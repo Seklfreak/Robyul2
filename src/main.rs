@@ -1,13 +1,21 @@
 extern crate discord;
 
-mod core;
 mod modules;
 
 use discord::Discord;
 use discord::model::Event;
 use std::env;
+use modules::KModule;
 
 fn main() {
+    let mods: Vec<Box<KModule>> = vec![
+        Box::new(modules::About)
+    ];
+
+    for m in &mods {
+        m.init();
+    }
+
     let bot = Discord::from_bot_token(
     	&env::var("DISCORD_TOKEN").expect("Expecting token in $DISCORD_TOKEN")
     ).expect("Login failed. Wrong token?");
