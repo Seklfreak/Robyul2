@@ -1,3 +1,7 @@
+Disclaimer: This bot is still in a *very* early stage and should be considered neither stable nor usable.
+
+<hr>
+
 # Karen (Discord-Bot) &nbsp; ![](http://i.imgur.com/8hpM9GT.png)
 
 Karen is a hihgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Rust](http://rust-lang.org/).<br>
