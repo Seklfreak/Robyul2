@@ -1,0 +1,7 @@
+[package]
+name = "karen"
+version = "0.1.0"
+authors = ["Lukas Breuer <lukas.breuer@outlook.com>"]
+
+[dependencies]
+    discord = "0.6.0"
