@@ -4,7 +4,7 @@ Disclaimer: This bot is still in a *very* early stage and should be considered n
 
 # Karen (Discord-Bot) &nbsp; ![](http://i.imgur.com/8hpM9GT.png)
 
-Karen is a hihgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Rust](http://rust-lang.org/).<br>
+Karen is a highgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Rust](http://rust-lang.org/).<br>
 
 A design goal was to keep the experience with her non-intrusive.<br>
 That means there are currently neither modules for moderation/administration nor plans to make them.<br>
