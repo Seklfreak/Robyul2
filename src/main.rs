@@ -17,7 +17,7 @@ fn main() {
     }
 
     let bot = Discord::from_bot_token(
-    	&env::var("DISCORD_TOKEN").expect("Expecting token in $DISCORD_TOKEN")
+        &env::var("DISCORD_TOKEN").expect("Expecting token in $DISCORD_TOKEN")
     ).expect("Login failed. Wrong token?");
 
     let (mut connection, _) = bot.connect().expect("Error while connecting to discord!");
