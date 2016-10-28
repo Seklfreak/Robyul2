@@ -1,19 +1,23 @@
 extern crate discord;
 
-mod modules;
-
 use discord::Discord;
 use discord::model::Event;
 use std::env;
-use modules::KModule;
+
+mod modules;
+use modules::*;
 
 fn main() {
+    print_logo();
+
     let mods: Vec<Box<KModule>> = vec![
         Box::new(modules::About)
     ];
 
     for m in &mods {
+        println!("Loading module {:?}...", m.name());
         m.init();
+        println!("Done");
     }
 
     let bot = Discord::from_bot_token(
@@ -37,5 +41,29 @@ fn main() {
 
             Err(err) => println!("Received error: {:?}", err),
         }
+    }
+}
+
+fn print_logo() {
+    let v = vec![
+        "",
+        "Welcome to...",
+        " ▄    ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄ ",
+        "▐░▌  ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌",
+        "▐░▌ ▐░▌ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌",
+        "▐░▌▐░▌  ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌▐░▌    ▐░▌",
+        "▐░▌░▌   ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌",
+        "▐░░▌    ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌",
+        "▐░▌░▌   ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀█░█▀▀ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌",
+        "▐░▌▐░▌  ▐░▌       ▐░▌▐░▌     ▐░▌  ▐░▌          ▐░▌    ▐░▌▐░▌",
+        "▐░▌ ▐░▌ ▐░▌       ▐░▌▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌",
+        "▐░▌  ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌      ▐░░▌",
+        " ▀    ▀  ▀         ▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀ ",
+        "Version 0.1.0!                                        INDEV!",
+        ""
+    ];
+
+    for line in v {
+        println!("{}", line);
     }
 }
