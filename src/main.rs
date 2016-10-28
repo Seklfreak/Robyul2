@@ -17,8 +17,9 @@ fn main() {
     for m in &mods {
         println!("Loading module {:?}...", m.name());
         m.init();
-        println!("Done");
     }
+
+    println!("Done");
 
     let bot = Discord::from_bot_token(
         &env::var("DISCORD_TOKEN").expect("Expecting token in $DISCORD_TOKEN")
