@@ -5,6 +5,9 @@ dependencies = [
  "discord 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mysql 7.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog-atomic 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog-stream 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog-term 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -74,6 +77,11 @@ dependencies = [
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "crossbeam"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "discord"
@@ -184,6 +192,16 @@ dependencies = [
  "matches 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-bidi 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-normalization 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "isatty"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -561,6 +579,45 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "slog-atomic"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "slog-extra"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "slog 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thread_local 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "slog-stream"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "slog 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog-extra 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thread_local 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "slog-term"
+version = "1.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "isatty 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog-stream 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "sodiumoxide"
 version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -743,6 +800,7 @@ dependencies = [
 "checksum cfg-if 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de1e760d7b6535af4241fca8bd8adf68e2e7edacc6b29f5d399050c5e48cf88c"
 "checksum chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9213f7cd7c27e95c2b57c49f0e69b1ea65b27138da84a170133fd21b07659c00"
 "checksum cookie 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "0e3d6405328b6edb412158b3b7710e2634e23f3614b9bb1c412df7952489a626"
+"checksum crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0c5ea215664ca264da8a9d9c3be80d2eaf30923c259d03e870388eb927508f97"
 "checksum discord 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c486d764cb90c1b983e63f8ecd61351c76df49138bf0b8e2d638ae48364ec164"
 "checksum env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "15abd780e45b3ea4f76b4e9a26ff4843258dd8a3eed2775a0e7368c2e7936c2f"
 "checksum fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6cc484842f1e2884faf56f529f960cc12ad8c71ce96cc7abba0a067c98fee344"
@@ -753,6 +811,7 @@ dependencies = [
 "checksum hyper 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fa426d9b72a11926b7dbc1667fa3dc81a58e0bb9a65e4944dea68ea8dc18da36"
 "checksum hyper 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "bb0f4d00bb781e559b6e66ae4b5479df0fdf9ab15949f52fa2f1f5de16d4cc07"
 "checksum idna 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1053236e00ce4f668aeca4a769a09b3bf5a682d802abd6f3cb39374f6b162c11"
+"checksum isatty 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7408a548dc0e406b7912d9f84c261cc533c1866e047644a811c133c56041ac0c"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum language-tags 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a91d884b6667cd606bb5a69aa0c99ba811a115fc68915e7056ec08a46e93199a"
 "checksum lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49247ec2a285bb3dcb23cbd9c35193c025e7251bfce77c1d5da97e6362dffe7f"
@@ -797,6 +856,10 @@ dependencies = [
 "checksum serde 0.6.15 (registry+https://github.com/rust-lang/crates.io-index)" = "c97b18e9e53de541f11e497357d6c5eaeb39f0cb9c8734e274abe4935f6991fa"
 "checksum serde_json 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b5aaee47e038bf9552d30380d3973fff2593ee0a76d81ad4c581f267cdcadf36"
 "checksum slog 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7f29d8783f8b8fb78ed0f26caeeb750e94f96a3d22f3c85dd1e2f34a2ae407d9"
+"checksum slog-atomic 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ba3b01182455118151c6f4edc2b901be79948cac77df03c1b456e7daea200573"
+"checksum slog-extra 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f571614f815a4dc3aad7b9052d1e3eefd5ab76bb36efa90d4dc9ac134142b445"
+"checksum slog-stream 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e6f0fee00b80a7a44f82c5cf44ba03b6dc2712f9c14469a62ad90ea0911635c5"
+"checksum slog-term 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "04267b64bdb92a0b5313e71ad236f9689ac6fcb1d0602826957c5c2ae8b958a0"
 "checksum sodiumoxide 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e298b80334f85a0c49b8dc1b00e5f56a5cdc1803e28d6fe74ce6796ea3a5b816"
 "checksum solicit 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "172382bac9424588d7840732b250faeeef88942e37b6e35317dce98cafdd75b2"
 "checksum tempdir 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "87974a6f5c1dfb344d733055601650059a3363de2a6104819293baff662132d6"
