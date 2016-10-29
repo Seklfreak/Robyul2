@@ -13,7 +13,7 @@ matrix:
 
 before_install:
   # Install deps
-  - sudo apt-get install -qq pkg-config openssl wget curl libopus-dev ffmpeg build-essential
+  - sudo apt-get install -qq wget curl ffmpeg build-essential openssl
 
   # Install youtube-dl
   - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
