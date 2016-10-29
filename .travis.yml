@@ -12,5 +12,27 @@ matrix:
     - rust: nightly
 
 before_install:
-  - sudo apt-get install -qq pkg-config openssl libsodium-dev libopus-dev ffmpeg youtube-dl
-  - youtube-dl -U
+  # Install deps
+  - sudo apt-get install -qq pkg-config openssl wget curl libopus-dev ffmpeg build-essential
+
+  # Install youtube-dl
+  - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
+  - sudo chmod a+rx /usr/local/bin/youtube-dl
+
+  # Install libsodium
+  - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
+  - tar xvfz LATEST.tar.gz
+  - cd libsodium-*
+  - ./configure
+  - make
+  - make install
+  - cd ..
+
+  # Install libopus
+  - wget http://downloads.xiph.org/releases/opus/opus-1.1.3.tar.gz
+  - tar xvfz opus-1.1.3.tar.gz
+  - cd opus-1.1.3
+  - ./configure
+  - make
+  - make install
+  - cd ..
