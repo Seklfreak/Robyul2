@@ -23,10 +23,10 @@ before_install:
   - sudo chmod a+rx /usr/local/bin/youtube-dl
 
   # Install libsodium
-   - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
-   - tar xvfz LATEST.tar.gz
-   - cd libsodium-*
-   - ./configure
-   - make
-   - make install
-   - cd ..
+  - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
+  - tar xvfz LATEST.tar.gz
+  - cd libsodium-*
+  - ./configure
+  - make
+  - make install
+  - cd ..
