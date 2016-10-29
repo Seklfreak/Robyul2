@@ -1,3 +1,5 @@
+sudo: required
+
 language: rust
 
 rust:
@@ -8,3 +10,7 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
+
+before_install:
+  - sudo apt-get install -qq pkg-config openssl libsodium-dev libopus-dev ffmpeg youtube-dl
+  - youtube-dl -U
