@@ -3,6 +3,7 @@ Disclaimer: This bot is still in a *very* early stage and should be considered n
 <hr>
 
 # Karen (Discord-Bot) &nbsp; ![](http://i.imgur.com/8hpM9GT.png)
+[![Build Status](https://travis-ci.org/sn0w/Karen.svg?branch=master)](https://travis-ci.org/sn0w/Karen)
 
 Karen is a highgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Rust](http://rust-lang.org/).<br>
 
