@@ -1,17 +1,19 @@
 extern crate discord;
 
+mod modules;
+mod utils;
+
+use std::env;
 use discord::Discord;
 use discord::model::Event;
-use std::env;
-
-mod modules;
 use modules::*;
+use utils::*;
 
 fn main() {
-    print_logo();
+    ascii::print_logo();
 
     let mods: Vec<Box<KModule>> = vec![
-        Box::new(modules::About)
+        Box::new(modules::about::About)
     ];
 
     for m in &mods {
@@ -31,7 +33,9 @@ fn main() {
 
     loop {
         match connection.recv_event() {
-            Ok(Event::MessageCreate(message)) => {}
+            Ok(Event::MessageCreate(message)) => {
+
+            }
 
             Ok(_) => {}
 
@@ -42,29 +46,5 @@ fn main() {
 
             Err(err) => println!("Received error: {:?}", err),
         }
-    }
-}
-
-fn print_logo() {
-    let v = vec![
-        "",
-        "Welcome to...",
-        " ▄    ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄ ",
-        "▐░▌  ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌",
-        "▐░▌ ▐░▌ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌",
-        "▐░▌▐░▌  ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌▐░▌    ▐░▌",
-        "▐░▌░▌   ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌",
-        "▐░░▌    ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌",
-        "▐░▌░▌   ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀█░█▀▀ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌",
-        "▐░▌▐░▌  ▐░▌       ▐░▌▐░▌     ▐░▌  ▐░▌          ▐░▌    ▐░▌▐░▌",
-        "▐░▌ ▐░▌ ▐░▌       ▐░▌▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌",
-        "▐░▌  ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌      ▐░░▌",
-        " ▀    ▀  ▀         ▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀ ",
-        "Version 0.1.0!                                        INDEV!",
-        ""
-    ];
-
-    for line in v {
-        println!("{}", line);
     }
 }

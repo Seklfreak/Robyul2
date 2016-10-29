@@ -1,8 +1,7 @@
 /**
  * Export modules
  */
-mod about;
-pub use self::about::About;
+pub mod about;
 
 /**
  * Module "Interface"
