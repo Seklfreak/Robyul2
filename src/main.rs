@@ -1,13 +1,15 @@
+#[macro_use]
+extern crate slog;
 extern crate discord;
 
 mod modules;
-mod utils;
+mod core;
 
 use std::env;
-use discord::Discord;
+use discord::{Discord, State};
 use discord::model::Event;
 use modules::*;
-use utils::*;
+use core::*;
 
 fn main() {
     ascii::print_logo();
@@ -27,14 +29,15 @@ fn main() {
         &env::var("DISCORD_TOKEN").expect("Expecting token in $DISCORD_TOKEN")
     ).expect("Login failed. Wrong token?");
 
-    let (mut connection, _) = bot.connect().expect("Error while connecting to discord!");
+    let (mut connection, ready_event) = bot.connect().expect("Error while connecting to discord!");
+    Bot::state = State::new(ready_event);
 
     println!("Bot ready. Starting event loop!");
 
     loop {
         match connection.recv_event() {
             Ok(Event::MessageCreate(message)) => {
-
+                let prefix = utils::get_prefix_for_server(message);
             }
 
             Ok(_) => {}

@@ -5,3 +5,5 @@ authors = ["Lukas Breuer <lukas.breuer@outlook.com>"]
 
 [dependencies]
     discord = "0.6.0"
+    mysql = "7.1.2"
+    slog = "1.2.1"
