@@ -13,7 +13,7 @@ matrix:
 
 before_install:
   # Install deps
-  - sudo apt-get install -qq curl libav-tools libavcodec-extra build-essential openssl libsodium-dev libopus-dev libopus0 
+  - sudo apt-get install -qq curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
 
   # Link libav
   - sudo ln -s /usr/bin/avconv /usr/bin/ffmpeg
@@ -21,3 +21,12 @@ before_install:
   # Install youtube-dl
   - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
   - sudo chmod a+rx /usr/local/bin/youtube-dl
+
+  # Install libsodium
+   - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
+   - tar xvfz LATEST.tar.gz
+   - cd libsodium-*
+   - ./configure
+   - make
+   - make install
+   - cd ..
