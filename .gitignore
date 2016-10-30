@@ -67,3 +67,4 @@ Temporary Items
 # will have compiled files and executables
 **/*.rs.bk
 target/**/*
+site/
