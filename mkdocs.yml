@@ -2,3 +2,5 @@ site_name: Karen (Discord Bot)
 theme: cinder
 pages:
   - Home: index.md
+  - Legacy (Shiro): legacy.md
+  - Testimonials \o/: testimonials.md
