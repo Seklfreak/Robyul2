@@ -41,7 +41,7 @@ That's less than one open tab in Google Chrome.<br>
 I archieved this by dumping runtime audio conversions.<br>
 Shiro utilizes FFMPEG/libav and opusenc to process your audio **before** sending it to discord.<br>
 
-###### \*In-Use heap. Results may vary depending on JVM version and active Garbage Collector.
+<sub>*\*In-Use heap. Results may vary depending on JVM version and active Garbage Collector.*</sub>
 ### Requirements
 - Any OS and CPU that runs Java 8 [or Docker]
 - About 32mb of free RAM
