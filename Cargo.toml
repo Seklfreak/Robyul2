@@ -3,8 +3,16 @@ name = "karen"
 version = "0.1.0"
 authors = ["Lukas Breuer <lukas.breuer@outlook.com>"]
 
+description = ""
+readme = "README.md"
+license = "AGPLv3"
+keywords = ["karen", "discord", "chat", "music", "voice", "bot"]
+
+repository = "https://github.com/sn0w/karen"
+documentation = "https://docs.meetkaren.xyz"
+
 [dependencies]
-    discord = "0.6.0"
+    discord = { git = "https://github.com/SpaceManiac/discord-rs.git" }
     mysql = "7.1.2"
     slog = "1.2.1"
     slog-term = "1.3.2"
