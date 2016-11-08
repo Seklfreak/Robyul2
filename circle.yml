@@ -1,24 +1,22 @@
-machine:
+dependencies:
   pre:
     # Install rust
     - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
     
     # Get other deps
-    - sudo apt-get update
-    - sudo apt-get install -y curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
+    - sudo apt-get update; sudo apt-get install -y curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
     
     # Link ffmpeg
     - sudo ln -s /usr/bin/avconv /usr/bin/ffmpeg
     
     # Donload youtube-dl
-    - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
-    - sudo chmod a+rx /usr/local/bin/youtube-dl
+    - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl && sudo chmod a+rx /usr/local/bin/youtube-dl
 
     # Compile libsodium
-    - curl -sSL https://download.libsodium.org/libsodium/releases/libsodium-1.0.11.tar.gz > libsodium-1.0.11.tar.gz
+    - wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.11.tar.gz
     - tar xvfz libsodium-1.0.11.tar.gz
     - cd libsodium-1.0.11
-    - ./configure
+    - bash ./configure
     - make
     - sudo make install
 
