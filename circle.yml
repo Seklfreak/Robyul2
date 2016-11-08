@@ -1,16 +1,27 @@
 machine:
   pre:
-    - curl -sSf https://sh.rustup.rs | sh
+    # Install rust
+    - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+    
+    # Get other deps
     - sudo apt-get install -qq curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
+    
+    # Link ffmpeg
     - sudo ln -s /usr/bin/avconv /usr/bin/ffmpeg
+    
+    # Donload youtube-dl
     - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
     - sudo chmod a+rx /usr/local/bin/youtube-dl
+
+    # Compile libsodium
     - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
     - tar xvfz LATEST.tar.gz
     - cd libsodium-*
     - ./configure
     - make
     - sudo make install
+
+    # Return
     - cd ..
 
 test:
