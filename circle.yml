@@ -1,0 +1,19 @@
+machine:
+  pre:
+    - curl -sSf https://sh.rustup.rs | sh
+    - sudo apt-get install -qq curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
+    - sudo ln -s /usr/bin/avconv /usr/bin/ffmpeg
+    - sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
+    - sudo chmod a+rx /usr/local/bin/youtube-dl
+    - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
+    - tar xvfz LATEST.tar.gz
+    - cd libsodium-*
+    - ./configure
+    - make
+    - sudo make install
+    - cd ..
+
+test:
+  override:
+    - cargo build -v
+    - cargo test -v
