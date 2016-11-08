@@ -4,7 +4,8 @@ machine:
     - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
     
     # Get other deps
-    - sudo apt-get install -qq curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
+    - sudo apt-get update
+    - sudo apt-get install -y curl libav-tools libavcodec-extra build-essential openssl libopus-dev libopus0 
     
     # Link ffmpeg
     - sudo ln -s /usr/bin/avconv /usr/bin/ffmpeg
@@ -14,9 +15,9 @@ machine:
     - sudo chmod a+rx /usr/local/bin/youtube-dl
 
     # Compile libsodium
-    - wget https://download.libsodium.org/libsodium/releases/LATEST.tar.gz
-    - tar xvfz LATEST.tar.gz
-    - cd libsodium-*
+    - curl -sSL https://download.libsodium.org/libsodium/releases/libsodium-1.0.11.tar.gz > libsodium-1.0.11.tar.gz
+    - tar xvfz libsodium-1.0.11.tar.gz
+    - cd libsodium-1.0.11
     - ./configure
     - make
     - sudo make install
