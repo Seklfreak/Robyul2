@@ -1,11 +1,16 @@
 package main
 
 import (
-	"io/ioutil"
-	"./karen"
+	Logger "./logger"
+	"github.com/bwmarrin/discordgo"
 )
 
-func main() {
-	token, _ := ioutil.ReadFile("token")
-	karen.Initialize(token)
+func onReady(session *discordgo.Session, event *discordgo.Ready) {
+	Logger.INF("Connected to discord!")
+}
+
+func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
+    if message.Content == "!ping" {
+        session.ChannelMessageSend(message.ChannelID, "Pong!")
+    }
 }

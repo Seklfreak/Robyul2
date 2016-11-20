@@ -1,5 +1,6 @@
 .idea
 *.iml
+**/*/token
 
 # Created by https://www.gitignore.io/api/go,windows,osx,linux
 
