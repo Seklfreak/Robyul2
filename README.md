@@ -4,14 +4,14 @@ Disclaimer: This bot is still in a *very* early stage and should be considered n
 
 # Karen &nbsp; ![](http://i.imgur.com/8hpM9GT.png)
 
-Karen is a highgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Rust](http://rust-lang.org/).
+Karen is a highgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
 Got any problems or just want to chat with me and other devs?<br>
 Join the Discord Server! :)<br>
 [![](https://discordapp.com/api/guilds/180818466847064065/widget.png)](https://discord.gg/5SjDr3G)
 
 ### Docs
-All docs are available at http://meetkaren.xyz or in the `gh-pages` branch.
+All docs are available at http://meetkaren.xyz.
 
 ### Karen's Friends :tada:
 Bots built by friends or awesome strangers
