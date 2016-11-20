@@ -91,7 +91,7 @@ Inheritance and forcing external plugin developers to implement certain features
 The easy (but as it later turned out fatal) decision was to use Groovy (a Java dialect).
 C# *was* an option but there were some psychological issues on my side (like refusing to type `mono bot.exe` on Linux) and also some other problems (like NuGet being unable to properly handle trasitive dependencies).
 
-Like Karen (v2) she was written completely from scratch but introduced many new concepts and ideas:
+Like Karen (v2) she was written completely from scratch and introduced many new concepts and ideas:
 
 - Instead of loading plain objects Shiro was able to search the classpath for hot-swapped classes annotated with `@ShiroMeta()` at runtime.<br>
 - Per-guild prefixes
@@ -130,7 +130,7 @@ class Ping implements IModule {
 ```
 
 Shiro was the most popular bot ever.<br>
-As of October 2016 she joined 10 Guilds and offered access to more than 100 channels and 550 people.
+As of November 2016 she watched over 100 channels and offered access to more than 600 people.
 
 Shiro's internals were shiny and organized like never before and thus able to influence the API's and features of two bots.
 [Daniele/Rem](https://github.com/Daniele122898/Rem) and [Serraniel/Ako](https://github.com/Serraniel/Ako-Discord-Bot-Loader) oriented their features/internals/concepts around her structure/plugins.
