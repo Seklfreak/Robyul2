@@ -136,10 +136,10 @@ Shiro's internals were shiny and organized like never before and thus able to in
 [Daniele/Rem](https://github.com/Daniele122898/Rem) and [Serraniel/Ako](https://github.com/Serraniel/Ako-Discord-Bot-Loader) oriented their features/internals/concepts around her structure/plugins.
 
 ### Karen (v4)
-Language: [Rust](http://rust-lang.org/)<br>
-Framework: [SpaceManiac/discord-rs](https://github.com/SpaceManiac/discord-rs)<br>
-
 > a.k.a. Phoenix from the ashes
+
+Language: [Go](http://golang.org/)<br>
+Framework: [bwmarrin/discordgo](https://github.com/bwmarrin/discordgo)<br>
 
 Shiro was groing fast.<br>
 Too fast.<br>
