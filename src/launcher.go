@@ -4,7 +4,7 @@ import (
     "github.com/bwmarrin/discordgo"
     redis "gopkg.in/redis.v3"
     "io/ioutil"
-    "./logger"
+    Logger "./logger"
     "strings"
     "os"
     "os/signal"
@@ -16,7 +16,7 @@ var (
 )
 
 func main() {
-    logger.INF("Bootstrapping...")
+    Logger.INF("Bootstrapping...")
 
     // Read token
     file, _ := ioutil.ReadFile("token")
@@ -45,4 +45,8 @@ func main() {
     signal.Notify(channel, os.Interrupt, os.Kill)
 
     <- channel
+
+    Logger.WRN("The OS is killing me :c")
+    Logger.WRN("Disconnecting...")
+    discord.Close()
 }
