@@ -2,32 +2,38 @@ package main
 
 import (
     "github.com/bwmarrin/discordgo"
-    redis "gopkg.in/redis.v3"
-    "io/ioutil"
     Logger "./logger"
-    "strings"
     "os"
     "os/signal"
+    redis "gopkg.in/redis.v5"
+    "github.com/Jeffail/gabs"
 )
 
 var (
-    discord *discordgo.Session
-    rcli    *redis.Client
+    config *gabs.Container
+    rcli *redis.Client
 )
 
 func main() {
     Logger.INF("Bootstrapping...")
 
-    // Read token
-    file, _ := ioutil.ReadFile("token")
-    token := string(file)
+    // Read config
+    config = GetConfig("config.json")
 
-    // Remove newline from token
-    token = strings.TrimRight(token, "\n")
+    // Connect to DB
+    rcli = redis.NewClient(&redis.Options{
+        Addr: config.Path("redis").Data().(string),
+        DB: 0,
+    })
+
+    _, err := rcli.Ping().Result()
+    if err != nil {
+        Logger.ERR("Cannot connect to redis!")
+        os.Exit(1)
+    }
 
     // Connect and add event handlers
-    discord, err := discordgo.New(token)
-
+    discord, err := discordgo.New(config.Path("discord.token").Data().(string))
     if err != nil {
         panic(err)
     }
@@ -44,7 +50,7 @@ func main() {
     channel := make(chan os.Signal, 1)
     signal.Notify(channel, os.Interrupt, os.Kill)
 
-    <- channel
+    <-channel
 
     Logger.WRN("The OS is killing me :c")
     Logger.WRN("Disconnecting...")

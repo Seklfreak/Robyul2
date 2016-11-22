@@ -1,6 +1,8 @@
+config.json
 .idea
 *.iml
 **/*/token
+karen
 
 # Created by https://www.gitignore.io/api/go,windows,osx,linux
 
