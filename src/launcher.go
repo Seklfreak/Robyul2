@@ -5,13 +5,11 @@ import (
     Logger "./logger"
     "os"
     "os/signal"
-    redis "gopkg.in/redis.v5"
     "github.com/Jeffail/gabs"
 )
 
 var (
     config *gabs.Container
-    rcli *redis.Client
 )
 
 func main() {
@@ -20,20 +18,16 @@ func main() {
     // Read config
     config = GetConfig("config.json")
 
+/*
     // Connect to DB
-    rcli = redis.NewClient(&redis.Options{
-        Addr: config.Path("redis").Data().(string),
-        DB: 0,
-    })
-
-    _, err := rcli.Ping().Result()
-    if err != nil {
-        Logger.ERR("Cannot connect to redis!")
-        os.Exit(1)
-    }
+    ConnectDB(
+        config.Path("mongo.url").Data().(string),
+        config.Path("mongo.db").Data().(string),
+    )
+*/
 
     // Connect and add event handlers
-    discord, err := discordgo.New(config.Path("discord.token").Data().(string))
+    discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
     if err != nil {
         panic(err)
     }
