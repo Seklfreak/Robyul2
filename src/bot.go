@@ -90,6 +90,9 @@ var games = []string{
     "async is the future!",
     "down with OOP!",
     "spoopy stuff",
+    "with human pets",
+    "Planking",
+    "Rare Pepe",
 
     // Kaomoji
     "ʕ•ᴥ•ʔ",
@@ -112,6 +115,9 @@ var games = []string{
     "Hyperdimension Neptunia",
     "Final Fantasy MCMX",
     "CIV V (forever!)",
+    "Pokemon Go",
+    "Simulation Simulator 2016",
+    "Half Life 3",
 
     // software
     "with FFMPEG",
@@ -132,4 +138,7 @@ var games = []string{
     "with Serraniel#8978",
     "with 0xFADED#3237",
     "with C0untLizzi",
+    "with moot",
+    "with your waifu",
+    "with Trump",
 }
