@@ -10,6 +10,7 @@ import (
 
 var (
     config *gabs.Container
+    discordSession *discordgo.Session
 )
 
 func main() {
@@ -18,13 +19,13 @@ func main() {
     // Read config
     config = GetConfig("config.json")
 
-/*
-    // Connect to DB
-    ConnectDB(
-        config.Path("mongo.url").Data().(string),
-        config.Path("mongo.db").Data().(string),
-    )
-*/
+    /*
+        // Connect to DB
+        ConnectDB(
+            config.Path("mongo.url").Data().(string),
+            config.Path("mongo.db").Data().(string),
+        )
+    */
 
     // Connect and add event handlers
     discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))

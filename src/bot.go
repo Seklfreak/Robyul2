@@ -13,6 +13,8 @@ import (
 func onReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
 
+    discordSession = session
+
     guilds, e := session.UserGuilds()
     if e == nil {
         channels := 0
@@ -50,7 +52,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
             if (len(message.Mentions) >= 1) {
                 // Check if someone is mentioning us
                 if (message.Mentions[0].ID == session.State.User.ID) {
-                    CCTV(message)
+                    go CCTV(message.Message)
 
                     parts := strings.Split(message.Content, " ")
                     parts = append(parts[:0], parts[1:]...)
@@ -58,22 +60,27 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                     msg := strings.Trim(strings.Join(parts, " "), " ")
 
                     switch {
-                    case regexp.MustCompile("^REFRESH CHAT SESSION$").Match(msg):
+                    case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
                         // Refresh cleverbot session
                         return
 
-                    case regexp.MustCompile("^SET PREFIX (.){0,10}$").Match(msg):
+                    case regexp.MustCompile("^SET PREFIX (.){0,10}$").Match([]byte(msg)):
                         // Set new prefix
+                        SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
                         return
 
                     default:
                         // Send to cleverbot
+                        CleverbotSend(channel.ID, msg)
                         return
                     }
                 }
             }
 
-            // Check modules
+            // Check if the message is prefixed for us
+            if (regexp.MustCompile("^" + GetPrefixForServer(channel.GuildID)).Match([]byte(message.Content))) {
+                // Check if a module matches that command
+            }
         }
     }
 }
