@@ -96,10 +96,24 @@ Message:
     )
 }
 
-func GetPrefixForServer(guild string) string {
-    return "äääää"
+func GetPrefixForServer(guild string) (string, error) {
+    return GuildSettingGet(guild, "prefix")
 }
 
-func SetPrefixForServer(guild string, prefix string) {
+func SetPrefixForServer(guild string, prefix string) error {
+    return GuildSettingSet(guild, "prefix", prefix)
+}
 
+func SendError(channel string, err error) {
+    discordSession.ChannelMessageSend(
+        channel,
+        "Error :frowning:\n```\n" + err.Error() + "\n```",
+    )
+}
+
+type Callback func()
+
+func WhileTypingIn(channel string, cb Callback) {
+    discordSession.ChannelTyping(channel)
+    cb()
 }

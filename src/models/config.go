@@ -1,13 +1,6 @@
 package models
 
-import "github.com/bwmarrin/discordgo"
-
-type GuildSettings struct {
-    Guild    *discordgo.Guild
-    Settings []GuildSetting
-}
-
-type GuildSetting struct {
-    Key   string
-    Value string
+type Config struct {
+    Guild string
+    Data map[string]string
 }

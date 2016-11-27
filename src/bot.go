@@ -62,24 +62,42 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                     switch {
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
                         // Refresh cleverbot session
+                        CleverbotRefreshSession(channel.ID)
+                        discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
                         return
 
                     case regexp.MustCompile("^SET PREFIX (.){0,10}$").Match([]byte(msg)):
                         // Set new prefix
-                        SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
+                        err := SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
+
+                        if err != nil {
+                            SendError(channel.ID, err)
+                        } else {
+                            discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved!")
+                        }
                         return
 
                     default:
                         // Send to cleverbot
-                        CleverbotSend(channel.ID, msg)
+                        WhileTypingIn(channel.ID, func() {
+                            CleverbotSend(channel.ID, msg)
+                        })
                         return
                     }
                 }
             }
 
-            // Check if the message is prefixed for us
-            if (regexp.MustCompile("^" + GetPrefixForServer(channel.GuildID)).Match([]byte(message.Content))) {
-                // Check if a module matches that command
+            // Only continue if a prefix is set
+            prefix, err := GetPrefixForServer(channel.GuildID)
+            if err == nil {
+                // Check if the message is prefixed for us
+                if (strings.HasPrefix(message.Content, prefix)) {
+                    // Check if a module matches that command
+                    discordSession.ChannelMessageSend(
+                        channel.ID,
+                        fmt.Sprintf("Recevied you poke via %s! No plugins though :c", prefix),
+                    )
+                }
             }
         }
     }
@@ -125,6 +143,7 @@ var games = []string{
     "Pokemon Go",
     "Simulation Simulator 2016",
     "Half Life 3",
+    "Nekopara",
 
     // software
     "with FFMPEG",
