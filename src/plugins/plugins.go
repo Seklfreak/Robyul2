@@ -4,9 +4,6 @@ import "github.com/bwmarrin/discordgo"
 
 // Plugin interface to enforce a basic structure
 type Plugin interface {
-    // Constructor
-    New() Plugin
-
     // The name of this plugin
     Name() string
 
@@ -23,15 +20,15 @@ type Plugin interface {
 
     // The action to execute if any command matches
     Action(
-        command string,
-        msg *discordgo.Message,
-        session *discordgo.Session,
+    command string,
+    msg *discordgo.Message,
+    session *discordgo.Session,
     )
 }
 
 // List of plugin instances
 var PluginList = []Plugin{
-    About.New(),
+    About{},
 }
 
 // CallBotPlugin iterates through the list of registered
@@ -48,4 +45,8 @@ func CallBotPlugin(command string, msg *discordgo.Message, session *discordgo.Se
             }
         }
     }
+}
+
+func GetPlugins() []Plugin {
+    return PluginList
 }

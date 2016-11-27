@@ -90,10 +90,54 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
             // Only continue if a prefix is set
             prefix, err := GetPrefixForServer(channel.GuildID)
             if err == nil {
+                // Save a sanitized version of the command (no prefix)
+                cmd := strings.Replace(parts[0], prefix, "", 1)
+
                 // Check if the message is prefixed for us
                 if (strings.HasPrefix(message.Content, prefix)) {
-                    // Check if a module matches that command
-                    plugins.CallBotPlugin(parts[0], message.Message, &discordSession)
+                    // Check if the user calls for help
+                    if cmd == "h" || cmd == "help" {
+                        // Print help of all plugins
+                        msg := ""
+
+                        msg += "Hi " + message.Author.Username + " :smiley:\n"
+                        msg += "These are all usable commands:\n"
+                        msg += "```\n"
+
+                        for _, plugin := range plugins.GetPlugins() {
+                            description := plugin.Description()
+
+                            if description == "" {
+                                description = "no description"
+                            }
+
+                            msg += fmt.Sprintf("%s [%s]", plugin.Name(), description) + "\n"
+
+                            for cmd, usage := range plugin.Commands() {
+                                if usage == "" {
+                                    usage = "[no usage information]"
+                                }
+
+                                msg += fmt.Sprintf("\t %s \t\t - %s", prefix + cmd, usage)
+                            }
+                        }
+
+                        msg += "\n```"
+
+                        discordSession.ChannelMessageSend(
+                            message.ChannelID,
+                            fmt.Sprintf("<@%s> :mailbox_with_mail:", message.Author.ID),
+                        )
+
+                        uc, err := discordSession.UserChannelCreate(message.Author.ID)
+                        if err == nil {
+                            discordSession.ChannelMessageSend(uc.ID, msg)
+                        }
+                    } else {
+                        // Check if a module matches said command
+                        // Do nothing otherwise
+                        plugins.CallBotPlugin(cmd, message.Message, discordSession)
+                    }
                 }
             }
         }
