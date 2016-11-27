@@ -31,6 +31,7 @@ var PluginList = []Plugin{
     About{},
     Stats{},
     Ping{},
+    Invite{},
 }
 
 // CallBotPlugin iterates through the list of registered

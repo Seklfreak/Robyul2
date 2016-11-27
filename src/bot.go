@@ -37,13 +37,6 @@ func onReady(session *discordgo.Session, event *discordgo.Ready) {
 
     // Run async game-changer
     go changeGameInterval(session)
-
-    // Print invite
-    fmt.Printf(
-        "\n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%d\n\n",
-        "249908516880515072",
-        65535,
-    )
 }
 
 func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -122,7 +115,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                                     usage = "[no usage information]"
                                 }
 
-                                msg += fmt.Sprintf("\t %s \t\t - %s", prefix + cmd, usage)
+                                msg += fmt.Sprintf("\t %s \t\t - %s\n", prefix + cmd, usage)
                             }
                         }
 
