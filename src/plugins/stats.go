@@ -11,21 +11,21 @@ import (
 
 type Stats struct{}
 
-func (a Stats) Name() string {
+func (s Stats) Name() string {
     return "Stats"
 }
 
-func (a Stats) Description() string {
+func (s Stats) Description() string {
     return "Shows some stats"
 }
 
-func (a Stats) Commands() map[string]string {
+func (s Stats) Commands() map[string]string {
     return map[string]string{
         "stats" : "",
     }
 }
 
-func (a Stats) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
+func (s Stats) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
     // Count guilds, channels and users
     users := make(map[string]string)
     channels := 0
@@ -74,7 +74,7 @@ func (a Stats) Action(command string, msg *discordgo.Message, session *discordgo
     session.ChannelMessageSend(msg.ChannelID, strings.Join(m, "\n"))
 }
 
-func (a Stats) New() Plugin {
+func (s Stats) New() Plugin {
     return &Stats{}
 }
 

@@ -30,6 +30,7 @@ type Plugin interface {
 var PluginList = []Plugin{
     About{},
     Stats{},
+    Ping{},
 }
 
 // CallBotPlugin iterates through the list of registered
