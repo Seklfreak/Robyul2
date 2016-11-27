@@ -16,30 +16,34 @@ func onReady(session *discordgo.Session, event *discordgo.Ready) {
 
     discordSession = session
 
-    guilds, e := session.UserGuilds()
-    if e == nil {
+    // Async stats
+    go func() {
+        time.Sleep(3 * time.Second)
+
+        users := make(map[string]string)
         channels := 0
-        users := 0
+        guilds := session.State.Guilds
 
         for _, guild := range guilds {
             channels += len(guild.Channels)
-            users += len(guild.Members)
+
+            for _, u := range guild.Members {
+                users[u.User.ID] = u.User.Username
+            }
         }
 
-        Logger.INF(fmt.Sprintf("Servers:%d | Channels:%d | Users:%d", len(guilds), channels, users))
-    } else {
-        Logger.ERR("Error retrieving stats")
-        fmt.Println(e.Error())
-    }
+        Logger.INF(fmt.Sprintf("Servers:%d | Channels:%d | Users:%d", len(guilds), channels, len(users)))
+    }()
 
+    // Run async game-changer
+    go changeGameInterval(session)
+
+    // Print invite
     fmt.Printf(
         "\n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%d\n\n",
         "249908516880515072",
         65535,
     )
-
-    // Run async game-changer
-    go changeGameInterval(session);
 }
 
 func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {

@@ -29,6 +29,7 @@ type Plugin interface {
 // List of plugin instances
 var PluginList = []Plugin{
     About{},
+    Stats{},
 }
 
 // CallBotPlugin iterates through the list of registered
