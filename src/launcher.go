@@ -13,6 +13,8 @@ var (
     discordSession *discordgo.Session
 )
 
+type Callback func()
+
 func main() {
     Logger.INF("Bootstrapping...")
 

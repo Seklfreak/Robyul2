@@ -111,8 +111,6 @@ func SendError(channel string, err error) {
     )
 }
 
-type Callback func()
-
 func WhileTypingIn(channel string, cb Callback) {
     discordSession.ChannelTyping(channel)
     cb()

@@ -8,6 +8,7 @@ import (
     "time"
     "strings"
     "regexp"
+    "./plugins"
 )
 
 func onReady(session *discordgo.Session, event *discordgo.Ready) {
@@ -48,16 +49,15 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
         // Get a friend already and stop chatting with bots
         channel, _ := session.Channel(message.ChannelID)
         if (!channel.IsPrivate) {
+            // Split the message into parts
+            parts := strings.Split(message.Content, " ")
+            msg := strings.Trim(strings.Join(append(parts[:0], parts[1:]...), " "), " ")
+
             // Check if the message contains @mentions
             if (len(message.Mentions) >= 1) {
                 // Check if someone is mentioning us
                 if (message.Mentions[0].ID == session.State.User.ID) {
                     go CCTV(message.Message)
-
-                    parts := strings.Split(message.Content, " ")
-                    parts = append(parts[:0], parts[1:]...)
-
-                    msg := strings.Trim(strings.Join(parts, " "), " ")
 
                     switch {
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
@@ -93,10 +93,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                 // Check if the message is prefixed for us
                 if (strings.HasPrefix(message.Content, prefix)) {
                     // Check if a module matches that command
-                    discordSession.ChannelMessageSend(
-                        channel.ID,
-                        fmt.Sprintf("Recevied you poke via %s! No plugins though :c", prefix),
-                    )
+                    plugins.CallBotPlugin(parts[0], message.Message, &discordSession)
                 }
             }
         }
