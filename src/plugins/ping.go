@@ -37,7 +37,3 @@ func (p Ping) Action(command string, content string, msg *discordgo.Message, ses
         m.Content + " (" + strconv.Itoa(int(end.Sub(start).Seconds() * 100)) + "ms RTT)",
     )
 }
-
-func (p Ping) New() Plugin {
-    return &Ping{}
-}

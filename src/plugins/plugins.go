@@ -39,6 +39,7 @@ var PluginList = []Plugin{
     Invite{},
     Giphy{},
     Google{},
+    RandomCat{},
 }
 
 // CallBotPlugin iterates through the list of registered

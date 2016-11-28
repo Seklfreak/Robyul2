@@ -74,10 +74,6 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     session.ChannelMessageSend(msg.ChannelID, strings.Join(m, "\n"))
 }
 
-func (s Stats) New() Plugin {
-    return &Stats{}
-}
-
 func u64tos(i uint64) string {
     return strconv.Itoa(int(i))
 }

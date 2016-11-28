@@ -28,7 +28,3 @@ func (g Google) Action(command string, content string, msg *discordgo.Message, s
         url.QueryEscape(content),
     ))
 }
-
-func (g Google) New() Plugin {
-    return &Ping{}
-}

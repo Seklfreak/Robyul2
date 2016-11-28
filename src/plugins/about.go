@@ -35,7 +35,3 @@ She is the titular protagonist of two arcs: Karen Bee and Karen Ogre. She is als
 
     session.ChannelMessageSend(msg.ChannelID, m)
 }
-
-func (a About) New() Plugin {
-    return &About{}
-}

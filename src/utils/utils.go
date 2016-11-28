@@ -5,6 +5,11 @@ import (
     "github.com/ugjka/cleverbot-go"
     "github.com/bwmarrin/discordgo"
     "fmt"
+    "bytes"
+    "io"
+    "net/http"
+    "strconv"
+    "errors"
 )
 
 type Callback func()
@@ -121,4 +126,34 @@ func SendError(session *discordgo.Session, channel string, err interface{}) {
 func WhileTypingIn(session *discordgo.Session, channel string, cb Callback) {
     session.ChannelTyping(channel)
     cb()
+}
+
+func GetJSON(url string) *gabs.Container {
+    // Send request
+    response, err := http.Get(url)
+    if err != nil {
+        panic(err)
+    }
+
+    // Only continue if code was 200
+    if response.StatusCode != 200 {
+        panic(errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode)))
+    } else {
+        // Read body
+        defer response.Body.Close()
+
+        buf := bytes.NewBuffer(nil)
+        _, err := io.Copy(buf, response.Body)
+        if err != nil {
+            panic(err)
+        }
+
+        // Parse json
+        json, err := gabs.ParseJSON(buf.Bytes())
+        if err != nil {
+            panic(err)
+        }
+
+        return json
+    }
 }

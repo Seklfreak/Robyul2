@@ -32,7 +32,3 @@ func (i Invite) Action(command string, content string, msg *discordgo.Message, s
         ),
     )
 }
-
-func (i Invite) New() Plugin {
-    return &Ping{}
-}
