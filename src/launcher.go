@@ -5,13 +5,10 @@ import (
     Logger "./logger"
     "os"
     "os/signal"
-    "github.com/Jeffail/gabs"
+    "./utils"
 )
 
-var (
-    config *gabs.Container
-    discordSession *discordgo.Session
-)
+var discordSession *discordgo.Session
 
 type Callback func()
 
@@ -19,15 +16,16 @@ func main() {
     Logger.INF("Bootstrapping...")
 
     // Read config
-    config = GetConfig("config.json")
+    utils.LoadConfig("config.json")
+    config := utils.GetConfig()
 
     // Connect to DB
-    ConnectDB(
+    utils.ConnectDB(
         config.Path("mongo.url").Data().(string),
         config.Path("mongo.db").Data().(string),
     )
 
-    defer dbSession.Close()
+    defer utils.GetDBSession().Close()
 
     // Connect and add event handlers
     discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))

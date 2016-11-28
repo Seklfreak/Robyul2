@@ -9,12 +9,26 @@ import (
     "strings"
     "regexp"
     "./plugins"
+    "./utils"
 )
 
 func onReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
 
     discordSession = session
+
+    // Print plugin list
+    tmpl := "[PLUG] %s reacts to [ %s]"
+
+    for _, plugin := range plugins.GetPlugins() {
+        cmds := ""
+
+        for cmd := range plugin.Commands() {
+            cmds += cmd + " "
+        }
+
+        Logger.INF(fmt.Sprintf(tmpl, plugin.Name(), cmds))
+    }
 
     // Async stats
     go func() {
@@ -54,21 +68,21 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
             if (len(message.Mentions) >= 1) {
                 // Check if someone is mentioning us
                 if (message.Mentions[0].ID == session.State.User.ID) {
-                    go CCTV(message.Message)
+                    go utils.CCTV(session, message.Message)
 
                     switch {
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
                         // Refresh cleverbot session
-                        CleverbotRefreshSession(channel.ID)
+                        utils.CleverbotRefreshSession(channel.ID)
                         discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
                         return
 
                     case regexp.MustCompile("^SET PREFIX (.){0,10}$").Match([]byte(msg)):
                         // Set new prefix
-                        err := SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
+                        err := utils.SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
 
                         if err != nil {
-                            SendError(channel.ID, err)
+                            utils.SendError(session, channel.ID, err)
                         } else {
                             discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved!")
                         }
@@ -76,8 +90,8 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
 
                     default:
                         // Send to cleverbot
-                        WhileTypingIn(channel.ID, func() {
-                            CleverbotSend(channel.ID, msg)
+                        utils.WhileTypingIn(session, channel.ID, func() {
+                            utils.CleverbotSend(session, channel.ID, msg)
                         })
                         return
                     }
@@ -85,7 +99,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
             }
 
             // Only continue if a prefix is set
-            prefix, err := GetPrefixForServer(channel.GuildID)
+            prefix, err := utils.GetPrefixForServer(channel.GuildID)
             if err == nil {
                 // Save a sanitized version of the command (no prefix)
                 cmd := strings.Replace(parts[0], prefix, "", 1)

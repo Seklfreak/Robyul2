@@ -1,10 +1,10 @@
-package main
+package utils
 
 import (
     "gopkg.in/mgo.v2"
-    Logger "./logger"
+    Logger "../logger"
     "gopkg.in/mgo.v2/bson"
-    "./models"
+    "../models"
     "time"
 )
 
@@ -30,8 +30,12 @@ func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connected!")
 }
 
+func GetDBSession() *mgo.Session {
+    return dbSession
+}
+
 func GetDB() *mgo.Database {
-    return dbSession.DB(dbName)
+    return GetDBSession().DB(dbName)
 }
 
 func GuildSettingSet(guild string, key string, value string) (err error) {

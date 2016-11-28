@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
     "github.com/Jeffail/gabs"
@@ -7,21 +7,28 @@ import (
     "fmt"
 )
 
+type Callback func()
+
 var (
+    config *gabs.Container
     cleverbotSessions map[string]*cleverbot.Session
 )
 
-func GetConfig(path string) *gabs.Container {
+func LoadConfig(path string) {
     json, err := gabs.ParseJSONFile(path)
 
     if err != nil {
         panic(err)
     }
 
-    return json
+    config = json
 }
 
-func CleverbotSend(channel string, message string) {
+func GetConfig() *gabs.Container {
+    return config
+}
+
+func CleverbotSend(session *discordgo.Session, channel string, message string) {
     var msg string
 
     if cleverbotSessions[channel] == nil {
@@ -39,14 +46,14 @@ func CleverbotSend(channel string, message string) {
         msg = response
     }
 
-    discordSession.ChannelMessageSend(channel, msg)
+    session.ChannelMessageSend(channel, msg)
 }
 
 func CleverbotRefreshSession(channel string) {
     cleverbotSessions[channel] = cleverbot.New()
 }
 
-func CCTV(message *discordgo.Message) {
+func CCTV(session *discordgo.Session, message *discordgo.Message) {
     var (
         channelName string = "?"
         channelID string = "?"
@@ -54,12 +61,12 @@ func CCTV(message *discordgo.Message) {
         serverID string = "?"
     )
 
-    channel, err := discordSession.Channel(message.ChannelID)
+    channel, err := session.Channel(message.ChannelID)
     if err == nil {
         channelName = channel.Name
         channelID = channel.ID
 
-        server, err := discordSession.Guild(channel.ID)
+        server, err := session.Guild(channel.ID)
         if err == nil {
             serverName = server.Name
             serverID = server.ID
@@ -90,7 +97,7 @@ Message:
             ) +
             "\n```"
 
-    discordSession.ChannelMessageSend(
+    session.ChannelMessageSend(
         config.Path("cctv").Data().(string),
         msg,
     )
@@ -104,14 +111,14 @@ func SetPrefixForServer(guild string, prefix string) error {
     return GuildSettingSet(guild, "prefix", prefix)
 }
 
-func SendError(channel string, err error) {
-    discordSession.ChannelMessageSend(
+func SendError(session *discordgo.Session, channel string, err error) {
+    session.ChannelMessageSend(
         channel,
         "Error :frowning:\n```\n" + err.Error() + "\n```",
     )
 }
 
-func WhileTypingIn(channel string, cb Callback) {
-    discordSession.ChannelTyping(channel)
+func WhileTypingIn(session *discordgo.Session, channel string, cb Callback) {
+    session.ChannelTyping(channel)
     cb()
 }
