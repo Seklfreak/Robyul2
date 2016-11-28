@@ -41,6 +41,7 @@ var PluginList = []Plugin{
     Google{},
     RandomCat{},
     Stone{},
+    Roll{},
 }
 
 // CallBotPlugin iterates through the list of registered
