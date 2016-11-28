@@ -22,7 +22,7 @@ func (p Ping) Commands() map[string]string {
     }
 }
 
-func (p Ping) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
+func (p Ping) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     start := time.Now()
 
     m, err := session.ChannelMessageSend(msg.ChannelID, ":ping_pong: Pong! :grin:")

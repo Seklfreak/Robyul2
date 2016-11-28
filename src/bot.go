@@ -144,6 +144,8 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
 
                                 msg += fmt.Sprintf("\t %s \t\t - %s\n", prefix + cmd, usage)
                             }
+
+                            msg += "\n"
                         }
 
                         msg += "\n```"
@@ -160,7 +162,12 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                     } else {
                         // Check if a module matches said command
                         // Do nothing otherwise
-                        plugins.CallBotPlugin(cmd, message.Message, discordSession)
+                        plugins.CallBotPlugin(
+                            cmd,
+                            strings.Replace(message.Content, prefix+cmd, "", -1),
+                            message.Message,
+                            discordSession,
+                        )
                     }
                 }
             }

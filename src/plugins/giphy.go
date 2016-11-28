@@ -2,7 +2,6 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "strings"
     "fmt"
     "net/http"
     "errors"
@@ -11,6 +10,7 @@ import (
     "github.com/Jeffail/gabs"
     "math/rand"
     "bytes"
+    "net/url"
 )
 
 const ENDPOINT = "http://api.giphy.com/v1/gifs/search"
@@ -35,22 +35,20 @@ func (g Giphy) Commands() map[string]string {
     }
 }
 
-func (g Giphy) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
+func (g Giphy) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
-    // URL encoder
-    query := strings.Replace(
-        strings.Replace(msg.Content, command, "", 1),
-        " ",
-        "+",
-        -1,
-    )
-
-    // Build full url
-    url := fmt.Sprintf("%s?q=%s&api_key=%s&rating=%s&limit=%s", ENDPOINT, query, API_KEY, RATING, LIMIT)
-
     // Send request
-    response, err := http.Get(url)
+    response, err := http.Get(
+        fmt.Sprintf(
+            "%s?q=%s&api_key=%s&rating=%s&limit=%s",
+            ENDPOINT,
+            url.QueryEscape(content),
+            API_KEY,
+            RATING,
+            LIMIT,
+        ),
+    )
     if err != nil {
         panic(err)
     }

@@ -3,6 +3,7 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "../utils"
+    "strings"
 )
 
 // Plugin interface to enforce a basic structure
@@ -24,6 +25,7 @@ type Plugin interface {
     // The action to execute if any command matches
     Action(
     command string,
+    content string,
     msg *discordgo.Message,
     session *discordgo.Session,
     )
@@ -36,18 +38,19 @@ var PluginList = []Plugin{
     Ping{},
     Invite{},
     Giphy{},
+    Google{},
 }
 
 // CallBotPlugin iterates through the list of registered
 // plugins and tries to guess whice one is the intended call
 // Fist match wins.
-func CallBotPlugin(command string, msg *discordgo.Message, session *discordgo.Session) {
+func CallBotPlugin(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Iterate over all plugins
     for _, plug := range PluginList {
         // Iterate over all commands of the current plugin
         for cmd := range plug.Commands() {
             if command == cmd {
-                go safePluginCall(command, msg, session, plug)
+                go safePluginCall(command, strings.Trim(content, " "), msg, session, plug)
                 break
             }
         }
@@ -55,7 +58,7 @@ func CallBotPlugin(command string, msg *discordgo.Message, session *discordgo.Se
 }
 
 // Wrapper that catches any panics from plugins
-func safePluginCall(command string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
+func safePluginCall(command string, content string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
     defer func() {
         err := recover()
 
@@ -64,7 +67,7 @@ func safePluginCall(command string, msg *discordgo.Message, session *discordgo.S
         }
     }()
 
-    plug.Action(command, msg, session)
+    plug.Action(command, content, msg, session)
 }
 
 // Getter for this plugin list

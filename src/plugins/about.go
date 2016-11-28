@@ -18,7 +18,7 @@ func (a About) Commands() map[string]string {
     }
 }
 
-func (a About) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
+func (a About) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     m := "Hi my name is Karen!\nI'm a :robot: that will make this Discord Server a better place c:\nHere is some information about me:\n```\n"
 
     m += `

@@ -22,7 +22,7 @@ func (i Invite) Commands() map[string]string {
     }
 }
 
-func (i Invite) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
+func (i Invite) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelMessageSend(
         msg.ChannelID,
         fmt.Sprintf(
