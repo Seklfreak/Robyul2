@@ -1,6 +1,9 @@
 package plugins
 
-import "github.com/bwmarrin/discordgo"
+import (
+    "github.com/bwmarrin/discordgo"
+    "../utils"
+)
 
 // Plugin interface to enforce a basic structure
 type Plugin interface {
@@ -32,7 +35,7 @@ var PluginList = []Plugin{
     Stats{},
     Ping{},
     Invite{},
-    //Giphy{},
+    Giphy{},
 }
 
 // CallBotPlugin iterates through the list of registered
@@ -44,13 +47,27 @@ func CallBotPlugin(command string, msg *discordgo.Message, session *discordgo.Se
         // Iterate over all commands of the current plugin
         for cmd := range plug.Commands() {
             if command == cmd {
-                plug.Action(command, msg, session)
+                go safePluginCall(command, msg, session, plug)
                 break
             }
         }
     }
 }
 
+// Wrapper that catches any panics from plugins
+func safePluginCall(command string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
+    defer func() {
+        err := recover()
+
+        if err != nil {
+            utils.SendError(session, msg.ChannelID, err)
+        }
+    }()
+
+    plug.Action(command, msg, session)
+}
+
+// Getter for this plugin list
 func GetPlugins() []Plugin {
     return PluginList
 }

@@ -5,11 +5,12 @@ import (
     "strings"
     "fmt"
     "net/http"
-    "../utils"
     "errors"
     "strconv"
     "io"
-    "os"
+    "github.com/Jeffail/gabs"
+    "math/rand"
+    "bytes"
 )
 
 const ENDPOINT = "http://api.giphy.com/v1/gifs/search"
@@ -35,6 +36,9 @@ func (g Giphy) Commands() map[string]string {
 }
 
 func (g Giphy) Action(command string, msg *discordgo.Message, session *discordgo.Session) {
+    session.ChannelTyping(msg.ChannelID)
+
+    // URL encoder
     query := strings.Replace(
         strings.Replace(msg.Content, command, "", 1),
         " ",
@@ -42,24 +46,50 @@ func (g Giphy) Action(command string, msg *discordgo.Message, session *discordgo
         -1,
     )
 
+    // Build full url
     url := fmt.Sprintf("%s?q=%s&api_key=%s&rating=%s&limit=%s", ENDPOINT, query, API_KEY, RATING, LIMIT)
+
+    // Send request
     response, err := http.Get(url)
-
-    fmt.Println(url)
-    fmt.Println(response)
-
     if err != nil {
-        utils.SendError(session, msg.ChannelID, err)
+        panic(err)
+    }
+
+    // Only continue if code was 200
+    if response.StatusCode != 200 {
+        panic(errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode)))
     } else {
-        if response.StatusCode != 200 {
-            utils.SendError(session, msg.ChannelID, errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode)))
-        } else {
-            defer response.Body.Close()
-            _, err := io.Copy(os.Stdout, response.Body)
-            if err != nil {
-                utils.SendError(session, msg.ChannelID, err)
-            }
+        // Read body
+        defer response.Body.Close()
+
+        buf := bytes.NewBuffer(nil)
+        _, err := io.Copy(buf, response.Body)
+        if err != nil {
+            panic(err)
         }
+
+        // Parse json
+        json, err := gabs.ParseJSON(buf.Bytes())
+        if err != nil {
+            panic(err)
+        }
+
+        // Get gifs
+        gifs, err := json.Path("data").Children()
+        if err != nil {
+            panic(err)
+        }
+
+        // Chose a random one
+        m := ""
+        if len(gifs) > 0 {
+            m = gifs[rand.Intn(len(gifs))].Path("bitly_url").Data().(string)
+        } else {
+            m = "No gifs found :frowning:"
+        }
+
+        // Send the result
+        session.ChannelMessageSend(msg.ChannelID, m)
     }
 }
 

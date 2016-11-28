@@ -60,15 +60,17 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
         // Get a friend already and stop chatting with bots
         channel, _ := session.Channel(message.ChannelID)
         if (!channel.IsPrivate) {
-            // Split the message into parts
-            parts := strings.Split(message.Content, " ")
-            msg := strings.Trim(strings.Join(append(parts[:0], parts[1:]...), " "), " ")
-
             // Check if the message contains @mentions
             if (len(message.Mentions) >= 1) {
                 // Check if someone is mentioning us
                 if (message.Mentions[0].ID == session.State.User.ID) {
                     go utils.CCTV(session, message.Message)
+
+                    // Prepare content for editing
+                    msg := message.Content
+
+                    /// Remove our @mention
+                    msg = strings.Replace(msg, "<@" + session.State.User.ID + ">", "", -1)
 
                     switch {
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
@@ -90,9 +92,17 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
 
                     default:
                         // Send to cleverbot
-                        utils.WhileTypingIn(session, channel.ID, func() {
-                            utils.CleverbotSend(session, channel.ID, msg)
-                        })
+                        session.ChannelTyping(message.ChannelID)
+                        // Resolve other @mentions before sending the message
+                        for _, user := range message.Mentions {
+                            msg = strings.Replace(msg, "<@" + user.ID + ">", user.Username, -1)
+                        }
+
+                        // Remove smileys
+                        msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
+
+                        // Send to cleverbot
+                        utils.CleverbotSend(session, channel.ID, msg)
                         return
                     }
                 }
@@ -101,6 +111,9 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
             // Only continue if a prefix is set
             prefix, err := utils.GetPrefixForServer(channel.GuildID)
             if err == nil {
+                // Split the message into parts
+                parts := strings.Split(message.Content, " ")
+
                 // Save a sanitized version of the command (no prefix)
                 cmd := strings.Replace(parts[0], prefix, "", 1)
 

@@ -26,14 +26,16 @@ func (p Ping) Action(command string, msg *discordgo.Message, session *discordgo.
     start := time.Now()
 
     m, err := session.ChannelMessageSend(msg.ChannelID, ":ping_pong: Pong! :grin:")
-    if err == nil {
-        end := time.Now()
-        session.ChannelMessageEdit(
-            msg.ChannelID,
-            m.ID,
-            m.Content + " (" + strconv.Itoa(int(end.Sub(start).Seconds() * 100)) + "ms RTT)",
-        )
+    if err != nil {
+        panic(err)
     }
+
+    end := time.Now()
+    session.ChannelMessageEdit(
+        msg.ChannelID,
+        m.ID,
+        m.Content + " (" + strconv.Itoa(int(end.Sub(start).Seconds() * 100)) + "ms RTT)",
+    )
 }
 
 func (p Ping) New() Plugin {

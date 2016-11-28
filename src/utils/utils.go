@@ -111,10 +111,10 @@ func SetPrefixForServer(guild string, prefix string) error {
     return GuildSettingSet(guild, "prefix", prefix)
 }
 
-func SendError(session *discordgo.Session, channel string, err error) {
+func SendError(session *discordgo.Session, channel string, err interface{}) {
     session.ChannelMessageSend(
         channel,
-        "Error :frowning:\n```\n" + err.Error() + "\n```",
+        "Error :frowning:\n```\n" + fmt.Sprintf("%#v", err) + "\n```",
     )
 }
 
