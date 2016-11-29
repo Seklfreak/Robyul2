@@ -4,7 +4,7 @@ Disclaimer: This bot is still in a *very* early stage and should be considered n
 
 # Karen &nbsp; ![](http://i.imgur.com/8hpM9GT.png)
 
-Karen is a highgly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
+Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
 Got any problems or just want to chat with me and other devs?<br>
 Join the Discord Server! :)<br>
