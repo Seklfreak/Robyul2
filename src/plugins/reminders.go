@@ -53,7 +53,11 @@ func (r Reminders) Init(session *discordgo.Session) {
 
             for _, reminders := range reminderBucket {
                 changes := false
-                for idx, reminder := range reminders.Reminders {
+
+                // Downward loop for in-loop element removal
+                for idx := len(reminders.Reminders) - 1; idx >= 0; idx-- {
+                    reminder := reminders.Reminders[idx]
+
                     if reminder.Timestamp <= time.Now().Unix() {
                         session.ChannelMessageSend(
                             reminder.ChannelID,
@@ -80,8 +84,7 @@ func (r Reminders) Init(session *discordgo.Session) {
 
 func (r Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
-    case "remind":
-    case "rm":
+    case "rm", "remind":
         parts := strings.Split(content, " ")
 
         if len(parts) < 4 {
@@ -113,23 +116,19 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
         ts := time.Now().Unix()
 
         switch unit {
-        case "s":
-        case "seconds":
+        case "s", "seconds":
             ts += schedule
             break
 
-        case "m":
-        case "minutes":
+        case "m", "minutes":
             ts += schedule * 60
             break
 
-        case "h":
-        case "hours":
+        case "h", "hours":
             ts += schedule * 60 * 60
             break
 
-        case "d":
-        case "days":
+        case "d", "days":
             ts += schedule * 60 * 60 * 24
             break
 
@@ -138,19 +137,6 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
             return
             break
         }
-
-        session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
-            `
-[DEBUG]
-Got: %d x "%s"
-Base: ~%d
-Res:   %d
-`,
-            schedule,
-            unit,
-            time.Now().Unix(),
-            ts,
-        ))
 
         channel, err := session.Channel(msg.ChannelID)
         if err != nil {
@@ -169,8 +155,7 @@ Res:   %d
         session.ChannelMessageSend(msg.ChannelID, "Ok I'll remind you :ok_hand:")
         break
 
-    case "reminders":
-    case "rms":
+    case "rms", "reminders":
         reminders := getReminders(msg.Author.ID)
 
         m := "These are your pending reminders :slight_smile:\n"
