@@ -102,7 +102,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                         err := utils.SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
 
                         if err != nil {
-                            utils.SendError(session, channel.ID, err)
+                            utils.SendError(session, message.Message, err)
                         } else {
                             discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved!")
                         }

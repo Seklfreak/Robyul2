@@ -70,10 +70,11 @@ func safePluginCall(command string, content string, msg *discordgo.Message, sess
         err := recover()
 
         if err != nil {
-            utils.SendError(session, msg.ChannelID, err)
+            utils.SendError(session, msg, err)
         }
     }()
 
+    utils.CCTV(session, msg)
     plug.Action(command, content, msg, session)
 }
 

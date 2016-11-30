@@ -10,7 +10,7 @@ import (
     "net/http"
     "strconv"
     "errors"
-    "runtime/debug"
+    "github.com/getsentry/raven-go"
 )
 
 type Callback func()
@@ -72,7 +72,7 @@ func CCTV(session *discordgo.Session, message *discordgo.Message) {
         channelName = channel.Name
         channelID = channel.ID
 
-        server, err := session.Guild(channel.ID)
+        server, err := session.Guild(channel.GuildID)
         if err == nil {
             serverName = server.Name
             serverID = server.ID
@@ -117,15 +117,26 @@ func SetPrefixForServer(guild string, prefix string) error {
     return GuildSettingSet(guild, "prefix", prefix)
 }
 
-func SendError(session *discordgo.Session, channel string, err interface{}) {
+func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
     session.ChannelMessageSend(
-        channel,
+        msg.ChannelID,
         "Error :frowning:\n```\n" +
             fmt.Sprintf("%#v", err) +
-            "\n\n" +
-            string(debug.Stack()) +
             "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
     )
+
+    raven.SetUserContext(&raven.User{
+        ID: msg.ID,
+        Username: msg.Author.Username + "#" + msg.Author.Discriminator,
+    })
+    raven.CaptureError(errors.New(fmt.Sprintf("%#v", err)), map[string]string{
+        "ChannelID": msg.ChannelID,
+        "Content": msg.Content,
+        "Timestamp": msg.Timestamp,
+        "TTS": strconv.FormatBool(msg.Tts),
+        "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+        "IsBot": strconv.FormatBool(msg.Author.Bot),
+    })
 }
 
 func WhileTypingIn(session *discordgo.Session, channel string, cb Callback) {

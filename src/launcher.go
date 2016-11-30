@@ -6,6 +6,7 @@ import (
     "os"
     "os/signal"
     "./utils"
+    "github.com/getsentry/raven-go"
 )
 
 var discordSession *discordgo.Session
@@ -18,6 +19,14 @@ func main() {
     // Read config
     utils.LoadConfig("config.json")
     config := utils.GetConfig()
+
+    // Call home
+    Logger.INF("[SENTRY] Calling home...")
+    err := raven.SetDSN(config.Path("sentry").Data().(string))
+    if err != nil {
+        panic(err)
+    }
+    Logger.INF("[SENTRY] Someone picked up the phone \\^-^/")
 
     // Connect to DB
     utils.ConnectDB(
@@ -38,6 +47,7 @@ func main() {
 
     err = discord.Open()
     if err != nil {
+        raven.CaptureErrorAndWait(err, nil)
         panic(err)
     }
 
