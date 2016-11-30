@@ -15,6 +15,7 @@ func (a About) Description() string {
 func (a About) Commands() map[string]string {
     return map[string]string{
         "about" : "",
+        "a": "Alias for about",
     }
 }
 
