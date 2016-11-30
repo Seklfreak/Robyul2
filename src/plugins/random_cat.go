@@ -21,6 +21,10 @@ func (rc RandomCat) Commands() map[string]string {
     }
 }
 
+func (rc RandomCat) Init(session *discordgo.Session) {
+
+}
+
 func (rc RandomCat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     const ENDPOINT = "http://random.cat/meow"
 

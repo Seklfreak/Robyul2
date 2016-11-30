@@ -21,6 +21,10 @@ func (s Stone) Commands() map[string]string {
     }
 }
 
+func (s Stone) Init(session *discordgo.Session) {
+
+}
+
 func (s Stone) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
         "<@%s> IS GOING TO DIE!!!\n" +

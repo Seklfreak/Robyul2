@@ -22,6 +22,10 @@ func (g Google) Commands() map[string]string {
     }
 }
 
+func (g Google) Init(session *discordgo.Session) {
+
+}
+
 func (g Google) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
         "<https://lmgtfy.com/?q=%s>",

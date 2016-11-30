@@ -25,6 +25,10 @@ func (g Giphy) Commands() map[string]string {
     }
 }
 
+func (g Giphy) Init(session *discordgo.Session) {
+
+}
+
 func (g Giphy) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     const ENDPOINT = "http://api.giphy.com/v1/gifs/search"
     const API_KEY = "dc6zaTOxFJmzC"
@@ -48,7 +52,8 @@ func (g Giphy) Action(command string, content string, msg *discordgo.Message, se
     // Get gifs
     gifs, err := json.Path("data").Children()
     if err != nil {
-        panic(err)
+        session.ChannelMessageSend(msg.ChannelID, "Error parsing Giphy's response :frowning:")
+        return
     }
 
     // Chose a random one

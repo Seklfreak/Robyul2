@@ -25,6 +25,10 @@ func (s Stats) Commands() map[string]string {
     }
 }
 
+func (s Stats) Init(session *discordgo.Session) {
+
+}
+
 func (s Stats) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Count guilds, channels and users
     users := make(map[string]string)

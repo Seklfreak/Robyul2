@@ -10,6 +10,7 @@ import (
     "net/http"
     "strconv"
     "errors"
+    "runtime/debug"
 )
 
 type Callback func()
@@ -119,7 +120,11 @@ func SetPrefixForServer(guild string, prefix string) error {
 func SendError(session *discordgo.Session, channel string, err interface{}) {
     session.ChannelMessageSend(
         channel,
-        "Error :frowning:\n```\n" + fmt.Sprintf("%#v", err) + "\n```",
+        "Error :frowning:\n```\n" +
+            fmt.Sprintf("%#v", err) +
+            "\n\n" +
+            string(debug.Stack()) +
+            "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
     )
 }
 

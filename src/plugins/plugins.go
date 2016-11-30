@@ -29,6 +29,9 @@ type Plugin interface {
     msg *discordgo.Message,
     session *discordgo.Session,
     )
+
+    // Initializer
+    Init(session *discordgo.Session)
 }
 
 // List of plugin instances
@@ -42,6 +45,7 @@ var PluginList = []Plugin{
     RandomCat{},
     Stone{},
     Roll{},
+    Reminders{},
 }
 
 // CallBotPlugin iterates through the list of registered

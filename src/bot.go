@@ -14,10 +14,15 @@ import (
 
 func onReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
+    fmt.Printf(
+        "\n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s\n\n",
+        utils.GetConfig().Path("discord.id").Data().(string),
+        utils.GetConfig().Path("discord.perms").Data().(string),
+    )
 
     discordSession = session
 
-    // Print plugin list
+    // Init plugins
     tmpl := "[PLUG] %s reacts to [ %s]"
 
     for _, plugin := range plugins.GetPlugins() {
@@ -28,6 +33,7 @@ func onReady(session *discordgo.Session, event *discordgo.Ready) {
         }
 
         Logger.INF(fmt.Sprintf(tmpl, plugin.Name(), cmds))
+        plugin.Init(session)
     }
 
     // Async stats
@@ -47,6 +53,18 @@ func onReady(session *discordgo.Session, event *discordgo.Ready) {
         }
 
         Logger.INF(fmt.Sprintf("Servers:%d | Channels:%d | Users:%d", len(guilds), channels, len(users)))
+
+        // Change avatar/name
+        if session.State.User.Username != utils.GetConfig().Path("bot.name").Data().(string) ||
+            session.State.User.Avatar != utils.GetConfig().Path("bot.avatar").Data().(string) {
+            session.UserUpdate(
+                "",
+                "",
+                utils.GetConfig().Path("bot.name").Data().(string),
+                utils.GetConfig().Path("bot.avatar").Data().(string),
+                "",
+            )
+        }
     }()
 
     // Run async game-changer
@@ -164,7 +182,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                         // Do nothing otherwise
                         plugins.CallBotPlugin(
                             cmd,
-                            strings.Replace(message.Content, prefix+cmd, "", -1),
+                            strings.Replace(message.Content, prefix + cmd, "", -1),
                             message.Message,
                             discordSession,
                         )

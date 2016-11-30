@@ -22,6 +22,10 @@ func (p Ping) Commands() map[string]string {
     }
 }
 
+func (p Ping) Init(session *discordgo.Session) {
+
+}
+
 func (p Ping) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     start := time.Now()
 
