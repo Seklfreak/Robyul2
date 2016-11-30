@@ -19,7 +19,7 @@ func (i Invite) Description() string {
 func (i Invite) Commands() map[string]string {
     return map[string]string{
         "invite" : "",
-        "inv" : "",
+        "inv" : "Alias for invite",
     }
 }
 

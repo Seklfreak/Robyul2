@@ -139,6 +139,20 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                 if (strings.HasPrefix(message.Content, prefix)) {
                     // Check if the user calls for help
                     if cmd == "h" || cmd == "help" {
+                        // Find the longest plugin name and command
+                        longestPlugin, longestCommand := 0, 0
+                        for _, plugin := range plugins.GetPlugins() {
+                            if len(plugin.Name()) > longestPlugin {
+                                longestPlugin = len(plugin.Name())
+                            }
+
+                            for cmd := range plugin.Commands() {
+                                if len(cmd) > longestCommand {
+                                    longestCommand = len(cmd)
+                                }
+                            }
+                        }
+
                         // Print help of all plugins
                         msg := ""
 
@@ -153,14 +167,28 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                                 description = "no description"
                             }
 
-                            msg += fmt.Sprintf("%s [%s]", plugin.Name(), description) + "\n"
+                            padding := (longestPlugin - len(plugin.Name())) + 8
+
+                            msg += fmt.Sprintf(
+                                "%s%s[%s]\n",
+                                plugin.Name(),
+                                strings.Repeat(" ", padding),
+                                description,
+                            )
 
                             for cmd, usage := range plugin.Commands() {
                                 if usage == "" {
-                                    usage = "[no usage information]"
+                                    usage = "(no usage information)"
                                 }
 
-                                msg += fmt.Sprintf("\t %s \t\t - %s\n", prefix + cmd, usage)
+                                cmdPadding := (longestCommand - len(cmd)) + 6
+
+                                msg += fmt.Sprintf(
+                                    "\t%s%s%s\n",
+                                    prefix + cmd,
+                                    strings.Repeat(" ", cmdPadding),
+                                    usage,
+                                )
                             }
 
                             msg += "\n"

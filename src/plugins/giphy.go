@@ -21,7 +21,7 @@ func (g Giphy) Description() string {
 func (g Giphy) Commands() map[string]string {
     return map[string]string{
         "giphy" : "<search>",
-        "gif" : "<search>",
+        "gif" : "Alias for giphy",
     }
 }
 

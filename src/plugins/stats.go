@@ -5,6 +5,7 @@ import (
     "os"
     "runtime"
     "github.com/cloudfoundry/gosigar"
+    "github.com/dustin/go-humanize"
     "strings"
     "strconv"
 )
@@ -61,13 +62,17 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
         "Hi! Here are some stats about me :smiley:",
         "```",
         "--------------------- System Information ---------------------",
-        "OS:       " + runtime.GOOS + " [Arch: " + runtime.GOARCH + "]",
-        "Hostname: " + hostname,
-        "Uptime:   " + strings.Trim(uptime.Format(), " "),
-        "--------------------- RAM Information ------------------------",
-        "Used heap:     " + u64tos(ram.HeapAlloc / 1048576) + " mb",
-        "Reserved heap: " + u64tos(ram.TotalAlloc / 1048576) + " mb",
-        "Overall:       " + u64tos(ram.Sys / 1048576) + " mb",
+        "OS:                      " + runtime.GOOS + " [Arch: " + runtime.GOARCH + "]",
+        "Hostname:                " + hostname,
+        "Uptime:                  " + strings.Trim(uptime.Format(), " "),
+        "Go Version:              " + runtime.Version(),
+        "",
+        "--------------------- Bot Information ------------------------",
+        "Used RAM:                " + humanize.Bytes(ram.Alloc),
+        "Reserved RAM:            " + humanize.Bytes(ram.Sys),
+        "Garbage Collected:       " + humanize.Bytes(ram.TotalAlloc),
+        "Running Coroutines:      " + strconv.Itoa(runtime.NumGoroutine()),
+        "",
         "--------------------- Discord Information --------------------",
         "Connected Servers:       " + strconv.Itoa(len(guilds)),
         "Watching Channels:       " + strconv.Itoa(channels),
