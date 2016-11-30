@@ -177,7 +177,7 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
             }
 
             m += fmt.Sprintf(
-                "%s - %s | #%s in '%s'",
+                "%s - %s | #%s in '%s'\n",
                 ts.String(),
                 reminder.Message,
                 channel,
@@ -185,6 +185,8 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
             )
         }
         m += "\n```"
+
+        session.ChannelMessageSend(msg.ChannelID, m)
         break
     }
 }
