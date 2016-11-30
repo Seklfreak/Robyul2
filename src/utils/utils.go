@@ -120,7 +120,7 @@ func SetPrefixForServer(guild string, prefix string) error {
 func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
     session.ChannelMessageSend(
         msg.ChannelID,
-        "Error :frowning:\n```\n" +
+        "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
             fmt.Sprintf("%#v", err) +
             "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
     )
