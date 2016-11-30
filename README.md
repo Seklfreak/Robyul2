@@ -1,5 +1,5 @@
-Disclaimer: This bot is still in a *very* early stage and should be considered neither stable nor usable.
-
+Disclaimer: This bot is still in a early stage.<br>
+Please expect (rare) crashes and performance problems until the bot is mature enough.
 <hr>
 
 # Karen &nbsp; ![](http://i.imgur.com/vDJVt9g.png)
