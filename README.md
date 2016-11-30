@@ -2,7 +2,7 @@ Disclaimer: This bot is still in a *very* early stage and should be considered n
 
 <hr>
 
-# Karen &nbsp; ![](http://i.imgur.com/8hpM9GT.png)
+# Karen &nbsp; ![](http://i.imgur.com/vDJVt9g.png)
 
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
