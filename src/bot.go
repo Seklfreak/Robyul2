@@ -90,6 +90,9 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                     /// Remove our @mention
                     msg = strings.Replace(msg, "<@" + session.State.User.ID + ">", "", -1)
 
+                    // Trim message
+                    msg = strings.Trim(msg, " ")
+
                     switch {
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
                         // Refresh cleverbot session
