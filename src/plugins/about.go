@@ -36,6 +36,8 @@ She is the titular protagonist of two arcs: Karen Bee and Karen Ogre. She is als
 `
 
     m += "\n```"
+    m += "BTW: I'm :free:, open-source and built using the Go programming language.\n"
+    m += "Visit me at <http://meetkaren.xyz> or <https://github.com/sn0w/Karen>"
 
     session.ChannelMessageSend(msg.ChannelID, m)
 }
