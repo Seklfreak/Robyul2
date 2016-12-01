@@ -135,7 +135,7 @@ As of November 2016 she watched over 100 channels and offered access to more tha
 Shiro's internals were shiny and organized like never before and thus able to influence the API's and features of two bots.
 [Daniele/Rem](https://github.com/Daniele122898/Rem) and [Serraniel/Ako](https://github.com/Serraniel/Ako-Discord-Bot-Loader) oriented their features/internals/concepts around her structure/plugins.
 
-### Karen (v4)
+### Karen (v4) ![](http://i.imgur.com/vDJVt9g.png)
 > a.k.a. Phoenix from the ashes
 
 Language: [Go](http://golang.org/)<br>
@@ -151,3 +151,41 @@ Karen is the current effort to build a truly scalable, high-performance discord 
 
 C0untLizzi#4250 on the "Coding Lounge" discord server had a major impact on the chosen language and also helps me regulary in understanding it.
 HUGE shoutout at this point!
+
+Karen is mostly a port of Shiro to another language but (as always) changes a lot of stuff:
+
+- MongoDB instead of MySQL
+- Sentry.IO instead of PM's for error monitoring
+- Datadog-Like dashboard planned
+- Webinterface planned
+- Unbreakable panic recovery for plugins
+
+Thanks to Go's loose bindings a Plugin can be anything that satisfies the `Plugin` interface:
+```go
+type Plugin interface {
+    // The name of this plugin
+    Name() string
+
+    // A short but meaningful description
+    Description() string
+
+    // A map of commands and their usage
+    // Example:
+    // music => show info
+    // start => ...
+    // pause => ...
+    // ...
+    Commands() map[string]string
+
+    // The action to execute if any command matches
+    Action(
+    command string,
+    content string,
+    msg *discordgo.Message,
+    session *discordgo.Session,
+    )
+
+    // Initializer
+    Init(session *discordgo.Session)
+}
+```
