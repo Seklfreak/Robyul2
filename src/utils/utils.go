@@ -173,3 +173,32 @@ func GetJSON(url string) *gabs.Container {
         return json
     }
 }
+
+func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callback) {
+    channel, e := session.Channel(msg.ChannelID)
+    if e != nil {
+        SendError(session, msg, errors.New("Cannot verify permissions"))
+        return
+    }
+
+    guild, e := session.Guild(channel.GuildID)
+    if e != nil {
+        SendError(session, msg, errors.New("Cannot verify permissions"))
+        return
+    }
+
+    if msg.Author.ID == guild.OwnerID {
+        cb()
+        return
+    }
+
+    // Check if role may manage server
+    for _, role := range guild.Roles {
+        if role.Permissions & 8 == 8 {
+            cb()
+            return
+        }
+    }
+
+    session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
+}

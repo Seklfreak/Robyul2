@@ -95,20 +95,24 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
 
                     switch {
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
-                        // Refresh cleverbot session
-                        utils.CleverbotRefreshSession(channel.ID)
-                        discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
+                        utils.RequireAdmin(session, message.Message, func() {
+                            // Refresh cleverbot session
+                            utils.CleverbotRefreshSession(channel.ID)
+                            discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
+                        })
                         return
 
                     case regexp.MustCompile("^SET PREFIX (.){0,10}$").Match([]byte(msg)):
-                        // Set new prefix
-                        err := utils.SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
+                        utils.RequireAdmin(session, message.Message, func() {
+                            // Set new prefix
+                            err := utils.SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
 
-                        if err != nil {
-                            utils.SendError(session, message.Message, err)
-                        } else {
-                            discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved!")
-                        }
+                            if err != nil {
+                                utils.SendError(session, message.Message, err)
+                            } else {
+                                discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved!")
+                            }
+                        })
                         return
 
                     default:
