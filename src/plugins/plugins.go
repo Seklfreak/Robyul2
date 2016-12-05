@@ -11,6 +11,9 @@ type Plugin interface {
     // The name of this plugin
     Name() string
 
+    // Hidden from !help ?
+    HelpHidden() bool
+
     // A short but meaningful description
     Description() string
 

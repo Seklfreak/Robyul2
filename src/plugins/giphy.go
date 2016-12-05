@@ -14,6 +14,10 @@ func (g Giphy) Name() string {
     return "Giphy"
 }
 
+func (g Giphy) HelpHidden() bool {
+    return false
+}
+
 func (g Giphy) Description() string {
     return "Gets a random gif"
 }

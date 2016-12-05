@@ -29,6 +29,10 @@ func (r Reminders) Name() string {
     return "Reminders"
 }
 
+func (r Reminders) HelpHidden() bool {
+    return false
+}
+
 func (r Reminders) Description() string {
     return "Reminds you to do stuff!"
 }

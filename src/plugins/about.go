@@ -8,6 +8,10 @@ func (a About) Name() string {
     return "About"
 }
 
+func (a About) HelpHidden() bool {
+    return false
+}
+
 func (a About) Description() string {
     return "Shows information about the bot"
 }

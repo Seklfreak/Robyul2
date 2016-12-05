@@ -14,6 +14,10 @@ func (r Roll) Name() string {
     return "Roll"
 }
 
+func (r Roll) HelpHidden() bool {
+    return false
+}
+
 func (r Roll) Description() string {
     return "Roll a random number"
 }

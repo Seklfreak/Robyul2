@@ -11,6 +11,10 @@ func (s Stone) Name() string {
     return "Stone"
 }
 
+func (s Stone) HelpHidden() bool {
+    return false
+}
+
 func (s Stone) Description() string {
     return "Stone someone to death!!!1!11!"
 }

@@ -12,6 +12,10 @@ func (p Ping) Name() string {
     return "Ping"
 }
 
+func (p Ping) HelpHidden() bool {
+    return false
+}
+
 func (p Ping) Description() string {
     return "Shows the ping"
 }

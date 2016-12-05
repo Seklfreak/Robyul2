@@ -168,37 +168,39 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                         msg += "```\n"
 
                         for _, plugin := range plugins.GetPlugins() {
-                            description := plugin.Description()
+                            if plugin.HelpHidden() == false {
+                                description := plugin.Description()
 
-                            if description == "" {
-                                description = "no description"
-                            }
-
-                            padding := (longestPlugin - len(plugin.Name())) + 8
-
-                            msg += fmt.Sprintf(
-                                "%s%s[%s]\n",
-                                plugin.Name(),
-                                strings.Repeat(" ", padding),
-                                description,
-                            )
-
-                            for cmd, usage := range plugin.Commands() {
-                                if usage == "" {
-                                    usage = "(no usage information)"
+                                if description == "" {
+                                    description = "no description"
                                 }
 
-                                cmdPadding := (longestCommand - len(cmd)) + 6
+                                padding := (longestPlugin - len(plugin.Name())) + 8
 
                                 msg += fmt.Sprintf(
-                                    "\t%s%s%s\n",
-                                    prefix + cmd,
-                                    strings.Repeat(" ", cmdPadding),
-                                    usage,
+                                    "%s%s[%s]\n",
+                                    plugin.Name(),
+                                    strings.Repeat(" ", padding),
+                                    description,
                                 )
-                            }
 
-                            msg += "\n"
+                                for cmd, usage := range plugin.Commands() {
+                                    if usage == "" {
+                                        usage = "(no usage information)"
+                                    }
+
+                                    cmdPadding := (longestCommand - len(cmd)) + 6
+
+                                    msg += fmt.Sprintf(
+                                        "\t%s%s%s\n",
+                                        prefix + cmd,
+                                        strings.Repeat(" ", cmdPadding),
+                                        usage,
+                                    )
+                                }
+
+                                msg += "\n"
+                            }
                         }
 
                         msg += "\n```"

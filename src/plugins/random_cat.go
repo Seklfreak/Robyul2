@@ -11,6 +11,10 @@ func (rc RandomCat) Name() string {
     return "RandomCat"
 }
 
+func (rc RandomCat) HelpHidden() bool {
+    return false
+}
+
 func (rc RandomCat) Description() string {
     return "Get a random cat image"
 }

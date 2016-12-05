@@ -12,6 +12,10 @@ func (i Invite) Name() string {
     return "Invite"
 }
 
+func (i Invite) HelpHidden() bool {
+    return false
+}
+
 func (i Invite) Description() string {
     return "Get an invite link for me"
 }

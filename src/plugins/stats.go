@@ -16,6 +16,10 @@ func (s Stats) Name() string {
     return "Stats"
 }
 
+func (s Stats) HelpHidden() bool {
+    return false
+}
+
 func (s Stats) Description() string {
     return "Shows some stats"
 }
