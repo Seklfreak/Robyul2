@@ -35,29 +35,29 @@ func GetConfig() *gabs.Container {
     return config
 }
 
-func CleverbotSend(session *discordgo.Session, guild string, message string) {
+func CleverbotSend(session *discordgo.Session, channel string, message string) {
     var msg string
 
-    if cleverbotSessions[guild] == nil {
+    if cleverbotSessions[channel] == nil {
         if len(cleverbotSessions) == 0 {
             cleverbotSessions = make(map[string]*cleverbot.Session)
         }
 
-        cleverbotSessions[guild] = cleverbot.New()
+        cleverbotSessions[channel] = cleverbot.New()
     }
 
-    response, err := cleverbotSessions[guild].Ask(message)
+    response, err := cleverbotSessions[channel].Ask(message)
     if err != nil {
         msg = "Error :frowning:\n```\n" + err.Error() + "\n```"
     } else {
         msg = response
     }
 
-    session.ChannelMessageSend(guild, msg)
+    session.ChannelMessageSend(channel, msg)
 }
 
-func CleverbotRefreshSession(guild string) {
-    cleverbotSessions[guild] = cleverbot.New()
+func CleverbotRefreshSession(channel string) {
+    cleverbotSessions[channel] = cleverbot.New()
 }
 
 func CCTV(session *discordgo.Session, message *discordgo.Message) {

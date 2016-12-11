@@ -105,7 +105,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
                         utils.RequireAdmin(session, message.Message, func() {
                             // Refresh cleverbot session
-                            utils.CleverbotRefreshSession(channel.GuildID)
+                            utils.CleverbotRefreshSession(channel.ID)
                             discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
                         })
                         return
@@ -135,7 +135,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                         msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
                         // Send to cleverbot
-                        utils.CleverbotSend(session, channel.GuildID, msg)
+                        utils.CleverbotSend(session, channel.ID, msg)
                         return
                     }
                 }
