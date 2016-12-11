@@ -11,6 +11,7 @@ import (
     "strconv"
     "errors"
     "github.com/getsentry/raven-go"
+    "reflect"
 )
 
 type Callback func()
@@ -201,4 +202,14 @@ func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callbac
     }
 
     session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
+}
+
+func SliceContains(s []interface{}, e interface{}) {
+    for _, a := range s {
+        if reflect.DeepEqual(a, e) {
+            return true
+        }
+    }
+
+    return false
 }

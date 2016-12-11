@@ -50,6 +50,7 @@ var PluginList = []Plugin{
     Roll{},
     Reminders{},
     Bolizei{},
+    Music{},
 }
 
 // CallBotPlugin iterates through the list of registered
