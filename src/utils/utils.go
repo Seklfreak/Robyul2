@@ -132,7 +132,7 @@ func SendError(session *discordgo.Session, msg *discordgo.Message, err interface
     raven.CaptureError(errors.New(fmt.Sprintf("%#v", err)), map[string]string{
         "ChannelID": msg.ChannelID,
         "Content": msg.Content,
-        "Timestamp": msg.Timestamp,
+        "Timestamp": string(msg.Timestamp),
         "TTS": strconv.FormatBool(msg.Tts),
         "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
         "IsBot": strconv.FormatBool(msg.Author.Bot),
