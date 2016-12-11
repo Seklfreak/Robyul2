@@ -35,7 +35,7 @@ func (i Invite) Action(command string, content string, msg *discordgo.Message, s
     session.ChannelMessageSend(
         msg.ChannelID,
         fmt.Sprintf(
-            "To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s :smiley:",
+            "Woah thanks :heart_eyes: \n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s :smiley:",
             utils.GetConfig().Path("discord.id").Data().(string),
             utils.GetConfig().Path("discord.perms").Data().(string),
         ),
