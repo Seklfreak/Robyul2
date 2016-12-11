@@ -10,6 +10,7 @@ import (
     "regexp"
     "./plugins"
     "./utils"
+    "github.com/getsentry/raven-go"
 )
 
 func onReady(session *discordgo.Session, event *discordgo.Ready) {
@@ -74,9 +75,16 @@ func onReady(session *discordgo.Session, event *discordgo.Ready) {
 func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
     // Ignore other bots and @everyone/@here
     if (!message.Author.Bot && !message.MentionEveryone) {
+        // Get the channel
+        // Ignore the event if we cannot resolve the cannel
+        channel, err := session.Channel(message.ChannelID)
+        if err != nil {
+            go raven.CaptureError(err, map[string]string{})
+            return
+        }
+
         // We only do things in guilds.
         // Get a friend already and stop chatting with bots
-        channel, _ := session.Channel(message.ChannelID)
         if (!channel.IsPrivate) {
             // Check if the message contains @mentions
             if (len(message.Mentions) >= 1) {
@@ -97,7 +105,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                     case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
                         utils.RequireAdmin(session, message.Message, func() {
                             // Refresh cleverbot session
-                            utils.CleverbotRefreshSession(channel.ID)
+                            utils.CleverbotRefreshSession(channel.GuildID)
                             discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
                         })
                         return
@@ -127,7 +135,7 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
                         msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
                         // Send to cleverbot
-                        utils.CleverbotSend(session, channel.ID, msg)
+                        utils.CleverbotSend(session, channel.GuildID, msg)
                         return
                     }
                 }
@@ -135,95 +143,101 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
 
             // Only continue if a prefix is set
             prefix, err := utils.GetPrefixForServer(channel.GuildID)
-            if err == nil {
-                // Split the message into parts
-                parts := strings.Split(message.Content, " ")
+            if err != nil {
+                go raven.CaptureError(err, map[string]string{})
+                return
+            }
 
-                // Save a sanitized version of the command (no prefix)
-                cmd := strings.Replace(parts[0], prefix, "", 1)
+            // Split the message into parts
+            parts := strings.Split(message.Content, " ")
 
-                // Check if the message is prefixed for us
-                if (strings.HasPrefix(message.Content, prefix)) {
-                    // Check if the user calls for help
-                    if cmd == "h" || cmd == "help" {
-                        // Find the longest plugin name and command
-                        longestPlugin, longestCommand := 0, 0
-                        for _, plugin := range plugins.GetPlugins() {
-                            if len(plugin.Name()) > longestPlugin {
-                                longestPlugin = len(plugin.Name())
-                            }
+            // Save a sanitized version of the command (no prefix)
+            cmd := strings.Replace(parts[0], prefix, "", 1)
 
-                            for cmd := range plugin.Commands() {
-                                if len(cmd) > longestCommand {
-                                    longestCommand = len(cmd)
-                                }
-                            }
+            // Check if the message is prefixed for us
+            if (strings.HasPrefix(message.Content, prefix)) {
+                // Check if the user calls for help
+                if cmd == "h" || cmd == "help" {
+                    // Find the longest plugin name and command
+                    longestPlugin, longestCommand := 0, 0
+                    for _, plugin := range plugins.GetPlugins() {
+                        if len(plugin.Name()) > longestPlugin {
+                            longestPlugin = len(plugin.Name())
                         }
 
-                        // Print help of all plugins
-                        msg := ""
+                        for cmd := range plugin.Commands() {
+                            if len(cmd) > longestCommand {
+                                longestCommand = len(cmd)
+                            }
+                        }
+                    }
 
-                        msg += "Hi " + message.Author.Username + " :smiley:\n"
-                        msg += "These are all usable commands:\n"
-                        msg += "```\n"
+                    // Print help of all plugins
+                    msg := ""
 
-                        for _, plugin := range plugins.GetPlugins() {
-                            if plugin.HelpHidden() == false {
-                                description := plugin.Description()
+                    msg += "Hi " + message.Author.Username + " :smiley:\n"
+                    msg += "These are all usable commands:\n"
+                    msg += "```\n"
 
-                                if description == "" {
-                                    description = "no description"
+                    for _, plugin := range plugins.GetPlugins() {
+                        if plugin.HelpHidden() == false {
+                            description := plugin.Description()
+
+                            if description == "" {
+                                description = "no description"
+                            }
+
+                            padding := (longestPlugin - len(plugin.Name())) + 8
+
+                            msg += fmt.Sprintf(
+                                "%s%s[%s]\n",
+                                plugin.Name(),
+                                strings.Repeat(" ", padding),
+                                description,
+                            )
+
+                            for cmd, usage := range plugin.Commands() {
+                                if usage == "" {
+                                    usage = "(no usage information)"
                                 }
 
-                                padding := (longestPlugin - len(plugin.Name())) + 8
+                                cmdPadding := (longestCommand - len(cmd)) + 6
 
                                 msg += fmt.Sprintf(
-                                    "%s%s[%s]\n",
-                                    plugin.Name(),
-                                    strings.Repeat(" ", padding),
-                                    description,
+                                    "\t%s%s%s\n",
+                                    prefix + cmd,
+                                    strings.Repeat(" ", cmdPadding),
+                                    usage,
                                 )
-
-                                for cmd, usage := range plugin.Commands() {
-                                    if usage == "" {
-                                        usage = "(no usage information)"
-                                    }
-
-                                    cmdPadding := (longestCommand - len(cmd)) + 6
-
-                                    msg += fmt.Sprintf(
-                                        "\t%s%s%s\n",
-                                        prefix + cmd,
-                                        strings.Repeat(" ", cmdPadding),
-                                        usage,
-                                    )
-                                }
-
-                                msg += "\n"
                             }
+
+                            msg += "\n"
                         }
-
-                        msg += "\n```"
-
-                        discordSession.ChannelMessageSend(
-                            message.ChannelID,
-                            fmt.Sprintf("<@%s> :mailbox_with_mail:", message.Author.ID),
-                        )
-
-                        uc, err := discordSession.UserChannelCreate(message.Author.ID)
-                        if err == nil {
-                            discordSession.ChannelMessageSend(uc.ID, msg)
-                        }
-                    } else {
-                        // Check if a module matches said command
-                        // Do nothing otherwise
-                        plugins.CallBotPlugin(
-                            cmd,
-                            strings.Replace(message.Content, prefix + cmd, "", -1),
-                            message.Message,
-                            discordSession,
-                        )
                     }
+
+                    msg += "\n```"
+
+                    discordSession.ChannelMessageSend(
+                        message.ChannelID,
+                        fmt.Sprintf("<@%s> :mailbox_with_mail:", message.Author.ID),
+                    )
+
+                    uc, err := discordSession.UserChannelCreate(message.Author.ID)
+                    if err != nil {
+                        go raven.CaptureError(err, map[string]string{})
+                        return
+                    }
+
+                    discordSession.ChannelMessageSend(uc.ID, msg)
+                } else {
+                    // Check if a module matches said command
+                    // Do nothing otherwise
+                    plugins.CallBotPlugin(
+                        cmd,
+                        strings.Replace(message.Content, prefix + cmd, "", -1),
+                        message.Message,
+                        discordSession,
+                    )
                 }
             }
         }
@@ -232,7 +246,11 @@ func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreat
 
 func changeGameInterval(session *discordgo.Session) {
     for {
-        session.UpdateStatus(0, games[rand.Intn(len(games))])
+        err := session.UpdateStatus(0, games[rand.Intn(len(games))])
+        if err != nil {
+            raven.CaptureError(err, map[string]string{})
+        }
+
         time.Sleep(10 * time.Second)
     }
 }
@@ -242,9 +260,7 @@ var games = []string{
     "async is the future!",
     "down with OOP!",
     "spoopy stuff",
-    "with human pets",
     "Planking",
-    "Rare Pepe",
 
     // Kaomoji
     "ʕ•ᴥ•ʔ",
@@ -266,7 +282,7 @@ var games = []string{
     "Candy Crush",
     "Hyperdimension Neptunia",
     "Final Fantasy MCMX",
-    "CIV V (forever!)",
+    "CIV V",
     "Pokemon Go",
     "Simulation Simulator 2016",
     "Half Life 3",

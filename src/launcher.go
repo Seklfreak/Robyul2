@@ -42,6 +42,7 @@ func main() {
         panic(err)
     }
 
+    // Add event listeners
     discord.AddHandler(onReady)
     discord.AddHandler(onMessageCreate)
 
