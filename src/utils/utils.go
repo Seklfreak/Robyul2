@@ -204,7 +204,7 @@ func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callbac
     session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
 }
 
-func SliceContains(s []interface{}, e interface{}) {
+func SliceContains(s []interface{}, e interface{}) bool {
     for _, a := range s {
         if reflect.DeepEqual(a, e) {
             return true

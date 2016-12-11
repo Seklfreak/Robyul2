@@ -7,7 +7,6 @@ import (
     "strings"
     "io/ioutil"
     "regexp"
-    "../music"
 )
 
 var (
@@ -119,7 +118,7 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
         // Check if the user wanted us to join.
         // Else report the error
         if command == "join" {
-            voiceConnection, err := session.ChannelVoiceJoin(guild.ID, channel.ID, false, false)
+            _, err := session.ChannelVoiceJoin(guild.ID, channel.ID, false, false)
             if err != nil {
                 panic(err)
             }
