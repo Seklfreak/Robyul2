@@ -42,9 +42,6 @@ func GuildSettingSet(guild string, key string, value string) (err error) {
     // Create an empty config object
     settings := models.Config{}
     err = GetDB().C("config").Find(bson.M{"guild" : guild}).One(&settings)
-    if err != nil {
-        return err
-    }
 
     // Check if the entry is new
     if settings.Data["_"] == "" {
