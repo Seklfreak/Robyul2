@@ -19,7 +19,7 @@ Bots built by friends or awesome strangers
 |Avatar|Name|Language|Link|
 |:-:|:-:|:-:|:-:|
 |![](http://i.imgur.com/SrgZI3g.png)|Emily|Java|[MaikWezinkhof/DiscordBot](https://github.com/MaikWezinkhof/DiscordBot)
-|![](http://i.imgur.com/7KiL7oG.png)|Rem|Java|[Daniele122898/Rem](https://github.com/Daniele122898/Rem)
-|![](http://i.imgur.com/PNcNRfM.png)|Ako-Chan|C#|[Serraniel/Ako-Discord-Bot-Loader](https://github.com/Serraniel/Ako-Discord-Bot-Loader)
 |![](http://i.imgur.com/Tb0FZoZ.png)|Shinobu-Chan|Python 3|[Der-Eddy/discord_bot](https://github.com/Der-Eddy/discord_bot)
+|![](http://i.imgur.com/PNcNRfM.png)|Ako-Chan|C#|[Serraniel/Ako-Discord-Bot-Loader](https://github.com/Serraniel/Ako-Discord-Bot-Loader)
+|![](http://i.imgur.com/7KiL7oG.png)|Rem|Java|[Daniele122898/Rem](https://github.com/Daniele122898/Rem)
 |![](http://i.imgur.com/vBnv5u2.png)|Winry Rockbell|JavaScript|[Devsome/Winry-Discordbot](https://github.com/Devsome/EliteBot) <br> **Warning:** Author likes and writes messy code!
