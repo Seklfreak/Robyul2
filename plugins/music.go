@@ -7,6 +7,7 @@ import (
     "strings"
     "io/ioutil"
     "regexp"
+    //"../music"
 )
 
 var (
@@ -28,8 +29,13 @@ func (m Music) HelpHidden() bool {
 
 func (m Music) Description() string {
     return `
-     Listen to Music :) [EXPERIMENTAL V3 | NOW WITH NATIVE SPEED! \o/]
+     Listen to Music :) [EXPERIMENTAL V3 | Who you gonna call? Edition]
      For a list of links supported by !add visit https://rg3.github.io/youtube-dl/supportedsites.html
+
+     Like the title says this feature is experimental.
+     Please expect bugs, stuttering audio and random crashes.
+     BUT: **Don't** ignore them.
+     Report any issues on https://github.com/sn0w/karen so I can fix them.
     `
 }
 
@@ -118,9 +124,15 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
         // Check if the user wanted us to join.
         // Else report the error
         if command == "join" {
-            _, err := session.ChannelVoiceJoin(guild.ID, channel.ID, false, false)
+            message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
+
+            _, err := session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
             if err != nil {
                 panic(err)
+            }
+
+            if merr == nil {
+                session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :slight_smile:")
             }
         } else {
             session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff :neutral_face:")
@@ -135,7 +147,7 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
     switch command {
     case "leave":
         session.ChannelMessageSend(channel.ID, "OK, bye :wave:")
-        voiceConnection.Close()
+        voiceConnection.Disconnect()
         break
 
     case "play":

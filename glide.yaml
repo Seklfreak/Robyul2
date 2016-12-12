@@ -1,4 +1,4 @@
-package: .
+package: github.com/sn0w/Karen
 import:
 - package: github.com/Jeffail/gabs
   version: ^1.0.0
@@ -9,6 +9,5 @@ import:
 - package: github.com/getsentry/raven-go
 - package: github.com/layeh/gopus
 - package: github.com/ugjka/cleverbot-go
-- package: gopkg.in/mgo.v2
-  subpackages:
-  - bson
+- package: gopkg.in/gorethink/gorethink.v3
+  version: ^3.0.0

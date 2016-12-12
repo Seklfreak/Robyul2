@@ -3,7 +3,7 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "fmt"
-    "../utils"
+    "github.com/sn0w/Karen/utils"
 )
 
 type Invite struct{}

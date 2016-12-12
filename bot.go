@@ -2,15 +2,15 @@ package main
 
 import (
     "fmt"
-    Logger "./logger"
+    Logger "github.com/sn0w/Karen/logger"
     "github.com/bwmarrin/discordgo"
     "math/rand"
     "time"
     "strings"
     "regexp"
-    "./plugins"
-    "./utils"
     "github.com/getsentry/raven-go"
+    "github.com/sn0w/Karen/plugins"
+    "github.com/sn0w/Karen/utils"
 )
 
 func onReady(session *discordgo.Session, event *discordgo.Ready) {

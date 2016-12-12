@@ -1,23 +1,24 @@
 package utils
 
 import (
-    "gopkg.in/mgo.v2"
-    Logger "../logger"
-    "gopkg.in/mgo.v2/bson"
-    "../models"
+    Logger "github.com/sn0w/Karen/logger"
+    "github.com/sn0w/Karen/models"
     "time"
+    rethink "gopkg.in/gorethink/gorethink.v3"
 )
 
 var (
     dbName string
-    dbSession *mgo.Session
+    dbSession *rethink.Session
 )
 
 func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connecting to " + url)
 
-    dbName = db
-    session, err := mgo.Dial(url)
+    session, err := rethink.Connect(rethink.ConnectOpts{
+        Address: url,
+        Database: db,
+    })
 
     if err != nil {
         Logger.ERR("[DB] " + err.Error())
@@ -30,18 +31,15 @@ func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connected!")
 }
 
-func GetDBSession() *mgo.Session {
+func GetDB() *rethink.Session {
     return dbSession
-}
-
-func GetDB() *mgo.Database {
-    return GetDBSession().DB(dbName)
 }
 
 func GuildSettingSet(guild string, key string, value string) (err error) {
     // Create an empty config object
     settings := models.Config{}
-    err = GetDB().C("config").Find(bson.M{"guild" : guild}).One(&settings)
+    err = rethink.Table("config").Get()
+   // err = GetDB().C("config").Find(bson.M{"guild" : guild}).One(&settings)
 
     // Check if the entry is new
     if settings.Data["_"] == "" {
@@ -55,14 +53,14 @@ func GuildSettingSet(guild string, key string, value string) (err error) {
 
     settings.Data[key] = value
 
-    err = GetDB().C("config").Update(bson.M{"guild" : guild}, settings)
+    //   err = GetDB().C("config").Update(bson.M{"guild" : guild}, settings)
 
     return err
 }
 
 func GuildSettingGet(guild string, key string) (result string, err error) {
     settings := models.Config{}
-    err = GetDB().C("config").Find(bson.M{"guild" : guild}).One(&settings)
+    //    err = GetDB().C("config").Find(bson.M{"guild" : guild}).One(&settings)
     result = settings.Data[key]
 
     return result, err

@@ -1,8 +1,10 @@
-hash: b397d6f12748982b79a5b4bf8f5622483be4961d7dcadc28b70632241c7319e5
-updated: 2016-12-12T19:26:43.894091618+01:00
+hash: d7ddbbabc29f5edc19e1c5a9bd808ce81c6f45c4c891415ae5b5894156c031be
+updated: 2016-12-12T20:04:16.327757094+01:00
 imports:
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
+- name: github.com/cenk/backoff
+  version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
   version: a61bf5eafa3aee233ec8043e9da052447e5463dd
 - name: github.com/cloudfoundry/gosigar
@@ -11,25 +13,41 @@ imports:
   version: ef638b6c2e62b857442c6443dace9366a48c0ee2
 - name: github.com/getsentry/raven-go
   version: 3f7439d3e74d88e21d196ba20eb61a5a958bc118
+- name: github.com/golang/protobuf
+  version: 8ee79997227bf9b34611aee7946ae64735e6fd93
+  subpackages:
+  - proto
 - name: github.com/gorilla/websocket
   version: 0868951cdb8e69bc42df4598bdc6164ff2f1a072
+- name: github.com/hailocab/go-hostpool
+  version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/Jeffail/gabs
   version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
 - name: github.com/layeh/gopus
   version: 867541549ca5f8b4db2b92fd1dded8711256a27d
+- name: github.com/Sirupsen/logrus
+  version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
 - name: github.com/ugjka/cleverbot-go
   version: 08e59adc4ee745138a8dc05321da38778067d22d
 - name: golang.org/x/crypto
   version: 9a6f0a01987842989747adff311d80750ba25530
   subpackages:
   - nacl/secretbox
+  - pbkdf2
   - poly1305
   - salsa20/salsa
-- name: gopkg.in/mgo.v2
-  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+- name: golang.org/x/sys
+  version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
-  - bson
-  - internal/json
-  - internal/sasl
-  - internal/scram
+  - unix
+- name: gopkg.in/fatih/pool.v2
+  version: 20a0a429c5f93de45c90f5f09ea297c25e0929b3
+- name: gopkg.in/gorethink/gorethink.v2
+  version: 016a1d3b4d15951ab2e39bd3596718ba94d298ba
+  subpackages:
+  - encoding
+  - ql2
+  - types
+- name: gopkg.in/gorethink/gorethink.v3
+  version: 417badecf1ab14d0d6e38ad82397da2a59e2f6ca
 testImports: []

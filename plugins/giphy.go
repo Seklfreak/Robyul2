@@ -5,7 +5,7 @@ import (
     "fmt"
     "math/rand"
     "net/url"
-    "../utils"
+    "github.com/sn0w/Karen/utils"
 )
 
 type Giphy struct{}
