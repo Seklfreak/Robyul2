@@ -1,0 +1,14 @@
+package: .
+import:
+- package: github.com/Jeffail/gabs
+  version: ^1.0.0
+- package: github.com/bwmarrin/discordgo
+  version: ^0.15.0
+- package: github.com/cloudfoundry/gosigar
+- package: github.com/dustin/go-humanize
+- package: github.com/getsentry/raven-go
+- package: github.com/layeh/gopus
+- package: github.com/ugjka/cleverbot-go
+- package: gopkg.in/mgo.v2
+  subpackages:
+  - bson

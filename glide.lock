@@ -1,0 +1,35 @@
+hash: b397d6f12748982b79a5b4bf8f5622483be4961d7dcadc28b70632241c7319e5
+updated: 2016-12-12T19:26:43.894091618+01:00
+imports:
+- name: github.com/bwmarrin/discordgo
+  version: 5835676872d7fa65ee37b32672079c4ede2c1855
+- name: github.com/certifi/gocertifi
+  version: a61bf5eafa3aee233ec8043e9da052447e5463dd
+- name: github.com/cloudfoundry/gosigar
+  version: c32d31af94b0e9d3b2877e49c1a581ad5a793343
+- name: github.com/dustin/go-humanize
+  version: ef638b6c2e62b857442c6443dace9366a48c0ee2
+- name: github.com/getsentry/raven-go
+  version: 3f7439d3e74d88e21d196ba20eb61a5a958bc118
+- name: github.com/gorilla/websocket
+  version: 0868951cdb8e69bc42df4598bdc6164ff2f1a072
+- name: github.com/Jeffail/gabs
+  version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
+- name: github.com/layeh/gopus
+  version: 867541549ca5f8b4db2b92fd1dded8711256a27d
+- name: github.com/ugjka/cleverbot-go
+  version: 08e59adc4ee745138a8dc05321da38778067d22d
+- name: golang.org/x/crypto
+  version: 9a6f0a01987842989747adff311d80750ba25530
+  subpackages:
+  - nacl/secretbox
+  - poly1305
+  - salsa20/salsa
+- name: gopkg.in/mgo.v2
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+  subpackages:
+  - bson
+  - internal/json
+  - internal/sasl
+  - internal/scram
+testImports: []
