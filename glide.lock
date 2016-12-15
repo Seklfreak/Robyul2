@@ -1,5 +1,5 @@
-hash: d7ddbbabc29f5edc19e1c5a9bd808ce81c6f45c4c891415ae5b5894156c031be
-updated: 2016-12-12T20:04:16.327757094+01:00
+hash: 8ffd71fd561620e1e1e23fea6fdf79f8a5553719911ebfd6366da5ccc67eb300
+updated: 2016-12-12T23:12:54.787890954+01:00
 imports:
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
@@ -25,6 +25,8 @@ imports:
   version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
 - name: github.com/layeh/gopus
   version: 867541549ca5f8b4db2b92fd1dded8711256a27d
+- name: github.com/robertkowalski/graylog-golang
+  version: e5295cfa28272ada50cb9b5d97696ee06e49ed42
 - name: github.com/Sirupsen/logrus
   version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
 - name: github.com/ugjka/cleverbot-go

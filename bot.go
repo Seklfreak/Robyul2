@@ -13,7 +13,7 @@ import (
     "github.com/sn0w/Karen/utils"
 )
 
-func onReady(session *discordgo.Session, event *discordgo.Ready) {
+func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
     fmt.Printf(
         "\n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s\n\n",
@@ -72,7 +72,7 @@ func onReady(session *discordgo.Session, event *discordgo.Ready) {
     go changeGameInterval(session)
 }
 
-func onMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
+func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
     // Ignore other bots and @everyone/@here
     if (!message.Author.Bot && !message.MentionEveryone) {
         // Get the channel

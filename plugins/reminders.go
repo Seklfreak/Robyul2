@@ -48,10 +48,10 @@ func (r Reminders) Init(session *discordgo.Session) {
     go func() {
         for {
             var reminderBucket []DB_Reminders
-   //         err := utils.GetDB().C("reminders").Find(bson.M{}).All(&reminderBucket)
-   //         if err != nil {
-   //             panic(err)
-   //         }
+            //         err := utils.GetDB().C("reminders").Find(bson.M{}).All(&reminderBucket)
+            //         if err != nil {
+            //             panic(err)
+            //         }
 
             for _, reminders := range reminderBucket {
                 changes := false
@@ -195,33 +195,35 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
 
 func getReminders(uid string) DB_Reminders {
     var reminderBucket DB_Reminders
- //   err := utils.GetDB().C("reminders").Find(bson.M{"userid" : uid}).One(&reminderBucket)
+    //   err := utils.GetDB().C("reminders").Find(bson.M{"userid" : uid}).One(&reminderBucket)
 
     // If user has no DB entries create an empty document
- /*   if err != nil {
-        if err.Error() == "not found" {
-            err := utils.GetDB().C("reminders").Insert(DB_Reminders{
-                UserID: uid,
-                Reminders: make([]DB_Reminder, 0),
-            })
+    /*   if err != nil {
+           if err.Error() == "not found" {
+               err := utils.GetDB().C("reminders").Insert(DB_Reminders{
+                   UserID: uid,
+                   Reminders: make([]DB_Reminder, 0),
+               })
 
-            // If the creation was successful read the document
-            if err != nil {
-                panic(err)
-            } else {
-                return getReminders(uid)
-            }
-        } else {
-            panic(err)
-        }
-    }
-*/
+               // If the creation was successful read the document
+               if err != nil {
+                   panic(err)
+               } else {
+                   return getReminders(uid)
+               }
+           } else {
+               panic(err)
+           }
+       }
+   */
     return reminderBucket
 }
 
-func setReminders(uid string, reminders DB_Reminders) {/*
-    err := utils.GetDB().C("reminders").Update(bson.M{"userid" : uid}, reminders)
-    if err != nil {
-        panic(err)
-    }
-*/}
+func setReminders(uid string, reminders DB_Reminders) {
+    /*
+        err := utils.GetDB().C("reminders").Update(bson.M{"userid" : uid}, reminders)
+        if err != nil {
+            panic(err)
+        }
+    */
+}
