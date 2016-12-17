@@ -32,7 +32,7 @@ func (g Giphy) Action(command string, content string, msg *discordgo.Message, se
     // Send request
     json := utils.GetJSON(
         fmt.Sprintf(
-            "%s?q=%s&api_key=%s&rating=%s&limit=%s",
+            "%s?q=%s&api_key=%s&rating=%s&limit=%d",
             ENDPOINT,
             url.QueryEscape(content),
             API_KEY,
