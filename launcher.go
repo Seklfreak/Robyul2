@@ -42,6 +42,7 @@ func main() {
     migrations.Run()
 
     // Connect and add event handlers
+    Logger.INF("Connecting to discord...")
     discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
     if err != nil {
         panic(err)

@@ -8,23 +8,11 @@ import (
 
 type Bolizei struct{}
 
-func (b Bolizei) Name() string {
-    return "Bolizei"
-}
-
-func (b Bolizei) HelpHidden() bool {
-    return true
-}
-
-func (b Bolizei) Description() string {
-    return ""
-}
-
-func (b Bolizei) Commands() map[string]string {
-    return map[string]string{
-        "polizei" : "",
-        "bolizei" : "",
-        "wiiuu" : "",
+func (b Bolizei) Commands() []string {
+    return []string{
+        "polizei",
+        "bolizei",
+        "wiiuu",
     }
 }
 

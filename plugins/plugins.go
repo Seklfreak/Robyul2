@@ -8,24 +8,10 @@ import (
 
 // Plugin interface to enforce a basic structure
 type Plugin interface {
-    // The name of this plugin
-    Name() string
+    // List of commands and aliases
+    Commands() []string
 
-    // Hidden from !help ?
-    HelpHidden() bool
-
-    // A short but meaningful description
-    Description() string
-
-    // A map of commands and their usage
-    // Example:
-    // music => show info
-    // start => ...
-    // pause => ...
-    // ...
-    Commands() map[string]string
-
-    // The action to execute if any command matches
+    // Action to execute on message receive
     Action(
     command string,
     content string,
@@ -33,11 +19,11 @@ type Plugin interface {
     session *discordgo.Session,
     )
 
-    // Initializer
+    // Plugin constructor
     Init(session *discordgo.Session)
 }
 
-// List of plugin instances
+// List of active plugins
 var PluginList = []Plugin{
     About{},
     Stats{},
@@ -50,17 +36,17 @@ var PluginList = []Plugin{
     Roll{},
     Reminders{},
     Bolizei{},
-    Music{},
+    //Music{},
 }
 
 // CallBotPlugin iterates through the list of registered
-// plugins and tries to guess whice one is the intended call
+// plugins and tries to guess which one is the intended call
 // Fist match wins.
 func CallBotPlugin(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Iterate over all plugins
     for _, plug := range PluginList {
         // Iterate over all commands of the current plugin
-        for cmd := range plug.Commands() {
+        for _, cmd := range plug.Commands() {
             if command == cmd {
                 go safePluginCall(command, strings.Trim(content, " "), msg, session, plug)
                 break

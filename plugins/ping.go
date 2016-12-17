@@ -8,21 +8,9 @@ import (
 
 type Ping struct{}
 
-func (p Ping) Name() string {
-    return "Ping"
-}
-
-func (p Ping) HelpHidden() bool {
-    return false
-}
-
-func (p Ping) Description() string {
-    return "Shows the ping"
-}
-
-func (p Ping) Commands() map[string]string {
-    return map[string]string{
-        "ping" : "",
+func (p Ping) Commands() []string {
+    return []string{
+        "ping",
     }
 }
 

@@ -4,22 +4,10 @@ import "github.com/bwmarrin/discordgo"
 
 type About struct{}
 
-func (a About) Name() string {
-    return "About"
-}
-
-func (a About) HelpHidden() bool {
-    return false
-}
-
-func (a About) Description() string {
-    return "Shows information about the bot"
-}
-
-func (a About) Commands() map[string]string {
-    return map[string]string{
-        "about" : "",
-        "a": "Alias for about",
+func (a About) Commands() []string {
+    return []string{
+        "about",
+        "a",
     }
 }
 

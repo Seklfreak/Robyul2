@@ -140,6 +140,8 @@ Shiro's internals were shiny and organized like never before and thus able to in
 
 Language: [Go](http://golang.org/)<br>
 Framework: [bwmarrin/discordgo](https://github.com/bwmarrin/discordgo)<br>
+Influenced by: Shiro<br>
+Influenced: -
 
 Shiro was groing fast.<br>
 Too fast.<br>
@@ -154,7 +156,7 @@ HUGE shoutout at this point!
 
 Karen is mostly a port of Shiro to another language but (as always) changes a lot of stuff:
 
-- MongoDB instead of MySQL
+- RethinkDB instead of MySQL
 - Sentry.IO instead of PM's for error monitoring
 - Datadog-Like dashboard planned
 - Webinterface planned
@@ -163,21 +165,12 @@ Karen is mostly a port of Shiro to another language but (as always) changes a lo
 Thanks to Go's loose bindings a Plugin can be anything that satisfies the `Plugin` interface:
 ```go
 type Plugin interface {
-    // The name of this plugin
     Name() string
 
-    // A short but meaningful description
     Description() string
 
-    // A map of commands and their usage
-    // Example:
-    // music => show info
-    // start => ...
-    // pause => ...
-    // ...
-    Commands() map[string]string
+    Commands() []string
 
-    // The action to execute if any command matches
     Action(
     command string,
     content string,
@@ -185,7 +178,6 @@ type Plugin interface {
     session *discordgo.Session,
     )
 
-    // Initializer
     Init(session *discordgo.Session)
 }
 ```

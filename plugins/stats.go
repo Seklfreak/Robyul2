@@ -12,21 +12,9 @@ import (
 
 type Stats struct{}
 
-func (s Stats) Name() string {
-    return "Stats"
-}
-
-func (s Stats) HelpHidden() bool {
-    return false
-}
-
-func (s Stats) Description() string {
-    return "Shows some stats"
-}
-
-func (s Stats) Commands() map[string]string {
-    return map[string]string{
-        "stats" : "",
+func (s Stats) Commands() []string {
+    return []string{
+        "stats",
     }
 }
 

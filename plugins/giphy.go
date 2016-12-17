@@ -10,22 +10,10 @@ import (
 
 type Giphy struct{}
 
-func (g Giphy) Name() string {
-    return "Giphy"
-}
-
-func (g Giphy) HelpHidden() bool {
-    return false
-}
-
-func (g Giphy) Description() string {
-    return "Gets a random gif"
-}
-
-func (g Giphy) Commands() map[string]string {
-    return map[string]string{
-        "giphy" : "<search>",
-        "gif" : "Alias for giphy",
+func (g Giphy) Commands() []string {
+    return []string{
+        "giphy",
+        "gif",
     }
 }
 

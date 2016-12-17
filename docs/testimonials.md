@@ -1,9 +1,11 @@
-### Testimonials! (OMG OMG OMG \o/)
+### Testimonials!
 This site combines testimonials of **Shiro** and **Karen** since they share a lot of plugins and default behaviour.
+
+Ordered by date.
 
 <hr>
 
-[![](https://i.imgur.com/5rPB8iM.png)](https://github.com/serraniel)
+![](https://i.imgur.com/5rPB8iM.png)
 <br><br>
 ![](https://i.imgur.com/6m0MhFX.png)
 <br><br>

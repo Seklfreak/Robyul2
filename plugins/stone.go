@@ -7,21 +7,9 @@ import (
 
 type Stone struct{}
 
-func (s Stone) Name() string {
-    return "Stone"
-}
-
-func (s Stone) HelpHidden() bool {
-    return false
-}
-
-func (s Stone) Description() string {
-    return "Stone someone to death!!!1!11!"
-}
-
-func (s Stone) Commands() map[string]string {
-    return map[string]string{
-        "stone" : "<@mention>",
+func (s Stone) Commands() []string {
+    return []string{
+        "stone",
     }
 }
 

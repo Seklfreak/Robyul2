@@ -19,41 +19,18 @@ var (
 
 type Music struct{}
 
-func (m Music) Name() string {
-    return "Music"
-}
-
-func (m Music) HelpHidden() bool {
-    return true
-}
-
-func (m Music) Description() string {
-    return `
-     Listen to Music :) [EXPERIMENTAL V3 | Who you gonna call? Edition]
-     For a list of links supported by !add visit https://rg3.github.io/youtube-dl/supportedsites.html
-
-     Like the title says this feature is experimental.
-     Please expect bugs, stuttering audio and random crashes.
-     BUT: **Don't** ignore them.
-     Report any issues on https://github.com/sn0w/karen so I can fix them.
-    `
-}
-
-func (m Music) Commands() map[string]string {
-    return map[string]string{
-        "join" : "Join the voice channel you're in right now",
-        "leave" : "Leaves the current voice channel",
-
-        "play": "Start playing music",
-        "stop": "Stop playing music",
-        "skip": "Skip the current track",
-        "clear": "Clear the playlist",
-
-        "add": "<random|youtube/soundcloud/... link> Adds a track to the playlist",
-        "list": "List the current playlist",
-
-        "playing": "Show the current track",
-        "np": "Alias for playing",
+func (m Music) Commands() []string {
+    return []string{
+        "join",
+        "leave" ,
+        "play",
+        "stop",
+        "skip",
+        "clear",
+        "add",
+        "list",
+        "playing",
+        "np",
     }
 }
 

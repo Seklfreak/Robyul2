@@ -11,6 +11,7 @@ import (
     "github.com/getsentry/raven-go"
     "github.com/sn0w/Karen/plugins"
     "github.com/sn0w/Karen/utils"
+    "github.com/sn0w/Karen/helpers"
 )
 
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
@@ -29,11 +30,16 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     for _, plugin := range plugins.GetPlugins() {
         cmds := ""
 
-        for cmd := range plugin.Commands() {
+        for _, cmd := range plugin.Commands() {
             cmds += cmd + " "
         }
 
-        Logger.INF(fmt.Sprintf(tmpl, plugin.Name(), cmds))
+        Logger.INF(fmt.Sprintf(
+            tmpl,
+            helpers.Typeof(plugin),
+            cmds,
+        ))
+
         plugin.Init(session)
     }
 

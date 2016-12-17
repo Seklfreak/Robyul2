@@ -27,3 +27,6 @@ pages:
   - Legacy (Shiro): legacy.md
   - Testimonials \o/: testimonials.md
   - Family Tree: tree.md
+
+remote_branch: gh-pages
+remote_name: gh-pages

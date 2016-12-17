@@ -23,24 +23,12 @@ type DB_Reminder struct {
     Timestamp int64
 }
 
-func (r Reminders) Name() string {
-    return "Reminders"
-}
-
-func (r Reminders) HelpHidden() bool {
-    return false
-}
-
-func (r Reminders) Description() string {
-    return "Reminds you to do stuff!"
-}
-
-func (r Reminders) Commands() map[string]string {
-    return map[string]string{
-        "remind" : "<your_message> in <number> <s|seconds|m|minutes|h|hours|d|days>",
-        "rm" : "Alias for remind",
-        "reminders" : "Lists your active reminders",
-        "rms" : "Alias for reminders",
+func (r Reminders) Commands() []string {
+    return []string{
+        "remind",
+        "rm",
+        "reminders",
+        "rms",
     }
 }
 

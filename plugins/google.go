@@ -8,22 +8,10 @@ import (
 
 type Google struct{}
 
-func (g Google) Name() string {
-    return "Google"
-}
-
-func (g Google) HelpHidden() bool {
-    return false
-}
-
-func (g Google) Description() string {
-    return "If someone is too dumb/lazy to use google, use this."
-}
-
-func (g Google) Commands() map[string]string {
-    return map[string]string{
-        "google" : "<any search query>",
-        "goog" : "",
+func (g Google) Commands() []string {
+    return []string{
+        "google",
+        "goog",
     }
 }
 

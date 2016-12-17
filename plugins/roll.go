@@ -10,21 +10,9 @@ import (
 
 type Roll struct{}
 
-func (r Roll) Name() string {
-    return "Roll"
-}
-
-func (r Roll) HelpHidden() bool {
-    return false
-}
-
-func (r Roll) Description() string {
-    return "Roll a random number"
-}
-
-func (r Roll) Commands() map[string]string {
-    return map[string]string{
-        "roll" : "<min> <max>",
+func (r Roll) Commands() []string {
+    return []string{
+        "roll",
     }
 }
 
