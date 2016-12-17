@@ -34,10 +34,6 @@ func (i Invite) Init(session *discordgo.Session) {
 func (i Invite) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelMessageSend(
         msg.ChannelID,
-        fmt.Sprintf(
-            "Woah thanks :heart_eyes: \n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s :smiley:",
-            utils.GetConfig().Path("discord.id").Data().(string),
-            utils.GetConfig().Path("discord.perms").Data().(string),
-        ),
+        "Woah thanks :heart_eyes: \n I'm still beta but you can register for access here: <https://goo.gl/forms/9J9GYMg8c9IM6a5Z2>",
     )
 }
