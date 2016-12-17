@@ -61,17 +61,17 @@ This will make Karen listen for any command that begins with `!`.<br>
 Be sure to set it to something no other bot uses on your server.
 
 ### Commandlist
-|Command|Aliases|Usage|Description|
+|Command|Aliases|Description|Usage
 |:-|:-|:-|:-|
-|!about|!a|-|Shows some information about Karen.
-|!giphy|!gif|`!gif <search term>`|Searches for gifs on giphy.com
-|!google|!goog|`!google <search term>`|Generates a link for someone who's too dumb to google (aka "that guy")
-|!invite|!inv|-|Get an invite link for Karen
-|!ping|-|-|Shows Karen's current ping to discord
-|!cat|-|-|Shows a random cat image
-|!remind|!rm|`!remind ordering pizza in 25 <seconds/s/minutes/m/hours/h/days/d>`
-|!reminders|!rms|-|Shows your pending reminders
-|!roll|-|`!roll 25 80`|Rolls a random number in the given range
-|!stats|-|-|Shows stats about Karen
-|!stone|-|`!stone @some-user`|Stones someone to death
-|!help|!h|-|Shows this help
+|!about|!a|Shows some information about Karen|-
+|!giphy|!gif|Searches for gifs on giphy.com|`!gif <search term>`
+|!google|!goog|Generates a link for someone who's too dumb to google (aka "that guy")|`!google <search term>`
+|!invite|!inv|Get an invite link for Karen|-
+|!ping|-|Shows Karen's current ping to discord|-
+|!cat|-|Shows a random cat image|-
+|!remind|!rm|Reminds you to do stuff|`!remind order pizza in 25 <seconds/minutes/hours/days>`<br>`!remind order pizza in 25 <s/m/h/d>`
+|!reminders|!rms|Shows your pending reminders|-
+|!roll|-|Rolls a random number in the given range|`!roll 25 80`
+|!stats|-|Shows stats about Karen|-
+|!stone|-|Stones someone to death|`!stone @some-user`
+|!help|!h|Shows this help|-
