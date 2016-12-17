@@ -1,7 +1,7 @@
 dependencies:
     override:
-        - sudo apt update
         - sudo add-apt-repository ppa:masterminds/glide -y
+        - sudo apt update
         - sudo apt install glide -y
 
 test:
