@@ -4,6 +4,7 @@ general:
 dependencies:
     pre:
         - mkdir -p $GOPATH/bin
+        - export PATH="$GOPATH/bin:$PATH"
         - curl https://glide.sh/get | sh
     override:
         - glide install
