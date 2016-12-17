@@ -3,9 +3,9 @@ Please expect (rare) crashes and performance problems until the bot is mature en
 <hr>
 
 # Karen &nbsp; ![](http://i.imgur.com/vDJVt9g.png)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sn0w/karen)](https://goreportcard.com/report/github.com/sn0w/karen)
-[![GoDoc](https://godoc.org/github.com/sn0w/karen?status.svg)](https://godoc.org/github.com/sn0w/karen)
-[![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/sn0w/karen) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/sn0w/Karen)](https://goreportcard.com/report/github.com/sn0w/Karen)
+[![GoDoc](https://godoc.org/github.com/sn0w/Karen?status.svg)](https://godoc.org/github.com/sn0w/Karen)
+[![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/sn0w/Karen) 
 
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
