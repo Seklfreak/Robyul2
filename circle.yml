@@ -1,11 +1,9 @@
-general:
-  build_dir: src
-
 dependencies:
-    pre:
-        - mkdir -p $GOPATH/bin
-        - export PATH="$GOPATH/bin:$PATH"
-        - curl https://glide.sh/get | sh
     override:
+        - sudo apt update
+        - sudo add-apt-repository ppa:masterminds/glide -y
+        - sudo apt install glide -y
+
+test:
+    pre:
         - glide install
-        - go build -v
