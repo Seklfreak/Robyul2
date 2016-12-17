@@ -7,8 +7,12 @@ import (
     "errors"
 )
 
+// Holds the db session
 var dbSession *rethink.Session
 
+// Connects to the db
+// url - The url to connect to
+// db  - The db to access
 func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connecting to " + url)
 
@@ -64,17 +68,45 @@ func GuildSettingSet(guild string, key string, value string) (err error) {
 }
 
 func GuildSettingGet(guild string, key string) (result string, err error) {
-    var settings models.Config
+    result, err = DBGet(
+        "guild_configs",
+        map[string]interface{}{"guild": guild},
+        &models.Config{},
+    )
+
+    return
+}
+
+// Gets a document from the db
+// table  - The table to read from
+// filter - The filter to apply
+// T      - The type to reflect onto the result
+func DBGet(table string, filter map[string]interface{}, T interface{}) (result interface{}, err error) {
     var cursor *rethink.Cursor
     var marshalled bool
 
-    cursor, err = rethink.Table("guild_configs").Filter(map[string]interface{}{"guild":guild}).Run(GetDB())
-    marshalled, err = cursor.Peek(&settings)
+    cursor, err = rethink.Table(table).Filter(filter).Run(GetDB())
+    marshalled, err = cursor.Peek(&T)
+
     if !marshalled {
         err = errors.New("Failed to unmarshal document")
         return
     }
 
-    result = settings.Data[key]
+    result = T
     return
+}
+
+// Inserts $data into the db
+// table - The table to wrtie into
+// data  - The object to write
+func DBInsert(table string, data interface{}) (interface{}, error) {
+    return rethink.Table(table).Insert(data).Run(GetDB())
+}
+
+// Updates data in the db
+// table - The table to change
+// data  - The data to write
+func DBUpdate(table string, data interface{}) (interface{}, error) {
+    return rethink.Table(table).Update(data).Run(GetDB())
 }

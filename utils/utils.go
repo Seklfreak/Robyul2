@@ -14,13 +14,18 @@ import (
     "reflect"
 )
 
+// Defines what a callback is
 type Callback func()
 
 var (
+    // Saves the config
     config *gabs.Container
+
+    // Array of cleverbot sessions
     cleverbotSessions map[string]*cleverbot.Session
 )
 
+// Loads the config from $path into $config
 func LoadConfig(path string) {
     json, err := gabs.ParseJSONFile(path)
 
@@ -31,10 +36,12 @@ func LoadConfig(path string) {
     config = json
 }
 
+// Config getter
 func GetConfig() *gabs.Container {
     return config
 }
 
+// Sends a message to cleverbot. Responds with it's answer.
 func CleverbotSend(session *discordgo.Session, channel string, message string) {
     var msg string
 
@@ -56,68 +63,22 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
     session.ChannelMessageSend(channel, msg)
 }
 
+// Refreshes the cleverbot session for said channel
 func CleverbotRefreshSession(channel string) {
     cleverbotSessions[channel] = cleverbot.New()
 }
 
-func CCTV(session *discordgo.Session, message *discordgo.Message) {
-    var (
-        channelName string = "?"
-        channelID string = "?"
-        serverName string = "?"
-        serverID string = "?"
-    )
-
-    channel, err := session.Channel(message.ChannelID)
-    if err == nil {
-        channelName = channel.Name
-        channelID = channel.ID
-
-        server, err := session.Guild(channel.GuildID)
-        if err == nil {
-            serverName = server.Name
-            serverID = server.ID
-        }
-    }
-
-    template := `
-At:      %s
-Origin:  #%s (%s) in %s (%s)
-Author:  %s#%s (%s)
-Message:
-%s
-`
-
-    msg :=
-        "```\n" +
-            fmt.Sprintf(
-                template,
-                message.Timestamp,
-                channelName,
-                channelID,
-                serverName,
-                serverID,
-                message.Author.Username,
-                message.Author.Discriminator,
-                message.Author.ID,
-                message.Content,
-            ) +
-            "\n```"
-
-    session.ChannelMessageSend(
-        config.Path("cctv").Data().(string),
-        msg,
-    )
-}
-
+// Gets the prefix for $guild
 func GetPrefixForServer(guild string) (string, error) {
     return GuildSettingGet(guild, "prefix")
 }
 
+// Sets the prefix for $guild to $prefix
 func SetPrefixForServer(guild string, prefix string) error {
     return GuildSettingSet(guild, "prefix", prefix)
 }
 
+// Takes an error and sends it to discord and sentry.io
 func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
     session.ChannelMessageSend(
         msg.ChannelID,
@@ -140,11 +101,7 @@ func SendError(session *discordgo.Session, msg *discordgo.Message, err interface
     })
 }
 
-func WhileTypingIn(session *discordgo.Session, channel string, cb Callback) {
-    session.ChannelTyping(channel)
-    cb()
-}
-
+// Sends a GET request to $url, parses it and returns the JSON
 func GetJSON(url string) *gabs.Container {
     // Send request
     response, err := http.Get(url)
@@ -175,6 +132,7 @@ func GetJSON(url string) *gabs.Container {
     }
 }
 
+// Only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callback) {
     channel, e := session.Channel(msg.ChannelID)
     if e != nil {
@@ -202,14 +160,4 @@ func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callbac
     }
 
     session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
-}
-
-func SliceContains(s []interface{}, e interface{}) bool {
-    for _, a := range s {
-        if reflect.DeepEqual(a, e) {
-            return true
-        }
-    }
-
-    return false
 }

@@ -9,6 +9,7 @@ var Migrations = []Migration{
     M1_create_table_guild_config,
 }
 
+// Runs all registered migrations
 func Run() {
     fmt.Println("[DB] Running migrations...")
     for _, migration := range Migrations {

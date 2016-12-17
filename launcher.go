@@ -10,10 +10,13 @@ import (
     "github.com/sn0w/Karen/migrations"
 )
 
+// The discord session holder
 var discordSession *discordgo.Session
 
+// Defines what a callback is
 type Callback func()
 
+// Entrypoint
 func main() {
     Logger.INF("Bootstrapping...")
 

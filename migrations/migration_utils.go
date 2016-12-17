@@ -6,6 +6,7 @@ import (
     "github.com/sn0w/Karen/helpers"
 )
 
+// Create a table if it does not exist
 func CreateTableIfNotExists(tableName string) {
     cursor, err := rethink.TableList().Run(utils.GetDB())
     helpers.Relax(err)
@@ -27,6 +28,7 @@ func CreateTableIfNotExists(tableName string) {
     }
 }
 
+// Create a DB if it does not exist
 func CreateDBIfNotExists(dbName string) {
     cursor, err := rethink.DBList().Run(utils.GetDB())
     helpers.Relax(err)

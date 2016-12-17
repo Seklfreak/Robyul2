@@ -2,6 +2,7 @@ package helpers
 
 import "reflect"
 
+// Resolves the type of $v as a string
 func Typeof(v interface{}) string {
     t := reflect.TypeOf(v)
 

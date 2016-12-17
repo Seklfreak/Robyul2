@@ -14,6 +14,7 @@ import (
     "github.com/sn0w/Karen/helpers"
 )
 
+// Called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
     fmt.Printf(
@@ -78,6 +79,8 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     go changeGameInterval(session)
 }
 
+// Called after a new message was sent
+// This will be called after *every* message on *every* server so it should die as soon as possible.
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
     // Ignore other bots and @everyone/@here
     if (!message.Author.Bot && !message.MentionEveryone) {
@@ -183,6 +186,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 }
 
+// Changes the game interval every 10 seconds after called
 func changeGameInterval(session *discordgo.Session) {
     for {
         err := session.UpdateStatus(0, games[rand.Intn(len(games))])
@@ -194,6 +198,7 @@ func changeGameInterval(session *discordgo.Session) {
     }
 }
 
+// List of games to randomly show
 var games = []string{
     // Random stuff
     "async is the future!",

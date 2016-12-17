@@ -7,6 +7,8 @@ import (
     "strings"
     "regexp"
     "strconv"
+    rethink "gopkg.in/gorethink/gorethink.v3"
+    "github.com/sn0w/Karen/utils"
 )
 
 type Reminders struct{}
@@ -40,6 +42,8 @@ func (r Reminders) Init(session *discordgo.Session) {
             //         if err != nil {
             //             panic(err)
             //         }
+
+            rethink.Table("reminders").Filter(map[string]interface{}{}).Run(utils.GetDB())
 
             for _, reminders := range reminderBucket {
                 changes := false
