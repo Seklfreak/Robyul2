@@ -23,6 +23,7 @@ func (g Google) Description() string {
 func (g Google) Commands() map[string]string {
     return map[string]string{
         "google" : "<any search query>",
+        "goog" : "",
     }
 }
 

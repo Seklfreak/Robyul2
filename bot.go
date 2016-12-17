@@ -158,77 +158,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             if (strings.HasPrefix(message.Content, prefix)) {
                 // Check if the user calls for help
                 if cmd == "h" || cmd == "help" {
-                    // Find the longest plugin name and command
-                    longestPlugin, longestCommand := 0, 0
-                    for _, plugin := range plugins.GetPlugins() {
-                        if len(plugin.Name()) > longestPlugin {
-                            longestPlugin = len(plugin.Name())
-                        }
-
-                        for cmd := range plugin.Commands() {
-                            if len(cmd) > longestCommand {
-                                longestCommand = len(cmd)
-                            }
-                        }
-                    }
-
-                    // Print help of all plugins
-                    msg := ""
-
-                    msg += "Hi " + message.Author.Username + " :smiley:\n"
-                    msg += "These are all usable commands:\n"
-                    msg += "```\n"
-
-                    for _, plugin := range plugins.GetPlugins() {
-                        if plugin.HelpHidden() == false {
-                            description := plugin.Description()
-
-                            if description == "" {
-                                description = "no description"
-                            }
-
-                            padding := (longestPlugin - len(plugin.Name())) + 8
-
-                            msg += fmt.Sprintf(
-                                "%s%s[%s]\n",
-                                plugin.Name(),
-                                strings.Repeat(" ", padding),
-                                description,
-                            )
-
-                            for cmd, usage := range plugin.Commands() {
-                                if usage == "" {
-                                    usage = "(no usage information)"
-                                }
-
-                                cmdPadding := (longestCommand - len(cmd)) + 6
-
-                                msg += fmt.Sprintf(
-                                    "\t%s%s%s\n",
-                                    prefix + cmd,
-                                    strings.Repeat(" ", cmdPadding),
-                                    usage,
-                                )
-                            }
-
-                            msg += "\n"
-                        }
-                    }
-
-                    msg += "\n```"
-
                     discordSession.ChannelMessageSend(
                         message.ChannelID,
-                        fmt.Sprintf("<@%s> :mailbox_with_mail:", message.Author.ID),
+                        fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/#commandlist>", message.Author.ID),
                     )
-
-                    uc, err := discordSession.UserChannelCreate(message.Author.ID)
-                    if err != nil {
-                        go raven.CaptureError(err, map[string]string{})
-                        return
-                    }
-
-                    discordSession.ChannelMessageSend(uc.ID, msg)
                 } else {
                     // Check if a module matches said command
                     // Do nothing otherwise
