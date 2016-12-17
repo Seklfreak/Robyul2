@@ -129,7 +129,6 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
         default:
             session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the time-format is correct")
             return
-            break
         }
 
         channel, err := session.Channel(msg.ChannelID)

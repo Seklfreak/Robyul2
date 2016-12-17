@@ -24,7 +24,6 @@ func ConnectDB(url string, db string) {
     if err != nil {
         Logger.ERR("[DB] " + err.Error())
         panic(err)
-        return
     }
 
     dbSession = session
