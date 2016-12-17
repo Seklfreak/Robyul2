@@ -1,2 +1,9 @@
 general:
   build_dir: src
+
+dependencies:
+    pre:
+        - curl https://glide.sh/get | sh
+    override:
+        - glide install
+        - go build -v
