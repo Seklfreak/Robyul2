@@ -7,3 +7,4 @@ dependencies:
 test:
     pre:
         - glide install
+        - go build -v
