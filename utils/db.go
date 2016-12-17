@@ -68,11 +68,14 @@ func GuildSettingSet(guild string, key string, value string) (err error) {
 }
 
 func GuildSettingGet(guild string, key string) (result string, err error) {
-    result, err = DBGet(
+    var res interface{}
+    res, err = DBGet(
         "guild_configs",
         map[string]interface{}{"guild": guild},
         &models.Config{},
     )
+
+    result = res.(string)
 
     return
 }

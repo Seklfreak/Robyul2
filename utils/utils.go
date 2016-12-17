@@ -11,7 +11,6 @@ import (
     "strconv"
     "errors"
     "github.com/getsentry/raven-go"
-    "reflect"
 )
 
 // Defines what a callback is

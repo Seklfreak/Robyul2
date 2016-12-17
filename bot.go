@@ -99,8 +99,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             if (len(message.Mentions) >= 1) {
                 // Check if someone is mentioning us
                 if (message.Mentions[0].ID == session.State.User.ID) {
-                    go utils.CCTV(session, message.Message)
-
                     // Prepare content for editing
                     msg := message.Content
 
