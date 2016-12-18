@@ -12,6 +12,7 @@ var Migrations = []Migration{
     M0_create_db,
     M1_create_table_guild_config,
     M2_create_table_reminders,
+    M3_create_table_music,
 }
 
 // Runs all registered migrations

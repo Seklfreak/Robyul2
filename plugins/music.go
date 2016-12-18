@@ -7,22 +7,39 @@ import (
     "strings"
     "io/ioutil"
     "regexp"
-    //"../music"
-)
+    "os/exec"
+    "github.com/sn0w/Karen/helpers"
+    rethink "gopkg.in/gorethink/gorethink.v3"
 
-var (
-    music_foundYTD = false
-    music_foundFFPROBE = false
-    music_foundFFMPEG = false
-    music_enabled = false
+    "github.com/sn0w/Karen/utils"
 )
 
 type Music struct{}
 
+type Playlist struct {
+    GuildID   string
+    ChannelID string
+    Songs     []Song
+}
+
+type Song struct {
+    ID          string `gorethink:"id,omitempty"`
+    AddedBy     string `gorethink:"addedBy"`
+    Title       string `gorethink:"title"`
+    Description string `gorethink:"description"`
+    FullTitle   string `gorethink:"full_title"`
+    URL         string `gorethink:"webpage_url"`
+    Duration    int    `gorethink:"duration"`
+    Processed   bool `gorethink:"processed"`
+    Path        string `gorethink:"path"`
+}
+
+var musicPluginEnabled = false
+
 func (m Music) Commands() []string {
     return []string{
         "join",
-        "leave" ,
+        "leave",
         "play",
         "stop",
         "skip",
@@ -35,6 +52,8 @@ func (m Music) Commands() []string {
 }
 
 func (m Music) Init(session *discordgo.Session) {
+    foundYTD, foundFFPROBE, foundFFMPEG := false, false, false
+
     fmt.Println("=> Checking for youtube-dl, ffmpeg and ffprobe...")
     for _, path := range strings.Split(os.Getenv("PATH"), ":") {
         files, _ := ioutil.ReadDir(path)
@@ -42,23 +61,22 @@ func (m Music) Init(session *discordgo.Session) {
         for _, file := range files {
             switch {
             case regexp.MustCompile(`youtube-dl.*`).Match([]byte(file.Name())):
-                music_foundYTD = true
+                foundYTD = true
                 break
 
             case regexp.MustCompile(`ffprobe.*`).Match([]byte(file.Name())):
-                music_foundFFPROBE = true
+                foundFFPROBE = true
                 break
 
             case regexp.MustCompile(`ffmpeg.*`).Match([]byte(file.Name())):
-                music_foundFFMPEG = true
+                foundFFMPEG = true
                 break
             }
         }
     }
 
-    if (music_foundYTD && music_foundFFPROBE && music_foundFFMPEG) {
-        music_enabled = true
-
+    if (foundYTD && foundFFPROBE && foundFFMPEG) {
+        musicPluginEnabled = true
         fmt.Println("=> Found. Music enabled!")
     } else {
         fmt.Println("=> Not Found. Music disabled!")
@@ -66,7 +84,7 @@ func (m Music) Init(session *discordgo.Session) {
 }
 
 func (m Music) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    if !music_enabled {
+    if !musicPluginEnabled {
         return
     }
 
@@ -149,6 +167,55 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
         break
 
     case "add":
+        content = strings.Trim(content, " ")
+
+        // Resolve the url through YTDL.
+        ytdl := exec.Command("youtube-dl", "-g", content)
+        yerr := ytdl.Run()
+
+        // If youtube-dl exits with 0 the link is valid
+        if yerr != nil {
+            session.ChannelMessageSend(channel.ID, "That looks like an invalid or unspported download link :frowning:")
+            return
+        }
+
+        // check if the link has been cached
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":content}).Run(utils.GetDB())
+        defer cursor.Close()
+        helpers.Relax(err)
+
+        var matches []Song
+        err = cursor.All(&matches)
+        if err == rethink.ErrEmptyResult {
+            // First song ever O-O
+            // Ignore error
+        } else if err != nil {
+            // Error. Should report that.
+            helpers.Relax(err)
+            return
+        }
+
+        for _, match := range matches {
+            // Check if url is present
+            if match.URL == content {
+                // Check if the match was processed
+                if match.Processed {
+                    session.ChannelMessageSend(channel.ID, "Added from cache! :smiley:")
+                    return
+                } else {
+                    session.ChannelMessageSend(channel.ID, "This song is:ok_hand:\n You can see the live queue at <http://music.meetkaren.xyz/>")
+                }
+            }
+        }
+
+        // add to queue otherwise
+        _, e := rethink.Table("music").Insert(Song{
+            Processed: false,
+            URL: content,
+        }).RunWrite(utils.GetDB())
+        helpers.Relax(e)
+
+        session.ChannelMessageSend(channel.ID, "Added to queue :ok_hand:\n You can see the live queue at <http://music.meetkaren.xyz/>")
         break
     }
 }

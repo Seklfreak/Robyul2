@@ -1,6 +1,8 @@
-hash: 8ffd71fd561620e1e1e23fea6fdf79f8a5553719911ebfd6366da5ccc67eb300
-updated: 2016-12-12T23:12:54.787890954+01:00
+hash: 7b6e0b15c7b8de1c250fe535a74f7cff569d96c1f8bd5f259740a99cfd6235f4
+updated: 2016-12-18T17:55:25.807832966+01:00
 imports:
+- name: github.com/bwmarrin/dgvoice
+  version: 425c1589e1ae73f10440bd3c0aa6b3bcb119e58c
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
 - name: github.com/cenk/backoff

@@ -12,3 +12,4 @@ import:
 - package: gopkg.in/gorethink/gorethink.v3
   version: ^3.0.0
 - package: github.com/robertkowalski/graylog-golang
+- package: github.com/bwmarrin/dgvoice
