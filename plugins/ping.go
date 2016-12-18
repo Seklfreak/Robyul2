@@ -4,6 +4,8 @@ import (
     "github.com/bwmarrin/discordgo"
     "time"
     "strconv"
+    "github.com/sn0w/Karen/helpers"
+    "github.com/sn0w/Karen/utils"
 )
 
 type Ping struct{}
