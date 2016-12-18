@@ -43,8 +43,8 @@ func (r Reminders) Init(session *discordgo.Session) {
             cursor, err := rethink.Table("reminders").Run(utils.GetDB())
             helpers.Relax(err)
 
-            m, err := cursor.Peek(&reminderBucket)
-            helpers.RelaxAssertEqual(m, true, err)
+            err = cursor.All(&reminderBucket)
+            helpers.Relax(err)
 
             for _, reminders := range reminderBucket {
                 changes := false
@@ -187,30 +187,28 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
 
 func getReminders(uid string) DB_Reminders {
     var reminderBucket DB_Reminders
-    listCursor, err := rethink.Table("reminders").Filter(map[string]interface{}{"userid":uid}).Run(utils.GetDB())
+    listCursor, err := rethink.Table("reminders").Filter(
+        rethink.Row.Field("userid").Eq(uid),
+    ).Run(utils.GetDB())
     defer listCursor.Close()
+    err = listCursor.One(&reminderBucket)
 
     // If user has no DB entries create an empty document
-    if err != nil {
-        if err == rethink.ErrEmptyResult {
-            _, e := rethink.Table("reminders").Insert(DB_Reminders{
-                UserID: uid,
-                Reminders: make([]DB_Reminder, 0),
-            }).RunWrite(utils.GetDB())
+    if err == rethink.ErrEmptyResult {
+        _, e := rethink.Table("reminders").Insert(DB_Reminders{
+            UserID: uid,
+            Reminders: make([]DB_Reminder, 0),
+        }).RunWrite(utils.GetDB())
 
-            // If the creation was successful read the document
-            if e != nil {
-                panic(e)
-            } else {
-                return getReminders(uid)
-            }
+        // If the creation was successful read the document
+        if e != nil {
+            panic(e)
         } else {
-            panic(err)
+            return getReminders(uid)
         }
+    } else if err != nil {
+        panic(err)
     }
-
-    e := listCursor.One(&reminderBucket)
-    helpers.Relax(e)
 
     return reminderBucket
 }
