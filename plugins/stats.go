@@ -50,29 +50,27 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
         hostname = "Unknown"
     }
 
-    m := []string{
-        "Hi! Here are some stats about me :smiley:",
-        "```",
-        "--------------------- System Information ---------------------",
-        "OS:                      " + runtime.GOOS + " [Arch: " + runtime.GOARCH + "]",
-        "Hostname:                " + hostname,
-        "Uptime:                  " + strings.Trim(uptime.Format(), " "),
-        "Go Version:              " + runtime.Version(),
-        "",
-        "--------------------- Bot Information ------------------------",
-        "Used RAM:                " + humanize.Bytes(ram.Alloc),
-        "Reserved RAM:            " + humanize.Bytes(ram.Sys),
-        "Garbage Collected:       " + humanize.Bytes(ram.TotalAlloc),
-        "Running Coroutines:      " + strconv.Itoa(runtime.NumGoroutine()),
-        "",
-        "--------------------- Discord Information --------------------",
-        "Connected Servers:       " + strconv.Itoa(len(guilds)),
-        "Watching Channels:       " + strconv.Itoa(channels),
-        "Users with access to me: " + strconv.Itoa(len(users)),
-        "```",
-    }
+    session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+        Title: "Stats!",
+        Description: "More awesome than melted cheese!",
+        Color: 0x0FADED,
+        Fields: []*discordgo.MessageEmbedField{
+            // System
+            {Name: "Hostname", Value: hostname, Inline: true},
+            {Name: "Uptime", Value: strings.Trim(uptime.Format(), " "), Inline: true},
+            {Name: "GO Version", Value: runtime.Version(), Inline: true},
 
-    session.ChannelMessageSend(msg.ChannelID, strings.Join(m, "\n"))
+            // Bot
+            {Name: "Used RAM", Value: humanize.Bytes(ram.Alloc) + "/" + humanize.Bytes(ram.Sys), Inline: true},
+            {Name: "Collected garbage", Value: humanize.Bytes(ram.TotalAlloc), Inline: true},
+            {Name: "Running coroutines", Value: strconv.Itoa(runtime.NumGoroutine()), Inline: true},
+
+            // Discord
+            {Name: "Connected servers", Value: strconv.Itoa(len(guilds)), Inline: true},
+            {Name: "Watching channels", Value: strconv.Itoa(channels), Inline: true},
+            {Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
+        },
+    })
 }
 
 func u64tos(i uint64) string {
