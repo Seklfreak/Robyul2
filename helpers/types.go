@@ -12,3 +12,16 @@ func Typeof(v interface{}) string {
         return t.Name()
     }
 }
+
+func MapToSliceOfSlices(m map[string]string) [][]string {
+    res := make([][]string, len(m))
+
+    for idx := range res {
+        for key, val := range m {
+            res[idx] = append(res[idx], key)
+            res[idx] = append(res[idx], val)
+        }
+    }
+
+    return res
+}
