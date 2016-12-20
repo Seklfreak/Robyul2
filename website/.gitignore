@@ -1,0 +1,24 @@
+# Created by https://www.gitignore.io/api/codeigniter,composer
+
+### Codeigniter ###
+application/logs/
+!application/logs/index.html
+!application/logs/.htaccess
+
+application/cache/
+!application/cache/index.html
+!application/cache/.htaccess
+
+application/config/config.php
+
+/vendor/
+
+
+### Composer ###
+composer.phar
+
+# Commit your application's lock file http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file
+# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
+# composer.lock
+
+# End of https://www.gitignore.io/api/codeigniter,composer
