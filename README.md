@@ -25,6 +25,11 @@ Got any problems or just want to chat with me and other devs?<br>
 Join the Discord Server! :)<br>
 [![](https://discordapp.com/api/guilds/180818466847064065/widget.png)](https://discord.gg/5SjDr3G)
 
+### How does this work?? TL;DR?
+I've drawn a colorful picture just for you!
+
+![](http://i.imgur.com/FVrc3jW.png)
+
 ### Docs
 Soon (tm)
 
