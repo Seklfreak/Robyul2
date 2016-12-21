@@ -1,7 +1,3 @@
-Disclaimer: This bot is still in a early stage.<br>
-Please expect (rare) crashes and performance problems until the bot is mature enough.
-<hr>
-
 <p align="center">
   <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
   <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
@@ -15,6 +11,13 @@ Please expect (rare) crashes and performance problems until the bot is mature en
   </a>
   <br>
 </p>
+
+<hr/>
+
+Disclaimer: This bot is still in a early stage.<br>
+Please expect (rare) crashes and performance problems until the bot is mature enough.
+
+<hr/>
 
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
