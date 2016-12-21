@@ -3,8 +3,7 @@ Please expect (rare) crashes and performance problems until the bot is mature en
 <hr>
 
 <p align="center">
-  <img src="http://i.imgur.com/vDJVt9g.png"/><br>
-  <h1>Karen</h1><br>
+  <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
   <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
     <img src="https://goreportcard.com/badge/github.com/sn0w/Karen" alt="Go Report Card"/>
   </a>
