@@ -28,7 +28,7 @@ Join the Discord Server! :)<br>
 ## How does this work?? TL;DR?
 I've drawn a colorful picture just for you!
 
-![](http://i.imgur.com/mhfqO1V.png)
+![](http://i.imgur.com/lI3VJDo.png)
 
 ## Docs
 Soon (tm)
