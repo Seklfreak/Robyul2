@@ -2,10 +2,20 @@ Disclaimer: This bot is still in a early stage.<br>
 Please expect (rare) crashes and performance problems until the bot is mature enough.
 <hr>
 
-# Karen &nbsp; ![](http://i.imgur.com/vDJVt9g.png)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sn0w/Karen)](https://goreportcard.com/report/github.com/sn0w/Karen)
-[![GoDoc](https://godoc.org/github.com/sn0w/Karen?status.svg)](https://godoc.org/github.com/sn0w/Karen)
-[![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/sn0w/Karen) 
+<p align="center">
+  <img src="http://i.imgur.com/vDJVt9g.png"/><br>
+  <h1>Karen</h1><br>
+  <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
+    <img src="https://goreportcard.com/badge/github.com/sn0w/Karen" alt="Go Report Card"/>
+  </a>
+  <a href="https://godoc.org/github.com/sn0w/Karen">
+    <img src="https://godoc.org/github.com/sn0w/Karen?status.svg" alt="GoDoc" />
+  </a>
+  <a href="https://gowalker.org/github.com/sn0w/Karen">
+    <img src="http://gowalker.org/api/v1/badge" alt="Go Walker" />
+  </a>
+  <br>
+</p>
 
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
