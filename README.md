@@ -26,7 +26,7 @@ Join the Discord Server! :)<br>
 [![](https://discordapp.com/api/guilds/180818466847064065/widget.png)](https://discord.gg/5SjDr3G)
 
 ### Docs
-All docs are available at http://meetkaren.xyz.
+Soon (tm)
 
 ### Invite
 Invite link is coming soon.
