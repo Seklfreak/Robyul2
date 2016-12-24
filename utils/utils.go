@@ -69,12 +69,24 @@ func CleverbotRefreshSession(channel string) {
 
 // Gets the prefix for $guild
 func GetPrefixForServer(guild string) (string, error) {
-    return GuildSettingGet(guild, "prefix")
+    settings, err := GuildSettingsGet(guild)
+    if err != nil {
+        return "", err
+    }
+
+    return settings.Prefix, nil
 }
 
 // Sets the prefix for $guild to $prefix
 func SetPrefixForServer(guild string, prefix string) error {
-    return GuildSettingSet(guild, "prefix", prefix)
+    settings, err := GuildSettingsGet(guild)
+    if err != nil {
+        return err
+    }
+
+    settings.Prefix = prefix
+
+    return GuildSettingsSet(guild, settings)
 }
 
 // Takes an error and sends it to discord and sentry.io

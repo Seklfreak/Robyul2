@@ -22,12 +22,12 @@ func interfaceToSlice(input interface{}) []interface{} {
     return s
 }
 
-func SliceRemoveOrderedElement(input interface{}, idx int) []interface{} {
+func SliceRemoveOrderedElement(input interface{}, idx int) interface{} {
     array := interfaceToSlice(input)
     return append(array[:idx], array[idx + 1:]...)
 }
 
-func SliceRemoveElement(input interface{}, idx int) []interface{} {
+func SliceRemoveElement(input interface{}, idx int) interface{} {
     array := interfaceToSlice(input)
     array[len(array) - 1], array[idx] = array[idx], array[len(array) - 1]
     return array[:len(array) - 1]

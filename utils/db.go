@@ -11,6 +11,8 @@ var dbSession *rethink.Session
 func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connecting to " + url)
 
+    rethink.SetTags("rethink", "json")
+
     session, err := rethink.Connect(rethink.ConnectOpts{
         Address: url,
         Database: db,
@@ -31,8 +33,8 @@ func GetDB() *rethink.Session {
     return dbSession
 }
 
-func GuildSettingSet(guild string, key string, value string) error {
-    // Create an empty config object
+func GuildSettingsSet(guild string, config models.Config) error {
+    // Check if an config object exists
     var settings models.Config
 
     cursor, err := rethink.Table("guild_configs").Filter(
@@ -47,25 +49,14 @@ func GuildSettingSet(guild string, key string, value string) error {
     err = cursor.One(&settings)
 
     switch err {
+    // Nope. Insert!
     case rethink.ErrEmptyResult:
-        settings = models.Config{
-            Data: make(map[string]string),
-            Guild: guild,
-        }
-
-        settings.Data[key] = value
-
-        _, err = rethink.Table("guild_configs").Insert(settings).RunWrite(GetDB())
+        _, err = rethink.Table("guild_configs").Insert(config).RunWrite(GetDB())
         break
 
+    // Yup. Update!
     case nil:
-        if err != nil {
-            return err
-        }
-
-        settings.Data[key] = value
-
-        _, err = rethink.Table("guild_configs").Update(settings).RunWrite(GetDB())
+        _, err = rethink.Table("guild_configs").Update(config).RunWrite(GetDB())
         break
 
     default:
@@ -75,7 +66,7 @@ func GuildSettingSet(guild string, key string, value string) error {
     return err
 }
 
-func GuildSettingGet(guild string, key string) (string, error) {
+func GuildSettingsGet(guild string) (models.Config, error) {
     var settings models.Config
     var cursor *rethink.Cursor
     var err error
@@ -86,14 +77,16 @@ func GuildSettingGet(guild string, key string) (string, error) {
     defer cursor.Close()
 
     if err != nil {
-        return "", err
+        return settings, err
     }
 
-    var marshalled bool
-    marshalled, err = cursor.Peek(&settings)
-    if !marshalled {
-        return "", err
-    }
+    err = cursor.One(&settings)
 
-    return settings.Data[key], nil
+    switch err {
+    case rethink.ErrEmptyResult:
+        settings = models.Config{}.Default(guild)
+        return settings, nil
+    default:
+        return settings, err
+    }
 }
