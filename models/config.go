@@ -8,9 +8,6 @@ type Config struct {
 
     CleanupEnabled         bool `rethink:"cleanup_enabled"`
 
-    AutoRepliesEnabled     bool `rethink:"auto_replies_enabled"`
-    AutoReplies            map[string]string `rethink:"auto_replies"`
-
     AnnouncementsEnabled   bool `rethink:"announcements_enabled"`
     AnnouncementsChannel   string `rethink:"announcements_channel"`
 
@@ -25,9 +22,6 @@ func (c Config) Default(guild string) Config {
         Prefix: "%",
 
         CleanupEnabled: false,
-
-        AutoRepliesEnabled: false,
-        AutoReplies: make(map[string]string),
 
         AnnouncementsEnabled: false,
         AnnouncementsChannel: "",
