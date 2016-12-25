@@ -60,7 +60,7 @@ func (r Reminders) Init(session *discordgo.Session) {
                                 "You wanted me to remind you to `" + reminder.Message + "` :slight_smile:",
                         )
 
-                        reminders.Reminders = helpers.SliceRemoveOrderedElement(reminders.Reminders, idx).([]DB_Reminder)
+                        reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx + 1:]...)
                         changes = true
                     }
                 }
