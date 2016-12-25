@@ -84,7 +84,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     // Ignore other bots and @everyone/@here
     if (!message.Author.Bot && !message.MentionEveryone) {
         // Get the channel
-        // Ignore the event if we cannot resolve the cannel
+        // Ignore the event if we cannot resolve the channel
         channel, err := session.Channel(message.ChannelID)
         if err != nil {
             go raven.CaptureError(err, map[string]string{})
@@ -107,8 +107,33 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                     // Trim message
                     msg = strings.Trim(msg, " ")
 
+                    // Convert to []byte before matching
+                    bmsg := []byte(msg)
+
+                    // Match against common task patterns
+                    // Send to cleverbot if nothing matches
                     switch {
-                    case regexp.MustCompile("^REFRESH CHAT SESSION$").Match([]byte(msg)):
+                    case regexp.MustCompile("(?i)^HELP.*").Match(bmsg):
+                        sendHelp(message)
+                        return
+
+                    case regexp.MustCompile("(?i)^PREFIX.*").Match(bmsg):
+                        prefix, _ := utils.GetPrefixForServer(channel.GuildID)
+                        if prefix == "" {
+                            discordSession.ChannelMessageSend(
+                                channel.ID,
+                                "Seems like there is no prefix yet :thinking:\n" +
+                                    "Admins can set one by typing for example `@Karen set prefix ?`",
+                            )
+                        }
+
+                        discordSession.ChannelMessageSend(
+                            channel.ID,
+                            "The prefix is `" + prefix + "` :smiley:",
+                        )
+                        return
+
+                    case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
                         utils.RequireAdmin(session, message.Message, func() {
                             // Refresh cleverbot session
                             utils.CleverbotRefreshSession(channel.ID)
@@ -116,15 +141,24 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                         })
                         return
 
-                    case regexp.MustCompile("^SET PREFIX (.){0,10}$").Match([]byte(msg)):
+                    case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
                         utils.RequireAdmin(session, message.Message, func() {
+                            // Extract prefix
+                            prefix := strings.Split(
+                                regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""),
+                                " ",
+                            )[0]
+
                             // Set new prefix
-                            err := utils.SetPrefixForServer(channel.GuildID, strings.Replace(msg, "SET PREFIX ", "", 1))
+                            err := utils.SetPrefixForServer(
+                                channel.GuildID,
+                                prefix,
+                            )
 
                             if err != nil {
                                 utils.SendError(session, message.Message, err)
                             } else {
-                                discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved!")
+                                discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
                             }
                         })
                         return
@@ -132,6 +166,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                     default:
                         // Send to cleverbot
                         session.ChannelTyping(message.ChannelID)
+
                         // Resolve other @mentions before sending the message
                         for _, user := range message.Mentions {
                             msg = strings.Replace(msg, "<@" + user.ID + ">", user.Username, -1)
@@ -148,26 +183,23 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             }
 
             // Only continue if a prefix is set
-            prefix, err := utils.GetPrefixForServer(channel.GuildID)
-            if err != nil {
-                go raven.CaptureError(err, map[string]string{})
+            prefix, _ := utils.GetPrefixForServer(channel.GuildID)
+            if prefix == "" {
                 return
             }
 
-            // Split the message into parts
-            parts := strings.Split(message.Content, " ")
-
-            // Save a sanitized version of the command (no prefix)
-            cmd := strings.Replace(parts[0], prefix, "", 1)
-
             // Check if the message is prefixed for us
             if (strings.HasPrefix(message.Content, prefix)) {
+                // Split the message into parts
+                parts := strings.Split(message.Content, " ")
+
+                // Save a sanitized version of the command (no prefix)
+                cmd := strings.Replace(parts[0], prefix, "", 1)
+
                 // Check if the user calls for help
                 if cmd == "h" || cmd == "help" {
-                    discordSession.ChannelMessageSend(
-                        message.ChannelID,
-                        fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/#commandlist>", message.Author.ID),
-                    )
+                    sendHelp(message)
+                    return
                 } else {
                     // Check if a module matches said command
                     // Do nothing otherwise
@@ -181,6 +213,13 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             }
         }
     }
+}
+
+func sendHelp(message *discordgo.MessageCreate) {
+    discordSession.ChannelMessageSend(
+        message.ChannelID,
+        fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/#commandlist>", message.Author.ID),
+    )
 }
 
 // Changes the game interval every 10 seconds after called
