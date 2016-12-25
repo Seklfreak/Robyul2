@@ -11,6 +11,9 @@ type Plugin interface {
     // List of commands and aliases
     Commands() []string
 
+    // Plugin constructor
+    Init(session *discordgo.Session)
+
     // Action to execute on message receive
     Action(
     command string,
@@ -18,9 +21,11 @@ type Plugin interface {
     msg *discordgo.Message,
     session *discordgo.Session,
     )
+}
 
-    // Plugin constructor
+type TriggerPlugin interface {
     Init(session *discordgo.Session)
+    Action(msg *discordgo.Message, session *discordgo.Session)
 }
 
 // List of active plugins
@@ -36,6 +41,9 @@ var PluginList = []Plugin{
     Roll{},
     Reminders{},
     //Music{},
+}
+
+var TriggerPluginList = []TriggerPlugin{
 }
 
 // CallBotPlugin iterates through the list of registered
@@ -59,6 +67,27 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message, sessi
     }
 }
 
+// CallTriggerPlugins iterates through all trigger plugins
+// and calls *all* of them (async).
+//
+// msg     - The message that triggered the execution
+// session - The discord session
+func CallTriggerPlugins(msg *discordgo.Message, session *discordgo.Session) {
+    // Iterate over all plugins
+    for _, plug := range TriggerPluginList {
+        go func() {
+            defer func() {
+                err := recover()
+                if err != nil {
+                    utils.SendError(session, msg, err)
+                }
+            }()
+
+            plug.Action(msg, session)
+        }()
+    }
+}
+
 // Wrapper that catches any panics from plugins
 // Arguments: Same as CallBotPlugin().
 func safePluginCall(command string, content string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
@@ -71,9 +100,4 @@ func safePluginCall(command string, content string, msg *discordgo.Message, sess
     }()
 
     plug.Action(command, content, msg, session)
-}
-
-// Getter for this plugin list
-func GetPlugins() []Plugin {
-    return PluginList
 }

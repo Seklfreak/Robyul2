@@ -27,8 +27,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 
     // Init plugins
     tmpl := "[PLUG] %s reacts to [ %s]"
-
-    for _, plugin := range plugins.GetPlugins() {
+    for _, plugin := range plugins.PluginList {
         cmds := ""
 
         for _, cmd := range plugin.Commands() {
@@ -39,6 +38,17 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
             tmpl,
             helpers.Typeof(plugin),
             cmds,
+        ))
+
+        plugin.Init(session)
+    }
+
+    // Init trigger plugins
+    tmpl = "[TRIG] Registered %s"
+    for _, plugin := range plugins.TriggerPluginList {
+        Logger.INF(fmt.Sprintf(
+            tmpl,
+            helpers.Typeof(plugin),
         ))
 
         plugin.Init(session)
@@ -183,8 +193,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             }
 
             // Only continue if a prefix is set
+            // Else check if any instant-replies match
             prefix, _ := utils.GetPrefixForServer(channel.GuildID)
             if prefix == "" {
+                plugins.CallTriggerPlugins(message.Message, session)
                 return
             }
 
