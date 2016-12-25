@@ -35,7 +35,6 @@ var PluginList = []Plugin{
     Stone{},
     Roll{},
     Reminders{},
-    Bolizei{},
     //Music{},
 }
 

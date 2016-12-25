@@ -20,6 +20,6 @@ func (i Invite) Init(session *discordgo.Session) {
 func (i Invite) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelMessageSend(
         msg.ChannelID,
-        "Woah thanks :heart_eyes: \n I'm still beta but you can register for access here: <https://goo.gl/forms/9J9GYMg8c9IM6a5Z2>",
+        "Woah thanks :heart_eyes: \n I'm still beta but you can apply for early-access here: <https://meetkaren.xyz/invite>",
     )
 }
