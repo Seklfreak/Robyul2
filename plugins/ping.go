@@ -4,6 +4,7 @@ import (
     "github.com/bwmarrin/discordgo"
     "time"
     "strconv"
+    "github.com/sn0w/Karen/helpers"
 )
 
 type Ping struct{}
@@ -22,14 +23,12 @@ func (p Ping) Action(command string, content string, msg *discordgo.Message, ses
     start := time.Now()
 
     m, err := session.ChannelMessageSend(msg.ChannelID, ":ping_pong: Pong! :grin:")
-    if err != nil {
-        panic(err)
-    }
+    helpers.Relax(err)
 
     end := time.Now()
     session.ChannelMessageEdit(
         msg.ChannelID,
         m.ID,
-        m.Content + " (" + strconv.Itoa(int(end.Sub(start).Seconds() * 100)) + "ms RTT)",
+        m.Content + " (" + strconv.Itoa(int(end.Sub(start).Seconds() * 100)) + "ms)",
     )
 }
