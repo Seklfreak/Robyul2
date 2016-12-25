@@ -230,7 +230,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 func sendHelp(message *discordgo.MessageCreate) {
     discordSession.ChannelMessageSend(
         message.ChannelID,
-        fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/#commandlist>", message.Author.ID),
+        fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/commands>", message.Author.ID),
     )
 }
 
