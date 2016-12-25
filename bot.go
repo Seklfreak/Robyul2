@@ -48,28 +48,27 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     go func() {
         time.Sleep(3 * time.Second)
 
-        users := make(map[string]string)
-        channels := 0
-        guilds := session.State.Guilds
+        configName := utils.GetConfig().Path("bot.name").Data().(string)
+        configAvatar := utils.GetConfig().Path("bot.avatar").Data().(string)
 
-        for _, guild := range guilds {
-            channels += len(guild.Channels)
-
-            for _, u := range guild.Members {
-                users[u.User.ID] = u.User.Username
-            }
-        }
-
-        Logger.INF(fmt.Sprintf("Servers:%d | Channels:%d | Users:%d", len(guilds), channels, len(users)))
-
-        // Change avatar/name
-        if session.State.User.Username != utils.GetConfig().Path("bot.name").Data().(string) ||
-            session.State.User.Avatar != utils.GetConfig().Path("bot.avatar").Data().(string) {
+        // Change avatar if desired
+        if configAvatar != "" && configAvatar != session.State.User.Avatar {
             session.UserUpdate(
                 "",
                 "",
-                utils.GetConfig().Path("bot.name").Data().(string),
-                utils.GetConfig().Path("bot.avatar").Data().(string),
+                session.State.User.Username,
+                configAvatar,
+                "",
+            )
+        }
+
+        // Change name if desired
+        if configName != "" && configName != session.State.User.Username {
+            session.UserUpdate(
+                "",
+                "",
+                configName,
+                session.State.User.Avatar,
                 "",
             )
         }
