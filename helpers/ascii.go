@@ -62,8 +62,8 @@ func drawLine(start string, mid string, end string, paddings []int, data []strin
 // Draws content with padding and custom separators (eg "|A    |B    |C    |")
 func drawContent(separator string, end string, paddings []int, data []string) string {
     sb := ""
-    for idx, header := range data {
-        sb += separator + header + strings.Repeat(" ", paddings[idx] - len(header))
+    for idx, content := range data {
+        sb += separator + content + strings.Repeat(" ", paddings[idx] - len(content))
     }
     sb += end + "\n"
 

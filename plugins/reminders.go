@@ -152,10 +152,13 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
     case "rms", "reminders":
         reminders := getReminders(msg.Author.ID)
 
-        m := "These are your pending reminders :slight_smile:\n"
+        headers := []string{
+            "Time", "Guild", "Channel", "Message",
+        }
 
-        m += "```\n"
-        for _, reminder := range reminders.Reminders {
+        body := make([][]string, len(reminders.Reminders))
+
+        for idx, reminder := range reminders.Reminders {
             ts := time.Unix(reminder.Timestamp, 0)
             channel := "?"
             guild := "?"
@@ -170,17 +173,16 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
                 guild = guildRef.Name
             }
 
-            m += fmt.Sprintf(
-                "%s - %s | #%s in '%s'\n",
-                ts.String(),
-                reminder.Message,
-                channel,
-                guild,
-            )
+            body[idx] = []string{
+                ts.String(), guild, channel, reminder.Message,
+            }
         }
-        m += "\n```"
 
-        session.ChannelMessageSend(msg.ChannelID, m)
+        session.ChannelMessageSend(
+            msg.ChannelID,
+            "These are your pending reminders :slight_smile:\n" +
+                helpers.DrawTable(headers, body),
+        )
         break
     }
 }
