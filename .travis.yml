@@ -16,7 +16,6 @@ script:
     - go build -v
     - GOOS=windows GOARCH=386 go build -o karen.x86.exe
     - GOOS=windows GOARCH=amd64 go build -o karen.x64.exe
-    - GOOS=darwin GOARCH=amd64 go build -o karen.osx.o
     - GOOS=linux GOARCH=386 go build -o karen.x86.o
     - GOOS=linux GOARCH=amd64 go build -o karen.x64.o
 
@@ -29,6 +28,5 @@ deploy:
     - karen.x64.exe
     - karen.x86.o
     - karen.x64.o
-    - karen.osx.o
   on:
     tags: true
