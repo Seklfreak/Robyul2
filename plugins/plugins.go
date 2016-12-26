@@ -30,6 +30,7 @@ type TriggerPlugin interface {
 
 // List of active plugins
 var PluginList = []Plugin{
+    Avatar{},
     About{},
     Stats{},
     Ping{},
