@@ -13,8 +13,8 @@ install:
     - glide install
 
 script:
-    - GOOS=windows GOARCH=amd64 go build -v -o karen.x64.exe
     - GOOS=linux GOARCH=amd64 go build -v -o karen.x64.o
+    - GOOS=windows GOARCH=amd64 go build -v -o karen.x64.exe
 
 deploy:
   provider: releases
