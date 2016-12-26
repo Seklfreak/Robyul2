@@ -11,6 +11,7 @@ import (
     "strconv"
     "errors"
     "github.com/getsentry/raven-go"
+    "github.com/sn0w/Karen/helpers"
 )
 
 // Defines what a callback is
@@ -131,9 +132,7 @@ func NetGetUA(url string, useragent string) []byte {
 
     // Do request
     response, err := client.Do(request)
-    if err != nil {
-        panic(err)
-    }
+    helpers.Relax(err)
 
     // Only continue if code was 200
     if response.StatusCode != 200 {
@@ -144,9 +143,7 @@ func NetGetUA(url string, useragent string) []byte {
 
         buf := bytes.NewBuffer(nil)
         _, err := io.Copy(buf, response.Body)
-        if err != nil {
-            panic(err)
-        }
+        helpers.Relax(err)
 
         return buf.Bytes()
     }
@@ -156,9 +153,7 @@ func NetGetUA(url string, useragent string) []byte {
 func GetJSON(url string) *gabs.Container {
     // Parse json
     json, err := gabs.ParseJSON(NetGet(url))
-    if err != nil {
-        panic(err)
-    }
+    helpers.Relax(err)
 
     return json
 }
