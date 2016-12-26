@@ -43,6 +43,7 @@ var PluginList = []Plugin{
     //Music{},
     FML{},
     UrbanDict{},
+    Weather{},
 }
 
 var TriggerPluginList = []TriggerPlugin{

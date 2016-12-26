@@ -21,14 +21,14 @@ func (u UrbanDict) Init(session *discordgo.Session) {
 }
 
 func (u UrbanDict) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+    session.ChannelTyping(msg.ChannelID)
+
     if content == "" {
         session.ChannelMessageSend(msg.ChannelID, "You should pass a word to define :thinking:")
         return
     }
 
     endpoint := "http://api.urbandictionary.com/v0/define?term=" + url.QueryEscape(content)
-
-    session.ChannelTyping(msg.ChannelID)
 
     json := utils.GetJSON(endpoint)
 

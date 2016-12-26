@@ -112,10 +112,25 @@ func SendError(session *discordgo.Session, msg *discordgo.Message, err interface
     })
 }
 
-// Sends a GET request to $url, parses it and returns the JSON
-func GetJSON(url string) *gabs.Container {
-    // Send request
-    response, err := http.Get(url)
+func NetGet(url string) []byte {
+    return NetGetUA(url, "Karen/Discord-Bot")
+}
+
+func NetGetUA(url string, useragent string) []byte {
+    // Allocate client
+    client := &http.Client{}
+
+    // Prepare request
+    request, err := http.NewRequest("GET", url, nil)
+    if err != nil {
+        panic(err)
+    }
+
+    // Set custom UA
+    request.Header.Set("User-Agent", useragent)
+
+    // Do request
+    response, err := client.Do(request)
     if err != nil {
         panic(err)
     }
@@ -133,14 +148,19 @@ func GetJSON(url string) *gabs.Container {
             panic(err)
         }
 
-        // Parse json
-        json, err := gabs.ParseJSON(buf.Bytes())
-        if err != nil {
-            panic(err)
-        }
-
-        return json
+        return buf.Bytes()
     }
+}
+
+// Sends a GET request to $url, parses it and returns the JSON
+func GetJSON(url string) *gabs.Container {
+    // Parse json
+    json, err := gabs.ParseJSON(NetGet(url))
+    if err != nil {
+        panic(err)
+    }
+
+    return json
 }
 
 // Only calls $cb if the author is an admin or has MANAGE_SERVER permission
