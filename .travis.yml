@@ -2,17 +2,18 @@ sudo: true
 
 language: go
 
-go:
-- 1.7.x
+go: 1.7.x
 
 before_install:
-- sudo add-apt-repository ppa:masterminds/glide -y
-- sudo apt-get update
-- sudo apt-get install glide -y
-- glide install
+    - sudo add-apt-repository ppa:masterminds/glide -y
+    - sudo apt-get update
+    - sudo apt-get install glide -y
+
+install:
+    - glide install
 
 script:
-- go build -v -o karen.o
+    - go build -v -o karen.o
 
 deploy:
   provider: releases
