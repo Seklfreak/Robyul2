@@ -37,9 +37,7 @@ func GuildSettingsSet(guild string, config models.Config) error {
     // Check if an config object exists
     var settings models.Config
 
-    cursor, err := rethink.Table("guild_configs").Filter(
-        rethink.Row.Field("guild").Eq(guild),
-    ).Run(GetDB())
+    cursor, err := rethink.Table("guild_configs").Filter(map[string]interface{}{"guild":guild}).Run(GetDB())
     defer cursor.Close()
 
     if err != nil {
@@ -49,14 +47,16 @@ func GuildSettingsSet(guild string, config models.Config) error {
     err = cursor.One(&settings)
 
     switch err {
-    // Nope. Insert!
+    // Insert
     case rethink.ErrEmptyResult:
         _, err = rethink.Table("guild_configs").Insert(config).RunWrite(GetDB())
         break
 
-    // Yup. Update!
+    // Update
     case nil:
-        _, err = rethink.Table("guild_configs").Update(config).RunWrite(GetDB())
+        _, err = rethink.Table("guild_configs").Filter(
+            map[string]interface{}{"guild":guild},
+        ).Update(config).RunWrite(GetDB())
         break
 
     default:
@@ -71,9 +71,7 @@ func GuildSettingsGet(guild string) (models.Config, error) {
     var cursor *rethink.Cursor
     var err error
 
-    cursor, err = rethink.Table("guild_configs").Filter(
-        rethink.Row.Field("guild").Eq(guild),
-    ).Run(GetDB())
+    cursor, err = rethink.Table("guild_configs").Filter(map[string]interface{}{"guild":guild}).Run(GetDB())
     defer cursor.Close()
 
     if err != nil {
