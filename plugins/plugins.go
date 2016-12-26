@@ -46,6 +46,7 @@ var PluginList = []Plugin{
     UrbanDict{},
     Weather{},
     Minecraft{},
+    XKCD{},
 }
 
 var TriggerPluginList = []TriggerPlugin{
