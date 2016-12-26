@@ -1,16 +1,16 @@
 <p align="center">
   <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
   <a href="https://travis-ci.org/sn0w/Karen">
-    <img src="https://travis-ci.org/sn0w/Karen.svg?branch=master" alt="Build Status"/>
+    <img src="https://img.shields.io/travis/sn0w/Karen.svg?style=flat-square" alt="Build Status"/>
   </a>
   <a href="">
-    <img src="https://img.shields.io/github/tag/sn0w/karen.svg" alt="GitHub tag"/>
+    <img src="https://img.shields.io/github/tag/sn0w/karen.svg?style=flat-square" alt="GitHub tag"/>
   </a>
   <a href="">
-    <img src="https://img.shields.io/github/downloads/sn0w/karen/total.svg" alt="Github All Releases"/>
+    <img src="https://img.shields.io/github/downloads/sn0w/karen/total.svg?style=flat-square" alt="Github All Releases"/>
   </a>
   <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
-    <img src="https://goreportcard.com/badge/github.com/sn0w/Karen" alt="Go Report Card"/>
+    <img src="https://goreportcard.com/badge/github.com/sn0w/Karen?style=flat-square" alt="Go Report Card"/>
   </a>
   <a href="https://gowalker.org/github.com/sn0w/Karen">
     <img src="http://gowalker.org/api/v1/badge" alt="Go Walker" />
