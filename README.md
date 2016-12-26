@@ -1,5 +1,8 @@
 <p align="center">
   <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
+  <a href="https://circleci.com/gh/sn0w/Karen">
+    <img src="https://circleci.com/gh/sn0w/Karen.svg?style=svg" alt="CircleCI"/>
+  </a>
   <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
     <img src="https://goreportcard.com/badge/github.com/sn0w/Karen" alt="Go Report Card"/>
   </a>
