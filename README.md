@@ -3,11 +3,14 @@
   <a href="https://travis-ci.org/sn0w/Karen">
     <img src="https://travis-ci.org/sn0w/Karen.svg?branch=master" alt="Build Status"/>
   </a>
+  <a href="">
+    <img src="https://img.shields.io/github/tag/sn0w/karen.svg" alt="GitHub tag"/>
+  </a>
+  <a href="">
+    <img src="https://img.shields.io/github/downloads/sn0w/karen/total.svg" alt="Github All Releases"/>
+  </a>
   <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
     <img src="https://goreportcard.com/badge/github.com/sn0w/Karen" alt="Go Report Card"/>
-  </a>
-  <a href="https://godoc.org/github.com/sn0w/Karen">
-    <img src="https://godoc.org/github.com/sn0w/Karen?status.svg" alt="GoDoc" />
   </a>
   <a href="https://gowalker.org/github.com/sn0w/Karen">
     <img src="http://gowalker.org/api/v1/badge" alt="Go Walker" />
