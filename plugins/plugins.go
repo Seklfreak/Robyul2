@@ -41,6 +41,7 @@ var PluginList = []Plugin{
     Roll{},
     Reminders{},
     //Music{},
+    FML{},
 }
 
 var TriggerPluginList = []TriggerPlugin{

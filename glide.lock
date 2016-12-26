@@ -1,8 +1,8 @@
-hash: 7b6e0b15c7b8de1c250fe535a74f7cff569d96c1f8bd5f259740a99cfd6235f4
-updated: 2016-12-18T17:55:25.807832966+01:00
+hash: 0a8cf6087203188203ce504adfce99ddc125af7e416d96af3414fe4632b2f2e5
+updated: 2016-12-26T01:54:21.24752704+01:00
 imports:
-- name: github.com/bwmarrin/dgvoice
-  version: 425c1589e1ae73f10440bd3c0aa6b3bcb119e58c
+- name: github.com/andybalholm/cascadia
+  version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
 - name: github.com/cenk/backoff
@@ -25,10 +25,8 @@ imports:
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/Jeffail/gabs
   version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
-- name: github.com/layeh/gopus
-  version: 867541549ca5f8b4db2b92fd1dded8711256a27d
-- name: github.com/robertkowalski/graylog-golang
-  version: e5295cfa28272ada50cb9b5d97696ee06e49ed42
+- name: github.com/PuerkitoBio/goquery
+  version: 56a198aba89cdf7a612e6c762eff9d788b9f2dae
 - name: github.com/Sirupsen/logrus
   version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
 - name: github.com/ugjka/cleverbot-go
@@ -40,6 +38,11 @@ imports:
   - pbkdf2
   - poly1305
   - salsa20/salsa
+- name: golang.org/x/net
+  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
+  subpackages:
+  - html
+  - html/atom
 - name: golang.org/x/sys
   version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
