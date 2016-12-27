@@ -2,9 +2,9 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/utils"
     "net/url"
-    "github.com/sn0w/Karen/helpers"
 )
 
 type UrbanDict struct{}

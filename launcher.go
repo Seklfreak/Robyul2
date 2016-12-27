@@ -2,12 +2,12 @@ package main
 
 import (
     "github.com/bwmarrin/discordgo"
+    "github.com/getsentry/raven-go"
     Logger "github.com/sn0w/Karen/logger"
+    "github.com/sn0w/Karen/migrations"
+    "github.com/sn0w/Karen/utils"
     "os"
     "os/signal"
-    "github.com/sn0w/Karen/utils"
-    "github.com/getsentry/raven-go"
-    "github.com/sn0w/Karen/migrations"
 )
 
 // The discord session holder

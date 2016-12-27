@@ -14,7 +14,7 @@ func ConnectDB(url string, db string) {
     rethink.SetTags("rethink", "json")
 
     session, err := rethink.Connect(rethink.ConnectOpts{
-        Address: url,
+        Address:  url,
         Database: db,
     })
 
@@ -37,7 +37,7 @@ func GuildSettingsSet(guild string, config models.Config) error {
     // Check if an config object exists
     var settings models.Config
 
-    cursor, err := rethink.Table("guild_configs").Filter(map[string]interface{}{"guild":guild}).Run(GetDB())
+    cursor, err := rethink.Table("guild_configs").Filter(map[string]interface{}{"guild": guild}).Run(GetDB())
     defer cursor.Close()
 
     if err != nil {
@@ -55,7 +55,7 @@ func GuildSettingsSet(guild string, config models.Config) error {
     // Update
     case nil:
         _, err = rethink.Table("guild_configs").Filter(
-            map[string]interface{}{"guild":guild},
+            map[string]interface{}{"guild": guild},
         ).Update(config).RunWrite(GetDB())
         break
 
@@ -71,7 +71,7 @@ func GuildSettingsGet(guild string) (models.Config, error) {
     var cursor *rethink.Cursor
     var err error
 
-    cursor, err = rethink.Table("guild_configs").Filter(map[string]interface{}{"guild":guild}).Run(GetDB())
+    cursor, err = rethink.Table("guild_configs").Filter(map[string]interface{}{"guild": guild}).Run(GetDB())
     defer cursor.Close()
 
     if err != nil {

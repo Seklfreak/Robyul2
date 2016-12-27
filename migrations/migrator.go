@@ -2,8 +2,8 @@ package migrations
 
 import (
     "fmt"
-    "runtime"
     "reflect"
+    "runtime"
 )
 
 type Migration func()

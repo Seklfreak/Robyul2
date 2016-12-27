@@ -4,8 +4,8 @@ import (
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/utils"
     "net/url"
-    "strings"
     "regexp"
+    "strings"
 )
 
 type Weather struct{}

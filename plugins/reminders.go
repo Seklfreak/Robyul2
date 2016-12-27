@@ -1,22 +1,22 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
     "fmt"
-    "time"
-    "strings"
+    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/Karen/helpers"
+    "github.com/sn0w/Karen/utils"
+    rethink "gopkg.in/gorethink/gorethink.v3"
     "regexp"
     "strconv"
-    rethink "gopkg.in/gorethink/gorethink.v3"
-    "github.com/sn0w/Karen/utils"
-    "github.com/sn0w/Karen/helpers"
+    "strings"
+    "time"
 )
 
 type Reminders struct{}
 
 type DB_Reminders struct {
-    Id        string `gorethink:"id,omitempty"`
-    UserID    string `gorethink:"userid"`
+    Id        string        `gorethink:"id,omitempty"`
+    UserID    string        `gorethink:"userid"`
     Reminders []DB_Reminder `gorethink:"reminders"`
 }
 
@@ -24,7 +24,7 @@ type DB_Reminder struct {
     Message   string `gorethink:"message"`
     ChannelID string `gorethink:"channelID"`
     GuildID   string `gorethink:"guildID"`
-    Timestamp int64 `gorethink:"timestamp"`
+    Timestamp int64  `gorethink:"timestamp"`
 }
 
 func (r Reminders) Commands() []string {
@@ -139,9 +139,9 @@ func (r Reminders) Action(command string, content string, msg *discordgo.Message
 
         reminders := getReminders(msg.Author.ID)
         reminders.Reminders = append(reminders.Reminders, DB_Reminder{
-            Message: message,
+            Message:   message,
             ChannelID: channel.ID,
-            GuildID: channel.GuildID,
+            GuildID:   channel.GuildID,
             Timestamp: ts,
         })
         setReminders(msg.Author.ID, reminders)
@@ -198,7 +198,7 @@ func getReminders(uid string) DB_Reminders {
     // If user has no DB entries create an empty document
     if err == rethink.ErrEmptyResult {
         _, e := rethink.Table("reminders").Insert(DB_Reminders{
-            UserID: uid,
+            UserID:    uid,
             Reminders: make([]DB_Reminder, 0),
         }).RunWrite(utils.GetDB())
 

@@ -1,8 +1,8 @@
 package helpers
 
 import (
-    "reflect"
     "errors"
+    "reflect"
 )
 
 func interfaceToSlice(input interface{}) []interface{} {

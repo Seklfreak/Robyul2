@@ -1,17 +1,17 @@
 package utils
 
 import (
-    "github.com/Jeffail/gabs"
-    "github.com/ugjka/cleverbot-go"
-    "github.com/bwmarrin/discordgo"
-    "fmt"
     "bytes"
+    "errors"
+    "fmt"
+    "github.com/Jeffail/gabs"
+    "github.com/bwmarrin/discordgo"
+    "github.com/getsentry/raven-go"
+    "github.com/sn0w/Karen/helpers"
+    "github.com/ugjka/cleverbot-go"
     "io"
     "net/http"
     "strconv"
-    "errors"
-    "github.com/getsentry/raven-go"
-    "github.com/sn0w/Karen/helpers"
 )
 
 // Defines what a callback is
@@ -100,16 +100,16 @@ func SendError(session *discordgo.Session, msg *discordgo.Message, err interface
     )
 
     raven.SetUserContext(&raven.User{
-        ID: msg.ID,
+        ID:       msg.ID,
         Username: msg.Author.Username + "#" + msg.Author.Discriminator,
     })
     raven.CaptureError(errors.New(fmt.Sprintf("%#v", err)), map[string]string{
-        "ChannelID": msg.ChannelID,
-        "Content": msg.Content,
-        "Timestamp": string(msg.Timestamp),
-        "TTS": strconv.FormatBool(msg.Tts),
+        "ChannelID":       msg.ChannelID,
+        "Content":         msg.Content,
+        "Timestamp":       string(msg.Timestamp),
+        "TTS":             strconv.FormatBool(msg.Tts),
         "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-        "IsBot": strconv.FormatBool(msg.Author.Bot),
+        "IsBot":           strconv.FormatBool(msg.Author.Bot),
     })
 }
 

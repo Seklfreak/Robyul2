@@ -2,10 +2,10 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "strings"
     "math/rand"
-    "strconv"
     "regexp"
+    "strconv"
+    "strings"
 )
 
 type Roll struct{}

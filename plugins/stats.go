@@ -2,12 +2,12 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "os"
-    "runtime"
     "github.com/cloudfoundry/gosigar"
     "github.com/dustin/go-humanize"
-    "strings"
+    "os"
+    "runtime"
     "strconv"
+    "strings"
 )
 
 type Stats struct{}
@@ -51,13 +51,13 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     }
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        Title: "Stats!",
+        Title:       "Stats!",
         Description: "More awesome than melted cheese!",
-        Color: 0x0FADED,
+        Color:       0x0FADED,
         Fields: []*discordgo.MessageEmbedField{
             // System
             {Name: "Hostname", Value: hostname, Inline: true},
-            {Name: "Uptime", Value: strings.Trim(uptime.Format(), " "), Inline: true},
+            {Name: "Uptime", Value: strings.TrimSpace(uptime.Format()), Inline: true},
             {Name: "GO Version", Value: runtime.Version(), Inline: true},
 
             // Bot

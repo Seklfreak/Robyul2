@@ -1,8 +1,8 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
     "github.com/PuerkitoBio/goquery"
+    "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
 )
 

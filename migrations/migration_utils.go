@@ -1,9 +1,9 @@
 package migrations
 
 import (
+    "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/utils"
     rethink "gopkg.in/gorethink/gorethink.v3"
-    "github.com/sn0w/Karen/helpers"
 )
 
 // Create a table if it does not exist

@@ -41,7 +41,7 @@ var PluginList = []Plugin{
     Stone{},
     Roll{},
     Reminders{},
-    //Music{},
+    Music{},
     FML{},
     UrbanDict{},
     Weather{},
@@ -49,8 +49,7 @@ var PluginList = []Plugin{
     XKCD{},
 }
 
-var TriggerPluginList = []TriggerPlugin{
-}
+var TriggerPluginList = []TriggerPlugin{}
 
 // CallBotPlugin iterates through the list of registered
 // plugins and tries to guess which one is the intended call
@@ -66,7 +65,7 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message, sessi
         // Iterate over all commands of the current plugin
         for _, cmd := range plug.Commands() {
             if command == cmd {
-                go safePluginCall(command, strings.Trim(content, " "), msg, session, plug)
+                go safePluginCall(command, strings.TrimSpace(content), msg, session, plug)
                 break
             }
         }

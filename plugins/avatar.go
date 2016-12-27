@@ -1,8 +1,8 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
     "fmt"
+    "github.com/bwmarrin/discordgo"
 )
 
 type Avatar struct{}

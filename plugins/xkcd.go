@@ -1,9 +1,9 @@
 package plugins
 
 import (
+    "fmt"
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/utils"
-    "fmt"
 )
 
 type XKCD struct{}

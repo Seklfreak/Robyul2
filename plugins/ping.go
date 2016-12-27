@@ -2,9 +2,9 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "time"
-    "strconv"
     "github.com/sn0w/Karen/helpers"
+    "strconv"
+    "time"
 )
 
 type Ping struct{}

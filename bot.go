@@ -2,16 +2,16 @@ package main
 
 import (
     "fmt"
-    Logger "github.com/sn0w/Karen/logger"
     "github.com/bwmarrin/discordgo"
-    "math/rand"
-    "time"
-    "strings"
-    "regexp"
     "github.com/getsentry/raven-go"
+    "github.com/sn0w/Karen/helpers"
+    Logger "github.com/sn0w/Karen/logger"
     "github.com/sn0w/Karen/plugins"
     "github.com/sn0w/Karen/utils"
-    "github.com/sn0w/Karen/helpers"
+    "math/rand"
+    "regexp"
+    "strings"
+    "time"
 )
 
 // Called after the gateway connected
@@ -92,7 +92,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 // This will be called after *every* message on *every* server so it should die as soon as possible.
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
     // Ignore other bots and @everyone/@here
-    if (!message.Author.Bot && !message.MentionEveryone) {
+    if !message.Author.Bot && !message.MentionEveryone {
         // Get the channel
         // Ignore the event if we cannot resolve the channel
         channel, err := session.Channel(message.ChannelID)
@@ -103,11 +103,11 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
         // We only do things in guilds.
         // Get a friend already and stop chatting with bots
-        if (!channel.IsPrivate) {
+        if !channel.IsPrivate {
             // Check if the message contains @mentions
-            if (len(message.Mentions) >= 1) {
+            if len(message.Mentions) >= 1 {
                 // Check if someone is mentioning us
-                if (message.Mentions[0].ID == session.State.User.ID) {
+                if message.Mentions[0].ID == session.State.User.ID {
                     // Prepare content for editing
                     msg := message.Content
 
@@ -201,7 +201,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             }
 
             // Check if the message is prefixed for us
-            if (strings.HasPrefix(message.Content, prefix)) {
+            if strings.HasPrefix(message.Content, prefix) {
                 // Split the message into parts
                 parts := strings.Split(message.Content, " ")
 

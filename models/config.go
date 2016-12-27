@@ -8,10 +8,10 @@ type Config struct {
 
     CleanupEnabled         bool `rethink:"cleanup_enabled"`
 
-    AnnouncementsEnabled   bool `rethink:"announcements_enabled"`
+    AnnouncementsEnabled   bool   `rethink:"announcements_enabled"`
     AnnouncementsChannel   string `rethink:"announcements_channel"`
 
-    WelcomeNewUsersEnabled bool `rethink:"welcome_new_users_enabled"`
+    WelcomeNewUsersEnabled bool   `rethink:"welcome_new_users_enabled"`
     WelcomeNewUsersText    string `rethink:"welcome_new_users_text"`
 }
 
@@ -27,6 +27,6 @@ func (c Config) Default(guild string) Config {
         AnnouncementsChannel: "",
 
         WelcomeNewUsersEnabled: false,
-        WelcomeNewUsersText: "",
+        WelcomeNewUsersText:    "",
     }
 }

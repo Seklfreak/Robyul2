@@ -1,36 +1,34 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
     "fmt"
-    "os"
-    "strings"
-    "io/ioutil"
-    "regexp"
-    "os/exec"
+    "github.com/Jeffail/gabs"
+    "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
-    rethink "gopkg.in/gorethink/gorethink.v3"
-
     "github.com/sn0w/Karen/utils"
+    rethink "gopkg.in/gorethink/gorethink.v3"
+    "io/ioutil"
+    "os"
+    "os/exec"
+    "regexp"
+    "strings"
+    "time"
 )
 
-type Music struct{}
-
-type Playlist struct {
-    GuildID   string
-    ChannelID string
-    Songs     []Song
+type Music struct {
+    // Maps refs to a song slice.
+    // guild:voice_id -> []Song
+    Playlist map[string][]Song
 }
 
 type Song struct {
     ID          string `gorethink:"id,omitempty"`
-    AddedBy     string `gorethink:"addedBy"`
+    AddedBy     string `gorethink:"added_by"`
     Title       string `gorethink:"title"`
     Description string `gorethink:"description"`
-    FullTitle   string `gorethink:"full_title"`
     URL         string `gorethink:"webpage_url"`
     Duration    int    `gorethink:"duration"`
-    Processed   bool `gorethink:"processed"`
+    Processed   bool   `gorethink:"processed"`
     Path        string `gorethink:"path"`
 }
 
@@ -41,6 +39,7 @@ func (m Music) Commands() []string {
         "join",
         "leave",
         "play",
+        "pause",
         "stop",
         "skip",
         "clear",
@@ -75,9 +74,12 @@ func (m Music) Init(session *discordgo.Session) {
         }
     }
 
-    if (foundYTD && foundFFPROBE && foundFFMPEG) {
+    if foundYTD && foundFFPROBE && foundFFMPEG {
         musicPluginEnabled = true
         fmt.Println("=> Found. Music enabled!")
+
+        // Start loop that processes videos in background
+        go processorLoop()
     } else {
         fmt.Println("=> Not Found. Music disabled!")
     }
@@ -88,15 +90,13 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
         return
     }
 
+    // Channel ref
     channel, err := session.Channel(msg.ChannelID)
-    if err != nil {
-        panic(err)
-    }
+    helpers.Relax(err)
 
+    // Guild ref
     guild, err := session.Guild(channel.GuildID)
-    if err != nil {
-        panic(err)
-    }
+    helpers.Relax(err)
 
     // Voice channel ref
     vc := resolveVoiceChannel(msg.Author, guild, session)
@@ -104,7 +104,7 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
     // Voice connection ref
     var voiceConnection *discordgo.VoiceConnection
 
-    // Check if the user is connected at all
+    // Check if the user is connected to voice at all
     if vc == nil {
         // Nope
         session.ChannelMessageSend(channel.ID, "You have to join a channel first! :neutral_face:")
@@ -122,26 +122,34 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
             message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
             _, err := session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
-            if err != nil {
-                panic(err)
-            }
+            helpers.Relax(err)
 
             if merr == nil {
-                session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :slight_smile:")
+                session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :smiley:")
             }
+
+            helpers.Relax(merr)
         } else {
-            session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff :neutral_face:")
-            return
+            session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff :thinking:")
         }
+
+        return
     } else {
         // We are \o/
+        // Save the ref for easier access
         voiceConnection = session.VoiceConnections[guild.ID]
+
+        // Allocate playlist if not present
+        id := voiceConnection.GuildID + ":" + voiceConnection.ChannelID
+        if m.Playlist[id] == nil {
+            m.Playlist[id] = make([]Song, 0)
+        }
     }
 
     // Check what the user wants from us
     switch command {
     case "leave":
-        session.ChannelMessageSend(channel.ID, "OK, bye :wave:")
+        session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
         voiceConnection.Disconnect()
         break
 
@@ -167,11 +175,11 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
         break
 
     case "add":
-        content = strings.Trim(content, " ")
+        content = strings.TrimSpace(content)
 
         // Resolve the url through YTDL.
-        ytdl := exec.Command("youtube-dl", "-g", content)
-        yerr := ytdl.Run()
+        ytdl := exec.Command("youtube-dl", "-J", content)
+        yout, yerr := ytdl.CombinedOutput()
 
         // If youtube-dl exits with 0 the link is valid
         if yerr != nil {
@@ -179,42 +187,51 @@ func (m Music) Action(command string, content string, msg *discordgo.Message, se
             return
         }
 
-        // check if the link has been cached
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":content}).Run(utils.GetDB())
-        defer cursor.Close()
+        // Check if the link has been cached
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url": strings.TrimSpace(content)}).Run(utils.GetDB())
         helpers.Relax(err)
+        defer cursor.Close()
 
-        var matches []Song
-        err = cursor.All(&matches)
+        var match Song
+        err = cursor.One(&match)
         if err == rethink.ErrEmptyResult {
-            // First song ever O-O
-            // Ignore error
+            // Link was not downloaded yet
+            // Parse info JSON and allocate song object
+            json, err := gabs.ParseJSON(yout)
+            helpers.Relax(err)
+
+            match = Song{
+                AddedBy:     msg.Author.ID,
+                Processed:   false,
+                Title:       json.Path("title").Data().(string),
+                Description: json.Path("description").Data().(string),
+                Duration:    int(json.Path("duration").Data().(float64)),
+                URL:         content,
+            }
+
+            // Check if the video is not too long
+            if match.Duration > int((15 * time.Minute).Seconds()) {
+                session.ChannelMessageSend(msg.ChannelID, "Whoa that's a big video!\nPlease use something shorter :neutral_face:")
+                return
+            }
+
+            // Add to db
+            _, e := rethink.Table("music").Insert(match).RunWrite(utils.GetDB())
+            helpers.Relax(e)
         } else if err != nil {
-            // Error. Should report that.
+            // Unknown error. Should report that.
             helpers.Relax(err)
             return
         }
 
-        for _, match := range matches {
-            // Check if url is present
-            if match.URL == content {
-                // Check if the match was processed
-                if match.Processed {
-                    session.ChannelMessageSend(channel.ID, "Added from cache! :smiley:")
-                    return
-                } else {
-                    session.ChannelMessageSend(channel.ID, "This song is:ok_hand:\n You can see the live queue at <http://music.meetkaren.xyz/>")
-                }
-            }
+        // Check if the match was already processed
+        if match.Processed {
+            // Was processed. Add from cache.
+            session.ChannelMessageSend(channel.ID, "Added from cache! :smiley:")
+            return
         }
 
-        // add to queue otherwise
-        _, e := rethink.Table("music").Insert(Song{
-            Processed: false,
-            URL: content,
-        }).RunWrite(utils.GetDB())
-        helpers.Relax(e)
-
+        // Not yet processed. Let the users know.
         session.ChannelMessageSend(channel.ID, "Added to queue :ok_hand:\n You can see the live queue at <http://music.meetkaren.xyz/>")
         break
     }
@@ -224,9 +241,7 @@ func resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild, session *
     for _, vs := range guild.VoiceStates {
         if vs.UserID == user.ID {
             channel, err := session.Channel(vs.ChannelID)
-            if err != nil {
-                panic(err)
-            }
+            helpers.Relax(err)
 
             return channel
         }

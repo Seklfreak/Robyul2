@@ -1,11 +1,11 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
     "fmt"
+    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/Karen/utils"
     "math/rand"
     "net/url"
-    "github.com/sn0w/Karen/utils"
 )
 
 type Giphy struct{}
