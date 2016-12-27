@@ -4,6 +4,16 @@ package helpers
 
 import "reflect"
 
+type Callback func()
+
+// Softer form of relax
+// Calls a callback instead of panicking
+func SoftRelax(err error, cb Callback) {
+    if err != nil {
+        cb()
+    }
+}
+
 // Helper to reduce if-checks if panicking is allowed
 // If $err is nil this is a no-op. Panics otherwise.
 func Relax(err error) {

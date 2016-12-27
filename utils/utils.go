@@ -12,6 +12,7 @@ import (
     "io"
     "net/http"
     "strconv"
+    "runtime"
 )
 
 // Defines what a callback is
@@ -92,12 +93,25 @@ func SetPrefixForServer(guild string, prefix string) error {
 
 // Takes an error and sends it to discord and sentry.io
 func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
-    session.ChannelMessageSend(
-        msg.ChannelID,
-        "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
-            fmt.Sprintf("%#v", err) +
-            "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
-    )
+    if GetConfig().Path("debug").Data().(bool) == true {
+        buf := make([]byte, 1 << 16)
+        stackSize := runtime.Stack(buf, false)
+
+        session.ChannelMessageSend(
+            msg.ChannelID,
+            "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
+                fmt.Sprintf("%#v\n", err) +
+                fmt.Sprintf("%s\n", string(buf[0:stackSize])) +
+                "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
+        )
+    } else {
+        session.ChannelMessageSend(
+            msg.ChannelID,
+            "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
+                fmt.Sprintf("%#v", err) +
+                "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
+        )
+    }
 
     raven.SetUserContext(&raven.User{
         ID:       msg.ID,
