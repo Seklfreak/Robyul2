@@ -13,6 +13,9 @@ import (
     "regexp"
     "strings"
     "time"
+    Logger "github.com/sn0w/Karen/logger"
+    "strconv"
+    "encoding/base64"
 )
 
 type Callback func()
@@ -84,7 +87,7 @@ func (m *Music) Init(session *discordgo.Session) {
         m.queue = make(map[string][]Song)
 
         // Start loop that processes videos in background
-        go processorLoop()
+        go m.processorLoop()
     } else {
         fmt.Println("=> Not Found. Music disabled!")
     }
@@ -104,7 +107,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     helpers.Relax(err)
 
     // Voice channel ref
-    vc := resolveVoiceChannel(msg.Author, guild, session)
+    vc := m.resolveVoiceChannel(msg.Author, guild, session)
 
     // Voice connection ref
     var voiceConnection *discordgo.VoiceConnection
@@ -321,7 +324,7 @@ func (m *Music) waitForSong(channel string, fingerprint string, match Song, sess
 }
 
 // Resolves a voice channel relative to a user id
-func resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild, session *discordgo.Session) *discordgo.Channel {
+func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild, session *discordgo.Session) *discordgo.Channel {
     for _, vs := range guild.VoiceStates {
         if vs.UserID == user.ID {
             channel, err := session.Channel(vs.ChannelID)
@@ -335,15 +338,15 @@ func resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild, session *
 }
 
 // Endless coroutine that checks for new songs and spawns youtube-dl as needed
-func processorLoop() {
+func (m *Music) processorLoop() {
     // Define vars once and override later as needed
     var err error
     var cursor *rethink.Cursor
+    b64 := base64.URLEncoding.WithPadding(base64.NoPadding)
 
     for {
         // Sleep before next iteration
-        time.Sleep(10 * time.Second)
-        continue
+        time.Sleep(5 * time.Second)
 
         // Get unprocessed items
         cursor, err = rethink.Table("music").Filter(map[string]interface{}{"processed":false}).Run(utils.GetDB())
@@ -352,32 +355,53 @@ func processorLoop() {
         // Get items
         var songs []Song
         err = cursor.All(&songs)
+        helpers.Relax(err)
         cursor.Close()
 
-        if err == rethink.ErrEmptyResult {
+        if err == rethink.ErrEmptyResult || len(songs) == 0 {
             continue
         }
 
+        Logger.INF("[MUSIC] Found " + strconv.Itoa(len(songs)) + " unprocessed items!")
+
         // Loop through items
         for _, song := range songs {
+            src := []byte(song.URL)
+            buf := make([]byte, b64.EncodedLen(len(src)))
+            b64.Encode(buf, src)
+            name := string(buf)
+
+            Logger.INF("[MUSIC] Downloading " + song.URL + " as " + name)
+
             ytdl := exec.Command(
                 "youtube-dl",
                 "--abort-on-error",
                 "--no-color",
                 "--no-playlist",
-                "--max-filesize",
-                "512m",
-                "-f",
-                "[height<=480][abr<=192][ext=mp4]",
-                "-o",
-                ".%(ext)s",
+                "--max-filesize", "1024m",
+                "-f", "bestaudio/best[height<=720][fps<=30]/best[height<=720]/[abr<=192]",
+                "-x",
+                "--audio-format", "opus",
+                "--audio-quality", "0",
+                "-o", name + ".%(ext)s",
+                "--exec", "mv {} /srv/karen-data",
                 song.URL,
             )
-            _, _ = ytdl.CombinedOutput()
-        }
+            ytdl.Stdout = os.Stdout
+            ytdl.Stderr = os.Stderr
+            helpers.Relax(ytdl.Start())
+            helpers.Relax(ytdl.Wait())
 
-        // Update db
-        _, err = rethink.Table("music").Insert(songs).RunWrite(utils.GetDB())
-        helpers.Relax(err)
+            // Mark as processed
+            song.Processed = true
+            song.Path = "/srv/karen-data/" + name + ".opus"
+
+            // Update db
+            _, err = rethink.Table("music").
+                Filter(map[string]interface{}{"id":song.ID}).
+                Update(song).
+                RunWrite(utils.GetDB())
+            helpers.Relax(err)
+        }
     }
 }
