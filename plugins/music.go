@@ -16,16 +16,51 @@ import (
     Logger "github.com/sn0w/Karen/logger"
     "strconv"
     "encoding/base64"
+    "encoding/binary"
+    "io"
 )
 
+// Define callbacks
 type Callback func()
 
-type Music struct {
-    playlist map[string][]Song
-    queue    map[string][]Song
-    enabled  bool
+// Define control messages
+type controlMessage int
+
+const (
+    Skip controlMessage = iota
+    Pause
+    Resume
+)
+
+// A connection to one guild's channel
+type GuildConnection struct {
+    // Controller channel for Skip/Pause/Resume
+    controller chan controlMessage
+
+    // Closer channel for Stop commands
+    closer     chan struct{}
+
+    // Slice of waiting songs
+    playlist   []Song
+
+    // Slice of waiting but unprocessed songs
+    queue      []Song
+
+    // Whether this is playing music or not
+    playing    bool
 }
 
+// Helper to generate a guild connection
+func (gc *GuildConnection) Alloc() *GuildConnection {
+    gc.controller = make(chan controlMessage)
+    gc.closer = make(chan struct{})
+    gc.playlist = []Song{}
+    gc.queue = []Song{}
+    gc.playing = false
+    return gc
+}
+
+// Define a song
 type Song struct {
     ID        string `gorethink:"id,omitempty"`
     AddedBy   string `gorethink:"added_by"`
@@ -34,6 +69,12 @@ type Song struct {
     Duration  int    `gorethink:"duration"`
     Processed bool   `gorethink:"processed"`
     Path      string `gorethink:"path"`
+}
+
+// Plugin class
+type Music struct {
+    guildConnections map[string]*GuildConnection
+    enabled          bool
 }
 
 func (m Music) Commands() []string {
@@ -49,7 +90,7 @@ func (m Music) Commands() []string {
         "list",
         "playing",
         "np",
-        "mdbg",
+        "mdev",
     }
 }
 
@@ -82,9 +123,8 @@ func (m *Music) Init(session *discordgo.Session) {
         m.enabled = true
         fmt.Println("=> Found. Music enabled!")
 
-        // Allocate maps
-        m.playlist = make(map[string][]Song)
-        m.queue = make(map[string][]Song)
+        // Allocate connections map
+        m.guildConnections = make(map[string]*GuildConnection)
 
         // Start loop that processes videos in background
         go m.processorLoop()
@@ -94,42 +134,30 @@ func (m *Music) Init(session *discordgo.Session) {
 }
 
 func (m *Music) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+    // Only continue if enabled
     if !m.enabled {
         return
     }
 
-    // Channel ref
+    // Store channel ref
     channel, err := session.Channel(msg.ChannelID)
     helpers.Relax(err)
 
-    // Guild ref
+    // Store guild ref
     guild, err := session.Guild(channel.GuildID)
     helpers.Relax(err)
 
-    // Voice channel ref
+    // Store voice channel ref
     vc := m.resolveVoiceChannel(msg.Author, guild, session)
 
-    // Voice connection ref
+    // Store voice connection ref
     var voiceConnection *discordgo.VoiceConnection
 
-    // Fingerprint (guild:channel)
+    // Store fingerprint (guild:channel)
     var fingerprint string
-
-    if command == "mdbg" {
-        session.ChannelMessageSend(
-            channel.ID,
-            fmt.Sprintf("Queue:\n```\n%#v\n```", m.queue),
-        )
-        session.ChannelMessageSend(
-            channel.ID,
-            fmt.Sprintf("Playlist:\n```\n%#v\n```", m.playlist),
-        )
-        return
-    }
 
     // Check if the user is connected to voice at all
     if vc == nil {
-        // Nope
         session.ChannelMessageSend(channel.ID, "You have to join a channel first! :neutral_face:")
         return
     }
@@ -158,22 +186,29 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         return
     } else {
-        // We are \o/
+        // We are connected \o/
         // Save the ref for easier access
         voiceConnection = session.VoiceConnections[guild.ID]
 
         // Generate fingerprint
         fingerprint = voiceConnection.GuildID + ":" + voiceConnection.ChannelID
 
-        // Allocate playlist if not present
-        if m.playlist[fingerprint] == nil {
-            m.playlist[fingerprint] = make([]Song, 0)
+        // Allocate guildConnection if not present
+        if m.guildConnections[fingerprint] == nil {
+            m.guildConnections[fingerprint] = (&GuildConnection{}).Alloc()
         }
+    }
 
-        // Allocate queue if not present
-        if m.queue[fingerprint] == nil {
-            m.queue[fingerprint] = make([]Song, 0)
-        }
+    if command == "mdev" {
+        session.ChannelMessageSend(
+            channel.ID,
+            fmt.Sprintf("Queue:\n```\n%#v\n```", m.guildConnections[fingerprint].queue),
+        )
+        session.ChannelMessageSend(
+            channel.ID,
+            fmt.Sprintf("Playlist:\n```\n%#v\n```", m.guildConnections[fingerprint].playlist),
+        )
+        return
     }
 
     // Check what the user wants from us
@@ -184,24 +219,39 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "play":
+        m.startPlayer(fingerprint, voiceConnection)
         break
 
     case "stop":
+        close(m.guildConnections[fingerprint].closer)
         break
 
     case "skip":
+        m.guildConnections[fingerprint].controller <- Skip
         break
 
     case "clear":
+        close(m.guildConnections[fingerprint].closer)
+        m.guildConnections[fingerprint].playlist = make([]Song, 0)
         break
 
     case "playing", "np":
+        session.ChannelMessageSend(
+            channel.ID,
+            fmt.Sprintf("%s", m.guildConnections[fingerprint].playlist[0].Title),
+        )
         break
 
     case "list":
+        msg := ""
+        for i, song := range m.guildConnections[fingerprint].playlist {
+            msg += fmt.Sprintf("%d - %s", i, song.Title)
+        }
+        session.ChannelMessageSend(channel.ID, msg)
         break
 
     case "random":
+        //@todo
         break
 
     case "add":
@@ -253,7 +303,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             helpers.Relax(e)
 
             // Add to queue
-            m.queue[fingerprint] = append(m.queue[fingerprint], match)
+            m.guildConnections[fingerprint].queue = append(m.guildConnections[fingerprint].queue, match)
 
             // Inform users
             session.ChannelMessageSend(
@@ -278,7 +328,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         // Not yet processed. Check if it's in the queue
         songPresent := false
-        for _, song := range m.queue[fingerprint] {
+        for _, song := range m.guildConnections[fingerprint].queue {
             if match.URL == song.URL {
                 songPresent = true
                 break
@@ -293,7 +343,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             return
         }
 
-        m.queue[fingerprint] = append(m.queue[fingerprint], match)
+        m.guildConnections[fingerprint].queue = append(m.guildConnections[fingerprint].queue, match)
         session.ChannelMessageSend(
             channel.ID,
             "Song was added to your queue but did not finish downloading yet. Wait a bit :wink:\nLive progress at: <https://meetkaren.xyz/music>",
@@ -403,5 +453,103 @@ func (m *Music) processorLoop() {
                 RunWrite(utils.GetDB())
             helpers.Relax(err)
         }
+    }
+}
+
+func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection) {
+    // Ignore call if already playing
+    if m.guildConnections[fingerprint].playing {
+        return
+    }
+
+    // Get pointer to closer and controller via guildConnection
+    closer := &m.guildConnections[fingerprint].closer
+    controller := &m.guildConnections[fingerprint].controller
+
+    // Start eventloop
+    for {
+        // Exit if the closer channel closes
+        select {
+        case <-(*closer):
+            return
+        default:
+        }
+
+        // Do nothing until voice is ready and songs are queued
+        if !vc.Ready || len(m.guildConnections[fingerprint].playlist) == 0 {
+            time.Sleep(1 * time.Second)
+            continue
+        }
+
+        // Play
+        m.guildConnections[fingerprint].playing = true
+        m.play(vc, *closer, *controller, m.guildConnections[fingerprint].playlist[0])
+    }
+}
+
+func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, controller <-chan controlMessage, song Song) {
+    // Mark as speaking
+    vc.Speaking(true)
+
+    // Mark as not speaking as soon as we're done
+    defer vc.Speaking(false)
+
+    // Read file
+    file, err := os.Open(song.Path)
+    helpers.Relax(err)
+    defer file.Close()
+
+    // Allocate opus buffer
+    var opusLength int16
+
+    // Start eventloop
+    for {
+        // Exit if the closer channel closes
+        select {
+        case <-closer:
+            return
+        default:
+        }
+
+        // Listen for commands from controler
+        select {
+        case ctl := <-controller:
+            switch ctl {
+            case Skip:
+                return
+            case Pause:
+                // Wait until the controller asks to Skip or Resume
+                wait := true
+                for {
+                    ctl := <-controller
+                    switch ctl {
+                    case Skip:
+                        return
+                    case Resume:
+                        wait = false
+                    }
+
+                    if !wait {
+                        break
+                    }
+                }
+            default:
+            }
+        }
+
+        // Read opus frame
+        err = binary.Read(file, binary.LittleEndian, &opusLength)
+        if err == io.EOF || err == io.ErrUnexpectedEOF {
+            return
+        }
+        helpers.Relax(err)
+
+        // Read encoded PCM
+        opus := make([]byte, opusLength)
+        err = binary.Read(file, binary.LittleEndian, &opus)
+        helpers.Relax(err)
+
+        // Send to discord
+        vc.OpusSend <- opus
     }
 }
