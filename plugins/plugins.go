@@ -42,7 +42,7 @@ var PluginList = []Plugin{
     Stone{},
     Roll{},
     Reminders{},
-    &Music{},
+    //&Music{},
     FML{},
     UrbanDict{},
     Weather{},
