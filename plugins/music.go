@@ -323,7 +323,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             }
 
             // Check if the video is not too long
-            if match.Duration > int((15 * time.Minute).Seconds()) {
+            if match.Duration > int((65 * time.Minute).Seconds()) {
                 session.ChannelMessageSend(channel.ID, "Whoa that's a big video!\nPlease use something shorter :neutral_face:")
                 return
             }
