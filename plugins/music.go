@@ -501,6 +501,7 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection) {
     // Get pointer to closer and controller via guildConnection
     closer := &m.guildConnections[fingerprint].closer
     controller := &m.guildConnections[fingerprint].controller
+    playlist := &m.guildConnections[fingerprint].playlist
 
     // Start eventloop
     for {
@@ -512,14 +513,18 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection) {
         }
 
         // Do nothing until voice is ready and songs are queued
-        if !vc.Ready || len(m.guildConnections[fingerprint].playlist) == 0 {
+        if !vc.Ready || len(*playlist) == 0 {
             time.Sleep(1 * time.Second)
             continue
         }
 
         // Play
+        // Blocks until the song is finished
         m.guildConnections[fingerprint].playing = true
         m.play(vc, *closer, *controller, m.guildConnections[fingerprint].playlist[0])
+
+        // Remove song from playlist
+        *playlist = append((*playlist)[:0], (*playlist)[1:]...)
     }
 }
 
