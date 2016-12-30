@@ -261,13 +261,22 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "list":
-        msg := ":musical_note: Playlist\n"
+        msg := ":musical_note: Playlist\n\n"
+        msg += "Currently Playing: " + (*playlist)[0].Title + "\n"
+
+        songs := [][]string{}
         for i, song := range *playlist {
             if i == 0 {
-                msg += fmt.Sprintf("Current Track: %s\n", song.Title)
+                continue
             }
-            msg += fmt.Sprintf("%d - %s\n", i, song.Title)
+
+            songs = append(songs, []string{strconv.Itoa(i) + ".", song.Title})
         }
+
+        msg += helpers.DrawTable([]string{
+            "#", "Title",
+        }, songs)
+
         session.ChannelMessageSend(channel.ID, msg)
         break
 
