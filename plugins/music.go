@@ -256,13 +256,13 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     case "playing", "np":
         session.ChannelMessageSend(
             channel.ID,
-            fmt.Sprintf(":musical_note: Currently playing `%s`", (*playlist)[0].Title),
+           ":musical_note: Currently playing `" + (*playlist)[0].Title + "`",
         )
         break
 
     case "list":
         msg := ":musical_note: Playlist\n\n"
-        msg += "Currently Playing: " + (*playlist)[0].Title + "\n"
+        msg += "Currently Playing: `" + (*playlist)[0].Title + "`\n"
 
         songs := [][]string{}
         for i, song := range *playlist {
@@ -548,10 +548,15 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, m
             continue
         }
 
-        // Play
-        // Blocks until the song is finished
+        // Mark guild as playing
         m.guildConnections[fingerprint].playing = true
-        m.play(vc, *closer, *controller, m.guildConnections[fingerprint].playlist[0])
+
+        // Announce track
+        session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `" + (*playlist)[0].Title + "`")
+
+        // Send data to discord
+        // Blocks until the song is done
+        m.play(vc, *closer, *controller, (*playlist)[0])
 
         // Remove song from playlist
         *playlist = append((*playlist)[:0], (*playlist)[1:]...)
