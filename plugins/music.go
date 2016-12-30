@@ -368,7 +368,7 @@ func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg 
     playlist := &m.guildConnections[fingerprint].playlist
 
     for {
-        time.Sleep(10 * time.Second)
+        time.Sleep(1 * time.Second)
 
         cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":match.URL}).Run(utils.GetDB())
         helpers.Relax(err)
@@ -439,6 +439,8 @@ func (m *Music) processorLoop() {
 
         // Loop through items
         for _, song := range songs {
+            start := time.Now().Unix()
+
             name := utils.BtoA(song.URL)
 
             Logger.INF("[MUSIC] Downloading " + song.URL + " as " + name)
@@ -487,6 +489,9 @@ func (m *Music) processorLoop() {
                 Update(song).
                 RunWrite(utils.GetDB())
             helpers.Relax(err)
+
+            end := time.Now().Unix()
+            Logger.INF("[MUSIC] Conversion took " + strconv.Itoa(int(end - start)) + " seconds. | File: " + name)
         }
     }
 }
