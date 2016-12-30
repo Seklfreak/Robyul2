@@ -560,7 +560,7 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, m
 
         // Send data to discord
         // Blocks until the song is done
-        m.play(vc, *closer, *controller, (*playlist)[0], msg, session)
+        m.play(vc, *closer, *controller, (*playlist)[0], msg, session, fingerprint)
 
         // Remove song from playlist
         *playlist = append((*playlist)[:0], (*playlist)[1:]...)
@@ -575,6 +575,7 @@ func (m *Music) play(
     song Song,
     msg *discordgo.Message,
     session *discordgo.Session,
+    fingerprint string,
 ) {
     // @formatter:on
 
@@ -631,7 +632,7 @@ func (m *Music) play(
 
                     // Stop lock after timeout
                     if iteration == 1200 {
-                        close(closer)
+                        close(m.guildConnections[fingerprint].closer)
                         return
                     }
 
