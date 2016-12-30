@@ -16,7 +16,7 @@ var (
     GuildCount = expvar.NewInt("guild_count")
     CommandsExecuted = expvar.NewInt("commands_executed")
     CleverbotRequests = expvar.NewInt("cleverbot_requests")
-    GoroutineCount = expvar.NewInt("coroutine_count")
+    CoroutineCount = expvar.NewInt("coroutine_count")
 )
 
 func Init() {
@@ -58,6 +58,6 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 func CollectRuntimeMetrics() {
     for {
         time.Sleep(15 * time.Second)
-        GoroutineCount.Set(int64(runtime.NumGoroutine()))
+        CoroutineCount.Set(int64(runtime.NumGoroutine()))
     }
 }
