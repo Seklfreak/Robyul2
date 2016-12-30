@@ -15,7 +15,6 @@ import (
     "time"
     Logger "github.com/sn0w/Karen/logger"
     "strconv"
-    "encoding/base64"
     "encoding/binary"
     "io"
 )
@@ -263,18 +262,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
     case "add":
         session.ChannelTyping(channel.ID)
-
         content = strings.TrimSpace(content)
-
-        // Resolve the url through YTDL.
-        ytdl := exec.Command("youtube-dl", "-J", content)
-        yout, yerr := ytdl.Output()
-
-        // If youtube-dl exits with 0 the link is valid
-        if yerr != nil {
-            session.ChannelMessageSend(channel.ID, "That looks like an invalid or unspported download link :frowning:")
-            return
-        }
 
         // Check if the link has been cached
         cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":content}).Run(utils.GetDB())
@@ -287,6 +275,17 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         // Check if the song does not yet exists in the DB
         if err == rethink.ErrEmptyResult {
             // Link was not downloaded yet
+
+            // Resolve the url through YTDL.
+            ytdl := exec.Command("youtube-dl", "-J", content)
+            yout, yerr := ytdl.Output()
+
+            // If youtube-dl exits with 0 the link is valid
+            if yerr != nil {
+                session.ChannelMessageSend(channel.ID, "That looks like an invalid or unspported download link :frowning:")
+                return
+            }
+
             // Parse info JSON and allocate song object
             json, err := gabs.ParseJSON(yout)
             helpers.Relax(err)
@@ -413,7 +412,6 @@ func (m *Music) processorLoop() {
     // Define vars once and override later as needed
     var err error
     var cursor *rethink.Cursor
-    b64 := base64.URLEncoding.WithPadding(base64.NoPadding)
 
     for {
         // Sleep before next iteration
@@ -437,10 +435,7 @@ func (m *Music) processorLoop() {
 
         // Loop through items
         for _, song := range songs {
-            src := []byte(song.URL)
-            buf := make([]byte, b64.EncodedLen(len(src)))
-            b64.Encode(buf, src)
-            name := string(buf)
+            name := utils.BtoA(song.URL)
 
             Logger.INF("[MUSIC] Downloading " + song.URL + " as " + name)
 

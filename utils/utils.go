@@ -13,6 +13,7 @@ import (
     "net/http"
     "strconv"
     "runtime"
+    "encoding/base64"
 )
 
 // Defines what a callback is
@@ -200,4 +201,13 @@ func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callbac
     }
 
     session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
+}
+
+func BtoA(s string) string {
+    b64 := base64.URLEncoding.WithPadding(base64.NoPadding)
+    src := []byte(s)
+    buf := make([]byte, b64.EncodedLen(len(src)))
+    b64.Encode(buf, src)
+
+    return string(buf)
 }
