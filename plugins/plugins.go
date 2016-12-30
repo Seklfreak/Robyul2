@@ -2,8 +2,8 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "github.com/sn0w/Karen/utils"
     "strings"
+    "github.com/sn0w/Karen/helpers"
 )
 
 // Plugin interface to enforce a basic structure
@@ -81,13 +81,7 @@ func CallTriggerPlugins(msg *discordgo.Message, session *discordgo.Session) {
     // Iterate over all plugins
     for _, plug := range TriggerPluginList {
         go func() {
-            defer func() {
-                err := recover()
-                if err != nil {
-                    utils.SendError(session, msg, err)
-                }
-            }()
-
+            defer helpers.RecoverDiscord(session, msg)
             plug.Action(msg, session)
         }()
     }
@@ -96,13 +90,6 @@ func CallTriggerPlugins(msg *discordgo.Message, session *discordgo.Session) {
 // Wrapper that catches any panics from plugins
 // Arguments: Same as CallBotPlugin().
 func safePluginCall(command string, content string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
-    defer func() {
-        err := recover()
-
-        if err != nil {
-            utils.SendError(session, msg, err)
-        }
-    }()
-
+    defer helpers.RecoverDiscord(session, msg)
     plug.Action(command, content, msg, session)
 }

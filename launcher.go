@@ -8,6 +8,7 @@ import (
     "github.com/sn0w/Karen/utils"
     "os"
     "os/signal"
+    "github.com/sn0w/Karen/helpers"
 )
 
 // The discord session holder
@@ -23,6 +24,11 @@ func main() {
     // Read config
     utils.LoadConfig("config.json")
     config := utils.GetConfig()
+
+    // Check if the bot is being debugged
+    if config.Path("debug").Data().(bool) {
+        helpers.DEBUG_MODE = true
+    }
 
     // Call home
     Logger.INF("[SENTRY] Calling home...")

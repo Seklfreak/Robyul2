@@ -38,6 +38,8 @@ func (r Reminders) Commands() []string {
 
 func (r Reminders) Init(session *discordgo.Session) {
     go func() {
+        defer helpers.Recover()
+
         for {
             var reminderBucket []DB_Reminders
             cursor, err := rethink.Table("reminders").Run(utils.GetDB())

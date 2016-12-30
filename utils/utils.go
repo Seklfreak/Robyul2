@@ -3,16 +3,13 @@ package utils
 import (
     "bytes"
     "errors"
-    "fmt"
     "github.com/Jeffail/gabs"
     "github.com/bwmarrin/discordgo"
-    "github.com/getsentry/raven-go"
     "github.com/sn0w/Karen/helpers"
     "github.com/ugjka/cleverbot-go"
     "io"
     "net/http"
     "strconv"
-    "runtime"
     "encoding/base64"
 )
 
@@ -92,42 +89,6 @@ func SetPrefixForServer(guild string, prefix string) error {
     return GuildSettingsSet(guild, settings)
 }
 
-// Takes an error and sends it to discord and sentry.io
-func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
-    if GetConfig().Path("debug").Data().(bool) == true {
-        buf := make([]byte, 1 << 16)
-        stackSize := runtime.Stack(buf, false)
-
-        session.ChannelMessageSend(
-            msg.ChannelID,
-            "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
-                fmt.Sprintf("%#v\n", err) +
-                fmt.Sprintf("%s\n", string(buf[0:stackSize])) +
-                "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
-        )
-    } else {
-        session.ChannelMessageSend(
-            msg.ChannelID,
-            "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
-                fmt.Sprintf("%#v", err) +
-                "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
-        )
-    }
-
-    raven.SetUserContext(&raven.User{
-        ID:       msg.ID,
-        Username: msg.Author.Username + "#" + msg.Author.Discriminator,
-    })
-    raven.CaptureError(errors.New(fmt.Sprintf("%#v", err)), map[string]string{
-        "ChannelID":       msg.ChannelID,
-        "Content":         msg.Content,
-        "Timestamp":       string(msg.Timestamp),
-        "TTS":             strconv.FormatBool(msg.Tts),
-        "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-        "IsBot":           strconv.FormatBool(msg.Author.Bot),
-    })
-}
-
 func NetGet(url string) []byte {
     return NetGetUA(url, "Karen/Discord-Bot")
 }
@@ -177,13 +138,13 @@ func GetJSON(url string) *gabs.Container {
 func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callback) {
     channel, e := session.Channel(msg.ChannelID)
     if e != nil {
-        SendError(session, msg, errors.New("Cannot verify permissions"))
+        helpers.SendError(session, msg, errors.New("Cannot verify permissions"))
         return
     }
 
     guild, e := session.Guild(channel.GuildID)
     if e != nil {
-        SendError(session, msg, errors.New("Cannot verify permissions"))
+        helpers.SendError(session, msg, errors.New("Cannot verify permissions"))
         return
     }
 

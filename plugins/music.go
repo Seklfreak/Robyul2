@@ -225,7 +225,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "play":
-        go m.startPlayer(fingerprint, voiceConnection)
+        go m.startPlayer(fingerprint, voiceConnection, msg, session)
         break
 
     case "stop":
@@ -316,7 +316,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
                 channel.ID,
                 "Added to queue. Music should start soon.\nLive progress at: <https://meetkaren.xyz/music>",
             )
-            go m.waitForSong(channel.ID, fingerprint, match, session)
+            go m.waitForSong(channel.ID, fingerprint, match, msg, session)
             return
         } else if err != nil {
             // Unknown error. Should report that.
@@ -355,13 +355,15 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             channel.ID,
             "Song was added to your queue but did not finish downloading yet. Wait a bit :wink:\nLive progress at: <https://meetkaren.xyz/music>",
         )
-        go m.waitForSong(channel.ID, fingerprint, match, session)
+        go m.waitForSong(channel.ID, fingerprint, match, msg, session)
         break
     }
 }
 
 // Waits until the song is ready.
-func (m *Music) waitForSong(channel string, fingerprint string, match Song, session *discordgo.Session) {
+func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg *discordgo.Message, session *discordgo.Session) {
+    defer helpers.RecoverDiscord(session, msg)
+
     queue := &m.guildConnections[fingerprint].queue
     playlist := &m.guildConnections[fingerprint].playlist
 
@@ -409,6 +411,8 @@ func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild
 
 // Endless coroutine that checks for new songs and spawns youtube-dl as needed
 func (m *Music) processorLoop() {
+    defer helpers.Recover()
+
     // Define vars once and override later as needed
     var err error
     var cursor *rethink.Cursor
@@ -487,7 +491,9 @@ func (m *Music) processorLoop() {
     }
 }
 
-func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection) {
+func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, msg *discordgo.Message, session *discordgo.Session) {
+    defer helpers.RecoverDiscord(session, msg)
+
     // Ignore call if already playing
     if m.guildConnections[fingerprint].playing {
         return

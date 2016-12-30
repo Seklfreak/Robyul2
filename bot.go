@@ -166,7 +166,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                             )
 
                             if err != nil {
-                                utils.SendError(session, message.Message, err)
+                                helpers.SendError(session, message.Message, err)
                             } else {
                                 discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
                             }
