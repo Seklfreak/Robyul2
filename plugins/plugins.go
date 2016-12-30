@@ -4,6 +4,7 @@ import (
     "github.com/bwmarrin/discordgo"
     "strings"
     "github.com/sn0w/Karen/helpers"
+    "github.com/sn0w/Karen/metrics"
 )
 
 // Plugin interface to enforce a basic structure
@@ -91,5 +92,6 @@ func CallTriggerPlugins(msg *discordgo.Message, session *discordgo.Session) {
 // Arguments: Same as CallBotPlugin().
 func safePluginCall(command string, content string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
     defer helpers.RecoverDiscord(session, msg)
+    metrics.CommandsExecuted.Add(1)
     plug.Action(command, content, msg, session)
 }

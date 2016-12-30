@@ -12,6 +12,7 @@ import (
     "regexp"
     "strings"
     "time"
+    "github.com/sn0w/Karen/metrics"
 )
 
 // Called after the gateway connected
@@ -124,10 +125,12 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                     // Send to cleverbot if nothing matches
                     switch {
                     case regexp.MustCompile("(?i)^HELP.*").Match(bmsg):
+                        metrics.CommandsExecuted.Add(1)
                         sendHelp(message)
                         return
 
                     case regexp.MustCompile("(?i)^PREFIX.*").Match(bmsg):
+                        metrics.CommandsExecuted.Add(1)
                         prefix, _ := utils.GetPrefixForServer(channel.GuildID)
                         if prefix == "" {
                             discordSession.ChannelMessageSend(
@@ -144,6 +147,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                         return
 
                     case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
+                        metrics.CommandsExecuted.Add(1)
                         utils.RequireAdmin(session, message.Message, func() {
                             // Refresh cleverbot session
                             utils.CleverbotRefreshSession(channel.ID)
@@ -152,6 +156,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                         return
 
                     case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
+                        metrics.CommandsExecuted.Add(1)
                         utils.RequireAdmin(session, message.Message, func() {
                             // Extract prefix
                             prefix := strings.Split(
@@ -174,6 +179,9 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                         return
 
                     default:
+                        // Track usage
+                        metrics.CleverbotRequests.Add(1)
+
                         // Send to cleverbot
                         session.ChannelTyping(message.ChannelID)
 
@@ -210,6 +218,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
                 // Check if the user calls for help
                 if cmd == "h" || cmd == "help" {
+                    metrics.CommandsExecuted.Add(1)
                     sendHelp(message)
                     return
                 } else {

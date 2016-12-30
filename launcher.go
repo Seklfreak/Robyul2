@@ -9,6 +9,7 @@ import (
     "os"
     "os/signal"
     "github.com/sn0w/Karen/helpers"
+    "github.com/sn0w/Karen/metrics"
 )
 
 // The discord session holder
@@ -20,6 +21,9 @@ type Callback func()
 // Entrypoint
 func main() {
     Logger.INF("Bootstrapping...")
+
+    // Start metric server
+    metrics.Init()
 
     // Read config
     utils.LoadConfig("config.json")
@@ -61,6 +65,9 @@ func main() {
     ProxyAttachListeners(discord, ProxiedEventHandlers{
         BotOnReady,
         BotOnMessageCreate,
+
+        metrics.OnReady,
+        metrics.OnMessageCreate,
     })
 
     // Connect to discord
