@@ -225,18 +225,30 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "play":
+        if len(*playlist) == 0 {
+            if len(*queue) > 0 {
+                session.ChannelMessageSend(channel.ID, "Please wait until your downloads are finished :wink:")
+                return
+            }
+
+            session.ChannelMessageSend(channel.ID, "You should add some music first :thinking:")
+            return
+        }
         go m.startPlayer(fingerprint, voiceConnection, msg, session)
         break
 
     case "stop":
+        session.ChannelMessageSend(channel.ID, ":stop_button: Track stopped")
         close(m.guildConnections[fingerprint].closer)
         break
 
     case "skip":
+        session.ChannelMessageSend(channel.ID, ":track_next: Loading next track")
         m.guildConnections[fingerprint].controller <- Skip
         break
 
     case "clear":
+        session.ChannelMessageSend(channel.ID, ":asterisk::stop_button: Playlist deleted. Music stopped.")
         close(m.guildConnections[fingerprint].closer)
         *playlist = []Song{}
         break
@@ -244,20 +256,23 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     case "playing", "np":
         session.ChannelMessageSend(
             channel.ID,
-            fmt.Sprintf("%s", (*playlist)[0].Title),
+            fmt.Sprintf(":musical_note: Currently playing `%s`", (*playlist)[0].Title),
         )
         break
 
     case "list":
-        msg := ""
+        msg := ":musical_note: Playlist\n"
         for i, song := range *playlist {
-            msg += fmt.Sprintf("%d - %s", i, song.Title)
+            if i == 0 {
+                msg += fmt.Sprintf("Current Track: %s\n", song.Title)
+            }
+            msg += fmt.Sprintf("%d - %s\n", i, song.Title)
         }
         session.ChannelMessageSend(channel.ID, msg)
         break
 
     case "random":
-        //@todo
+        session.ChannelMessageSend(channel.ID, ":x: Not yet implemented")
         break
 
     case "add":
