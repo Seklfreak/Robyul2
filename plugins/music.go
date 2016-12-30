@@ -31,13 +31,6 @@ const (
     Resume
 )
 
-// Constants
-const (
-    OPUS_FRAME_SIZE = 960
-    OPUS_SAMPLE_RATE = 48000
-    OPUS_CHANNEL_COUNT = 2
-)
-
 // A connection to one guild's channel
 type GuildConnection struct {
     // Controller channel for Skip/Pause/Resume
