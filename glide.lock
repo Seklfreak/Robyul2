@@ -1,5 +1,5 @@
-hash: 0a8cf6087203188203ce504adfce99ddc125af7e416d96af3414fe4632b2f2e5
-updated: 2016-12-26T01:54:21.24752704+01:00
+hash: 3d2f59b5235c83e848fe01f935f93258abb306fb90d671a441ff028daec3f4f8
+updated: 2016-12-30T17:05:47.147522251+01:00
 imports:
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
@@ -26,7 +26,7 @@ imports:
 - name: github.com/Jeffail/gabs
   version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
 - name: github.com/PuerkitoBio/goquery
-  version: 56a198aba89cdf7a612e6c762eff9d788b9f2dae
+  version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
   version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
 - name: github.com/ugjka/cleverbot-go
@@ -57,4 +57,6 @@ imports:
   - types
 - name: gopkg.in/gorethink/gorethink.v3
   version: 417badecf1ab14d0d6e38ad82397da2a59e2f6ca
+- name: layeh.com/gopus
+  version: 0ebf989153aa016ef5e77141b08c48e48a79312e
 testImports: []

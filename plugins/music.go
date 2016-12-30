@@ -32,6 +32,13 @@ const (
     Resume
 )
 
+// Constants
+const (
+    OPUS_FRAME_SIZE = 960
+    OPUS_SAMPLE_RATE = 48000
+    OPUS_CHANNEL_COUNT = 2
+)
+
 // A connection to one guild's channel
 type GuildConnection struct {
     // Controller channel for Skip/Pause/Resume
@@ -199,14 +206,14 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
     }
 
+    // Store pointers for easier access
+    queue := &m.guildConnections[fingerprint].queue
+    playlist := &m.guildConnections[fingerprint].playlist
+
     if command == "mdev" {
         session.ChannelMessageSend(
             channel.ID,
-            fmt.Sprintf("Queue:\n```\n%#v\n```", m.guildConnections[fingerprint].queue),
-        )
-        session.ChannelMessageSend(
-            channel.ID,
-            fmt.Sprintf("Playlist:\n```\n%#v\n```", m.guildConnections[fingerprint].playlist),
+            fmt.Sprintf("```\n%#v\n```", m.guildConnections[fingerprint]),
         )
         return
     }
@@ -219,7 +226,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "play":
-        m.startPlayer(fingerprint, voiceConnection)
+        go m.startPlayer(fingerprint, voiceConnection)
         break
 
     case "stop":
@@ -232,19 +239,19 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
     case "clear":
         close(m.guildConnections[fingerprint].closer)
-        m.guildConnections[fingerprint].playlist = make([]Song, 0)
+        *playlist = []Song{}
         break
 
     case "playing", "np":
         session.ChannelMessageSend(
             channel.ID,
-            fmt.Sprintf("%s", m.guildConnections[fingerprint].playlist[0].Title),
+            fmt.Sprintf("%s", (*playlist)[0].Title),
         )
         break
 
     case "list":
         msg := ""
-        for i, song := range m.guildConnections[fingerprint].playlist {
+        for i, song := range *playlist {
             msg += fmt.Sprintf("%d - %s", i, song.Title)
         }
         session.ChannelMessageSend(channel.ID, msg)
@@ -303,7 +310,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             helpers.Relax(e)
 
             // Add to queue
-            m.guildConnections[fingerprint].queue = append(m.guildConnections[fingerprint].queue, match)
+            *queue = append(*queue, match)
 
             // Inform users
             session.ChannelMessageSend(
@@ -321,14 +328,15 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         // Song present in DB
         // Check if the match was already processed
         if match.Processed {
-            // Was processed. Add from cache.
+            // Was processed. Add to playlist.
+            *playlist = append(*playlist, match)
             session.ChannelMessageSend(channel.ID, "Added from cache! :ok_hand:")
             return
         }
 
         // Not yet processed. Check if it's in the queue
         songPresent := false
-        for _, song := range m.guildConnections[fingerprint].queue {
+        for _, song := range *queue {
             if match.URL == song.URL {
                 songPresent = true
                 break
@@ -343,7 +351,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             return
         }
 
-        m.guildConnections[fingerprint].queue = append(m.guildConnections[fingerprint].queue, match)
+        *queue = append(*queue, match)
         session.ChannelMessageSend(
             channel.ID,
             "Song was added to your queue but did not finish downloading yet. Wait a bit :wink:\nLive progress at: <https://meetkaren.xyz/music>",
@@ -355,6 +363,9 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
 // Waits until the song is ready.
 func (m *Music) waitForSong(channel string, fingerprint string, match Song, session *discordgo.Session) {
+    queue := &m.guildConnections[fingerprint].queue
+    playlist := &m.guildConnections[fingerprint].playlist
+
     for {
         time.Sleep(10 * time.Second)
 
@@ -367,6 +378,16 @@ func (m *Music) waitForSong(channel string, fingerprint string, match Song, sess
         cursor.Close()
 
         if res.Processed {
+            // Remove from queue
+            for idx, song := range *queue {
+                if song.URL == match.URL {
+                    *queue = append((*queue)[:idx], (*queue)[idx + 1:]...)
+                }
+            }
+
+            // Add to playlist
+            *playlist = append(*playlist, match)
+
             session.ChannelMessageSend(channel, "`" + match.Title + "` finished downloading :smiley:")
             break
         }
@@ -423,6 +444,7 @@ func (m *Music) processorLoop() {
 
             Logger.INF("[MUSIC] Downloading " + song.URL + " as " + name)
 
+            // Download with youtube-dl
             ytdl := exec.Command(
                 "youtube-dl",
                 "--abort-on-error",
@@ -431,7 +453,7 @@ func (m *Music) processorLoop() {
                 "--max-filesize", "1024m",
                 "-f", "bestaudio/best[height<=720][fps<=30]/best[height<=720]/[abr<=192]",
                 "-x",
-                "--audio-format", "opus",
+                "--audio-format", "wav",
                 "--audio-quality", "0",
                 "-o", name + ".%(ext)s",
                 "--exec", "mv {} /srv/karen-data",
@@ -441,6 +463,20 @@ func (m *Music) processorLoop() {
             ytdl.Stderr = os.Stderr
             helpers.Relax(ytdl.Start())
             helpers.Relax(ytdl.Wait())
+
+            // WAV => RAW OPUS using DCA
+            opusFile, err := os.Create("/srv/karen-data/" + name + ".opus")
+            helpers.Relax(err)
+
+            Logger.INF("[MUSIC] WAV => OPUS | " + name)
+            dca := exec.Command("dca", "-raw", "-i", "/srv/karen-data/" + name + ".wav")
+            dca.Stderr = os.Stderr
+            dca.Stdout = opusFile
+            helpers.Relax(dca.Start())
+            helpers.Relax(dca.Wait())
+
+            // Cleanup
+            helpers.Relax(os.Remove("/srv/karen-data/" + name + ".wav"))
 
             // Mark as processed
             song.Processed = true
@@ -499,7 +535,7 @@ func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, cont
     helpers.Relax(err)
     defer file.Close()
 
-    // Allocate opus buffer
+    // Allocate opus header buffer
     var opusLength int16
 
     // Start eventloop
@@ -511,7 +547,7 @@ func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, cont
         default:
         }
 
-        // Listen for commands from controler
+        // Listen for commands from controller
         select {
         case ctl := <-controller:
             switch ctl {
@@ -535,16 +571,17 @@ func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, cont
                 }
             default:
             }
+        default:
         }
 
-        // Read opus frame
+        // Read opus frame length
         err = binary.Read(file, binary.LittleEndian, &opusLength)
         if err == io.EOF || err == io.ErrUnexpectedEOF {
             return
         }
         helpers.Relax(err)
 
-        // Read encoded PCM
+        // Read audio data
         opus := make([]byte, opusLength)
         err = binary.Read(file, binary.LittleEndian, &opus)
         helpers.Relax(err)
