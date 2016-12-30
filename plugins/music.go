@@ -693,15 +693,22 @@ func (m *Music) janitor() {
         helpers.Relax(err)
 
         for _, file := range dir {
+            foundFile := false
+
             for _, song := range songs {
-                if song.Path != "/srv/karen-data/" + file.Name() {
-                    err = os.Remove("/srv/karen-data/" + file.Name())
-                    helpers.Relax(err)
+                if strings.Contains("/srv/karen-data/" + file.Name(), utils.BtoA(song.URL)) {
+                    foundFile = true
                     break
                 }
             }
+
+            if !foundFile {
+                Logger.INF("[MUSIC] [JANITOR] Removing " + file.Name())
+                err = os.Remove("/srv/karen-data/" + file.Name())
+                helpers.Relax(err)
+            }
         }
 
-        time.Sleep(20 * time.Second)
+        time.Sleep(30 * time.Second)
     }
 }
