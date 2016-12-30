@@ -256,11 +256,16 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     case "playing", "np":
         session.ChannelMessageSend(
             channel.ID,
-           ":musical_note: Currently playing `" + (*playlist)[0].Title + "`",
+            ":musical_note: Currently playing `" + (*playlist)[0].Title + "`",
         )
         break
 
     case "list":
+        if len(*playlist) == 0 {
+            session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
+            return
+        }
+
         msg := ":musical_note: Playlist\n\n"
         msg += "Currently Playing: `" + (*playlist)[0].Title + "`\n"
 
