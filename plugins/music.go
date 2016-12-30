@@ -227,7 +227,16 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             session.ChannelMessageSend(channel.ID, "You should add some music first :thinking:")
             return
         }
-        go m.startPlayer(fingerprint, voiceConnection, msg, session)
+
+        if m.guildConnections[fingerprint].playing {
+            m.guildConnections[fingerprint].controller <- Resume
+        } else {
+            go m.startPlayer(fingerprint, voiceConnection, msg, session)
+        }
+        break
+
+    case "pause":
+        m.guildConnections[fingerprint].controller <- Pause
         break
 
     case "stop":
@@ -549,19 +558,29 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, m
         // Mark guild as playing
         m.guildConnections[fingerprint].playing = true
 
-        // Announce track
-        session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `" + (*playlist)[0].Title + "`")
-
         // Send data to discord
         // Blocks until the song is done
-        m.play(vc, *closer, *controller, (*playlist)[0])
+        m.play(vc, *closer, *controller, (*playlist)[0], msg, session)
 
         // Remove song from playlist
         *playlist = append((*playlist)[:0], (*playlist)[1:]...)
     }
 }
 
-func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, controller <-chan controlMessage, song Song) {
+// @formatter:off
+func (m *Music) play(
+    vc *discordgo.VoiceConnection,
+    closer <-chan struct{},
+    controller <-chan controlMessage,
+    song Song,
+    msg *discordgo.Message,
+    session *discordgo.Session,
+) {
+    // @formatter:on
+
+    // Announce track
+    session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `" + song.Title + "`")
+
     // Mark as speaking
     vc.Speaking(true)
 
@@ -592,9 +611,11 @@ func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, cont
             case Skip:
                 return
             case Pause:
-                // Wait until the controller asks to Skip or Resume
                 wait := true
+                iteration := 0
+                session.ChannelMessageSend(msg.ChannelID, ":pause_button: Track paused")
                 for {
+                    // Read from controller channel
                     ctl := <-controller
                     switch ctl {
                     case Skip:
@@ -603,10 +624,22 @@ func (m *Music) play(vc *discordgo.VoiceConnection, closer <-chan struct{}, cont
                         wait = false
                     }
 
+                    // If Skip or Resume was received end lock
                     if !wait {
                         break
                     }
+
+                    // Stop lock after timeout
+                    if iteration == 1200 {
+                        close(closer)
+                        return
+                    }
+
+                    // Sleep for 0.5s until next check
+                    iteration++
+                    time.Sleep(500 * time.Millisecond)
                 }
+                session.ChannelMessageSend(msg.ChannelID, ":play_pause: Track resumed")
             default:
             }
         default:
