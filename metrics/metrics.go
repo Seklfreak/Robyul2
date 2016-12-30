@@ -58,6 +58,6 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 func CollectRuntimeMetrics() {
     for {
         time.Sleep(15 * time.Second)
-        GoroutineCount.Set(runtime.NumGoroutine())
+        GoroutineCount.Set(int64(runtime.NumGoroutine()))
     }
 }
