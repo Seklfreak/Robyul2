@@ -126,7 +126,12 @@ func (m *Music) Init(session *discordgo.Session) {
         m.guildConnections = make(map[string]*GuildConnection)
 
         // Start loop that processes videos in background
+        fmt.Println("=> Starting async processor loop")
         go m.processorLoop()
+
+        // Start janitor that removes files which are not tracked in the DB
+        fmt.Println("=> Starting async janitor")
+        go m.janitor()
     } else {
         fmt.Println("=> Not Found. Music disabled!")
     }
@@ -330,7 +335,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             }
 
             // Check if the video is not too long
-            if match.Duration > int((65 * time.Minute).Seconds()) {
+            // Bot owners may bypass this
+            if !helpers.IsBotAdmin(msg.Author.ID) && match.Duration > int((65 * time.Minute).Seconds()) {
                 session.ChannelMessageSend(channel.ID, "Whoa that's a big video!\nPlease use something shorter :neutral_face:")
                 return
             }
@@ -660,5 +666,42 @@ func (m *Music) play(
 
         // Send to discord
         vc.OpusSend <- opus
+    }
+}
+
+func (m *Music) janitor() {
+    defer helpers.Recover()
+
+    for {
+        // Query for songs
+        cursor, err := rethink.Table("music").Run(utils.GetDB())
+        helpers.Relax(err)
+
+        // Get items
+        var songs []Song
+        err = cursor.All(&songs)
+        helpers.Relax(err)
+        cursor.Close()
+
+        // If there are no songs continue
+        if err == rethink.ErrEmptyResult || len(songs) == 0 {
+            continue
+        }
+
+        // Remove files that have to DB entry
+        dir, err := ioutil.ReadDir("/srv/karen-data")
+        helpers.Relax(err)
+
+        for _, file := range dir {
+            for _, song := range songs {
+                if song.Path != "/srv/karen-data/" + file.Name() {
+                    err = os.Remove("/srv/karen-data/" + file.Name())
+                    helpers.Relax(err)
+                    break
+                }
+            }
+        }
+
+        time.Sleep(20 * time.Second)
     }
 }
