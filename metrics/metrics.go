@@ -6,6 +6,7 @@ import (
     "github.com/bwmarrin/discordgo"
     "time"
     "github.com/sn0w/Karen/logger"
+    "runtime"
 )
 
 var (
@@ -15,6 +16,7 @@ var (
     GuildCount = expvar.NewInt("guild_count")
     CommandsExecuted = expvar.NewInt("commands_executed")
     CleverbotRequests = expvar.NewInt("cleverbot_requests")
+    GoroutineCount = expvar.NewInt("coroutine_count")
 )
 
 func Init() {
@@ -24,6 +26,7 @@ func Init() {
 
 func OnReady(session *discordgo.Session, event *discordgo.Ready) {
     go CollectDiscordMetrics(session)
+    go CollectRuntimeMetrics()
 }
 
 func OnMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
@@ -32,7 +35,7 @@ func OnMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate)
 
 func CollectDiscordMetrics(session *discordgo.Session) {
     for {
-        time.Sleep(1 * time.Minute)
+        time.Sleep(15 * time.Second)
 
         users := make(map[string]string)
         channels := 0
@@ -49,5 +52,12 @@ func CollectDiscordMetrics(session *discordgo.Session) {
         UserCount.Set(int64(len(users)))
         ChannelCount.Set(int64(channels))
         GuildCount.Set(int64(len(guilds)))
+    }
+}
+
+func CollectRuntimeMetrics() {
+    for {
+        time.Sleep(15 * time.Second)
+        GoroutineCount.Set(runtime.NumGoroutine())
     }
 }
