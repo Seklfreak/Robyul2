@@ -9,10 +9,10 @@ import (
 type Migration func()
 
 var Migrations = []Migration{
-    M0_create_db,
-    M1_create_table_guild_config,
-    M2_create_table_reminders,
-    M3_create_table_music,
+    m0_create_db,
+    m1_create_table_guild_config,
+    m2_create_table_reminders,
+    m3_create_table_music,
 }
 
 // Runs all registered migrations
