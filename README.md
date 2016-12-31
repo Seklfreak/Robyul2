@@ -23,8 +23,10 @@
 Disclaimer: This bot is still in a early stage.<br>
 Please expect (rare) crashes and performance problems until the bot is mature enough.
 
-This project will probably never reach more than a D on GoReportCard because I don't like gofmt's style and will most likely never adopt it until it allows 4 spaces instead of tabs. 
+This project will probably never reach more than a D on GoReportCard because I don't like gofmt's style and will most likely never adopt it until it allows 4 spaces instead of tabs.
 
+The primary reason for having GoReportCard are the go_vet, gocyclo, ineffassing and misspell tests.<br>
+You are forced to keep the score as-is or improve it when making contributions to the project.
 <hr/>
 
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
