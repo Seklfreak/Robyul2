@@ -1,5 +1,6 @@
 package models
 
+// A struct describing all config options a guild may set
 type Config struct {
     Id                     string `rethink:"id,omitempty"`
     Guild                  string `rethink:"guild"`
@@ -15,6 +16,7 @@ type Config struct {
     WelcomeNewUsersText    string `rethink:"welcome_new_users_text"`
 }
 
+// Helper for generating default values
 func (c Config) Default(guild string) Config {
     return Config{
         Guild: guild,

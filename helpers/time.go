@@ -2,6 +2,7 @@ package helpers
 
 import "fmt"
 
+// SecondsToDuration turns an int (seconds) into HH:MM:SS
 func SecondsToDuration(input int) string {
     hours := 0
     minutes := 0

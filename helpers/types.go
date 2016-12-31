@@ -2,7 +2,7 @@ package helpers
 
 import "reflect"
 
-// Resolves the type of $v as a string
+// Typeof resolves the type of $v as a string
 func Typeof(v interface{}) string {
     t := reflect.TypeOf(v)
 
@@ -13,6 +13,7 @@ func Typeof(v interface{}) string {
     }
 }
 
+// MapToSliceOfSlices converts a map to [][]string
 func MapToSliceOfSlices(m map[string]string) [][]string {
     res := make([][]string, len(m))
 

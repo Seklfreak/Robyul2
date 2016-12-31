@@ -2,7 +2,7 @@ package helpers
 
 import "strings"
 
-// Draws an ASCII table
+// DrawTable draws a fancy ASCII table
 // Inspired by MySQL
 func DrawTable(headers []string, rows [][]string) string {
     // Result container

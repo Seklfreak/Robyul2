@@ -1,5 +1,6 @@
 package helpers
 
+// HumanizeNumber takes an int and turns it into a word
 func HumanizeNumber(num int) string {
     switch num {
     case 1:

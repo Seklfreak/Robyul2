@@ -12,8 +12,10 @@ import (
     "errors"
 )
 
+// Callback aliases a func
 type Callback func()
 
+// RecoverDiscord recover()s and sends a message to discord
 func RecoverDiscord(session *discordgo.Session, msg *discordgo.Message) {
     err := recover()
     if err != nil {
@@ -21,6 +23,7 @@ func RecoverDiscord(session *discordgo.Session, msg *discordgo.Message) {
     }
 }
 
+// Recover recover()s and prints the error to console
 func Recover() {
     err := recover()
     if err != nil {
@@ -28,7 +31,7 @@ func Recover() {
     }
 }
 
-// Softer form of relax
+// SoftRelax is a softer form of Relax()
 // Calls a callback instead of panicking
 func SoftRelax(err error, cb Callback) {
     if err != nil {
@@ -36,7 +39,7 @@ func SoftRelax(err error, cb Callback) {
     }
 }
 
-// Helper to reduce if-checks if panicking is allowed
+// Relax is a helper to reduce if-checks if panicking is allowed
 // If $err is nil this is a no-op. Panics otherwise.
 func Relax(err error) {
     if err != nil {
@@ -44,21 +47,21 @@ func Relax(err error) {
     }
 }
 
-// if a != b throw err
+// RelaxAssertEqual panics if a is not b
 func RelaxAssertEqual(a interface{}, b interface{}, err error) {
     if !reflect.DeepEqual(a, b) {
         Relax(err)
     }
 }
 
-// if a == b throw err
+// RelaxAssertUnequal panics if a is b
 func RelaxAssertUnequal(a interface{}, b interface{}, err error) {
     if reflect.DeepEqual(a, b) {
         Relax(err)
     }
 }
 
-// Takes an error and sends it to discord and sentry.io
+// SendError Takes an error and sends it to discord and sentry.io
 func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
     if DEBUG_MODE == true {
         buf := make([]byte, 1 << 16)
@@ -84,7 +87,8 @@ func SendError(session *discordgo.Session, msg *discordgo.Message, err interface
         ID:       msg.ID,
         Username: msg.Author.Username + "#" + msg.Author.Discriminator,
     })
-    raven.CaptureError(errors.New(fmt.Sprintf("%#v", err)), map[string]string{
+
+    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
         "ChannelID":       msg.ChannelID,
         "Content":         msg.Content,
         "Timestamp":       string(msg.Timestamp),
