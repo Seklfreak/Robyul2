@@ -3,6 +3,7 @@ package helpers
 import (
     "errors"
     "reflect"
+    "math/rand"
 )
 
 func interfaceToSlice(input interface{}) []interface{} {
@@ -31,4 +32,9 @@ func SliceRemoveElement(input interface{}, idx int) interface{} {
     array := interfaceToSlice(input)
     array[len(array) - 1], array[idx] = array[idx], array[len(array) - 1]
     return array[:len(array) - 1]
+}
+
+func SliceRandom(input interface{}) interface{} {
+    array := interfaceToSlice(input)
+    return array[rand.Intn(len(array) - 1)]
 }

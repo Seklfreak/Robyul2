@@ -80,16 +80,26 @@ func (m Music) Commands() []string {
     return []string{
         "join",
         "leave",
+
         "play",
         "pause",
+
         "stop",
+
         "skip",
-        "clear",
+
         "add",
+        "clear",
+
         "list",
         "playlist",
+
+        "random",
+        "rand",
+
         "playing",
         "np",
+
         "mdev",
     }
 }
@@ -300,18 +310,33 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
                 continue
             }
 
-            songs = append(songs, []string{strconv.Itoa(i) + ".", song.Title})
+            songs = append(songs, []string{
+                strconv.Itoa(i) + ".",
+                song.Title,
+                helpers.SecondsToDuration(song.Duration),
+            })
         }
 
         msg += helpers.DrawTable([]string{
-            "#", "Title",
+            "#", "Title", "Duration",
         }, songs)
 
         session.ChannelMessageSend(channel.ID, msg)
         break
 
-    case "random":
-        session.ChannelMessageSend(channel.ID, ":x: Not yet implemented")
+    case "random", "rand":
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed":true}).Run(utils.GetDB())
+        helpers.Relax(err)
+        defer cursor.Close()
+
+        var matches []Song
+        err = cursor.All(&matches)
+        helpers.Relax(err)
+
+        match := helpers.SliceRandom(matches).(Song)
+        *playlist = append(*playlist, match)
+
+        session.ChannelMessageSend(channel.ID, ":ballot_box_with_check: Added `" + match.Title + "`")
         break
 
     case "add":
