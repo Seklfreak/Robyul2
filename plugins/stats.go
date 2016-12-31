@@ -54,6 +54,7 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
         Title:       "Stats!",
         Description: "More awesome than melted cheese!",
         Color:       0x0FADED,
+        URL: "https://stats.meetkaren.xyz",
         Fields: []*discordgo.MessageEmbedField{
             // System
             {Name: "Hostname", Value: hostname, Inline: true},
@@ -71,8 +72,4 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
             {Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
         },
     })
-}
-
-func u64tos(i uint64) string {
-    return strconv.Itoa(int(i))
 }

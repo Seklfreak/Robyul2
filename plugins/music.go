@@ -87,6 +87,7 @@ func (m Music) Commands() []string {
         "clear",
         "add",
         "list",
+        "playlist",
         "playing",
         "np",
         "mdev",
@@ -255,19 +256,36 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "clear":
-        session.ChannelMessageSend(channel.ID, ":asterisk::stop_button: Playlist deleted. Music stopped.")
-        close(m.guildConnections[fingerprint].closer)
+        if len(*playlist) == 0 {
+            session.ChannelMessageSend(channel.ID, "Nothing to clear ¯\\_(ツ)_/¯ (Playlist empty)")
+            return
+        }
+        session.ChannelMessageSend(channel.ID, ":asterisk: Playlist deleted.")
         *playlist = []Song{}
         break
 
     case "playing", "np":
+        if !m.guildConnections[fingerprint].playing {
+            session.ChannelMessageSend(
+                channel.ID,
+                "Why do you ask me? You didn't even start playback yet!",
+            )
+            return
+        }
+        if len(*playlist) == 0 {
+            session.ChannelMessageSend(
+                channel.ID,
+                "Seems like you cleared the Playlist. \n I don't know what's playing :neutral_face:",
+            )
+            return
+        }
         session.ChannelMessageSend(
             channel.ID,
             ":musical_note: Currently playing `" + (*playlist)[0].Title + "`",
         )
         break
 
-    case "list":
+    case "list", "playlist":
         if len(*playlist) == 0 {
             session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
             return
