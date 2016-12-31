@@ -13,18 +13,18 @@ import (
     "encoding/base64"
 )
 
-// Defines what a callback is
+// Callback aliases a func
 type Callback func()
 
 var (
-    // Saves the config
+    // config Saves the bot-config
     config *gabs.Container
 
-    // Array of cleverbot sessions
+    // cleverbotSessions stores all cleverbot connections
     cleverbotSessions map[string]*cleverbot.Session
 )
 
-// Loads the config from $path into $config
+// LoadConfig loads the config from $path into $config
 func LoadConfig(path string) {
     json, err := gabs.ParseJSONFile(path)
 
@@ -35,12 +35,12 @@ func LoadConfig(path string) {
     config = json
 }
 
-// Config getter
+// GetConfig is a config getter
 func GetConfig() *gabs.Container {
     return config
 }
 
-// Sends a message to cleverbot. Responds with it's answer.
+// CleverbotSend sends a message to cleverbot and responds with it's answer.
 func CleverbotSend(session *discordgo.Session, channel string, message string) {
     var msg string
 
@@ -62,12 +62,12 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
     session.ChannelMessageSend(channel, msg)
 }
 
-// Refreshes the cleverbot session for said channel
+// CleverbotRefreshSession refreshes the cleverbot session for said channel
 func CleverbotRefreshSession(channel string) {
     cleverbotSessions[channel] = cleverbot.New()
 }
 
-// Gets the prefix for $guild
+// GetPrefixForServer gets the prefix for $guild
 func GetPrefixForServer(guild string) (string, error) {
     settings, err := GuildSettingsGet(guild)
     if err != nil {
@@ -77,7 +77,7 @@ func GetPrefixForServer(guild string) (string, error) {
     return settings.Prefix, nil
 }
 
-// Sets the prefix for $guild to $prefix
+// SetPrefixForServer sets the prefix for $guild to $prefix
 func SetPrefixForServer(guild string, prefix string) error {
     settings, err := GuildSettingsGet(guild)
     if err != nil {
@@ -89,10 +89,12 @@ func SetPrefixForServer(guild string, prefix string) error {
     return GuildSettingsSet(guild, settings)
 }
 
+// NetGet executes a GET request to url with the Karen/Discord-Bot user-agent
 func NetGet(url string) []byte {
     return NetGetUA(url, "Karen/Discord-Bot")
 }
 
+// NetGetUA performs a GET request with a custom user-agent
 func NetGetUA(url string, useragent string) []byte {
     // Allocate client
     client := &http.Client{}
@@ -125,7 +127,7 @@ func NetGetUA(url string, useragent string) []byte {
     }
 }
 
-// Sends a GET request to $url, parses it and returns the JSON
+// GetJSON sends a GET request to $url, parses it and returns the JSON
 func GetJSON(url string) *gabs.Container {
     // Parse json
     json, err := gabs.ParseJSON(NetGet(url))
@@ -134,7 +136,7 @@ func GetJSON(url string) *gabs.Container {
     return json
 }
 
-// Only calls $cb if the author is an admin or has MANAGE_SERVER permission
+// RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callback) {
     channel, e := session.Channel(msg.ChannelID)
     if e != nil {
@@ -164,6 +166,7 @@ func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callbac
     session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
 }
 
+// BtoA is a polyfill for javascript's window#btoa()
 func BtoA(s string) string {
     b64 := base64.URLEncoding.WithPadding(base64.NoPadding)
     src := []byte(s)

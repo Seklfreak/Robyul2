@@ -48,7 +48,7 @@ func DrawTable(headers []string, rows [][]string) string {
     return sb
 }
 
-// Draws a line with given paddings and chars (eg "+-----+-----+-----+")
+// drawLine draws a line with given paddings and chars (eg "+-----+-----+-----+")
 func drawLine(start string, mid string, end string, paddings []int, data []string) string {
     sb := ""
     for idx := range data {
@@ -59,7 +59,7 @@ func drawLine(start string, mid string, end string, paddings []int, data []strin
     return sb
 }
 
-// Draws content with padding and custom separators (eg "|A    |B    |C    |")
+// drawContent draws content with padding and custom separators (eg "|A    |B    |C    |")
 func drawContent(separator string, end string, paddings []int, data []string) string {
     sb := ""
     for idx, content := range data {

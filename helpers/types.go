@@ -8,9 +8,9 @@ func Typeof(v interface{}) string {
 
     if t.Kind() == reflect.Ptr {
         return "*" + t.Elem().Name()
-    } else {
-        return t.Name()
     }
+
+    return t.Name()
 }
 
 // MapToSliceOfSlices converts a map to [][]string
