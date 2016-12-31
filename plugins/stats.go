@@ -51,10 +51,7 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     }
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        Title:       "Stats!",
-        Description: "More awesome than melted cheese!",
         Color:       0x0FADED,
-        URL: "https://stats.meetkaren.xyz",
         Fields: []*discordgo.MessageEmbedField{
             // System
             {Name: "Hostname", Value: hostname, Inline: true},
@@ -70,6 +67,9 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
             {Name: "Connected servers", Value: strconv.Itoa(len(guilds)), Inline: true},
             {Name: "Watching channels", Value: strconv.Itoa(channels), Inline: true},
             {Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
+
+            // Link
+            {Name: "Want more stats and awesome graphs?", Value: "Visit [stats.meetkaren.xyz](https://stats.meetkaren.xyz)", Inline: false},
         },
     })
 }
