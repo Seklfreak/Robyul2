@@ -23,6 +23,8 @@
 Disclaimer: This bot is still in a early stage.<br>
 Please expect (rare) crashes and performance problems until the bot is mature enough.
 
+This project will probably never reach more than a D on GoReportCard because I don't like gofmt's style and will most likely never adopt it until it allows 4 spaces instead of tabs. 
+
 <hr/>
 
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
