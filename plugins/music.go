@@ -326,6 +326,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             json, err := gabs.ParseJSON(yout)
             helpers.Relax(err)
 
+            if json.ExistsP("is_live") && json.Path("is_live").Data().(bool) {
+                session.ChannelMessageSend(channel.ID, "Livestreams are not supported :neutral_face:")
+                return
+            }
+
             match = Song{
                 AddedBy:     msg.Author.ID,
                 Processed:   false,
