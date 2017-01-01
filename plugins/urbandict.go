@@ -3,7 +3,6 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
-    "github.com/sn0w/Karen/utils"
     "net/url"
 )
 
@@ -30,7 +29,7 @@ func (u UrbanDict) Action(command string, content string, msg *discordgo.Message
 
     endpoint := "http://api.urbandictionary.com/v0/define?term=" + url.QueryEscape(content)
 
-    json := utils.GetJSON(endpoint)
+    json := helpers.GetJSON(endpoint)
 
     res, e := json.Path("list").Children()
     helpers.Relax(e)

@@ -11,9 +11,6 @@ import (
     "strconv"
 )
 
-// Callback aliases a func
-type Callback func()
-
 // RecoverDiscord recover()s and sends a message to discord
 func RecoverDiscord(session *discordgo.Session, msg *discordgo.Message) {
     err := recover()

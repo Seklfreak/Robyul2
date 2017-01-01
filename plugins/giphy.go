@@ -3,9 +3,9 @@ package plugins
 import (
     "fmt"
     "github.com/bwmarrin/discordgo"
-    "github.com/sn0w/Karen/utils"
     "math/rand"
     "net/url"
+    "github.com/sn0w/Karen/helpers"
 )
 
 type Giphy struct{}
@@ -30,7 +30,7 @@ func (g Giphy) Action(command string, content string, msg *discordgo.Message, se
     session.ChannelTyping(msg.ChannelID)
 
     // Send request
-    json := utils.GetJSON(
+    json := helpers.GetJSON(
         fmt.Sprintf(
             "%s?q=%s&api_key=%s&rating=%s&limit=%d",
             ENDPOINT,

@@ -2,7 +2,7 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "github.com/sn0w/Karen/utils"
+    "github.com/sn0w/Karen/helpers"
 )
 
 type RandomCat struct{}
@@ -22,7 +22,7 @@ func (rc RandomCat) Action(command string, content string, msg *discordgo.Messag
 
     session.ChannelTyping(msg.ChannelID)
 
-    json := utils.GetJSON(ENDPOINT)
+    json := helpers.GetJSON(ENDPOINT)
     session.ChannelMessageSend(
         msg.ChannelID,
         "MEOW! :smiley_cat: \n " + json.Path("file").Data().(string),

@@ -2,10 +2,10 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "github.com/sn0w/Karen/utils"
     "net/url"
     "regexp"
     "strings"
+    "github.com/sn0w/Karen/helpers"
 )
 
 type Weather struct{}
@@ -29,7 +29,7 @@ func (w Weather) Action(command string, content string, msg *discordgo.Message, 
         return
     }
 
-    text := string(utils.NetGetUA("http://wttr.in/" + url.QueryEscape(content), "curl/7.51.0"))
+    text := string(helpers.NetGetUA("http://wttr.in/" + url.QueryEscape(content), "curl/7.51.0"))
     lines := strings.Split(text, "\n")
 
     session.ChannelMessageSend(

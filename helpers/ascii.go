@@ -1,6 +1,19 @@
 package helpers
 
-import "strings"
+import (
+    "strings"
+    "encoding/base64"
+)
+
+// BtoA is a polyfill for javascript's window#btoa()
+func BtoA(s string) string {
+    b64 := base64.URLEncoding.WithPadding(base64.NoPadding)
+    src := []byte(s)
+    buf := make([]byte, b64.EncodedLen(len(src)))
+    b64.Encode(buf, src)
+
+    return string(buf)
+}
 
 // DrawTable draws a fancy ASCII table
 // Inspired by MySQL

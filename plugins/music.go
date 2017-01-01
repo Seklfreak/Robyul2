@@ -5,7 +5,6 @@ import (
     "github.com/Jeffail/gabs"
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
-    "github.com/sn0w/Karen/utils"
     rethink "gopkg.in/gorethink/gorethink.v3"
     "io/ioutil"
     "os"
@@ -334,7 +333,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "random", "rand":
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed":true}).Run(utils.GetDB())
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed":true}).Run(helpers.GetDB())
         helpers.Relax(err)
         defer cursor.Close()
 
@@ -353,7 +352,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         content = strings.TrimSpace(content)
 
         // Check if the link has been cached
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":content}).Run(utils.GetDB())
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":content}).Run(helpers.GetDB())
         helpers.Relax(err)
         defer cursor.Close()
 
@@ -399,7 +398,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             }
 
             // Add to db
-            _, e := rethink.Table("music").Insert(match).RunWrite(utils.GetDB())
+            _, e := rethink.Table("music").Insert(match).RunWrite(helpers.GetDB())
             helpers.Relax(e)
 
             // Add to queue
@@ -464,7 +463,7 @@ func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg 
     for {
         time.Sleep(1 * time.Second)
 
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":match.URL}).Run(utils.GetDB())
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":match.URL}).Run(helpers.GetDB())
         helpers.Relax(err)
 
         var res Song
@@ -516,7 +515,7 @@ func (m *Music) processorLoop() {
         time.Sleep(5 * time.Second)
 
         // Get unprocessed items
-        cursor, err = rethink.Table("music").Filter(map[string]interface{}{"processed":false}).Run(utils.GetDB())
+        cursor, err = rethink.Table("music").Filter(map[string]interface{}{"processed":false}).Run(helpers.GetDB())
         helpers.Relax(err)
 
         // Get items
@@ -535,7 +534,7 @@ func (m *Music) processorLoop() {
         for _, song := range songs {
             start := time.Now().Unix()
 
-            name := utils.BtoA(song.URL)
+            name := helpers.BtoA(song.URL)
 
             Logger.INF("[MUSIC] Downloading " + song.URL + " as " + name)
 
@@ -581,7 +580,7 @@ func (m *Music) processorLoop() {
             _, err = rethink.Table("music").
                 Filter(map[string]interface{}{"id":song.ID}).
                 Update(song).
-                RunWrite(utils.GetDB())
+                RunWrite(helpers.GetDB())
             helpers.Relax(err)
 
             end := time.Now().Unix()
@@ -725,7 +724,7 @@ func (m *Music) janitor() {
 
     for {
         // Query for songs
-        cursor, err := rethink.Table("music").Run(utils.GetDB())
+        cursor, err := rethink.Table("music").Run(helpers.GetDB())
         helpers.Relax(err)
 
         // Get items
@@ -747,7 +746,7 @@ func (m *Music) janitor() {
             foundFile := false
 
             for _, song := range songs {
-                if strings.Contains("/srv/karen-data/" + file.Name(), utils.BtoA(song.URL)) {
+                if strings.Contains("/srv/karen-data/" + file.Name(), helpers.BtoA(song.URL)) {
                     foundFile = true
                     break
                 }

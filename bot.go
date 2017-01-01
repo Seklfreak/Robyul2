@@ -7,8 +7,6 @@ import (
     "github.com/sn0w/Karen/helpers"
     Logger "github.com/sn0w/Karen/logger"
     "github.com/sn0w/Karen/plugins"
-    "github.com/sn0w/Karen/utils"
-    "math/rand"
     "regexp"
     "strings"
     "time"
@@ -20,8 +18,8 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
     fmt.Printf(
         "\n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s\n\n",
-        utils.GetConfig().Path("discord.id").Data().(string),
-        utils.GetConfig().Path("discord.perms").Data().(string),
+        helpers.GetConfig().Path("discord.id").Data().(string),
+        helpers.GetConfig().Path("discord.perms").Data().(string),
     )
 
     discordSession = session
@@ -59,8 +57,8 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     go func() {
         time.Sleep(3 * time.Second)
 
-        configName := utils.GetConfig().Path("bot.name").Data().(string)
-        configAvatar := utils.GetConfig().Path("bot.avatar").Data().(string)
+        configName := helpers.GetConfig().Path("bot.name").Data().(string)
+        configAvatar := helpers.GetConfig().Path("bot.avatar").Data().(string)
 
         // Change avatar if desired
         if configAvatar != "" && configAvatar != session.State.User.Avatar {
@@ -131,7 +129,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
                     case regexp.MustCompile("(?i)^PREFIX.*").Match(bmsg):
                         metrics.CommandsExecuted.Add(1)
-                        prefix, _ := utils.GetPrefixForServer(channel.GuildID)
+                        prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
                         if prefix == "" {
                             discordSession.ChannelMessageSend(
                                 channel.ID,
@@ -148,16 +146,16 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
                     case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
                         metrics.CommandsExecuted.Add(1)
-                        utils.RequireAdmin(session, message.Message, func() {
+                        helpers.RequireAdmin(session, message.Message, func() {
                             // Refresh cleverbot session
-                            utils.CleverbotRefreshSession(channel.ID)
+                            helpers.CleverbotRefreshSession(channel.ID)
                             discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
                         })
                         return
 
                     case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
                         metrics.CommandsExecuted.Add(1)
-                        utils.RequireAdmin(session, message.Message, func() {
+                        helpers.RequireAdmin(session, message.Message, func() {
                             // Extract prefix
                             prefix := strings.Split(
                                 regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""),
@@ -165,7 +163,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                             )[0]
 
                             // Set new prefix
-                            err := utils.SetPrefixForServer(
+                            err := helpers.SetPrefixForServer(
                                 channel.GuildID,
                                 prefix,
                             )
@@ -194,7 +192,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                         msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
                         // Send to cleverbot
-                        utils.CleverbotSend(session, channel.ID, msg)
+                        helpers.CleverbotSend(session, channel.ID, msg)
                         return
                     }
                 }
@@ -202,7 +200,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
             // Only continue if a prefix is set
             // Else check if any instant-replies match
-            prefix, _ := utils.GetPrefixForServer(channel.GuildID)
+            prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
             if prefix == "" {
                 plugins.CallTriggerPlugins(message.Message, session)
                 return
@@ -246,7 +244,7 @@ func sendHelp(message *discordgo.MessageCreate) {
 // Changes the game interval every 10 seconds after called
 func changeGameInterval(session *discordgo.Session) {
     for {
-        err := session.UpdateStatus(0, games[rand.Intn(len(games))])
+        err := session.UpdateStatus(0, helpers.SliceRandom(games).(string))
         if err != nil {
             raven.CaptureError(err, map[string]string{})
         }

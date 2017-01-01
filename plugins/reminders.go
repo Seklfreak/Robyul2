@@ -4,7 +4,6 @@ import (
     "fmt"
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
-    "github.com/sn0w/Karen/utils"
     rethink "gopkg.in/gorethink/gorethink.v3"
     "regexp"
     "strconv"
@@ -42,7 +41,7 @@ func (r Reminders) Init(session *discordgo.Session) {
 
         for {
             var reminderBucket []DB_Reminders
-            cursor, err := rethink.Table("reminders").Run(utils.GetDB())
+            cursor, err := rethink.Table("reminders").Run(helpers.GetDB())
             helpers.Relax(err)
 
             err = cursor.All(&reminderBucket)
@@ -193,7 +192,7 @@ func getReminders(uid string) DB_Reminders {
     var reminderBucket DB_Reminders
     listCursor, err := rethink.Table("reminders").Filter(
         rethink.Row.Field("userid").Eq(uid),
-    ).Run(utils.GetDB())
+    ).Run(helpers.GetDB())
     defer listCursor.Close()
     err = listCursor.One(&reminderBucket)
 
@@ -202,7 +201,7 @@ func getReminders(uid string) DB_Reminders {
         _, e := rethink.Table("reminders").Insert(DB_Reminders{
             UserID:    uid,
             Reminders: make([]DB_Reminder, 0),
-        }).RunWrite(utils.GetDB())
+        }).RunWrite(helpers.GetDB())
 
         // If the creation was successful read the document
         if e != nil {
@@ -218,6 +217,6 @@ func getReminders(uid string) DB_Reminders {
 }
 
 func setReminders(uid string, reminders DB_Reminders) {
-    _, err := rethink.Table("reminders").Update(reminders).Run(utils.GetDB())
+    _, err := rethink.Table("reminders").Update(reminders).Run(helpers.GetDB())
     helpers.Relax(err)
 }

@@ -3,7 +3,7 @@ package plugins
 import (
     "fmt"
     "github.com/bwmarrin/discordgo"
-    "github.com/sn0w/Karen/utils"
+    "github.com/sn0w/Karen/helpers"
 )
 
 type XKCD struct{}
@@ -21,7 +21,7 @@ func (x XKCD) Init(session *discordgo.Session) {
 func (x XKCD) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
-    json := utils.GetJSON("https://xkcd.com/info.0.json")
+    json := helpers.GetJSON("https://xkcd.com/info.0.json")
     session.ChannelMessageSend(
         msg.ChannelID,
         fmt.Sprintf(

@@ -5,7 +5,6 @@ import (
     "github.com/getsentry/raven-go"
     Logger "github.com/sn0w/Karen/logger"
     "github.com/sn0w/Karen/migrations"
-    "github.com/sn0w/Karen/utils"
     "os"
     "os/signal"
     "github.com/sn0w/Karen/helpers"
@@ -26,8 +25,8 @@ func main() {
     metrics.Init()
 
     // Read config
-    utils.LoadConfig("config.json")
-    config := utils.GetConfig()
+    helpers.LoadConfig("config.json")
+    config := helpers.GetConfig()
 
     // Check if the bot is being debugged
     if config.Path("debug").Data().(bool) {
@@ -43,13 +42,13 @@ func main() {
     Logger.INF("[SENTRY] Someone picked up the phone \\^-^/")
 
     // Connect to DB
-    utils.ConnectDB(
+    helpers.ConnectDB(
         config.Path("rethink.url").Data().(string),
         config.Path("rethink.db").Data().(string),
     )
 
     // Close DB when main dies
-    defer utils.GetDB().Close()
+    defer helpers.GetDB().Close()
 
     // Run migrations
     migrations.Run()

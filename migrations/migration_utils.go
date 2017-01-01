@@ -2,13 +2,12 @@ package migrations
 
 import (
     "github.com/sn0w/Karen/helpers"
-    "github.com/sn0w/Karen/utils"
     rethink "gopkg.in/gorethink/gorethink.v3"
 )
 
 // Create a table if it does not exist
 func CreateTableIfNotExists(tableName string) {
-    cursor, err := rethink.TableList().Run(utils.GetDB())
+    cursor, err := rethink.TableList().Run(helpers.GetDB())
     helpers.Relax(err)
     defer cursor.Close()
 
@@ -23,14 +22,14 @@ func CreateTableIfNotExists(tableName string) {
     }
 
     if !tableExists {
-        _, err := rethink.TableCreate(tableName).Run(utils.GetDB())
+        _, err := rethink.TableCreate(tableName).Run(helpers.GetDB())
         helpers.Relax(err)
     }
 }
 
 // Create a DB if it does not exist
 func CreateDBIfNotExists(dbName string) {
-    cursor, err := rethink.DBList().Run(utils.GetDB())
+    cursor, err := rethink.DBList().Run(helpers.GetDB())
     helpers.Relax(err)
     defer cursor.Close()
 
@@ -45,7 +44,7 @@ func CreateDBIfNotExists(dbName string) {
     }
 
     if !dbExists {
-        _, err := rethink.DBCreate(dbName).Run(utils.GetDB())
+        _, err := rethink.DBCreate(dbName).Run(helpers.GetDB())
         helpers.Relax(err)
     }
 }

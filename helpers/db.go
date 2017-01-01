@@ -1,4 +1,4 @@
-package utils
+package helpers
 
 import (
     Logger "github.com/sn0w/Karen/logger"
@@ -86,4 +86,26 @@ func GuildSettingsGet(guild string) (models.Config, error) {
     default:
         return settings, err
     }
+}
+
+// GetPrefixForServer gets the prefix for $guild
+func GetPrefixForServer(guild string) (string, error) {
+    settings, err := GuildSettingsGet(guild)
+    if err != nil {
+        return "", err
+    }
+
+    return settings.Prefix, nil
+}
+
+// SetPrefixForServer sets the prefix for $guild to $prefix
+func SetPrefixForServer(guild string, prefix string) error {
+    settings, err := GuildSettingsGet(guild)
+    if err != nil {
+        return err
+    }
+
+    settings.Prefix = prefix
+
+    return GuildSettingsSet(guild, settings)
 }
