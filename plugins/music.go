@@ -18,9 +18,6 @@ import (
     "io"
 )
 
-// Define callbacks
-type Callback func()
-
 // Define control messages
 type controlMessage int
 
