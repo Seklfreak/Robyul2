@@ -105,6 +105,8 @@ func (m Music) Commands() []string {
         "playlist",
         "random",
         "rand",
+        "search",
+        "find",
 
         "mdev",
     }
@@ -447,6 +449,47 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             "Song was added to your queue but did not finish downloading yet. Wait a bit :wink:\nLive progress at: <https://meetkaren.xyz/music>",
         )
         go m.waitForSong(channel.ID, fingerprint, match, msg, session)
+        break
+    case "search", "find":
+        if len(content) < 4 {
+            session.ChannelMessageSend(
+                channel.ID,
+                "Kinda short search term :thinking:\nTry something longer!",
+            )
+            return
+        }
+
+        term := "(?i).*" + strings.Join(strings.Split(content, " "), ".*") + ".*"
+
+        // @formatter:off
+        cursor, err := rethink.
+            Table("music").
+            Filter(map[string]interface{}{"processed":true}).
+            Filter(rethink.Row.Field("title").Match(term)).
+            Run(helpers.GetDB())
+        // @formatter:on
+
+        helpers.Relax(err)
+        defer cursor.Close()
+
+        var results []Song
+        err = cursor.All(&results)
+        if err == rethink.ErrEmptyResult {
+            session.ChannelMessageSend(
+                channel.ID,
+                "No results :frowning:",
+            )
+            return
+        }
+        helpers.Relax(err)
+
+        headers := []string{"Title", "Link for !add"}
+        rows := make([][]string, len(results))
+        for i, result := range results {
+            rows[i] = []string{result.Title, result.URL}
+        }
+
+        session.ChannelMessageSend(channel.ID, ":mag: Search results:\n" + helpers.DrawTable(headers, rows))
         break
     }
 }
