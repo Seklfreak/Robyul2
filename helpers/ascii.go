@@ -4,6 +4,7 @@ import (
     "strings"
     "encoding/base64"
     "strconv"
+    "fmt"
 )
 
 // BtoA is a polyfill for javascript's window#btoa()
@@ -116,7 +117,7 @@ func drawContent(start string, separator string, end string, paddings []int, dat
             sb += separator
         }
 
-        sb += content + strings.Repeat(" ", paddings[idx] - len(content))
+        sb += fmt.Sprintf("%-" + strconv.Itoa(paddings[idx]) + "s", content)
     }
     sb += end + "\n"
 
