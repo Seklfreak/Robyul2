@@ -220,7 +220,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
     }
 
-    // Store pointers for easier access
+    // Store gc pointer for easier access
     queue := &m.guildConnections[fingerprint].queue
     playlist := &m.guildConnections[fingerprint].playlist
 
@@ -237,6 +237,9 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     switch command {
     case "leave":
         voiceConnection.Disconnect()
+        m.guildConnections[fingerprint].CloseChannels()
+        m.guildConnections[fingerprint].playing = false
+        *playlist = []Song{}
         session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
         break
 
