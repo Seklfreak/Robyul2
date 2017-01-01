@@ -107,7 +107,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             // Check if the message contains @mentions
             if len(message.Mentions) >= 1 {
                 // Check if someone is mentioning us
-                if message.Mentions[0].ID == session.State.User.ID {
+                if strings.HasPrefix(message.Content, "<@") && message.Mentions[0].ID == session.State.User.ID {
                     // Prepare content for editing
                     msg := message.Content
 
