@@ -81,10 +81,10 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message, sessi
 func CallTriggerPlugins(msg *discordgo.Message, session *discordgo.Session) {
     // Iterate over all plugins
     for _, plug := range TriggerPluginList {
-        go func() {
+        go func(plugin TriggerPlugin) {
             defer helpers.RecoverDiscord(session, msg)
-            plug.Action(msg, session)
-        }()
+            plugin.Action(msg, session)
+        }(plug)
     }
 }
 
