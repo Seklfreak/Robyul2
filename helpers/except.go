@@ -9,7 +9,6 @@ import (
     "runtime"
     "github.com/getsentry/raven-go"
     "strconv"
-    "errors"
 )
 
 // Callback aliases a func
