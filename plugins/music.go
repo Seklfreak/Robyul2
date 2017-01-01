@@ -240,8 +240,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     case "leave":
         voiceConnection.Disconnect()
         m.guildConnections[fingerprint].CloseChannels()
-        m.guildConnections[fingerprint].playing = false
-        *playlist = []Song{}
+        delete(m.guildConnections, fingerprint)
         session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
         break
 
