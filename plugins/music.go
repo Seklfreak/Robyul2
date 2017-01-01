@@ -51,12 +51,28 @@ type GuildConnection struct {
 
 // Helper to generate a guild connection
 func (gc *GuildConnection) Alloc() *GuildConnection {
-    gc.controller = make(chan controlMessage)
-    gc.closer = make(chan struct{})
+    gc.CreateChannels()
+
     gc.playlist = []Song{}
     gc.queue = []Song{}
     gc.playing = false
+
     return gc
+}
+
+func (gc *GuildConnection) CloseChannels() {
+    close(gc.closer)
+    close(gc.controller)
+}
+
+func (gc *GuildConnection) CreateChannels() {
+    gc.closer = make(chan struct{})
+    gc.controller = make(chan controlMessage)
+}
+
+func (gc *GuildConnection) RecreateChannels() {
+    gc.CloseChannels()
+    gc.CreateChannels()
 }
 
 // Define a song
@@ -83,22 +99,16 @@ func (m Music) Commands() []string {
 
         "play",
         "pause",
-
         "stop",
-
         "skip",
-
-        "add",
-        "clear",
-
-        "list",
-        "playlist",
-
-        "random",
-        "rand",
-
         "playing",
         "np",
+
+        "add",
+        "list",
+        "playlist",
+        "random",
+        "rand",
 
         "mdev",
     }
@@ -165,10 +175,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     // Store voice channel ref
     vc := m.resolveVoiceChannel(msg.Author, guild, session)
 
-    // Store voice connection ref
+    // Store voice connection ref (deferred)
     var voiceConnection *discordgo.VoiceConnection
 
-    // Store fingerprint (guild:channel)
+    // Store fingerprint (guild:channel) (deferred)
     var fingerprint string
 
     // Check if the user is connected to voice at all
@@ -218,6 +228,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     queue := &m.guildConnections[fingerprint].queue
     playlist := &m.guildConnections[fingerprint].playlist
 
+    // Dev command that shows the guild connection
     if command == "mdev" {
         session.ChannelMessageSend(
             channel.ID,
@@ -229,8 +240,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     // Check what the user wants from us
     switch command {
     case "leave":
-        session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
         voiceConnection.Disconnect()
+        session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
         break
 
     case "play":
@@ -256,22 +267,16 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "stop":
-        session.ChannelMessageSend(channel.ID, ":stop_button: Track stopped")
-        close(m.guildConnections[fingerprint].closer)
+        m.guildConnections[fingerprint].RecreateChannels()
+        m.guildConnections[fingerprint].playing = false
+        *playlist = []Song{}
+
+        session.ChannelMessageSend(channel.ID, ":stop_button: Playback stopped. (Playlist is now empty)")
         break
 
     case "skip":
-        session.ChannelMessageSend(channel.ID, ":track_next: Loading next track")
         m.guildConnections[fingerprint].controller <- Skip
-        break
-
-    case "clear":
-        if len(*playlist) == 0 {
-            session.ChannelMessageSend(channel.ID, "Nothing to clear ¯\\_(ツ)_/¯ (Playlist empty)")
-            return
-        }
-        session.ChannelMessageSend(channel.ID, ":asterisk: Playlist deleted.")
-        *playlist = []Song{}
+        session.ChannelMessageSend(channel.ID, ":track_next: Loading next track")
         break
 
     case "playing", "np":
@@ -282,6 +287,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             )
             return
         }
+
         if len(*playlist) == 0 {
             session.ChannelMessageSend(
                 channel.ID,
@@ -289,6 +295,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             )
             return
         }
+
         session.ChannelMessageSend(
             channel.ID,
             ":musical_note: Currently playing `" + (*playlist)[0].Title + "`",
@@ -304,22 +311,24 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         msg := ":musical_note: Playlist\n\n"
         msg += "Currently Playing: `" + (*playlist)[0].Title + "`\n"
 
-        songs := [][]string{}
-        for i, song := range *playlist {
-            if i == 0 {
-                continue
+        if len(*playlist) > 1 {
+            songs := [][]string{}
+            for i, song := range *playlist {
+                if i == 0 {
+                    continue
+                }
+
+                songs = append(songs, []string{
+                    strconv.Itoa(i) + ".",
+                    song.Title,
+                    helpers.SecondsToDuration(song.Duration),
+                })
             }
 
-            songs = append(songs, []string{
-                strconv.Itoa(i) + ".",
-                song.Title,
-                helpers.SecondsToDuration(song.Duration),
-            })
+            msg += helpers.DrawTable([]string{
+                "#", "Title", "Duration",
+            }, songs)
         }
-
-        msg += helpers.DrawTable([]string{
-            "#", "Title", "Duration",
-        }, songs)
 
         session.ChannelMessageSend(channel.ID, msg)
         break
@@ -684,13 +693,7 @@ func (m *Music) play(
                         break
                     }
 
-                    // Stop lock after timeout
-                    if iteration == 1200 {
-                        close(m.guildConnections[fingerprint].closer)
-                        return
-                    }
-
-                    // Sleep for 0.5s until next check
+                    // Sleep for 0.5s until next check to reduce CPU load
                     iteration++
                     time.Sleep(500 * time.Millisecond)
                 }
