@@ -480,7 +480,7 @@ func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg 
             // Add to playlist
             *playlist = append(*playlist, res)
 
-            session.ChannelMessageSend(channel, "`" + res.Title + "` finished downloading :smiley:")
+            session.ChannelMessageSend(channel, ":ballot_box_with_check: `" + res.Title + "` finished downloading :smiley:")
             break
         }
     }
