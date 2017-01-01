@@ -5,13 +5,14 @@ import (
     "errors"
 )
 
-var BOT_ADMINS = []string{
+var botAdmins = []string{
     "157834823594016768", // 0xFADED#3237
     "165345731706748929", // Serraniel#8978
 }
 
+// IsBotAdmin checks if $id is in $botAdmins
 func IsBotAdmin(id string) bool {
-    for _, s := range BOT_ADMINS {
+    for _, s := range botAdmins {
         if s == id {
             return true
         }

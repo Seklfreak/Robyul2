@@ -8,6 +8,7 @@ import (
 
 var dbSession *rethink.Session
 
+// ConnectDB connects to rethink and stores the session
 func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connecting to " + url)
 
@@ -28,10 +29,13 @@ func ConnectDB(url string, db string) {
     Logger.INF("[DB] Connected!")
 }
 
+// GetDB is a simple getter for the rethink session.
+// Might receive some singleton-like lazy-creation later
 func GetDB() *rethink.Session {
     return dbSession
 }
 
+// GuildSettingsSet writes all $config into the db
 func GuildSettingsSet(guild string, config models.Config) error {
     // Check if an config object exists
     var settings models.Config
@@ -65,6 +69,7 @@ func GuildSettingsSet(guild string, config models.Config) error {
     return err
 }
 
+// GuildSettingsGet returns all config values for the guild or a default object
 func GuildSettingsGet(guild string) (models.Config, error) {
     var settings models.Config
     var cursor *rethink.Cursor

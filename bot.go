@@ -13,7 +13,7 @@ import (
     "github.com/sn0w/Karen/metrics"
 )
 
-// Called after the gateway connected
+// BotOnReady gets called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INF("Connected to discord!")
     fmt.Printf(
@@ -87,8 +87,9 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     go changeGameInterval(session)
 }
 
-// Called after a new message was sent
-// This will be called after *every* message on *every* server so it should die as soon as possible.
+// BotOnMessageCreate gets called after a new message was sent
+// This will be called after *every* message on *every* server so it should die as soon as possible
+// or spawn costly work inside of coroutines.
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
     // Ignore other bots and @everyone/@here
     if !message.Author.Bot && !message.MentionEveryone {

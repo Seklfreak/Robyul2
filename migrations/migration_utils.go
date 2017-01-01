@@ -5,7 +5,7 @@ import (
     rethink "gopkg.in/gorethink/gorethink.v3"
 )
 
-// Create a table if it does not exist
+// CreateTableIfNotExists (works like the mysql call)
 func CreateTableIfNotExists(tableName string) {
     cursor, err := rethink.TableList().Run(helpers.GetDB())
     helpers.Relax(err)
@@ -27,7 +27,7 @@ func CreateTableIfNotExists(tableName string) {
     }
 }
 
-// Create a DB if it does not exist
+// CreateDBIfNotExists (works like the mysql call)
 func CreateDBIfNotExists(dbName string) {
     cursor, err := rethink.DBList().Run(helpers.GetDB())
     helpers.Relax(err)
