@@ -272,7 +272,6 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
     case "skip":
         m.guildConnections[fingerprint].controller <- Skip
-        session.ChannelMessageSend(channel.ID, ":track_next: Loading next track")
         break
 
     case "playing", "np":
@@ -305,26 +304,25 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
 
         msg := ":musical_note: Playlist\n\n"
-        msg += "Currently Playing: `" + (*playlist)[0].Title + "`\n"
 
-        if len(*playlist) > 1 {
-            songs := [][]string{}
-            for i, song := range *playlist {
-                if i == 0 {
-                    continue
-                }
+        songs := [][]string{}
+        for i, song := range *playlist {
+            num := strconv.Itoa(i) + "."
 
-                songs = append(songs, []string{
-                    strconv.Itoa(i) + ".",
-                    song.Title,
-                    helpers.SecondsToDuration(song.Duration),
-                })
+            if i == 0 {
+                num = "Current"
             }
 
-            msg += helpers.DrawTable([]string{
-                "#", "Title", "Duration",
-            }, songs)
+            songs = append(songs, []string{
+                num,
+                song.Title,
+                helpers.SecondsToDuration(song.Duration),
+            })
         }
+
+        msg += helpers.DrawTable([]string{
+            "#", "Title", "Duration",
+        }, songs)
 
         session.ChannelMessageSend(channel.ID, msg)
         break
@@ -621,8 +619,10 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, m
         // Blocks until the song is done
         m.play(vc, *closer, *controller, (*playlist)[0], msg, session, fingerprint)
 
-        // Remove song from playlist
-        *playlist = append((*playlist)[:0], (*playlist)[1:]...)
+        // Remove song from playlist if it's not empty
+        if len(*playlist) > 0 {
+            *playlist = append((*playlist)[:0], (*playlist)[1:]...)
+        }
     }
 }
 
