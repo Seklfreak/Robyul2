@@ -310,10 +310,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         songs := [][]string{}
         for i, song := range *playlist {
-            num := strconv.Itoa(i) + "."
+            num := strconv.Itoa(i + 1) + "."
 
-            if i == 0 {
-                num = "Current"
+            if i == 0 &&  m.guildConnections[fingerprint].playing {
+                num += " (playing)"
             }
 
             songs = append(songs, []string{
