@@ -29,6 +29,13 @@ The primary reason for having GoReportCard at all are the go_vet, gocyclo, ineff
 You are forced to keep the score as-is or improve it when making contributions to the project.
 <hr/>
 
+I'd prefer if you don't run a copy of Karen "on premises".<br>
+The source code is mostly provided for educational purposes and transparency.<br>
+If you still want to run her yourself please ping me on discord.<br>
+The setup is not as trivial as intended so you might need some help from me.
+
+<hr/>
+
 Karen is a highly efficient, multipurpose [Discord](https://discordapp.com/) bot written in [Go](http://golang.org/).
 
 Got any problems or just want to chat with me and other devs?<br>
