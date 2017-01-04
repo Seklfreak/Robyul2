@@ -200,6 +200,15 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
             if merr == nil {
                 session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :smiley:")
+
+                // Make guild connection
+                fp := guild.ID + ":" + session.VoiceConnections[guild.ID].ChannelID
+                if m.guildConnections[fp] == nil {
+                    m.guildConnections[fp] = (&GuildConnection{}).Alloc()
+                }
+
+                // Start auto-leaver
+                go m.autoLeave(guild.ID, channel.ID, session)
             }
 
             helpers.Relax(merr)
@@ -215,11 +224,6 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         // Generate fingerprint
         fingerprint = voiceConnection.GuildID + ":" + voiceConnection.ChannelID
-
-        // Allocate guildConnection if not present
-        if m.guildConnections[fingerprint] == nil {
-            m.guildConnections[fingerprint] = (&GuildConnection{}).Alloc()
-        }
     }
 
     // Store gc pointer for easier access
@@ -493,7 +497,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     }
 }
 
-// Waits until the song is ready.
+// Waits until the song is ready and notifies.
 func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg *discordgo.Message, session *discordgo.Session) {
     defer helpers.RecoverDiscord(session, msg)
 
@@ -542,7 +546,7 @@ func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild
     return nil
 }
 
-// Endless coroutine that checks for new songs and spawns youtube-dl as needed
+// processorLoop is a endless coroutine that checks for new songs and spawns youtube-dl as needed
 func (m *Music) processorLoop() {
     defer helpers.Recover()
 
@@ -629,6 +633,7 @@ func (m *Music) processorLoop() {
     }
 }
 
+// startPlayer is a helper to call play()
 func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, msg *discordgo.Message, session *discordgo.Session) {
     defer helpers.RecoverDiscord(session, msg)
 
@@ -672,6 +677,7 @@ func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, m
 }
 
 // @formatter:off
+// play is responsible for streaming the OPUS data to discord
 func (m *Music) play(
     vc *discordgo.VoiceConnection,
     closer <-chan struct{},
@@ -761,6 +767,7 @@ func (m *Music) play(
     }
 }
 
+// janitor watches the data dir and deletes files that don't belong there
 func (m *Music) janitor() {
     defer helpers.Recover()
 
@@ -802,5 +809,36 @@ func (m *Music) janitor() {
         }
 
         time.Sleep(30 * time.Second)
+    }
+}
+
+// autoLeave disconnects from VC if the users leave anf forget to !leave
+func(m *Music) autoLeave(guildId string, channelId string, session *discordgo.Session) {
+    for {
+        time.Sleep(5 * time.Second)
+
+        voiceChannel := session.VoiceConnections[guildId]
+        guild, err := session.Guild(guildId)
+        if err != nil {
+            continue
+        }
+
+        fellows := 0
+        for _, state := range guild.VoiceStates {
+            if state.ChannelID == voiceChannel.ChannelID {
+                fellows++
+            }
+        }
+
+        if fellows == 1 {
+            fingerprint := voiceChannel.GuildID + ":" + voiceChannel.ChannelID
+
+            session.ChannelMessageSend(channelId, "Where did everyone go? :frowning:")
+
+            voiceChannel.Disconnect()
+            (*m.guildConnections[fingerprint]).CloseChannels()
+            delete(m.guildConnections, fingerprint)
+            break
+        }
     }
 }
