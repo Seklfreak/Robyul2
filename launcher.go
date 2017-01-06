@@ -60,14 +60,10 @@ func main() {
         panic(err)
     }
 
-    // Register callbacks in proxy
-    ProxyAttachListeners(discord, ProxiedEventHandlers{
-        BotOnReady,
-        BotOnMessageCreate,
-
-        metrics.OnReady,
-        metrics.OnMessageCreate,
-    })
+    discord.AddHandler(BotOnReady)
+    discord.AddHandler(BotOnMessageCreate)
+    discord.AddHandler(metrics.OnReady)
+    discord.AddHandler(metrics.OnMessageCreate)
 
     // Connect to discord
     err = discord.Open()
