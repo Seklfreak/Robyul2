@@ -25,12 +25,47 @@ Join the Discord Server! :)<br>
 [![](https://discordapp.com/api/guilds/180818466847064065/widget.png)](https://discord.gg/5SjDr3G)
 <hr/>
 
-### How does this work?? TL;DR?
+### How does this work?
 I've drawn a colorful picture just for you!
 
 ![](http://i.imgur.com/lI3VJDo.png)
 
+### Why are you saying `high performance` all the time?
+I've built a few bots already and all of them were far from performant.<br>
+Why do we live in a time where it's acceptable that an EMPTY Java class consumes 10mb RAM?<br>
+Why does no one care about optimizing anymore?
+
+That's why I'm building Karen.<br>
+I want to create a bot that:
+
+ - Can handle an almost infinite amount of joined guilds
+ - Is able to scale vertically **and** horizontally
+ - Can play music for free, forever. (Not like that freemium stuff Mee6 does)
+ - Will **never** use more resources than absolutely needed
+ - Never crashes (or to be precise: be able to recover from almost any `panic()`)
+ 
+To archieve these goals I defined some basic rules:
+ - Plugins are compiled into the bot instead of lazy-loading
+ - All commands are stateless
+ - If a plugin cannot work without states (like `music.go`) it has to implement the state-handling itself
+ - Write as much async code as possible
+ - Channels > Callbacks
+ - Write optimized helper functions instead of duplicated boilerplate code
+ - `panic()` on **any** error that is not user-related and `recover()` later
+ - Mind your CPU! A coroutine should die as soon as possible
+ - If you wait for something in an endless let it `sleep()` as long as possible between iterations.
+ - A function's cyclomatic complexity should be as low as possible
+ - A function should have as few responsibilities as possible
+ 
+### Achievements
+
+- Never exceeded 1% CPU usage at the time of writing.
+- Never used more than 6MB of it's allocated heap.
+
+![](https://i.imgur.com/lGf08Yo.png)
+
 ### Docs
+
 Hancrafted guide soon (tm)
 
 Until then use GoWalker/GoDoc for coding guides and
