@@ -29,7 +29,7 @@ type TriggerPlugin interface {
     Action(msg *discordgo.Message, session *discordgo.Session)
 }
 
-// List of active plugins
+// PluginList is the list of active plugins
 var PluginList = []Plugin{
     Avatar{},
     About{},
@@ -50,6 +50,7 @@ var PluginList = []Plugin{
     XKCD{},
 }
 
+// TriggerPluginList is the list of plugins that activate on normal chat
 var TriggerPluginList = []TriggerPlugin{}
 
 // CallBotPlugin iterates through the list of registered
