@@ -25,6 +25,12 @@ Join the Discord Server! :)<br>
 [![](https://discordapp.com/api/guilds/180818466847064065/widget.png)](https://discord.gg/5SjDr3G)
 <hr/>
 
+### Invite
+Public invite link is coming after the private beta ends.
+
+Want access?<br>
+Register here: https://goo.gl/forms/9J9GYMg8c9IM6a5Z2
+
 ### How does this work?
 I've drawn a colorful picture just for you!
 
@@ -65,17 +71,10 @@ To archieve these goals I defined some basic rules:
 ![](https://i.imgur.com/lGf08Yo.png)
 
 ### Docs
-
 Hancrafted guide soon (tm)
 
 Until then use GoWalker/GoDoc for coding guides and
 the homepage for usage help.
-
-### Invite
-Public invite link is coming after the private beta ends.
-
-Want access?<br>
-Register here: https://goo.gl/forms/9J9GYMg8c9IM6a5Z2
 
 ### Disclaimer
 This bot is still in a early stage.<br>
