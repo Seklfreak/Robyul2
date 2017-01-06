@@ -9,7 +9,6 @@ import (
     "os/signal"
     "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/metrics"
-    "fmt"
     "github.com/sn0w/Karen/version"
 )
 
@@ -18,8 +17,8 @@ var discordSession *discordgo.Session
 
 // Entrypoint
 func main() {
-    Logger.INF("Booting Karen...")
-    fmt.Print(version.DumpInfo())
+    Logger.INFO.L("launcher", "Booting Karen...")
+    version.DumpInfo()
 
     // Start metric server
     metrics.Init()
@@ -34,12 +33,12 @@ func main() {
     }
 
     // Call home
-    Logger.INF("[SENTRY] Calling home...")
+    Logger.INFO.L("launcher", "[SENTRY] Calling home...")
     err := raven.SetDSN(config.Path("sentry").Data().(string))
     if err != nil {
         panic(err)
     }
-    Logger.INF("[SENTRY] Someone picked up the phone \\^-^/")
+    Logger.INFO.L("launcher", "[SENTRY] Someone picked up the phone \\^-^/")
 
     // Connect to DB
     helpers.ConnectDB(
@@ -54,7 +53,7 @@ func main() {
     migrations.Run()
 
     // Connect and add event handlers
-    Logger.INF("Connecting to discord...")
+    Logger.INFO.L("launcher", "Connecting to discord...")
     discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
     if err != nil {
         panic(err)
@@ -79,7 +78,7 @@ func main() {
     // Wait until the os wants us to shutdown
     <-channel
 
-    Logger.WRN("The OS is killing me :c")
-    Logger.WRN("Disconnecting...")
+    Logger.WARNING.L("launcher", "The OS is killing me :c")
+    Logger.WARNING.L("launcher", "Disconnecting...")
     discord.Close()
 }

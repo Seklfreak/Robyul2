@@ -15,12 +15,12 @@ import (
 
 // BotOnReady gets called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
-    Logger.INF("Connected to discord!")
-    fmt.Printf(
-        "\n To add me to your discord server visit https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s\n\n",
+    Logger.INFO.L("bot", "Connected to discord!")
+    Logger.VERBOSE.L("bot", "Invite link: " + fmt.Sprintf(
+        "https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s",
         helpers.GetConfig().Path("discord.id").Data().(string),
         helpers.GetConfig().Path("discord.perms").Data().(string),
-    )
+    ))
 
     discordSession = session
 
@@ -33,7 +33,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
             cmds += cmd + " "
         }
 
-        Logger.INF(fmt.Sprintf(
+        Logger.INFO.L("bot", fmt.Sprintf(
             tmpl,
             helpers.Typeof(plugin),
             cmds,
@@ -45,7 +45,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     // Init trigger plugins
     tmpl = "[TRIG] Registered %s"
     for _, plugin := range plugins.TriggerPluginList {
-        Logger.INF(fmt.Sprintf(
+        Logger.INFO.L("bot", fmt.Sprintf(
             tmpl,
             helpers.Typeof(plugin),
         ))

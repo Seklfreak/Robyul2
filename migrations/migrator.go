@@ -1,10 +1,10 @@
 package migrations
 
 import (
-    "fmt"
     "reflect"
     "runtime"
     "github.com/sn0w/Karen/helpers"
+    "github.com/sn0w/Karen/logger"
 )
 
 var migrations = []helpers.Callback{
@@ -16,15 +16,15 @@ var migrations = []helpers.Callback{
 
 // Run executes all registered migrations
 func Run() {
-    fmt.Println("[DB] Running migrations...")
+    logger.INFO.L("migrator", "Running migrations...")
     for _, migration := range migrations {
         migrationName := runtime.FuncForPC(
             reflect.ValueOf(migration).Pointer(),
         ).Name()
 
-        fmt.Printf("[DB] Running %s\n", migrationName)
+        logger.INFO.L("migrator", "Running " + migrationName)
         migration()
     }
 
-    fmt.Println("[DB] Migrations finished!")
+    logger.INFO.L("migrator", "Migrations finished!")
 }

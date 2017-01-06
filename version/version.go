@@ -1,5 +1,7 @@
 package version
 
+import "github.com/sn0w/Karen/logger"
+
 // Version related vars
 // Set by compiler
 var (
@@ -17,9 +19,9 @@ var (
 )
 
 // DumpInfo dumps all above vars
-func DumpInfo() string {
-    return "BOT VERSION: " + BOT_VERSION + "\n" +
-        "BUILD TIME: " + BUILD_TIME + "\n" +
-        "BUILD USER: " + BUILD_USER + "\n" +
-        "BUILD HOST: " + BUILD_HOST + "\n"
+func DumpInfo() {
+    logger.VERBOSE.L("version", "BOT VERSION: " + BOT_VERSION)
+    logger.VERBOSE.L("version", "BUILD TIME: " + BUILD_TIME)
+    logger.VERBOSE.L("version", "BUILD USER: " + BUILD_USER)
+    logger.VERBOSE.L("version", "BUILD HOST: " + BUILD_HOST)
 }

@@ -34,7 +34,7 @@ var (
 
 // Init starts a http server on 127.0.0.1:1337
 func Init() {
-    logger.INF("[METRICS] Listening on http://[::1]:1337")
+    logger.INFO.L("metrics", "Listening on http://[::1]:1337")
     go http.ListenAndServe(":1337", nil)
 }
 

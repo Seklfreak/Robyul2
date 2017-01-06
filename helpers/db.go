@@ -10,7 +10,7 @@ var dbSession *rethink.Session
 
 // ConnectDB connects to rethink and stores the session
 func ConnectDB(url string, db string) {
-    Logger.INF("[DB] Connecting to " + url)
+    Logger.INFO.L("db", "Connecting to " + url)
 
     rethink.SetTags("rethink", "json")
 
@@ -20,13 +20,13 @@ func ConnectDB(url string, db string) {
     })
 
     if err != nil {
-        Logger.ERR("[DB] " + err.Error())
+        Logger.ERROR.L("db", err.Error())
         panic(err)
     }
 
     dbSession = session
 
-    Logger.INF("[DB] Connected!")
+    Logger.INFO.L("db", "Connected!")
 }
 
 // GetDB is a simple getter for the rethink session.

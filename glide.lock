@@ -1,5 +1,5 @@
-hash: 3d2f59b5235c83e848fe01f935f93258abb306fb90d671a441ff028daec3f4f8
-updated: 2016-12-30T17:05:47.147522251+01:00
+hash: b48a52591029bd5444fc7e9b813ab3de31956e016f26bb5fba6adca358b56cb7
+updated: 2017-01-06T22:43:22.878958458+01:00
 imports:
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
@@ -29,6 +29,8 @@ imports:
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
   version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
+- name: github.com/ttacon/chalk
+  version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
   version: 08e59adc4ee745138a8dc05321da38778067d22d
 - name: golang.org/x/crypto
@@ -47,6 +49,10 @@ imports:
   version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
   - unix
+- name: golang.org/x/tools
+  version: 8b89e95de3193f7363c912845b43a7c72d3e1d95
+  subpackages:
+  - cmd/stringer
 - name: gopkg.in/fatih/pool.v2
   version: 20a0a429c5f93de45c90f5f09ea297c25e0929b3
 - name: gopkg.in/gorethink/gorethink.v2

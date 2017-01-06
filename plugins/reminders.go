@@ -1,7 +1,6 @@
 package plugins
 
 import (
-    "fmt"
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
     rethink "gopkg.in/gorethink/gorethink.v3"
@@ -9,6 +8,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "github.com/sn0w/Karen/logger"
 )
 
 type Reminders struct{}
@@ -75,7 +75,7 @@ func (r Reminders) Init(session *discordgo.Session) {
         }
     }()
 
-    fmt.Println("=> Started reminder loop (10s)")
+    logger.PLUGIN.L("reminders", "Started reminder loop (10s)")
 }
 
 func (r Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

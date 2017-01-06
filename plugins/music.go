@@ -116,7 +116,7 @@ func (m *Music) Init(session *discordgo.Session) {
     m.enabled = false
     foundYTD, foundFFPROBE, foundFFMPEG := false, false, false
 
-    fmt.Println("=> Checking for youtube-dl, ffmpeg and ffprobe...")
+    Logger.PLUGIN.L("music", "Checking for youtube-dl, ffmpeg and ffprobe...")
     for _, path := range strings.Split(os.Getenv("PATH"), ":") {
         files, _ := ioutil.ReadDir(path)
 
@@ -139,20 +139,20 @@ func (m *Music) Init(session *discordgo.Session) {
 
     if foundYTD && foundFFPROBE && foundFFMPEG {
         m.enabled = true
-        fmt.Println("=> Found. Music enabled!")
+        Logger.PLUGIN.L("music", "Found. Music enabled!")
 
         // Allocate connections map
         m.guildConnections = make(map[string]*GuildConnection)
 
         // Start loop that processes videos in background
-        fmt.Println("=> Starting async processor loop")
+        Logger.PLUGIN.L("music", "Starting async processor loop")
         go m.processorLoop()
 
         // Start janitor that removes files which are not tracked in the DB
-        fmt.Println("=> Starting async janitor")
+        Logger.PLUGIN.L("music", "Starting async janitor")
         go m.janitor()
     } else {
-        fmt.Println("=> Not Found. Music disabled!")
+        Logger.PLUGIN.L("music", "Not Found. Music disabled!")
     }
 }
 
@@ -572,7 +572,7 @@ func (m *Music) processorLoop() {
             continue
         }
 
-        Logger.INF("[MUSIC] Found " + strconv.Itoa(len(songs)) + " unprocessed items!")
+        Logger.INFO.L("music", "Found " + strconv.Itoa(len(songs)) + " unprocessed items!")
 
         // Loop through items
         for _, song := range songs {
@@ -580,7 +580,7 @@ func (m *Music) processorLoop() {
 
             name := helpers.BtoA(song.URL)
 
-            Logger.INF("[MUSIC] Downloading " + song.URL + " as " + name)
+            Logger.INFO.L("music", "Downloading " + song.URL + " as " + name)
 
             // Download with youtube-dl
             ytdl := exec.Command(
@@ -606,7 +606,7 @@ func (m *Music) processorLoop() {
             opusFile, err := os.Create("/srv/karen-data/" + name + ".opus")
             helpers.Relax(err)
 
-            Logger.INF("[MUSIC] WAV => OPUS | " + name)
+            Logger.INFO.L("music", "WAV => OPUS | " + name)
             dca := exec.Command("dca", "-raw", "-i", "/srv/karen-data/" + name + ".wav")
             dca.Stderr = os.Stderr
             dca.Stdout = opusFile
@@ -628,7 +628,7 @@ func (m *Music) processorLoop() {
             helpers.Relax(err)
 
             end := time.Now().Unix()
-            Logger.INF("[MUSIC] Conversion took " + strconv.Itoa(int(end - start)) + " seconds. | File: " + name)
+            Logger.INFO.L("music", "Conversion took " + strconv.Itoa(int(end - start)) + " seconds. | File: " + name)
         }
     }
 }
@@ -802,7 +802,7 @@ func (m *Music) janitor() {
             }
 
             if !foundFile {
-                Logger.INF("[MUSIC] [JANITOR] Removing " + file.Name())
+                Logger.INFO.L("music", "[JANITOR] Removing " + file.Name())
                 err = os.Remove("/srv/karen-data/" + file.Name())
                 helpers.Relax(err)
             }
@@ -813,7 +813,7 @@ func (m *Music) janitor() {
 }
 
 // autoLeave disconnects from VC if the users leave anf forget to !leave
-func(m *Music) autoLeave(guildId string, channelId string, session *discordgo.Session) {
+func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.Session) {
     for {
         time.Sleep(5 * time.Second)
 

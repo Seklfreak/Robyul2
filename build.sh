@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 BOT_VERSION=$(git describe --tags)
 BUILD_TIME=$(date +%T-%D)
 BUILD_USER="$USER"
