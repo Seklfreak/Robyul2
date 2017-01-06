@@ -9,6 +9,8 @@ import (
     "os/signal"
     "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/metrics"
+    "fmt"
+    "github.com/sn0w/Karen/version"
 )
 
 // The discord session holder
@@ -16,7 +18,8 @@ var discordSession *discordgo.Session
 
 // Entrypoint
 func main() {
-    Logger.INF("Bootstrapping...")
+    Logger.INF("Booting Karen...")
+    fmt.Print(version.DumpInfo())
 
     // Start metric server
     metrics.Init()

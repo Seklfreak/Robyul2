@@ -2,12 +2,10 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "github.com/cloudfoundry/gosigar"
     "github.com/dustin/go-humanize"
-    "os"
     "runtime"
     "strconv"
-    "strings"
+    "github.com/sn0w/Karen/version"
 )
 
 type Stats struct{}
@@ -40,23 +38,13 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     var ram runtime.MemStats
     runtime.ReadMemStats(&ram)
 
-    // Get uptime
-    uptime := sigar.Uptime{}
-    uptime.Get()
-
-    // Get hostname
-    hostname, err := os.Hostname()
-    if err != nil {
-        hostname = "Unknown"
-    }
-
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
         Color:       0x0FADED,
         Fields: []*discordgo.MessageEmbedField{
             // System
-            {Name: "Hostname", Value: hostname, Inline: true},
-            {Name: "Uptime", Value: strings.TrimSpace(uptime.Format()), Inline: true},
+            {Name: "Bot Version", Value: version.BOT_VERSION, Inline: true},
             {Name: "GO Version", Value: runtime.Version(), Inline: true},
+            {Name: "Build Time", Value: version.BUILD_TIME, Inline: true},
 
             // Bot
             {Name: "Used RAM", Value: humanize.Bytes(ram.Alloc) + "/" + humanize.Bytes(ram.Sys), Inline: true},
