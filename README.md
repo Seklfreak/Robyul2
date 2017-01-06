@@ -59,7 +59,7 @@ To archieve these goals I defined some basic rules:
  - Write optimized helper functions instead of duplicated boilerplate code
  - `panic()` on **any** error that is not user-related and `recover()` later
  - Mind your CPU! A coroutine should die as soon as possible
- - If you wait for something in an endless let it `sleep()` as long as possible between iterations.
+ - If you wait for something in an endless loop let it `sleep()` as long as possible between iterations.
  - A function's cyclomatic complexity should be as low as possible
  - A function should have as few responsibilities as possible
  
