@@ -92,32 +92,11 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 // This will be called after *every* message on *every* server so it should die as soon as possible
 // or spawn costly work inside of coroutines.
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
-    var (
-        ma time.Time
-        me time.Time
-        na time.Time
-        ne time.Time
-    )
-
-    defer func() {
-        me = time.Now()
-
-        fmt.Printf(
-            "[MSG] %s took %fµs (NET: %fµs)\n",
-            message.ID,
-            float64(me.Sub(ma).Nanoseconds()) / 1000,
-            float64(ne.Sub(na).Nanoseconds()) / 1000,
-        )
-    }()
-
-    ma = time.Now()
-
     // Ignore other bots and @everyone/@here
     if message.Author.Bot || message.MentionEveryone {
         return
     }
 
-    na = time.Now()
     // Get the channel
     // Ignore the event if we cannot resolve the channel
     channel, err := cache.Channel(message.ChannelID)
@@ -125,7 +104,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         go raven.CaptureError(err, map[string]string{})
         return
     }
-    ne = time.Now()
 
     // We only do things in guilds.
     // Get a friend already and stop chatting with bots
