@@ -3,6 +3,7 @@ package helpers
 import (
     "github.com/bwmarrin/discordgo"
     "errors"
+    "github.com/sn0w/Karen/cache"
 )
 
 var botAdmins = []string{
@@ -23,16 +24,16 @@ func IsBotAdmin(id string) bool {
 
 
 // RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
-func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callback) {
-    channel, e := session.Channel(msg.ChannelID)
+func RequireAdmin(msg *discordgo.Message, cb Callback) {
+    channel, e := cache.GetSession().Channel(msg.ChannelID)
     if e != nil {
-        SendError(session, msg, errors.New("Cannot verify permissions"))
+        SendError(msg, errors.New("Cannot verify permissions"))
         return
     }
 
-    guild, e := session.Guild(channel.GuildID)
+    guild, e := cache.GetSession().Guild(channel.GuildID)
     if e != nil {
-        SendError(session, msg, errors.New("Cannot verify permissions"))
+        SendError(msg, errors.New("Cannot verify permissions"))
         return
     }
 
@@ -49,5 +50,5 @@ func RequireAdmin(session *discordgo.Session, msg *discordgo.Message, cb Callbac
         }
     }
 
-    session.ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
+    cache.GetSession().ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
 }

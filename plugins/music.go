@@ -499,7 +499,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
 // Waits until the song is ready and notifies.
 func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg *discordgo.Message, session *discordgo.Session) {
-    defer helpers.RecoverDiscord(session, msg)
+    defer helpers.RecoverDiscord(msg)
 
     queue := &m.guildConnections[fingerprint].queue
     playlist := &m.guildConnections[fingerprint].playlist
@@ -635,7 +635,7 @@ func (m *Music) processorLoop() {
 
 // startPlayer is a helper to call play()
 func (m *Music) startPlayer(fingerprint string, vc *discordgo.VoiceConnection, msg *discordgo.Message, session *discordgo.Session) {
-    defer helpers.RecoverDiscord(session, msg)
+    defer helpers.RecoverDiscord(msg)
 
     // Ignore call if already playing
     if m.guildConnections[fingerprint].playing {

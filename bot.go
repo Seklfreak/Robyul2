@@ -11,6 +11,7 @@ import (
     "strings"
     "time"
     "github.com/sn0w/Karen/metrics"
+    "github.com/sn0w/Karen/cache"
 )
 
 // BotOnReady gets called after the gateway connected
@@ -22,7 +23,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
         helpers.GetConfig().Path("discord.perms").Data().(string),
     ))
 
-    discordSession = session
+    cache.SetSession(session)
 
     // Init plugins
     tmpl := "[PLUG] %s reacts to [ %s]"
@@ -90,18 +91,40 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 // This will be called after *every* message on *every* server so it should die as soon as possible
 // or spawn costly work inside of coroutines.
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
+    var (
+        ma time.Time
+        me time.Time
+        na time.Time
+        ne time.Time
+    )
+
+    defer func() {
+        me = time.Now()
+
+        fmt.Printf(
+            "[MSG] %s took %dns (NET: %dns)\n",
+            message.ID,
+            me.Sub(ma).Nanoseconds(),
+            ne.Sub(na).Nanoseconds(),
+        )
+    }()
+
+    ma = time.Now()
+
     // Ignore other bots and @everyone/@here
     if message.Author.Bot || message.MentionEveryone {
         return
     }
 
+    na = time.Now()
     // Get the channel
     // Ignore the event if we cannot resolve the channel
-    channel, err := session.Channel(message.ChannelID)
+    channel, err := cache.Channel(message.ChannelID)
     if err != nil {
         go raven.CaptureError(err, map[string]string{})
         return
     }
+    ne = time.Now()
 
     // We only do things in guilds.
     // Get a friend already and stop chatting with bots
@@ -137,14 +160,14 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                 metrics.CommandsExecuted.Add(1)
                 prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
                 if prefix == "" {
-                    discordSession.ChannelMessageSend(
+                    cache.GetSession().ChannelMessageSend(
                         channel.ID,
                         "Seems like there is no prefix yet :thinking:\n" +
                             "Admins can set one by typing for example `@Karen set prefix ?`",
                     )
                 }
 
-                discordSession.ChannelMessageSend(
+                cache.GetSession().ChannelMessageSend(
                     channel.ID,
                     "The prefix is `" + prefix + "` :smiley:",
                 )
@@ -152,16 +175,16 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
             case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
                 metrics.CommandsExecuted.Add(1)
-                helpers.RequireAdmin(session, message.Message, func() {
+                helpers.RequireAdmin(message.Message, func() {
                     // Refresh cleverbot session
                     helpers.CleverbotRefreshSession(channel.ID)
-                    discordSession.ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
+                    cache.GetSession().ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
                 })
                 return
 
             case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
                 metrics.CommandsExecuted.Add(1)
-                helpers.RequireAdmin(session, message.Message, func() {
+                helpers.RequireAdmin(message.Message, func() {
                     // Extract prefix
                     prefix := strings.Split(
                         regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""),
@@ -175,9 +198,9 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                     )
 
                     if err != nil {
-                        helpers.SendError(session, message.Message, err)
+                        helpers.SendError(message.Message, err)
                     } else {
-                        discordSession.ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
+                        cache.GetSession().ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
                     }
                 })
                 return
@@ -208,7 +231,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     // Else check if any instant-replies match
     prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
     if prefix == "" {
-        plugins.CallTriggerPlugins(message.Message, session)
+        plugins.CallTriggerPlugins(message.Message)
         return
     }
 
@@ -233,13 +256,12 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             cmd,
             strings.Replace(message.Content, prefix + cmd, "", -1),
             message.Message,
-            discordSession,
         )
     }
 }
 
 func sendHelp(message *discordgo.MessageCreate) {
-    discordSession.ChannelMessageSend(
+    cache.GetSession().ChannelMessageSend(
         message.ChannelID,
         fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/commands>", message.Author.ID),
     )

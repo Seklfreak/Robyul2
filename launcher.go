@@ -12,9 +12,6 @@ import (
     "github.com/sn0w/Karen/version"
 )
 
-// The discord session holder
-var discordSession *discordgo.Session
-
 // Entrypoint
 func main() {
     Logger.INFO.L("launcher", "Booting Karen...")

@@ -9,13 +9,14 @@ import (
     "runtime"
     "github.com/getsentry/raven-go"
     "strconv"
+    "github.com/sn0w/Karen/cache"
 )
 
 // RecoverDiscord recover()s and sends a message to discord
-func RecoverDiscord(session *discordgo.Session, msg *discordgo.Message) {
+func RecoverDiscord(msg *discordgo.Message) {
     err := recover()
     if err != nil {
-        SendError(session, msg, err)
+        SendError(msg, err)
     }
 }
 
@@ -58,12 +59,12 @@ func RelaxAssertUnequal(a interface{}, b interface{}, err error) {
 }
 
 // SendError Takes an error and sends it to discord and sentry.io
-func SendError(session *discordgo.Session, msg *discordgo.Message, err interface{}) {
+func SendError(msg *discordgo.Message, err interface{}) {
     if DEBUG_MODE == true {
         buf := make([]byte, 1 << 16)
         stackSize := runtime.Stack(buf, false)
 
-        session.ChannelMessageSend(
+        cache.GetSession().ChannelMessageSend(
             msg.ChannelID,
             "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
                 fmt.Sprintf("%#v\n", err) +
@@ -71,7 +72,7 @@ func SendError(session *discordgo.Session, msg *discordgo.Message, err interface
                 "\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
         )
     } else {
-        session.ChannelMessageSend(
+        cache.GetSession().ChannelMessageSend(
             msg.ChannelID,
             "Error :frowning:\n0xFADED#3237 has been notified.\n```\n" +
                 fmt.Sprintf("%#v", err) +

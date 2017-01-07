@@ -5,6 +5,7 @@ import (
     "strings"
     "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/metrics"
+    "github.com/sn0w/Karen/cache"
 )
 
 // Plugin interface to enforce a basic structure
@@ -61,13 +62,13 @@ var TriggerPluginList = []TriggerPlugin{}
 // content - The content without command
 // msg     - The message object
 // session - The discord session
-func CallBotPlugin(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func CallBotPlugin(command string, content string, msg *discordgo.Message) {
     // Iterate over all plugins
     for _, plug := range PluginList {
         // Iterate over all commands of the current plugin
         for _, cmd := range plug.Commands() {
             if command == cmd {
-                go safePluginCall(command, strings.TrimSpace(content), msg, session, plug)
+                go safePluginCall(command, strings.TrimSpace(content), msg, plug)
                 break
             }
         }
@@ -79,20 +80,20 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message, sessi
 //
 // msg     - The message that triggered the execution
 // session - The discord session
-func CallTriggerPlugins(msg *discordgo.Message, session *discordgo.Session) {
+func CallTriggerPlugins(msg *discordgo.Message) {
     // Iterate over all plugins
     for _, plug := range TriggerPluginList {
         go func(plugin TriggerPlugin) {
-            defer helpers.RecoverDiscord(session, msg)
-            plugin.Action(msg, session)
+            defer helpers.RecoverDiscord(msg)
+            plugin.Action(msg, cache.GetSession())
         }(plug)
     }
 }
 
 // Wrapper that catches any panics from plugins
 // Arguments: Same as CallBotPlugin().
-func safePluginCall(command string, content string, msg *discordgo.Message, session *discordgo.Session, plug Plugin) {
-    defer helpers.RecoverDiscord(session, msg)
+func safePluginCall(command string, content string, msg *discordgo.Message, plug Plugin) {
+    defer helpers.RecoverDiscord(msg)
     metrics.CommandsExecuted.Add(1)
-    plug.Action(command, content, msg, session)
+    plug.Action(command, content, msg, cache.GetSession())
 }
