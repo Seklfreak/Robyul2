@@ -1,8 +1,8 @@
 package logger
 
 import (
-    "time"
     "fmt"
+    "time"
 )
 
 func (c LogLevel) L(src string, msg string) {

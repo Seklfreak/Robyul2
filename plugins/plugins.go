@@ -2,10 +2,10 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "strings"
+    "github.com/sn0w/Karen/cache"
     "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/metrics"
-    "github.com/sn0w/Karen/cache"
+    "strings"
 )
 
 // Plugin interface to enforce a basic structure

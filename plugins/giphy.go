@@ -3,9 +3,9 @@ package plugins
 import (
     "fmt"
     "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/Karen/helpers"
     "math/rand"
     "net/url"
-    "github.com/sn0w/Karen/helpers"
 )
 
 type Giphy struct{}

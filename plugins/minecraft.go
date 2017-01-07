@@ -2,8 +2,8 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "regexp"
     "github.com/sn0w/Karen/helpers"
+    "regexp"
 )
 
 type Minecraft struct{}

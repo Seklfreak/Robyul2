@@ -3,13 +3,13 @@
 package helpers
 
 import (
-    "reflect"
-    "github.com/bwmarrin/discordgo"
     "fmt"
-    "runtime"
+    "github.com/bwmarrin/discordgo"
     "github.com/getsentry/raven-go"
-    "strconv"
     "github.com/sn0w/Karen/cache"
+    "reflect"
+    "runtime"
+    "strconv"
 )
 
 // RecoverDiscord recover()s and sends a message to discord

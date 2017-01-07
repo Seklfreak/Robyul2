@@ -1,10 +1,10 @@
 package helpers
 
 import (
-    "strings"
     "encoding/base64"
-    "strconv"
     "fmt"
+    "strconv"
+    "strings"
 )
 
 // BtoA is a polyfill for javascript's window#btoa()

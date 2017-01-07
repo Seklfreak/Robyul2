@@ -15,17 +15,17 @@ const (
 )
 
 var nicenames = map[LogLevel]string{
-    ERROR: "ERROR",
+    ERROR:   "ERROR",
     WARNING: "WARNING",
-    PLUGIN: "PLUGIN",
-    INFO: "INFO",
+    PLUGIN:  "PLUGIN",
+    INFO:    "INFO",
     VERBOSE: "VERBOSE",
 }
 
 var colors = map[LogLevel]chalk.Color{
-    ERROR: chalk.Red,
+    ERROR:   chalk.Red,
     WARNING: chalk.Yellow,
-    PLUGIN: chalk.Cyan,
-    INFO: chalk.Green,
+    PLUGIN:  chalk.Cyan,
+    INFO:    chalk.Green,
     VERBOSE: chalk.White,
 }

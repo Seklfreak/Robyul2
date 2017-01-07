@@ -1,8 +1,8 @@
 package helpers
 
 import (
-    "github.com/ugjka/cleverbot-go"
     "github.com/bwmarrin/discordgo"
+    "github.com/ugjka/cleverbot-go"
 )
 
 // cleverbotSessions stores all cleverbot connections

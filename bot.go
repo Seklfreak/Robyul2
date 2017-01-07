@@ -4,14 +4,15 @@ import (
     "fmt"
     "github.com/bwmarrin/discordgo"
     "github.com/getsentry/raven-go"
+    "github.com/sn0w/Karen/cache"
     "github.com/sn0w/Karen/helpers"
     Logger "github.com/sn0w/Karen/logger"
+    "github.com/sn0w/Karen/metrics"
     "github.com/sn0w/Karen/plugins"
+    "math/rand"
     "regexp"
     "strings"
     "time"
-    "github.com/sn0w/Karen/metrics"
-    "github.com/sn0w/Karen/cache"
 )
 
 // BotOnReady gets called after the gateway connected
@@ -102,10 +103,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         me = time.Now()
 
         fmt.Printf(
-            "[MSG] %s took %dns (NET: %dns)\n",
+            "[MSG] %s took %fµs (NET: %fµs)\n",
             message.ID,
-            me.Sub(ma).Nanoseconds(),
-            ne.Sub(na).Nanoseconds(),
+            float64(me.Sub(ma).Nanoseconds()) / 1000,
+            float64(ne.Sub(na).Nanoseconds()) / 1000,
         )
     }()
 
@@ -236,28 +237,30 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Check if the message is prefixed for us
-    if strings.HasPrefix(message.Content, prefix) {
-        // Split the message into parts
-        parts := strings.Split(message.Content, " ")
-
-        // Save a sanitized version of the command (no prefix)
-        cmd := strings.Replace(parts[0], prefix, "", 1)
-
-        // Check if the user calls for help
-        if cmd == "h" || cmd == "help" {
-            metrics.CommandsExecuted.Add(1)
-            sendHelp(message)
-            return
-        }
-
-        // Check if a module matches said command
-        // Do nothing otherwise
-        plugins.CallBotPlugin(
-            cmd,
-            strings.Replace(message.Content, prefix + cmd, "", -1),
-            message.Message,
-        )
+    if !strings.HasPrefix(message.Content, prefix) {
+        return
     }
+
+    // Split the message into parts
+    parts := strings.Split(message.Content, " ")
+
+    // Save a sanitized version of the command (no prefix)
+    cmd := strings.Replace(parts[0], prefix, "", 1)
+
+    // Check if the user calls for help
+    if cmd == "h" || cmd == "help" {
+        metrics.CommandsExecuted.Add(1)
+        sendHelp(message)
+        return
+    }
+
+    // Check if a module matches said command
+    // Do nothing otherwise
+    plugins.CallBotPlugin(
+        cmd,
+        strings.Replace(message.Content, prefix + cmd, "", -1),
+        message.Message,
+    )
 }
 
 func sendHelp(message *discordgo.MessageCreate) {
@@ -270,7 +273,10 @@ func sendHelp(message *discordgo.MessageCreate) {
 // Changes the game interval every 10 seconds after called
 func changeGameInterval(session *discordgo.Session) {
     for {
-        err := session.UpdateStatus(0, helpers.SliceRandom(games).(string))
+        err := session.UpdateStatus(
+            0,
+            games[rand.Intn(len(games))],
+        )
         if err != nil {
             raven.CaptureError(err, map[string]string{})
         }

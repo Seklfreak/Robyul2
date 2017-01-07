@@ -2,10 +2,10 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/Karen/helpers"
     "net/url"
     "regexp"
     "strings"
-    "github.com/sn0w/Karen/helpers"
 )
 
 type Weather struct{}

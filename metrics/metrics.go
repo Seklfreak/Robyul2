@@ -1,12 +1,12 @@
 package metrics
 
 import (
-    "net/http"
     "expvar"
     "github.com/bwmarrin/discordgo"
-    "time"
     "github.com/sn0w/Karen/logger"
+    "net/http"
     "runtime"
+    "time"
 )
 
 var (

@@ -1,10 +1,10 @@
 package migrations
 
 import (
-    "reflect"
-    "runtime"
     "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/logger"
+    "reflect"
+    "runtime"
 )
 
 var migrations = []helpers.Callback{

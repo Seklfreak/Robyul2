@@ -3,9 +3,9 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "github.com/dustin/go-humanize"
+    "github.com/sn0w/Karen/version"
     "runtime"
     "strconv"
-    "github.com/sn0w/Karen/version"
 )
 
 type Stats struct{}
@@ -39,7 +39,7 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     runtime.ReadMemStats(&ram)
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        Color:       0x0FADED,
+        Color: 0x0FADED,
         Fields: []*discordgo.MessageEmbedField{
             // System
             {Name: "Bot Version", Value: version.BOT_VERSION, Inline: true},

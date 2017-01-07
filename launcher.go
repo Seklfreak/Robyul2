@@ -3,22 +3,29 @@ package main
 import (
     "github.com/bwmarrin/discordgo"
     "github.com/getsentry/raven-go"
+    "github.com/sn0w/Karen/helpers"
     Logger "github.com/sn0w/Karen/logger"
+    "github.com/sn0w/Karen/metrics"
     "github.com/sn0w/Karen/migrations"
+    "github.com/sn0w/Karen/version"
+    "math/rand"
     "os"
     "os/signal"
-    "github.com/sn0w/Karen/helpers"
-    "github.com/sn0w/Karen/metrics"
-    "github.com/sn0w/Karen/version"
+    "time"
 )
 
 // Entrypoint
 func main() {
     Logger.INFO.L("launcher", "Booting Karen...")
+
+    // Show version
     version.DumpInfo()
 
     // Start metric server
     metrics.Init()
+
+    // Make the randomness more random
+    rand.Seed(time.Now().UTC().UnixNano())
 
     // Read config
     helpers.LoadConfig("config.json")

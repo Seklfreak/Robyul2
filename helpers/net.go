@@ -1,14 +1,13 @@
 package helpers
 
 import (
+    "bytes"
+    "errors"
+    "github.com/Jeffail/gabs"
+    "io"
     "net/http"
     "strconv"
-    "bytes"
-    "io"
-    "github.com/Jeffail/gabs"
-    "errors"
 )
-
 
 // NetGet executes a GET request to url with the Karen/Discord-Bot user-agent
 func NetGet(url string) []byte {

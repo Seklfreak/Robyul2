@@ -18,6 +18,3 @@ import:
 - package: layeh.com/gopus
 - package: github.com/ttacon/chalk
   version: ^0.1.0
-- package: golang.org/x/tools
-  subpackages:
-  - cmd/stringer

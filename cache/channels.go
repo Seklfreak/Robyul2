@@ -44,4 +44,3 @@ func Channel(id string) (ch *discordgo.Channel, e error) {
     ch = channels[id]
     return
 }
-

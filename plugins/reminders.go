@@ -3,12 +3,12 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
+    "github.com/sn0w/Karen/logger"
     rethink "gopkg.in/gorethink/gorethink.v3"
     "regexp"
     "strconv"
     "strings"
     "time"
-    "github.com/sn0w/Karen/logger"
 )
 
 type Reminders struct{}

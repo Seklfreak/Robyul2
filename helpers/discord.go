@@ -1,8 +1,8 @@
 package helpers
 
 import (
-    "github.com/bwmarrin/discordgo"
     "errors"
+    "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/cache"
 )
 
@@ -21,7 +21,6 @@ func IsBotAdmin(id string) bool {
 
     return false
 }
-
 
 // RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireAdmin(msg *discordgo.Message, cb Callback) {

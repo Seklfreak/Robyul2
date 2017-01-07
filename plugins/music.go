@@ -1,21 +1,22 @@
 package plugins
 
 import (
+    "encoding/binary"
     "fmt"
     "github.com/Jeffail/gabs"
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
+    Logger "github.com/sn0w/Karen/logger"
     rethink "gopkg.in/gorethink/gorethink.v3"
+    "io"
     "io/ioutil"
+    "math/rand"
     "os"
     "os/exec"
     "regexp"
+    "strconv"
     "strings"
     "time"
-    Logger "github.com/sn0w/Karen/logger"
-    "strconv"
-    "encoding/binary"
-    "io"
 )
 
 // Define control messages
@@ -317,7 +318,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         for i, song := range *playlist {
             num := strconv.Itoa(i + 1) + "."
 
-            if i == 0 &&  m.guildConnections[fingerprint].playing {
+            if i == 0 && m.guildConnections[fingerprint].playing {
                 num += " (playing)"
             }
 
@@ -336,7 +337,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "random", "rand":
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed":true}).Run(helpers.GetDB())
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed": true}).Run(helpers.GetDB())
         helpers.Relax(err)
         defer cursor.Close()
 
@@ -344,7 +345,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         err = cursor.All(&matches)
         helpers.Relax(err)
 
-        match := helpers.SliceRandom(matches).(Song)
+        match := matches[rand.Intn(len(matches))]
         *playlist = append(*playlist, match)
 
         session.ChannelMessageSend(channel.ID, ":ballot_box_with_check: Added `" + match.Title + "`")
@@ -355,7 +356,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         content = strings.TrimSpace(content)
 
         // Check if the link has been cached
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":content}).Run(helpers.GetDB())
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url": content}).Run(helpers.GetDB())
         helpers.Relax(err)
         defer cursor.Close()
 
@@ -386,11 +387,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             }
 
             match = Song{
-                AddedBy:     msg.Author.ID,
-                Processed:   false,
-                Title:       json.Path("title").Data().(string),
-                Duration:    int(json.Path("duration").Data().(float64)),
-                URL:         content,
+                AddedBy:   msg.Author.ID,
+                Processed: false,
+                Title:     json.Path("title").Data().(string),
+                Duration:  int(json.Path("duration").Data().(float64)),
+                URL:       content,
             }
 
             // Check if the video is not too long
@@ -465,12 +466,12 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         term := "(?i).*" + strings.Join(strings.Split(content, " "), ".*") + ".*"
 
         // @formatter:off
-        cursor, err := rethink.
-            Table("music").
-            Filter(map[string]interface{}{"processed":true}).
-            Filter(rethink.Row.Field("title").Match(term)).
-            Run(helpers.GetDB())
-        // @formatter:on
+		cursor, err := rethink.
+			Table("music").
+			Filter(map[string]interface{}{"processed": true}).
+			Filter(rethink.Row.Field("title").Match(term)).
+			Run(helpers.GetDB())
+		// @formatter:on
 
         helpers.Relax(err)
         defer cursor.Close()
@@ -507,7 +508,7 @@ func (m *Music) waitForSong(channel string, fingerprint string, match Song, msg 
     for {
         time.Sleep(1 * time.Second)
 
-        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url":match.URL}).Run(helpers.GetDB())
+        cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url": match.URL}).Run(helpers.GetDB())
         helpers.Relax(err)
 
         var res Song
@@ -559,7 +560,7 @@ func (m *Music) processorLoop() {
         time.Sleep(5 * time.Second)
 
         // Get unprocessed items
-        cursor, err = rethink.Table("music").Filter(map[string]interface{}{"processed":false}).Run(helpers.GetDB())
+        cursor, err = rethink.Table("music").Filter(map[string]interface{}{"processed": false}).Run(helpers.GetDB())
         helpers.Relax(err)
 
         // Get items
@@ -622,7 +623,7 @@ func (m *Music) processorLoop() {
 
             // Update db
             _, err = rethink.Table("music").
-                Filter(map[string]interface{}{"id":song.ID}).
+                Filter(map[string]interface{}{"id": song.ID}).
                 Update(song).
                 RunWrite(helpers.GetDB())
             helpers.Relax(err)
