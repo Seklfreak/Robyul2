@@ -114,95 +114,98 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     // Check if the message contains @mentions
     if len(message.Mentions) >= 1 {
         // Check if someone is mentioning us
-        if strings.HasPrefix(message.Content, "<@") && message.Mentions[0].ID == session.State.User.ID {
-            // Prepare content for editing
-            msg := message.Content
+        // If not exit
+        if !(strings.HasPrefix(message.Content, "<@") && message.Mentions[0].ID == session.State.User.ID) {
+            return
+        }
 
-            /// Remove our @mention
-            msg = strings.Replace(msg, "<@" + session.State.User.ID + ">", "", -1)
+        // Prepare content for editing
+        msg := message.Content
 
-            // Trim message
-            msg = strings.Trim(msg, " ")
+        /// Remove our @mention
+        msg = strings.Replace(msg, "<@" + session.State.User.ID + ">", "", -1)
 
-            // Convert to []byte before matching
-            bmsg := []byte(msg)
+        // Trim message
+        msg = strings.Trim(msg, " ")
 
-            // Match against common task patterns
-            // Send to cleverbot if nothing matches
-            switch {
-            case regexp.MustCompile("(?i)^HELP.*").Match(bmsg):
-                metrics.CommandsExecuted.Add(1)
-                sendHelp(message)
-                return
+        // Convert to []byte before matching
+        bmsg := []byte(msg)
 
-            case regexp.MustCompile("(?i)^PREFIX.*").Match(bmsg):
-                metrics.CommandsExecuted.Add(1)
-                prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
-                if prefix == "" {
-                    cache.GetSession().ChannelMessageSend(
-                        channel.ID,
-                        "Seems like there is no prefix yet :thinking:\n" +
-                            "Admins can set one by typing for example `@Karen set prefix ?`",
-                    )
-                }
+        // Match against common task patterns
+        // Send to cleverbot if nothing matches
+        switch {
+        case regexp.MustCompile("(?i)^HELP.*").Match(bmsg):
+            metrics.CommandsExecuted.Add(1)
+            sendHelp(message)
+            return
 
+        case regexp.MustCompile("(?i)^PREFIX.*").Match(bmsg):
+            metrics.CommandsExecuted.Add(1)
+            prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
+            if prefix == "" {
                 cache.GetSession().ChannelMessageSend(
                     channel.ID,
-                    "The prefix is `" + prefix + "` :smiley:",
+                    "Seems like there is no prefix yet :thinking:\n" +
+                        "Admins can set one by typing for example `@Karen set prefix ?`",
                 )
-                return
-
-            case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
-                metrics.CommandsExecuted.Add(1)
-                helpers.RequireAdmin(message.Message, func() {
-                    // Refresh cleverbot session
-                    helpers.CleverbotRefreshSession(channel.ID)
-                    cache.GetSession().ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
-                })
-                return
-
-            case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
-                metrics.CommandsExecuted.Add(1)
-                helpers.RequireAdmin(message.Message, func() {
-                    // Extract prefix
-                    prefix := strings.Split(
-                        regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""),
-                        " ",
-                    )[0]
-
-                    // Set new prefix
-                    err := helpers.SetPrefixForServer(
-                        channel.GuildID,
-                        prefix,
-                    )
-
-                    if err != nil {
-                        helpers.SendError(message.Message, err)
-                    } else {
-                        cache.GetSession().ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
-                    }
-                })
-                return
-
-            default:
-                // Track usage
-                metrics.CleverbotRequests.Add(1)
-
-                // Send to cleverbot
-                session.ChannelTyping(message.ChannelID)
-
-                // Resolve other @mentions before sending the message
-                for _, user := range message.Mentions {
-                    msg = strings.Replace(msg, "<@" + user.ID + ">", user.Username, -1)
-                }
-
-                // Remove smileys
-                msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
-
-                // Send to cleverbot
-                helpers.CleverbotSend(session, channel.ID, msg)
-                return
             }
+
+            cache.GetSession().ChannelMessageSend(
+                channel.ID,
+                "The prefix is `" + prefix + "` :smiley:",
+            )
+            return
+
+        case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
+            metrics.CommandsExecuted.Add(1)
+            helpers.RequireAdmin(message.Message, func() {
+                // Refresh cleverbot session
+                helpers.CleverbotRefreshSession(channel.ID)
+                cache.GetSession().ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
+            })
+            return
+
+        case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
+            metrics.CommandsExecuted.Add(1)
+            helpers.RequireAdmin(message.Message, func() {
+                // Extract prefix
+                prefix := strings.Split(
+                    regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""),
+                    " ",
+                )[0]
+
+                // Set new prefix
+                err := helpers.SetPrefixForServer(
+                    channel.GuildID,
+                    prefix,
+                )
+
+                if err != nil {
+                    helpers.SendError(message.Message, err)
+                } else {
+                    cache.GetSession().ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
+                }
+            })
+            return
+
+        default:
+            // Track usage
+            metrics.CleverbotRequests.Add(1)
+
+            // Send to cleverbot
+            session.ChannelTyping(message.ChannelID)
+
+            // Resolve other @mentions before sending the message
+            for _, user := range message.Mentions {
+                msg = strings.Replace(msg, "<@" + user.ID + ">", user.Username, -1)
+            }
+
+            // Remove smileys
+            msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
+
+            // Send to cleverbot
+            helpers.CleverbotSend(session, channel.ID, msg)
+            return
         }
     }
 
