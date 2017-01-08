@@ -7,14 +7,15 @@ import (
 )
 
 var BETA_GUILDS = [...]string{
-    "259831440064118784", // FADED's Sandbox
-    "180818466847064065", // Karen's Sandbox
-    "172041631258640384", // P0WERPLANT
-    "161637499939192832", // Coding Lounge
-    "225168913808228352", // Emily's Space
-    "267186654312136704", // Shinda Sekai Sensen
-    "244110097599430667", // S E K A I
-    "266326434505687041", // Bot Test (quoththeraven)
+    "259831440064118784", // FADED's Sandbox        (Me)
+    "180818466847064065", // Karen's Sandbox        (Me)
+    "172041631258640384", // P0WERPLANT             (Me)
+    "161637499939192832", // Coding Lounge          (Devsome)
+    "225168913808228352", // Emily's Space          (Kaaz)
+    "267186654312136704", // Shinda Sekai Sensen    (黒ゲロロロ)
+    "244110097599430667", // S E K A I              (Senpai /「 ステ 」Abuse)
+    "266326434505687041", // Bot Test               (quoththeraven)
+    "267658193407049728", // Bot Creation           (quoththeraven)
 }
 
 // Automatically leaves guilds that are not registered beta testers
