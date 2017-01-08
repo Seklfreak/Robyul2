@@ -17,6 +17,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "bufio"
 )
 
 // Define control messages
@@ -563,19 +564,20 @@ func (m *Music) processorLoop() {
         cursor, err = rethink.Table("music").Filter(map[string]interface{}{"processed": false}).Run(helpers.GetDB())
         helpers.Relax(err)
 
-        // Get items
+        // Get song objects
         var songs []Song
         err = cursor.All(&songs)
         helpers.Relax(err)
         cursor.Close()
 
+        // If there are no results skip this iteration
         if err == rethink.ErrEmptyResult || len(songs) == 0 {
             continue
         }
 
         Logger.INFO.L("music", "Found " + strconv.Itoa(len(songs)) + " unprocessed items!")
 
-        // Loop through items
+        // Loop through songs
         for _, song := range songs {
             start := time.Now().Unix()
 
@@ -603,23 +605,45 @@ func (m *Music) processorLoop() {
             helpers.Relax(ytdl.Start())
             helpers.Relax(ytdl.Wait())
 
-            // WAV => RAW OPUS using DCA
-            opusFile, err := os.Create("/srv/karen-data/" + name + ".opus")
-            helpers.Relax(err)
+            // WAV => RAW OPUS
+            Logger.INFO.L("music", "WAV => ROPUS | " + name)
 
-            Logger.INFO.L("music", "WAV => OPUS | " + name)
-            dca := exec.Command("dca", "-raw", "-i", "/srv/karen-data/" + name + ".wav")
-            dca.Stderr = os.Stderr
-            dca.Stdout = opusFile
-            helpers.Relax(dca.Start())
-            helpers.Relax(dca.Wait())
+            // Create file
+            opusFile, err := os.Create("/srv/karen-data/" + name + ".ro")
+            helpers.Relax(err)
+            writer := bufio.NewWriter(opusFile)
+
+            // Read wav
+            cat := exec.Command("cat", "/srv/karen-data/" + name + ".wav")
+
+            // Convert wav to raw opus
+            ro := exec.Command("ropus")
+
+            // Pipe streams
+            r, w := io.Pipe()
+            cat.Stdout = w
+            ro.Stdin = r
+            ro.Stdout = writer
+
+            // Run commands
+            helpers.Relax(cat.Start())
+            helpers.Relax(ro.Start())
+
+            // Wait until cat loaded the whole file
+            helpers.Relax(cat.Wait())
+            w.Close()
+
+            // Wait until the file is converted
+            helpers.Relax(ro.Wait())
+            r.Close()
+            opusFile.Close()
 
             // Cleanup
             helpers.Relax(os.Remove("/srv/karen-data/" + name + ".wav"))
 
             // Mark as processed
             song.Processed = true
-            song.Path = "/srv/karen-data/" + name + ".opus"
+            song.Path = "/srv/karen-data/" + name + ".ro"
 
             // Update db
             _, err = rethink.Table("music").
@@ -761,6 +785,9 @@ func (m *Music) play(
         // Read audio data
         opus := make([]byte, opusLength)
         err = binary.Read(file, binary.LittleEndian, &opus)
+        if err == io.EOF || err == io.ErrUnexpectedEOF {
+            return
+        }
         helpers.Relax(err)
 
         // Send to discord
