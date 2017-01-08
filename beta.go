@@ -12,6 +12,7 @@ var BETA_GUILDS = [...]string{
     "172041631258640384", // P0WERPLANT
     "161637499939192832", // Coding Lounge
     "225168913808228352", // Emily's Space
+    "267186654312136704", // Shinda Sekai Sensen
 }
 
 // Automatically leaves guilds that are not registered beta testers
