@@ -44,7 +44,6 @@ var PluginList = []Plugin{
     Roll{},
     Reminders{},
     &Music{},
-    FML{},
     UrbanDict{},
     Weather{},
     Minecraft{},
