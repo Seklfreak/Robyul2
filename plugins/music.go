@@ -210,7 +210,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
                 }
 
                 // Start auto-leaver
-                go m.autoLeave(guild.ID, channel.ID, session)
+                go m.autoLeave(guild.ID, channel.ID, session, m.guildConnections[fp].closer)
             }
 
             helpers.Relax(merr)
@@ -606,6 +606,7 @@ func (m *Music) processorLoop() {
             helpers.Relax(ytdl.Wait())
 
             // WAV => RAW OPUS
+            cstart := time.Now().Unix()
             Logger.INFO.L("music", "WAV => ROPUS | " + name)
 
             // Create file
@@ -637,6 +638,7 @@ func (m *Music) processorLoop() {
             helpers.Relax(ro.Wait())
             r.Close()
             opusFile.Close()
+            cend := time.Now().Unix()
 
             // Cleanup
             helpers.Relax(os.Remove("/srv/karen-data/" + name + ".wav"))
@@ -653,7 +655,11 @@ func (m *Music) processorLoop() {
             helpers.Relax(err)
 
             end := time.Now().Unix()
-            Logger.INFO.L("music", "Conversion took " + strconv.Itoa(int(end - start)) + " seconds. | File: " + name)
+            Logger.INFO.L(
+                "music",
+                "Download took " + strconv.Itoa(int(end - start)) + "s " +
+                    "| Conversion took " + strconv.Itoa(int(cend - cstart)) + "s | File: " + name,
+            )
         }
     }
 }
@@ -841,9 +847,19 @@ func (m *Music) janitor() {
 }
 
 // autoLeave disconnects from VC if the users leave anf forget to !leave
-func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.Session) {
+func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.Session, closer <-chan struct{}) {
+    defer helpers.Recover()
+
     for {
+        // Wait for 5 seconds
         time.Sleep(5 * time.Second)
+
+        // Exit if the closer channel closes
+        select {
+        case <-closer:
+            return
+        default:
+        }
 
         voiceChannel := session.VoiceConnections[guildId]
         guild, err := session.Guild(guildId)

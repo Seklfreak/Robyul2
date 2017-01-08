@@ -24,7 +24,7 @@ func RecoverDiscord(msg *discordgo.Message) {
 func Recover() {
     err := recover()
     if err != nil {
-        fmt.Printf("%#v", err)
+        fmt.Printf("%#v\n", err)
     }
 }
 
