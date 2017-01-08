@@ -14,6 +14,7 @@ var BETA_GUILDS = [...]string{
     "225168913808228352", // Emily's Space
     "267186654312136704", // Shinda Sekai Sensen
     "244110097599430667", // S E K A I
+    "266326434505687041", // Bot Test (quoththeraven)
 }
 
 // Automatically leaves guilds that are not registered beta testers
