@@ -6,6 +6,7 @@ import (
     "github.com/sn0w/Karen/version"
     "runtime"
     "strconv"
+    "fmt"
 )
 
 type Stats struct{}
@@ -40,11 +41,21 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
         Color: 0x0FADED,
+        Thumbnail: &discordgo.MessageEmbedThumbnail{
+            URL: fmt.Sprintf(
+                "https://cdn.discordapp.com/avatars/%s/%s.jpg",
+                session.State.User.ID,
+                session.State.User.Avatar,
+            ),
+        },
         Fields: []*discordgo.MessageEmbedField{
+            // Build
+            {Name: "Build Time", Value: version.BUILD_TIME, Inline: false},
+            {Name: "Build System", Value: version.BUILD_USER + "@" + version.BUILD_HOST, Inline: false},
+
             // System
             {Name: "Bot Version", Value: version.BOT_VERSION, Inline: true},
             {Name: "GO Version", Value: runtime.Version(), Inline: true},
-            {Name: "Build Time", Value: version.BUILD_TIME, Inline: true},
 
             // Bot
             {Name: "Used RAM", Value: humanize.Bytes(ram.Alloc) + "/" + humanize.Bytes(ram.Sys), Inline: true},
