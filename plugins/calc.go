@@ -20,5 +20,12 @@ func (c Calc) Init(session *discordgo.Session) {
 }
 
 func (c Calc) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    session.ChannelMessageSend(msg.ChannelID, strconv.FormatFloat(calc.Solve(content), 'E', 4, 64))
+    defer func() {
+        err := recover()
+        if err != nil {
+            session.ChannelMessageSend(msg.ChannelID, "I couldn't solve it :sob:")
+        }
+    }()
+
+    session.ChannelMessageSend(msg.ChannelID, ":nerd: " + strconv.FormatFloat(calc.Solve(content), 'E', 4, 64))
 }
