@@ -54,6 +54,7 @@ func (c *Changelog) Action(command string, content string, msg *discordgo.Messag
             {Name: "Version", Value: c.log["number"], Inline: true},
             {Name: "Date", Value: c.log["date"], Inline: true},
             {Name: "Changelog", Value: c.log["body"], Inline: false},
+            {Name: "＿＿＿＿＿＿＿＿＿＿", Value: "Want to give feedback? Join the [Discord Server](https://discord.gg/wNPejct)!", Inline: false},
         },
     })
 }

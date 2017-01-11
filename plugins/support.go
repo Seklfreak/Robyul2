@@ -7,6 +7,7 @@ type Support struct{}
 func (s Support) Commands() []string {
     return []string{
         "support",
+        "discord",
     }
 }
 
