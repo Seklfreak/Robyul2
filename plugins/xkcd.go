@@ -4,6 +4,11 @@ import (
     "fmt"
     "github.com/bwmarrin/discordgo"
     "github.com/sn0w/Karen/helpers"
+    "regexp"
+    "strings"
+    "github.com/PuerkitoBio/goquery"
+    "strconv"
+    "math/rand"
 )
 
 type XKCD struct{}
@@ -21,7 +26,37 @@ func (x XKCD) Init(session *discordgo.Session) {
 func (x XKCD) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
-    json := helpers.GetJSON("https://xkcd.com/info.0.json")
+    var link string
+
+    if content == "" {
+        link = "https://xkcd.com/info.0.json"
+    } else if regexp.MustCompile("^\\d+$").MatchString(content) {
+        link = "https://xkcd.com/" + content + "/info.0.json"
+    } else if strings.Contains(content, "rand") {
+        // Get latest number
+        doc, err := goquery.NewDocument("https://xkcd.com")
+        helpers.Relax(err)
+
+        var num string
+        for _, attr := range doc.Find("ul.comicNav").Children().Get(1).FirstChild.Attr {
+            if attr.Key == "href" {
+                num = attr.Val
+                break
+            }
+        }
+
+        num = strings.Replace(num, "/", "", -1)
+
+        max, err := strconv.ParseInt(num, 10, 32)
+        if err != nil {
+            session.ChannelMessageSend(msg.ChannelID, "Error getting latest comic. Try again later :frowning:")
+            return
+        }
+
+        link = "https://xkcd.com/" + strconv.Itoa(rand.Intn(int(max - 1)) + 1) + "/info.0.json"
+    }
+
+    json := helpers.GetJSON(link)
     session.ChannelMessageSend(
         msg.ChannelID,
         fmt.Sprintf(
