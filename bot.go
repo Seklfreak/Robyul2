@@ -114,14 +114,8 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         return
     }
 
-    // Check if the message contains @mentions
-    if len(message.Mentions) >= 1 {
-        // Check if someone is mentioning us
-        // If not exit
-        if !(strings.HasPrefix(message.Content, "<@") && message.Mentions[0].ID == session.State.User.ID) {
-            return
-        }
-
+    // Check if the message contains @mentions for us
+    if len(message.Mentions) > 0 && strings.HasPrefix(message.Content, "<@") && message.Mentions[0].ID == session.State.User.ID {
         // Prepare content for editing
         msg := message.Content
 
@@ -221,6 +215,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Check if the message is prefixed for us
+    // If not exit
     if !strings.HasPrefix(message.Content, prefix) {
         return
     }
