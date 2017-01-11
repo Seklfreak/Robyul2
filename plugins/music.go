@@ -204,13 +204,13 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
                 session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :smiley:")
 
                 // Make guild connection
-                fp := guild.ID + ":" + session.VoiceConnections[guild.ID].ChannelID
-                if m.guildConnections[fp] == nil {
-                    m.guildConnections[fp] = (&GuildConnection{}).Alloc()
+                fingerprint = guild.ID + ":" + session.VoiceConnections[guild.ID].ChannelID
+                if m.guildConnections[fingerprint] == nil {
+                    m.guildConnections[fingerprint] = (&GuildConnection{}).Alloc()
                 }
 
                 // Start auto-leaver
-                go m.autoLeave(guild.ID, channel.ID, session, m.guildConnections[fp].closer)
+                go m.autoLeave(guild.ID, channel.ID, session, m.guildConnections[fingerprint].closer)
             }
 
             helpers.Relax(merr)
@@ -219,14 +219,14 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
 
         return
-    } else {
-        // We are connected \o/
-        // Save the ref for easier access
-        voiceConnection = session.VoiceConnections[guild.ID]
-
-        // Generate fingerprint
-        fingerprint = voiceConnection.GuildID + ":" + voiceConnection.ChannelID
     }
+
+    // We are connected \o/
+    // Save the ref for easier access
+    voiceConnection = session.VoiceConnections[guild.ID]
+
+    // Generate fingerprint
+    fingerprint = voiceConnection.GuildID + ":" + voiceConnection.ChannelID
 
     // Store gc pointer for easier access
     queue := &m.guildConnections[fingerprint].queue

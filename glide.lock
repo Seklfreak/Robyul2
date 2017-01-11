@@ -1,6 +1,8 @@
-hash: 9f02f634273df17d73564da0964999ac916a9f37639783af1f3b61e4ff2cf211
-updated: 2017-01-11T19:15:54.921574961+01:00
+hash: 7e756fa053ad4248c302681dd9a5f5cf4adaa1ea049f561e49e274686f2d5958
+updated: 2017-01-11T21:17:43.897613698+01:00
 imports:
+- name: github.com/andybalholm/cascadia
+  version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
 - name: github.com/cenk/backoff
@@ -25,6 +27,8 @@ imports:
   version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
 - name: github.com/marcmak/calc
   version: 5bbbfc3b3149741fda5147a18568a62f6cd3fec1
+  subpackages:
+  - calc
 - name: github.com/PuerkitoBio/goquery
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
@@ -44,6 +48,7 @@ imports:
   version: 45e771701b814666a7eb299e6c7a57d0b1799e91
   subpackages:
   - html
+  - html/atom
 - name: golang.org/x/sys
   version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
