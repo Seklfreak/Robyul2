@@ -35,6 +35,7 @@ var PluginList = []Plugin{
     About{},
     Avatar{},
     Calc{},
+    Choice{},
     Donate{},
     &FlipCoin{},
     Giphy{},
