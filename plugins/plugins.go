@@ -34,6 +34,7 @@ type TriggerPlugin interface {
 var PluginList = []Plugin{
     About{},
     Avatar{},
+    Donate{},
     Giphy{},
     Google{},
     Invite{},
