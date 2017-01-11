@@ -1,5 +1,5 @@
-hash: edac55d41dc27d7dfde4d52b2fd0ef4eaa3ea8a8d0d056122e681ddacb515e65
-updated: 2017-01-11T17:42:39.77563888+01:00
+hash: 9f02f634273df17d73564da0964999ac916a9f37639783af1f3b61e4ff2cf211
+updated: 2017-01-11T19:15:54.921574961+01:00
 imports:
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
@@ -23,6 +23,8 @@ imports:
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/Jeffail/gabs
   version: 2a3aa15961d5fee6047b8151b67ac2f08ba2c48c
+- name: github.com/marcmak/calc
+  version: 5bbbfc3b3149741fda5147a18568a62f6cd3fec1
 - name: github.com/PuerkitoBio/goquery
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
