@@ -28,9 +28,7 @@ func (x XKCD) Action(command string, content string, msg *discordgo.Message, ses
 
     var link string
 
-    if content == "" {
-        link = "https://xkcd.com/info.0.json"
-    } else if regexp.MustCompile("^\\d+$").MatchString(content) {
+    if regexp.MustCompile("^\\d+$").MatchString(content) {
         link = "https://xkcd.com/" + content + "/info.0.json"
     } else if strings.Contains(content, "rand") {
         // Get latest number
@@ -54,6 +52,8 @@ func (x XKCD) Action(command string, content string, msg *discordgo.Message, ses
         }
 
         link = "https://xkcd.com/" + strconv.Itoa(rand.Intn(int(max - 1)) + 1) + "/info.0.json"
+    } else {
+        link = "https://xkcd.com/info.0.json"
     }
 
     json := helpers.GetJSON(link)
