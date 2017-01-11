@@ -293,10 +293,8 @@ var games = []string{
     "Hyperdimension Neptunia",
     "Final Fantasy MCMX",
     "CIV V",
-    "Pokemon Go",
     "Simulation Simulator 2016",
     "Half Life 3",
-    "Nekopara",
 
     // software
     "with FFMPEG",
@@ -305,19 +303,29 @@ var games = []string{
     "with python",
     "with reflections",
 
-    // names
-    "with Shinobu-Chan",
-    "with Ako-Chan",
+    // Bot names
+    "with Shiro <3",        // Rest in Peace :(
+    "with Emily",           // ohai kaaz
+    "with Shinobu-Chan",    // ohai eddy
+    "with Nepgear",         // ohai serraniel
+    "with Rem",             // ohai serenity
+
+    // Anime names
+    "with Ram",
+    "with Rom",
     "with Nadeko",
     "with Miku",
+
+    // Discord names
+    "with Serraniel",
+    "with Kaaz",
+    "with 0xFADED",
+
+    // Other names
     "with you O_o",
     "with cats",
     "with JOHN CENA",
     "with senpai",
-    "with Serraniel#8978",
-    "with 0xFADED#3237",
-    "with C0untLizzi",
     "with moot",
     "with your waifu",
-    "with Trump",
 }
