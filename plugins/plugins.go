@@ -45,6 +45,7 @@ var PluginList = []Plugin{
     RandomCat{},
     Reminders{},
     Roll{},
+    RPS{},
     Shrug{},
     Stats{},
     Stone{},
