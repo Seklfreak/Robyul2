@@ -16,6 +16,7 @@ var BETA_GUILDS = [...]string{
     "244110097599430667", // S E K A I              (Senpai /「 ステ 」Abuse)
     "266326434505687041", // Bot Test               (quoththeraven)
     "267658193407049728", // Bot Creation           (quoththeraven)
+    "106029722458136576", // Shadow Realm           (WhereIsMyAim)
 }
 
 // Automatically leaves guilds that are not registered beta testers
