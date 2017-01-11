@@ -32,21 +32,24 @@ type TriggerPlugin interface {
 
 // PluginList is the list of active plugins
 var PluginList = []Plugin{
-    Avatar{},
     About{},
-    Stats{},
-    Ping{},
-    Invite{},
+    Avatar{},
     Giphy{},
     Google{},
-    RandomCat{},
-    Stone{},
-    Roll{},
-    Reminders{},
+    Invite{},
+    Lenny{},
+    Minecraft{},
     &Music{},
+    Ping{},
+    RandomCat{},
+    Reminders{},
+    Roll{},
+    Shrug{},
+    Stats{},
+    Stone{},
+    Support{},
     UrbanDict{},
     Weather{},
-    Minecraft{},
     XKCD{},
 }
 
