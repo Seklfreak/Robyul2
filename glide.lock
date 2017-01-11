@@ -1,8 +1,6 @@
 hash: edac55d41dc27d7dfde4d52b2fd0ef4eaa3ea8a8d0d056122e681ddacb515e65
-updated: 2017-01-07T21:07:25.388465675+01:00
+updated: 2017-01-11T17:42:39.77563888+01:00
 imports:
-- name: github.com/andybalholm/cascadia
-  version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
   version: 5835676872d7fa65ee37b32672079c4ede2c1855
 - name: github.com/cenk/backoff
@@ -44,7 +42,6 @@ imports:
   version: 45e771701b814666a7eb299e6c7a57d0b1799e91
   subpackages:
   - html
-  - html/atom
 - name: golang.org/x/sys
   version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
