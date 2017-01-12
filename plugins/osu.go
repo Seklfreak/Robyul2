@@ -77,6 +77,11 @@ func (o Osu) Action(command string, content string, msg *discordgo.Message, sess
 
     avatar = strings.Replace(avatar, `"`, "", -1)
 
+    if (!json.ExistsP("level")) || json.Path("level").Data() == nil {
+        session.ChannelMessageSend(msg.ChannelID, "Seems like " + user + " didn't play this mode yet :thinking:")
+        return
+    }
+
     _, err = session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
         Color: 0xEF77AF,
         Description: "Showing stats for " + user,
