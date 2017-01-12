@@ -46,6 +46,7 @@ var PluginList = []Plugin{
     Lenny{},
     Minecraft{},
     &Music{},
+    Osu{},
     Ping{},
     RandomCat{},
     Reminders{},
