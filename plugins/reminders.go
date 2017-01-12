@@ -5,13 +5,17 @@ import (
     "github.com/sn0w/Karen/helpers"
     "github.com/sn0w/Karen/logger"
     rethink "gopkg.in/gorethink/gorethink.v3"
-    "regexp"
-    "strconv"
     "strings"
     "time"
+    "github.com/olebedev/when"
+    "github.com/olebedev/when/rules/en"
+    "github.com/olebedev/when/rules/common"
+    "github.com/sn0w/Karen/cache"
 )
 
-type Reminders struct{}
+type Reminders struct {
+    parser *when.Parser
+}
 
 type DB_Reminders struct {
     Id        string        `gorethink:"id,omitempty"`
@@ -26,7 +30,7 @@ type DB_Reminder struct {
     Timestamp int64  `gorethink:"timestamp"`
 }
 
-func (r Reminders) Commands() []string {
+func (r *Reminders) Commands() []string {
     return []string{
         "remind",
         "rm",
@@ -35,7 +39,11 @@ func (r Reminders) Commands() []string {
     }
 }
 
-func (r Reminders) Init(session *discordgo.Session) {
+func (r *Reminders) Init(session *discordgo.Session) {
+    r.parser = when.New(nil)
+    r.parser.Add(en.All...)
+    r.parser.Add(common.All...)
+
     go func() {
         defer helpers.Recover()
 
@@ -78,72 +86,32 @@ func (r Reminders) Init(session *discordgo.Session) {
     logger.PLUGIN.L("reminders", "Started reminder loop (10s)")
 }
 
-func (r Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (r *Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "rm", "remind":
+        channel, err := cache.Channel(msg.ChannelID)
+        helpers.Relax(err)
+
         parts := strings.Split(content, " ")
 
-        if len(parts) < 4 {
+        if len(parts) < 3 {
             session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")
             return
         }
 
-        unitRegex := regexp.MustCompile(`^(s|seconds|m|minutes|h|hours|d|days)$`)
-
-        unit := parts[len(parts) - 1]
-
-        schedule, err := strconv.ParseInt(
-            regexp.MustCompile(`\D`).ReplaceAllString(parts[len(parts) - 2], ""),
-            10,
-            64,
-        )
-
-        if err != nil {
-            session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the time-format is correct")
-        }
-
-        message := strings.Join(parts[0:len(parts) - 3], " ")
-
-        if !unitRegex.MatchString(unit) {
-            session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the time-format is correct")
+        r, err := r.parser.Parse(content, time.Now())
+        helpers.Relax(err)
+        if r == nil {
+            session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")
             return
-        }
-
-        ts := time.Now().Unix()
-
-        switch unit {
-        case "s", "seconds":
-            ts += schedule
-            break
-
-        case "m", "minutes":
-            ts += schedule * 60
-            break
-
-        case "h", "hours":
-            ts += schedule * 60 * 60
-            break
-
-        case "d", "days":
-            ts += schedule * 60 * 60 * 24
-            break
-
-        default:
-            session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the time-format is correct")
-            return
-        }
-
-        channel, err := session.Channel(msg.ChannelID)
-        if err != nil {
-            panic(err)
         }
 
         reminders := getReminders(msg.Author.ID)
         reminders.Reminders = append(reminders.Reminders, DB_Reminder{
-            Message:   message,
+            Message:   strings.Replace(content, r.Text, "", 1),
             ChannelID: channel.ID,
             GuildID:   channel.GuildID,
-            Timestamp: ts,
+            Timestamp: r.Time.Unix(),
         })
         setReminders(msg.Author.ID, reminders)
 

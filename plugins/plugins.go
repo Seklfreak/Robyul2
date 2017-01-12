@@ -49,7 +49,7 @@ var PluginList = []Plugin{
     Osu{},
     Ping{},
     RandomCat{},
-    Reminders{},
+    &Reminders{},
     Roll{},
     RPS{},
     Shrug{},

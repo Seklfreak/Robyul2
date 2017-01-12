@@ -20,3 +20,5 @@ import:
   version: ^0.1.0
 - package: github.com/marcmak/calc
 - package: github.com/andybalholm/cascadia
+- package: github.com/olebedev/when
+- package: github.com/AlekSi/pointer

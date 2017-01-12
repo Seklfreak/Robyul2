@@ -1,6 +1,8 @@
-hash: 7e756fa053ad4248c302681dd9a5f5cf4adaa1ea049f561e49e274686f2d5958
-updated: 2017-01-11T21:17:43.897613698+01:00
+hash: f4b25ecb8b22d7e0d03f894460a99b0dc076109d255ef428315aeb5902eb6ab2
+updated: 2017-01-12T23:16:37.622821786+01:00
 imports:
+- name: github.com/AlekSi/pointer
+  version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
@@ -29,6 +31,15 @@ imports:
   version: 5bbbfc3b3149741fda5147a18568a62f6cd3fec1
   subpackages:
   - calc
+- name: github.com/olebedev/when
+  version: ab2a00cabc7ebc7e15bcb1251ebf4f2fed0ee5fb
+  subpackages:
+  - rules
+  - rules/common
+  - rules/en
+  - rules/ru
+- name: github.com/pkg/errors
+  version: 248dadf4e9068a0b3e79f02ed0a610d935de5302
 - name: github.com/PuerkitoBio/goquery
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
