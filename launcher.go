@@ -36,6 +36,9 @@ func main() {
         helpers.DEBUG_MODE = true
     }
 
+    // Print UA
+    Logger.WARNING.L("launcher", "USERAGENT: '" + helpers.DEFAULT_UA + "'")
+
     // Call home
     Logger.INFO.L("launcher", "[SENTRY] Calling home...")
     err := raven.SetDSN(config.Path("sentry").Data().(string))
