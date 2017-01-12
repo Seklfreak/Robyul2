@@ -42,6 +42,7 @@ var PluginList = []Plugin{
     Giphy{},
     Google{},
     Invite{},
+    Leet{},
     Lenny{},
     Minecraft{},
     &Music{},
