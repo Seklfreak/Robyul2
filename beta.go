@@ -14,6 +14,7 @@ var BETA_GUILDS = [...]string{
     "225168913808228352", // Emily's Space          (Kaaz)
     "267186654312136704", // Shinda Sekai Sensen    (黒ゲロロロ)
     "244110097599430667", // S E K A I              (Senpai /「 ステ 」Abuse)
+    "268279577598492672", // ZAKINET                (Senpai /「 ステ 」Abuse)
     "266326434505687041", // Bot Test               (quoththeraven)
     "267658193407049728", // Bot Creation           (quoththeraven)
     "106029722458136576", // Shadow Realm           (WhereIsMyAim)
