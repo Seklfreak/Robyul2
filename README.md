@@ -1,3 +1,7 @@
+Origin: https://git.lukas.moe/sn0w/Karen<br>
+Mirror: https://github.com/sn0w/Karen
+<br>
+
 <p align="center">
   <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
   <a href="https://travis-ci.org/sn0w/Karen">
