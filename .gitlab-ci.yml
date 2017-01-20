@@ -15,6 +15,7 @@ linux:
   variables:
     GOOS: linux
     GOARCH: amd64
+    GOTARGET: karen.o
   script:
     - ./build.sh
   except:
