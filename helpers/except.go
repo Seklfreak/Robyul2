@@ -6,7 +6,7 @@ import (
     "fmt"
     "github.com/bwmarrin/discordgo"
     "github.com/getsentry/raven-go"
-    "github.com/sn0w/Karen/cache"
+    "git.lukas.moe/sn0w/Karen/cache"
     "reflect"
     "runtime"
     "strconv"

@@ -18,7 +18,7 @@ fi
 echo $GOTARGET
 
 go build ${XFLAGS} --ldflags="
--X github.com/sn0w/Karen/version.BOT_VERSION=${BOT_VERSION}
--X github.com/sn0w/Karen/version.BUILD_TIME=${BUILD_TIME}
--X github.com/sn0w/Karen/version.BUILD_USER=${BUILD_USER}
--X github.com/sn0w/Karen/version.BUILD_HOST=${BUILD_HOST}" -o ${GOTARGET} .
+-X git.lukas.moe/sn0w/Karen/version.BOT_VERSION=${BOT_VERSION}
+-X git.lukas.moe/sn0w/Karen/version.BUILD_TIME=${BUILD_TIME}
+-X git.lukas.moe/sn0w/Karen/version.BUILD_USER=${BUILD_USER}
+-X git.lukas.moe/sn0w/Karen/version.BUILD_HOST=${BUILD_HOST}" -o ${GOTARGET} .

@@ -1,8 +1,8 @@
 package helpers
 
 import (
-    Logger "github.com/sn0w/Karen/logger"
-    "github.com/sn0w/Karen/models"
+    Logger "git.lukas.moe/sn0w/Karen/logger"
+    "git.lukas.moe/sn0w/Karen/models"
     rethink "gopkg.in/gorethink/gorethink.v3"
 )
 

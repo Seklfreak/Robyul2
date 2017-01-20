@@ -3,7 +3,7 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "github.com/dustin/go-humanize"
-    "github.com/sn0w/Karen/version"
+    "git.lukas.moe/sn0w/Karen/version"
     "runtime"
     "strconv"
     "fmt"

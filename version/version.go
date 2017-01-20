@@ -1,6 +1,6 @@
 package version
 
-import "github.com/sn0w/Karen/logger"
+import "git.lukas.moe/sn0w/Karen/logger"
 
 // Version related vars
 // Set by compiler

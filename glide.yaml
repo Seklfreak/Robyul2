@@ -1,4 +1,4 @@
-package: github.com/sn0w/Karen
+package: git.lukas.moe/sn0w/Karen
 import:
 - package: github.com/Jeffail/gabs
   version: ^1.0.0

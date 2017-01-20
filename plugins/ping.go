@@ -2,7 +2,7 @@ package plugins
 
 import (
     "github.com/bwmarrin/discordgo"
-    "github.com/sn0w/Karen/helpers"
+    "git.lukas.moe/sn0w/Karen/helpers"
     "strconv"
     "time"
 )
