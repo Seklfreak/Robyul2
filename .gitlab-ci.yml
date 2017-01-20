@@ -1,0 +1,61 @@
+stages:
+  - build
+  - deploy
+
+before_script:
+  - glide install
+
+cache:
+  paths:
+    - vendor/
+
+linux:
+  stage: build
+  image: sn0w/go-ci
+  variables:
+    GOOS: linux
+    GOARCH: amd64
+  script:
+    - ./build.sh
+  except:
+    - tags
+
+osx:
+  stage: build
+  image: sn0w/go-ci
+  variables:
+    GOOS: darwin
+    GOARCH: amd64
+    GOTARGET: karen.xo
+  script:
+    - ./build.sh
+  except:
+    - tags
+
+windows:
+  stage: build
+  image: sn0w/go-ci
+  variables:
+    GOOS: windows
+    GOARCH: amd64
+    GOTARGET: karen.exe
+  script:
+    - ./build.sh
+  except:
+    - tags
+
+deploy-linux:
+  stage: deploy
+  image: sn0w/go-ci
+  variables:
+    GOOS: linux
+    GOARCH: amd64
+    GOTARGET: karen.o
+  scripts:
+    - ./build.sh
+  only:
+    - tags
+  artifacts:
+    paths:
+      - karen.o
+    expire_in: 1 week
