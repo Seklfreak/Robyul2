@@ -51,7 +51,7 @@ deploy-linux:
     GOOS: linux
     GOARCH: amd64
     GOTARGET: karen.o
-  scripts:
+  script:
     - ./build.sh
   only:
     - tags
