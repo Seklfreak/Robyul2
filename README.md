@@ -4,14 +4,11 @@ Mirror: https://github.com/sn0w/Karen
 
 <p align="center">
   <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
-  <a href="https://travis-ci.org/sn0w/Karen">
-    <img src="https://img.shields.io/travis/sn0w/Karen.svg?style=flat-square" alt="Build Status"/>
+  <a href="https://git.lukas.moe/sn0w/Karen/commits/master">
+    <img alt="build status" src="https://git.lukas.moe/sn0w/Karen/badges/master/build.svg" />
   </a>
   <a href="/">
     <img src="https://img.shields.io/github/tag/sn0w/karen.svg?style=flat-square" alt="GitHub tag"/>
-  </a>
-  <a href="/">
-    <img src="https://img.shields.io/github/downloads/sn0w/karen/total.svg?style=flat-square" alt="Github All Releases"/>
   </a>
   <a href="https://goreportcard.com/report/github.com/sn0w/Karen">
     <img src="https://goreportcard.com/badge/github.com/sn0w/Karen?style=flat-square" alt="Go Report Card"/>
