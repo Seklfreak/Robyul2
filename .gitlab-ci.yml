@@ -41,8 +41,6 @@ build:linux:
     GOTARGET: karen.o
   script:
     - ./build.sh
-  except:
-    - tags
 
 build:osx:
   stage: build
@@ -53,8 +51,6 @@ build:osx:
     GOTARGET: karen.xo
   script:
     - ./build.sh
-  except:
-    - tags
 
 build:windows:
   stage: build
@@ -65,21 +61,18 @@ build:windows:
     GOTARGET: karen.exe
   script:
     - ./build.sh
-  except:
-    - tags
 
-build:prod:linux:
+collect_artifacts:
   stage: deploy
   image: sn0w/go-ci
-  variables:
-    GOOS: linux
-    GOARCH: amd64
-    GOTARGET: karen.o
-  script:
-    - ./build.sh
+  script: echo "Empty job that collects artifacts! :)"
+  dependencies:
+    - build:linux
+    - build:osx
+    - build:windows
   only:
     - tags
   artifacts:
     paths:
-      - karen.o
+      - karen.*
     expire_in: 1 week
