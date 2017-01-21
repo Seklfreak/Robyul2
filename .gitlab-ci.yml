@@ -3,12 +3,17 @@ stages:
   - build
   - deploy
   
-before_script:
-  - mkdir -p /go/src/git.lukas.moe/$CI_PROJECT_PATH
-  - mkdir /glide
-  - cp -r /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/$CI_PROJECT_PATH
-  - cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
-  - glide --home /glide install
+before_script: |+
+  #!/bin/bash
+  
+  set -e
+  set -x
+  
+  mkdir -p /go/src/git.lukas.moe/$CI_PROJECT_PATH
+  mkdir /glide
+  cp -r /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/$CI_PROJECT_PATH
+  cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
+  glide --home /glide install
 
 cache:
   paths:
