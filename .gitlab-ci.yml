@@ -20,6 +20,7 @@ vet:
 cyclo:
   stage: test
   image: sn0w/go-ci
+  allow_failure: true
   script: gocyclo -over 15 . | grep -v vendor
 
 typo:
