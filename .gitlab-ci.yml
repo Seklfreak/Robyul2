@@ -1,23 +1,16 @@
 stages:
-  - pre
   - test
   - build
   - deploy
-
+  
 before_script:
-  - glide install
+  - [[ ! -d /glide ]] && mkdir /glide
+  - glide --home /glide install
 
 cache:
   paths:
+    - /glide/
     - vendor/
-
-pre1:
-  stage: pre
-  image: sn0w/go-ci
-  script:
-    - pwd
-    - ls -lah
-    - exit 1
 
 vet:
   stage: test
