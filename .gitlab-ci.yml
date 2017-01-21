@@ -1,4 +1,5 @@
 stages:
+  - test
   - build
   - deploy
 
@@ -9,7 +10,23 @@ cache:
   paths:
     - vendor/
 
-linux:
+vet:
+  stage: test
+  image: sn0w/go-ci
+  script: go vet
+
+cyclo:
+  stage: test
+  image: sn0w/go-ci
+  script: gocyclo -over 15 . | grep -v vendor
+
+typo:
+  stage: test
+  image: sn0w/go-ci
+  allow_failure: true
+  script: misspell . | grep -v vendor
+
+build:linux:
   stage: build
   image: sn0w/go-ci
   variables:
@@ -21,7 +38,7 @@ linux:
   except:
     - tags
 
-osx:
+build:osx:
   stage: build
   image: sn0w/go-ci
   variables:
@@ -33,7 +50,7 @@ osx:
   except:
     - tags
 
-windows:
+build:windows:
   stage: build
   image: sn0w/go-ci
   variables:
@@ -45,7 +62,7 @@ windows:
   except:
     - tags
 
-deploy-linux:
+build:prod:linux:
   stage: deploy
   image: sn0w/go-ci
   variables:
