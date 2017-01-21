@@ -4,7 +4,10 @@ stages:
   - deploy
   
 before_script:
-  - "[[ ! -d /glide ]] && mkdir /glide"
+  - mkdir -p /go/src/git.lukas.moe/$CI_PROJECT_PATH
+  - mkdir /glide
+  - cp -r /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/$CI_PROJECT_PATH
+  - cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
   - glide --home /glide install
 
 cache:
