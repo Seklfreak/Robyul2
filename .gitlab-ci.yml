@@ -15,7 +15,8 @@ pre1:
   stage: pre
   image: sn0w/go-ci
   script:
-    - ls
+    - pwd
+    - ls -lah
     - exit 1
 
 vet:
