@@ -43,7 +43,8 @@ build:linux:
     - ./build.sh
   artifacts:
     expire_in: 15 mins
-    paths: karen.o
+    paths:
+      - karen.o
 
 build:osx:
   stage: build
@@ -56,7 +57,8 @@ build:osx:
     - ./build.sh
   artifacts:
       expire_in: 15 mins
-      paths: karen.xo
+      paths:
+        - karen.xo
 
 build:windows:
   stage: build
@@ -69,7 +71,8 @@ build:windows:
     - ./build.sh
   artifacts:
       expire_in: 15 mins
-      paths: karen.exe
+      paths:
+        - karen.exe
 
 collect_artifacts:
   stage: deploy
@@ -83,4 +86,5 @@ collect_artifacts:
     - tags
   artifacts:
       expire_in: 2 weeks
-      paths: karen.*
+      paths:
+        - karen.*
