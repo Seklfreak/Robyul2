@@ -7,6 +7,7 @@ import (
     "net/http"
     "runtime"
     "time"
+    "git.lukas.moe/sn0w/Karen/helpers"
 )
 
 var (
@@ -34,8 +35,8 @@ var (
 
 // Init starts a http server on 127.0.0.1:1337
 func Init() {
-    logger.INFO.L("metrics", "Listening on http://[::1]:1337")
-    go http.ListenAndServe(":1337", nil)
+    logger.INFO.L("metrics", "Listening on TCP/1337")
+    go http.ListenAndServe(helpers.GetConfig().Path("metrics_ip").Data().(string) + ":1337", nil)
 }
 
 // OnReady listens for said discord event

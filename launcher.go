@@ -18,6 +18,10 @@ import (
 func main() {
     Logger.INFO.L("launcher", "Booting Karen...")
 
+    // Read config
+    helpers.LoadConfig("config.json")
+    config := helpers.GetConfig()
+
     // Show version
     version.DumpInfo()
 
@@ -26,10 +30,6 @@ func main() {
 
     // Make the randomness more random
     rand.Seed(time.Now().UTC().UnixNano())
-
-    // Read config
-    helpers.LoadConfig("config.json")
-    config := helpers.GetConfig()
 
     // Check if the bot is being debugged
     if config.Path("debug").Data().(bool) {
