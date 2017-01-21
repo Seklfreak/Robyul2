@@ -1,4 +1,5 @@
 stages:
+  - pre
   - test
   - build
   - deploy
@@ -9,6 +10,13 @@ before_script:
 cache:
   paths:
     - vendor/
+
+pre1:
+  stage: pre
+  image: sn0w/go-ci
+  script:
+    - ls
+    - exit 1
 
 vet:
   stage: test
