@@ -10,6 +10,9 @@ before_script:
   - cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
   - glide --home /glide install
 
+after_script:
+  - cp -r /go/src/git.lukas.moe/* /builds
+
 cache:
   paths:
     - /glide/
