@@ -41,6 +41,9 @@ build:linux:
     GOTARGET: karen.o
   script:
     - ./build.sh
+  artifacts:
+    expire_in: 15 mins
+    paths: karen.o
 
 build:osx:
   stage: build
@@ -51,6 +54,9 @@ build:osx:
     GOTARGET: karen.xo
   script:
     - ./build.sh
+  artifacts:
+      expire_in: 15 mins
+      paths: karen.xo
 
 build:windows:
   stage: build
@@ -61,6 +67,9 @@ build:windows:
     GOTARGET: karen.exe
   script:
     - ./build.sh
+  artifacts:
+      expire_in: 15 mins
+      paths: karen.exe
 
 collect_artifacts:
   stage: deploy
@@ -73,6 +82,5 @@ collect_artifacts:
   only:
     - tags
   artifacts:
-    paths:
-      - karen.*
-    expire_in: 1 week
+      expire_in: 2 weeks
+      paths: karen.*
