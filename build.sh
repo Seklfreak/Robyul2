@@ -9,8 +9,7 @@ BUILD_HOST=$(hostname)
 XFLAGS="-v"
 
 if [[ "$CI" == "true" ]]; then
-    GOTARGET="${GOTARGET?:'Set a target'}"
-    XFLAGS="-x $XFLAGS"
+    GOTARGET="${GOTARGET?:'A target is mandatory'}"
 else
     GOTARGET="Karen"
 fi
