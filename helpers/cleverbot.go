@@ -5,6 +5,8 @@ import (
     "github.com/ugjka/cleverbot-go"
 )
 
+const API_ID = "Karen Discord-Bot <lukas.breuer@outlook.com> (https://meetkaren.xyz)"
+
 // cleverbotSessions stores all cleverbot connections
 var cleverbotSessions map[string]*cleverbot.Session
 
@@ -17,7 +19,7 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
             cleverbotSessions = make(map[string]*cleverbot.Session)
         }
 
-        cleverbotSessions[channel] = cleverbot.New()
+        cleverbotSessions[channel] = cleverbot.New(API_ID)
     }
 
     response, err := cleverbotSessions[channel].Ask(message)
@@ -32,5 +34,5 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
 
 // CleverbotRefreshSession refreshes the cleverbot session for said channel
 func CleverbotRefreshSession(channel string) {
-    cleverbotSessions[channel] = cleverbot.New()
+    cleverbotSessions[channel] = cleverbot.New(API_ID)
 }

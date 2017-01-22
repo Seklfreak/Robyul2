@@ -1,5 +1,5 @@
 hash: ba9f8a3dfa90f506e5e3413cc2e9da556220dba686e19ea609bfdf1b8647b067
-updated: 2017-01-21T00:43:32.140945951+01:00
+updated: 2017-01-23T00:17:37.94692308+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
@@ -47,7 +47,7 @@ imports:
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
-  version: 08e59adc4ee745138a8dc05321da38778067d22d
+  version: 9b8fa3113779b4078baff4c639b3f1486a85930c
 - name: golang.org/x/crypto
   version: 9a6f0a01987842989747adff311d80750ba25530
   subpackages:
