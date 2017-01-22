@@ -356,6 +356,12 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(channel.ID)
         content = strings.TrimSpace(content)
 
+        // Trim masquerade if present
+        contentRune := []rune(content)
+        if contentRune[0] == '<' && contentRune[len(contentRune) - 1] == '>' {
+            content = string(contentRune[1:len(contentRune) - 1])
+        }
+
         // Check if the link has been cached
         cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url": content}).Run(helpers.GetDB())
         helpers.Relax(err)
