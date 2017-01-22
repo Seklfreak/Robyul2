@@ -4,7 +4,6 @@ import (
     "github.com/bwmarrin/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
-    "strconv"
     "strings"
 )
 
@@ -27,16 +26,20 @@ func (c *Changelog) Init(session *discordgo.Session) {
 
     defer helpers.Recover()
 
-    json := helpers.GetJSON("https://api.github.com/repos/sn0w/karen/releases")
+    json := helpers.GetJSON("https://git.lukas.moe/api/v3/projects/77/repository/tags?private_token=9qvdMtLdxoC5amAmajN_")
     releases, err := json.Children()
     helpers.Relax(err)
 
     release := releases[0]
     c.log = map[string]string{
-        "id": strconv.Itoa(int(release.Path("id").Data().(float64))),
-        "number": release.Path("tag_name").Data().(string),
-        "date": release.Path("published_at").Data().(string),
-        "body": release.Path("body").Data().(string),
+        "number": release.Path("name").Data().(string),
+        "date": release.Path("commit.committed_date").Data().(string),
+    }
+
+    if release.ExistsP("release.description") && release.Path("release.description").Data() != nil {
+        c.log["body"] = release.Path("release.description").Data().(string)
+    } else {
+        c.log["body"] = "No changelog provided :("
     }
 
     c.log["body"] = strings.Replace(c.log["body"], "### New stuff", ":eight_spoked_asterisk: **NEW STUFF**", 1)
