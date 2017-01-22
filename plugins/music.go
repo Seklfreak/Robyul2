@@ -183,7 +183,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
     // Check if the user is connected to voice at all
     if vc == nil {
-        session.ChannelMessageSend(channel.ID, "You have to join a channel first! :neutral_face:")
+        session.ChannelMessageSend(channel.ID, "You're either not in the voice-chat or I can't see you :neutral_face:")
         return
     }
 
@@ -545,7 +545,9 @@ func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild
     for _, vs := range guild.VoiceStates {
         if vs.UserID == user.ID {
             channel, err := session.Channel(vs.ChannelID)
-            helpers.Relax(err)
+            if err != nil {
+                return nil
+            }
 
             return channel
         }
