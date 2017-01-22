@@ -423,7 +423,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Check if the video is not too long
             // Bot owners may bypass this
             if !helpers.IsBotAdmin(msg.Author.ID) && match.Duration > int((65 * time.Minute).Seconds()) {
-                session.ChannelMessageSend(channel.ID, "Whoa that's a big video!\nPlease use something shorter :neutral_face:")
+                session.ChannelMessageSend(channel.ID, "Whoa `" + match.Title + "` is a big video!\nPlease use something shorter :neutral_face:")
                 return
             }
 
@@ -437,7 +437,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Inform users
             session.ChannelMessageSend(
                 channel.ID,
-                "Added to queue. Music should start soon.\nLive progress at: <https://meetkaren.xyz/music>",
+                "`" + match.Title + "` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
             )
             go m.waitForSong(channel.ID, fingerprint, match, msg, session)
             return
@@ -468,7 +468,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if songPresent {
             session.ChannelMessageSend(
                 channel.ID,
-                "That song is already in your queue.\nLive progress at: <https://meetkaren.xyz/music>",
+                "`" + match.Title + "` is already in your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
             )
             return
         }
@@ -476,7 +476,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         *queue = append(*queue, match)
         session.ChannelMessageSend(
             channel.ID,
-            "Song was added to your queue but did not finish downloading yet. Wait a bit :wink:\nLive progress at: <https://meetkaren.xyz/music>",
+            "`" + match.Title + "` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
         )
         go m.waitForSong(channel.ID, fingerprint, match, msg, session)
         break
@@ -504,7 +504,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         var results []Song
         err = cursor.All(&results)
-        if err == rethink.ErrEmptyResult {
+        if err == rethink.ErrEmptyResult || len(results) == 0 {
             session.ChannelMessageSend(
                 channel.ID,
                 "No results :frowning:",
@@ -513,7 +513,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
         helpers.Relax(err)
 
-        headers := []string{"Title", "Link for !add"}
+        headers := []string{"Title", "Link"}
         rows := make([][]string, len(results))
         for i, result := range results {
             rows[i] = []string{result.Title, result.URL}
