@@ -362,6 +362,14 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             content = string(contentRune[1:len(contentRune) - 1])
         }
 
+        // Check if the url is a playlist
+        if strings.Contains(content, "list") ||
+            strings.Contains(content, "/set") ||
+            strings.Contains(content, "/mix") {
+            session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported :neutral_face:")
+            return
+        }
+
         // Check if the link has been cached
         cursor, err := rethink.Table("music").Filter(map[string]interface{}{"url": content}).Run(helpers.GetDB())
         helpers.Relax(err)
@@ -375,7 +383,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Link was not downloaded yet
 
             // Resolve the url through YTDL.
-            ytdl := exec.Command("youtube-dl", "-J", content)
+            ytdl := exec.Command("youtube-dl", "-J", "--flat-playlist", content)
             yout, yerr := ytdl.Output()
 
             // If youtube-dl exits with 0 the link is valid
@@ -388,9 +396,20 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             json, err := gabs.ParseJSON(yout)
             helpers.Relax(err)
 
+            // Exit if the link is a live stream
+            // (archived live streams are allowed though)
             if json.ExistsP("is_live") && json.Path("is_live").Data().(bool) {
                 session.ChannelMessageSend(channel.ID, "Livestreams are not supported :neutral_face:")
                 return
+            }
+
+            // Exit if the link is a playlist
+            if json.ExistsP("_type") && json.Path("_type").Data() != nil {
+                switch json.Path("_type").Data().(string) {
+                case "playlist":
+                    session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported :neutral_face:")
+                    return
+                }
             }
 
             match = Song{
