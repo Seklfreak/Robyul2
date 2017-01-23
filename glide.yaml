@@ -4,7 +4,6 @@ import:
   version: ^1.0.0
 - package: github.com/bwmarrin/discordgo
   version: ^0.15.0
-- package: github.com/cloudfoundry/gosigar
 - package: github.com/dustin/go-humanize
 - package: github.com/getsentry/raven-go
 - package: github.com/ugjka/cleverbot-go
@@ -19,6 +18,4 @@ import:
 - package: github.com/ttacon/chalk
   version: ^0.1.0
 - package: github.com/marcmak/calc
-- package: github.com/andybalholm/cascadia
 - package: github.com/olebedev/when
-- package: github.com/AlekSi/pointer

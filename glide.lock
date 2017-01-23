@@ -1,5 +1,5 @@
-hash: ba9f8a3dfa90f506e5e3413cc2e9da556220dba686e19ea609bfdf1b8647b067
-updated: 2017-01-23T00:17:37.94692308+01:00
+hash: ceb81e03e1bcc355df76733c1f7b71ca3eb5a7a6f0488d090039164a959b440c
+updated: 2017-01-23T23:23:01.537688218+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
@@ -11,8 +11,6 @@ imports:
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
   version: a61bf5eafa3aee233ec8043e9da052447e5463dd
-- name: github.com/cloudfoundry/gosigar
-  version: c32d31af94b0e9d3b2877e49c1a581ad5a793343
 - name: github.com/dustin/go-humanize
   version: ef638b6c2e62b857442c6443dace9366a48c0ee2
 - name: github.com/getsentry/raven-go

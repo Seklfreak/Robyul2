@@ -31,11 +31,15 @@ var (
 
     // CoroutineCount counts all running coroutines
     CoroutineCount = expvar.NewInt("coroutine_count")
+
+    // Uptime stores the timestamp of the bot's boot
+    Uptime = expvar.NewInt("uptime")
 )
 
 // Init starts a http server on 127.0.0.1:1337
 func Init() {
     logger.INFO.L("metrics", "Listening on TCP/1337")
+    Uptime.Set(time.Now().Unix())
     go http.ListenAndServe(helpers.GetConfig().Path("metrics_ip").Data().(string) + ":1337", nil)
 }
 

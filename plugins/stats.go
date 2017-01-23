@@ -7,6 +7,8 @@ import (
     "runtime"
     "strconv"
     "fmt"
+    "git.lukas.moe/sn0w/Karen/metrics"
+    "time"
 )
 
 type Stats struct{}
@@ -39,6 +41,14 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     var ram runtime.MemStats
     runtime.ReadMemStats(&ram)
 
+    // Get uptiume
+    bootTime, err := strconv.ParseInt(metrics.Uptime.String(), 10, 64)
+    if err != nil {
+        bootTime = 0
+    }
+
+    uptime := time.Now().Sub(time.Unix(bootTime, 0)).String()
+
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
         Color: 0x0FADED,
         Thumbnail: &discordgo.MessageEmbedThumbnail{
@@ -54,6 +64,7 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
             {Name: "Build System", Value: version.BUILD_USER + "@" + version.BUILD_HOST, Inline: false},
 
             // System
+            {Name: "Bot Uptime", Value: uptime, Inline: true},
             {Name: "Bot Version", Value: version.BOT_VERSION, Inline: true},
             {Name: "GO Version", Value: runtime.Version(), Inline: true},
 
