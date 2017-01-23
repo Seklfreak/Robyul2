@@ -99,6 +99,7 @@ func (m Music) Commands() []string {
         "pause",
         "stop",
         "skip",
+        "next",
         "playing",
         "np",
 
@@ -280,7 +281,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelMessageSend(channel.ID, ":stop_button: Playback stopped. (Playlist is now empty)")
         break
 
-    case "skip":
+    case "skip", "next":
         m.guildConnections[fingerprint].controller <- Skip
         break
 
