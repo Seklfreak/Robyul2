@@ -5,6 +5,7 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
     "strings"
+    "git.lukas.moe/sn0w/Karen/version"
 )
 
 type Changelog struct {
@@ -26,11 +27,10 @@ func (c *Changelog) Init(session *discordgo.Session) {
 
     defer helpers.Recover()
 
-    json := helpers.GetJSON("https://git.lukas.moe/api/v3/projects/77/repository/tags?private_token=9qvdMtLdxoC5amAmajN_")
-    releases, err := json.Children()
-    helpers.Relax(err)
+    release := helpers.GetJSON(
+        "https://git.lukas.moe/api/v3/projects/77/repository/tags/" + version.BOT_VERSION + "?private_token=9qvdMtLdxoC5amAmajN_",
+    )
 
-    release := releases[0]
     c.log = map[string]string{
         "number": release.Path("name").Data().(string),
         "date": release.Path("commit.committed_date").Data().(string),
