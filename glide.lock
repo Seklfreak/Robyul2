@@ -1,5 +1,5 @@
-hash: ceb81e03e1bcc355df76733c1f7b71ca3eb5a7a6f0488d090039164a959b440c
-updated: 2017-01-23T23:23:01.537688218+01:00
+hash: 1a2c5c4faa0fa9151c4d24263dcfd182c3e78a73983e0e89101d02c9d6840164
+updated: 2017-01-24T20:20:29.042439105+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
@@ -62,6 +62,11 @@ imports:
   version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
   - unix
+- name: golang.org/x/text
+  version: 11dbc599981ccdf4fb18802a28392a8bcf7a9395
+  subpackages:
+  - transform
+  - unicode/norm
 - name: gopkg.in/fatih/pool.v2
   version: 20a0a429c5f93de45c90f5f09ea297c25e0929b3
 - name: gopkg.in/gorethink/gorethink.v2
@@ -72,6 +77,4 @@ imports:
   - types
 - name: gopkg.in/gorethink/gorethink.v3
   version: 417badecf1ab14d0d6e38ad82397da2a59e2f6ca
-- name: layeh.com/gopus
-  version: 0ebf989153aa016ef5e77141b08c48e48a79312e
 testImports: []

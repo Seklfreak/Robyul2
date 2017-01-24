@@ -14,8 +14,10 @@ import:
 - package: golang.org/x/net
   subpackages:
   - html
-- package: layeh.com/gopus
 - package: github.com/ttacon/chalk
   version: ^0.1.0
 - package: github.com/marcmak/calc
 - package: github.com/olebedev/when
+- package: golang.org/x/text
+  subpackages:
+  - unicode/norm

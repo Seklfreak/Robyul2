@@ -16,7 +16,7 @@ RUN chmod a+rx /usr/bin/youtube-dl
 RUN rm /tmp/youtube-dl.sig
 
 # Get ropus
-RUN go get -v github.com/sn0w/ropus
+RUN go get -v git.lukas.moe/sn0w/ropus
 
 # Strip down
 RUN apk del .build-deps
