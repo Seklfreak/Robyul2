@@ -6,6 +6,7 @@ import (
     "strconv"
     "strings"
     "golang.org/x/text/unicode/norm"
+    "regexp"
 )
 
 // BtoA is a polyfill for javascript's window#btoa()
@@ -40,8 +41,11 @@ func DrawTable(headers []string, rows [][]string) string {
 
     for _, row := range rows {
         for cidx, col := range row {
-            if paddings[cidx] < len(col) {
-                paddings[cidx] = len(col)
+            tmp := norm.NFC.String(col)
+            length := len(tmp)
+
+            if paddings[cidx] < length {
+                paddings[cidx] = length
             }
         }
     }
@@ -110,6 +114,20 @@ func drawLine(start string, mid string, end string, paddings []int, data []strin
 
 // drawContent draws content with padding and custom separators (eg "|A    |B    |C    |")
 func drawContent(start string, separator string, end string, paddings []int, data []string) string {
+    sanitizer := regexp.MustCompile(
+        `[\r\n\t\f\v\x{2028}\x{2029}]+`,
+    )
+    unifier := regexp.MustCompile(
+        `[` +
+            `\x{0020}\x{00A0}\x{1680}\x{180E}` +
+            `\x{2000}\x{2001}\x{2002}\x{2003}` +
+            `\x{2004}\x{2005}\x{2006}\x{2007}` +
+            `\x{2008}\x{2009}\x{200A}\x{200B}` +
+            `\x{202F}\x{205F}\x{3000}\x{FEFF}` +
+            `\x{2423}\x{2422}\x{2420}` + // "visible" spaces
+            `]+`,
+    )
+
     sb := ""
     for idx, content := range data {
         if idx == 0 {
@@ -118,8 +136,15 @@ func drawContent(start string, separator string, end string, paddings []int, dat
             sb += separator
         }
 
-        sb += fmt.Sprintf("%-" + strconv.Itoa(paddings[idx]) + "s", content)
+        content = norm.NFC.String(content)
+        content = sanitizer.ReplaceAllString(content, "")
+        content = unifier.ReplaceAllString(content, " ")
+        sb += fmt.Sprintf(
+            "%-" + strconv.Itoa(paddings[idx]) + "s",
+            content,
+        )
     }
+
     sb += end + "\n"
 
     return sb
