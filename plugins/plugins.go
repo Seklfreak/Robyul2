@@ -57,6 +57,7 @@ var PluginList = []Plugin{
     Stone{},
     Support{},
     Triggered{},
+    Uptime{},
     UrbanDict{},
     Weather{},
     XKCD{},
