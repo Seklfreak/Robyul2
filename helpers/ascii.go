@@ -5,6 +5,7 @@ import (
     "fmt"
     "strconv"
     "strings"
+    "golang.org/x/text/unicode/norm"
 )
 
 // BtoA is a polyfill for javascript's window#btoa()

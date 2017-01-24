@@ -321,18 +321,18 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             num := strconv.Itoa(i + 1) + "."
 
             if i == 0 && m.guildConnections[fingerprint].playing {
-                num += " (playing)"
+                num = "[>] " + num
             }
 
             songs = append(songs, []string{
                 num,
-                song.Title,
                 helpers.SecondsToDuration(song.Duration),
+                song.Title,
             })
         }
 
         msg += helpers.DrawTable([]string{
-            "#", "Title", "Duration",
+            "#", "Duration", "Title",
         }, songs)
 
         session.ChannelMessageSend(channel.ID, msg)
