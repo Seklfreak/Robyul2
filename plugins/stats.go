@@ -16,6 +16,7 @@ type Stats struct{}
 func (s Stats) Commands() []string {
     return []string{
         "stats",
+        "sys",
     }
 }
 
