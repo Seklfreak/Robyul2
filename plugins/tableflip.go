@@ -2,19 +2,20 @@ package plugins
 
 import "github.com/bwmarrin/discordgo"
 
-type Tableflip struct{}
+type TableFlip struct{}
 
-func (tFlip Tableflip) Commands() []string {
+func (t TableFlip) Commands() []string {
     return []string{
         "tableflip",
-		"tbflip",
+        "tbflip",
+        "tflip",
     }
 }
 
-func (tFlip Tableflip) Init(session *discordgo.Session) {
+func (t TableFlip) Init(session *discordgo.Session) {
 
 }
 
-func (tFlip Tableflip) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (t TableFlip) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelMessageSend(msg.ChannelID, "(╯°□°）╯︵ ┻━┻")
 }
