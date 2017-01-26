@@ -56,6 +56,7 @@ var PluginList = []Plugin{
     Stats{},
     Stone{},
     Support{},
+    TableFlip{},
     Triggered{},
     Uptime{},
     UrbanDict{},
