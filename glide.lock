@@ -1,5 +1,5 @@
-hash: 1a2c5c4faa0fa9151c4d24263dcfd182c3e78a73983e0e89101d02c9d6840164
-updated: 2017-01-24T20:20:29.042439105+01:00
+hash: 5a13eead9f3b484d00c80c15158568a15d63fc02ccf6db81b7416a0743785076
+updated: 2017-01-26T22:09:02.626098031+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
@@ -10,17 +10,19 @@ imports:
 - name: github.com/cenk/backoff
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
-  version: a61bf5eafa3aee233ec8043e9da052447e5463dd
+  version: 03be5e6bb9874570ea7fb0961225d193cbc374c5
 - name: github.com/dustin/go-humanize
-  version: ef638b6c2e62b857442c6443dace9366a48c0ee2
+  version: 7a41df006ff9af79a29f0ffa9c5f21fbe6314a2d
 - name: github.com/getsentry/raven-go
   version: 3f7439d3e74d88e21d196ba20eb61a5a958bc118
 - name: github.com/golang/protobuf
   version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
   - proto
+- name: github.com/GoRethink/gorethink
+  version: 417badecf1ab14d0d6e38ad82397da2a59e2f6ca
 - name: github.com/gorilla/websocket
-  version: 0868951cdb8e69bc42df4598bdc6164ff2f1a072
+  version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/Jeffail/gabs
@@ -30,45 +32,45 @@ imports:
   subpackages:
   - calc
 - name: github.com/olebedev/when
-  version: ab2a00cabc7ebc7e15bcb1251ebf4f2fed0ee5fb
+  version: ac30b9a292575a8e46eac00ff0969379db9e338a
   subpackages:
   - rules
   - rules/common
   - rules/en
   - rules/ru
 - name: github.com/pkg/errors
-  version: 248dadf4e9068a0b3e79f02ed0a610d935de5302
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/PuerkitoBio/goquery
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
-  version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
+  version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
   version: 9b8fa3113779b4078baff4c639b3f1486a85930c
 - name: golang.org/x/crypto
-  version: 9a6f0a01987842989747adff311d80750ba25530
+  version: 854ae91cdcbf914b499b1d7641d07859f3653481
   subpackages:
   - nacl/secretbox
   - pbkdf2
   - poly1305
   - salsa20/salsa
 - name: golang.org/x/net
-  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
+  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
   - html
   - html/atom
 - name: golang.org/x/sys
-  version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
+  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 11dbc599981ccdf4fb18802a28392a8bcf7a9395
+  version: ece019dcfd29abcf65d0d1dfe145e8faad097640
   subpackages:
   - transform
   - unicode/norm
 - name: gopkg.in/fatih/pool.v2
-  version: 20a0a429c5f93de45c90f5f09ea297c25e0929b3
+  version: 6e328e67893eb46323ad06f0e92cb9536babbabc
 - name: gopkg.in/gorethink/gorethink.v2
   version: 016a1d3b4d15951ab2e39bd3596718ba94d298ba
   subpackages:

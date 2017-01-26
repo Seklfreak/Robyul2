@@ -2,22 +2,22 @@ package: git.lukas.moe/sn0w/Karen
 import:
 - package: github.com/Jeffail/gabs
   version: ^1.0.0
-- package: github.com/bwmarrin/discordgo
-  version: ^0.15.0
 - package: github.com/dustin/go-humanize
 - package: github.com/getsentry/raven-go
 - package: github.com/ugjka/cleverbot-go
-- package: gopkg.in/gorethink/gorethink.v3
-  version: ^3.0.0
 - package: github.com/PuerkitoBio/goquery
-  version: ^1.0.1
+  version: ^1.0.2
 - package: golang.org/x/net
   subpackages:
   - html
+- package: golang.org/x/text
+  subpackages:
+  - unicode/norm
 - package: github.com/ttacon/chalk
   version: ^0.1.0
 - package: github.com/marcmak/calc
 - package: github.com/olebedev/when
-- package: golang.org/x/text
-  subpackages:
-  - unicode/norm
+- package: github.com/bwmarrin/discordgo
+  version: ^0.15.0
+- package: github.com/GoRethink/gorethink
+  version: ^3.0.0
