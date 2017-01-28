@@ -25,7 +25,17 @@ func (c *Changelog) Init(session *discordgo.Session) {
 
     c.log = make(map[string]string)
 
-    defer helpers.Recover()
+    defer func() {
+        err := recover()
+        if err != nil {
+            c.log = map[string]string{
+                "number": version.BOT_VERSION,
+                "date": "-",
+                "body": "Sorry but i can't find a changelog for " + version.BOT_VERSION,
+            }
+            logger.PLUGIN.L("changelog", "Network error. Applied fallback.")
+        }
+    }()
 
     release := helpers.GetJSON(
         "https://git.lukas.moe/api/v3/projects/77/repository/tags/" + version.BOT_VERSION + "?private_token=9qvdMtLdxoC5amAmajN_",
