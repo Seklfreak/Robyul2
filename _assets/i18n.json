@@ -22,6 +22,35 @@
     ]
   },
   "triggers": {
+    "css": "http://i.imgur.com/TgPKFTz.gif",
+    "hi": {
+      "link": [
+        "https://cdn.discordapp.com/attachments/102817255661772800/219512763607678976/large_1.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219512898563735552/large.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219518948251664384/WgQWD.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219518717426532352/tumblr_lnttzfSUM41qgcvsy.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219519191290478592/tumblr_mf76erIF6s1qj96p1o1_500.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219519729604231168/giphy_3.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219519737971867649/63953d32c650703cded875ac601e765778ce90d0_hq.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219519738781368321/17201a4342e901e5f1bc2a03ad487219c0434c22_hq.gif"
+      ]
+    },
+    "hypetrain": {
+      "text": [
+        ":train2: CHOO CHOO"
+      ],
+      "link": [
+        "https://cdn.discordapp.com/attachments/102817255661772800/219514281136357376/tumblr_nr6ndeEpus1u21ng6o1_540.gif",
+        "https://cdn.discordapp.com/attachments/102817255661772800/219518372839161859/tumblr_n1h2afSbCu1ttmhgqo1_500.gif",
+        "https://gfycat.com/HairyFloweryBarebirdbat",
+        "https://i.imgur.com/PFAQSLA.gif",
+        "https://abload.de/img/ezgif-32008219442iq0i.gif",
+        "https://i.imgur.com/vOVwq5o.jpg",
+        "https://i.imgur.com/Ki12X4j.jpg",
+        "https://media.giphy.com/media/b1o4elYH8Tqjm/giphy.gif"
+      ]
+    },
+    "iptables": "http://i.imgur.com/deIwRtM.gif",
     "nep": {
       "text": [
         "Can't pep the nep",

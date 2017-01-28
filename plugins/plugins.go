@@ -67,6 +67,10 @@ var PluginList = []Plugin{
 
 // TriggerPluginList is the list of plugins that activate on normal chat
 var TriggerPluginList = []TriggerPlugin{
+    triggers.CSS{},
+    triggers.Hi{},
+    triggers.HypeTrain{},
+    triggers.IPTables{},
     triggers.Nep{},
 }
 

@@ -6,16 +6,15 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  * Full credit to Der-Eddy and his original python implementation for Shinobu-Chan.
  * @link https://github.com/Der-Eddy/discord_bot
  */
-type Nep struct {}
+type IPTables struct {}
 
-func (n Nep) Triggers() []string {
+func (i IPTables) Triggers() []string {
     return []string{
-        "nep",
-        "nepgear",
-        "neptune",
+        "ipt",
+        "iptables",
     }
 }
 
-func (n Nep) Response() string {
-    return helpers.GetText("triggers.nep.text") + "\n" + helpers.GetText("triggers.nep.link")
+func (i IPTables) Response() string {
+    return helpers.GetText("triggers.iptables")
 }

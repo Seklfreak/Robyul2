@@ -6,16 +6,18 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  * Full credit to Der-Eddy and his original python implementation for Shinobu-Chan.
  * @link https://github.com/Der-Eddy/discord_bot
  */
-type Nep struct {}
+type Hi struct {}
 
-func (n Nep) Triggers() []string {
+func (h Hi) Triggers() []string {
     return []string{
-        "nep",
-        "nepgear",
-        "neptune",
+        "wave",
+        "hi",
+        "hello",
+        "ohai",
+        "ohayou",
     }
 }
 
-func (n Nep) Response() string {
-    return helpers.GetText("triggers.nep.text") + "\n" + helpers.GetText("triggers.nep.link")
+func (h Hi) Response() string {
+    return ":wave: " + helpers.GetText("triggers.hi.link")
 }

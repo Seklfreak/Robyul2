@@ -26,6 +26,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     cache.SetSession(session)
 
     // Init plugins
+    fmt.Println()
     tmpl := "[PLUG] %s reacts to [ %s]"
     for _, plugin := range plugins.PluginList {
         cmds := ""
@@ -44,6 +45,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     }
 
     // Init trigger plugins
+    fmt.Println()
     tmpl = "[TRIG] %s gets triggered by [ %s]"
     for _, plugin := range plugins.TriggerPluginList {
         cmds := ""
