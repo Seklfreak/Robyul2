@@ -309,6 +309,7 @@ var games = []string{
     "with Shinobu-Chan",    // ohai eddy
     "with Nepgear",         // ohai serraniel
     "with Rem",             // ohai serenity
+    "with Sora <3",         // again serenity :3
 
     // Anime names
     "with Ram",
