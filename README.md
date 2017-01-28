@@ -1,9 +1,9 @@
 Origin: https://git.lukas.moe/sn0w/Karen<br>
 Mirror: https://github.com/sn0w/Karen
-<br>
+
+<hr>
 
 <p align="center">
-  <img src="http://i.imgur.com/vDJVt9g.png"/><br><br>
   <a href="https://git.lukas.moe/sn0w/Karen/commits/master">
     <img alt="build status" src="https://git.lukas.moe/sn0w/Karen/badges/master/build.svg" />
   </a>
@@ -18,12 +18,14 @@ Mirror: https://github.com/sn0w/Karen
   </a>
   <br>
   Karen is a highly efficient, multipurpose Discord bot written in Golang.
+  <br>
+  <br>
+  Got any problems or just want to chat with me and other devs?<br>
+  Join the Discord Server! :)<br>
+  <a href="https://discord.gg/5SjDr3G">
+    <img src="https://discordapp.com/api/guilds/180818466847064065/widget.png">
+  </a>
 </p>
-
-<hr/>
-Got any problems or just want to chat with me and other devs?<br>
-Join the Discord Server! :)<br>
-[![](https://discordapp.com/api/guilds/180818466847064065/widget.png)](https://discord.gg/5SjDr3G)
 <hr/>
 
 ### Invite
