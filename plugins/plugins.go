@@ -1,7 +1,7 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/cache"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/metrics"

@@ -4,7 +4,7 @@ import (
     "encoding/binary"
     "fmt"
     "github.com/Jeffail/gabs"
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     rethink "gopkg.in/gorethink/gorethink.v3"

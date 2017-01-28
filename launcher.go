@@ -1,7 +1,7 @@
 package main
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "github.com/getsentry/raven-go"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"

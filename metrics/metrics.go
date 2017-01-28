@@ -2,7 +2,7 @@ package metrics
 
 import (
     "expvar"
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/logger"
     "net/http"
     "runtime"

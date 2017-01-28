@@ -1,6 +1,6 @@
 package plugins
 
-import "github.com/bwmarrin/discordgo"
+import "github.com/sn0w/discordgo"
 
 type About struct{}
 

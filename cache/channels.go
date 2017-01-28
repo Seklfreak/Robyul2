@@ -1,7 +1,7 @@
 package cache
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "time"
 )
 

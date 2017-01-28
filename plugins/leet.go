@@ -1,7 +1,7 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "strings"
 )
 

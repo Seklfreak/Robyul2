@@ -1,7 +1,7 @@
 package helpers
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "github.com/ugjka/cleverbot-go"
 )
 

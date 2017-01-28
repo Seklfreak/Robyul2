@@ -1,7 +1,7 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "github.com/dustin/go-humanize"
     "git.lukas.moe/sn0w/Karen/version"
     "runtime"

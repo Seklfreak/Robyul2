@@ -2,7 +2,7 @@ package main
 
 import (
     "fmt"
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "github.com/getsentry/raven-go"
     "git.lukas.moe/sn0w/Karen/cache"
     "git.lukas.moe/sn0w/Karen/helpers"

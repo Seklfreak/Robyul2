@@ -2,7 +2,7 @@ package cache
 
 import (
     "errors"
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
 )
 
 var session *discordgo.Session

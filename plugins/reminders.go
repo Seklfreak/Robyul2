@@ -1,7 +1,7 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
     rethink "gopkg.in/gorethink/gorethink.v3"

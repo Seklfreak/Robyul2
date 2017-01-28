@@ -2,7 +2,7 @@ package helpers
 
 import (
     "errors"
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/cache"
 )
 

@@ -2,7 +2,7 @@ package plugins
 
 import (
     "fmt"
-    "github.com/bwmarrin/discordgo"
+    "github.com/sn0w/discordgo"
 )
 
 type Avatar struct{}

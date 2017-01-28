@@ -1,12 +1,10 @@
-hash: 5a13eead9f3b484d00c80c15158568a15d63fc02ccf6db81b7416a0743785076
-updated: 2017-01-26T22:09:02.626098031+01:00
+hash: d6f78b99f699f23ca0ba1d77512e7826d8f83e2773c801c568b1e65683abdb99
+updated: 2017-01-28T20:47:35.720617594+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
-- name: github.com/bwmarrin/discordgo
-  version: 5835676872d7fa65ee37b32672079c4ede2c1855
 - name: github.com/cenk/backoff
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
@@ -44,6 +42,8 @@ imports:
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
   version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
+- name: github.com/sn0w/discordgo
+  version: d263620a46be3ebba53b409c48322758f6747edd
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
