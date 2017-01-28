@@ -22,6 +22,9 @@ func main() {
     helpers.LoadConfig("config.json")
     config := helpers.GetConfig()
 
+    // Read i18n
+    helpers.LoadTranslations()
+
     // Show version
     version.DumpInfo()
 

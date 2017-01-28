@@ -9,7 +9,6 @@ import (
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/plugins"
-    "math/rand"
     "regexp"
     "strings"
     "time"
@@ -142,14 +141,13 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             if prefix == "" {
                 cache.GetSession().ChannelMessageSend(
                     channel.ID,
-                    "Seems like there is no prefix yet :thinking:\n" +
-                        "Admins can set one by typing for example `@Karen set prefix ?`",
+                    helpers.GetText("bot.prefix.not-set"),
                 )
             }
 
             cache.GetSession().ChannelMessageSend(
                 channel.ID,
-                "The prefix is `" + prefix + "` :smiley:",
+                helpers.GetTextF("bot.prefix.is", prefix),
             )
             return
 
@@ -158,7 +156,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             helpers.RequireAdmin(message.Message, func() {
                 // Refresh cleverbot session
                 helpers.CleverbotRefreshSession(channel.ID)
-                cache.GetSession().ChannelMessageSend(channel.ID, ":cyclone: Refreshed!")
+                cache.GetSession().ChannelMessageSend(channel.ID, helpers.GetText("bot.cleverbot.refreshed"))
             })
             return
 
@@ -180,7 +178,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
                 if err != nil {
                     helpers.SendError(message.Message, err)
                 } else {
-                    cache.GetSession().ChannelMessageSend(channel.ID, ":white_check_mark: Saved! \n The prefix is now `" + prefix + "`")
+                    cache.GetSession().ChannelMessageSend(channel.ID, helpers.GetTextF("bot.prefix.saved", prefix))
                 }
             })
             return
@@ -245,88 +243,18 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 func sendHelp(message *discordgo.MessageCreate) {
     cache.GetSession().ChannelMessageSend(
         message.ChannelID,
-        fmt.Sprintf("<@%s> Check out <http://meetkaren.xyz/commands>", message.Author.ID),
+        helpers.GetTextF("bot.help", message.Author.ID),
     )
 }
 
 // Changes the game interval every 10 seconds after called
 func changeGameInterval(session *discordgo.Session) {
     for {
-        err := session.UpdateStatus(
-            0,
-            games[rand.Intn(len(games))],
-        )
+        err := session.UpdateStatus(0, helpers.GetText("games"))
         if err != nil {
             raven.CaptureError(err, map[string]string{})
         }
 
         time.Sleep(10 * time.Second)
     }
-}
-
-// List of games to randomly show
-var games = []string{
-    // Random stuff
-    "async is the future!",
-    "down with OOP!",
-    "spoopy stuff",
-    "Planking",
-
-    // Kaomoji
-    "ʕ•ᴥ•ʔ",
-    "༼ つ ◕_◕ ༽つ",
-    "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
-    "( ͡° ͜ʖ ͡°)",
-    "¯\\_(ツ)_/¯",
-    "(ง ͠° ͟ل͜ ͡°)ง",
-    "ಠ_ಠ",
-    "(╯°□°)╯︵ ʞooqǝɔɐɟ",
-    "♪~ ᕕ(ᐛ)ᕗ",
-    "\\ (•◡•) /",
-    "｡◕‿◕｡",
-
-    // actual games
-    "Hearthstone",
-    "Overwatch",
-    "HuniePop",
-    "Candy Crush",
-    "Hyperdimension Neptunia",
-    "Final Fantasy MCMX",
-    "CIV V",
-    "Simulation Simulator 2016",
-    "Half Life 3",
-
-    // software
-    "with FFMPEG",
-    "with libav",
-    "with gophers",
-    "with python",
-    "with reflections",
-
-    // Bot names
-    "with Shiro <3",        // Rest in Peace :(
-    "with Emily",           // ohai kaaz
-    "with Shinobu-Chan",    // ohai eddy
-    "with Nepgear",         // ohai serraniel
-    "with Rem",             // ohai serenity
-    "with Sora <3",         // again serenity :3
-
-    // Anime names
-    "with Ram",
-    "with Rom",
-    "with Nadeko",
-    "with Miku",
-
-    // Discord names
-    "with Serraniel",
-    "with Kaaz",
-    "with 0xFADED",
-
-    // Other names
-    "with you O_o",
-    "with cats",
-    "with JOHN CENA",
-    "with senpai",
-    "with moot",
-    "with your waifu",
 }

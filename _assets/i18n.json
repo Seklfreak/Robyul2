@@ -1,0 +1,74 @@
+{
+  "bot": {
+    "prefix": {
+      "not-set": "Seems like there is no prefix yet :thinking:\nAdmins can set one by typing for example `@Karen set prefix ?`",
+      "is": [
+        "The prefix is `%s` :smiley:",
+        "Last time I checked it was `%s` :wink:",
+        "iirc it's `%s` :thinking:"
+      ],
+      "saved": [
+        "Ok i'll try to remember that :sweat_smile:",
+        "Ok the prefix is now `%s` :smiley:",
+        ":ok_hand:"
+      ]
+    },
+    "cleverbot": {
+      "refreshed": ":cyclone: Refreshed!"
+    },
+    "help": [
+      "<@%s> Check out <http://meetkaren.xyz/commands>",
+      "<@%s> It's at <http://meetkaren.xyz/commands> :smiley:"
+    ]
+  },
+  "games": [
+    "async is the future!",
+    "down with OOP!",
+    "spoopy stuff",
+    "Planking",
+    "ʕ•ᴥ•ʔ",
+    "༼ つ ◕_◕ ༽つ",
+    "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
+    "( ͡° ͜ʖ ͡°)",
+    "¯\\_(ツ)_/¯",
+    "(ง ͠° ͟ل͜ ͡°)ง",
+    "ಠ_ಠ",
+    "(╯°□°)╯︵ ʞooqǝɔɐɟ",
+    "♪~ ᕕ(ᐛ)ᕗ",
+    "\\ (•◡•) /",
+    "｡◕‿◕｡",
+    "Hearthstone",
+    "Overwatch",
+    "HuniePop",
+    "Candy Crush",
+    "Hyperdimension Neptunia",
+    "Final Fantasy MCMX",
+    "CIV V",
+    "Simulation Simulator 2016",
+    "Half Life 3",
+    "with FFMPEG",
+    "with libav",
+    "with gophers",
+    "with python",
+    "with reflections",
+    "with Shiro <3",
+    "with Emily",
+    "with Shinobu-Chan",
+    "with Nepgear",
+    "with Rem",
+    "with Sora <3",
+    "with Ram",
+    "with Rom",
+    "with Nadeko",
+    "with Miku",
+    "with Serraniel",
+    "with Kaaz",
+    "with 0xFADED",
+    "with you O_o",
+    "with cats",
+    "with JOHN CENA",
+    "with senpai",
+    "with moot",
+    "with your waifu"
+  ]
+}

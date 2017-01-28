@@ -16,6 +16,7 @@ fi
 
 echo $GOTARGET
 
+go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
 go build ${XFLAGS} --ldflags="
 -X git.lukas.moe/sn0w/Karen/version.BOT_VERSION=${BOT_VERSION}
 -X git.lukas.moe/sn0w/Karen/version.BUILD_TIME=${BUILD_TIME}
