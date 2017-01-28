@@ -44,14 +44,19 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     }
 
     // Init trigger plugins
-    tmpl = "[TRIG] Registered %s"
+    tmpl = "[TRIG] %s gets triggered by [ %s]"
     for _, plugin := range plugins.TriggerPluginList {
+        cmds := ""
+
+        for _, cmd := range plugin.Triggers() {
+            cmds += cmd + " "
+        }
+
         Logger.INFO.L("bot", fmt.Sprintf(
             tmpl,
             helpers.Typeof(plugin),
+            cmds,
         ))
-
-        plugin.Init(session)
     }
 
     go func() {
@@ -205,10 +210,8 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Only continue if a prefix is set
-    // Else check if any instant-replies match
     prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
     if prefix == "" {
-        plugins.CallTriggerPlugins(message.Message)
         return
     }
 
@@ -232,12 +235,21 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Check if a module matches said command
-    // Do nothing otherwise
     plugins.CallBotPlugin(
         cmd,
         strings.Replace(message.Content, prefix + cmd, "", -1),
         message.Message,
     )
+
+    // Check if a trigger matches
+    plugins.CallTriggerPlugin(
+        cmd,
+        strings.Replace(message.Content, prefix + cmd, "", -1),
+        message.Message,
+    )
+
+    // Else exit
+    return
 }
 
 func sendHelp(message *discordgo.MessageCreate) {

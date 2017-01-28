@@ -6,6 +6,7 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/metrics"
     "strings"
+    "git.lukas.moe/sn0w/Karen/plugins/triggers"
 )
 
 // Plugin interface to enforce a basic structure
@@ -26,8 +27,8 @@ type Plugin interface {
 }
 
 type TriggerPlugin interface {
-    Init(session *discordgo.Session)
-    Action(msg *discordgo.Message, session *discordgo.Session)
+    Triggers() []string
+    Response() string
 }
 
 // PluginList is the list of active plugins
@@ -65,7 +66,9 @@ var PluginList = []Plugin{
 }
 
 // TriggerPluginList is the list of plugins that activate on normal chat
-var TriggerPluginList = []TriggerPlugin{}
+var TriggerPluginList = []TriggerPlugin{
+    triggers.Nep{},
+}
 
 // CallBotPlugin iterates through the list of registered
 // plugins and tries to guess which one is the intended call
@@ -93,13 +96,21 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message) {
 //
 // msg     - The message that triggered the execution
 // session - The discord session
-func CallTriggerPlugins(msg *discordgo.Message) {
+func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
     // Iterate over all plugins
     for _, plug := range TriggerPluginList {
-        go func(plugin TriggerPlugin) {
-            defer helpers.RecoverDiscord(msg)
-            plugin.Action(msg, cache.GetSession())
-        }(plug)
+        for _, trig := range plug.Triggers() {
+            if trigger == trig {
+                go func(plugin TriggerPlugin) {
+                    defer helpers.RecoverDiscord(msg)
+                    cache.GetSession().ChannelMessageSend(
+                        msg.ChannelID,
+                        plugin.Response(),
+                    )
+                }(plug)
+                break
+            }
+        }
     }
 }
 
