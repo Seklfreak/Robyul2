@@ -21,3 +21,4 @@ import:
   version: d263620a46be3ebba53b409c48322758f6747edd
 - package: github.com/GoRethink/gorethink
   version: ^3.0.0
+- package: github.com/bwmarrin/snowflake

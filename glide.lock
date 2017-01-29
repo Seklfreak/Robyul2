@@ -1,10 +1,12 @@
-hash: d6f78b99f699f23ca0ba1d77512e7826d8f83e2773c801c568b1e65683abdb99
-updated: 2017-01-28T20:47:35.720617594+01:00
+hash: 6f37c959ab44434eda4b4da45d4fe5b8f2c3ae6e2d17741676d82a0d2ac4fd6f
+updated: 2017-01-29T18:19:53.290518129+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
+- name: github.com/bwmarrin/snowflake
+  version: 34b33bf22ac0c98266031bcb193e2c9a621730f8
 - name: github.com/cenk/backoff
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
