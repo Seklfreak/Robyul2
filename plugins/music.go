@@ -18,6 +18,7 @@ import (
     "strings"
     "time"
     "bufio"
+    "sync"
 )
 
 // Define control messages
@@ -31,6 +32,8 @@ const (
 
 // A connection to one guild's channel
 type GuildConnection struct {
+    sync.RWMutex
+
     // Controller channel for Skip/Pause/Resume
     controller chan controlMessage
 
@@ -49,23 +52,29 @@ type GuildConnection struct {
 
 // Helper to generate a guild connection
 func (gc *GuildConnection) Alloc() *GuildConnection {
-    gc.CreateChannels()
-
+    gc.Lock()
     gc.playlist = []Song{}
     gc.queue = []Song{}
     gc.playing = false
+    gc.Unlock()
+
+    gc.CreateChannels()
 
     return gc
 }
 
 func (gc *GuildConnection) CloseChannels() {
+    gc.Lock()
     close(gc.closer)
     close(gc.controller)
+    gc.Unlock()
 }
 
 func (gc *GuildConnection) CreateChannels() {
+    gc.Lock()
     gc.closer = make(chan struct{})
     gc.controller = make(chan controlMessage)
+    gc.Unlock()
 }
 
 func (gc *GuildConnection) RecreateChannels() {
@@ -208,6 +217,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
                 // Start auto-leaver
                 go m.autoLeave(guild.ID, channel.ID, session, m.guildConnections[guild.ID].closer)
+
+                return
             }
 
             helpers.Relax(merr)
@@ -236,6 +247,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Check what the user wants from us
+    session.ChannelTyping(channel.ID)
     switch command {
     case "leave":
         voiceConnection.Disconnect()
@@ -268,8 +280,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
     case "stop":
         m.guildConnections[guild.ID].RecreateChannels()
+
+        m.guildConnections[guild.ID].Lock()
         m.guildConnections[guild.ID].playing = false
         *playlist = []Song{}
+        m.guildConnections[guild.ID].Unlock()
 
         session.ChannelMessageSend(channel.ID, ":stop_button: Playback stopped. (Playlist is now empty)")
         break
@@ -341,13 +356,15 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
 
         match := matches[rand.Intn(len(matches))]
+
+        m.guildConnections[guild.ID].Lock()
         *playlist = append(*playlist, match)
+        m.guildConnections[guild.ID].Unlock()
 
         session.ChannelMessageSend(channel.ID, ":ballot_box_with_check: Added `" + match.Title + "`")
         break
 
     case "add":
-        session.ChannelTyping(channel.ID)
         content = strings.TrimSpace(content)
 
         // Trim masquerade if present
@@ -426,7 +443,9 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             helpers.Relax(e)
 
             // Add to queue
+            m.guildConnections[guild.ID].Lock()
             *queue = append(*queue, match)
+            m.guildConnections[guild.ID].Unlock()
 
             // Inform users
             session.ChannelMessageSend(
@@ -445,7 +464,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         // Check if the match was already processed
         if match.Processed {
             // Was processed. Add to playlist.
+            m.guildConnections[guild.ID].Lock()
             *playlist = append(*playlist, match)
+            m.guildConnections[guild.ID].Unlock()
+
             session.ChannelMessageSend(channel.ID, "Added from cache! :ok_hand:")
             return
         }
@@ -467,7 +489,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             return
         }
 
+        m.guildConnections[guild.ID].Lock()
         *queue = append(*queue, match)
+        m.guildConnections[guild.ID].Unlock()
+
         session.ChannelMessageSend(
             channel.ID,
             "`" + match.Title + "` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
@@ -540,12 +565,16 @@ func (m *Music) waitForSong(channel string, guild string, match Song, msg *disco
             // Remove from queue
             for idx, song := range *queue {
                 if song.URL == match.URL {
+                    m.guildConnections[guild].Lock()
                     *queue = append((*queue)[:idx], (*queue)[idx + 1:]...)
+                    m.guildConnections[guild].Unlock()
                 }
             }
 
             // Add to playlist
+            m.guildConnections[guild].Lock()
             *playlist = append(*playlist, res)
+            m.guildConnections[guild].Unlock()
 
             session.ChannelMessageSend(channel, ":ballot_box_with_check: `" + res.Title + "` finished downloading :smiley:")
             break
@@ -715,7 +744,9 @@ func (m *Music) startPlayer(guild string, vc *discordgo.VoiceConnection, msg *di
         }
 
         // Mark guild as playing
+        m.guildConnections[guild].Lock()
         m.guildConnections[guild].playing = true
+        m.guildConnections[guild].Unlock()
 
         // Send data to discord
         // Blocks until the song is done
@@ -723,7 +754,9 @@ func (m *Music) startPlayer(guild string, vc *discordgo.VoiceConnection, msg *di
 
         // Remove song from playlist if it's not empty
         if len(*playlist) > 0 {
+            m.guildConnections[guild].Lock()
             *playlist = append((*playlist)[:0], (*playlist)[1:]...)
+            m.guildConnections[guild].Unlock()
         }
     }
 }
