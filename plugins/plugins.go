@@ -72,6 +72,7 @@ var TriggerPluginList = []TriggerPlugin{
     triggers.Invite{},
     triggers.IPTables{},
     triggers.Nep{},
+    triggers.ReZero{},
 }
 
 // CallBotPlugin iterates through the list of registered
