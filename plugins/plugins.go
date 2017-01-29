@@ -38,7 +38,6 @@ var PluginList = []Plugin{
     Calc{},
     &Changelog{},
     Choice{},
-    Donate{},
     &FlipCoin{},
     Giphy{},
     Google{},
@@ -68,6 +67,7 @@ var PluginList = []Plugin{
 // TriggerPluginList is the list of plugins that activate on normal chat
 var TriggerPluginList = []TriggerPlugin{
     triggers.CSS{},
+    triggers.Donate{},
     triggers.Hi{},
     triggers.HypeTrain{},
     triggers.IPTables{},
