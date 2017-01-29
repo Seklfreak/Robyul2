@@ -41,7 +41,6 @@ var PluginList = []Plugin{
     &FlipCoin{},
     Giphy{},
     Google{},
-    Invite{},
     Leet{},
     Lenny{},
     Minecraft{},
@@ -70,6 +69,7 @@ var TriggerPluginList = []TriggerPlugin{
     triggers.Donate{},
     triggers.Hi{},
     triggers.HypeTrain{},
+    triggers.Invite{},
     triggers.IPTables{},
     triggers.Nep{},
 }
