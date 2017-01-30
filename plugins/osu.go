@@ -82,7 +82,7 @@ func (o Osu) Action(command string, content string, msg *discordgo.Message, sess
         return
     }
 
-    _, err = session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+    session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
         Color: 0xEF77AF,
         Description: "Showing stats for " + user,
         Thumbnail: &discordgo.MessageEmbedThumbnail{
