@@ -202,6 +202,9 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         // Check if the user wanted us to join.
         // Else report the error
         if command == "join" {
+            lock := helpers.VoiceOccupy(guild.ID, "music")
+            helpers.RelaxAssertEqual(lock, true, nil)
+
             message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
             _, err := session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
@@ -253,6 +256,9 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         voiceConnection.Disconnect()
         m.guildConnections[guild.ID].CloseChannels()
         delete(m.guildConnections, guild.ID)
+
+        helpers.VoiceFree(guild.ID)
+
         session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
         break
 

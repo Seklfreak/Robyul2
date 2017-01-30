@@ -43,6 +43,7 @@ var PluginList = []Plugin{
     Google{},
     Leet{},
     Lenny{},
+    //&ListenDotMoe{},
     Minecraft{},
     &Music{},
     Osu{},
