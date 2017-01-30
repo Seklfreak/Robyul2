@@ -1,5 +1,5 @@
-hash: 6f37c959ab44434eda4b4da45d4fe5b8f2c3ae6e2d17741676d82a0d2ac4fd6f
-updated: 2017-01-29T18:19:53.290518129+01:00
+hash: 755323ff0b0f544a043c692416b9e1292d82e19f25fbf5555789b2334fdfa715
+updated: 2017-01-31T00:12:15.701220406+01:00
 imports:
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
@@ -7,7 +7,7 @@ imports:
   version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/snowflake
   version: 34b33bf22ac0c98266031bcb193e2c9a621730f8
-- name: github.com/cenk/backoff
+- name: github.com/cenkalti/backoff
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
   version: 03be5e6bb9874570ea7fb0961225d193cbc374c5
@@ -20,7 +20,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/GoRethink/gorethink
-  version: 417badecf1ab14d0d6e38ad82397da2a59e2f6ca
+  version: 610fcc04c971a9fa42f1b6625c7c52b5bb472c51
 - name: github.com/gorilla/websocket
   version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
 - name: github.com/hailocab/go-hostpool
@@ -46,12 +46,14 @@ imports:
   version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 - name: github.com/sn0w/discordgo
   version: d263620a46be3ebba53b409c48322758f6747edd
+- name: github.com/sn0w/radio-b
+  version: 2ff01299214548269cc0892b9b3a446370f75d66
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
   version: 9b8fa3113779b4078baff4c639b3f1486a85930c
 - name: golang.org/x/crypto
-  version: 854ae91cdcbf914b499b1d7641d07859f3653481
+  version: dc137beb6cce2043eb6b5f223ab8bf51c32459f4
   subpackages:
   - nacl/secretbox
   - pbkdf2
@@ -73,12 +75,10 @@ imports:
   - unicode/norm
 - name: gopkg.in/fatih/pool.v2
   version: 6e328e67893eb46323ad06f0e92cb9536babbabc
-- name: gopkg.in/gorethink/gorethink.v2
-  version: 016a1d3b4d15951ab2e39bd3596718ba94d298ba
+- name: gopkg.in/gorethink/gorethink.v3
+  version: 610fcc04c971a9fa42f1b6625c7c52b5bb472c51
   subpackages:
   - encoding
   - ql2
   - types
-- name: gopkg.in/gorethink/gorethink.v3
-  version: 417badecf1ab14d0d6e38ad82397da2a59e2f6ca
 testImports: []

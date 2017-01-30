@@ -4,7 +4,6 @@ import (
     "time"
     "sync"
     "github.com/sn0w/discordgo"
-    "git.lukas.moe/sn0w/Karen/channels"
     "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/helpers"
     "strings"
@@ -12,12 +11,13 @@ import (
     "bufio"
     "encoding/binary"
     "io"
+    "git.lukas.moe/sn0w/radio-b"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helper structs for managing and closing voice connections
 // ---------------------------------------------------------------------------------------------------------------------
-var ListenDotMoeChan channels.Receiver
+var RadioChan *radio.Radio
 
 type RadioGuildConnection struct {
     sync.RWMutex
@@ -166,8 +166,7 @@ func (l *ListenDotMoe) resolveVoiceChannel(user *discordgo.User, guild *discordg
 
 func (l *ListenDotMoe) streamer() {
     logger.VERBOSE.L("listen_moe.go", "Allocating channels")
-    broadcastChannel := channels.NewBroadcaster()
-    ListenDotMoeChan = broadcastChannel.Listen()
+    RadioChan = radio.NewRadio()
 
     logger.VERBOSE.L("listen_moe.go", "Piping subprocesses")
 
@@ -222,14 +221,17 @@ func (l *ListenDotMoe) streamer() {
         helpers.Relax(err)
 
         // Send to discord
-        broadcastChannel.Write(opus)
+        RadioChan.Broadcast(opus)
     }
 
     logger.VERBOSE.L("listen_moe.go", "Stream died")
 }
 
 func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
+    audioChan, id := RadioChan.Listen()
     vc := session.VoiceConnections[guildID]
+
+    vc.Speaking(true)
 
     // Start eventloop
     for {
@@ -247,6 +249,10 @@ func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
         }
 
         // Send a frame to discord
-        vc.OpusSend <- ListenDotMoeChan.Read()
+        vc.OpusSend <- (<-audioChan)
     }
+
+    vc.Speaking(false)
+
+    RadioChan.Stop(id)
 }
