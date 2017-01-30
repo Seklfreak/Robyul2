@@ -52,7 +52,7 @@ func (b Broadcaster) Write(v []byte) {
     b.SendChannel <- v
 }
 
-func (r *Receiver) Read() interface{} {
+func (r *Receiver) Read() []byte {
     b := <-r.C
     v := b.v
     r.C <- b

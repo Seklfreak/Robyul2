@@ -153,5 +153,8 @@
     "with your waifu"
   ],
   "plugins": {
+    "listen_moe": {
+      "unknown_command": "I don't know that command :neutral_face:\nYou can either `join` or `leave` but not `%s`"
+    }
   }
 }
