@@ -125,23 +125,25 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         // Check if the user wanted us to join.
         // Else report the error
         if content == "join" {
-            helpers.VoiceOccupy(guild.ID, "listen.moe")
+            helpers.RequireAdmin(msg, func() {
+                helpers.VoiceOccupy(guild.ID, "listen.moe")
 
-            message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
+                message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
-            voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
-            helpers.Relax(err)
+                voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
+                helpers.Relax(err)
 
-            if merr == nil {
-                session.ChannelMessageEdit(channel.ID, message.ID, "Joined!\nThe radio should start playing shortly c:")
+                if merr == nil {
+                    session.ChannelMessageEdit(channel.ID, message.ID, "Joined!\nThe radio should start playing shortly c:")
 
-                l.connections[guild.ID] = (&RadioGuildConnection{}).Alloc()
+                    l.connections[guild.ID] = (&RadioGuildConnection{}).Alloc()
 
-                go l.pipeStream(guild.ID, session)
-                return
-            }
+                    go l.pipeStream(guild.ID, session)
+                    return
+                }
 
-            helpers.Relax(merr)
+                helpers.Relax(merr)
+            })
         } else {
             session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff :thinking:")
         }
@@ -153,13 +155,15 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
     // Check for other commands
     switch content {
     case "leave", "l":
-        voiceConnection.Disconnect()
+        helpers.RequireAdmin(msg, func() {
+            voiceConnection.Disconnect()
 
-        l.connections[guild.ID].Lock()
-        l.connections[guild.ID].Close()
-        delete(l.connections, guild.ID)
+            l.connections[guild.ID].Lock()
+            l.connections[guild.ID].Close()
+            delete(l.connections, guild.ID)
 
-        session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
+            session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
+        })
         break
 
     case "playing", "np", "song", "title":
@@ -185,7 +189,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
             Color: 0xEC1A55,
             Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "http://i.imgur.com/H2cqEio.png",
+                URL: "http://i.imgur.com/Jp8N7YG.jpg",
             },
             Fields: fields,
             Footer: &discordgo.MessageEmbedFooter{

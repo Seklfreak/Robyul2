@@ -36,7 +36,7 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
         return
     }
 
-    if msg.Author.ID == guild.OwnerID {
+    if msg.Author.ID == guild.OwnerID || IsBotAdmin(msg.Author.ID) {
         cb()
         return
     }
@@ -49,5 +49,5 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
         }
     }
 
-    cache.GetSession().ChannelMessageSend(msg.ChannelID, "You are not an admin :frowning:")
+    cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
 }
