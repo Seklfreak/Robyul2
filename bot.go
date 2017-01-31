@@ -17,6 +17,10 @@ import (
 
 // BotOnReady gets called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
+    session.Lock()
+    session.LogLevel = discordgo.LogWarning
+    session.Unlock()
+
     Logger.INFO.L("bot", "Connected to discord!")
     Logger.VERBOSE.L("bot", "Invite link: " + fmt.Sprintf(
         "https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s",
