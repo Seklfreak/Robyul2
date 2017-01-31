@@ -8,6 +8,6 @@ func (d Donate) Triggers() []string {
     }
 }
 
-func (d Donate) Response() string {
+func (d Donate) Response(trigger string, content string) string {
     return "Thank you so much :3 \n https://www.patreon.com/sn0w"
 }

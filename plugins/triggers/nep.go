@@ -16,6 +16,6 @@ func (n Nep) Triggers() []string {
     }
 }
 
-func (n Nep) Response() string {
+func (n Nep) Response(trigger string, content string) string {
     return helpers.GetText("triggers.nep.text") + "\n" + helpers.GetText("triggers.nep.link")
 }

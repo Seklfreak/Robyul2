@@ -11,6 +11,6 @@ func (e EightBall) Triggers() []string {
     }
 }
 
-func (e EightBall) Response() string {
+func (e EightBall) Response(trigger string, content string) string {
     return ":8ball: " + helpers.GetText("triggers.8ball")
 }

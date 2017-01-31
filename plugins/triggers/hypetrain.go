@@ -15,6 +15,6 @@ func (h HypeTrain) Triggers() []string {
     }
 }
 
-func (h HypeTrain) Response() string {
+func (h HypeTrain) Response(trigger string, content string) string {
     return helpers.GetText("triggers.hypetrain.text") + "\n" + helpers.GetText("triggers.hypetrain.link")
 }

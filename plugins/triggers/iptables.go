@@ -11,6 +11,6 @@ func (i IPTables) Triggers() []string {
     }
 }
 
-func (i IPTables) Response() string {
+func (i IPTables) Response(trigger string, content string) string {
     return helpers.GetText("triggers.iptables")
 }

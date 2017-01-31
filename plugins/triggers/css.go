@@ -15,6 +15,6 @@ func (c CSS) Triggers() []string {
     }
 }
 
-func (c CSS) Response() string {
+func (c CSS) Response(trigger string, content string) string {
     return helpers.GetText("triggers.css")
 }

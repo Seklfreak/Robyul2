@@ -28,7 +28,7 @@ type Plugin interface {
 
 type TriggerPlugin interface {
     Triggers() []string
-    Response() string
+    Response(trigger string, content string) string
 }
 
 // PluginList is the list of active plugins
@@ -112,7 +112,7 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
                     defer helpers.RecoverDiscord(msg)
                     cache.GetSession().ChannelMessageSend(
                         msg.ChannelID,
-                        plugin.Response(),
+                        plugin.Response(trigger, content),
                     )
                 }(plug)
                 break

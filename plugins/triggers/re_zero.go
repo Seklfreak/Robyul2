@@ -12,6 +12,6 @@ func (r ReZero) Triggers() []string {
     }
 }
 
-func (r ReZero) Response() string {
+func (r ReZero) Response(trigger string, content string) string {
     return helpers.GetText("triggers.re_zero.link")
 }

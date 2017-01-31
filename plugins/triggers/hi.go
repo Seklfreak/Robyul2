@@ -18,6 +18,6 @@ func (h Hi) Triggers() []string {
     }
 }
 
-func (h Hi) Response() string {
+func (h Hi) Response(trigger string, content string) string {
     return ":wave: " + helpers.GetText("triggers.hi.link")
 }
