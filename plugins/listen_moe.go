@@ -323,24 +323,34 @@ func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
 // Helper functions for interacting with listen.moe's api
 // ---------------------------------------------------------------------------------------------------------------------
 func (l *ListenDotMoe) tracklistWorker() {
-    c, _, err := websocket.DefaultDialer.Dial((&url.URL{
-        Scheme: "wss",
-        Host: "listen.moe",
-        Path: "/api/v2/socket",
-    }).String(), nil)
-
-    helpers.Relax(err)
-    defer c.Close()
-
-    c.WriteJSON(map[string]string{"token":helpers.GetConfig().Path("listen_moe").Data().(string)})
-    helpers.Relax(err)
-
     for {
-        time.Sleep(5 * time.Second)
-        err := c.ReadJSON(&RadioCurrentMeta)
-        if err == io.ErrUnexpectedEOF {
-            continue
-        }
+        c, _, err := websocket.DefaultDialer.Dial((&url.URL{
+            Scheme: "wss",
+            Host: "listen.moe",
+            Path: "/api/v2/socket",
+        }).String(), nil)
+
         helpers.Relax(err)
+
+        c.WriteJSON(map[string]string{"token":helpers.GetConfig().Path("listen_moe").Data().(string)})
+        helpers.Relax(err)
+
+        for {
+            time.Sleep(5 * time.Second)
+            err := c.ReadJSON(&RadioCurrentMeta)
+
+            if err == io.ErrUnexpectedEOF {
+                continue
+            }
+
+            if err != nil {
+                break
+            }
+        }
+
+        logger.WARNING.L("listen_moe", "Connection to wss://listen.moe lost. Reconnecting!")
+        c.Close()
+
+        time.Sleep(5 * time.Second)
     }
 }

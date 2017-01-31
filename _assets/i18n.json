@@ -1,4 +1,13 @@
 {
+  "admin": {
+    "no_permission": [
+      "Uhm I'm sorry but only guild admins may do that :frowning:",
+      "Don't tell anyone but that command - totally dangerous!\nOnly admins are brave enough to use it.",
+      "These are not the druids you're looking for :see_no_evil:",
+      "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
+      "Seems like you're not an admin :thinking:"
+    ]
+  },
   "bot": {
     "mentions": {
       "too-few": [
