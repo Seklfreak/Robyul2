@@ -124,8 +124,8 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         // Nope.
         // Check if the user wanted us to join.
         // Else report the error
-        if content == "join" {
-            helpers.RequireAdmin(msg, func() {
+        if content == "join" || content == "j" {
+            if helpers.IsAdmin(msg) {
                 helpers.VoiceOccupy(guild.ID, "listen.moe")
 
                 message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
@@ -143,7 +143,10 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
                 }
 
                 helpers.Relax(merr)
-            })
+            } else {
+                // @todo: remove this else and use returns instead.
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("admin.no_permission"))
+            }
         } else {
             session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff :thinking:")
         }
@@ -155,7 +158,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
     // Check for other commands
     switch content {
     case "leave", "l":
-        helpers.RequireAdmin(msg, func() {
+        if helpers.IsAdmin(msg) {
             voiceConnection.Disconnect()
 
             l.connections[guild.ID].Lock()
@@ -163,7 +166,11 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
             delete(l.connections, guild.ID)
 
             session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
-        })
+
+            return
+        }
+
+        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("admin.no_permission"))
         break
 
     case "playing", "np", "song", "title":
@@ -224,69 +231,83 @@ func (l *ListenDotMoe) resolveVoiceChannel(user *discordgo.User, guild *discordg
 // Helper functions for reading and piping listen.moe's stream to multiple targets at once
 // ---------------------------------------------------------------------------------------------------------------------
 
+// @todo:
+// remove FFMPEG and ROPUS dependency.
+// should be doable by correctly waiting until the ICECast headers are sent and then piping the raw bytes.
+// until we reach this point the streamer routine consumes about 2% CPU power. All-The-Time!!!
+
 func (l *ListenDotMoe) streamer() {
-    logger.PLUGIN.L("listen_moe", "Allocating channels")
-    RadioChan = radio.NewRadio()
-
-    logger.PLUGIN.L("listen_moe", "Piping subprocesses")
-
-    // Read stream with ffmpeg and turn it into PCM
-    ffmpeg := exec.Command(
-        "ffmpeg",
-        "-i", "http://listen.moe:9999/stream",
-        "-f", "s16le",
-        "pipe:1",
-    )
-    ffout, err := ffmpeg.StdoutPipe()
-    helpers.Relax(err)
-
-    // Pipe FFMPEG to ropus to convert it to .ro format
-    ropus := exec.Command("ropus")
-    ropus.Stdin = ffout
-
-    rout, err := ropus.StdoutPipe()
-    helpers.Relax(err)
-
-    logger.PLUGIN.L("listen_moe", "Running FFMPEG")
-
-    // Run ffmpeg
-    err = ffmpeg.Start()
-    helpers.Relax(err)
-
-    logger.PLUGIN.L("listen_moe", "Running ROPUS")
-
-    // Run ropus
-    err = ropus.Start()
-    helpers.Relax(err)
-
-    // Stream ropus to buffer
-    robuf := bufio.NewReaderSize(rout, 16384)
-
-    // Stream ropus output to discord
-    var opusLength int16
-
-    logger.PLUGIN.L("listen_moe", "Streaming :3")
     for {
-        // Read opus frame length
-        err = binary.Read(robuf, binary.LittleEndian, &opusLength)
-        if err == io.EOF || err == io.ErrUnexpectedEOF {
-            break
-        }
+        logger.PLUGIN.L("listen_moe", "Allocating channels")
+        RadioChan = radio.NewRadio()
+
+        logger.PLUGIN.L("listen_moe", "Piping subprocesses")
+
+        // Read stream with ffmpeg and turn it into PCM
+        ffmpeg := exec.Command(
+            "ffmpeg",
+            "-i", "http://listen.moe:9999/stream",
+            "-f", "s16le",
+            "pipe:1",
+        )
+        ffout, err := ffmpeg.StdoutPipe()
         helpers.Relax(err)
 
-        // Read audio data
-        opus := make([]byte, opusLength)
-        err = binary.Read(robuf, binary.LittleEndian, &opus)
-        if err == io.EOF || err == io.ErrUnexpectedEOF {
-            break
-        }
+        // Pipe FFMPEG to ropus to convert it to .ro format
+        ropus := exec.Command("ropus")
+        ropus.Stdin = ffout
+
+        rout, err := ropus.StdoutPipe()
         helpers.Relax(err)
 
-        // Send to discord
-        RadioChan.Broadcast(opus)
+        // Run ffmpeg
+        logger.PLUGIN.L("listen_moe", "Running FFMPEG")
+        err = ffmpeg.Start()
+        helpers.Relax(err)
+
+        // Run ropus
+        logger.PLUGIN.L("listen_moe", "Running ROPUS")
+        err = ropus.Start()
+        helpers.Relax(err)
+
+        // Stream ropus to buffer
+        robuf := bufio.NewReaderSize(rout, 16384)
+
+        // Stream ropus output to discord
+        var opusLength int16
+
+        logger.PLUGIN.L("listen_moe", "Streaming :3")
+        for {
+            // Read opus frame length
+            err = binary.Read(robuf, binary.LittleEndian, &opusLength)
+            if err == io.EOF || err == io.ErrUnexpectedEOF {
+                break
+            }
+            helpers.Relax(err)
+
+            // Read audio data
+            opus := make([]byte, opusLength)
+            err = binary.Read(robuf, binary.LittleEndian, &opus)
+            if err == io.EOF || err == io.ErrUnexpectedEOF {
+                break
+            }
+            helpers.Relax(err)
+
+            // Send to discord
+            RadioChan.Broadcast(opus)
+        }
+
+        logger.ERROR.L("listen_moe", "Stream died :(")
+        logger.PLUGIN.L("listen_moe", "Waiting for ffmpeg and ropus to die")
+        ffmpeg.Wait()
+        ropus.Wait()
+
+        logger.PLUGIN.L("listen_moe", "Telling coroutines the bad news...")
+        RadioChan.Alienate()
+
+        logger.PLUGIN.L("listen_moe", "Will reconnect in 2 seconds")
+        time.Sleep(2 * time.Second)
     }
-
-    logger.PLUGIN.L("listen_moe", "Stream died")
 }
 
 func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {

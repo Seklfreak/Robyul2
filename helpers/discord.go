@@ -1,7 +1,6 @@
 package helpers
 
 import (
-    "errors"
     "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/cache"
 )
@@ -22,32 +21,37 @@ func IsBotAdmin(id string) bool {
     return false
 }
 
-// RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
-func RequireAdmin(msg *discordgo.Message, cb Callback) {
+func IsAdmin(msg *discordgo.Message) bool {
     channel, e := cache.GetSession().Channel(msg.ChannelID)
     if e != nil {
-        SendError(msg, errors.New("Cannot verify permissions"))
-        return
+        return false
     }
 
     guild, e := cache.GetSession().Guild(channel.GuildID)
     if e != nil {
-        SendError(msg, errors.New("Cannot verify permissions"))
-        return
+        return false
     }
 
     if msg.Author.ID == guild.OwnerID || IsBotAdmin(msg.Author.ID) {
-        cb()
-        return
+        return true
     }
 
     // Check if role may manage server
     for _, role := range guild.Roles {
         if role.Permissions & 8 == 8 {
-            cb()
-            return
+            return true
         }
     }
 
-    cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+    return false
+}
+
+// RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
+func RequireAdmin(msg *discordgo.Message, cb Callback) {
+    if !IsAdmin(msg) {
+        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+        return
+    }
+
+    cb()
 }
