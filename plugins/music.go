@@ -19,6 +19,7 @@ import (
     "time"
     "bufio"
     "sync"
+    "git.lukas.moe/sn0w/Karen/cache"
 )
 
 // Define control messages
@@ -175,8 +176,14 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Store channel ref
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := cache.Channel(msg.ChannelID)
     helpers.Relax(err)
+
+    // Only continue if the voice is available
+    if !helpers.VoiceIsFreeOrOccupiedBy(channel.GuildID, "music") {
+        helpers.VoiceSendStatus(channel.ID, channel.GuildID, session)
+        return
+    }
 
     // Store guild ref
     guild, err := session.Guild(channel.GuildID)
@@ -202,12 +209,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         // Check if the user wanted us to join.
         // Else report the error
         if command == "join" {
-            lock := helpers.VoiceOccupy(guild.ID, "music")
-            helpers.RelaxAssertEqual(lock, true, nil)
+            helpers.VoiceOccupy(guild.ID, "music")
 
             message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
-            _, err := session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
+            voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
             helpers.Relax(err)
 
             if merr == nil {

@@ -1,6 +1,9 @@
 package helpers
 
-import "sync"
+import (
+    "sync"
+    "github.com/sn0w/discordgo"
+)
 
 // UNASSIGNED is an alias for a guild that is not connected to VC right now
 const UNASSIGNED = "___UNASSIGNED___"
@@ -13,9 +16,23 @@ var (
     mutex = &sync.Mutex{}
 )
 
-// VoiceIsOccupied checks if a plugin blocks further voice connections
+// VoiceIsOccupied checks if any plugin blocks further voice connections
 func VoiceIsOccupied(guild string) bool {
+    if connections[guild] == "" {
+        connections[guild] = UNASSIGNED
+    }
+
     return connections[guild] != UNASSIGNED
+}
+
+// VoiceIsOccupied checks if a given plugin blocks further voice connections
+func VoiceIsOccupiedBy(guild string, id string) bool {
+    return connections[guild] == id
+}
+
+// VoiceIsOccupied checks if a given plugin blocks further voice connections or if the voice is unassigned
+func VoiceIsFreeOrOccupiedBy(guild string, id string) bool {
+    return !VoiceIsOccupied(guild) || VoiceIsOccupiedBy(guild, id)
 }
 
 // VoiceOccupy marks a guild as occupied. Returns true if occupation was successful. False otherwise.
@@ -43,4 +60,11 @@ func VoiceFree(guild string) {
     mutex.Lock()
     connections[guild] = UNASSIGNED
     mutex.Unlock()
+}
+
+func VoiceSendStatus(channel string, guild string, session *discordgo.Session) {
+    session.ChannelMessageSend(
+        channel,
+        "Sorry but voice is currently occupied by `" + connections[guild] + "`.\nCall leave for that plugin first.",
+    )
 }

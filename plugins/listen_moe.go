@@ -12,6 +12,7 @@ import (
     "encoding/binary"
     "io"
     "git.lukas.moe/sn0w/radio-b"
+    "git.lukas.moe/sn0w/Karen/cache"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -69,8 +70,14 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
     content = strings.TrimSpace(content)
 
     // Store channel ref
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := cache.Channel(msg.ChannelID)
     helpers.Relax(err)
+
+    // Only continue if the voice is available
+    if !helpers.VoiceIsFreeOrOccupiedBy(channel.GuildID, "listen.moe") {
+        helpers.VoiceSendStatus(channel.ID, channel.GuildID, session)
+        return
+    }
 
     // Store guild ref
     guild, err := session.Guild(channel.GuildID)
@@ -96,8 +103,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         // Check if the user wanted us to join.
         // Else report the error
         if content == "join" {
-            lock := helpers.VoiceOccupy(guild.ID, "listen.moe")
-            helpers.RelaxAssertEqual(lock, true, nil)
+            helpers.VoiceOccupy(guild.ID, "listen.moe")
 
             message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
