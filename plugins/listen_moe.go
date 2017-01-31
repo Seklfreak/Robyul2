@@ -56,6 +56,7 @@ type ListenDotMoe struct {
 func (l *ListenDotMoe) Commands() []string {
     return []string{
         "moe",
+        "lm",
     }
 }
 
