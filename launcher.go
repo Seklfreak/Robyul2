@@ -16,7 +16,7 @@ import (
 
 // Entrypoint
 func main() {
-    Logger.INFO.L("launcher", "Booting Karen...")
+    Logger.BOOT.L("launcher", "Booting Karen...")
 
     // Read config
     helpers.LoadConfig("config.json")
@@ -40,17 +40,18 @@ func main() {
     }
 
     // Print UA
-    Logger.WARNING.L("launcher", "USERAGENT: '" + helpers.DEFAULT_UA + "'")
+    Logger.BOOT.L("launcher", "USERAGENT: '" + helpers.DEFAULT_UA + "'")
 
     // Call home
-    Logger.INFO.L("launcher", "[SENTRY] Calling home...")
+    Logger.BOOT.L("launcher", "[SENTRY] Calling home...")
     err := raven.SetDSN(config.Path("sentry").Data().(string))
     if err != nil {
         panic(err)
     }
-    Logger.INFO.L("launcher", "[SENTRY] Someone picked up the phone \\^-^/")
+    Logger.BOOT.L("launcher", "[SENTRY] Someone picked up the phone \\^-^/")
 
     // Connect to DB
+    Logger.BOOT.L("launcher", "Opening database connection...")
     helpers.ConnectDB(
         config.Path("rethink.url").Data().(string),
         config.Path("rethink.db").Data().(string),
@@ -63,7 +64,7 @@ func main() {
     migrations.Run()
 
     // Connect and add event handlers
-    Logger.INFO.L("launcher", "Connecting to discord...")
+    Logger.BOOT.L("launcher", "Connecting to discord...")
     discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
     if err != nil {
         panic(err)
@@ -88,7 +89,7 @@ func main() {
     // Wait until the os wants us to shutdown
     <-channel
 
-    Logger.WARNING.L("launcher", "The OS is killing me :c")
-    Logger.WARNING.L("launcher", "Disconnecting...")
+    Logger.ERROR.L("launcher", "The OS is killing me :c")
+    Logger.ERROR.L("launcher", "Disconnecting...")
     discord.Close()
 }

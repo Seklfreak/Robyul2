@@ -16,15 +16,15 @@ var migrations = []helpers.Callback{
 
 // Run executes all registered migrations
 func Run() {
-    logger.INFO.L("migrator", "Running migrations...")
+    logger.BOOT.L("migrator", "Running migrations...")
     for _, migration := range migrations {
         migrationName := runtime.FuncForPC(
             reflect.ValueOf(migration).Pointer(),
         ).Name()
 
-        logger.INFO.L("migrator", "Running " + migrationName)
+        logger.BOOT.L("migrator", "Running " + migrationName)
         migration()
     }
 
-    logger.INFO.L("migrator", "Migrations finished!")
+    logger.BOOT.L("migrator", "Migrations finished!")
 }

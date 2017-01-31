@@ -165,10 +165,10 @@ func (l *ListenDotMoe) resolveVoiceChannel(user *discordgo.User, guild *discordg
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (l *ListenDotMoe) streamer() {
-    logger.VERBOSE.L("listen_moe.go", "Allocating channels")
+    logger.PLUGIN.L("listen_moe", "Allocating channels")
     RadioChan = radio.NewRadio()
 
-    logger.VERBOSE.L("listen_moe.go", "Piping subprocesses")
+    logger.PLUGIN.L("listen_moe", "Piping subprocesses")
 
     // Read stream with ffmpeg and turn it into PCM
     ffmpeg := exec.Command(
@@ -187,11 +187,13 @@ func (l *ListenDotMoe) streamer() {
     rout, err := ropus.StdoutPipe()
     helpers.Relax(err)
 
-    logger.VERBOSE.L("listen_moe.go", "Running subprocesses")
+    logger.PLUGIN.L("listen_moe", "Running FFMPEG")
 
     // Run ffmpeg
     err = ffmpeg.Start()
     helpers.Relax(err)
+
+    logger.PLUGIN.L("listen_moe", "Running ROPUS")
 
     // Run ropus
     err = ropus.Start()
@@ -203,7 +205,7 @@ func (l *ListenDotMoe) streamer() {
     // Stream ropus output to discord
     var opusLength int16
 
-    logger.VERBOSE.L("listen_moe.go", "Streaming")
+    logger.PLUGIN.L("listen_moe", "Streaming :3")
     for {
         // Read opus frame length
         err = binary.Read(robuf, binary.LittleEndian, &opusLength)
@@ -224,7 +226,7 @@ func (l *ListenDotMoe) streamer() {
         RadioChan.Broadcast(opus)
     }
 
-    logger.VERBOSE.L("listen_moe.go", "Stream died")
+    logger.PLUGIN.L("listen_moe", "Stream died")
 }
 
 func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
