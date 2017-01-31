@@ -22,3 +22,4 @@ import:
 - package: github.com/GoRethink/gorethink
   version: ^3.0.0
 - package: github.com/bwmarrin/snowflake
+- package: git.lukas.moe/sn0w/radio-b

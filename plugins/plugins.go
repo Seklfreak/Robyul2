@@ -68,6 +68,7 @@ var PluginList = []Plugin{
 var TriggerPluginList = []TriggerPlugin{
     triggers.CSS{},
     triggers.Donate{},
+    triggers.EightBall{},
     triggers.Hi{},
     triggers.HypeTrain{},
     triggers.Invite{},

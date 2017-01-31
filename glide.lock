@@ -1,6 +1,8 @@
-hash: 755323ff0b0f544a043c692416b9e1292d82e19f25fbf5555789b2334fdfa715
-updated: 2017-01-31T00:12:15.701220406+01:00
+hash: 5288e0f3fdf9a0018d45eaa53b7c4633fc2ecd30dd6857d1ae5ba9c60e46b484
+updated: 2017-01-31T17:38:21.816735322+01:00
 imports:
+- name: git.lukas.moe/sn0w/radio-b
+  version: 26c2bee4caee0c2b261ff0b8accf01fd9ed6bf1f
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
@@ -46,8 +48,6 @@ imports:
   version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 - name: github.com/sn0w/discordgo
   version: d263620a46be3ebba53b409c48322758f6747edd
-- name: github.com/sn0w/radio-b
-  version: 2ff01299214548269cc0892b9b3a446370f75d66
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
