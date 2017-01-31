@@ -189,7 +189,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
             },
             Fields: fields,
             Footer: &discordgo.MessageEmbedFooter{
-                Text: "powered by [listen.moe](https://listen.moe) (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
+                Text: "powered by listen.moe (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
             },
         })
         break
