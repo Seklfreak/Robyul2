@@ -18,7 +18,7 @@ import:
 - package: github.com/marcmak/calc
 - package: github.com/olebedev/when
 - package: github.com/sn0w/discordgo
-  version: d263620a46be3ebba53b409c48322758f6747edd
+  version: sn0w-patch-3
 - package: github.com/GoRethink/gorethink
   version: ^3.0.0
 - package: github.com/bwmarrin/snowflake

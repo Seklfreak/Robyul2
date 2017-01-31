@@ -669,7 +669,7 @@ func (m *Music) processorLoop() {
 
             // WAV => RAW OPUS
             cstart := time.Now().Unix()
-            Logger.INFO.L("music", "WAV => ROPUS | " + name)
+            Logger.INFO.L("music", "PCM => ROPUS | " + name)
 
             // Create file
             opusFile, err := os.Create("/srv/karen-data/" + name + ".ro")
@@ -677,7 +677,15 @@ func (m *Music) processorLoop() {
             writer := bufio.NewWriter(opusFile)
 
             // Read wav
-            cat := exec.Command("cat", "/srv/karen-data/" + name + ".wav")
+            cat := exec.Command(
+                "ffmpeg",
+                "-i", "/srv/karen-data/" + name + ".wav",
+                "-f", "s16le",
+                "-ar", "48000",
+                "-ac", "2",
+                "-v", "128",
+                "pipe:1",
+            )
 
             // Convert wav to raw opus
             ro := exec.Command("ropus")

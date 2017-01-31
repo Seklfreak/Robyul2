@@ -131,7 +131,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
     // Check for other commands
     switch content {
     case "leave", "l":
-        voiceConnection.Close()
+        voiceConnection.Disconnect()
 
         l.connections[guild.ID].Lock()
         l.connections[guild.ID].Close()
