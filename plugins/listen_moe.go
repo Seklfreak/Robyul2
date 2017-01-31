@@ -185,7 +185,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
             Color: 0xEC1A55,
             Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "https://cdn.discordapp.com/icons/216372140046286849/abfe0ee694e80138aa8134b94e7901a4.webp",
+                URL: "http://i.imgur.com/H2cqEio.png",
             },
             Fields: fields,
             Footer: &discordgo.MessageEmbedFooter{
