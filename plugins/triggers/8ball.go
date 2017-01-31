@@ -12,5 +12,9 @@ func (e EightBall) Triggers() []string {
 }
 
 func (e EightBall) Response(trigger string, content string) string {
+    if len(content) < 3 {
+        return helpers.GetText("triggers.8ball.ask_a_question")
+    }
+
     return ":8ball: " + helpers.GetText("triggers.8ball")
 }
