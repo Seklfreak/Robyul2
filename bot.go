@@ -12,6 +12,7 @@ import (
     "regexp"
     "strings"
     "time"
+    "strconv"
 )
 
 // BotOnReady gets called after the gateway connected
@@ -24,6 +25,10 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     ))
 
     cache.SetSession(session)
+
+    // Stats!
+    totalPlugins := 0
+    totalTriggers := 0
 
     // Init plugins
     fmt.Println()
@@ -42,6 +47,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
         ))
 
         plugin.Init(session)
+        totalPlugins++
     }
 
     // Init trigger plugins
@@ -59,7 +65,14 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
             helpers.Typeof(plugin),
             cmds,
         ))
+
+        totalTriggers++
     }
+
+    Logger.PLUGIN.L(
+        "bot",
+        "Initializer finished. Loaded " + strconv.Itoa(totalPlugins) + " plugins and " + strconv.Itoa(totalTriggers) + " triggers",
+    )
 
     go func() {
         time.Sleep(3 * time.Second)
