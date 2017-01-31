@@ -1,5 +1,5 @@
-hash: 3e746c6e8fb0ba9a02a6b5ce32ea0c2a965fa7f1a2327eaabb018c4573b3a2d6
-updated: 2017-01-31T20:54:18.039202756+01:00
+hash: 747bc1d23d0787c97794a5721f8a8e98bc958191b2ad99cb5991a395c7c1af35
+updated: 2017-01-31T21:23:30.338747772+01:00
 imports:
 - name: git.lukas.moe/sn0w/radio-b
   version: 26c2bee4caee0c2b261ff0b8accf01fd9ed6bf1f
@@ -24,7 +24,7 @@ imports:
 - name: github.com/GoRethink/gorethink
   version: 610fcc04c971a9fa42f1b6625c7c52b5bb472c51
 - name: github.com/gorilla/websocket
-  version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/Jeffail/gabs

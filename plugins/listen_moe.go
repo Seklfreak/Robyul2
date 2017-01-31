@@ -13,12 +13,32 @@ import (
     "io"
     "git.lukas.moe/sn0w/radio-b"
     "git.lukas.moe/sn0w/Karen/cache"
+    "github.com/gorilla/websocket"
+    "net/url"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helper structs for managing and closing voice connections
 // ---------------------------------------------------------------------------------------------------------------------
 var RadioChan *radio.Radio
+
+var RadioCurrentMeta RadioMeta
+
+type RadioMetaContainer struct {
+    SongId      float64 `json:"song_id,omitempty"`
+    ArtistName  string `json:"artist_name"`
+    SongName    string `json:"song_name"`
+    AnimeName   string `json:"anime_name,omitempty"`
+    RequestedBy string `json:"requested_by,omitempty"`
+    Listeners   float64 `json:"listeners,omitempty"`
+}
+
+type RadioMeta struct {
+    RadioMetaContainer
+
+    Last       RadioMetaContainer `json:"last,omitempty"`
+    SecondLast RadioMetaContainer `json:"second_last,omitempty"`
+}
 
 type RadioGuildConnection struct {
     sync.RWMutex
@@ -64,6 +84,7 @@ func (l *ListenDotMoe) Init(session *discordgo.Session) {
     l.connections = make(map[string]*RadioGuildConnection)
 
     go l.streamer()
+    go l.tracklistWorker()
 }
 
 func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -142,7 +163,35 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         break
 
     case "playing", "np", "song", "title":
-        session.ChannelMessageSend(channel.ID, "Not yet implemented")
+        fields := make([]*discordgo.MessageEmbedField, 1)
+        fields[0] = &discordgo.MessageEmbedField{
+            Name: "Now Playing",
+            Value: RadioCurrentMeta.ArtistName + " " + RadioCurrentMeta.SongName,
+            Inline: false,
+        }
+
+        if RadioCurrentMeta.AnimeName != "" {
+            fields = append(fields, &discordgo.MessageEmbedField{
+                Name: "Anime", Value: RadioCurrentMeta.AnimeName, Inline: false,
+            })
+        }
+
+        if RadioCurrentMeta.RequestedBy != "" {
+            fields = append(fields, &discordgo.MessageEmbedField{
+                Name: "Requested by", Value: "[" + RadioCurrentMeta.RequestedBy + "](https://forum.listen.moe/u/" + RadioCurrentMeta.RequestedBy + ")", Inline: false,
+            })
+        }
+
+        session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+            Color: 0xEC1A55,
+            Thumbnail: &discordgo.MessageEmbedThumbnail{
+                URL: "https://cdn.discordapp.com/icons/216372140046286849/abfe0ee694e80138aa8134b94e7901a4.webp",
+            },
+            Fields: fields,
+            Footer: &discordgo.MessageEmbedFooter{
+                Text: "powered by listen.moe (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
+            },
+        })
         break
     }
 }
@@ -264,4 +313,32 @@ func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
     vc.Speaking(false)
 
     RadioChan.Stop(id)
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Helper functions for interacting with listen.moe's api
+// ---------------------------------------------------------------------------------------------------------------------
+func (l *ListenDotMoe) tracklistWorker() {
+    c, _, err := websocket.DefaultDialer.Dial((&url.URL{
+        Scheme: "wss",
+        Host: "listen.moe",
+        Path: "/api/v2/socket",
+    }).String(), nil)
+
+    helpers.Relax(err)
+    defer c.Close()
+
+    c.WriteJSON(map[string]string{"token":helpers.GetConfig().Path("listen_moe").Data().(string)})
+    helpers.Relax(err)
+
+    for {
+        time.Sleep(5 * time.Second)
+        logger.VERBOSE.L("listen_moe", "Getting new meta")
+
+        err := c.ReadJSON(&RadioCurrentMeta)
+        if err == io.ErrUnexpectedEOF {
+            continue
+        }
+        helpers.Relax(err)
+    }
 }
