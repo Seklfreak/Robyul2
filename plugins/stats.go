@@ -1,13 +1,13 @@
 package plugins
 
 import (
-    "github.com/sn0w/discordgo"
-    "github.com/dustin/go-humanize"
-    "git.lukas.moe/sn0w/Karen/version"
-    "runtime"
-    "strconv"
     "fmt"
     "git.lukas.moe/sn0w/Karen/metrics"
+    "git.lukas.moe/sn0w/Karen/version"
+    "github.com/dustin/go-humanize"
+    "github.com/sn0w/discordgo"
+    "runtime"
+    "strconv"
     "time"
 )
 

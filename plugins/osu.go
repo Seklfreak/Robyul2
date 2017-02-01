@@ -1,11 +1,11 @@
 package plugins
 
 import (
-    "github.com/sn0w/discordgo"
-    "git.lukas.moe/sn0w/Karen/helpers"
-    "strings"
     "fmt"
+    "git.lukas.moe/sn0w/Karen/helpers"
+    "github.com/sn0w/discordgo"
     "regexp"
+    "strings"
 )
 
 type Osu struct{}
@@ -83,7 +83,7 @@ func (o Osu) Action(command string, content string, msg *discordgo.Message, sess
     }
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        Color: 0xEF77AF,
+        Color:       0xEF77AF,
         Description: "Showing stats for " + user,
         Thumbnail: &discordgo.MessageEmbedThumbnail{
             URL: avatar,
@@ -98,7 +98,7 @@ func (o Osu) Action(command string, content string, msg *discordgo.Message, sess
             {Name: "Rank (Global)", Value: json.Path("pp_rank").Data().(string) + "th", Inline: true},
         },
         Footer: &discordgo.MessageEmbedFooter{
-            Text:  "ppy powered :3",
+            Text: "ppy powered :3",
         },
     })
 }

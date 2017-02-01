@@ -2,7 +2,7 @@ package triggers
 
 import "git.lukas.moe/sn0w/Karen/helpers"
 
-type Git struct {}
+type Git struct{}
 
 func (g Git) Triggers() []string {
     return []string{

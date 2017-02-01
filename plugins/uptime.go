@@ -1,10 +1,10 @@
 package plugins
 
 import (
+    "git.lukas.moe/sn0w/Karen/metrics"
     "github.com/sn0w/discordgo"
     "strconv"
     "time"
-    "git.lukas.moe/sn0w/Karen/metrics"
 )
 
 type Uptime struct{}

@@ -1,20 +1,20 @@
 package plugins
 
 import (
-    "time"
-    "sync"
-    "github.com/sn0w/discordgo"
-    "git.lukas.moe/sn0w/Karen/logger"
-    "git.lukas.moe/sn0w/Karen/helpers"
-    "strings"
-    "os/exec"
     "bufio"
     "encoding/binary"
-    "io"
-    "git.lukas.moe/sn0w/radio-b"
     "git.lukas.moe/sn0w/Karen/cache"
+    "git.lukas.moe/sn0w/Karen/helpers"
+    "git.lukas.moe/sn0w/Karen/logger"
+    "git.lukas.moe/sn0w/radio-b"
     "github.com/gorilla/websocket"
+    "github.com/sn0w/discordgo"
+    "io"
     "net/url"
+    "os/exec"
+    "strings"
+    "sync"
+    "time"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -26,10 +26,10 @@ var RadioCurrentMeta RadioMeta
 
 type RadioMetaContainer struct {
     SongId      float64 `json:"song_id,omitempty"`
-    ArtistName  string `json:"artist_name"`
-    SongName    string `json:"song_name"`
-    AnimeName   string `json:"anime_name,omitempty"`
-    RequestedBy string `json:"requested_by,omitempty"`
+    ArtistName  string  `json:"artist_name"`
+    SongName    string  `json:"song_name"`
+    AnimeName   string  `json:"anime_name,omitempty"`
+    RequestedBy string  `json:"requested_by,omitempty"`
     Listeners   float64 `json:"listeners,omitempty"`
 }
 
@@ -176,8 +176,8 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
     case "playing", "np", "song", "title":
         fields := make([]*discordgo.MessageEmbedField, 1)
         fields[0] = &discordgo.MessageEmbedField{
-            Name: "Now Playing",
-            Value: RadioCurrentMeta.ArtistName + " " + RadioCurrentMeta.SongName,
+            Name:   "Now Playing",
+            Value:  RadioCurrentMeta.ArtistName + " " + RadioCurrentMeta.SongName,
             Inline: false,
         }
 
@@ -347,13 +347,13 @@ func (l *ListenDotMoe) tracklistWorker() {
     for {
         c, _, err := websocket.DefaultDialer.Dial((&url.URL{
             Scheme: "wss",
-            Host: "listen.moe",
-            Path: "/api/v2/socket",
+            Host:   "listen.moe",
+            Path:   "/api/v2/socket",
         }).String(), nil)
 
         helpers.Relax(err)
 
-        c.WriteJSON(map[string]string{"token":helpers.GetConfig().Path("listen_moe").Data().(string)})
+        c.WriteJSON(map[string]string{"token": helpers.GetConfig().Path("listen_moe").Data().(string)})
         helpers.Relax(err)
 
         for {

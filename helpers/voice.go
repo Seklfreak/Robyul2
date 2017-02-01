@@ -1,8 +1,8 @@
 package helpers
 
 import (
-    "sync"
     "github.com/sn0w/discordgo"
+    "sync"
 )
 
 // UNASSIGNED is an alias for a guild that is not connected to VC right now

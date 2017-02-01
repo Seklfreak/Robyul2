@@ -1,8 +1,8 @@
 package plugins
 
 import (
-    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
+    "github.com/sn0w/discordgo"
     "net/url"
 )
 

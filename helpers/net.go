@@ -3,11 +3,11 @@ package helpers
 import (
     "bytes"
     "errors"
+    "git.lukas.moe/sn0w/Karen/version"
     "github.com/Jeffail/gabs"
     "io"
     "net/http"
     "strconv"
-    "git.lukas.moe/sn0w/Karen/version"
 )
 
 var DEFAULT_UA = "Karen/" + version.BOT_VERSION + " (https://git.lukas.moe/sn0w/karen)"

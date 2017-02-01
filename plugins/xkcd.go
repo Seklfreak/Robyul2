@@ -2,13 +2,13 @@ package plugins
 
 import (
     "fmt"
-    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
-    "regexp"
-    "strings"
     "github.com/PuerkitoBio/goquery"
-    "strconv"
+    "github.com/sn0w/discordgo"
     "math/rand"
+    "regexp"
+    "strconv"
+    "strings"
 )
 
 type XKCD struct{}

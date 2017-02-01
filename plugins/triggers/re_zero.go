@@ -2,7 +2,7 @@ package triggers
 
 import "git.lukas.moe/sn0w/Karen/helpers"
 
-type ReZero struct {}
+type ReZero struct{}
 
 func (r ReZero) Triggers() []string {
     return []string{

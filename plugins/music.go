@@ -1,12 +1,14 @@
 package plugins
 
 import (
+    "bufio"
     "encoding/binary"
     "fmt"
-    "github.com/Jeffail/gabs"
-    "github.com/sn0w/discordgo"
+    "git.lukas.moe/sn0w/Karen/cache"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
+    "github.com/Jeffail/gabs"
+    "github.com/sn0w/discordgo"
     rethink "gopkg.in/gorethink/gorethink.v3"
     "io"
     "io/ioutil"
@@ -16,10 +18,8 @@ import (
     "regexp"
     "strconv"
     "strings"
-    "time"
-    "bufio"
     "sync"
-    "git.lukas.moe/sn0w/Karen/cache"
+    "time"
 )
 
 // Define control messages
@@ -382,7 +382,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         // Trim masquerade if present
         contentRune := []rune(content)
         if contentRune[0] == '<' && contentRune[len(contentRune) - 1] == '>' {
-            content = string(contentRune[1:len(contentRune) - 1])
+            content = string(contentRune[1 : len(contentRune) - 1])
         }
 
         // Check if the url is a playlist
@@ -528,7 +528,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			Filter(map[string]interface{}{"processed": true}).
 			Filter(rethink.Row.Field("title").Match(term)).
 			Run(helpers.GetDB())
-		// @formatter:on
+			// @formatter:on
 
         helpers.Relax(err)
         defer cursor.Close()
@@ -784,14 +784,14 @@ func (m *Music) startPlayer(guild string, vc *discordgo.VoiceConnection, msg *di
 // @formatter:off
 // play is responsible for streaming the OPUS data to discord
 func (m *Music) play(
-    vc *discordgo.VoiceConnection,
-    closer <-chan struct{},
-    controller <-chan controlMessage,
-    song Song,
-    msg *discordgo.Message,
-    session *discordgo.Session,
+	vc *discordgo.VoiceConnection,
+	closer <-chan struct{},
+	controller <-chan controlMessage,
+	song Song,
+	msg *discordgo.Message,
+	session *discordgo.Session,
 ) {
-    // @formatter:on
+	// @formatter:on
 
     // Announce track
     session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `" + song.Title + "`")

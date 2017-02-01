@@ -1,10 +1,10 @@
 package helpers
 
 import (
-    "github.com/Jeffail/gabs"
-    "strings"
-    "math/rand"
     "fmt"
+    "github.com/Jeffail/gabs"
+    "math/rand"
+    "strings"
 )
 
 var translations *gabs.Container

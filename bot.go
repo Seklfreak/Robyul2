@@ -2,17 +2,17 @@ package main
 
 import (
     "fmt"
-    "github.com/sn0w/discordgo"
-    "github.com/getsentry/raven-go"
     "git.lukas.moe/sn0w/Karen/cache"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/plugins"
+    "github.com/getsentry/raven-go"
+    "github.com/sn0w/discordgo"
     "regexp"
+    "strconv"
     "strings"
     "time"
-    "strconv"
 )
 
 // BotOnReady gets called after the gateway connected

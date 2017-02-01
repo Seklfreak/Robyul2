@@ -1,11 +1,11 @@
 package plugins
 
 import (
-    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
-    "strings"
     "git.lukas.moe/sn0w/Karen/version"
+    "github.com/sn0w/discordgo"
+    "strings"
 )
 
 type Changelog struct {
@@ -30,8 +30,8 @@ func (c *Changelog) Init(session *discordgo.Session) {
         if err != nil {
             c.log = map[string]string{
                 "number": version.BOT_VERSION,
-                "date": "-",
-                "body": "Sorry but i can't find a changelog for " + version.BOT_VERSION,
+                "date":   "-",
+                "body":   "Sorry but i can't find a changelog for " + version.BOT_VERSION,
             }
             logger.PLUGIN.L("changelog", "Network error. Applied fallback.")
         }
@@ -43,7 +43,7 @@ func (c *Changelog) Init(session *discordgo.Session) {
 
     c.log = map[string]string{
         "number": release.Path("name").Data().(string),
-        "date": release.Path("commit.committed_date").Data().(string),
+        "date":   release.Path("commit.committed_date").Data().(string),
     }
 
     if release.ExistsP("release.description") && release.Path("release.description").Data() != nil {

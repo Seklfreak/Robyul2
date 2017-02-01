@@ -2,7 +2,7 @@ package triggers
 
 import "git.lukas.moe/sn0w/Karen/helpers"
 
-type EightBall struct {}
+type EightBall struct{}
 
 func (e EightBall) Triggers() []string {
     return []string{

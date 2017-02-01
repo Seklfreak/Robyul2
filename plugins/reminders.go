@@ -1,16 +1,16 @@
 package plugins
 
 import (
-    "github.com/sn0w/discordgo"
+    "git.lukas.moe/sn0w/Karen/cache"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
+    "github.com/olebedev/when"
+    "github.com/olebedev/when/rules/common"
+    "github.com/olebedev/when/rules/en"
+    "github.com/sn0w/discordgo"
     rethink "gopkg.in/gorethink/gorethink.v3"
     "strings"
     "time"
-    "github.com/olebedev/when"
-    "github.com/olebedev/when/rules/en"
-    "github.com/olebedev/when/rules/common"
-    "git.lukas.moe/sn0w/Karen/cache"
 )
 
 type Reminders struct {

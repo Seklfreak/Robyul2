@@ -4,9 +4,9 @@ package helpers
 
 import (
     "fmt"
-    "github.com/sn0w/discordgo"
-    "github.com/getsentry/raven-go"
     "git.lukas.moe/sn0w/Karen/cache"
+    "github.com/getsentry/raven-go"
+    "github.com/sn0w/discordgo"
     "reflect"
     "runtime"
     "strconv"

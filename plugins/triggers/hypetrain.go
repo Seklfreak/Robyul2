@@ -6,7 +6,7 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  * Full credit to Der-Eddy and his original python implementation for Shinobu-Chan.
  * @link https://github.com/Der-Eddy/discord_bot
  */
-type HypeTrain struct {}
+type HypeTrain struct{}
 
 func (h HypeTrain) Triggers() []string {
     return []string{

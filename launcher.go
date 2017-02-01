@@ -1,13 +1,13 @@
 package main
 
 import (
-    "github.com/sn0w/discordgo"
-    "github.com/getsentry/raven-go"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/migrations"
     "git.lukas.moe/sn0w/Karen/version"
+    "github.com/getsentry/raven-go"
+    "github.com/sn0w/discordgo"
     "math/rand"
     "os"
     "os/signal"

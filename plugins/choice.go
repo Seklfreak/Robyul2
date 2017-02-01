@@ -2,8 +2,8 @@ package plugins
 
 import (
     "github.com/sn0w/discordgo"
-    "strings"
     "math/rand"
+    "strings"
 )
 
 type Choice struct{}

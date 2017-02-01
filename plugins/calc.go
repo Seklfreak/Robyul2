@@ -1,8 +1,8 @@
 package plugins
 
 import (
-    "github.com/sn0w/discordgo"
     "github.com/marcmak/calc/calc"
+    "github.com/sn0w/discordgo"
     "strconv"
 )
 

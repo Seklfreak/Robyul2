@@ -2,8 +2,8 @@ package plugins
 
 import (
     "fmt"
-    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
+    "github.com/sn0w/discordgo"
 )
 
 type Stone struct{}

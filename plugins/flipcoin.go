@@ -5,7 +5,7 @@ import (
     "math/rand"
 )
 
-type FlipCoin struct{
+type FlipCoin struct {
     choices [2]string
 }
 

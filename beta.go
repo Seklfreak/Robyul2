@@ -1,8 +1,8 @@
 package main
 
 import (
-    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/logger"
+    "github.com/sn0w/discordgo"
     "time"
 )
 

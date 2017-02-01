@@ -6,7 +6,7 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  * Full credit to Der-Eddy and his original python implementation for Shinobu-Chan.
  * @link https://github.com/Der-Eddy/discord_bot
  */
-type Hi struct {}
+type Hi struct{}
 
 func (h Hi) Triggers() []string {
     return []string{

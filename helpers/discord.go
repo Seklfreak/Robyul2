@@ -1,8 +1,8 @@
 package helpers
 
 import (
-    "github.com/sn0w/discordgo"
     "git.lukas.moe/sn0w/Karen/cache"
+    "github.com/sn0w/discordgo"
 )
 
 var botAdmins = []string{

@@ -3,10 +3,10 @@ package helpers
 import (
     "encoding/base64"
     "fmt"
-    "strconv"
-    "strings"
     "golang.org/x/text/unicode/norm"
     "regexp"
+    "strconv"
+    "strings"
 )
 
 // BtoA is a polyfill for javascript's window#btoa()

@@ -24,7 +24,7 @@ func NewBroadcaster() Broadcaster {
             case v := <-sendc:
                 if v == nil {
                     currc <- broadcast{}
-                    return;
+                    return
                 }
                 c := make(chan broadcast, 1)
                 b := broadcast{c: c, v: v}
@@ -38,7 +38,7 @@ func NewBroadcaster() Broadcaster {
 
     return Broadcaster{
         ListenChannel: listenc,
-        SendChannel: sendc,
+        SendChannel:   sendc,
     }
 }
 
