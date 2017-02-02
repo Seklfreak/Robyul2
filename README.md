@@ -22,7 +22,7 @@ Mirror: https://github.com/sn0w/Karen
   <br>
   Got any problems or just want to chat with me and other devs?<br>
   Join the Discord Server! :)<br>
-  <a href="https://discord.gg/5SjDr3G">
+  <a href="https://discord.meetkaren.xyz">
     <img src="https://discordapp.com/api/guilds/180818466847064065/widget.png">
   </a>
 </p>
