@@ -334,28 +334,35 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             return
         }
 
-        msg := ":musical_note: Playlist\n\n"
-
-        songs := [][]string{}
-        for i, song := range *playlist {
-            num := strconv.Itoa(i + 1) + "."
-
-            if i == 0 && m.guildConnections[guild.ID].playing {
-                num = "[>] " + num
-            }
-
-            songs = append(songs, []string{
-                num,
-                helpers.SecondsToDuration(song.Duration),
-                song.Title,
-            })
+        embed := &discordgo.MessageEmbed{
+            Title: ":musical_note: Playlist",
+            Color: 0x0FADED,
+            Fields: []*discordgo.MessageEmbedField{
+                {Name: "Current", Value: "", Inline: false},
+                {Name: "Queue", Value: "", Inline: false},
+            },
+            Footer: &discordgo.MessageEmbedFooter{
+                Text: "",
+            },
         }
 
-        msg += helpers.DrawTable([]string{
-            "#", "Duration", "Title",
-        }, songs)
+        for i, song := range *playlist {
+            if i > 10 {
+                embed.Footer.Text = strconv.Itoa(len(*playlist) - i) + " entries omitted."
+                break
+            }
 
-        session.ChannelMessageSend(channel.ID, msg)
+            num := strconv.Itoa(i + 1) + "."
+
+            if i == 0 {
+                embed.Fields[0].Value = song.Title
+                continue
+            }
+
+            embed.Fields[1].Value += num + " " + song.Title + "\n"
+        }
+
+        session.ChannelMessageSendEmbed(channel.ID, embed)
         break
 
     case "random", "rand":
