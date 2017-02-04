@@ -54,7 +54,6 @@ var PluginList = []Plugin{
     Stats{},
     Stone{},
     Support{},
-    TableFlip{},
     Uptime{},
     UrbanDict{},
     Weather{},
@@ -75,6 +74,7 @@ var TriggerPluginList = []TriggerPlugin{
     triggers.Nep{},
     triggers.ReZero{},
     triggers.Shrug{},
+    triggers.TableFlip{},
     triggers.Triggered{},
 }
 
