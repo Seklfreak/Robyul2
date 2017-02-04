@@ -57,7 +57,6 @@ var PluginList = []Plugin{
     Stone{},
     Support{},
     TableFlip{},
-    Triggered{},
     Uptime{},
     UrbanDict{},
     Weather{},
@@ -76,6 +75,7 @@ var TriggerPluginList = []TriggerPlugin{
     triggers.IPTables{},
     triggers.Nep{},
     triggers.ReZero{},
+    triggers.Triggered{},
 }
 
 // CallBotPlugin iterates through the list of registered
