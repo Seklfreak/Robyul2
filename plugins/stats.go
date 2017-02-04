@@ -42,7 +42,7 @@ func (s Stats) Action(command string, content string, msg *discordgo.Message, se
     var ram runtime.MemStats
     runtime.ReadMemStats(&ram)
 
-    // Get uptiume
+    // Get uptime
     bootTime, err := strconv.ParseInt(metrics.Uptime.String(), 10, 64)
     if err != nil {
         bootTime = 0
