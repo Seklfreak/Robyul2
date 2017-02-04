@@ -52,7 +52,6 @@ var PluginList = []Plugin{
     &Reminders{},
     Roll{},
     RPS{},
-    Shrug{},
     Stats{},
     Stone{},
     Support{},
@@ -75,6 +74,7 @@ var TriggerPluginList = []TriggerPlugin{
     triggers.IPTables{},
     triggers.Nep{},
     triggers.ReZero{},
+    triggers.Shrug{},
     triggers.Triggered{},
 }
 
