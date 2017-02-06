@@ -127,30 +127,34 @@ func (m Music) Commands() []string {
 
 func (m *Music) Init(session *discordgo.Session) {
     m.enabled = false
-    foundYTD, foundFFPROBE, foundFFMPEG := false, false, false
+    foundYTD, foundFFPROBE, foundFFMPEG, foundRopus := false, false, false, false
 
-    Logger.PLUGIN.L("music", "Checking for youtube-dl, ffmpeg and ffprobe...")
+    Logger.PLUGIN.L("music", "Checking for youtube-dl, ropus, ffmpeg and ffprobe...")
     for _, path := range strings.Split(os.Getenv("PATH"), ":") {
         files, _ := ioutil.ReadDir(path)
 
         for _, file := range files {
             switch {
-            case regexp.MustCompile(`youtube-dl.*`).Match([]byte(file.Name())):
+            case regexp.MustCompile(`youtube-dl`).Match([]byte(file.Name())):
                 foundYTD = true
                 break
 
-            case regexp.MustCompile(`ffprobe.*`).Match([]byte(file.Name())):
+            case regexp.MustCompile(`ffprobe`).Match([]byte(file.Name())):
                 foundFFPROBE = true
                 break
 
-            case regexp.MustCompile(`ffmpeg.*`).Match([]byte(file.Name())):
+            case regexp.MustCompile(`ffmpeg`).Match([]byte(file.Name())):
                 foundFFMPEG = true
+                break
+
+            case regexp.MustCompile(`ropus`).Match([]byte(file.Name())):
+                foundRopus = true
                 break
             }
         }
     }
 
-    if foundYTD && foundFFPROBE && foundFFMPEG {
+    if foundYTD && foundFFPROBE && foundFFMPEG && foundRopus {
         m.enabled = true
         Logger.PLUGIN.L("music", "Found. Music enabled!")
 

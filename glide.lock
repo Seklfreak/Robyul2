@@ -1,5 +1,5 @@
-hash: 747bc1d23d0787c97794a5721f8a8e98bc958191b2ad99cb5991a395c7c1af35
-updated: 2017-01-31T21:23:30.338747772+01:00
+hash: 67acf9ae399bc966654d11ded4e22346e075568372da19e7a9fac147ee901eda
+updated: 2017-02-04T23:18:11.659551116+01:00
 imports:
 - name: git.lukas.moe/sn0w/radio-b
   version: 26c2bee4caee0c2b261ff0b8accf01fd9ed6bf1f
@@ -47,7 +47,7 @@ imports:
 - name: github.com/Sirupsen/logrus
   version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 - name: github.com/sn0w/discordgo
-  version: 745cd79d3c9854ff118296d26fc98adc0afe9c77
+  version: d263620a46be3ebba53b409c48322758f6747edd
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
