@@ -70,6 +70,11 @@ func main() {
         panic(err)
     }
 
+    discord.Lock()
+    discord.Debug = false
+    discord.LogLevel = discordgo.LogError
+    discord.Unlock()
+
     discord.AddHandler(BotOnReady)
     discord.AddHandler(BotOnMessageCreate)
     discord.AddHandler(metrics.OnReady)
