@@ -49,6 +49,9 @@ type GuildConnection struct {
 
     // Whether this is playing music or not
     playing    bool
+
+    // A lock that stops the autoleaver while disconnecting
+    leaveLock  sync.RWMutex
 }
 
 // Helper to generate a guild connection
@@ -263,10 +266,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     session.ChannelTyping(channel.ID)
     switch command {
     case "leave":
+        m.guildConnections[guild.ID].leaveLock.RLock()
         voiceConnection.Disconnect()
         m.guildConnections[guild.ID].CloseChannels()
-        delete(m.guildConnections, guild.ID)
 
+        delete(m.guildConnections, guild.ID)
         helpers.VoiceFree(guild.ID)
 
         session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
@@ -945,6 +949,11 @@ func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.S
         default:
         }
 
+        if m.guildConnections[guildId] == nil {
+            break
+        }
+
+        m.guildConnections[guildId].RLock()
         voiceChannel := session.VoiceConnections[guildId]
         guild, err := session.Guild(guildId)
         if err != nil {
@@ -964,7 +973,10 @@ func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.S
             voiceChannel.Disconnect()
             (*m.guildConnections[guild.ID]).CloseChannels()
             delete(m.guildConnections, guild.ID)
+
             break
         }
+
+        m.guildConnections[guildId].RUnlock()
     }
 }
