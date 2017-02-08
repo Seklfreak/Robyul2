@@ -2,7 +2,7 @@ package migrations
 
 import (
     "git.lukas.moe/sn0w/Karen/helpers"
-    rethink "gopkg.in/gorethink/gorethink.v3"
+    rethink "github.com/gorethink/gorethink"
 )
 
 // CreateTableIfNotExists (works like the mysql call)

@@ -19,8 +19,8 @@ import:
 - package: github.com/olebedev/when
 - package: github.com/sn0w/discordgo
   version: develop
-- package: github.com/GoRethink/gorethink
-  version: ^3.0.0
+- package: github.com/gorethink/gorethink
+  version: ^3.0.1
 - package: github.com/bwmarrin/snowflake
 - package: git.lukas.moe/sn0w/radio-b
 - package: github.com/gorilla/websocket

@@ -9,7 +9,7 @@ import (
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "github.com/Jeffail/gabs"
     "github.com/sn0w/discordgo"
-    rethink "gopkg.in/gorethink/gorethink.v3"
+    rethink "github.com/gorethink/gorethink"
     "io"
     "io/ioutil"
     "math/rand"

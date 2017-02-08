@@ -8,7 +8,7 @@ import (
     "github.com/olebedev/when/rules/common"
     "github.com/olebedev/when/rules/en"
     "github.com/sn0w/discordgo"
-    rethink "gopkg.in/gorethink/gorethink.v3"
+    rethink "github.com/gorethink/gorethink"
     "strings"
     "time"
 )

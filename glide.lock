@@ -1,8 +1,8 @@
-hash: 037b0f476e32237569f0e2cbd2ac26caff89b2e35dbfdc62c908826a786ba495
-updated: 2017-02-06T23:02:15.971469247+01:00
+hash: fd05c61c88897c3e939e7506f24ff77c9daad63d96569d7b8fca172bf3332783
+updated: 2017-02-08T23:32:26.196603125+01:00
 imports:
 - name: git.lukas.moe/sn0w/radio-b
-  version: 26c2bee4caee0c2b261ff0b8accf01fd9ed6bf1f
+  version: 131c32148a1de1b4fc3dd2a75c2d6523199309b0
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
@@ -21,7 +21,7 @@ imports:
   version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
   - proto
-- name: github.com/GoRethink/gorethink
+- name: github.com/gorethink/gorethink
   version: 610fcc04c971a9fa42f1b6625c7c52b5bb472c51
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
@@ -45,7 +45,7 @@ imports:
 - name: github.com/PuerkitoBio/goquery
   version: 3cb3b8656883c2cc3deb9c643d93ea6e5157e425
 - name: github.com/Sirupsen/logrus
-  version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
+  version: 3f603f494d61c73457fb234161d8982b9f0f0b71
 - name: github.com/sn0w/discordgo
   version: d263620a46be3ebba53b409c48322758f6747edd
 - name: github.com/ttacon/chalk
@@ -53,23 +53,23 @@ imports:
 - name: github.com/ugjka/cleverbot-go
   version: 9b8fa3113779b4078baff4c639b3f1486a85930c
 - name: golang.org/x/crypto
-  version: dc137beb6cce2043eb6b5f223ab8bf51c32459f4
+  version: 537c9dfe43c8ca78e68e340fc140bca4d8bfaaa0
   subpackages:
   - nacl/secretbox
   - pbkdf2
   - poly1305
   - salsa20/salsa
 - name: golang.org/x/net
-  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
+  version: 236b8f043b920452504e263bc21d354427127473
   subpackages:
   - html
   - html/atom
 - name: golang.org/x/sys
-  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
+  version: 7a6e5648d140666db5d920909e082ca00a87ba2c
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: ece019dcfd29abcf65d0d1dfe145e8faad097640
+  version: dafb3384ad25363d928a9e97ce4ad3a2f0667e34
   subpackages:
   - transform
   - unicode/norm

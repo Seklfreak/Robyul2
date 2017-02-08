@@ -3,7 +3,7 @@ package helpers
 import (
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/models"
-    rethink "gopkg.in/gorethink/gorethink.v3"
+    rethink "github.com/gorethink/gorethink"
 )
 
 var dbSession *rethink.Session
