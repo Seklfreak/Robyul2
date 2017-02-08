@@ -19,7 +19,7 @@ var BETA_GUILDS = [...]string{
     "267658193407049728", // Bot Creation           (quoththeraven)
     "106029722458136576", // Shadow Realm           (WhereIsMyAim)
     "268143270520029187", // Joel's Beasts          (Joel)
-    "271346578189582339", // Universe Interned Ltd. (Inside24)
+    "271346578189582339", // Universe Internet Ltd. (Inside24)
 }
 
 // Automatically leaves guilds that are not registered beta testers
