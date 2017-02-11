@@ -27,9 +27,9 @@
         "iirc it's `%s` :thinking:"
       ],
       "saved": [
-        "Ok I'll try to remember that :sweat_smile:",
+        "Ok I'll try to remember `%s` :sweat_smile:",
         "Ok the prefix is now `%s` :smiley:",
-        ":ok_hand:"
+        "Ok it's now `%s` :ok_hand:"
       ]
     },
     "cleverbot": {

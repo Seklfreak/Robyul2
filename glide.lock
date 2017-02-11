@@ -51,7 +51,7 @@ imports:
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
-  version: 9b8fa3113779b4078baff4c639b3f1486a85930c
+  version: d7fee5d7fe8e42f9ff5c8774a48bf5186db6c7f0
 - name: golang.org/x/crypto
   version: 537c9dfe43c8ca78e68e340fc140bca4d8bfaaa0
   subpackages:
