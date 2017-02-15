@@ -120,14 +120,9 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 
     case "rms", "reminders":
         reminders := getReminders(msg.Author.ID)
+        embedFields := []*discordgo.MessageEmbedField{}
 
-        headers := []string{
-            "Time", "Guild", "Channel", "Message",
-        }
-
-        body := make([][]string, len(reminders.Reminders))
-
-        for idx, reminder := range reminders.Reminders {
+        for _, reminder := range reminders.Reminders {
             ts := time.Unix(reminder.Timestamp, 0)
             channel := "?"
             guild := "?"
@@ -142,16 +137,23 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
                 guild = guildRef.Name
             }
 
-            body[idx] = []string{
-                ts.String(), guild, channel, reminder.Message,
-            }
+            embedFields = append(embedFields, &discordgo.MessageEmbedField{
+                Inline: false,
+                Name: reminder.Message,
+                Value: "At " + ts.String() + " in #" + channel + " of " + guild,
+            })
         }
 
-        session.ChannelMessageSend(
-            msg.ChannelID,
-            "These are your pending reminders :slight_smile:\n" +
-                helpers.DrawTable(headers, body),
-        )
+        if len(embedFields) == 0 {
+            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("remiders.empty"))
+            return
+        }
+
+        session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+            Title: "Pending reminders",
+            Fields: embedFields,
+            Color: 0x0FADED,
+        })
         break
     }
 }
