@@ -3,10 +3,14 @@ package cache
 import (
     "github.com/sn0w/discordgo"
     "time"
+    "sync"
 )
 
 // How long a cached channel pointer is valid (seconds)
 var channelTimeout int64 = 15
+
+// A mutex to prevent concurrent modifications
+var mutex = sync.Mutex{}
 
 // Maps channel-id's to channel pointers
 var channels = make(map[string]*discordgo.Channel)
@@ -21,8 +25,10 @@ func updateChannel(id string) error {
         return err
     }
 
+    mutex.Lock()
     channels[id] = channel
     channelMeta[id] = time.Now().Unix()
+    mutex.Unlock()
 
     return nil
 }
