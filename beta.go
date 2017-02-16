@@ -7,8 +7,7 @@ import (
 )
 
 var BETA_GUILDS = [...]string{
-    "259831440064118784", // FADED's Sandbox        (Me)
-    "180818466847064065", // Karen's Sandbox        (Me)
+    "180818466847064065", // FADED's Sandbox        (Me)
     "172041631258640384", // P0WERPLANT             (Me)
     "161637499939192832", // Coding Lounge          (Devsome)
     "225168913808228352", // Emily's Space          (Kaaz)
