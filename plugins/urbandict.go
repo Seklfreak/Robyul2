@@ -4,6 +4,7 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     "github.com/sn0w/discordgo"
     "net/url"
+    "strconv"
 )
 
 type UrbanDict struct{}
@@ -50,13 +51,27 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
         tags += child.Data().(string) + ", "
     }
 
-    session.ChannelMessageSend(
+    session.ChannelMessageSendEmbed(
         msg.ChannelID,
-        "The definition of `" + object["word"].Data().(string) + "` is:\n" +
-            "```\n" +
-            object["definition"].Data().(string) + "\n" +
-            "```\n" +
-            "Example: `" + object["example"].Data().(string) + "`\n" +
-            "Tags: `" + tags + "`",
+        &discordgo.MessageEmbed{
+            Color: 0x134FE6,
+            Title: object["word"].Data().(string),
+            Description: object["definition"].Data().(string),
+            URL: object["permalink"].Data().(string),
+            Fields: []*discordgo.MessageEmbedField{
+                {Name: "Example(s)", Value: object["example"].Data().(string), Inline: false},
+                {Name: "Tags", Value: tags, Inline: false},
+                {Name: "Author", Value: object["author"].Data().(string), Inline: true},
+                {
+                    Name: "Votes",
+                    Value: ":+1: " + strconv.FormatFloat(object["thumbs_up"].Data().(float64), 'f', 0, 64) +
+                        " | :-1: " + strconv.FormatFloat(object["thumbs_down"].Data().(float64), 'f', 0, 64),
+                    Inline: true,
+                },
+            },
+            Footer: &discordgo.MessageEmbedFooter{
+                Text: "powered by urbandictionary.com",
+            },
+        },
     )
 }
