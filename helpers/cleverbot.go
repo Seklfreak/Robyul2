@@ -2,7 +2,7 @@ package helpers
 
 import (
     "github.com/sn0w/discordgo"
-    "github.com/ugjka/cleverbot-go"
+    "github.com/CleverbotIO/go-cleverbot.io"
 )
 
 const API_ID = "Karen Discord-Bot <lukas.breuer@outlook.com> (https://meetkaren.xyz)"
@@ -19,7 +19,7 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
             cleverbotSessions = make(map[string]*cleverbot.Session)
         }
 
-        cleverbotSessions[channel] = cleverbot.New(API_ID)
+        CleverbotRefreshSession(channel)
     }
 
     response, err := cleverbotSessions[channel].Ask(message)
@@ -34,5 +34,12 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
 
 // CleverbotRefreshSession refreshes the cleverbot session for said channel
 func CleverbotRefreshSession(channel string) {
-    cleverbotSessions[channel] = cleverbot.New(API_ID)
+    session, err := cleverbot.New(
+        GetConfig().Path("cleverbot.user").Data().(string),
+        GetConfig().Path("cleverbot.key").Data().(string),
+        API_ID,
+    )
+    Relax(err)
+
+    cleverbotSessions[channel] = session
 }
