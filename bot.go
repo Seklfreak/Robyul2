@@ -25,6 +25,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     ))
 
     cache.SetSession(session)
+    go helpers.GuildSettingsUpdater()
 
     // Stats!
     totalPlugins := 0
@@ -134,7 +135,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Check if the message contains @mentions for us
-    if len(message.Mentions) > 0 && strings.HasPrefix(message.Content, "<@") && message.Mentions[0].ID == session.State.User.ID {
+    if strings.HasPrefix(message.Content, "<@") && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
         // Prepare content for editing
         msg := message.Content
 
@@ -157,7 +158,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
         case regexp.MustCompile("(?i)^PREFIX.*").Match(bmsg):
             metrics.CommandsExecuted.Add(1)
-            prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
+            prefix := helpers.GetPrefixForServer(channel.GuildID)
             if prefix == "" {
                 cache.GetSession().ChannelMessageSend(
                     channel.ID,
@@ -207,7 +208,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             // Track usage
             metrics.CleverbotRequests.Add(1)
 
-            // Send to cleverbot
+            // Mark typing
             session.ChannelTyping(message.ChannelID)
 
             // Resolve other @mentions before sending the message
@@ -225,7 +226,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Only continue if a prefix is set
-    prefix, _ := helpers.GetPrefixForServer(channel.GuildID)
+    prefix := helpers.GetPrefixForServer(channel.GuildID)
     if prefix == "" {
         return
     }

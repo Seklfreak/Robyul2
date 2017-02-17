@@ -4,9 +4,18 @@ import (
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/models"
     rethink "github.com/gorethink/gorethink"
+    "git.lukas.moe/sn0w/Karen/cache"
+    "time"
+    "sync"
+    "github.com/getsentry/raven-go"
 )
 
-var dbSession *rethink.Session
+var (
+    dbSession *rethink.Session
+
+    guildSettingsCache map[string]models.Config
+    cacheMutex sync.Mutex
+)
 
 // ConnectDB connects to rethink and stores the session
 func ConnectDB(url string, db string) {
@@ -25,6 +34,7 @@ func ConnectDB(url string, db string) {
     }
 
     dbSession = session
+    guildSettingsCache = make(map[string]models.Config)
 
     Logger.INFO.L("db", "Connected!")
 }
@@ -66,6 +76,11 @@ func GuildSettingsSet(guild string, config models.Config) error {
         panic(err)
     }
 
+    // Update cache
+    cacheMutex.Lock()
+    guildSettingsCache[guild] = config
+    cacheMutex.Unlock()
+
     return err
 }
 
@@ -93,24 +108,38 @@ func GuildSettingsGet(guild string) (models.Config, error) {
     }
 }
 
-// GetPrefixForServer gets the prefix for $guild
-func GetPrefixForServer(guild string) (string, error) {
-    settings, err := GuildSettingsGet(guild)
-    if err != nil {
-        return "", err
-    }
+func GuildSettingsGetCached(id string) (models.Config) {
+    return guildSettingsCache[id]
+}
 
-    return settings.Prefix, nil
+// GetPrefixForServer gets the prefix for $guild
+func GetPrefixForServer(guild string) (string) {
+    return GuildSettingsGetCached(guild).Prefix
 }
 
 // SetPrefixForServer sets the prefix for $guild to $prefix
 func SetPrefixForServer(guild string, prefix string) error {
-    settings, err := GuildSettingsGet(guild)
-    if err != nil {
-        return err
-    }
+    settings := GuildSettingsGetCached(guild)
 
     settings.Prefix = prefix
 
     return GuildSettingsSet(guild, settings)
+}
+
+func GuildSettingsUpdater() {
+    for {
+        for _, guild := range cache.GetSession().State.Guilds {
+            settings, e := GuildSettingsGet(guild.ID)
+            if e != nil {
+                raven.CaptureError(e, map[string]string{})
+                continue
+            }
+
+            cacheMutex.Lock()
+            guildSettingsCache[guild.ID] = settings
+            cacheMutex.Unlock()
+        }
+
+        time.Sleep(15 * time.Second)
+    }
 }
