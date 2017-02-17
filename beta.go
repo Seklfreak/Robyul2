@@ -2,7 +2,7 @@ package main
 
 import (
     "git.lukas.moe/sn0w/Karen/logger"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "time"
 )
 

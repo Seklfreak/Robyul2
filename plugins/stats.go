@@ -5,7 +5,7 @@ import (
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/version"
     "github.com/dustin/go-humanize"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "runtime"
     "strconv"
     "time"

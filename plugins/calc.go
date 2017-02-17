@@ -2,7 +2,7 @@ package plugins
 
 import (
     "github.com/marcmak/calc/calc"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "strconv"
 )
 

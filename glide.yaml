@@ -25,3 +25,7 @@ import:
 - package: github.com/gorilla/websocket
   version: ^1.1.0
 - package: github.com/CleverbotIO/go-cleverbot.io
+- package: cloud.google.com/go
+  version: ^0.6.0
+  subpackages:
+  - translate

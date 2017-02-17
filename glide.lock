@@ -1,6 +1,10 @@
-hash: 4d356186e5d2c600882a87154985a572ddc78a7d9ddb9c2e098c493d88594f42
-updated: 2017-02-17T14:08:49.87175152+01:00
+hash: 095a83a13d305071a6c2ade087ecffc496d34275ac5025cf58e2d9812e2c898f
+updated: 2017-02-17T17:27:48.170057566+01:00
 imports:
+- name: cloud.google.com/go
+  version: c116c7972ec94f148459a304d07a67ecbc770d4b
+  subpackages:
+  - translate
 - name: git.lukas.moe/sn0w/radio-b
   version: 131c32148a1de1b4fc3dd2a75c2d6523199309b0
 - name: github.com/AlekSi/pointer
@@ -50,8 +54,6 @@ imports:
   version: e1271ee34c6a305e38566ecd27ae374944907ee9
 - name: github.com/Sirupsen/logrus
   version: 3f603f494d61c73457fb234161d8982b9f0f0b71
-- name: github.com/sn0w/discordgo
-  version: d263620a46be3ebba53b409c48322758f6747edd
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: golang.org/x/crypto

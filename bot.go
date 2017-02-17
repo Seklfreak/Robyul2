@@ -8,7 +8,7 @@ import (
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/plugins"
     "github.com/getsentry/raven-go"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "regexp"
     "strconv"
     "strings"

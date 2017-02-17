@@ -7,7 +7,7 @@ import (
     "github.com/olebedev/when"
     "github.com/olebedev/when/rules/common"
     "github.com/olebedev/when/rules/en"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     rethink "github.com/gorethink/gorethink"
     "strings"
     "time"

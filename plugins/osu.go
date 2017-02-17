@@ -3,7 +3,7 @@ package plugins
 import (
     "fmt"
     "git.lukas.moe/sn0w/Karen/helpers"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "regexp"
     "strings"
 )

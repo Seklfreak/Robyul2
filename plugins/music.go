@@ -8,7 +8,7 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "github.com/Jeffail/gabs"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     rethink "github.com/gorethink/gorethink"
     "io"
     "io/ioutil"

@@ -5,7 +5,7 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/plugins/triggers"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "strings"
 )
 
@@ -54,6 +54,7 @@ var PluginList = []Plugin{
     &Stats{},
     &Stone{},
     &Support{},
+    &Translator{},
     &Uptime{},
     &UrbanDict{},
     &Weather{},

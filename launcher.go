@@ -7,7 +7,7 @@ import (
     "git.lukas.moe/sn0w/Karen/migrations"
     "git.lukas.moe/sn0w/Karen/version"
     "github.com/getsentry/raven-go"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "math/rand"
     "os"
     "os/signal"

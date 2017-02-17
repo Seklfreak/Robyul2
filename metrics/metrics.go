@@ -4,7 +4,7 @@ import (
     "expvar"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "net/http"
     "runtime"
     "time"

@@ -2,7 +2,7 @@ package plugins
 
 import (
     "git.lukas.moe/sn0w/Karen/helpers"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
 )
 
 type RandomCat struct{}

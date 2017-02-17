@@ -2,7 +2,7 @@ package plugins
 
 import (
     "fmt"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "net/url"
 )
 

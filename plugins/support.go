@@ -1,6 +1,6 @@
 package plugins
 
-import "github.com/sn0w/discordgo"
+import "github.com/bwmarrin/discordgo"
 
 type Support struct{}
 

@@ -8,7 +8,7 @@ import (
     "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/radio-b"
     "github.com/gorilla/websocket"
-    "github.com/sn0w/discordgo"
+    "github.com/bwmarrin/discordgo"
     "io"
     "net/url"
     "os/exec"
