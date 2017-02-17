@@ -19,7 +19,9 @@ var (
 // VoiceIsOccupied checks if any plugin blocks further voice connections
 func VoiceIsOccupied(guild string) bool {
     if connections[guild] == "" {
+        mutex.Lock()
         connections[guild] = UNASSIGNED
+        mutex.Unlock()
     }
 
     return connections[guild] != UNASSIGNED
