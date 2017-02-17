@@ -1,23 +1,26 @@
 {
-  "listen_moe": "YOUR_LISTEN.MOE_TOKEN",
-  "osu": "YOUR_OSU_API_TOKEN",
-  "sentry": "https://YOU_SENTRY_TOKEN_1:YOUR_SENTRY_TOKEN_2@sentry.io/YOUR_SENTRY_TOKEN_3",
-  "cleverbot": {
-    "user": "",
-    "key": ""
-  },
-  "rethink": {
-    "db": "YOUR_DB_NAME",
-    "url": "YOUR_DB_IP"
-  },
-  "discord": {
-    "id": "YOUR_DISCORD_APP_ID",
-    "perms": "YOUR_REQUESTED_PERMISSION_INT",
-    "token": "YOUR_DISCORD_TOKEN"
-  },
-  "bot": {
-    "name": "YOUR_BOT_NAME",
-    "avatar": "YOUR_BASE64_AVATAR"
-  },
-  "debug": false
+    "listen_moe": "YOUR_LISTEN.MOE_TOKEN",
+    "osu": "YOUR_OSU_API_TOKEN",
+    "sentry": "https://YOU_SENTRY_TOKEN_1:YOUR_SENTRY_TOKEN_2@sentry.io/YOUR_SENTRY_TOKEN_3",
+    "cleverbot": {
+        "user": "",
+        "key": ""
+    },
+    "google": {
+        "translate": ""
+    },
+    "rethink": {
+        "db": "YOUR_DB_NAME",
+        "url": "YOUR_DB_IP"
+    },
+    "discord": {
+        "id": "YOUR_DISCORD_APP_ID",
+        "perms": "YOUR_REQUESTED_PERMISSION_INT",
+        "token": "YOUR_DISCORD_TOKEN"
+    },
+    "bot": {
+        "name": "YOUR_BOT_NAME",
+        "avatar": "YOUR_BASE64_AVATAR"
+    },
+    "debug": false
 }

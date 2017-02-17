@@ -206,6 +206,10 @@
   "plugins": {
     "listen_moe": {
       "unknown_command": "I don't know that command :neutral_face:\nYou can either `join` or `leave` but not `%s`"
+    },
+    "translator": {
+      "unknown_lang": "The language-code `%s` is invalid.\nCheck <https://cloud.google.com/translate/docs/languages> for a list of supported codes.",
+      "error": "I don't know :("
     }
   }
 }

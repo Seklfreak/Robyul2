@@ -1,10 +1,13 @@
 hash: 095a83a13d305071a6c2ade087ecffc496d34275ac5025cf58e2d9812e2c898f
-updated: 2017-02-17T17:27:48.170057566+01:00
+updated: 2017-02-17T17:49:49.182917131+01:00
 imports:
 - name: cloud.google.com/go
   version: c116c7972ec94f148459a304d07a67ecbc770d4b
   subpackages:
+  - compute/metadata
+  - internal
   - translate
+  - translate/internal/translate/v2
 - name: git.lukas.moe/sn0w/radio-b
   version: 131c32148a1de1b4fc3dd2a75c2d6523199309b0
 - name: github.com/AlekSi/pointer
@@ -29,6 +32,8 @@ imports:
   version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
   - proto
+- name: github.com/googleapis/gax-go
+  version: da06d194a00e19ce00d9011a13931c3f6f6887c7
 - name: github.com/gorethink/gorethink
   version: 610fcc04c971a9fa42f1b6625c7c52b5bb472c51
 - name: github.com/gorilla/websocket
@@ -66,8 +71,23 @@ imports:
 - name: golang.org/x/net
   version: 236b8f043b920452504e263bc21d354427127473
   subpackages:
+  - context
+  - context/ctxhttp
   - html
   - html/atom
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
+- name: golang.org/x/oauth2
+  version: b9780ec78894ab900c062d58ee3076cd9b2a4501
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
 - name: golang.org/x/sys
   version: 7a6e5648d140666db5d920909e082ca00a87ba2c
   subpackages:
@@ -75,8 +95,48 @@ imports:
 - name: golang.org/x/text
   version: dafb3384ad25363d928a9e97ce4ad3a2f0667e34
   subpackages:
+  - internal/tag
+  - language
   - transform
   - unicode/norm
+- name: google.golang.org/api
+  version: bc20c61134e1d25265dd60049f5735381e79b631
+  subpackages:
+  - gensupport
+  - googleapi
+  - googleapi/internal/uritemplates
+  - googleapi/transport
+  - internal
+  - option
+  - transport
+- name: google.golang.org/appengine
+  version: 2e4a801b39fc199db615bfca7d0b9f8cd9580599
+  subpackages:
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
+  - internal/socket
+  - internal/urlfetch
+  - socket
+  - urlfetch
+- name: google.golang.org/grpc
+  version: d0c32ee6a441117d49856d6120ca9552af413ee0
+  subpackages:
+  - codes
+  - credentials
+  - credentials/oauth
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - stats
+  - tap
+  - transport
 - name: gopkg.in/fatih/pool.v2
   version: 6e328e67893eb46323ad06f0e92cb9536babbabc
 - name: gopkg.in/gorethink/gorethink.v3
