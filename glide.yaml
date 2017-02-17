@@ -17,7 +17,7 @@ import:
   version: ^0.1.0
 - package: github.com/marcmak/calc
 - package: github.com/olebedev/when
-- package: github.com/sn0w/discordgo
+- package: github.com/bwmarrin/discordgo
   version: develop
 - package: github.com/gorethink/gorethink
   version: ^3.0.1

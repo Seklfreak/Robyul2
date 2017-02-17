@@ -1,5 +1,5 @@
-hash: fd05c61c88897c3e939e7506f24ff77c9daad63d96569d7b8fca172bf3332783
-updated: 2017-02-17T12:58:08.130851481+01:00
+hash: f1f3291108b19493bf1dc123fca00b89bc39ca36924957436798dcdbd6178b10
+updated: 2017-02-17T13:00:18.817932389+01:00
 imports:
 - name: git.lukas.moe/sn0w/radio-b
   version: 131c32148a1de1b4fc3dd2a75c2d6523199309b0
@@ -7,6 +7,8 @@ imports:
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
+- name: github.com/bwmarrin/discordgo
+  version: edd6e169fa71948189f7b489c3a3455880f849ae
 - name: github.com/bwmarrin/snowflake
   version: 34b33bf22ac0c98266031bcb193e2c9a621730f8
 - name: github.com/cenkalti/backoff
