@@ -5,7 +5,7 @@ import (
     "github.com/CleverbotIO/go-cleverbot.io"
 )
 
-const API_ID = "Karen Discord-Bot <lukas.breuer@outlook.com> (https://meetkaren.xyz)"
+const API_ID = "Karen Discord-Bot <lukas.breuer@outlook.com> (https://meetkaren.xyz) | Session "
 
 // cleverbotSessions stores all cleverbot connections
 var cleverbotSessions map[string]*cleverbot.Session
@@ -37,7 +37,7 @@ func CleverbotRefreshSession(channel string) {
     session, err := cleverbot.New(
         GetConfig().Path("cleverbot.user").Data().(string),
         GetConfig().Path("cleverbot.key").Data().(string),
-        API_ID,
+        API_ID + channel,
     )
     Relax(err)
 
