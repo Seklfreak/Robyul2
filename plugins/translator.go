@@ -35,10 +35,11 @@ func (t *Translator) Init(session *discordgo.Session) {
 }
 
 func (t *Translator) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    // Assumed format: <lang1> <lang2> <text>
+    // Assumed format: <lang_in> <lang_out> <text>
     parts := strings.Split(content, " ")
 
     if len(parts) < 3 {
+        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.check_format"))
         return
     }
 
