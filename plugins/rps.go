@@ -7,17 +7,17 @@ import (
 
 type RPS struct{}
 
-func (r RPS) Commands() []string {
+func (r *RPS) Commands() []string {
     return []string{
         "rps",
     }
 }
 
-func (r RPS) Init(session *discordgo.Session) {
+func (r *RPS) Init(session *discordgo.Session) {
 
 }
 
-func (r RPS) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (r *RPS) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch {
     case regexp.MustCompile("(?i)rock").MatchString(content):
         session.ChannelMessageSend(msg.ChannelID, "I've chosen :newspaper:\nMy paper wraps your stone.\nI win :smiley:")

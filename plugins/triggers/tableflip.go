@@ -2,7 +2,7 @@ package triggers
 
 type TableFlip struct{}
 
-func (t TableFlip) Triggers() []string {
+func (t *TableFlip) Triggers() []string {
     return []string{
         "tableflip",
         "flip",
@@ -10,6 +10,6 @@ func (t TableFlip) Triggers() []string {
     }
 }
 
-func (t TableFlip) Response(trigger string, content string) string {
+func (t *TableFlip) Response(trigger string, content string) string {
     return "(╯°□°）╯︵ ┻━┻"
 }

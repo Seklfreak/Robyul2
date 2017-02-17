@@ -8,18 +8,18 @@ import (
 
 type Minecraft struct{}
 
-func (m Minecraft) Commands() []string {
+func (m *Minecraft) Commands() []string {
     return []string{
         "minecraft",
         "mc",
     }
 }
 
-func (m Minecraft) Init(session *discordgo.Session) {
+func (m *Minecraft) Init(session *discordgo.Session) {
 
 }
 
-func (m Minecraft) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Minecraft) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Deferred error handler
     defer func() {
         err := recover()

@@ -10,7 +10,7 @@ import (
 
 type Osu struct{}
 
-func (o Osu) Commands() []string {
+func (o *Osu) Commands() []string {
     return []string{
         "osu",
         "osu!mania",
@@ -20,11 +20,11 @@ func (o Osu) Commands() []string {
     }
 }
 
-func (o Osu) Init(session *discordgo.Session) {
+func (o *Osu) Init(session *discordgo.Session) {
 
 }
 
-func (o Osu) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (o *Osu) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
     user := strings.TrimSpace(content)

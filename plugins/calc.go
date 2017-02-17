@@ -8,18 +8,18 @@ import (
 
 type Calc struct{}
 
-func (c Calc) Commands() []string {
+func (c *Calc) Commands() []string {
     return []string{
         "calc",
         "math",
     }
 }
 
-func (c Calc) Init(session *discordgo.Session) {
+func (c *Calc) Init(session *discordgo.Session) {
 
 }
 
-func (c Calc) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (c *Calc) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     defer func() {
         err := recover()
         if err != nil {

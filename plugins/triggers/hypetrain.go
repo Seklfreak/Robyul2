@@ -8,13 +8,13 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  */
 type HypeTrain struct{}
 
-func (h HypeTrain) Triggers() []string {
+func (h *HypeTrain) Triggers() []string {
     return []string{
         "hype",
         "hypu",
     }
 }
 
-func (h HypeTrain) Response(trigger string, content string) string {
+func (h *HypeTrain) Response(trigger string, content string) string {
     return helpers.GetText("triggers.hypetrain.text") + "\n" + helpers.GetText("triggers.hypetrain.link")
 }

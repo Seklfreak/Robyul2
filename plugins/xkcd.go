@@ -13,17 +13,17 @@ import (
 
 type XKCD struct{}
 
-func (x XKCD) Commands() []string {
+func (x *XKCD) Commands() []string {
     return []string{
         "xkcd",
     }
 }
 
-func (x XKCD) Init(session *discordgo.Session) {
+func (x *XKCD) Init(session *discordgo.Session) {
 
 }
 
-func (x XKCD) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (x *XKCD) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
     var link string

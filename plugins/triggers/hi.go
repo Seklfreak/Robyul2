@@ -8,7 +8,7 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  */
 type Hi struct{}
 
-func (h Hi) Triggers() []string {
+func (h *Hi) Triggers() []string {
     return []string{
         "wave",
         "hi",
@@ -18,6 +18,6 @@ func (h Hi) Triggers() []string {
     }
 }
 
-func (h Hi) Response(trigger string, content string) string {
+func (h *Hi) Response(trigger string, content string) string {
     return ":wave: " + helpers.GetText("triggers.hi.link")
 }

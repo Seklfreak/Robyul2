@@ -10,17 +10,17 @@ import (
 
 type Roll struct{}
 
-func (r Roll) Commands() []string {
+func (r *Roll) Commands() []string {
     return []string{
         "roll",
     }
 }
 
-func (r Roll) Init(session *discordgo.Session) {
+func (r *Roll) Init(session *discordgo.Session) {
 
 }
 
-func (r Roll) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (r *Roll) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     regex := regexp.MustCompile(`[^\d-]`)
     args := strings.Split(content, " ")
 

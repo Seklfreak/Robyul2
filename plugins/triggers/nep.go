@@ -8,7 +8,7 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  */
 type Nep struct{}
 
-func (n Nep) Triggers() []string {
+func (n *Nep) Triggers() []string {
     return []string{
         "nep",
         "nepgear",
@@ -16,6 +16,6 @@ func (n Nep) Triggers() []string {
     }
 }
 
-func (n Nep) Response(trigger string, content string) string {
+func (n *Nep) Response(trigger string, content string) string {
     return helpers.GetText("triggers.nep.text") + "\n" + helpers.GetText("triggers.nep.link")
 }

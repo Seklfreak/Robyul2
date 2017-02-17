@@ -9,7 +9,7 @@ type FlipCoin struct {
     choices [2]string
 }
 
-func (f FlipCoin) Commands() []string {
+func (f *FlipCoin) Commands() []string {
     return []string{
         "flip",
     }

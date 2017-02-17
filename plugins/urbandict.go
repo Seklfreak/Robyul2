@@ -8,18 +8,18 @@ import (
 
 type UrbanDict struct{}
 
-func (u UrbanDict) Commands() []string {
+func (u *UrbanDict) Commands() []string {
     return []string{
         "urban",
         "ub",
     }
 }
 
-func (u UrbanDict) Init(session *discordgo.Session) {
+func (u *UrbanDict) Init(session *discordgo.Session) {
 
 }
 
-func (u UrbanDict) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (u *UrbanDict) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
     if content == "" {

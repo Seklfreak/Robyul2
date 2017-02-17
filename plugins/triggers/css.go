@@ -8,13 +8,13 @@ import "git.lukas.moe/sn0w/Karen/helpers"
  */
 type CSS struct{}
 
-func (c CSS) Triggers() []string {
+func (c *CSS) Triggers() []string {
     return []string{
         "css",
         "cs:s",
     }
 }
 
-func (c CSS) Response(trigger string, content string) string {
+func (c *CSS) Response(trigger string, content string) string {
     return helpers.GetText("triggers.css")
 }

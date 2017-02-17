@@ -8,17 +8,17 @@ import (
 
 type Stone struct{}
 
-func (s Stone) Commands() []string {
+func (s *Stone) Commands() []string {
     return []string{
         "stone",
     }
 }
 
-func (s Stone) Init(session *discordgo.Session) {
+func (s *Stone) Init(session *discordgo.Session) {
 
 }
 
-func (s Stone) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (s *Stone) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     mentionCount := len(msg.Mentions)
 
     if mentionCount == 0 {

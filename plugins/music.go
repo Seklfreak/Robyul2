@@ -103,7 +103,7 @@ type Music struct {
     enabled          bool
 }
 
-func (m Music) Commands() []string {
+func (m *Music) Commands() []string {
     return []string{
         "join",
         "leave",

@@ -4,7 +4,7 @@ import "git.lukas.moe/sn0w/Karen/helpers"
 
 type ReZero struct{}
 
-func (r ReZero) Triggers() []string {
+func (r *ReZero) Triggers() []string {
     return []string{
         "rem",
         "re:zero",
@@ -12,6 +12,6 @@ func (r ReZero) Triggers() []string {
     }
 }
 
-func (r ReZero) Response(trigger string, content string) string {
+func (r *ReZero) Response(trigger string, content string) string {
     return helpers.GetText("triggers.re_zero.link")
 }

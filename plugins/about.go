@@ -4,7 +4,7 @@ import "github.com/sn0w/discordgo"
 
 type About struct{}
 
-func (a About) Commands() []string {
+func (a *About) Commands() []string {
     return []string{
         "about",
         "a",
@@ -13,11 +13,11 @@ func (a About) Commands() []string {
     }
 }
 
-func (a About) Init(session *discordgo.Session) {
+func (a *About) Init(session *discordgo.Session) {
 
 }
 
-func (a About) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (a *About) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     m := "Hi my name is Karen!\nI'm a :robot: that will make this Discord Server a better place c:\nHere is some information about me:\n```\n"
 
     m += `

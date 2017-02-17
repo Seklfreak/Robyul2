@@ -8,17 +8,17 @@ import (
 
 type Avatar struct{}
 
-func (a Avatar) Commands() []string {
+func (a *Avatar) Commands() []string {
     return []string{
         "avatar",
     }
 }
 
-func (a Avatar) Init(session *discordgo.Session) {
+func (a *Avatar) Init(session *discordgo.Session) {
 
 }
 
-func (a Avatar) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (a *Avatar) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     mentionCount := len(msg.Mentions)
 
     if mentionCount == 0 {

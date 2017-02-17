@@ -19,18 +19,18 @@ var leetReplacements = map[string]string{
     "Y": "¥", "Z": "Z",
 }
 
-func (l Leet) Commands() []string {
+func (l *Leet) Commands() []string {
     return []string{
         "leet",
         "l33t",
     }
 }
 
-func (l Leet) Init(session *discordgo.Session) {
+func (l *Leet) Init(session *discordgo.Session) {
 
 }
 
-func (l Leet) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (l *Leet) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     content = strings.ToUpper(content)
 
     for ascii, leet := range leetReplacements {
