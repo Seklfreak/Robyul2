@@ -108,7 +108,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	//go changeGameInterval(session)
 
 	// Run auto-leaver for non-beta guilds
-	go autoLeaver(session)
+	//go autoLeaver(session)
 }
 
 // BotOnMessageCreate gets called after a new message was sent
