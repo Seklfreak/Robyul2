@@ -33,7 +33,6 @@ func IsAdmin(msg *discordgo.Message) bool {
 	}
 
 	if msg.Author.ID == guild.OwnerID || IsBotAdmin(msg.Author.ID) {
-		print("is owner")
 		return true
 	}
 

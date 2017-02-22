@@ -4,7 +4,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
-	//"github.com/Seklfreak/Robyul2/plugins/triggers"
+	// "github.com/Seklfreak/Robyul2/plugins/triggers"
 	"github.com/bwmarrin/discordgo"
 	"strings"
 )
@@ -38,6 +38,10 @@ var PluginList = []Plugin{
 	&Uptime{},
 	&Mod{},
 	&Music{},
+	&Translator{},
+	&Ping{},
+	&UrbanDict{},
+	&Weather{},
 	//&Avatar{},
 	//&Calc{},
 	//&Changelog{},
@@ -49,16 +53,12 @@ var PluginList = []Plugin{
 	//&ListenDotMoe{},
 	//&Minecraft{},
 	//&Osu{},
-	//&Ping{},
 	//&RandomCat{},
 	//&Reminders{},
 	//&Roll{},
 	//&RPS{},
 	//&Stone{},
 	//&Support{},
-	//&Translator{},
-	//&UrbanDict{},
-	//&Weather{},
 	//&XKCD{},
 }
 
