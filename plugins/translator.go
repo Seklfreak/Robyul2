@@ -1,83 +1,83 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
-    "context"
-    "cloud.google.com/go/translate"
-    "git.lukas.moe/sn0w/Karen/helpers"
-    "strings"
-    "golang.org/x/text/language"
-    "google.golang.org/api/option"
+	"cloud.google.com/go/translate"
+	"context"
+	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/bwmarrin/discordgo"
+	"golang.org/x/text/language"
+	"google.golang.org/api/option"
+	"strings"
 )
 
 type Translator struct {
-    ctx    context.Context
-    client *translate.Client
+	ctx    context.Context
+	client *translate.Client
 }
 
 func (t *Translator) Commands() []string {
-    return []string{
-        "translator",
-        "translate",
-        "t",
-    }
+	return []string{
+		"translator",
+		"translate",
+		"t",
+	}
 }
 
 func (t *Translator) Init(session *discordgo.Session) {
-    t.ctx = context.Background()
+	t.ctx = context.Background()
 
-    client, err := translate.NewClient(
-        t.ctx,
-        option.WithAPIKey(helpers.GetConfig().Path("google.translate").Data().(string)),
-    )
-    helpers.Relax(err)
-    t.client = client
+	client, err := translate.NewClient(
+		t.ctx,
+		option.WithAPIKey(helpers.GetConfig().Path("google.translate").Data().(string)),
+	)
+	helpers.Relax(err)
+	t.client = client
 }
 
 func (t *Translator) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    // Assumed format: <lang_in> <lang_out> <text>
-    parts := strings.Split(content, " ")
+	// Assumed format: <lang_in> <lang_out> <text>
+	parts := strings.Split(content, " ")
 
-    if len(parts) < 3 {
-        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.check_format"))
-        return
-    }
+	if len(parts) < 3 {
+		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.check_format"))
+		return
+	}
 
-    source, err := language.Parse(parts[0])
-    if err != nil {
-        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[0]))
-        return
-    }
+	source, err := language.Parse(parts[0])
+	if err != nil {
+		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[0]))
+		return
+	}
 
-    target, err := language.Parse(parts[1])
-    if err != nil {
-        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[1]))
-        return
-    }
+	target, err := language.Parse(parts[1])
+	if err != nil {
+		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[1]))
+		return
+	}
 
-    translations, err := t.client.Translate(
-        t.ctx,
-        parts[2:],
-        target,
-        &translate.Options{
-            Format: translate.Text,
-            Source: source,
-        },
-    )
+	translations, err := t.client.Translate(
+		t.ctx,
+		parts[2:],
+		target,
+		&translate.Options{
+			Format: translate.Text,
+			Source: source,
+		},
+	)
 
-    if err != nil {
-        //session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.translator.error"))
-        helpers.SendError(msg, err)
-        return
-    }
+	if err != nil {
+		//session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.translator.error"))
+		helpers.SendError(msg, err)
+		return
+	}
 
-    m := ""
-    for _, piece := range translations {
-        m += piece.Text + " "
-    }
+	m := ""
+	for _, piece := range translations {
+		m += piece.Text + " "
+	}
 
-    session.ChannelMessageSend(
-        msg.ChannelID,
-        ":earth_africa: " + strings.ToUpper(source.String()) + " => " + strings.ToUpper(target.String()) + "\n```\n" + m + "\n```",
-    )
+	session.ChannelMessageSend(
+		msg.ChannelID,
+		":earth_africa: "+strings.ToUpper(source.String())+" => "+strings.ToUpper(target.String())+"\n```\n"+m+"\n```",
+	)
 }

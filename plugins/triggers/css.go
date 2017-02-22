@@ -1,6 +1,6 @@
 package triggers
 
-import "git.lukas.moe/sn0w/Karen/helpers"
+import "github.com/Seklfreak/Robyul2/helpers"
 
 /**
  * Full credit to Der-Eddy and his original python implementation for Shinobu-Chan.
@@ -9,12 +9,12 @@ import "git.lukas.moe/sn0w/Karen/helpers"
 type CSS struct{}
 
 func (c *CSS) Triggers() []string {
-    return []string{
-        "css",
-        "cs:s",
-    }
+	return []string{
+		"css",
+		"cs:s",
+	}
 }
 
 func (c *CSS) Response(trigger string, content string) string {
-    return helpers.GetText("triggers.css")
+	return helpers.GetText("triggers.css")
 }

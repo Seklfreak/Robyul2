@@ -1,6 +1,6 @@
 package triggers
 
-import "git.lukas.moe/sn0w/Karen/helpers"
+import "github.com/Seklfreak/Robyul2/helpers"
 
 /**
  * Full credit to Der-Eddy and his original python implementation for Shinobu-Chan.
@@ -9,15 +9,15 @@ import "git.lukas.moe/sn0w/Karen/helpers"
 type Hi struct{}
 
 func (h *Hi) Triggers() []string {
-    return []string{
-        "wave",
-        "hi",
-        "hello",
-        "ohai",
-        "ohayou",
-    }
+	return []string{
+		"wave",
+		"hi",
+		"hello",
+		"ohai",
+		"ohayou",
+	}
 }
 
 func (h *Hi) Response(trigger string, content string) string {
-    return ":wave: " + helpers.GetText("triggers.hi.link")
+	return ":wave: " + helpers.GetText("triggers.hi.link")
 }
