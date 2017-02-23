@@ -196,6 +196,10 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID))
 				logger.INFO.L("vlive", fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s)", entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
+		case "delete": // [p]vlive delete <id>
+			helpers.RequireAdmin(msg, func() {
+				// TODO: implement
+			})
 		case "list": // [p]vlive list
 			currentChannel, err := session.Channel(msg.ChannelID)
 			helpers.Relax(err)
@@ -277,80 +281,10 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				helpers.Relax(err)
 			}
 			return
-			//fmt.Println("Found channel:", vliveChannel.Name, "vod:", len(vliveChannel.VOD), "upcoming:", len(vliveChannel.Upcoming), "live:", len(vliveChannel.Live), "notices:", len(vliveChannel.Notices), "celeb:", len(vliveChannel.Celebs))
 		}
 	} else {
 		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 	}
-	// switch command {
-	// case "rm", "remind":
-	// 	channel, err := cache.Channel(msg.ChannelID)
-	// 	helpers.Relax(err)
-
-	// 	parts := strings.Split(content, " ")
-
-	// 	if len(parts) < 3 {
-	// 		session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")
-	// 		return
-	// 	}
-
-	// 	r, err := r.parser.Parse(content, time.Now())
-	// 	helpers.Relax(err)
-	// 	if r == nil {
-	// 		session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")
-	// 		return
-	// 	}
-
-	// 	VLive := getVLive(msg.Author.ID)
-	// 	VLive.VLive = append(VLive.VLive, DB_VLive{
-	// 		Message:   strings.Replace(content, r.Text, "", 1),
-	// 		ChannelID: channel.ID,
-	// 		GuildID:   channel.GuildID,
-	// 		Timestamp: r.Time.Unix(),
-	// 	})
-	// 	setVLive(msg.Author.ID, VLive)
-
-	// 	session.ChannelMessageSend(msg.ChannelID, "Ok I'll remind you :ok_hand:")
-	// 	break
-
-	// case "rms", "VLive":
-	// 	VLive := getVLive(msg.Author.ID)
-	// 	embedFields := []*discordgo.MessageEmbedField{}
-
-	// 	for _, reminder := range VLive.VLive {
-	// 		ts := time.Unix(reminder.Timestamp, 0)
-	// 		channel := "?"
-	// 		guild := "?"
-
-	// 		chanRef, err := session.Channel(reminder.ChannelID)
-	// 		if err == nil {
-	// 			channel = chanRef.Name
-	// 		}
-
-	// 		guildRef, err := session.Guild(reminder.GuildID)
-	// 		if err == nil {
-	// 			guild = guildRef.Name
-	// 		}
-
-	// 		embedFields = append(embedFields, &discordgo.MessageEmbedField{
-	// 			Inline: false,
-	// 			Name:   reminder.Message,
-	// 			Value:  "At " + ts.String() + " in #" + channel + " of " + guild,
-	// 		})
-	// 	}
-
-	// 	if len(embedFields) == 0 {
-	// 		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("remiders.empty"))
-	// 		return
-	// 	}
-
-	// 	session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-	// 		Title:  "Pending VLive",
-	// 		Fields: embedFields,
-	// 		Color:  0x0FADED,
-	// 	})
-	// 	break
-	// }
 }
 
 func getVliveChannelIdFromChannelName(channelSearchName string) (string, error) {

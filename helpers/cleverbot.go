@@ -3,6 +3,8 @@ package helpers
 import (
 	"github.com/CleverbotIO/go-cleverbot.io"
 	"github.com/bwmarrin/discordgo"
+	"strconv"
+	"time"
 )
 
 const API_ID = "Karen Discord-Bot <lukas.breuer@outlook.com> (https://meetkaren.xyz) | Session "
@@ -37,8 +39,9 @@ func CleverbotRefreshSession(channel string) {
 	session, err := cleverbot.New(
 		GetConfig().Path("cleverbot.user").Data().(string),
 		GetConfig().Path("cleverbot.key").Data().(string),
-		API_ID+channel,
+		API_ID+channel+" | timestamp "+strconv.FormatInt(time.Now().Unix(), 10),
 	)
+	// TODO: get old session?
 	Relax(err)
 
 	cleverbotSessions[channel] = session
