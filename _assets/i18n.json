@@ -227,6 +227,14 @@
       "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?",
       "user-muted-success": "User `%s` has been muted. :mute:",
       "user-unmuted-success": "User `%s` has been unmuted. :speaker:"
+    },
+    "vlive": {
+      "channel-not-found": "Unable to find channel",
+      "channel-embed-title": "%s V LIVE CHANNEL",
+      "embed-footer": "via vlive.tv",
+      "channel-embed-name-live": ":mega: Live since %s KST",
+      "channel-embed-name-vod": ":mega: Last video on %s KST",
+      "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST"
     }
   }
 }
