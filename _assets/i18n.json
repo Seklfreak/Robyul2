@@ -224,7 +224,9 @@
     },
     "mod": {
       "deleting-messages-failed": "Deleting messages failed: `%s`",
-      "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?"
+      "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?",
+      "user-muted-success": "User `%s` has been muted. :mute:",
+      "user-unmuted-success": "User `%s` has been unmuted. :speaker:"
     }
   }
 }

@@ -15,6 +15,8 @@ type Mod struct{}
 func (m *Mod) Commands() []string {
 	return []string{
 		"cleanup",
+		"mute",
+		"unmute",
 	}
 }
 
@@ -128,7 +130,50 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 			}
+		case "mute": // [p]mute server <@User>
+			args := strings.Split(content, " ")
+			if len(args) >= 2 {
+				if len(msg.Mentions) >= 1 {
+					switch args[0] {
+					case "server":
+						channel, err := session.Channel(msg.ChannelID)
+						helpers.Relax(err)
+						muteRole, err := helpers.GetMuteRole(channel.GuildID)
+						helpers.Relax(err)
+						err = session.GuildMemberRoleAdd(channel.GuildID, msg.Mentions[0].ID, muteRole.ID)
+						helpers.Relax(err)
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", msg.Author.Username))
+					}
+				} else {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		case "unmute": // [p]unmute server <@User>
+			args := strings.Split(content, " ")
+			if len(args) >= 2 {
+				if len(msg.Mentions) >= 1 {
+					switch args[0] {
+					case "server":
+						channel, err := session.Channel(msg.ChannelID)
+						helpers.Relax(err)
+						muteRole, err := helpers.GetMuteRole(channel.GuildID)
+						helpers.Relax(err)
+						err = session.GuildMemberRoleRemove(channel.GuildID, msg.Mentions[0].ID, muteRole.ID)
+						helpers.Relax(err)
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", msg.Author.Username))
+					}
+				} else {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
 		}
-
 	})
 }

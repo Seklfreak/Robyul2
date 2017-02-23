@@ -14,6 +14,8 @@ type Config struct {
 
 	WelcomeNewUsersEnabled bool   `rethink:"welcome_new_users_enabled"`
 	WelcomeNewUsersText    string `rethink:"welcome_new_users_text"`
+
+	MutedRoleName string `rethink:"muted_role_name"`
 }
 
 // Default is a helper for generating default config values
@@ -30,5 +32,7 @@ func (c Config) Default(guild string) Config {
 
 		WelcomeNewUsersEnabled: false,
 		WelcomeNewUsersText:    "",
+
+		MutedRoleName: "Muted",
 	}
 }

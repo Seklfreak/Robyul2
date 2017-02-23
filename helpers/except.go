@@ -66,10 +66,10 @@ func SendError(msg *discordgo.Message, err interface{}) {
 
 		cache.GetSession().ChannelMessageSend(
 			msg.ChannelID,
-			"Error :frowning:\n0xFADED#3237 has been notified.\n```\n"+
+			"Error :frowning:\n```\n"+
 				fmt.Sprintf("%#v\n", err)+
 				fmt.Sprintf("%s\n", string(buf[0:stackSize]))+
-				"\n```\nhttp://i.imgur.com/FcV2n4X.jpg",
+				"\n```",
 		)
 	} else {
 		cache.GetSession().ChannelMessageSend(

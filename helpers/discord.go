@@ -96,3 +96,33 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 		time.Sleep(1 * time.Second)
 	}
 }
+
+func GetMuteRole(guildID string) (*discordgo.Role, error) {
+	guild, err := cache.GetSession().Guild(guildID)
+	Relax(err)
+	var muteRole *discordgo.Role
+	settings, err := GuildSettingsGet(guildID)
+	for _, role := range guild.Roles {
+		Relax(err)
+		if role.Name == settings.MutedRoleName {
+			muteRole = role
+		}
+	}
+	if muteRole == nil {
+		muteRole, err = cache.GetSession().GuildRoleCreate(guildID)
+		if err != nil {
+			return muteRole, err
+		}
+		muteRole, err = cache.GetSession().GuildRoleEdit(guildID, muteRole.ID, settings.MutedRoleName, muteRole.Color, muteRole.Hoist, 0, muteRole.Mentionable)
+		if err != nil {
+			return muteRole, err
+		}
+		for _, channel := range guild.Channels {
+			err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
+			if err != nil {
+				return muteRole, err
+			}
+		}
+	}
+	return muteRole, nil
+}
