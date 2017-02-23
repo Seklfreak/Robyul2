@@ -229,7 +229,7 @@
       "user-unmuted-success": "User `%s` has been unmuted. :speaker:"
     },
     "vlive": {
-      "channel-not-found": "Unable to find channel!",
+      "channel-not-found": "Unable to find V Live Channel!",
       "channel-embed-title": "%s V LIVE CHANNEL",
       "embed-footer": "via vlive.tv",
       "channel-embed-name-live": ":mega: Live since %s KST",
@@ -241,7 +241,9 @@
       "channel-embed-title-upcoming": ":calendar_spiral: %s scheduled a new video for %s KST!",
       "channel-embed-title-live": ":mega: %s just went live!",
       "channel-embed-title-notice": ":pencil: %s posted a new notice!",
-      "channel-embed-title-celeb": ":star2: %s posted a new celeb post!"
+      "channel-embed-title-celeb": ":star2: %s posted a new celeb post!",
+      "channel-delete-not-found-error": "Unable to find V Live Channel in the Database!",
+      "channel-delete-success": "Deleted V Live Channel %s from the Database!"
     }
   }
 }

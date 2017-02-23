@@ -245,7 +245,6 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
 					return
 				}
-				// TODO: Check if already exists
 				// create new entry in db
 				entry := getEntryByOrCreateEmpty("id", "")
 				entry.ServerID = targetChannel.GuildID
@@ -263,7 +262,24 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			})
 		case "delete": // [p]vlive delete <id>
 			helpers.RequireAdmin(msg, func() {
-				// TODO: implement
+				if len(args) >= 2 {
+					session.ChannelTyping(msg.ChannelID)
+					entryId := args[1]
+					entryBucket := getEntryBy("id", entryId)
+					if entryBucket.ID != "" {
+						deleteEntryById(entryBucket.ID)
+
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
+						logger.INFO.L("vlive", fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))
+					} else {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.vlive.channel-delete-not-found-error"))
+						return
+					}
+
+				} else {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					return
+				}
 			})
 		case "list": // [p]vlive list
 			currentChannel, err := session.Channel(msg.ChannelID)
@@ -572,6 +588,23 @@ func postCelebToChannel(channelID string, celeb DB_Celeb, vliveChannel DB_VLiveC
 	}
 }
 
+func getEntryBy(key string, id string) DB_Entry {
+	var entryBucket DB_Entry
+	listCursor, err := rethink.Table("vlive").Filter(
+		rethink.Row.Field(key).Eq(id),
+	).Run(helpers.GetDB())
+	defer listCursor.Close()
+	err = listCursor.One(&entryBucket)
+
+	if err == rethink.ErrEmptyResult {
+		return entryBucket
+	} else if err != nil {
+		panic(err)
+	}
+
+	return entryBucket
+}
+
 func getEntryByOrCreateEmpty(key string, id string) DB_Entry {
 	var entryBucket DB_Entry
 	listCursor, err := rethink.Table("vlive").Filter(
@@ -599,5 +632,12 @@ func getEntryByOrCreateEmpty(key string, id string) DB_Entry {
 
 func setEntry(entry DB_Entry) {
 	_, err := rethink.Table("vlive").Update(entry).Run(helpers.GetDB())
+	helpers.Relax(err)
+}
+
+func deleteEntryById(id string) {
+	_, err := rethink.Table("vlive").Filter(
+		rethink.Row.Field("id").Eq(id),
+	).Delete().RunWrite(helpers.GetDB())
 	helpers.Relax(err)
 }
