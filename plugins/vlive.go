@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/logger"
 	"github.com/bwmarrin/discordgo"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +30,8 @@ const (
 	VliveFriendlyVideo             string = "http://www.vlive.tv/video/%d"
 	VliveFriendlyNotice            string = "http://channels.vlive.tv/%s/notice/%d"
 	VliveFriendlyCeleb             string = "http://channels.vlive.tv/%s/celeb/%s"
+	VliveFriendlySearch            string = "http://www.vlive.tv/search/all?query=%s"
+	ChannelIdRegex                 string = "(http(s)?://channels.vlive.tv)?(/)?(channels/)?([A-Z0-9]+)(/video)?"
 )
 
 type VLive struct{}
@@ -143,15 +147,25 @@ func (r *VLive) Init(session *discordgo.Session) {
 }
 
 func (r *VLive) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	content = strings.Trim(content, " ")
 	args := strings.Split(content, " ")
 	if len(args) >= 1 {
 		switch args[0] {
 		case "add":
 			session.ChannelMessageSend(msg.ChannelID, "implement me please")
 		default:
-			// TODO: Search for channel name
 			session.ChannelTyping(msg.ChannelID)
-			vliveChannel, err := getVLiveChannelByVliveChannelId(args[0])
+			// try to find channel by search
+			var err error
+			vliveChannelId := ""
+			if len(content) >= 2 {
+				vliveChannelId, err = getVliveChannelIdFromChannelName(content)
+			}
+			if err != nil || vliveChannelId == "" {
+				vliveChannelId = args[0]
+			}
+			// use input as id instead or use the id from above (if channel found)
+			vliveChannel, err := getVLiveChannelByVliveChannelId(vliveChannelId)
 			if err != nil {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
 				return
@@ -270,6 +284,32 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 	// 	})
 	// 	break
 	// }
+}
+
+func getVliveChannelIdFromChannelName(channelSearchName string) (string, error) {
+	friendlySearch := fmt.Sprintf(VliveFriendlySearch, channelSearchName)
+	doc, err := goquery.NewDocument(friendlySearch)
+	if err != nil {
+		return "", err
+	}
+	finalId := ""
+	doc.Find(".ct_box").Each(func(i int, s *goquery.Selection) {
+		//name := s.Find(".name").Text()
+		url, _ := s.Attr("href")
+		re := regexp.MustCompile(ChannelIdRegex)
+		result := re.FindStringSubmatch(url)
+		if !strings.HasSuffix(result[5], " +") {
+			finalId = result[5]
+			return
+		}
+	})
+
+	if finalId == "" {
+		return "", errors.New("Channel not found!")
+	} else {
+		return finalId, nil
+	}
+
 }
 
 func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) {

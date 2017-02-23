@@ -229,7 +229,7 @@
       "user-unmuted-success": "User `%s` has been unmuted. :speaker:"
     },
     "vlive": {
-      "channel-not-found": "Unable to find channel",
+      "channel-not-found": "Unable to find channel!",
       "channel-embed-title": "%s V LIVE CHANNEL",
       "embed-footer": "via vlive.tv",
       "channel-embed-name-live": ":mega: Live since %s KST",
