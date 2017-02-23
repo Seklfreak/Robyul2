@@ -234,7 +234,9 @@
       "embed-footer": "via vlive.tv",
       "channel-embed-name-live": ":mega: Live since %s KST",
       "channel-embed-name-vod": ":mega: Last video on %s KST",
-      "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST"
+      "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST",
+      "channel-added-success": "Added V Live Channel `%s` to the Channel <#%s>!",
+      "channel-list-no-chanels-error": "No V Live Channels on this Server found!"
     }
   }
 }

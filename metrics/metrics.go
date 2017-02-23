@@ -5,6 +5,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/logger"
 	"github.com/bwmarrin/discordgo"
+	rethink "github.com/gorethink/gorethink"
 	"net/http"
 	"runtime"
 	"time"
@@ -34,6 +35,9 @@ var (
 
 	// Uptime stores the timestamp of the bot's boot
 	Uptime = expvar.NewInt("uptime")
+
+	// VliveChannelsCount counts all connected vlive channels
+	VliveChannelsCount = expvar.NewInt("vlive_channels_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -90,6 +94,14 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 func CollectRuntimeMetrics() {
 	for {
 		time.Sleep(15 * time.Second)
+
 		CoroutineCount.Set(int64(runtime.NumGoroutine()))
+
+		cursor, err := rethink.Table("vlive").Count().Run(helpers.GetDB())
+		helpers.Relax(err)
+		var cnt int
+		cursor.One(&cnt)
+		cursor.Close()
+		VliveChannelsCount.Set(int64(cnt))
 	}
 }

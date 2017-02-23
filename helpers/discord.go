@@ -1,8 +1,10 @@
 package helpers
 
 import (
+	"errors"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
+	"regexp"
 	"time"
 )
 
@@ -125,4 +127,16 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
 		}
 	}
 	return muteRole, nil
+}
+
+func GetChannelFromMention(mention string) (*discordgo.Channel, error) {
+	var targetChannel *discordgo.Channel
+	re := regexp.MustCompile("(<#)?(\\d+)(>)?")
+	result := re.FindStringSubmatch(mention)
+	if len(result) == 4 {
+		targetChannel, err := cache.GetSession().Channel(result[2])
+		return targetChannel, err
+	} else {
+		return targetChannel, errors.New("Channel not found.")
+	}
 }

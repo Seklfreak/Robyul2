@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/logger"
 	"github.com/bwmarrin/discordgo"
+	rethink "github.com/gorethink/gorethink"
 	"math/big"
 	"regexp"
 	"strconv"
@@ -151,8 +152,74 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 	args := strings.Split(content, " ")
 	if len(args) >= 1 {
 		switch args[0] {
-		case "add":
-			session.ChannelMessageSend(msg.ChannelID, "implement me please")
+		case "add": // [p]vlive add <vlive channel name/vlive channel id> <discord channel>
+			helpers.RequireAdmin(msg, func() {
+				session.ChannelTyping(msg.ChannelID)
+				// get target channel
+				var err error
+				var targetChannel *discordgo.Channel
+				var targetGuild *discordgo.Guild
+				if len(args) >= 3 {
+					targetChannel, err = helpers.GetChannelFromMention(args[len(args)-1])
+					if err != nil {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+				} else {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					return
+				}
+				targetGuild, err = session.Guild(targetChannel.GuildID)
+				helpers.Relax(err)
+				// try to find channel by search
+				vliveChannelId := ""
+				if len(args[1]) >= 2 {
+					vliveChannelId, err = getVliveChannelIdFromChannelName(args[1])
+				}
+				if err != nil || vliveChannelId == "" {
+					vliveChannelId = args[1]
+				}
+				// use input as id instead or use the id from above (if channel found)
+				vliveChannel, err := getVLiveChannelByVliveChannelId(vliveChannelId)
+				if err != nil {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
+					return
+				}
+				// TODO: Check if already exists
+				// create new entry in db
+				entry := getEntryByOrCreateEmpty("id", "")
+				entry.ServerID = targetChannel.GuildID
+				entry.ChannelID = targetChannel.ID
+				entry.VLiveChannel = vliveChannel
+				setEntry(entry)
+
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID))
+				logger.INFO.L("vlive", fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s)", entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+			})
+		case "list": // [p]vlive list
+			currentChannel, err := session.Channel(msg.ChannelID)
+			helpers.Relax(err)
+			var entryBucket []DB_Entry
+			listCursor, err := rethink.Table("vlive").Filter(
+				rethink.Row.Field("serverid").Eq(currentChannel.GuildID),
+			).Run(helpers.GetDB())
+			helpers.Relax(err)
+			defer listCursor.Close()
+			err = listCursor.All(&entryBucket)
+
+			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-list-no-chanels-error"))
+				return
+			} else if err != nil {
+				helpers.Relax(err)
+			}
+
+			resultMessage := ""
+			for _, entry := range entryBucket {
+				resultMessage += fmt.Sprintf("`%s`: V Live Channel `%s` posting to <#%s>\n", entry.ID, entry.VLiveChannel.Name, entry.ChannelID)
+			}
+			resultMessage += fmt.Sprintf("Found **%d** V Live Channels in total.", len(entryBucket))
+			session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
 		default:
 			session.ChannelTyping(msg.ChannelID)
 			// try to find channel by search
@@ -403,38 +470,32 @@ func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) 
 	return vliveChannel, nil
 }
 
-// func getVLive(uid string) DB_VLive {
-// 	var vlive DB_VLive
-// 	return vlive
-// 	// var reminderBucket DB_VLive
-// 	// listCursor, err := rethink.Table("VLive").Filter(
-// 	// 	rethink.Row.Field("userid").Eq(uid),
-// 	// ).Run(helpers.GetDB())
-// 	// defer listCursor.Close()
-// 	// err = listCursor.One(&reminderBucket)
+func getEntryByOrCreateEmpty(key string, id string) DB_Entry {
+	var entryBucket DB_Entry
+	listCursor, err := rethink.Table("vlive").Filter(
+		rethink.Row.Field(key).Eq(id),
+	).Run(helpers.GetDB())
+	defer listCursor.Close()
+	err = listCursor.One(&entryBucket)
 
-// 	// // If user has no DB entries create an empty document
-// 	// if err == rethink.ErrEmptyResult {
-// 	// 	_, e := rethink.Table("VLive").Insert(DB_VLive{
-// 	// 		UserID: uid,
-// 	// 		VLive:  make([]DB_VLive, 0),
-// 	// 	}).RunWrite(helpers.GetDB())
+	// If user has no DB entries create an empty document
+	if err == rethink.ErrEmptyResult {
+		insert := rethink.Table("vlive").Insert(DB_Entry{})
+		res, e := insert.RunWrite(helpers.GetDB())
+		// If the creation was successful read the document
+		if e != nil {
+			panic(e)
+		} else {
+			return getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
+		}
+	} else if err != nil {
+		panic(err)
+	}
 
-// 	// 	// If the creation was successful read the document
-// 	// 	if e != nil {
-// 	// 		panic(e)
-// 	// 	} else {
-// 	// 		return getVLive(uid)
-// 	// 	}
-// 	// } else if err != nil {
-// 	// 	panic(err)
-// 	// }
+	return entryBucket
+}
 
-// 	// return reminderBucket
-// }
-
-// func setVLive(uid string, VLive DB_VLive) {
-// 	return
-// 	// _, err := rethink.Table("VLive").Update(VLive).Run(helpers.GetDB())
-// 	// helpers.Relax(err)
-// }
+func setEntry(entry DB_Entry) {
+	_, err := rethink.Table("vlive").Update(entry).Run(helpers.GetDB())
+	helpers.Relax(err)
+}
