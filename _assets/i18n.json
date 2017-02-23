@@ -236,7 +236,12 @@
       "channel-embed-name-vod": ":mega: Last video on %s KST",
       "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST",
       "channel-added-success": "Added V Live Channel `%s` to the Channel <#%s>!",
-      "channel-list-no-chanels-error": "No V Live Channels on this Server found!"
+      "channel-list-no-chanels-error": "No V Live Channels on this Server found!",
+      "channel-embed-title-vod": ":film_frames: %s uploaded a new video!",
+      "channel-embed-title-upcoming": ":calendar_spiral: %s scheduled a new video for %s KST!",
+      "channel-embed-title-live": ":mega: %s just went live!",
+      "channel-embed-title-notice": ":pencil: %s posted a new notice!",
+      "channel-embed-title-celeb": ":star2: %s posted a new celeb post!"
     }
   }
 }

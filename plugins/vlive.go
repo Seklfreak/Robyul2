@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/logger"
 	"github.com/bwmarrin/discordgo"
@@ -45,7 +46,7 @@ type DB_Entry struct {
 	PostedUpcoming []DB_Video      `gorethink:"posted_upcoming"`
 	PostedLive     []DB_Video      `gorethink:"posted_live"`
 	PostedVOD      []DB_Video      `gorethink:"posted_vod"`
-	PostedNotice   []DB_Notice     `gorethink:"posted_notices"`
+	PostedNotices  []DB_Notice     `gorethink:"posted_notices"`
 	PostedCelebs   []DB_Celeb      `gorethink:"posted_celebs"`
 }
 
@@ -108,37 +109,96 @@ func (r *VLive) Init(session *discordgo.Session) {
 		defer helpers.Recover()
 
 		for {
-			// TODO: Everything
-			// var reminderBucket []DB_VLive
-			// cursor, err := rethink.Table("VLive").Run(helpers.GetDB())
-			// helpers.Relax(err)
+			var entryBucket []DB_Entry
+			cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
+			helpers.Relax(err)
 
-			// err = cursor.All(&reminderBucket)
-			// helpers.Relax(err)
+			err = cursor.All(&entryBucket)
+			helpers.Relax(err)
 
-			// for _, VLive := range reminderBucket {
-			// 	changes := false
-
-			// 	// Downward loop for in-loop element removal
-			// 	for idx := len(VLive.VLive) - 1; idx >= 0; idx-- {
-			// 		reminder := VLive.VLive[idx]
-
-			// 		if reminder.Timestamp <= time.Now().Unix() {
-			// 			session.ChannelMessageSend(
-			// 				reminder.ChannelID,
-			// 				":alarm_clock: Ring! Ring! <@"+VLive.UserID+">\n"+
-			// 					"You wanted me to remind you to `"+reminder.Message+"` :slight_smile:",
-			// 			)
-
-			// 			VLive.VLive = append(VLive.VLive[:idx], VLive.VLive[idx+1:]...)
-			// 			changes = true
-			// 		}
-			// 	}
-
-			// 	if changes {
-			// 		setVLive(VLive.UserID, VLive)
-			// 	}
-			// }
+			// TODO: Check multiple entries at once
+			for _, entry := range entryBucket {
+				changes := false
+				logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s", entry.VLiveChannel.Name))
+				updatedVliveChannel, err := getVLiveChannelByVliveChannelId(entry.VLiveChannel.Code)
+				if err != nil {
+					logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", entry.VLiveChannel.Name, err.Error()))
+					continue
+				}
+				for _, vod := range updatedVliveChannel.VOD {
+					videoAlreadyPosted := false
+					for _, postedVod := range entry.PostedVOD {
+						if postedVod.Seq == vod.Seq {
+							videoAlreadyPosted = true
+						}
+					}
+					if videoAlreadyPosted == false {
+						logger.VERBOSE.L("vlive", fmt.Sprintf("Posting VOD: #%d", vod.Seq))
+						entry.PostedVOD = append(entry.PostedVOD, vod)
+						changes = true
+						go postVodToChannel(entry.ChannelID, vod, updatedVliveChannel)
+					}
+				}
+				for _, upcoming := range updatedVliveChannel.Upcoming {
+					videoAlreadyPosted := false
+					for _, postedUpcoming := range entry.PostedUpcoming {
+						if postedUpcoming.Seq == upcoming.Seq {
+							videoAlreadyPosted = true
+						}
+					}
+					if videoAlreadyPosted == false {
+						logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
+						entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
+						changes = true
+						go postUpcomingToChannel(entry.ChannelID, upcoming, updatedVliveChannel)
+					}
+				}
+				for _, live := range updatedVliveChannel.Live {
+					videoAlreadyPosted := false
+					for _, postedLive := range entry.PostedLive {
+						if postedLive.Seq == live.Seq {
+							videoAlreadyPosted = true
+						}
+					}
+					if videoAlreadyPosted == false {
+						logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Live: #%d", live.Seq))
+						entry.PostedLive = append(entry.PostedLive, live)
+						changes = true
+						go postLiveToChannel(entry.ChannelID, live, updatedVliveChannel)
+					}
+				}
+				for _, notice := range updatedVliveChannel.Notices {
+					noticeAlreadyPosted := false
+					for _, postedNotice := range entry.PostedNotices {
+						if postedNotice.Number == notice.Number {
+							noticeAlreadyPosted = true
+						}
+					}
+					if noticeAlreadyPosted == false {
+						logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Notice: #%d", notice.Number))
+						entry.PostedNotices = append(entry.PostedNotices, notice)
+						changes = true
+						go postNoticeToChannel(entry.ChannelID, notice, updatedVliveChannel)
+					}
+				}
+				for _, celeb := range updatedVliveChannel.Celebs {
+					celebAlreadyPosted := false
+					for _, postedCeleb := range entry.PostedCelebs {
+						if postedCeleb.ID == celeb.ID {
+							celebAlreadyPosted = true
+						}
+					}
+					if celebAlreadyPosted == false {
+						logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
+						entry.PostedCelebs = append(entry.PostedCelebs, celeb)
+						changes = true
+						go postCelebToChannel(entry.ChannelID, celeb, updatedVliveChannel)
+					}
+				}
+				if changes == true {
+					setEntry(entry)
+				}
+			}
 
 			time.Sleep(60 * time.Second)
 		}
@@ -191,6 +251,11 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				entry.ServerID = targetChannel.GuildID
 				entry.ChannelID = targetChannel.ID
 				entry.VLiveChannel = vliveChannel
+				entry.PostedVOD = vliveChannel.VOD
+				entry.PostedUpcoming = vliveChannel.Upcoming
+				entry.PostedLive = vliveChannel.Live
+				entry.PostedCelebs = vliveChannel.Celebs
+				entry.PostedNotices = vliveChannel.Notices
 				setEntry(entry)
 
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID))
@@ -315,6 +380,15 @@ func getVliveChannelIdFromChannelName(channelSearchName string) (string, error) 
 
 func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) {
 	var vliveChannel DB_VLiveChannel
+
+	defer func() {
+		err := recover()
+
+		if err != nil {
+			logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", channelId, err))
+		}
+	}()
+
 	endpointDecodeChannelCode := fmt.Sprintf(VliveEndpointDecodeChannelCode, VliveAppId, channelId)
 	jsonGabs := helpers.GetJSON(endpointDecodeChannelCode)
 	resN, ok := jsonGabs.Path("result.channelSeq").Data().(float64)
@@ -344,7 +418,7 @@ func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) 
 		for _, videoListEntry := range videoListChildren {
 			err = json.Unmarshal([]byte(videoListEntry.String()), &vliveVideo)
 			if err != nil {
-				helpers.Relax(err)
+				return vliveChannel, err
 			}
 			vliveVideo.Url = fmt.Sprintf(VliveFriendlyVideo, vliveVideo.Seq)
 			if vliveVideo.Type == "LIVE" {
@@ -362,7 +436,7 @@ func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) 
 		for _, videoListEntry := range videoListChildren {
 			err = json.Unmarshal([]byte(videoListEntry.String()), &vliveVideo)
 			if err != nil {
-				helpers.Relax(err)
+				return vliveChannel, err
 			}
 			vliveChannel.Upcoming = append(vliveChannel.Upcoming, vliveVideo)
 		}
@@ -377,7 +451,7 @@ func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) 
 		for _, noticeEntry := range noticesChildren {
 			err = json.Unmarshal([]byte(noticeEntry.String()), &vliveNotice)
 			if err != nil {
-				helpers.Relax(err)
+				return vliveChannel, err
 			}
 			vliveNotice.Url = fmt.Sprintf(VliveFriendlyNotice, channelId, vliveNotice.Number)
 			vliveChannel.Notices = append(vliveChannel.Notices, vliveNotice)
@@ -393,7 +467,7 @@ func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) 
 			for _, celebEntry := range celebsChildren {
 				err = json.Unmarshal([]byte(celebEntry.String()), &vliveCeleb)
 				if err != nil {
-					helpers.Relax(err)
+					return vliveChannel, err
 				}
 				vliveCeleb.Url = fmt.Sprintf(VliveFriendlyCeleb, channelId, vliveCeleb.ID)
 				vliveChannel.Celebs = append(vliveChannel.Celebs, vliveCeleb)
@@ -402,6 +476,100 @@ func getVLiveChannelByVliveChannelId(channelId string) (DB_VLiveChannel, error) 
 	}
 
 	return vliveChannel, nil
+}
+
+func postVodToChannel(channelID string, vod DB_Video, vliveChannel DB_VLiveChannel) {
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-vod", vliveChannel.Name),
+		URL:         vod.Url,
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Description: fmt.Sprintf("**%s**", vod.Title),
+		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
+	}
+	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
+	if ok == true {
+		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+	}
+	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+	if err != nil {
+		logger.ERROR.L("vlive", fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
+	}
+}
+
+func postUpcomingToChannel(channelID string, vod DB_Video, vliveChannel DB_VLiveChannel) {
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-upcoming", vliveChannel.Name, vod.Date),
+		URL:         vod.Url,
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Description: fmt.Sprintf("**%s**", vod.Title),
+		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
+	}
+	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
+	if ok == true {
+		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+	}
+	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+	if err != nil {
+		logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
+	}
+}
+
+func postLiveToChannel(channelID string, vod DB_Video, vliveChannel DB_VLiveChannel) {
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-live", vliveChannel.Name),
+		URL:         vod.Url,
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Description: fmt.Sprintf("**%s**", vod.Title),
+		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
+	}
+	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
+	if ok == true {
+		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+	}
+	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+	if err != nil {
+		logger.ERROR.L("vlive", fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
+	}
+}
+
+func postNoticeToChannel(channelID string, notice DB_Notice, vliveChannel DB_VLiveChannel) {
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-notice", vliveChannel.Name),
+		URL:         notice.Url,
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Description: fmt.Sprintf("**%s**", notice.Title),
+		Image:       &discordgo.MessageEmbedImage{URL: notice.ImageUrl},
+	}
+	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
+	if ok == true {
+		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+	}
+	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+	if err != nil {
+		logger.ERROR.L("vlive", fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, channelID, err))
+	}
+}
+
+func postCelebToChannel(channelID string, celeb DB_Celeb, vliveChannel DB_VLiveChannel) {
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-celeb", vliveChannel.Name),
+		URL:         celeb.Url,
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Description: fmt.Sprintf("%s ...", celeb.Summary),
+	}
+	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
+	if ok == true {
+		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+	}
+	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+	if err != nil {
+		logger.ERROR.L("vlive", fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, channelID, err))
+	}
 }
 
 func getEntryByOrCreateEmpty(key string, id string) DB_Entry {
