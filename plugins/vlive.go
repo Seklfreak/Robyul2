@@ -10,7 +10,6 @@ import (
 	"github.com/Seklfreak/Robyul2/logger"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
-	"math/big"
 	"regexp"
 	"strconv"
 	"strings"
@@ -330,6 +329,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Followers", Value: strconv.FormatInt(vliveChannel.Followers, 10), Inline: true},
 					{Name: "Videos", Value: strconv.FormatInt(vliveChannel.TotalVideos, 10), Inline: true}},
+				Color: helpers.GetDiscordColorFromHex(vliveChannel.Color),
 			}
 			if len(vliveChannel.Live) > 0 {
 				channelEmbed.Fields = append(channelEmbed.Fields, &discordgo.MessageEmbedField{
@@ -352,10 +352,6 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					Value:  fmt.Sprintf("**%s**\n%s", vliveChannel.Upcoming[0].Title, vliveChannel.Upcoming[0].Url),
 					Inline: false,
 				})
-			}
-			vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
-			if ok == true {
-				channelEmbed.Color = int(vliveChannelColorInt.Int64())
 			}
 			_, err = session.ChannelMessageSendEmbed(msg.ChannelID, channelEmbed)
 			if err != nil {
@@ -502,10 +498,7 @@ func postVodToChannel(channelID string, vod DB_Video, vliveChannel DB_VLiveChann
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
 		Description: fmt.Sprintf("**%s**", vod.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
-	}
-	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
-	if ok == true {
-		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
 	}
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
@@ -521,10 +514,7 @@ func postUpcomingToChannel(channelID string, vod DB_Video, vliveChannel DB_VLive
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
 		Description: fmt.Sprintf("**%s**", vod.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
-	}
-	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
-	if ok == true {
-		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
 	}
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
@@ -540,10 +530,7 @@ func postLiveToChannel(channelID string, vod DB_Video, vliveChannel DB_VLiveChan
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
 		Description: fmt.Sprintf("**%s**", vod.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
-	}
-	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
-	if ok == true {
-		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
 	}
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
@@ -559,10 +546,7 @@ func postNoticeToChannel(channelID string, notice DB_Notice, vliveChannel DB_VLi
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
 		Description: fmt.Sprintf("**%s**", notice.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: notice.ImageUrl},
-	}
-	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
-	if ok == true {
-		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
 	}
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
@@ -577,10 +561,7 @@ func postCelebToChannel(channelID string, celeb DB_Celeb, vliveChannel DB_VLiveC
 		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
 		Description: fmt.Sprintf("%s ...", celeb.Summary),
-	}
-	vliveChannelColorInt, ok := new(big.Int).SetString(strings.Replace(vliveChannel.Color, "#", "", 1), 16)
-	if ok == true {
-		channelEmbed.Color = int(vliveChannelColorInt.Int64())
+		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
 	}
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
+	"math/big"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -138,5 +140,14 @@ func GetChannelFromMention(mention string) (*discordgo.Channel, error) {
 		return targetChannel, err
 	} else {
 		return targetChannel, errors.New("Channel not found.")
+	}
+}
+
+func GetDiscordColorFromHex(hex string) int {
+	colorInt, ok := new(big.Int).SetString(strings.Replace(hex, "#", "", 1), 16)
+	if ok == true {
+		return int(colorInt.Int64())
+	} else {
+		return 0x0FADED
 	}
 }
