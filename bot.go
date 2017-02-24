@@ -13,6 +13,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "git.lukas.moe/sn0w/Karen/ratelimits"
 )
 
 // BotOnReady gets called after the gateway connected
@@ -109,6 +110,9 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 
     // Run auto-leaver for non-beta guilds
     go autoLeaver(session)
+
+    // Run ratelimiter
+    ratelimits.Container.Init()
 }
 
 // BotOnMessageCreate gets called after a new message was sent
@@ -117,6 +121,11 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
     // Ignore other bots and @everyone/@here
     if message.Author.Bot || message.MentionEveryone {
+        return
+    }
+
+    // Check if the user is allowed to request commands
+    if !ratelimits.Container.HasKeys(message.Author.ID) {
         return
     }
 
@@ -136,6 +145,12 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
     // Check if the message contains @mentions for us
     if strings.HasPrefix(message.Content, "<@") && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
+        // Consume a key for this action
+        e := ratelimits.Container.Drain(1, message.Author.ID)
+        if e != nil {
+            return
+        }
+
         // Prepare content for editing
         msg := message.Content
 

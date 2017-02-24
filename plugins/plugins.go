@@ -7,6 +7,7 @@ import (
     "git.lukas.moe/sn0w/Karen/plugins/triggers"
     "github.com/bwmarrin/discordgo"
     "strings"
+    "git.lukas.moe/sn0w/Karen/ratelimits"
 )
 
 // Plugin interface to enforce a basic structure
@@ -93,6 +94,12 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message) {
         // Iterate over all commands of the current plugin
         for _, cmd := range plug.Commands() {
             if command == cmd {
+                // Consume a key for this action
+                e := ratelimits.Container.Drain(1, msg.Author.ID)
+                if e != nil {
+                    break
+                }
+
                 go safePluginCall(command, strings.TrimSpace(content), msg, plug)
                 break
             }
@@ -110,6 +117,12 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
     for _, plug := range TriggerPluginList {
         for _, trig := range plug.Triggers() {
             if trigger == trig {
+                // Consume a key for this action
+                e := ratelimits.Container.Drain(1, msg.Author.ID)
+                if e != nil {
+                    break
+                }
+
                 go func(plugin TriggerPlugin) {
                     defer helpers.RecoverDiscord(msg)
                     cache.GetSession().ChannelMessageSend(
