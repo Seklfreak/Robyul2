@@ -3,9 +3,9 @@ package ratelimits
 import (
     "time"
     "sync"
-    "github.com/pkg/errors"
     "fmt"
     "strconv"
+    "errors"
 )
 
 const (
