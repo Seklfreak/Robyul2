@@ -29,3 +29,4 @@ import:
   subpackages:
   - translate
 - package: github.com/ugjka/cleverbot-go
+  version: 19404e6e029ce2e79f0b16f1c9b72980e8951237

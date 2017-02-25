@@ -1,5 +1,5 @@
-hash: 956aef396d269c75bd9affdcbdd6c2fdc130f3a4ab4aafa06dffd61f3f10189f
-updated: 2017-02-25T17:43:39.134109847+01:00
+hash: bb5362650275ef0c7ba0663e6c307cce86d96db005c2a353caf54d5ecacf04ac
+updated: 2017-02-25T17:50:26.404096902+01:00
 imports:
 - name: cloud.google.com/go
   version: c116c7972ec94f148459a304d07a67ecbc770d4b
@@ -60,7 +60,7 @@ imports:
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
-  version: d7fee5d7fe8e42f9ff5c8774a48bf5186db6c7f0
+  version: 19404e6e029ce2e79f0b16f1c9b72980e8951237
 - name: golang.org/x/crypto
   version: 537c9dfe43c8ca78e68e340fc140bca4d8bfaaa0
   subpackages:
