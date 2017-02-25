@@ -3,8 +3,6 @@ package ratelimits
 import (
     "time"
     "sync"
-    "fmt"
-    "strconv"
     "errors"
 )
 
@@ -47,8 +45,6 @@ func (b *BucketContainer) Refiller() {
     for {
         for user, keys := range b.buckets {
             if keys < BUCKET_UPPER_BOUND {
-                fmt.Println("[RATELIMIT] +1 key for " + user)
-
                 b.Lock()
                 b.buckets[user] += DROP_SIZE
                 b.Unlock()
@@ -81,8 +77,6 @@ func (b *BucketContainer) Drain(amount uint8, user string) error {
     b.Lock()
     b.buckets[user] -= amount
     b.Unlock()
-
-    fmt.Println("[RATELIMIT] Drained " + strconv.Itoa(int(amount)) + " keys from " + user + " (New amount: " + strconv.Itoa(int(b.buckets[user])) + ")")
 
     return nil
 }
