@@ -1,5 +1,5 @@
-hash: 095a83a13d305071a6c2ade087ecffc496d34275ac5025cf58e2d9812e2c898f
-updated: 2017-02-17T17:49:49.182917131+01:00
+hash: 956aef396d269c75bd9affdcbdd6c2fdc130f3a4ab4aafa06dffd61f3f10189f
+updated: 2017-02-25T17:43:39.134109847+01:00
 imports:
 - name: cloud.google.com/go
   version: c116c7972ec94f148459a304d07a67ecbc770d4b
@@ -15,15 +15,13 @@ imports:
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
-  version: edd6e169fa71948189f7b489c3a3455880f849ae
+  version: c34affbc570dee6050ae15e42b08d9c061a0a3aa
 - name: github.com/bwmarrin/snowflake
   version: 34b33bf22ac0c98266031bcb193e2c9a621730f8
 - name: github.com/cenkalti/backoff
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
   version: 03be5e6bb9874570ea7fb0961225d193cbc374c5
-- name: github.com/CleverbotIO/go-cleverbot.io
-  version: 2b334e3eb17cf9556f3d9dc1d42eddc7b2e37007
 - name: github.com/dustin/go-humanize
   version: 7a41df006ff9af79a29f0ffa9c5f21fbe6314a2d
 - name: github.com/getsentry/raven-go
@@ -61,6 +59,8 @@ imports:
   version: 3f603f494d61c73457fb234161d8982b9f0f0b71
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
+- name: github.com/ugjka/cleverbot-go
+  version: d7fee5d7fe8e42f9ff5c8774a48bf5186db6c7f0
 - name: golang.org/x/crypto
   version: 537c9dfe43c8ca78e68e340fc140bca4d8bfaaa0
   subpackages:
@@ -100,7 +100,7 @@ imports:
   - transform
   - unicode/norm
 - name: google.golang.org/api
-  version: bc20c61134e1d25265dd60049f5735381e79b631
+  version: 64485db7e8c8be51e572801d06cdbcfadd3546c1
   subpackages:
   - gensupport
   - googleapi
@@ -110,7 +110,7 @@ imports:
   - option
   - transport
 - name: google.golang.org/appengine
-  version: 2e4a801b39fc199db615bfca7d0b9f8cd9580599
+  version: 3a452f9e00122ead39586d68ffdb9c6e1326af3c
   subpackages:
   - internal
   - internal/app_identity
@@ -124,7 +124,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/grpc
-  version: d0c32ee6a441117d49856d6120ca9552af413ee0
+  version: 34384f34de585705f1a6783a158d2ec8af29f618
   subpackages:
   - codes
   - credentials
