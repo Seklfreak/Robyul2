@@ -56,7 +56,7 @@ var PluginList = []Plugin{
     &Stats{},
     &Stone{},
     &Support{},
-    &Translator{},
+    //&Translator{},
     &Uptime{},
     &UrbanDict{},
     &Weather{},
