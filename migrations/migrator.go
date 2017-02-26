@@ -13,6 +13,7 @@ var migrations = []helpers.Callback{
 	m2_create_table_reminders,
 	m3_create_table_music,
 	m4_create_table_vlive,
+	m5_create_table_twitter,
 }
 
 // Run executes all registered migrations

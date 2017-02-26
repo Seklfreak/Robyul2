@@ -43,6 +43,7 @@ var PluginList = []Plugin{
 	&UrbanDict{},
 	&Weather{},
 	&VLive{},
+	&Twitter{},
 	//&Avatar{},
 	//&Calc{},
 	//&Changelog{},

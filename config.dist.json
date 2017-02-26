@@ -22,5 +22,12 @@
         "name": "YOUR_BOT_NAME",
         "avatar": "YOUR_BASE64_AVATAR"
     },
-    "debug": false
+    "metrics_ip": "127.0.0.1",
+    "debug": false,
+    "twitter": {
+        "consumer_key": "",
+        "consumer_secret": "",
+        "access_token": "",
+        "access_secret": ""
+    }
 }
