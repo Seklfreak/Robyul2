@@ -131,7 +131,10 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
                 message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
                 voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
-                helpers.Relax(err)
+                if err != nil {
+                    helpers.VoiceFree(guild.ID)
+                    helpers.Relax(err)
+                }
 
                 if merr == nil {
                     session.ChannelMessageEdit(channel.ID, message.ID, "Joined!\nThe radio should start playing shortly c:")

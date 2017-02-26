@@ -220,7 +220,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
             voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
-            helpers.Relax(err)
+            if err != nil {
+                helpers.VoiceFree(guild.ID)
+                helpers.Relax(err)
+            }
 
             if merr == nil {
                 session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :smiley:")
