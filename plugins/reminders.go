@@ -145,7 +145,7 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
         }
 
         if len(embedFields) == 0 {
-            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("remiders.empty"))
+            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reminders.empty"))
             return
         }
 
