@@ -12,7 +12,6 @@ import (
     rethink "github.com/gorethink/gorethink"
     "io"
     "io/ioutil"
-    "math/rand"
     "os"
     "os/exec"
     "regexp"
@@ -382,7 +381,28 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         err = cursor.All(&matches)
         helpers.Relax(err)
 
-        match := matches[rand.Intn(len(matches))]
+        var match Song
+
+        for _, song := range matches {
+            dupe := false
+
+            for _, entry := range *playlist {
+                if song.ID == entry.ID {
+                    dupe = true
+                    break
+                }
+            }
+
+            if !dupe {
+                match = song
+                break
+            }
+        }
+
+        if match == (Song{}) {
+            session.ChannelMessageSend(channel.ID, "Sorry but there are no more songs that aren't already in your playlist :shrug:")
+            return
+        }
 
         m.guildConnections[guild.ID].Lock()
         *playlist = append(*playlist, match)
