@@ -28,13 +28,13 @@ type BucketContainer struct {
     sync.Mutex
 
     // Maps discord ids to key-counts
-    buckets map[string]uint8
+    buckets map[string]int8
 }
 
 // Allocates the map and starts routines
 func (b *BucketContainer) Init() {
     b.Lock()
-    b.buckets = make(map[string]uint8)
+    b.buckets = make(map[string]int8)
     b.Unlock()
 
     go b.Refiller()
@@ -44,10 +44,31 @@ func (b *BucketContainer) Init() {
 func (b *BucketContainer) Refiller() {
     for {
         for user, keys := range b.buckets {
+            // Chill zone
+            if keys == -1 {
+                b.Lock()
+                b.buckets[user]++
+                b.Unlock()
+
+                continue
+            }
+
+            // Chill zone exit
+            if keys == 0 {
+                b.Lock()
+                b.buckets[user] = BUCKET_INITIAL_FILL
+                b.Unlock()
+
+                continue
+            }
+
+            // More free keys for nice users :3
             if keys < BUCKET_UPPER_BOUND {
                 b.Lock()
                 b.buckets[user] += DROP_SIZE
                 b.Unlock()
+
+                continue
             }
         }
 
@@ -65,7 +86,7 @@ func (b *BucketContainer) CreateBucketIfNotExists(user string) {
 }
 
 // Drains $amount from $user if he has enough keys left
-func (b *BucketContainer) Drain(amount uint8, user string) error {
+func (b *BucketContainer) Drain(amount int8, user string) error {
     b.CreateBucketIfNotExists(user)
 
     // Check if there are enough keys left
@@ -86,4 +107,14 @@ func (b *BucketContainer) HasKeys(user string) bool {
     b.CreateBucketIfNotExists(user)
 
     return b.buckets[user] > 0
+}
+
+func (b *BucketContainer) Get(user string) int8 {
+    return b.buckets[user]
+}
+
+func (b *BucketContainer) Set(user string, value int8) {
+    b.Lock()
+    b.buckets[user] = value
+    b.Unlock()
 }

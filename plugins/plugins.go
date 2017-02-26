@@ -49,6 +49,7 @@ var PluginList = []Plugin{
     &Osu{},
     &Ping{},
     &RandomCat{},
+    &Ratelimit{},
     &Reminders{},
     &Roll{},
     &RPS{},
