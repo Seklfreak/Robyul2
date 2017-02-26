@@ -9,9 +9,9 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/logger"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -327,8 +327,8 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
 				Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
 				Fields: []*discordgo.MessageEmbedField{
-					{Name: "Followers", Value: strconv.FormatInt(vliveChannel.Followers, 10), Inline: true},
-					{Name: "Videos", Value: strconv.FormatInt(vliveChannel.TotalVideos, 10), Inline: true}},
+					{Name: "Followers", Value: humanize.Comma(vliveChannel.Followers), Inline: true},
+					{Name: "Videos", Value: humanize.Comma(vliveChannel.TotalVideos), Inline: true}},
 				Color: helpers.GetDiscordColorFromHex(vliveChannel.Color),
 			}
 			if len(vliveChannel.Live) > 0 {

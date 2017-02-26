@@ -8,8 +8,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
+	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -244,11 +244,6 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			createdAtTime, err := time.Parse(rfc2822, twitterUser.CreatedAt)
 			helpers.Relax(err)
 
-			sinceCreatingText := helpers.HumanizedTimesSinceText(createdAtTime)
-			if sinceCreatingText == "" {
-				sinceCreatingText = "very recently"
-			}
-
 			twitterNameModifier := ""
 			if twitterUser.Verified {
 				twitterNameModifier += " :white_check_mark:"
@@ -263,10 +258,10 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitter.embed-footer")},
 				Description: twitterUser.Description,
 				Fields: []*discordgo.MessageEmbedField{
-					{Name: "Followers", Value: strconv.Itoa(twitterUser.FollowersCount), Inline: true},
-					{Name: "Following", Value: strconv.Itoa(twitterUser.FriendsCount), Inline: true},
-					{Name: "Tweets", Value: strconv.Itoa(twitterUser.StatusesCount), Inline: true}, // TODO: Make readable
-					{Name: "Account Creation", Value: sinceCreatingText, Inline: true}},
+					{Name: "Followers", Value: humanize.Comma(int64(twitterUser.FollowersCount)), Inline: true},
+					{Name: "Following", Value: humanize.Comma(int64(twitterUser.FriendsCount)), Inline: true},
+					{Name: "Tweets", Value: humanize.Comma(int64(twitterUser.StatusesCount)), Inline: true},
+					{Name: "Account Creation", Value: humanize.Time(createdAtTime), Inline: true}},
 				Color: helpers.GetDiscordColorFromHex(twitterUser.ProfileLinkColor),
 			}
 			if twitterUser.Entities.URL.Urls != nil && len(twitterUser.Entities.URL.Urls) >= 1 {

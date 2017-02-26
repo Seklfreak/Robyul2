@@ -2,8 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"strings"
-	"time"
 )
 
 // SecondsToDuration turns an int (seconds) into HH:MM:SS
@@ -23,84 +21,6 @@ func SecondsToDuration(input int) string {
 	}
 
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-}
-
-// http://stackoverflow.com/a/36531443
-func HumanizedTimesSince(a time.Time) (year, month, day, hour, min, sec int) {
-	b := time.Now()
-	if a.Location() != b.Location() {
-		b = b.In(a.Location())
-	}
-	if a.After(b) {
-		a, b = b, a
-	}
-	y1, M1, d1 := a.Date()
-	y2, M2, d2 := b.Date()
-
-	h1, m1, s1 := a.Clock()
-	h2, m2, s2 := b.Clock()
-
-	year = int(y2 - y1)
-	month = int(M2 - M1)
-	day = int(d2 - d1)
-	hour = int(h2 - h1)
-	min = int(m2 - m1)
-	sec = int(s2 - s1)
-
-	// Normalize negative values
-	if sec < 0 {
-		sec += 60
-		min--
-	}
-	if min < 0 {
-		min += 60
-		hour--
-	}
-	if hour < 0 {
-		hour += 24
-		day--
-	}
-	if day < 0 {
-		// days in month:
-		t := time.Date(y1, M1, 32, 0, 0, 0, 0, time.UTC)
-		day += 32 - t.Day()
-		month--
-	}
-	if month < 0 {
-		month += 12
-		year--
-	}
-
-	return
-}
-
-func HumanizedTimesSinceText(since time.Time) string {
-	sinceText := ""
-	yearsSince, monthsSince, daysSince, hoursSince, minutesSince, secondsSince := HumanizedTimesSince(since)
-	if yearsSince >= 0 || monthsSince >= 0 || daysSince >= 0 || hoursSince >= 0 || minutesSince >= 0 || secondsSince >= 0 {
-		if yearsSince >= 0 {
-			sinceText += fmt.Sprintf(", %d years", yearsSince)
-		}
-		if monthsSince >= 0 {
-			sinceText += fmt.Sprintf(", %d months", monthsSince)
-		}
-		if daysSince >= 0 {
-			sinceText += fmt.Sprintf(", %d days", daysSince)
-		}
-		if hoursSince >= 0 {
-			sinceText += fmt.Sprintf(", %d hours", hoursSince)
-		}
-		if minutesSince >= 0 {
-			sinceText += fmt.Sprintf(", %d minutes", minutesSince)
-		}
-		if secondsSince >= 0 {
-			sinceText += fmt.Sprintf(", %d seconds", secondsSince)
-		}
-		sinceText += " ago"
-		sinceText = strings.Replace(sinceText, ", ", "", 1)
-		sinceText = Rev(strings.Replace(Rev(sinceText), Rev(", "), Rev(" and "), 1))
-	}
-	return sinceText
 }
 
 func Rev(s string) string {
