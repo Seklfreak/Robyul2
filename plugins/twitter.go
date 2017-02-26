@@ -35,7 +35,7 @@ var (
 
 const (
 	TwitterFriendlyUser   string = "https://twitter.com/%s"
-	TwitterFriendlyStatus string = "https://twitter.com/%s/status/%d"
+	TwitterFriendlyStatus string = "https://twitter.com/%s/status/%s"
 	rfc2822               string = "Mon Jan 02 15:04:05 -0700 2006"
 )
 
@@ -84,6 +84,13 @@ func (m *Twitter) Init(session *discordgo.Session) {
 					ExcludeReplies:  twitter.Bool(true),
 					IncludeRetweets: twitter.Bool(true),
 				})
+
+				// https://github.com/golang/go/wiki/SliceTricks#reversing
+				for i := len(twitterUserTweets)/2 - 1; i >= 0; i-- {
+					opp := len(twitterUserTweets) - 1 - i
+					twitterUserTweets[i], twitterUserTweets[opp] = twitterUserTweets[opp], twitterUserTweets[i]
+				}
+
 				if err != nil {
 					logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
 					continue
