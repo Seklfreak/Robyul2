@@ -355,15 +355,15 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
 
         for i, song := range *playlist {
-            if i > 10 {
+            if i > 11 {
                 embed.Footer.Text = strconv.Itoa(len(*playlist) - i) + " entries omitted."
                 break
             }
 
-            num := strconv.Itoa(i + 1) + "."
+            num := "`[" + strconv.Itoa(i + 1) + "]` "
 
             if i == 0 {
-                embed.Fields[0].Value = song.Title
+                embed.Fields[0].Value = num + " " + song.Title
                 continue
             }
 
