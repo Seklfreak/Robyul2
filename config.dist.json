@@ -29,5 +29,9 @@
         "consumer_secret": "",
         "access_token": "",
         "access_secret": ""
+    },
+    "instagram": {
+        "username": "",
+        "password": ""
     }
 }

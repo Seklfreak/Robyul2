@@ -44,6 +44,7 @@ var PluginList = []Plugin{
 	&Weather{},
 	&VLive{},
 	&Twitter{},
+	&Instagram{},
 	//&Avatar{},
 	//&Calc{},
 	//&Changelog{},

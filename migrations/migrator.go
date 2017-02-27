@@ -14,6 +14,7 @@ var migrations = []helpers.Callback{
 	m3_create_table_music,
 	m4_create_table_vlive,
 	m5_create_table_twitter,
+	m6_create_table_instagram,
 }
 
 // Run executes all registered migrations

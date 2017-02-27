@@ -254,6 +254,16 @@
       "account-delete-success": "Deleted Twitter Account `@%s` from the Database!",
       "account-list-no-accounts-error": "No Twitter Accounts found on this server!",
       "tweet-embed-title": "%s (@%s)%s posted a new Tweet"
+    },
+    "instagram": {
+      "account-embed-title": "%s (@%s)%s Instagram Account",
+      "account-not-found": "User not found!",
+      "embed-footer": "via instagram.com",
+      "account-added-success": "Added Instagram Account `@%s` to the Channel <#%s>!",
+      "account-delete-not-found-error": "Unable to find Instagram Account in the Database!",
+      "account-delete-success": "Deleted Instagram Account `@%s` from the Database!",
+      "account-list-no-accounts-error": "No Instagram Accounts found on this server!",
+      "post-embed-title": "%s (@%s)%s posted a new %s"
     }
   }
 }

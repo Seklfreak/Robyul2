@@ -68,7 +68,7 @@ func (m *Twitter) Init(session *discordgo.Session) {
 			// TODO: Check multiple entries at once
 			for _, entry := range entryBucket {
 				changes := false
-				logger.VERBOSE.L("twitter", fmt.Sprintf("checking Twitter Account %s", entry.AccountScreenName))
+				logger.VERBOSE.L("twitter", fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
 
 				twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
 					ScreenName: entry.AccountScreenName,
@@ -84,6 +84,10 @@ func (m *Twitter) Init(session *discordgo.Session) {
 					ExcludeReplies:  twitter.Bool(true),
 					IncludeRetweets: twitter.Bool(true),
 				})
+				if err != nil {
+					logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
+					continue
+				}
 
 				// https://github.com/golang/go/wiki/SliceTricks#reversing
 				for i := len(twitterUserTweets)/2 - 1; i >= 0; i-- {
@@ -91,10 +95,6 @@ func (m *Twitter) Init(session *discordgo.Session) {
 					twitterUserTweets[i], twitterUserTweets[opp] = twitterUserTweets[opp], twitterUserTweets[i]
 				}
 
-				if err != nil {
-					logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
-					continue
-				}
 				for _, tweet := range twitterUserTweets {
 					tweetAlreadyPosted := false
 					for _, postedTweet := range entry.PostedTweets {
@@ -193,12 +193,11 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						m.deleteEntryById(entryBucket.ID)
 
 						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
-						logger.INFO.L("twitter", fmt.Sprintf("Deleted TwitterAccount @%s", entryBucket.AccountScreenName))
+						logger.INFO.L("twitter", fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
 					} else {
 						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
 						return
 					}
-
 				} else {
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
@@ -246,7 +245,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 
 			twitterNameModifier := ""
 			if twitterUser.Verified {
-				twitterNameModifier += " :white_check_mark:"
+				twitterNameModifier += " :ballot_box_with_check:"
 			}
 			if twitterUser.Protected {
 				twitterNameModifier += " :lock:"
@@ -283,7 +282,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twitterUser *twitter.User) {
 	twitterNameModifier := ""
 	if twitterUser.Verified {
-		twitterNameModifier += " :white_check_mark:"
+		twitterNameModifier += " :ballot_box_with_check:"
 	}
 	if twitterUser.Protected {
 		twitterNameModifier += " :lock:"
