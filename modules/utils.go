@@ -93,6 +93,9 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
 
     // Redirect trigger
     if ref, ok := triggerCache[trigger]; ok {
-        (*ref).Response(trigger, content)
+        cache.GetSession().ChannelMessageSend(
+            msg.ChannelID,
+            (*ref).Response(trigger, content),
+        )
     }
 }
