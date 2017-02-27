@@ -44,6 +44,9 @@ var (
 
 	// InstagramAccountsCount counts all connected instagram accounts
 	InstagramAccountsCount = expvar.NewInt("instagram_accounts_count")
+
+	// FacebookPagesCount counts all connected instagram accounts
+	FacebookPagesCount = expvar.NewInt("facebook_pages_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -122,5 +125,11 @@ func CollectRuntimeMetrics() {
 		cursor.One(&cnt)
 		cursor.Close()
 		TwitterAccountsCount.Set(int64(cnt))
+
+		cursor, err = rethink.Table("facebook").Count().Run(helpers.GetDB())
+		helpers.Relax(err)
+		cursor.One(&cnt)
+		cursor.Close()
+		FacebookPagesCount.Set(int64(cnt))
 	}
 }
