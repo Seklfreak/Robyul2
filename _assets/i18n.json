@@ -226,7 +226,11 @@
       "deleting-messages-failed": "Deleting messages failed: `%s`",
       "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?",
       "user-muted-success": "User `%s` has been muted. :mute:",
-      "user-unmuted-success": "User `%s` has been unmuted. :speaker:"
+      "user-unmuted-success": "User `%s` has been unmuted. :speaker:",
+      "disallowed": "You are not allowed to do this!",
+      "bot-disallowed": "I am not allowed to do this!",
+      "user-banned-success": "User `%s (#%s)` has been banned. :no_entry:",
+      "user-kicked-success": "User `%s (#%s)` has been kicked. :door:"
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",

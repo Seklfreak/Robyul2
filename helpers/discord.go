@@ -143,6 +143,18 @@ func GetChannelFromMention(mention string) (*discordgo.Channel, error) {
 	}
 }
 
+func GetUserFromMention(mention string) (*discordgo.User, error) {
+	var targetUser *discordgo.User
+	re := regexp.MustCompile("(<@)?(\\d+)(>)?")
+	result := re.FindStringSubmatch(mention)
+	if len(result) == 4 {
+		targetUser, err := cache.GetSession().User(result[2])
+		return targetUser, err
+	} else {
+		return targetUser, errors.New("User not found.")
+	}
+}
+
 func GetDiscordColorFromHex(hex string) int {
 	colorInt, ok := new(big.Int).SetString(strings.Replace(hex, "#", "", 1), 16)
 	if ok == true {

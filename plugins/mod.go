@@ -17,6 +17,8 @@ func (m *Mod) Commands() []string {
 		"cleanup",
 		"mute",
 		"unmute",
+		"ban",
+		"kick",
 	}
 }
 
@@ -25,11 +27,11 @@ func (m *Mod) Init(session *discordgo.Session) {
 }
 
 func (m *Mod) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	helpers.RequireAdmin(msg, func() {
-		regexNumberOnly := regexp.MustCompile(`^\d+$`)
+	regexNumberOnly := regexp.MustCompile(`^\d+$`)
 
-		switch command {
-		case "cleanup":
+	switch command {
+	case "cleanup":
+		helpers.RequireAdmin(msg, func() {
 			args := strings.Split(content, " ")
 			if len(args) > 0 {
 				switch args[0] {
@@ -130,7 +132,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 			}
-		case "mute": // [p]mute server <@User>
+		})
+	case "mute": // [p]mute server <@User>
+		helpers.RequireAdmin(msg, func() {
 			args := strings.Split(content, " ")
 			if len(args) >= 2 {
 				if len(msg.Mentions) >= 1 {
@@ -152,7 +156,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
 			}
-		case "unmute": // [p]unmute server <@User>
+		})
+	case "unmute": // [p]unmute server <@User>
+		helpers.RequireAdmin(msg, func() {
 			args := strings.Split(content, " ")
 			if len(args) >= 2 {
 				if len(msg.Mentions) >= 1 {
@@ -174,6 +180,117 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
 			}
+		})
+	case "ban": // [p]ban <User> [<Days>]
+		args := strings.Split(content, " ")
+		if len(args) >= 1 {
+			// Days Argument
+			days := 0
+			var err error
+			if len(args) >= 2 && regexNumberOnly.MatchString(args[1]) {
+				days, err = strconv.Atoi(args[1])
+				if err != nil {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+			}
+
+			targetUser, err := helpers.GetUserFromMention(args[0])
+			if err != nil {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+				return
+			}
+			// Bot can ban?
+			botCanBan := false
+			channel, err := session.Channel(msg.ChannelID)
+			helpers.Relax(err)
+			guild, err := session.Guild(channel.GuildID)
+			guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
+			helpers.Relax(err)
+			for _, role := range guild.Roles {
+				for _, userRole := range guildMemberBot.Roles {
+					if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+						botCanBan = true
+					}
+				}
+			}
+			if botCanBan == false {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+				return
+			}
+			// User can ban?
+			userCanBan := false
+			guildMemberUser, err := session.GuildMember(guild.ID, msg.Author.ID)
+			helpers.Relax(err)
+			for _, role := range guild.Roles {
+				for _, userRole := range guildMemberUser.Roles {
+					if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+						userCanBan = true
+					}
+				}
+			}
+			if userCanBan == false {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+				return
+			}
+			// Ban user
+			err = session.GuildBanCreate(guild.ID, targetUser.ID, days)
+			helpers.Relax(err)
+			logger.INFO.L("mod", fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
+		} else {
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+			return
 		}
-	})
+	case "kick": // [p]kick <User>
+		args := strings.Split(content, " ")
+		if len(args) >= 1 {
+			targetUser, err := helpers.GetUserFromMention(args[0])
+			if err != nil {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+				return
+			}
+			// Bot can kick?
+			botCanKick := false
+			channel, err := session.Channel(msg.ChannelID)
+			helpers.Relax(err)
+			guild, err := session.Guild(channel.GuildID)
+			guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
+			helpers.Relax(err)
+			for _, role := range guild.Roles {
+				for _, userRole := range guildMemberBot.Roles {
+					if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+						botCanKick = true
+					}
+				}
+			}
+			if botCanKick == false {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+				return
+			}
+			// User can kick?
+			userCanKick := false
+			guildMemberUser, err := session.GuildMember(guild.ID, msg.Author.ID)
+			helpers.Relax(err)
+			for _, role := range guild.Roles {
+				for _, userRole := range guildMemberUser.Roles {
+					if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+						userCanKick = true
+					}
+				}
+			}
+			if userCanKick == false {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+				return
+			}
+			// Ban user
+			err = session.GuildMemberDelete(guild.ID, targetUser.ID)
+			helpers.Relax(err)
+			logger.INFO.L("mod", fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
+		} else {
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+			return
+		}
+	}
 }
