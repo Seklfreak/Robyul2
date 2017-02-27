@@ -6,11 +6,10 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
-    "git.lukas.moe/sn0w/Karen/plugins"
+    "git.lukas.moe/sn0w/Karen/modules"
     "github.com/getsentry/raven-go"
     "github.com/bwmarrin/discordgo"
     "regexp"
-    "strconv"
     "strings"
     "time"
     "git.lukas.moe/sn0w/Karen/ratelimits"
@@ -25,56 +24,23 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
         helpers.GetConfig().Path("discord.perms").Data().(string),
     ))
 
+    // Cache the session
     cache.SetSession(session)
+
+    // Load and init all modules
+    modules.Init(session)
+
+    // Run async worker for guild changes
     go helpers.GuildSettingsUpdater()
 
-    // Stats!
-    totalPlugins := 0
-    totalTriggers := 0
+    // Run async game-changer
+    go changeGameInterval(session)
 
-    // Init plugins
-    fmt.Println()
-    tmpl := "[PLUG] %s reacts to [ %s]"
-    for _, plugin := range plugins.PluginList {
-        cmds := ""
+    // Run auto-leaver for non-beta guilds
+    go autoLeaver(session)
 
-        for _, cmd := range plugin.Commands() {
-            cmds += cmd + " "
-        }
-
-        Logger.INFO.L("bot", fmt.Sprintf(
-            tmpl,
-            helpers.Typeof(plugin),
-            cmds,
-        ))
-
-        plugin.Init(session)
-        totalPlugins++
-    }
-
-    // Init trigger plugins
-    fmt.Println()
-    tmpl = "[TRIG] %s gets triggered by [ %s]"
-    for _, plugin := range plugins.TriggerPluginList {
-        cmds := ""
-
-        for _, cmd := range plugin.Triggers() {
-            cmds += cmd + " "
-        }
-
-        Logger.INFO.L("bot", fmt.Sprintf(
-            tmpl,
-            helpers.Typeof(plugin),
-            cmds,
-        ))
-
-        totalTriggers++
-    }
-
-    Logger.PLUGIN.L(
-        "bot",
-        "Initializer finished. Loaded " + strconv.Itoa(totalPlugins) + " plugins and " + strconv.Itoa(totalTriggers) + " triggers",
-    )
+    // Run ratelimiter
+    ratelimits.Container.Init()
 
     go func() {
         time.Sleep(3 * time.Second)
@@ -104,15 +70,6 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
             )
         }
     }()
-
-    // Run async game-changer
-    go changeGameInterval(session)
-
-    // Run auto-leaver for non-beta guilds
-    go autoLeaver(session)
-
-    // Run ratelimiter
-    ratelimits.Container.Init()
 }
 
 // BotOnMessageCreate gets called after a new message was sent
@@ -268,19 +225,14 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         return
     }
 
+    // Separate arguments from the command
+    content := strings.Replace(message.Content, prefix + cmd, "", -1)
+
     // Check if a module matches said command
-    plugins.CallBotPlugin(
-        cmd,
-        strings.Replace(message.Content, prefix + cmd, "", -1),
-        message.Message,
-    )
+    modules.CallBotPlugin(cmd, content, message.Message)
 
     // Check if a trigger matches
-    plugins.CallTriggerPlugin(
-        cmd,
-        strings.Replace(message.Content, prefix + cmd, "", -1),
-        message.Message,
-    )
+    modules.CallTriggerPlugin(cmd, content, message.Message)
 
     // Else exit
     return
