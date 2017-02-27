@@ -1,5 +1,5 @@
-hash: bb5362650275ef0c7ba0663e6c307cce86d96db005c2a353caf54d5ecacf04ac
-updated: 2017-02-25T17:50:26.404096902+01:00
+hash: 80a972e79ca3248ed89e9c5662efe7bfd64fa26cdd000a585bb5aced26335015
+updated: 2017-02-27T22:46:28.393233598+01:00
 imports:
 - name: cloud.google.com/go
   version: c116c7972ec94f148459a304d07a67ecbc770d4b
@@ -16,8 +16,6 @@ imports:
   version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
   version: c34affbc570dee6050ae15e42b08d9c061a0a3aa
-- name: github.com/bwmarrin/snowflake
-  version: 34b33bf22ac0c98266031bcb193e2c9a621730f8
 - name: github.com/cenkalti/backoff
   version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 - name: github.com/certifi/gocertifi
@@ -82,7 +80,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/oauth2
-  version: b9780ec78894ab900c062d58ee3076cd9b2a4501
+  version: 810daf0509f84359cfa9527f6ea4886f1dbabfc5
   subpackages:
   - google
   - internal
@@ -124,7 +122,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/grpc
-  version: 34384f34de585705f1a6783a158d2ec8af29f618
+  version: d122f1dfe6ecece11d0c914ce4b2d9cab6d4b4ff
   subpackages:
   - codes
   - credentials
