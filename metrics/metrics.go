@@ -38,6 +38,12 @@ var (
 
 	// VliveChannelsCount counts all connected vlive channels
 	VliveChannelsCount = expvar.NewInt("vlive_channels_count")
+
+	// TwitterAccountsCount counts all connected twitter accounts
+	TwitterAccountsCount = expvar.NewInt("twitter_accounts_count")
+
+	// InstagramAccountsCount counts all connected instagram accounts
+	InstagramAccountsCount = expvar.NewInt("instagram_accounts_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -97,11 +103,24 @@ func CollectRuntimeMetrics() {
 
 		CoroutineCount.Set(int64(runtime.NumGoroutine()))
 
+		var cnt int
+
 		cursor, err := rethink.Table("vlive").Count().Run(helpers.GetDB())
 		helpers.Relax(err)
-		var cnt int
 		cursor.One(&cnt)
 		cursor.Close()
 		VliveChannelsCount.Set(int64(cnt))
+
+		cursor, err = rethink.Table("instagram").Count().Run(helpers.GetDB())
+		helpers.Relax(err)
+		cursor.One(&cnt)
+		cursor.Close()
+		InstagramAccountsCount.Set(int64(cnt))
+
+		cursor, err = rethink.Table("twitter").Count().Run(helpers.GetDB())
+		helpers.Relax(err)
+		cursor.One(&cnt)
+		cursor.Close()
+		TwitterAccountsCount.Set(int64(cnt))
 	}
 }
