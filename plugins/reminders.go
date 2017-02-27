@@ -32,7 +32,7 @@ type DB_Reminder struct {
 
 func (r *Reminders) Commands() []string {
 	return []string{
-		"remind",
+		"remindme",
 		"rm",
 		"reminders",
 		"rms",
@@ -63,10 +63,13 @@ func (r *Reminders) Init(session *discordgo.Session) {
 					reminder := reminders.Reminders[idx]
 
 					if reminder.Timestamp <= time.Now().Unix() {
+						dmChannel, err := session.UserChannelCreate(reminders.UserID)
+						helpers.Relax(err)
+
 						session.ChannelMessageSend(
-							reminder.ChannelID,
-							":alarm_clock: Ring! Ring! <@"+reminders.UserID+">\n"+
-								"You wanted me to remind you to `"+reminder.Message+"` :slight_smile:",
+							dmChannel.ID,
+							":alarm_clock: You wanted me to remind you about this:\n"+
+								"```"+reminder.Message+"```",
 						)
 
 						reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx+1:]...)
@@ -88,7 +91,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 
 func (r *Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	switch command {
-	case "rm", "remind":
+	case "rm", "remind", "remindme":
 		channel, err := cache.Channel(msg.ChannelID)
 		helpers.Relax(err)
 
