@@ -34,6 +34,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 			return
 		}
 	}()
+	session.ChannelTyping(msg.ChannelID)
 
 	queryUrl := fmt.Sprintf(wolframBaseUrl, helpers.GetConfig().Path("wolframalpha.appid").Data().(string), url.QueryEscape(content))
 
