@@ -270,6 +270,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					Inline: true,
 				})
 			}
+			_, _ = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName)))
 			_, err = session.ChannelMessageSendEmbed(msg.ChannelID, accountEmbed)
 			helpers.Relax(err)
 			return
@@ -315,6 +316,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: tweet.Entities.Media[0].MediaURLHttps}
 	}
 
+	_, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr)))
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
 		logger.ERROR.L("vlive", fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.ID, channelID, err))

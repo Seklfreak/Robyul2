@@ -290,6 +290,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 					Inline: true,
 				})
 			}
+			_, _ = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)))
 			_, err := session.ChannelMessageSendEmbed(msg.ChannelID, accountEmbed)
 			helpers.Relax(err)
 			return
@@ -332,6 +333,7 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.ImageVersions2.Candidates[0].URL}
 	}
 
+	_, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.ID)))
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
 		logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
