@@ -39,6 +39,10 @@
     },
     "wolframalpha": {
         "appid": ""
+    },
+    "lastfm": {
+        "api_key": "",
+        "api_secret": ""
     }
 }
 }

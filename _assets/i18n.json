@@ -223,7 +223,7 @@
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
       "embed-footer": "via translate.google.com",
-      "embed-footer-plus-naver": "via translate.google.com and naver.com",
+      "embed-footer-plus-naver": "via translate.google.com and labspace.naver.com/nmt/",
       "embed-title-alternative-naver": "Alternative translation"
     },
     "mod": {
@@ -288,6 +288,19 @@
       "error": "Sorry, I couldn't find an answer too that. :disappointed:",
       "result-embed-title": "Results for \"%s\"",
       "embed-footer": "via wolframalpha.com"
+    },
+    "lastfm": {
+      "profile-embed-title": "%s Last.FM Account",
+      "profile-embed-title-realname": "%s (%s) Last.FM Account",
+      "embed-footer": "via last.fm",
+      "no-recent-tracks": "No scrobbles found.",
+      "lasttrack-embed-title-np": "%s is currently listening to:",
+      "lasttrack-embed-title-last": "%s last listened to:",
+      "too-few": "Not enough arguments. Set your own username with `_lastfm set <username>`",
+      "topalbums-embed-title": "%s Top Albums",
+      "topartists-embed-title": "%s Top Artists",
+      "toptracks-embed-title": "%s Top Tracks",
+      "set-username-success": "You set `%s` as your username. :clap:\n(This is saved accross servers.)"
     }
   }
 }

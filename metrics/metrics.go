@@ -50,6 +50,9 @@ var (
 
 	// WolframAlphaRequests increases after each request to wolframalpha.com
 	WolframAlphaRequests = expvar.NewInt("wolframalpha_requests")
+
+	// LastFmRequests increases after each request to last.fm
+	LastFmRequests = expvar.NewInt("lastfm_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337
