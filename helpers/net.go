@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-var DEFAULT_UA = "Karen/" + version.BOT_VERSION + " (https://github.com/Seklfreak/Robyul2)"
+var DEFAULT_UA = "Robyul2/" + version.BOT_VERSION + " (https://github.com/Seklfreak/Robyul2)"
 
 // NetGet executes a GET request to url with the Karen/Discord-Bot user-agent
 func NetGet(url string) []byte {

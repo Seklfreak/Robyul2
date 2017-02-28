@@ -222,7 +222,9 @@
       "error": "I don't know :(",
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
-      "embed-footer": "via translate.google.com"
+      "embed-footer": "via translate.google.com",
+      "embed-footer-plus-naver": "via translate.google.com and naver.com",
+      "embed-title-alternative-naver": "Alternative translation"
     },
     "mod": {
       "deleting-messages-failed": "Deleting messages failed: `%s`",
