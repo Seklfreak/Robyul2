@@ -373,6 +373,8 @@ func (m *LastFm) getLastFmAccountOrCreate(uid string) DB_LastFmAccount {
 }
 
 func (m *LastFm) setLastFmAccount(entry DB_LastFmAccount) {
-	_, err := rethink.Table("lastfm").Update(entry).Run(helpers.GetDB())
+	_, err := rethink.Table("lastfm").Filter(
+		rethink.Row.Field("userid").Eq(entry.UserID),
+	).Update(entry).RunWrite(helpers.GetDB())
 	helpers.Relax(err)
 }
