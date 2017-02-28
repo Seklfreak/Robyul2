@@ -281,7 +281,9 @@
       "post-embed-title": "%s (@%s)%s posted a new Update"
     },
     "wolframalpha": {
-      "error": "Sorry, I couldn't find an answer too that. :disappointed:"
+      "error": "Sorry, I couldn't find an answer too that. :disappointed:",
+      "result-embed-title": "Result for \"%s\"",
+      "embed-footer": "via wolframalpha.com"
     }
   }
 }
