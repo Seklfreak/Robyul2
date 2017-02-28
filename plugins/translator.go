@@ -15,6 +15,10 @@ type Translator struct {
 	client *translate.Client
 }
 
+const (
+	googleTranslateHexColor string = "#4285f4"
+)
+
 func (t *Translator) Commands() []string {
 	return []string{
 		"translator",
@@ -76,8 +80,13 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 		m += piece.Text + " "
 	}
 
-	session.ChannelMessageSend(
-		msg.ChannelID,
-		":earth_africa: "+strings.ToUpper(source.String())+" => "+strings.ToUpper(target.String())+"\n```\n"+m+"\n```",
-	)
+	translateEmbed := &discordgo.MessageEmbed{
+		Title:       helpers.GetTextF("plugins.translator.translation-embed-title", strings.ToUpper(source.String()), strings.ToUpper(target.String())),
+		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.translator.embed-footer")},
+		Description: m,
+		Color:       helpers.GetDiscordColorFromHex(googleTranslateHexColor),
+	}
+
+	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, translateEmbed)
+	helpers.Relax(err)
 }
