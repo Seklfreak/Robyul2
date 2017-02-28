@@ -47,6 +47,9 @@ var (
 
 	// FacebookPagesCount counts all connected instagram accounts
 	FacebookPagesCount = expvar.NewInt("facebook_pages_count")
+
+	// WolframAlphaRequests increases after each request to wolframalpha.com
+	WolframAlphaRequests = expvar.NewInt("wolframalpha_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337

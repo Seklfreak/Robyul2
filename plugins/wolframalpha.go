@@ -1,10 +1,10 @@
 package plugins
 
 import (
-	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/bwmarrin/discordgo"
-	//"regexp"
 	"fmt"
+	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/bwmarrin/discordgo"
 	"net/url"
 )
 
@@ -31,4 +31,5 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 	result := helpers.NetGet(queryUrl)
 
 	session.ChannelMessageSend(msg.ChannelID, string(result))
+	metrics.WolframAlphaRequests.Add(1)
 }
