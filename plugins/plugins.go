@@ -46,6 +46,7 @@ var PluginList = []Plugin{
 	&Twitter{},
 	&Instagram{},
 	&Facebook{},
+	&WolframAlpha{},
 	//&Avatar{},
 	//&Calc{},
 	//&Changelog{},

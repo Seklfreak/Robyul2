@@ -36,5 +36,9 @@
     },
     "facebook": {
         "access_token": ""
+    },
+    "wolframalpha": {
+        "appid": ""
     }
+}
 }
