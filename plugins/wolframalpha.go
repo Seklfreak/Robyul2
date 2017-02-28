@@ -26,6 +26,15 @@ func (m *WolframAlpha) Init(session *discordgo.Session) {
 }
 
 func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	defer func() {
+		err := recover()
+
+		if err != nil {
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
+			return
+		}
+	}()
+
 	queryUrl := fmt.Sprintf(wolframBaseUrl, helpers.GetConfig().Path("wolframalpha.appid").Data().(string), url.QueryEscape(content))
 
 	result := helpers.NetGet(queryUrl)

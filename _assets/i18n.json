@@ -279,6 +279,9 @@
       "account-delete-success": "Deleted Facebook Page `%s` from the Database!",
       "account-added-success": "Added Facebook Page `%s` to the Channel <#%s>!",
       "post-embed-title": "%s (@%s)%s posted a new Update"
+    },
+    "wolframalpha": {
+      "error": "Sorry, I couldn't find an answer too that. :disappointed:"
     }
   }
 }
