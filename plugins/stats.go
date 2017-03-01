@@ -98,6 +98,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			},
 		})
 	case "serverinfo":
+		session.ChannelTyping(msg.ChannelID)
 		currentChannel, err := session.Channel(msg.ChannelID)
 		helpers.Relax(err)
 		guild, err := session.Guild(currentChannel.GuildID)
@@ -141,7 +142,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 		ownerText := fmt.Sprintf("%s#%s", owner.Username, owner.Discriminator)
 		if member.Nick != "" {
-			ownerText = fmt.Sprintf("%s#%s ~ ", owner.Username, owner.Discriminator, member.Nick)
+			ownerText = fmt.Sprintf("%s#%s ~ %s", owner.Username, owner.Discriminator, member.Nick)
 		}
 
 		emoteText := "None"
@@ -182,11 +183,12 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, serverinfoEmbed)
 		helpers.Relax(err)
 	case "userinfo":
+		session.ChannelTyping(msg.ChannelID)
 		targetUser, err := session.User(msg.Author.ID)
 		helpers.Relax(err)
 		args := strings.Split(content, " ")
-		if len(args) > 1 {
-			targetUser, err = helpers.GetUserFromMention(args[1])
+		if len(args) >= 1 && args[0] != "" {
+			targetUser, err = helpers.GetUserFromMention(args[0])
 			helpers.Relax(err)
 			if targetUser.ID == "" {
 				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
@@ -204,14 +206,24 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		status := ""
 		game := ""
 		gameUrl := ""
-		nick := ""
 		for _, presence := range currentGuild.Presences{
 			if presence.User.ID == targetUser.ID {
 				status = string(presence.Status)
-				game = presence.Game.Name
-				gameUrl = presence.Game.URL
-				nick = presence.Nick
+				switch status {
+				case "dnd":
+					status = "Do Not Disturb"
+				case "idle":
+					status = "Away"
+				}
+				if presence.Game != nil {
+					game = presence.Game.Name
+					gameUrl = presence.Game.URL
+				}
 			}
+		}
+		nick := ""
+		if targetMember.Nick != "" {
+			nick = targetMember.Nick
 		}
 		description := fmt.Sprintf("**%s**", status)
 		if game != "" {
@@ -222,7 +234,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 		title := fmt.Sprintf("%s#%s", targetUser.Username, targetUser.Discriminator)
 		if nick != "" {
-			title = fmt.Sprintf("%s#%s ~ ", targetUser.Username, targetUser.Discriminator, nick != "")
+			title = fmt.Sprintf("%s#%s ~ %s", targetUser.Username, targetUser.Discriminator, nick)
 		}
 		rolesText := "None"
 		guildRoles, err := session.GuildRoles(currentGuild.ID)
@@ -254,7 +266,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), humanize.Time(joinedTime)), Inline: true},
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), humanize.Time(joinedServerTime)), Inline: true},
-				{Name: "Roles", Value: rolesText, Inline: true},
+				{Name: "Roles", Value: rolesText, Inline: false},
 			},
 		}
 
