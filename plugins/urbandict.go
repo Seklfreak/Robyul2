@@ -51,27 +51,32 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 		tags += child.Data().(string) + ", "
 	}
 
-	session.ChannelMessageSendEmbed(
-		msg.ChannelID,
-		&discordgo.MessageEmbed{
-			Color:       0x134FE6,
-			Title:       object["word"].Data().(string),
-			Description: object["definition"].Data().(string),
-			URL:         object["permalink"].Data().(string),
-			Fields: []*discordgo.MessageEmbedField{
-				{Name: "Example(s)", Value: object["example"].Data().(string), Inline: false},
-				{Name: "Tags", Value: tags, Inline: false},
-				{Name: "Author", Value: object["author"].Data().(string), Inline: true},
-				{
-					Name: "Votes",
-					Value: ":+1: " + strconv.FormatFloat(object["thumbs_up"].Data().(float64), 'f', 0, 64) +
-						" | :-1: " + strconv.FormatFloat(object["thumbs_down"].Data().(float64), 'f', 0, 64),
-					Inline: true,
-				},
-			},
-			Footer: &discordgo.MessageEmbedFooter{
-				Text: "powered by urbandictionary.com",
-			},
+	definitionEmbed := &discordgo.MessageEmbed{
+		Color:       0x134FE6,
+		Title:       object["word"].Data().(string),
+		Description: object["definition"].Data().(string),
+		URL:         object["permalink"].Data().(string),
+		Fields:      []*discordgo.MessageEmbedField{},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "powered by urbandictionary.com",
 		},
-	)
+	}
+
+	if object["example"].Data().(string) != "" {
+		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Example(s)", Value: object["example"].Data().(string), Inline: false})
+	}
+	if tags != "" {
+		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Tags", Value: tags, Inline: false})
+	}
+	if strconv.FormatFloat(object["thumbs_up"].Data().(float64), 'f', 0, 64) != "0" || strconv.FormatFloat(object["thumbs_down"].Data().(float64), 'f', 0, 64) != "0" {
+		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{
+			Name: "Votes",
+			Value: ":+1: " + strconv.FormatFloat(object["thumbs_up"].Data().(float64), 'f', 0, 64) +
+				" | :-1: " + strconv.FormatFloat(object["thumbs_down"].Data().(float64), 'f', 0, 64),
+			Inline: true,
+		})
+	}
+
+	_, err := session.ChannelMessageSendEmbed(msg.ChannelID, definitionEmbed)
+	helpers.Relax(err)
 }
