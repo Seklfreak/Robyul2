@@ -75,7 +75,7 @@
       "ask_a_question": "I cannot respond if you don't ask a question :thinking:"
     },
     "css": "http://i.imgur.com/TgPKFTz.gif",
-    "git": "https://git.lukas.moe/sn0w/Karen",
+    "git": "https://github.com/Seklfreak/Robyul2",
     "hi": {
       "link": [
         "https://cdn.discordapp.com/attachments/102817255661772800/219512763607678976/large_1.gif",
@@ -281,11 +281,10 @@
       "account-delete-not-found-error": "Unable to find Facebook Page in the Database!",
       "account-list-no-accounts-error": "No Facebook Page found on this server!",
       "account-delete-success": "Deleted Facebook Page `%s` from the Database!",
-      "account-added-success": "Added Facebook Page `%s` to the Channel <#%s>!",
       "post-embed-title": "%s (@%s)%s posted a new Update"
     },
     "wolframalpha": {
-      "error": "Sorry, I couldn't find an answer too that. :disappointed:",
+      "error": "Sorry, I couldn't find an answer to that. :disappointed:",
       "result-embed-title": "Results for \"%s\"",
       "embed-footer": "via wolframalpha.com"
     },
@@ -314,8 +313,19 @@
       "role-not-found": "I couldn't find the Role. :thinking:",
       "add-role-already": "You already got this bias role. :thinking:",
       "remove-role-not-found": "You don't have this role. :thinking:",
-      "role-added": "I added the Role for you! :clap:",
-      "role-removed": "I removed the Role from you! :worried:",
+      "role-added": [
+        "I added the Role for you! :clap:",
+        "I added the Role for you! :thumbsup:",
+        "I added the Role for you! :blush:",
+        "I added the Role for you! :sparkles:"
+      ],
+      "role-removed": [
+        "I removed the Role from you! :scream:",
+        "I removed the Role from you! :thumbsdown:",
+        "I removed the Role from you! :mask:",
+        "I removed the Role from you! :flushed:",
+        "I removed the Role from you! :worried:"
+      ],
       "role-limit-reached": "You already got enough Roles! :no_good:",
       "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a bias role.\nThe bias role you assign **first** will be your **primary role** and **appear above the others**.\n%s\n\nExample: **`+%s`** or **`-%s`**",
       "no-bias-config": "No Bias Config set for this Channel."

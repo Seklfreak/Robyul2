@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"strconv"
+	"fmt"
 )
 
 var botAdmins = []string{
@@ -162,4 +164,26 @@ func GetDiscordColorFromHex(hex string) int {
 	} else {
 		return 0x0FADED
 	}
+}
+
+func GetTimeFromSnowflake(id string) time.Time {
+	IDi, err := strconv.Atoi(id)
+	Relax(err)
+	createdAtTime := time.Unix(int64(((IDi >> 22) + 1420070400000) / 1000), 0)
+	return createdAtTime.UTC()
+}
+
+func GetAvatarUrl(user *discordgo.User) string {
+	if user.Avatar == "" {
+		return ""
+	}
+
+	avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=1024"
+
+	if strings.HasPrefix(user.Avatar, "a_") {
+		avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif")
+	} else {
+		avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp")
+	}
+	return avatarUrl
 }

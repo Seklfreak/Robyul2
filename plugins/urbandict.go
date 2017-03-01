@@ -5,7 +5,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"net/url"
 	"strconv"
-	"fmt"
 )
 
 type UrbanDict struct{}

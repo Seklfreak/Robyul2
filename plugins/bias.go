@@ -270,6 +270,232 @@ var (
 					},
 				},
 			},
+			{
+				ServerID:  "208673735580844032",
+				ChannelID: "252000620565889024",
+				Categories: []AssignableRole_Category{
+					{
+						Label:  "Primary Bias Roles",
+						Pool:   "bias-roles",
+						Hidden: true,
+						Limit:  1,
+						Roles: []AssignableRole_Role{
+							{
+								Name:    "Somi 💎",
+								Print:   "Somi",
+								Aliases: []string{"Somi", "Jeon Somi", "Ennik Douma", "전소미", "소미"},
+							},
+							{
+								Name:    "Sejeong 💎",
+								Print:   "Sejeong",
+								Aliases: []string{"Sejeong", "Kim Sejeong", "김세정", "세정"},
+							},
+							{
+								Name:    "Yoojung 💎",
+								Print:   "Yoojung",
+								Aliases: []string{"Yoojung", "Choi Yoojung", "최유정", "유정"},
+							},
+							{
+								Name:    "Chungha 💎",
+								Print:   "Chungha",
+								Aliases: []string{"Chungha", "Kim Chungha", "김청하", "청하"},
+							},
+							{
+								Name:    "Sohye 💎",
+								Print:   "Sohye",
+								Aliases: []string{"Sohye", "Kim Sohye", "김소혜", "소혜"},
+							},
+							{
+								Name:    "Jieqiong 💎",
+								Print:   "Jieqiong",
+								Aliases: []string{"Jieqiong", "Zhou Jieqiong", "Kyulkyung", "周洁琼", "주결경", "결경"},
+							},
+							{
+								Name:    "Chaeyeon 💎",
+								Print:   "Chaeyeon",
+								Aliases: []string{"Chaeyeon", "Jung Chaeyeon", "정채연", "채연"},
+							},
+							{
+								Name:    "Doyeon 💎",
+								Print:   "Doyeon",
+								Aliases: []string{"Doyeon", "Kim Doyeon", "김도연", "도연"},
+							},
+							{
+								Name:    "Mina 💎",
+								Print:   "Mina",
+								Aliases: []string{"Mina", "Kang Mina", "강미나", "미나"},
+							},
+							{
+								Name:    "Nayoung 💎",
+								Print:   "Nayoung",
+								Aliases: []string{"Nayoung", "Im Nayoung", "Lim Nayoung", "임나영", "나영"},
+							},
+							{
+								Name:    "Yeonjung 💎",
+								Print:   "Yeonjung",
+								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
+							},
+						},
+					},
+					{
+						Label:  "Bias Roles",
+						Pool:   "bias-roles",
+						Hidden: false,
+						Limit:  2,
+						Roles: []AssignableRole_Role{
+							{
+								Name:    "Somi",
+								Print:   "Somi",
+								Aliases: []string{"Somi", "Jeon Somi", "Ennik Douma", "전소미", "소미"},
+							},
+							{
+								Name:    "Sejeong",
+								Print:   "Sejeong",
+								Aliases: []string{"Sejeong", "Kim Sejeong", "김세정", "세정"},
+							},
+							{
+								Name:    "Yoojung",
+								Print:   "Yoojung",
+								Aliases: []string{"Yoojung", "Choi Yoojung", "최유정", "유정"},
+							},
+							{
+								Name:    "Chungha",
+								Print:   "Chungha",
+								Aliases: []string{"Chungha", "Kim Chungha", "김청하", "청하"},
+							},
+							{
+								Name:    "Sohye",
+								Print:   "Sohye",
+								Aliases: []string{"Sohye", "Kim Sohye", "김소혜", "소혜"},
+							},
+							{
+								Name:    "Jieqiong",
+								Print:   "Jieqiong",
+								Aliases: []string{"Jieqiong", "Zhou Jieqiong", "Kyulkyung", "周洁琼", "주결경", "결경"},
+							},
+							{
+								Name:    "Chaeyeon",
+								Print:   "Chaeyeon",
+								Aliases: []string{"Chaeyeon", "Jung Chaeyeon", "정채연", "채연"},
+							},
+							{
+								Name:    "Doyeon",
+								Print:   "Doyeon",
+								Aliases: []string{"Doyeon", "Kim Doyeon", "김도연", "도연"},
+							},
+							{
+								Name:    "Mina",
+								Print:   "Mina",
+								Aliases: []string{"Mina", "Kang Mina", "강미나", "미나"},
+							},
+							{
+								Name:    "Nayoung",
+								Print:   "Nayoung",
+								Aliases: []string{"Nayoung", "Im Nayoung", "Lim Nayoung", "임나영", "나영"},
+							},
+							{
+								Name:    "Yeonjung",
+								Print:   "Yeonjung",
+								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
+							},
+							{
+								Name:    "OT11",
+								Print:   "OT11",
+								Aliases: []string{"OT11", "I.O.I", "IOI", "아이오아이"},
+							},
+							{
+								Name:    "DoDaeng",
+								Print:   "DoDaeng",
+								Aliases: []string{"DoDaeng"},
+							},
+						},
+					},
+					{
+						Label:  "Group Roles",
+						Pool:   "",
+						Hidden: false,
+						Limit:  1,
+						Roles: []AssignableRole_Role{
+							{
+								Name:    "DIA",
+								Print:   "DIA",
+								Aliases: []string{"DIA", "DIAMOND", "Do It Amazing", "다이아", "MBK"},
+							},
+							{
+								Name:    "Gugudan",
+								Print:   "Gugudan",
+								Aliases: []string{"Gugudan", "gu9udan", "구구단", "Jellyfish"},
+							},
+							{
+								Name:    "iTeen",
+								Print:   "iTeen",
+								Aliases: []string{"iTeen", "Fantagio"},
+							},
+							{
+								Name:    "JYP",
+								Print:   "JYP",
+								Aliases: []string{"JYP"},
+							},
+							{
+								Name:    "M&H",
+								Print:   "M&H",
+								Aliases: []string{"M&H"},
+							},
+							{
+								Name:    "Pristin",
+								Print:   "Pristin",
+								Aliases: []string{"Pristin", "프리스틴", "Pledis Girlz", "Pledis"},
+							},
+							{
+								Name:    "S&P",
+								Print:   "S&P",
+								Aliases: []string{"S&P"},
+							},
+							{
+								Name:    "WJSN",
+								Print:   "WJSN",
+								Aliases: []string{"WJSN", "Cosmic Girls", "우주소녀", "Starship"},
+							},
+						},
+					},
+					{
+						Label:  "Gaming Roles",
+						Pool:   "",
+						Hidden: false,
+						Limit:  -1,
+						Roles: []AssignableRole_Role{
+							{
+								Name:    "Overwatch",
+								Print:   "Overwatch",
+								Aliases: []string{"Overwatch", "OW"},
+							},
+							{
+								Name:    "League of Legends",
+								Print:   "League of Legends",
+								Aliases: []string{"League of Legends", "LoL", "league"},
+							},
+							{
+								Name:    "DOTA",
+								Print:   "DOTA",
+								Aliases: []string{"DOTA", "DOTA2"},
+							},
+						},
+					},
+					{
+						Label:  "Other Roles",
+						Pool:   "",
+						Hidden: false,
+						Limit:  -1,
+						Roles: []AssignableRole_Role{
+							{
+								Name:    "Karaoke",
+								Print:   "Karaoke",
+								Aliases: []string{"Karaoke", "norebang"},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 )

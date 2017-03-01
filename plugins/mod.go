@@ -19,6 +19,7 @@ func (m *Mod) Commands() []string {
 		"unmute",
 		"ban",
 		"kick",
+		"serverlist",
 	}
 }
 
@@ -292,5 +293,21 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 			return
 		}
+	case "serverlist": // [p]serverlist
+		helpers.RequireAdmin(msg, func() {
+			resultText := ""
+			totalMembers := 0
+			totalChannels := 0
+			for _, guild := range session.State.Guilds {
+				resultText += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
+					guild.Name, guild.ID, len(guild.Channels), guild.MemberCount, guild.Region)
+				totalChannels += len(guild.Channels)
+				totalMembers += guild.MemberCount
+			}
+			resultText += fmt.Sprintf("Total Stats: Servers `%d`, Channels: `%d`, Members: `%d`", len(session.State.Guilds), totalChannels, totalMembers)
+
+			_, err := session.ChannelMessageSend(msg.ChannelID, resultText) // TODO: pagify
+			helpers.Relax(err)
+		})
 	}
 }
