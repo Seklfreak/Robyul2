@@ -116,7 +116,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "topalbums":
+		case "topalbums", "topalbum":
 			if len(args) >= 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
@@ -162,7 +162,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "topartists":
+		case "topartists", "topartist":
 			if len(args) >= 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
@@ -208,7 +208,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "toptracks":
+		case "toptracks", "topsongs", "toptrack", "topsong":
 			if len(args) >= 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
