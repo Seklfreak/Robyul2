@@ -71,7 +71,8 @@ type Instagram_Post struct {
 			Width  int    `json:"width"`
 		} `json:"candidates"`
 	} `json:"image_versions2"`
-	MediaType int `json:"media_type"`
+	MediaType int    `json:"media_type"`
+	Code      string `json:"code"`
 }
 
 var (
@@ -322,7 +323,7 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:       helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier),
-		URL:         fmt.Sprintf(instagramFriendlyPost, post.ID),
+		URL:         fmt.Sprintf(instagramFriendlyPost, post.Code),
 		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
 		Description: post.Caption.Text,
@@ -333,7 +334,7 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.ImageVersions2.Candidates[0].URL}
 	}
 
-	_, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.ID)))
+	_, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)))
 	_, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
 	if err != nil {
 		logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))

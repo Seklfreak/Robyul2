@@ -301,6 +301,14 @@
       "topartists-embed-title": "%s Top Artists",
       "toptracks-embed-title": "%s Top Tracks",
       "set-username-success": "You set `%s` as your username. :clap:\n(This is saved accross servers.)"
+    },
+    "weather": {
+      "address-not-found": "I can't find the location you are looking for. :thinking:",
+      "no-weather": "I couldn't find any weather for the given location. :speak_no_evil:",
+      "weather-embed-title": "Weather for %s",
+      "embed-footer": "Powered by Dark Sky",
+      "current-weather-description": "**Currently**\n**%s**\nTemperature: **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\nWind: **%s m/s** (%s mph)\nHumidity: **%s %%**",
+      "week-title": "This week"
     }
   }
 }

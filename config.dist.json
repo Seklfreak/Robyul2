@@ -7,7 +7,7 @@
         "key": ""
     },
     "google": {
-        "translate": ""
+        "api_key": ""
     },
     "rethink": {
         "db": "YOUR_DB_NAME",
@@ -43,6 +43,9 @@
     "lastfm": {
         "api_key": "",
         "api_secret": ""
+    },
+    "darksky": {
+        "api_key": ""
     }
 }
 }
