@@ -49,9 +49,9 @@ var (
 				ChannelID: "250220888077631489",
 				Categories: []AssignableRole_Category{
 					{
-						Label:  "Bias Roles",
+						Label:  "Primary Bias Roles",
 						Pool:   "bias-roles",
-						Hidden: false,
+						Hidden: true,
 						Limit:  1,
 						Roles: []AssignableRole_Role{
 							{
@@ -109,22 +109,12 @@ var (
 								Print:   "Yeonjung",
 								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
 							},
-							{
-								Name:    "OT11",
-								Print:   "OT11",
-								Aliases: []string{"OT11", "I.O.I", "IOI", "아이오아이"},
-							},
-							{
-								Name:    "DoDaeng",
-								Print:   "DoDaeng",
-								Aliases: []string{"DoDaeng"},
-							},
 						},
 					},
 					{
-						Label:  "Secondary Bias Roles",
+						Label:  "Bias Roles",
 						Pool:   "bias-roles",
-						Hidden: true,
+						Hidden: false,
 						Limit:  2,
 						Roles: []AssignableRole_Role{
 							{
