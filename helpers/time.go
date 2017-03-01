@@ -2,6 +2,8 @@ package helpers
 
 import (
 	"fmt"
+	"time"
+	"strconv"
 )
 
 // SecondsToDuration turns an int (seconds) into HH:MM:SS
@@ -29,4 +31,13 @@ func Rev(s string) string {
 		runes[i], runes[j] = runes[j], runes[i]
 	}
 	return string(runes)
+}
+
+func SinceInDaysText(timeThen time.Time) string {
+	duration := time.Since(timeThen)
+	if duration.Hours() >= 24 {
+		return strconv.FormatFloat(duration.Hours()/24, 'f', 0, 64) + " days ago"
+	} else {
+		return "Less then a Day ago"
+	}
 }

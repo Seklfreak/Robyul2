@@ -163,7 +163,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		serverinfoEmbed := &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Title: guild.Name,
-			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), humanize.Time(createdAtTime)),
+			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), helpers.SinceInDaysText(createdAtTime)),
 			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server ID: %s", guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Region", Value: guild.Region, Inline: true},
@@ -264,8 +264,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Description: description,
 			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("User ID: %s", targetUser.ID)},
 			Fields: []*discordgo.MessageEmbedField{
-				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), humanize.Time(joinedTime)), Inline: true},
-				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), humanize.Time(joinedServerTime)), Inline: true},
+				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedTime)), Inline: true},
+				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
 				{Name: "Roles", Value: rolesText, Inline: false},
 			},
 		}
