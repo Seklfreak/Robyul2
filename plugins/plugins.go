@@ -26,6 +26,30 @@ type Plugin interface {
 	)
 }
 
+// Plugin interface to enforce a basic structure
+type PluginExtended interface {
+	// List of commands and aliases
+	Commands() []string
+
+	// Plugin constructor
+	Init(session *discordgo.Session)
+
+	// Action to execute on message receive
+	Action(
+		command string,
+		content string,
+		msg *discordgo.Message,
+		session *discordgo.Session,
+	)
+
+	// Action to execute on every message receive
+	ActionAll(
+		content string,
+		msg *discordgo.Message,
+		session *discordgo.Session,
+	)
+}
+
 type TriggerPlugin interface {
 	Triggers() []string
 	Response(trigger string, content string) string
@@ -68,6 +92,11 @@ var PluginList = []Plugin{
 	//&XKCD{},
 }
 
+// PluginList is the list of active plugins
+var PluginExtendedList = []PluginExtended{
+	&Bias{},
+}
+
 // TriggerPluginList is the list of plugins that activate on normal chat
 var TriggerPluginList = []TriggerPlugin{
 //&triggers.CSS{},
@@ -105,6 +134,15 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message) {
 			}
 		}
 	}
+	for _, plug := range PluginExtendedList {
+		// Iterate over all commands of the current plugin
+		for _, cmd := range plug.Commands() {
+			if command == cmd {
+				go safePluginCall(command, strings.TrimSpace(content), msg, plug)
+				break
+			}
+		}
+	}
 }
 
 // CallTriggerPlugins iterates through all trigger plugins
@@ -130,10 +168,32 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
 	}
 }
 
+// CallTriggerPlugins iterates through all trigger plugins
+// and calls *all* of them (async).
+//
+// msg     - The message that triggered the execution
+// session - The discord session
+func CallExtendedPlugin(content string, msg *discordgo.Message) {
+	// Iterate over all plugins
+	for _, plug := range PluginExtendedList {
+		// Iterate over all commands of the current plugin
+		go safePluginExtendedCall(strings.TrimSpace(content), msg, plug)
+		break
+	}
+}
+
 // Wrapper that catches any panics from plugins
 // Arguments: Same as CallBotPlugin().
 func safePluginCall(command string, content string, msg *discordgo.Message, plug Plugin) {
 	defer helpers.RecoverDiscord(msg)
 	metrics.CommandsExecuted.Add(1)
 	plug.Action(command, content, msg, cache.GetSession())
+}
+
+// Wrapper that catches any panics from plugins
+// Arguments: Same as CallBotPlugin().
+func safePluginExtendedCall(content string, msg *discordgo.Message, plug PluginExtended) {
+	defer helpers.RecoverDiscord(msg)
+	metrics.CommandsExecuted.Add(1)
+	plug.ActionAll(content, msg, cache.GetSession())
 }

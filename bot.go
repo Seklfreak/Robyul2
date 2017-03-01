@@ -225,6 +225,11 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 		}
 	}
 
+	plugins.CallExtendedPlugin(
+		message.Content,
+		message.Message,
+	)
+
 	// Only continue if a prefix is set
 	prefix := helpers.GetPrefixForServer(channel.GuildID)
 	if prefix == "" {
