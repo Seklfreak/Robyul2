@@ -182,6 +182,16 @@ var (
 								Print:   "Yeonjung",
 								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
 							},
+							{
+								Name:    "OT11",
+								Print:   "OT11",
+								Aliases: []string{"OT11", "I.O.I", "IOI", "아이오아이"},
+							},
+							{
+								Name:    "DoDaeng",
+								Print:   "DoDaeng",
+								Aliases: []string{"DoDaeng"},
+							},
 						},
 					},
 					{
