@@ -9,6 +9,7 @@ import (
 var BETA_GUILDS = [...]string{
     "180818466847064065", // FADED's Sandbox        (Me)
     "172041631258640384", // P0WERPLANT             (Me)
+    "286474230634381312", // Ronin                  (Me/Serenity)
     "161637499939192832", // Coding Lounge          (Devsome)
     "225168913808228352", // Emily's Space          (Kaaz)
     "267186654312136704", // Shinda Sekai Sensen    (黒ゲロロロ)
