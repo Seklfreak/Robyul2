@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
 	"net/url"
 	"strconv"
@@ -127,6 +128,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 		strconv.FormatFloat(latResult, 'f', -1, 64),
 		strconv.FormatFloat(lngResult, 'f', -1, 64))
 	forecastResult := helpers.NetGet(darkSkyUrl)
+	metrics.DarkSkyRequests.Add(1)
 	var darkSkyForecast DarkSkyForecast
 	err = json.Unmarshal(forecastResult, &darkSkyForecast)
 	helpers.Relax(err)

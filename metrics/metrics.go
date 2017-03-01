@@ -53,6 +53,9 @@ var (
 
 	// LastFmRequests increases after each request to last.fm
 	LastFmRequests = expvar.NewInt("lastfm_requests")
+
+	// DarkSkyRequests increases after each request to darksky.net
+	DarkSkyRequests = expvar.NewInt("darksky_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337
