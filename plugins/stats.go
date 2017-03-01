@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 	"strings"
+	"github.com/bradfitz/slice"
 )
 
 type Stats struct{}
@@ -240,7 +241,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		guildRoles, err := session.GuildRoles(currentGuild.ID)
 		helpers.Relax(err)
 		isFirst := true
+		slice.Sort(guildRoles, func(i, j int) bool {
+			return guildRoles[i].Position > guildRoles[j].Position
+		})
 		for _, guildRole := range guildRoles {
+			fmt.Println(guildRole.Name, guildRole.Position)
 			for _, userRole := range targetMember.Roles {
 				if guildRole.ID == userRole {
 					if isFirst == true {
@@ -258,11 +263,39 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		joinedServerTime, err := discordgo.Timestamp(targetMember.JoinedAt).Parse()
 		helpers.Relax(err)
 
+		lastAfterMemberId := ""
+		var allMembers []*discordgo.Member
+		for {
+			members, err := session.GuildMembers(currentGuild.ID, lastAfterMemberId, 1000)
+			if len(members) <= 0 {
+				break
+			}
+			lastAfterMemberId = members[len(members)-1].User.ID
+			helpers.Relax(err)
+			for _, u := range members {
+				allMembers = append(allMembers, u)
+			}
+		}
+		slice.Sort(allMembers[:], func(i, j int) bool {
+			iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
+			helpers.Relax(err)
+			jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
+			helpers.Relax(err)
+			return  iMemberTime.Before(jMemberTime)
+		})
+		userNumber := -1
+		for i, sortedMember := range allMembers[:] {
+			if sortedMember.User.ID == targetUser.ID {
+				userNumber = i+1
+				break
+			}
+		}
+
 		userinfoEmbed := &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Title: title,
 			Description: description,
-			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("User ID: %s", targetUser.ID)},
+			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User ID: %s", userNumber, targetUser.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedTime)), Inline: true},
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
@@ -279,7 +312,5 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
 		helpers.Relax(err)
-		// TODO: Fix Role Order
-		// TODO: Show Member #
 	}
 }
