@@ -75,7 +75,7 @@ func SendError(msg *discordgo.Message, err interface{}) {
 		cache.GetSession().ChannelMessageSend(
 			msg.ChannelID,
 			"Error :frowning:\nSekl#7397 has been notified.\n```\n"+
-				fmt.Sprintf("%#v", err),
+				fmt.Sprintf("%#v", err)+"\n```",
 		)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"net/url"
 	"strconv"
+	"fmt"
 )
 
 type UrbanDict struct{}
@@ -51,10 +52,15 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 		tags += child.Data().(string) + ", "
 	}
 
+	description := object["definition"].Data().(string)
+	if len(description) > 2000 {
+		description = description[:1996]+" ..."
+	}
+
 	definitionEmbed := &discordgo.MessageEmbed{
 		Color:       0x134FE6,
 		Title:       object["word"].Data().(string),
-		Description: object["definition"].Data().(string),
+		Description: description,
 		URL:         object["permalink"].Data().(string),
 		Fields:      []*discordgo.MessageEmbedField{},
 		Footer: &discordgo.MessageEmbedFooter{
