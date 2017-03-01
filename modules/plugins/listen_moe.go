@@ -158,6 +158,8 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
     }
 
     // We are present.
+    voiceConnection = session.VoiceConnections[vc.GuildID]
+
     // Check for other commands
     switch content {
     case "leave", "l":
@@ -168,8 +170,9 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
             l.connections[guild.ID].Close()
             delete(l.connections, guild.ID)
 
-            session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
+            helpers.VoiceFree(guild.ID)
 
+            session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
             return
         }
 
@@ -297,7 +300,7 @@ func (l *ListenDotMoe) streamer() {
             helpers.Relax(err)
 
             // Send to discord
-            RadioChan.Broadcast(opus)
+            RadioChan.Broadcast(&opus)
         }
 
         logger.ERROR.L("listen_moe", "Stream died :(")
@@ -335,7 +338,7 @@ func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
         }
 
         // Send a frame to discord
-        vc.OpusSend <- (<-audioChan)
+        vc.OpusSend <- *(<-audioChan)
     }
 
     vc.Speaking(false)

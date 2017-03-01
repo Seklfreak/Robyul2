@@ -8,7 +8,7 @@ import (
 
 const (
     // How many keys a bucket may contain when created
-    BUCKET_INITIAL_FILL = 5
+    BUCKET_INITIAL_FILL = 16
 
     // The maximum amount of keys a user may possess
     BUCKET_UPPER_BOUND = 32
