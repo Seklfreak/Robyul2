@@ -46,7 +46,7 @@ var (
 		Channels: []AssignableRole_Channel{
 			{
 				ServerID:  "250216966436945920",
-				ChannelID: "261569717888745472",
+				ChannelID: "250220888077631489",
 				Categories: []AssignableRole_Category{
 					{
 						Label:  "Bias Roles",
