@@ -65,6 +65,16 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
 	cb()
 }
 
+// RequireOwner only calls $cb if the author is a bot admin
+func RequireOwner(msg *discordgo.Message, cb Callback) {
+	if !IsBotAdmin(msg.Author.ID) {
+		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+		return
+	}
+
+	cb()
+}
+
 func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText string, confirmEmojiID string, abortEmojiID string) bool {
 	// send embed asking the user to confirm
 	confirmMessage, err := cache.GetSession().ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
@@ -169,7 +179,7 @@ func GetDiscordColorFromHex(hex string) int {
 func GetTimeFromSnowflake(id string) time.Time {
 	IDi, err := strconv.Atoi(id)
 	Relax(err)
-	createdAtTime := time.Unix(int64(((IDi >> 22) + 1420070400000) / 1000), 0)
+	createdAtTime := time.Unix(int64(((IDi>>22)+1420070400000)/1000), 0)
 	return createdAtTime.UTC()
 }
 

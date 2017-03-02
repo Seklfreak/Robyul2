@@ -107,8 +107,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				helpers.Relax(err)
 			})
 		case "new-config":
-			// TODO: RequireOwner
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireOwner(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 
 				insert := rethink.Table("bias").Insert(AssignableRole_Channel{})

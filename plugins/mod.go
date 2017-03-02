@@ -294,7 +294,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			return
 		}
 	case "serverlist": // [p]serverlist
-		helpers.RequireAdmin(msg, func() {
+		helpers.RequireOwner(msg, func() {
 			resultText := ""
 			totalMembers := 0
 			totalChannels := 0
