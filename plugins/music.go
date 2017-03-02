@@ -27,7 +27,7 @@ import (
 type controlMessage int
 
 const (
-	Skip controlMessage = iota
+	Skip   controlMessage = iota
 	Pause
 	Resume
 )
@@ -343,7 +343,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		)
 		break
 
-	case "list", "playlist":
+	case "list", "playlist", "queue":
 		if len(*playlist) == 0 {
 			session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
 			return
@@ -404,7 +404,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		// Trim masquerade if present
 		contentRune := []rune(content)
 		if contentRune[0] == '<' && contentRune[len(contentRune)-1] == '>' {
-			content = string(contentRune[1 : len(contentRune)-1])
+			content = string(contentRune[1: len(contentRune)-1])
 		}
 
 		// Check if the url is a playlist
@@ -468,7 +468,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
 			// Check if the video is not too long
 			// Bot owners may bypass this
-			if !helpers.IsBotAdmin(msg.Author.ID) && match.Duration > int((65*time.Minute).Seconds()) {
+			if !helpers.IsBotAdmin(msg.Author.ID) && match.Duration > int((65 * time.Minute).Seconds()) {
 				session.ChannelMessageSend(channel.ID, "Whoa `"+match.Title+"` is a big video!\nPlease use something shorter :neutral_face:")
 				return
 			}
@@ -555,11 +555,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
 		// @formatter:off
 		cursor, err := rethink.
-			Table("music").
+		Table("music").
 			Filter(map[string]interface{}{"processed": true}).
 			Filter(rethink.Row.Field("title").Match(term)).
 			Run(helpers.GetDB())
-			// @formatter:on
+		// @formatter:on
 
 		helpers.Relax(err)
 		defer cursor.Close()
@@ -758,8 +758,7 @@ func (m *Music) processorLoop() {
 			end := time.Now().Unix()
 			Logger.INFO.L(
 				"music",
-				"Download took "+strconv.Itoa(int(end-start))+"s "+
-					"| Conversion took "+strconv.Itoa(int(cend-cstart))+"s | File: "+name,
+				"Download took "+strconv.Itoa(int(end-start))+"s "+"| Conversion took "+strconv.Itoa(int(cend-cstart))+"s | File: "+name,
 			)
 		}
 	}
