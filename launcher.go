@@ -77,6 +77,8 @@ func main() {
 
 	discord.AddHandler(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
+	discord.AddHandler(BotOnGuildMemberAdd)
+	discord.AddHandler(BotOnGuildMemberRemove)
 	discord.AddHandler(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
 

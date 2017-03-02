@@ -43,9 +43,21 @@ type PluginExtended interface {
 	)
 
 	// Action to execute on every message receive
-	ActionAll(
+	OnMessage(
 		content string,
 		msg *discordgo.Message,
+		session *discordgo.Session,
+	)
+
+	// Action to execute on every message receive
+	OnGuildMemberAdd(
+		member *discordgo.Member,
+		session *discordgo.Session,
+	)
+
+	// Action to execute on every message receive
+	OnGuildMemberRemove(
+		member *discordgo.Member,
 		session *discordgo.Session,
 	)
 }
@@ -95,24 +107,25 @@ var PluginList = []Plugin{
 // PluginList is the list of active plugins
 var PluginExtendedList = []PluginExtended{
 	&Bias{},
+	&GuildAnnouncements{},
 }
 
 // TriggerPluginList is the list of plugins that activate on normal chat
 var TriggerPluginList = []TriggerPlugin{
-//&triggers.CSS{},
-//&triggers.Donate{},
-//&triggers.Git{},
-//&triggers.EightBall{},
-//&triggers.Hi{},
-//&triggers.HypeTrain{},
-//&triggers.Invite{},
-//&triggers.IPTables{},
-//&triggers.Lenny{},
-//&triggers.Nep{},
-//&triggers.ReZero{},
-//&triggers.Shrug{},
-//&triggers.TableFlip{},
-//&triggers.Triggered{},
+	//&triggers.CSS{},
+	//&triggers.Donate{},
+	//&triggers.Git{},
+	//&triggers.EightBall{},
+	//&triggers.Hi{},
+	//&triggers.HypeTrain{},
+	//&triggers.Invite{},
+	//&triggers.IPTables{},
+	//&triggers.Lenny{},
+	//&triggers.Nep{},
+	//&triggers.ReZero{},
+	//&triggers.Shrug{},
+	//&triggers.TableFlip{},
+	//&triggers.Triggered{},
 }
 
 // CallBotPlugin iterates through the list of registered
@@ -178,7 +191,19 @@ func CallExtendedPlugin(content string, msg *discordgo.Message) {
 	for _, plug := range PluginExtendedList {
 		// Iterate over all commands of the current plugin
 		go safePluginExtendedCall(strings.TrimSpace(content), msg, plug)
-		break
+	}
+}
+
+func CallExtendedPluginOnGuildMemberAdd(member *discordgo.Member) {
+	// Iterate over all plugins
+	for _, plug := range PluginExtendedList {
+		go safePluginExtendedCallOnGuildMemberAdd(member, plug)
+	}
+}
+func CallExtendedPluginOnGuildMemberRemove(member *discordgo.Member) {
+	// Iterate over all plugins
+	for _, plug := range PluginExtendedList {
+		go safePluginExtendedCallOnGuildMemberRemove(member, plug)
 	}
 }
 
@@ -195,5 +220,15 @@ func safePluginCall(command string, content string, msg *discordgo.Message, plug
 func safePluginExtendedCall(content string, msg *discordgo.Message, plug PluginExtended) {
 	defer helpers.RecoverDiscord(msg)
 	metrics.CommandsExecuted.Add(1)
-	plug.ActionAll(content, msg, cache.GetSession())
+	plug.OnMessage(content, msg, cache.GetSession())
+}
+
+func safePluginExtendedCallOnGuildMemberAdd(member *discordgo.Member, plug PluginExtended) {
+	defer helpers.Recover()
+	plug.OnGuildMemberAdd(member, cache.GetSession())
+}
+
+func safePluginExtendedCallOnGuildMemberRemove(member *discordgo.Member, plug PluginExtended) {
+	defer helpers.Recover()
+	plug.OnGuildMemberRemove(member, cache.GetSession())
 }

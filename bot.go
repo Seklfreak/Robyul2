@@ -128,6 +128,18 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	//go autoLeaver(session)
 }
 
+func BotOnGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
+	plugins.CallExtendedPluginOnGuildMemberAdd(
+		member.Member,
+	)
+}
+
+func BotOnGuildMemberRemove(session *discordgo.Session, member *discordgo.GuildMemberRemove) {
+	plugins.CallExtendedPluginOnGuildMemberRemove(
+		member.Member,
+	)
+}
+
 // BotOnMessageCreate gets called after a new message was sent
 // This will be called after *every* message on *every* server so it should die as soon as possible
 // or spawn costly work inside of coroutines.

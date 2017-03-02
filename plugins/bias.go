@@ -110,7 +110,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 	}
 }
 
-func (m *Bias) ActionAll(content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 	for _, biasChannel := range biasChannels {
 		if msg.ChannelID == biasChannel.ChannelID {
 			channel, err := session.Channel(msg.ChannelID)
@@ -273,4 +273,11 @@ func (m *Bias) CleanUpRoleName(inputName string) string {
 	inputName = strings.Trim(inputName, " ")
 	inputName = strings.ToLower(inputName)
 	return inputName
+}
+
+func (m *Bias) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+
+}
+func (m *Bias) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
+
 }
