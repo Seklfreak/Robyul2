@@ -129,7 +129,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 		online := 0
-		for _, presence := range guild.Presences{
+		for _, presence := range guild.Presences {
 			if presence.Status == discordgo.StatusOnline || presence.Status == discordgo.StatusDoNotDisturb || presence.Status == discordgo.StatusIdle {
 				online += 1
 			}
@@ -162,10 +162,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		serverinfoEmbed := &discordgo.MessageEmbed{
-			Color: 0x0FADED,
-			Title: guild.Name,
+			Color:       0x0FADED,
+			Title:       guild.Name,
 			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), helpers.SinceInDaysText(createdAtTime)),
-			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server ID: %s", guild.ID)},
+			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server ID: %s", guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Region", Value: guild.Region, Inline: true},
 				{Name: "Users", Value: fmt.Sprintf("%d/%d", online, len(users)), Inline: true},
@@ -179,11 +179,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		if guild.Icon != "" {
 			serverinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon) }
+			serverinfoEmbed.URL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, serverinfoEmbed)
 		helpers.Relax(err)
-		// TODO: link big server icon
 	case "userinfo":
 		session.ChannelTyping(msg.ChannelID)
 		targetUser, err := session.User(msg.Author.ID)
@@ -208,7 +208,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		status := ""
 		game := ""
 		gameUrl := ""
-		for _, presence := range currentGuild.Presences{
+		for _, presence := range currentGuild.Presences {
 			if presence.User.ID == targetUser.ID {
 				status = string(presence.Status)
 				switch status {
@@ -281,21 +281,21 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			helpers.Relax(err)
 			jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
 			helpers.Relax(err)
-			return  iMemberTime.Before(jMemberTime)
+			return iMemberTime.Before(jMemberTime)
 		})
 		userNumber := -1
 		for i, sortedMember := range allMembers[:] {
 			if sortedMember.User.ID == targetUser.ID {
-				userNumber = i+1
+				userNumber = i + 1
 				break
 			}
 		}
 
 		userinfoEmbed := &discordgo.MessageEmbed{
-			Color: 0x0FADED,
-			Title: title,
+			Color:       0x0FADED,
+			Title:       title,
 			Description: description,
-			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User ID: %s", userNumber, targetUser.ID)},
+			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User ID: %s", userNumber, targetUser.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedTime)), Inline: true},
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
@@ -305,6 +305,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		if helpers.GetAvatarUrl(targetUser) != "" {
 			userinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)}
+			userinfoEmbed.URL = helpers.GetAvatarUrl(targetUser)
 		}
 		if gameUrl != "" {
 			userinfoEmbed.URL = gameUrl
@@ -312,6 +313,5 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
 		helpers.Relax(err)
-		// TODO: link big user dp
 	}
 }
