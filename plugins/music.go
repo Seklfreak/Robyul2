@@ -411,7 +411,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		if strings.Contains(content, "list") ||
 			strings.Contains(content, "/set") ||
 			strings.Contains(content, "/mix") {
-			session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported :neutral_face:")
+			_, err := session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported :neutral_face:")
+			helpers.Relax(err)
 			return
 		}
 
@@ -482,10 +483,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			m.guildConnections[guild.ID].Unlock()
 
 			// Inform users
-			session.ChannelMessageSend(
+			_, err = session.ChannelMessageSend(
 				channel.ID,
 				"`"+match.Title+"` was added to your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
 			)
+			helpers.Relax(err)
 			go m.waitForSong(channel.ID, guild.ID, match, msg, session)
 			return
 		} else if err != nil {
@@ -502,7 +504,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			*playlist = append(*playlist, match)
 			m.guildConnections[guild.ID].Unlock()
 
-			session.ChannelMessageSend(channel.ID, "Added from cache! :ok_hand:")
+			_, err := session.ChannelMessageSend(channel.ID, "Added from cache! :ok_hand:")
+			helpers.Relax(err)
 			return
 		}
 
@@ -516,22 +519,28 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		if songPresent {
-			session.ChannelMessageSend(
+			_, err := session.ChannelMessageSend(
 				channel.ID,
 				"`"+match.Title+"` is already in your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
 			)
+			helpers.Relax(err)
 			return
 		}
 
+		Logger.VERBOSE.L("music", "queing song")
 		m.guildConnections[guild.ID].Lock()
 		*queue = append(*queue, match)
 		m.guildConnections[guild.ID].Unlock()
+		Logger.VERBOSE.L("music", "queing song done")
 
-		session.ChannelMessageSend(
+		_, err = session.ChannelMessageSend(
 			channel.ID,
 			"`"+match.Title+"` was added to your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
 		)
+		helpers.Relax(err)
+		Logger.VERBOSE.L("music", "waiting for song")
 		go m.waitForSong(channel.ID, guild.ID, match, msg, session)
+		Logger.VERBOSE.L("music", "waiting for song done")
 		break
 	case "search", "find":
 		if len(content) < 4 {

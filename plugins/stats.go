@@ -183,6 +183,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, serverinfoEmbed)
 		helpers.Relax(err)
+		// TODO: link big server icon
 	case "userinfo":
 		session.ChannelTyping(msg.ChannelID)
 		targetUser, err := session.User(msg.Author.ID)
@@ -245,7 +246,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			return guildRoles[i].Position > guildRoles[j].Position
 		})
 		for _, guildRole := range guildRoles {
-			fmt.Println(guildRole.Name, guildRole.Position)
 			for _, userRole := range targetMember.Roles {
 				if guildRole.ID == userRole {
 					if isFirst == true {
@@ -312,5 +312,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
 		helpers.Relax(err)
+		// TODO: link big user dp
 	}
 }

@@ -46,8 +46,8 @@
       "refreshed": ":cyclone: Refreshed!"
     },
     "help": [
-      "<@%s> Check out <http://meetkaren.xyz/commands>",
-      "<@%s> It's at <http://meetkaren.xyz/commands> :smiley:"
+      "<@%s> Check out <https://github.com/Seklfreak/Robyul2/wiki/Commands>",
+      "<@%s> It's at <https://github.com/Seklfreak/Robyul2/wiki/Commands> :smiley:"
     ]
   },
   "triggers": {
