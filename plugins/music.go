@@ -345,7 +345,6 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		break
 
 	case "list", "playlist", "queue":
-		Logger.VERBOSE.L("music", "test")
 		if len(*playlist) == 0 {
 			session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
 			return
@@ -828,6 +827,7 @@ func (m *Music) play(
 
 	// Announce track
 	session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `"+song.Title+"`")
+	session.UpdateStatus(0, song.Title)
 
 	// Mark as speaking
 	vc.Speaking(true)

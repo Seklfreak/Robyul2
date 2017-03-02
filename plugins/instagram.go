@@ -45,7 +45,7 @@ type Instagram_User struct {
 	FollowerCount  int    `json:"follower_count"`
 	FollowingCount int    `json:"following_count"`
 	FullName       string `json:"full_name"`
-	ProfilePic     struct {
+	ProfilePic struct {
 		URL string `json:"url"`
 	} `json:"hd_profile_pic_url_info"`
 	IsBusiness bool             `json:"is_business"`
@@ -63,7 +63,7 @@ type Instagram_Post struct {
 		Text      string `json:"text"`
 		CreatedAt int    `json:"created_at"`
 	} `json:"caption"`
-	ID             string `json:"id"`
+	ID string `json:"id"`
 	ImageVersions2 struct {
 		Candidates []struct {
 			Height int    `json:"height"`
@@ -363,7 +363,7 @@ func (m *Instagram) applyHeaders(request *http.Request) {
 func (m *Instagram) login() {
 	usedUuid = uuid.NewV4().String()
 	// get csrf token
-	signupEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("si/fetch_headers/?challenge_type=signup&guid=%s", usedUuid)) // TODO: replace "-" in UUID?
+	signupEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("si/fetch_headers/?challenge_type=signup&guid=%s", usedUuid))
 	httpClient = &http.Client{}
 	request, err := http.NewRequest("GET", signupEndpoint, nil)
 	helpers.Relax(err)
