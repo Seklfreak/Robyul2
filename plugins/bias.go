@@ -106,6 +106,18 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
 				helpers.Relax(err)
 			})
+		case "new-config":
+			// TODO: RequireOwner
+			helpers.RequireAdmin(msg, func() {
+				session.ChannelTyping(msg.ChannelID)
+
+				insert := rethink.Table("bias").Insert(AssignableRole_Channel{})
+				_, err := insert.RunWrite(helpers.GetDB())
+				helpers.Relax(err)
+
+				_, err = session.ChannelMessageSend(msg.ChannelID, "Created a new entry in the Database. Please fill it manually.")
+				helpers.Relax(err)
+			})
 		}
 	}
 }
