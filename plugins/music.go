@@ -527,20 +527,20 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 
-		Logger.VERBOSE.L("music", "queing song")
+		Logger.INFO.L("music", "queing song")
 		m.guildConnections[guild.ID].Lock()
 		*queue = append(*queue, match)
 		m.guildConnections[guild.ID].Unlock()
-		Logger.VERBOSE.L("music", "queing song done")
+		Logger.INFO.L("music", "queing song done")
 
 		_, err = session.ChannelMessageSend(
 			channel.ID,
 			"`"+match.Title+"` was added to your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
 		)
 		helpers.Relax(err)
-		Logger.VERBOSE.L("music", "waiting for song")
+		Logger.INFO.L("music", "waiting for song")
 		go m.waitForSong(channel.ID, guild.ID, match, msg, session)
-		Logger.VERBOSE.L("music", "waiting for song done")
+		Logger.INFO.L("music", "waiting for song done")
 		break
 	case "search", "find":
 		if len(content) < 4 {

@@ -7,18 +7,16 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"strings"
 	"time"
+	rethink "github.com/gorethink/gorethink"
 )
 
 type Bias struct{}
 
-type AssignableRole_Channels struct {
-	Channels []AssignableRole_Channel
-}
-
 type AssignableRole_Channel struct {
-	ServerID   string
-	ChannelID  string
-	Categories []AssignableRole_Category
+	ID         string  `gorethink:"id,omitempty"`
+	ServerID   string  `gorethink:"serverid"`
+	ChannelID  string  `gorethink:"channelid"`
+	Categories []AssignableRole_Category  `gorethink:"categories"`
 }
 
 type AssignableRole_Category struct {
@@ -37,526 +35,83 @@ type AssignableRole_Role struct {
 
 func (m *Bias) Commands() []string {
 	return []string{
-		"bias-help",
+		"bias",
 	}
 }
 
 var (
-	biasChannels = AssignableRole_Channels{
-		Channels: []AssignableRole_Channel{
-			{
-				ServerID:  "250216966436945920",
-				ChannelID: "250220888077631489",
-				Categories: []AssignableRole_Category{
-					{
-						Label:  "Primary Bias Roles",
-						Pool:   "bias-roles",
-						Hidden: true,
-						Limit:  1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Somi 💎",
-								Print:   "Somi",
-								Aliases: []string{"Somi", "Jeon Somi", "Ennik Douma", "전소미", "소미"},
-							},
-							{
-								Name:    "Sejeong 💎",
-								Print:   "Sejeong",
-								Aliases: []string{"Sejeong", "Kim Sejeong", "김세정", "세정"},
-							},
-							{
-								Name:    "Yoojung 💎",
-								Print:   "Yoojung",
-								Aliases: []string{"Yoojung", "Choi Yoojung", "최유정", "유정"},
-							},
-							{
-								Name:    "Chungha 💎",
-								Print:   "Chungha",
-								Aliases: []string{"Chungha", "Kim Chungha", "김청하", "청하"},
-							},
-							{
-								Name:    "Sohye 💎",
-								Print:   "Sohye",
-								Aliases: []string{"Sohye", "Kim Sohye", "김소혜", "소혜"},
-							},
-							{
-								Name:    "Jieqiong 💎",
-								Print:   "Jieqiong",
-								Aliases: []string{"Jieqiong", "Zhou Jieqiong", "Kyulkyung", "周洁琼", "주결경", "결경"},
-							},
-							{
-								Name:    "Chaeyeon 💎",
-								Print:   "Chaeyeon",
-								Aliases: []string{"Chaeyeon", "Jung Chaeyeon", "정채연", "채연"},
-							},
-							{
-								Name:    "Doyeon 💎",
-								Print:   "Doyeon",
-								Aliases: []string{"Doyeon", "Kim Doyeon", "김도연", "도연"},
-							},
-							{
-								Name:    "Mina 💎",
-								Print:   "Mina",
-								Aliases: []string{"Mina", "Kang Mina", "강미나", "미나"},
-							},
-							{
-								Name:    "Nayoung 💎",
-								Print:   "Nayoung",
-								Aliases: []string{"Nayoung", "Im Nayoung", "Lim Nayoung", "임나영", "나영"},
-							},
-							{
-								Name:    "Yeonjung 💎",
-								Print:   "Yeonjung",
-								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
-							},
-						},
-					},
-					{
-						Label:  "Bias Roles",
-						Pool:   "bias-roles",
-						Hidden: false,
-						Limit:  2,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Somi",
-								Print:   "Somi",
-								Aliases: []string{"Somi", "Jeon Somi", "Ennik Douma", "전소미", "소미"},
-							},
-							{
-								Name:    "Sejeong",
-								Print:   "Sejeong",
-								Aliases: []string{"Sejeong", "Kim Sejeong", "김세정", "세정"},
-							},
-							{
-								Name:    "Yoojung",
-								Print:   "Yoojung",
-								Aliases: []string{"Yoojung", "Choi Yoojung", "최유정", "유정"},
-							},
-							{
-								Name:    "Chungha",
-								Print:   "Chungha",
-								Aliases: []string{"Chungha", "Kim Chungha", "김청하", "청하"},
-							},
-							{
-								Name:    "Sohye",
-								Print:   "Sohye",
-								Aliases: []string{"Sohye", "Kim Sohye", "김소혜", "소혜"},
-							},
-							{
-								Name:    "Jieqiong",
-								Print:   "Jieqiong",
-								Aliases: []string{"Jieqiong", "Zhou Jieqiong", "Kyulkyung", "周洁琼", "주결경", "결경"},
-							},
-							{
-								Name:    "Chaeyeon",
-								Print:   "Chaeyeon",
-								Aliases: []string{"Chaeyeon", "Jung Chaeyeon", "정채연", "채연"},
-							},
-							{
-								Name:    "Doyeon",
-								Print:   "Doyeon",
-								Aliases: []string{"Doyeon", "Kim Doyeon", "김도연", "도연"},
-							},
-							{
-								Name:    "Mina",
-								Print:   "Mina",
-								Aliases: []string{"Mina", "Kang Mina", "강미나", "미나"},
-							},
-							{
-								Name:    "Nayoung",
-								Print:   "Nayoung",
-								Aliases: []string{"Nayoung", "Im Nayoung", "Lim Nayoung", "임나영", "나영"},
-							},
-							{
-								Name:    "Yeonjung",
-								Print:   "Yeonjung",
-								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
-							},
-							{
-								Name:    "OT11",
-								Print:   "OT11",
-								Aliases: []string{"OT11", "I.O.I", "IOI", "아이오아이"},
-							},
-							{
-								Name:    "DoDaeng",
-								Print:   "DoDaeng",
-								Aliases: []string{"DoDaeng"},
-							},
-						},
-					},
-					{
-						Label:  "Group Roles",
-						Pool:   "",
-						Hidden: false,
-						Limit:  1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "DIA",
-								Print:   "DIA",
-								Aliases: []string{"DIA", "DIAMOND", "Do It Amazing", "다이아", "MBK"},
-							},
-							{
-								Name:    "Gugudan",
-								Print:   "Gugudan",
-								Aliases: []string{"Gugudan", "gu9udan", "구구단", "Jellyfish"},
-							},
-							{
-								Name:    "iTeen",
-								Print:   "iTeen",
-								Aliases: []string{"iTeen", "Fantagio"},
-							},
-							{
-								Name:    "JYP",
-								Print:   "JYP",
-								Aliases: []string{"JYP"},
-							},
-							{
-								Name:    "M&H",
-								Print:   "M&H",
-								Aliases: []string{"M&H"},
-							},
-							{
-								Name:    "Pristin",
-								Print:   "Pristin",
-								Aliases: []string{"Pristin", "프리스틴", "Pledis Girlz", "Pledis"},
-							},
-							{
-								Name:    "S&P",
-								Print:   "S&P",
-								Aliases: []string{"S&P"},
-							},
-							{
-								Name:    "WJSN",
-								Print:   "WJSN",
-								Aliases: []string{"WJSN", "Cosmic Girls", "우주소녀", "Starship"},
-							},
-						},
-					},
-					{
-						Label:  "Gaming Roles",
-						Pool:   "",
-						Hidden: false,
-						Limit:  -1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Overwatch",
-								Print:   "Overwatch",
-								Aliases: []string{"Overwatch", "OW"},
-							},
-							{
-								Name:    "League of Legends",
-								Print:   "League of Legends",
-								Aliases: []string{"League of Legends", "LoL", "league"},
-							},
-							{
-								Name:    "DOTA",
-								Print:   "DOTA",
-								Aliases: []string{"DOTA", "DOTA2"},
-							},
-						},
-					},
-					{
-						Label:  "Other Roles",
-						Pool:   "",
-						Hidden: false,
-						Limit:  -1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Karaoke",
-								Print:   "Karaoke",
-								Aliases: []string{"Karaoke", "norebang"},
-							},
-						},
-					},
-				},
-			},
-			{
-				ServerID:  "208673735580844032",
-				ChannelID: "252000620565889024",
-				Categories: []AssignableRole_Category{
-					{
-						Label:  "Primary Bias Roles",
-						Pool:   "bias-roles",
-						Hidden: true,
-						Limit:  1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Somi 💎",
-								Print:   "Somi",
-								Aliases: []string{"Somi", "Jeon Somi", "Ennik Douma", "전소미", "소미"},
-							},
-							{
-								Name:    "Sejeong 💎",
-								Print:   "Sejeong",
-								Aliases: []string{"Sejeong", "Kim Sejeong", "김세정", "세정"},
-							},
-							{
-								Name:    "Yoojung 💎",
-								Print:   "Yoojung",
-								Aliases: []string{"Yoojung", "Choi Yoojung", "최유정", "유정"},
-							},
-							{
-								Name:    "Chungha 💎",
-								Print:   "Chungha",
-								Aliases: []string{"Chungha", "Kim Chungha", "김청하", "청하"},
-							},
-							{
-								Name:    "Sohye 💎",
-								Print:   "Sohye",
-								Aliases: []string{"Sohye", "Kim Sohye", "김소혜", "소혜"},
-							},
-							{
-								Name:    "Jieqiong 💎",
-								Print:   "Jieqiong",
-								Aliases: []string{"Jieqiong", "Zhou Jieqiong", "Kyulkyung", "周洁琼", "주결경", "결경"},
-							},
-							{
-								Name:    "Chaeyeon 💎",
-								Print:   "Chaeyeon",
-								Aliases: []string{"Chaeyeon", "Jung Chaeyeon", "정채연", "채연"},
-							},
-							{
-								Name:    "Doyeon 💎",
-								Print:   "Doyeon",
-								Aliases: []string{"Doyeon", "Kim Doyeon", "김도연", "도연"},
-							},
-							{
-								Name:    "Mina 💎",
-								Print:   "Mina",
-								Aliases: []string{"Mina", "Kang Mina", "강미나", "미나"},
-							},
-							{
-								Name:    "Nayoung 💎",
-								Print:   "Nayoung",
-								Aliases: []string{"Nayoung", "Im Nayoung", "Lim Nayoung", "임나영", "나영"},
-							},
-							{
-								Name:    "Yeonjung 💎",
-								Print:   "Yeonjung",
-								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
-							},
-						},
-					},
-					{
-						Label:  "Bias Roles",
-						Pool:   "bias-roles",
-						Hidden: false,
-						Limit:  2,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Somi",
-								Print:   "Somi",
-								Aliases: []string{"Somi", "Jeon Somi", "Ennik Douma", "전소미", "소미"},
-							},
-							{
-								Name:    "Sejeong",
-								Print:   "Sejeong",
-								Aliases: []string{"Sejeong", "Kim Sejeong", "김세정", "세정"},
-							},
-							{
-								Name:    "Yoojung",
-								Print:   "Yoojung",
-								Aliases: []string{"Yoojung", "Choi Yoojung", "최유정", "유정"},
-							},
-							{
-								Name:    "Chungha",
-								Print:   "Chungha",
-								Aliases: []string{"Chungha", "Kim Chungha", "김청하", "청하"},
-							},
-							{
-								Name:    "Sohye",
-								Print:   "Sohye",
-								Aliases: []string{"Sohye", "Kim Sohye", "김소혜", "소혜"},
-							},
-							{
-								Name:    "Jieqiong",
-								Print:   "Jieqiong",
-								Aliases: []string{"Jieqiong", "Zhou Jieqiong", "Kyulkyung", "周洁琼", "주결경", "결경"},
-							},
-							{
-								Name:    "Chaeyeon",
-								Print:   "Chaeyeon",
-								Aliases: []string{"Chaeyeon", "Jung Chaeyeon", "정채연", "채연"},
-							},
-							{
-								Name:    "Doyeon",
-								Print:   "Doyeon",
-								Aliases: []string{"Doyeon", "Kim Doyeon", "김도연", "도연"},
-							},
-							{
-								Name:    "Mina",
-								Print:   "Mina",
-								Aliases: []string{"Mina", "Kang Mina", "강미나", "미나"},
-							},
-							{
-								Name:    "Nayoung",
-								Print:   "Nayoung",
-								Aliases: []string{"Nayoung", "Im Nayoung", "Lim Nayoung", "임나영", "나영"},
-							},
-							{
-								Name:    "Yeonjung",
-								Print:   "Yeonjung",
-								Aliases: []string{"Yeonjung", "Yu Yeonjung", "유연정", "연정"},
-							},
-							{
-								Name:    "OT11",
-								Print:   "OT11",
-								Aliases: []string{"OT11", "I.O.I", "IOI", "아이오아이"},
-							},
-							{
-								Name:    "DoDaeng",
-								Print:   "DoDaeng",
-								Aliases: []string{"DoDaeng"},
-							},
-						},
-					},
-					{
-						Label:  "Group Roles",
-						Pool:   "",
-						Hidden: false,
-						Limit:  1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "DIA",
-								Print:   "DIA",
-								Aliases: []string{"DIA", "DIAMOND", "Do It Amazing", "다이아", "MBK"},
-							},
-							{
-								Name:    "Gugudan",
-								Print:   "Gugudan",
-								Aliases: []string{"Gugudan", "gu9udan", "구구단", "Jellyfish"},
-							},
-							{
-								Name:    "iTeen",
-								Print:   "iTeen",
-								Aliases: []string{"iTeen", "Fantagio"},
-							},
-							{
-								Name:    "JYP",
-								Print:   "JYP",
-								Aliases: []string{"JYP"},
-							},
-							{
-								Name:    "M&H",
-								Print:   "M&H",
-								Aliases: []string{"M&H"},
-							},
-							{
-								Name:    "Pristin",
-								Print:   "Pristin",
-								Aliases: []string{"Pristin", "프리스틴", "Pledis Girlz", "Pledis"},
-							},
-							{
-								Name:    "S&P",
-								Print:   "S&P",
-								Aliases: []string{"S&P"},
-							},
-							{
-								Name:    "WJSN",
-								Print:   "WJSN",
-								Aliases: []string{"WJSN", "Cosmic Girls", "우주소녀", "Starship"},
-							},
-						},
-					},
-					{
-						Label:  "Gaming Roles",
-						Pool:   "",
-						Hidden: false,
-						Limit:  -1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Overwatch",
-								Print:   "Overwatch",
-								Aliases: []string{"Overwatch", "OW"},
-							},
-							{
-								Name:    "League of Legends",
-								Print:   "League of Legends",
-								Aliases: []string{"League of Legends", "LoL", "league"},
-							},
-							{
-								Name:    "DOTA",
-								Print:   "DOTA",
-								Aliases: []string{"DOTA", "DOTA2"},
-							},
-						},
-					},
-					{
-						Label:  "Other Roles",
-						Pool:   "",
-						Hidden: false,
-						Limit:  -1,
-						Roles: []AssignableRole_Role{
-							{
-								Name:    "Karaoke",
-								Print:   "Karaoke",
-								Aliases: []string{"Karaoke", "norebang"},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	biasChannels []AssignableRole_Channel
 )
 
 func (m *Bias) Init(session *discordgo.Session) {
-
+	biasChannels = m.GetBiasChannels()
 }
 
 func (m *Bias) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	helpers.RequireAdmin(msg, func() {
-		for _, biasChannel := range biasChannels.Channels {
-			if msg.ChannelID == biasChannel.ChannelID {
-				exampleRoleName := ""
-				biasListText := ""
-				for _, biasCategory := range biasChannel.Categories {
-					if biasCategory.Hidden == true {
-						continue
-					}
-					biasListText += fmt.Sprintf("\n%s: ", biasCategory.Label)
-					for i, biasRole := range biasCategory.Roles {
-						if exampleRoleName == "" {
-							exampleRoleName = biasRole.Print
-						}
-						if i != 0 {
-							if i+1 < len(biasCategory.Roles) {
-								biasListText += ", "
-							} else {
-								biasListText += " and "
+	args := strings.Split(content, " ")
+	if len(args) >= 1 {
+		switch args[0] {
+		case "help":
+			helpers.RequireAdmin(msg, func() {
+				for _, biasChannel := range biasChannels {
+					if msg.ChannelID == biasChannel.ChannelID {
+						exampleRoleName := ""
+						biasListText := ""
+						for _, biasCategory := range biasChannel.Categories {
+							if biasCategory.Hidden == true {
+								continue
+							}
+							biasListText += fmt.Sprintf("\n%s: ", biasCategory.Label)
+							for i, biasRole := range biasCategory.Roles {
+								if exampleRoleName == "" {
+									exampleRoleName = biasRole.Print
+								}
+								if i != 0 {
+									if i+1 < len(biasCategory.Roles) {
+										biasListText += ", "
+									} else {
+										biasListText += " and "
+									}
+								}
+								biasListText += fmt.Sprintf("**`%s`**", biasRole.Print)
+							}
+							calculatedLimit := biasCategory.Limit
+							if biasCategory.Pool != "" {
+								calculatedLimit = 0
+								for _, poolCategorie := range biasChannel.Categories {
+									if poolCategorie.Pool == biasCategory.Pool {
+										calculatedLimit += poolCategorie.Limit
+									}
+								}
+							}
+							if calculatedLimit == 1 {
+								biasListText += " (**`One Role`** Max)"
+							} else if calculatedLimit > 1 {
+								biasListText += fmt.Sprintf(" (**`%s Roles`** Max)", strings.Title(helpers.HumanizeNumber(calculatedLimit)))
 							}
 						}
-						biasListText += fmt.Sprintf("**`%s`**", biasRole.Print)
-					}
-					calculatedLimit := biasCategory.Limit
-					if biasCategory.Pool != "" {
-						calculatedLimit = 0
-						for _, poolCategorie := range biasChannel.Categories {
-							if poolCategorie.Pool == biasCategory.Pool {
-								calculatedLimit += poolCategorie.Limit
-							}
-						}
-					}
-					// TODO: Calculate limit
-					if calculatedLimit == 1 {
-						biasListText += " (**`One Role`** Max)"
-					} else if calculatedLimit > 1 {
-						biasListText += fmt.Sprintf(" (**`%s Roles`** Max)", strings.Title(helpers.HumanizeNumber(calculatedLimit)))
+						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.bias.bias-help-message", biasListText, exampleRoleName, exampleRoleName))
+						helpers.Relax(err)
+						return
 					}
 				}
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.bias.bias-help-message", biasListText, exampleRoleName, exampleRoleName))
-				helpers.Relax(err)
-				return
-			}
-		}
 
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
-		helpers.Relax(err)
-	})
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+				helpers.Relax(err)
+			})
+		case "refresh":
+			helpers.RequireAdmin(msg, func() {
+				session.ChannelTyping(msg.ChannelID)
+				biasChannels = m.GetBiasChannels()
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
+				helpers.Relax(err)
+			})
+		}
+	}
 }
 
 func (m *Bias) ActionAll(content string, msg *discordgo.Message, session *discordgo.Session) {
-	for _, biasChannel := range biasChannels.Channels {
+	for _, biasChannel := range biasChannels {
 		if msg.ChannelID == biasChannel.ChannelID {
 			channel, err := session.Channel(msg.ChannelID)
 			helpers.Relax(err)
@@ -660,6 +215,17 @@ func (m *Bias) ActionAll(content string, msg *discordgo.Message, session *discor
 			}
 		}
 	}
+}
+
+func (m *Bias) GetBiasChannels() []AssignableRole_Channel {
+	var entryBucket []AssignableRole_Channel
+	cursor, err := rethink.Table("bias").Run(helpers.GetDB())
+	helpers.Relax(err)
+
+	err = cursor.All(&entryBucket)
+	helpers.Relax(err)
+
+	return entryBucket
 }
 
 func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildID string, category AssignableRole_Category) []AssignableRole_Role {

@@ -17,6 +17,7 @@ var migrations = []helpers.Callback{
 	m6_create_table_instagram,
 	m7_create_table_facebook,
 	m8_create_table_lastfm,
+	m9_create_table_bias,
 }
 
 // Run executes all registered migrations

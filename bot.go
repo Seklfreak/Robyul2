@@ -50,6 +50,23 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 		plugin.Init(session)
 		totalPlugins++
 	}
+	tmpl = "[PLUG-EXTENDED] %s reacts to [ %s]"
+	for _, plugin := range plugins.PluginExtendedList {
+		cmds := ""
+
+		for _, cmd := range plugin.Commands() {
+			cmds += cmd + " "
+		}
+
+		Logger.INFO.L("bot", fmt.Sprintf(
+			tmpl,
+			helpers.Typeof(plugin),
+			cmds,
+		))
+
+		plugin.Init(session)
+		totalPlugins++
+	}
 
 	// Init trigger plugins
 	fmt.Println()
