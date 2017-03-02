@@ -120,6 +120,7 @@ func (m *Music) Commands() []string {
 		"add",
 		"list",
 		"playlist",
+		"queue",
 		"random",
 		"rand",
 		"search",
@@ -344,6 +345,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		break
 
 	case "list", "playlist", "queue":
+		Logger.VERBOSE.L("music", "test")
 		if len(*playlist) == 0 {
 			session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
 			return
@@ -353,8 +355,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			Title: ":musical_note: Playlist",
 			Color: 0x0FADED,
 			Fields: []*discordgo.MessageEmbedField{
-				{Name: "Current", Value: "", Inline: false},
-				{Name: "Queue", Value: "", Inline: false},
+				{Name: "Current", Value: "None", Inline: false},
+				{Name: "Queue", Value: "Empty", Inline: false},
 			},
 			Footer: &discordgo.MessageEmbedFooter{
 				Text: "",
@@ -377,7 +379,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			embed.Fields[1].Value += num + " " + song.Title + "\n"
 		}
 
-		session.ChannelMessageSendEmbed(channel.ID, embed)
+		_, err := session.ChannelMessageSendEmbed(channel.ID, embed)
+		helpers.Relax(err)
 		break
 
 	case "random", "rand":
