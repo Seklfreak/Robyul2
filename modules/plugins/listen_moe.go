@@ -166,11 +166,10 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
         if helpers.IsAdmin(msg) {
             voiceConnection.Disconnect()
 
-            l.connections[guild.ID].Lock()
             l.connections[guild.ID].Close()
             delete(l.connections, guild.ID)
 
-            helpers.VoiceFree("listen.moe")
+            helpers.VoiceFree(guild.ID)
 
             session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
             return
