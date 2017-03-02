@@ -372,6 +372,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             embed.Fields[1].Value += num + " " + song.Title + "\n"
         }
 
+        // Catch an empty queue
+        if embed.Fields[1].Value == "" {
+            embed.Fields[1].Value = "Empty ¯\\_(ツ)_/¯"
+        }
+
         session.ChannelMessageSendEmbed(channel.ID, embed)
         break
 
