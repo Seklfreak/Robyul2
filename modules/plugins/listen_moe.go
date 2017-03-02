@@ -323,9 +323,14 @@ func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
 
     // Start eventloop
     for {
+        connection, ok := l.connections[guildID]
+        if !ok {
+            break
+        }
+
         // Exit if the closer channel dies
         select {
-        case <-l.connections[guildID].closer:
+        case <-connection.closer:
             return
         default:
         }
