@@ -170,7 +170,7 @@ func (l *ListenDotMoe) Action(command string, content string, msg *discordgo.Mes
             l.connections[guild.ID].Close()
             delete(l.connections, guild.ID)
 
-            helpers.VoiceFree(guild.ID)
+            helpers.VoiceFree("listen.moe")
 
             session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
             return
