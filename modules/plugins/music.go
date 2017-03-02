@@ -836,9 +836,6 @@ func (m *Music) play(
 ) {
 	// @formatter:on
 
-    // Announce track
-    session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `" + song.Title + "`")
-
     // Mark as speaking
     vc.Speaking(true)
 
