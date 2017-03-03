@@ -85,6 +85,7 @@ var PluginList = []Plugin{
 	&WolframAlpha{},
 	&LastFm{},
 	&Twitch{},
+	&Charts{},
 	//&Avatar{},
 	//&Calc{},
 	//&Changelog{},

@@ -344,6 +344,12 @@
       "channel-delete-success": "Deleted Twitch Channel `%s` from the Database!",
       "channel-delete-not-found-error": "Unable to find Twitch Channel in the Database!",
       "channel-list-no-channels-error": "No Twitch Channels found on this server!"
+    },
+    "charts": {
+      "realtime-melon-embed-title": "**%s %s:00** | Melon Realtime Stats",
+      "daily-melon-embed-title": "Melon Daily Stats",
+      "melon-embed-footer": "via melon.com",
+      "melon-embed-hex-color": "#43C85D"
     }
   }
 }

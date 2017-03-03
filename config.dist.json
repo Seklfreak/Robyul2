@@ -49,5 +49,8 @@
   },
   "twitch": {
     "token": ""
+  },
+  "melon": {
+    "app_key": ""
   }
 }
