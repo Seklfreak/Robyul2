@@ -346,14 +346,19 @@
       "channel-list-no-channels-error": "No Twitch Channels found on this server!"
     },
     "charts": {
-      "realtime-melon-embed-title": "**%s %s:00 KST** | Melon Realtime Stats",
-      "daily-melon-embed-title": "Melon Daily Stats",
+      "realtime-melon-embed-title": "**%s %s:00 KST** | Melon Realtime Charts",
+      "daily-melon-embed-title": "Melon Daily Charts",
       "melon-embed-footer": "via melon.com",
       "melon-embed-hex-color": "#43C85D",
-      "realtime-ichart-embed-title": "**%s KST** | iChart Realtime Stats",
+      "realtime-ichart-embed-title": "**%s KST** | iChart Realtime Charts",
       "ichart-embed-footer": "via instiz.net",
       "ichart-embed-hex-color": "#1FC679",
-      "week-ichart-embed-title": "**%s KST** | iChart Weekly Stats"
+      "week-ichart-embed-title": "**%s KST** | iChart Weekly Charts",
+      "gaon-embed-footer": "via gaonchart.co.kr",
+      "gaon-embed-hex-color": "#000000",
+      "week-gaon-embed-title": "**%s** | Gaon Weekly Charts (domestic and overseas)",
+      "month-gaon-embed-title": "**%s** | Gaon Monthly Charts (domestic and overseas)",
+      "year-gaon-embed-title": "**%s** | Gaon Yearly Charts (domestic and overseas)"
     }
   }
 }

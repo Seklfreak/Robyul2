@@ -23,12 +23,19 @@ const (
 	ichartPageWeeklyCharts      string = "http://www.instiz.net/iframe_ichart_score.htm?week=1"
 	ichartFriendlyRealtimeStats string = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
 	ichartFriendlyWeeklyStats   string = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
+	gaonPageWeeklyCharts        string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=week"
+	gaonPageMonthlyCharts       string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=month"
+	gaonPageYearlyCharts        string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=year"
+	gaonFriendlyWeeklyCharts    string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=week"
+	gaonFriendlyMonthlyCharts   string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=month"
+	gaonFriendlyYearlyCharts    string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=year"
 )
 
 func (m *Charts) Commands() []string {
 	return []string{
 		"melon",
 		"ichart",
+		"gaon",
 	}
 }
 
@@ -104,11 +111,16 @@ type GenericSongScore struct {
 	PastRank    int
 	IsNew       bool
 }
+type GenericAlbumScore struct {
+	Artist      string
+	Album       string
+	CurrentRank int
+	PastRank    int
+	IsNew       bool
+}
 
 func (m *Charts) Init(session *discordgo.Session) {
 }
-
-// todo: gaon
 
 func (m *Charts) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Split(content, " ")
@@ -246,6 +258,98 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 					chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
 						Value: fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album),
+					})
+				}
+				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				helpers.Relax(err)
+			}
+		}
+	case "gaon":
+		if len(args) >= 1 {
+			switch args[0] {
+			case "week", "weekly":
+				session.ChannelTyping(msg.ChannelID)
+				time, albumRanks := m.GetGaonWeekStats()
+				chartsEmbed := &discordgo.MessageEmbed{
+					Title:  helpers.GetTextF("plugins.charts.week-gaon-embed-title", time),
+					URL:    gaonFriendlyWeeklyCharts,
+					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.gaon-embed-footer")},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.gaon-embed-hex-color")),
+				}
+				for _, album := range albumRanks {
+					rankChange := ""
+					rankChangeN := album.PastRank - album.CurrentRank
+					if rankChangeN > 0 {
+						rankChange = fmt.Sprintf(":arrow_up: %d", rankChangeN)
+					} else if rankChangeN < 0 {
+						rankChange = fmt.Sprintf(":arrow_down:  %d", rankChangeN * -1)
+					}
+					if album.IsNew == true {
+						rankChange += ":new:"
+					}
+
+					chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
+						Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(album.CurrentRank), rankChange),
+						Value: fmt.Sprintf("**%s** by **%s**", album.Album, album.Artist),
+					})
+				}
+				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				helpers.Relax(err)
+			case "month", "monthly":
+				session.ChannelTyping(msg.ChannelID)
+				time, albumRanks := m.GetGaonMonthStats()
+				chartsEmbed := &discordgo.MessageEmbed{
+					Title:  helpers.GetTextF("plugins.charts.month-gaon-embed-title", time),
+					URL:    gaonFriendlyMonthlyCharts,
+					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.gaon-embed-footer")},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.gaon-embed-hex-color")),
+				}
+				for _, album := range albumRanks {
+					rankChange := ""
+					rankChangeN := album.PastRank - album.CurrentRank
+					if rankChangeN > 0 {
+						rankChange = fmt.Sprintf(":arrow_up: %d", rankChangeN)
+					} else if rankChangeN < 0 {
+						rankChange = fmt.Sprintf(":arrow_down:  %d", rankChangeN * -1)
+					}
+					if album.IsNew == true {
+						rankChange += ":new:"
+					}
+
+					chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
+						Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(album.CurrentRank), rankChange),
+						Value: fmt.Sprintf("**%s** by **%s**", album.Album, album.Artist),
+					})
+				}
+				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				helpers.Relax(err)
+			case "year", "yearly":
+				session.ChannelTyping(msg.ChannelID)
+				time, albumRanks := m.GetGaonYearStats()
+				chartsEmbed := &discordgo.MessageEmbed{
+					Title:  helpers.GetTextF("plugins.charts.year-gaon-embed-title", time),
+					URL:    gaonFriendlyYearlyCharts,
+					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.gaon-embed-footer")},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.gaon-embed-hex-color")),
+				}
+				for _, album := range albumRanks {
+					rankChange := ""
+					rankChangeN := album.PastRank - album.CurrentRank
+					if rankChangeN > 0 {
+						rankChange = fmt.Sprintf(":arrow_up: %d", rankChangeN)
+					} else if rankChangeN < 0 {
+						rankChange = fmt.Sprintf(":arrow_down:  %d", rankChangeN * -1)
+					}
+					if album.IsNew == true {
+						rankChange += ":new:"
+					}
+
+					chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
+						Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(album.CurrentRank), rankChange),
+						Value: fmt.Sprintf("**%s** by **%s**", album.Album, album.Artist),
 					})
 				}
 				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
@@ -399,6 +503,108 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
 			if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow4", i*4)).Nodes) > 0 {
 				ranks[i].IsNew = true
 			}
+		}
+	}
+
+	return time, ranks
+}
+
+func (m *Charts) GetGaonWeekStats() (string, []GenericAlbumScore) {
+	doc, err := goquery.NewDocument(gaonPageWeeklyCharts)
+	helpers.Relax(err)
+
+	time := strings.Trim(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1), " ")
+	var ranks []GenericAlbumScore
+	for i := 0; i < 10; i++ {
+		ranks = append(ranks,
+			GenericAlbumScore{
+				Album:       "",
+				CurrentRank: i + 1,
+				PastRank:    0,
+			})
+		ranks[i].Album = doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.subject > p:nth-child(1)", ranks[i].CurrentRank+1)).Text()
+		ranks[i].Artist = doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.subject > p.singer", ranks[i].CurrentRank+1)).Text()
+		ranks[i].PastRank = ranks[i].CurrentRank
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Text())
+			helpers.Relax(err)
+			ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+		}
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Text())
+			helpers.Relax(err)
+			ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+		}
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .new", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			ranks[i].IsNew = true
+		}
+	}
+
+	return time, ranks
+}
+
+func (m *Charts) GetGaonMonthStats() (string, []GenericAlbumScore) {
+	doc, err := goquery.NewDocument(gaonPageMonthlyCharts)
+	helpers.Relax(err)
+
+	time := strings.Trim(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1), " ")
+	var ranks []GenericAlbumScore
+	for i := 0; i < 10; i++ {
+		ranks = append(ranks,
+			GenericAlbumScore{
+				Album:       "",
+				CurrentRank: i + 1,
+				PastRank:    0,
+			})
+		ranks[i].Album = doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.subject > p:nth-child(1)", ranks[i].CurrentRank+1)).Text()
+		ranks[i].Artist = doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.subject > p.singer", ranks[i].CurrentRank+1)).Text()
+		ranks[i].PastRank = ranks[i].CurrentRank
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Text())
+			helpers.Relax(err)
+			ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+		}
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Text())
+			helpers.Relax(err)
+			ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+		}
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .new", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			ranks[i].IsNew = true
+		}
+	}
+
+	return time, ranks
+}
+
+func (m *Charts) GetGaonYearStats() (string, []GenericAlbumScore) {
+	doc, err := goquery.NewDocument(gaonPageYearlyCharts)
+	helpers.Relax(err)
+
+	time := strings.Trim(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1), " ")
+	var ranks []GenericAlbumScore
+	for i := 0; i < 10; i++ {
+		ranks = append(ranks,
+			GenericAlbumScore{
+				Album:       "",
+				CurrentRank: i + 1,
+				PastRank:    0,
+			})
+		ranks[i].Album = doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.subject > p:nth-child(1)", ranks[i].CurrentRank+1)).Text()
+		ranks[i].Artist = doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.subject > p.singer", ranks[i].CurrentRank+1)).Text()
+		ranks[i].PastRank = ranks[i].CurrentRank
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Text())
+			helpers.Relax(err)
+			ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+		}
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Text())
+			helpers.Relax(err)
+			ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+		}
+		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .new", ranks[i].CurrentRank+1)).Nodes) > 0 {
+			ranks[i].IsNew = true
 		}
 	}
 
