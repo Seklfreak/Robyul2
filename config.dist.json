@@ -1,51 +1,53 @@
 {
-    "listen_moe": "YOUR_LISTEN.MOE_TOKEN",
-    "osu": "YOUR_OSU_API_TOKEN",
-    "sentry": "https://YOU_SENTRY_TOKEN_1:YOUR_SENTRY_TOKEN_2@sentry.io/YOUR_SENTRY_TOKEN_3",
-    "cleverbot": {
-        "user": "",
-        "key": ""
-    },
-    "google": {
-        "api_key": ""
-    },
-    "rethink": {
-        "db": "YOUR_DB_NAME",
-        "url": "YOUR_DB_IP"
-    },
-    "discord": {
-        "id": "YOUR_DISCORD_APP_ID",
-        "perms": "YOUR_REQUESTED_PERMISSION_INT",
-        "token": "YOUR_DISCORD_TOKEN"
-    },
-    "bot": {
-        "name": "YOUR_BOT_NAME",
-        "avatar": "YOUR_BASE64_AVATAR"
-    },
-    "metrics_ip": "127.0.0.1",
-    "debug": false,
-    "twitter": {
-        "consumer_key": "",
-        "consumer_secret": "",
-        "access_token": "",
-        "access_secret": ""
-    },
-    "instagram": {
-        "username": "",
-        "password": ""
-    },
-    "facebook": {
-        "access_token": ""
-    },
-    "wolframalpha": {
-        "appid": ""
-    },
-    "lastfm": {
-        "api_key": "",
-        "api_secret": ""
-    },
-    "darksky": {
-        "api_key": ""
-    }
-}
+  "listen_moe": "YOUR_LISTEN.MOE_TOKEN",
+  "osu": "YOUR_OSU_API_TOKEN",
+  "sentry": "https://YOU_SENTRY_TOKEN_1:YOUR_SENTRY_TOKEN_2@sentry.io/YOUR_SENTRY_TOKEN_3",
+  "cleverbot": {
+    "user": "",
+    "key": ""
+  },
+  "google": {
+    "api_key": ""
+  },
+  "rethink": {
+    "db": "YOUR_DB_NAME",
+    "url": "YOUR_DB_IP"
+  },
+  "discord": {
+    "id": "YOUR_DISCORD_APP_ID",
+    "perms": "YOUR_REQUESTED_PERMISSION_INT",
+    "token": "YOUR_DISCORD_TOKEN"
+  },
+  "bot": {
+    "name": "YOUR_BOT_NAME",
+    "avatar": "YOUR_BASE64_AVATAR"
+  },
+  "metrics_ip": "127.0.0.1",
+  "debug": false,
+  "twitter": {
+    "consumer_key": "",
+    "consumer_secret": "",
+    "access_token": "",
+    "access_secret": ""
+  },
+  "instagram": {
+    "username": "",
+    "password": ""
+  },
+  "facebook": {
+    "access_token": ""
+  },
+  "wolframalpha": {
+    "appid": ""
+  },
+  "lastfm": {
+    "api_key": "",
+    "api_secret": ""
+  },
+  "darksky": {
+    "api_key": ""
+  },
+  "twitch": {
+    "token": ""
+  }
 }

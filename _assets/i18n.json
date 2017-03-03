@@ -334,6 +334,16 @@
     "guildannouncements": {
       "message-edited": "I saved the new message!",
       "message-disabled": "I disabled this announcement."
+    },
+    "twitch": {
+      "no-channel-information": "This channel is offline :slight_frown:",
+      "channel-embed-title": ":mega: **%s** (%s) is live!",
+      "wentlive-embed-title": ":mega: **%s** (%s) just went live!",
+      "embed-footer": "via twitch.tv",
+      "channel-added-success": "Added Twitch Channel `%s` to the Channel <#%s>!",
+      "channel-delete-success": "Deleted Twitch Channel `%s` from the Database!",
+      "channel-delete-not-found-error": "Unable to find Twitch Channel in the Database!",
+      "channel-list-no-channels-error": "No Twitch Channels found on this server!"
     }
   }
 }

@@ -19,6 +19,7 @@ var migrations = []helpers.Callback{
 	m8_create_table_lastfm,
 	m9_create_table_bias,
 	m10_create_table_guild_announcements,
+	m11_create_table_twitch,
 }
 
 // Run executes all registered migrations
