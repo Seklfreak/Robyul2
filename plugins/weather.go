@@ -17,7 +17,6 @@ const (
 	googleMapsGeocodingEndpoint string = "https://maps.googleapis.com/maps/api/geocode/json?language=en&key=%s&address=%s"
 	darkSkyForecastRequest      string = "https://api.darksky.net/forecast/%s/%s,%s?exclude=minutely,hourly&lang=en&units=si"
 	darkSkyHexColor             string = "#333333"
-	weatherIconsBaseUrl         string = "http://g2.slmn.de/robyul/climacons-master/SVG/%s.svg"
 )
 
 type DarkSkyForecast struct {
@@ -46,7 +45,7 @@ type DarkSkyForecast struct {
 	Daily struct {
 		Summary string `json:"summary"`
 		Icon    string `json:"icon"`
-		Data    []struct {
+		Data []struct {
 			Time                       int     `json:"time"`
 			Summary                    string  `json:"summary"`
 			Icon                       string  `json:"icon"`
@@ -139,9 +138,9 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	}
 
 	weatherEmbed := &discordgo.MessageEmbed{
-		Title:     helpers.GetTextF("plugins.weather.weather-embed-title", addressResult),
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf(weatherIconsBaseUrl, darkSkyForecast.Currently.Icon)},
-		Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.weather.embed-footer")},
+		Title: helpers.GetTextF("plugins.weather.weather-embed-title", addressResult),
+		//Thumbnail: &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf(weatherIconsBaseUrl, darkSkyForecast.Currently.Icon)},
+		Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.weather.embed-footer")},
 		Description: helpers.GetTextF("plugins.weather.current-weather-description",
 			darkSkyForecast.Currently.Summary,
 			strconv.FormatFloat(darkSkyForecast.Currently.Temperature, 'f', 1, 64),
