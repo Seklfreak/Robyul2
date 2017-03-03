@@ -59,7 +59,7 @@ type DB_VLive_Channel struct {
 	ProfileImgUrl string `json:"channel_profile_img"`
 	Color         string `json:"representative_color"`
 	TotalVideos   int64  `json:"-"`
-	CelebBoard    struct {
+	CelebBoard struct {
 		BoardID int64 `json:"board_id"`
 	} `json:"celeb_board"`
 	Upcoming []DB_VLive_Video  `gorethink:"upcoming" json:"-"`
@@ -317,7 +317,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			}
 			// use input as id instead or use the id from above (if channel found)
 			vliveChannel, err := r.getVLiveChannelByVliveChannelId(vliveChannelId)
-			if err != nil {
+			if err != nil || vliveChannel.Name == "" {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
 				return
 			}

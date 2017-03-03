@@ -221,6 +221,11 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 			resultMessage += fmt.Sprintf("Found **%d** Twitch Channels in total.", len(entryBucket))
 			session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
 		default:
+			if args[0] == "" {
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				helpers.Relax(err)
+				return
+			}
 			session.ChannelTyping(msg.ChannelID)
 			twitchStatus := m.getTwitchStatus(args[0])
 			if twitchStatus.Stream.ID == 0 {

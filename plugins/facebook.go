@@ -215,6 +215,11 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 		default:
 			session.ChannelTyping(msg.ChannelID)
 
+			if args[0] == "" {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
+				return
+			}
+
 			facebookPage, err := m.lookupFacebookPage(args[0])
 			if err != nil {
 				if e, ok := err.(*fb.Error); ok {
@@ -302,7 +307,9 @@ func (m *Facebook) lookupFacebookPage(siteName string) (Facebook_Page, error) {
 	for _, facebookPostResult := range facebookPostsResult {
 		var facebookPost Facebook_Post
 		facebookPost.ID = facebookPostResult["id"].(string)
-		facebookPost.Message = facebookPostResult["message"].(string)
+		if _, ok := facebookPostResult["message"]; ok {
+			facebookPost.Message = facebookPostResult["message"].(string)
+		}
 		facebookPost.CreatedAt = facebookPostResult["created_time"].(string)
 		facebookPost.Url = facebookPostResult["permalink_url"].(string)
 		facebookPost.PictureUrl = ""
