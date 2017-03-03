@@ -341,7 +341,6 @@ func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchSt
 		URL:    twitchStatus.Stream.Channel.URL,
 		Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitch.embed-footer")},
 		Fields: []*discordgo.MessageEmbedField{
-			{Name: "Viewers", Value: humanize.Comma(int64(twitchStatus.Stream.Viewers)), Inline: true},
 			{Name: "Followers", Value: humanize.Comma(int64(twitchStatus.Stream.Channel.Followers)), Inline: true},
 			{Name: "Total Views", Value: humanize.Comma(int64(twitchStatus.Stream.Channel.Views)), Inline: true}},
 		Color: helpers.GetDiscordColorFromHex(twitchHexColor),
