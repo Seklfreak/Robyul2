@@ -15,6 +15,7 @@ import (
     "strings"
     "sync"
     "time"
+    "github.com/getsentry/raven-go"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -361,7 +362,11 @@ func (l *ListenDotMoe) tracklistWorker() {
             Path:   "/api/v2/socket",
         }).String(), nil)
 
-        helpers.Relax(err)
+        if err != nil {
+            raven.CaptureError(err, map[string]string{})
+            time.Sleep(3 * time.Second)
+            continue
+        }
 
         c.WriteJSON(map[string]string{"token": helpers.GetConfig().Path("listen_moe").Data().(string)})
         helpers.Relax(err)
