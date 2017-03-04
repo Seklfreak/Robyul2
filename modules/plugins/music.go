@@ -12,15 +12,14 @@ import (
 	rethink "github.com/gorethink/gorethink"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"runtime"
 )
 
 // Define control messages
@@ -229,7 +228,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
 
 			voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
-			helpers.Relax(err)
+			if err != nil {
+				helpers.VoiceFree(guild.ID)
+				helpers.Relax(err)
+			}
 
 			if merr == nil {
 				session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :smiley:")
@@ -363,23 +365,27 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		for i, song := range *playlist {
-			if i > 10 {
+			if i > 11 {
 				embed.Footer.Text = strconv.Itoa(len(*playlist)-i) + " entries omitted."
 				break
 			}
 
-			num := strconv.Itoa(i+1) + "."
+			num := "`[" + strconv.Itoa(i+1) + "]` "
 
 			if i == 0 {
-				embed.Fields[0].Value = song.Title
+				embed.Fields[0].Value = num + " " + song.Title
 				continue
 			}
 
 			embed.Fields[1].Value += num + " " + song.Title + "\n"
 		}
 
-		_, err := session.ChannelMessageSendEmbed(channel.ID, embed)
-		helpers.Relax(err)
+		// Catch an empty queue
+		if embed.Fields[1].Value == "" {
+			embed.Fields[1].Value = "Empty ¯\\_(ツ)_/¯"
+		}
+
+		session.ChannelMessageSendEmbed(channel.ID, embed)
 		break
 
 	case "random", "rand":
@@ -391,7 +397,28 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		err = cursor.All(&matches)
 		helpers.Relax(err)
 
-		match := matches[rand.Intn(len(matches))]
+		var match Song
+
+		for _, song := range matches {
+			dupe := false
+
+			for _, entry := range *playlist {
+				if song.ID == entry.ID {
+					dupe = true
+					break
+				}
+			}
+
+			if !dupe {
+				match = song
+				break
+			}
+		}
+
+		if match == (Song{}) {
+			session.ChannelMessageSend(channel.ID, "Sorry but there are no more songs that aren't already in your playlist :shrug:")
+			return
+		}
 
 		m.guildConnections[guild.ID].Lock()
 		*playlist = append(*playlist, match)
@@ -487,7 +514,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 			// Inform users
 			_, err = session.ChannelMessageSend(
 				channel.ID,
-				"`"+match.Title+"` was added to your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
+				"`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
 			)
 			helpers.Relax(err)
 			go m.waitForSong(channel.ID, guild.ID, match, msg, session)
@@ -523,26 +550,21 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 		if songPresent {
 			_, err := session.ChannelMessageSend(
 				channel.ID,
-				"`"+match.Title+"` is already in your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
+				"`"+match.Title+"` is already in your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
 			)
 			helpers.Relax(err)
 			return
 		}
 
-		Logger.INFO.L("music", "queing song")
 		m.guildConnections[guild.ID].Lock()
 		*queue = append(*queue, match)
 		m.guildConnections[guild.ID].Unlock()
-		Logger.INFO.L("music", "queing song done")
 
-		_, err = session.ChannelMessageSend(
+		session.ChannelMessageSend(
 			channel.ID,
-			"`"+match.Title+"` was added to your download-queue.", // \nLive progress at: <https://meetkaren.xyz/music>",
+			"`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
 		)
-		helpers.Relax(err)
-		Logger.INFO.L("music", "waiting for song")
 		go m.waitForSong(channel.ID, guild.ID, match, msg, session)
-		Logger.INFO.L("music", "waiting for song done")
 		break
 	case "search", "find":
 		if len(content) < 4 {

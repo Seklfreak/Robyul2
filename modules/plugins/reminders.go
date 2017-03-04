@@ -68,8 +68,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 
 						session.ChannelMessageSend(
 							dmChannel.ID,
-							":alarm_clock: You wanted me to remind you about this:\n"+
-								"```"+reminder.Message+"```",
+							":alarm_clock: You wanted me to remind you about this:\n"+"```"+reminder.Message+"```",
 						)
 
 						reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx+1:]...)
