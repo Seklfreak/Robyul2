@@ -1,12 +1,12 @@
 package modules
 
 import (
-    "git.lukas.moe/sn0w/Karen/modules/triggers"
     "git.lukas.moe/sn0w/Karen/modules/plugins"
+    "git.lukas.moe/sn0w/Karen/modules/triggers"
 )
 
 var (
-    pluginCache map[string]*Plugin
+    pluginCache  map[string]*Plugin
     triggerCache map[string]*TriggerPlugin
 
     PluginList = []Plugin{
@@ -50,6 +50,7 @@ var (
         &triggers.IPTables{},
         &triggers.Lenny{},
         &triggers.Nep{},
+        &triggers.Kawaii{},
         &triggers.ReZero{},
         &triggers.Shrug{},
         &triggers.TableFlip{},
