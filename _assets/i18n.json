@@ -301,7 +301,7 @@
       "topalbums-embed-title": "%s Top Albums",
       "topartists-embed-title": "%s Top Artists",
       "toptracks-embed-title": "%s Top Tracks",
-      "set-username-success": "You set `%s` as your username. :clap:\n(This is saved accross servers.)"
+      "set-username-success": "You set `%s` as your username. :clap:\n(This is saved across servers.)"
     },
     "weather": {
       "address-not-found": "I can't find the location you are looking for. :thinking:",

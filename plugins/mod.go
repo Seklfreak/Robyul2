@@ -317,8 +317,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				sourceChannel, err := session.Channel(msg.ChannelID)
 				helpers.Relax(err)
 				targetChannel, err := helpers.GetChannelFromMention(args[0])
-				helpers.Relax(err)
-				if targetChannel.ID == "" {
+				if err != nil || targetChannel.ID == "" {
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 					return
 				}
