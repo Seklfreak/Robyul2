@@ -290,13 +290,14 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
 	}
 
 	mediaModifier := ""
-	if tweet.Entities != nil && len(tweet.Entities.Media) > 0 {
-		mediaModifier += fmt.Sprintf(" (%d image", len(tweet.Entities.Media))
-		if len(tweet.Entities.Media) > 1 {
-			mediaModifier += "s"
-		}
-		mediaModifier += ")"
-	}
+	// Not always accurate
+	//if tweet.Entities != nil && len(tweet.Entities.Media) > 0 {
+	//	mediaModifier += fmt.Sprintf(" (%d image", len(tweet.Entities.Media))
+	//	if len(tweet.Entities.Media) > 1 {
+	//		mediaModifier += "s"
+	//	}
+	//	mediaModifier += ")"
+	//}
 	if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
 		if tweet.ExtendedEntities.Media[0].Type == "video" {
 			mediaModifier += " (video)"

@@ -197,3 +197,15 @@ func GetAvatarUrl(user *discordgo.User) string {
 	}
 	return avatarUrl
 }
+
+func GetAllPermissions(guild *discordgo.Guild, member *discordgo.Member) int64 {
+	var perms int64 = 0
+	for _, r := range member.Roles {
+		for _, x := range guild.Roles {
+			if x.ID == r {
+				perms |= int64(x.Permissions)
+			}
+		}
+	}
+	return perms
+}

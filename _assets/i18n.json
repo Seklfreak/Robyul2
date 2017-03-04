@@ -48,7 +48,8 @@
     "help": [
       "<@%s> Check out <https://github.com/Seklfreak/Robyul2/wiki/Commands>",
       "<@%s> It's at <https://github.com/Seklfreak/Robyul2/wiki/Commands> :smiley:"
-    ]
+    ],
+    "check-your-dms": "<@%s> Please check your DMs. :eyes:"
   },
   "triggers": {
     "8ball": {
@@ -359,6 +360,12 @@
       "week-gaon-embed-title": "**%s** | Gaon Weekly Charts (domestic and overseas)",
       "month-gaon-embed-title": "**%s** | Gaon Monthly Charts (domestic and overseas)",
       "year-gaon-embed-title": "**%s** | Gaon Yearly Charts (domestic and overseas)"
+    },
+    "notifications": {
+      "keyword-added-success": "<@%s> I will notify you about this keyboard! :pencil:",
+      "keyword-list-no-keywords-error": "<@%s> You haven't told me to notify you about any keywords yet. :thinking:",
+      "keyword-delete-not-found-error": "<@%s> I wasn't able to find this keyword in your active keywords on this server. :open_mouth:",
+      "keyword-delete-success": "<@%s> I removed the keyword from your list. :ok_hand:"
     }
   }
 }

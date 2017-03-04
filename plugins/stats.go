@@ -227,11 +227,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if targetMember.Nick != "" {
 			nick = targetMember.Nick
 		}
-		description := fmt.Sprintf("**%s**", status)
-		if game != "" {
-			description = fmt.Sprintf("**%s** (Playing: **%s**)", status, game)
-			if gameUrl != "" {
-				description = fmt.Sprintf("**%s** (:mega: Streaming: **%s**)", status, game)
+		description := ""
+		if status != "" {
+			description = fmt.Sprintf("**%s**", status)
+			if game != "" {
+				description = fmt.Sprintf("**%s** (Playing: **%s**)", status, game)
+				if gameUrl != "" {
+					description = fmt.Sprintf("**%s** (:mega: Streaming: **%s**)", status, game)
+				}
 			}
 		}
 		title := fmt.Sprintf("%s#%s", targetUser.Username, targetUser.Discriminator)
@@ -292,15 +295,17 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		userinfoEmbed := &discordgo.MessageEmbed{
-			Color:       0x0FADED,
-			Title:       title,
-			Description: description,
-			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User ID: %s", userNumber, targetUser.ID)},
+			Color:  0x0FADED,
+			Title:  title,
+			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User ID: %s", userNumber, targetUser.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedTime)), Inline: true},
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
 				{Name: "Roles", Value: rolesText, Inline: false},
 			},
+		}
+		if description != "" {
+			userinfoEmbed.Description = description
 		}
 
 		if helpers.GetAvatarUrl(targetUser) != "" {

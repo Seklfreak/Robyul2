@@ -110,6 +110,7 @@ var PluginList = []Plugin{
 var PluginExtendedList = []PluginExtended{
 	&Bias{},
 	&GuildAnnouncements{},
+	&Notifications{},
 }
 
 // TriggerPluginList is the list of plugins that activate on normal chat

@@ -56,6 +56,9 @@ var (
 
 	// DarkSkyRequests increases after each request to darksky.net
 	DarkSkyRequests = expvar.NewInt("darksky_requests")
+
+	// KeywordNotificationsSentCount increased after every keyword notification sent
+	KeywordNotificationsSentCount = expvar.NewInt("keywordnotifications_sent_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
