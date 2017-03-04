@@ -10,7 +10,7 @@ import (
 var channelTimeout int64 = 15
 
 // A mutex to prevent concurrent modifications
-var mutex = sync.Mutex{}
+var mutex = sync.RWMutex{}
 
 // Maps channel-id's to channel pointers
 var channels = make(map[string]*discordgo.Channel)
@@ -37,16 +37,26 @@ func updateChannel(id string) error {
 // If there is no cache a request is sent
 func Channel(id string) (ch *discordgo.Channel, e error) {
     // Check if that channel wasn't cached yet
-    if channels[id] == nil {
+    mutex.RLock()
+    _, ok := channels[id]
+    mutex.RUnlock()
+
+    if !ok {
         e = updateChannel(id)
     }
 
     // Check if the channel timed out
-    if time.Now().Unix() - channelMeta[id] > channelTimeout {
+    mutex.RLock()
+    meta := channelMeta[id]
+    mutex.RUnlock()
+
+    if time.Now().Unix() - meta > channelTimeout {
         e = updateChannel(id)
     }
 
-    // Return channel
+    mutex.RLock()
     ch = channels[id]
+    mutex.RUnlock()
+
     return
 }

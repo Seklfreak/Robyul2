@@ -14,7 +14,7 @@ var (
     dbSession *rethink.Session
 
     guildSettingsCache map[string]models.Config
-    cacheMutex sync.Mutex
+    cacheMutex sync.RWMutex
 )
 
 // ConnectDB connects to rethink and stores the session
@@ -34,7 +34,10 @@ func ConnectDB(url string, db string) {
     }
 
     dbSession = session
+
+    cacheMutex.Lock()
     guildSettingsCache = make(map[string]models.Config)
+    cacheMutex.Unlock()
 
     Logger.INFO.L("db", "Connected!")
 }
@@ -109,6 +112,9 @@ func GuildSettingsGet(guild string) (models.Config, error) {
 }
 
 func GuildSettingsGetCached(id string) (models.Config) {
+    cacheMutex.RLock()
+    defer cacheMutex.RUnlock()
+
     return guildSettingsCache[id]
 }
 

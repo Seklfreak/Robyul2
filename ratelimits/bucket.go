@@ -25,7 +25,7 @@ var Container = &BucketContainer{}
 
 // Container struct to lock the bucket map
 type BucketContainer struct {
-    sync.Mutex
+    sync.RWMutex
 
     // Maps discord ids to key-counts
     buckets map[string]int8
@@ -43,34 +43,27 @@ func (b *BucketContainer) Init() {
 // Refills user buckets in a set interval
 func (b *BucketContainer) Refiller() {
     for {
+        b.Lock()
         for user, keys := range b.buckets {
             // Chill zone
             if keys == -1 {
-                b.Lock()
                 b.buckets[user]++
-                b.Unlock()
-
                 continue
             }
 
             // Chill zone exit
             if keys == 0 {
-                b.Lock()
                 b.buckets[user] = BUCKET_INITIAL_FILL
-                b.Unlock()
-
                 continue
             }
 
             // More free keys for nice users :3
             if keys < BUCKET_UPPER_BOUND {
-                b.Lock()
                 b.buckets[user] += DROP_SIZE
-                b.Unlock()
-
                 continue
             }
         }
+        b.Unlock()
 
         time.Sleep(DROP_INTERVAL)
     }
@@ -78,7 +71,11 @@ func (b *BucketContainer) Refiller() {
 
 // Check if the user has a bucket. If not create one
 func (b *BucketContainer) CreateBucketIfNotExists(user string) {
-    if _, e := b.buckets[user]; !e {
+    b.RLock()
+    _, e := b.buckets[user]
+    b.RUnlock()
+
+    if !e {
         b.Lock()
         b.buckets[user] = BUCKET_INITIAL_FILL
         b.Unlock()
@@ -90,7 +87,11 @@ func (b *BucketContainer) Drain(amount int8, user string) error {
     b.CreateBucketIfNotExists(user)
 
     // Check if there are enough keys left
-    if amount > b.buckets[user] {
+    b.RLock()
+    userAmount := b.buckets[user]
+    b.RUnlock()
+
+    if amount > userAmount {
         return errors.New("No keys left")
     }
 
@@ -106,10 +107,16 @@ func (b *BucketContainer) Drain(amount int8, user string) error {
 func (b *BucketContainer) HasKeys(user string) bool {
     b.CreateBucketIfNotExists(user)
 
+    b.RLock()
+    defer b.RUnlock()
+
     return b.buckets[user] > 0
 }
 
 func (b *BucketContainer) Get(user string) int8 {
+    b.RLock()
+    defer b.RUnlock()
+
     return b.buckets[user]
 }
 
