@@ -20,6 +20,7 @@ func (m *Mod) Commands() []string {
 		"ban",
 		"kick",
 		"serverlist",
+		"echo",
 	}
 }
 
@@ -308,6 +309,28 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 			_, err := session.ChannelMessageSend(msg.ChannelID, resultText) // TODO: pagify
 			helpers.Relax(err)
+		})
+	case "echo": // [p]echo <channel> <message>
+		helpers.RequireAdmin(msg, func() {
+			args := strings.Split(content, " ")
+			if len(args) >= 2 {
+				sourceChannel, err := session.Channel(msg.ChannelID)
+				helpers.Relax(err)
+				targetChannel, err := helpers.GetChannelFromMention(args[0])
+				helpers.Relax(err)
+				if targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+				if sourceChannel.GuildID != targetChannel.GuildID {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.echo-error-wrong-server"))
+					return
+				}
+				session.ChannelMessageSend(targetChannel.ID, strings.Join(args[1:], " "))
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
 		})
 	}
 }

@@ -1,3 +1,11 @@
+# Robyul 2 (aka Gobyul)
+[<img src="https://img.shields.io/badge/Support-me!-orange.svg">](https://www.paypal.me/swk)
+[<img src="https://discordapp.com/api/guilds/250216966436945920/widget.png?style=shield">](https://discord.gg/NWwv299)
+
+The official Bot for the I.O.I Discord and other (Kpop) Discords.
+
+<hr>
+
 Origin: https://git.lukas.moe/sn0w/Karen<br>
 Mirror: https://github.com/sn0w/Karen
 
