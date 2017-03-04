@@ -14,8 +14,15 @@ type Notifications struct{}
 
 var (
 	notificationSettingsCache []DB_NotificationSetting
+	ignoredChannelsCache      []DB_IgnoredChannel
 	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-"}
 )
+
+type DB_IgnoredChannel struct {
+	ID        string `gorethink:"id,omitempty"`
+	GuildID   string `gorethink:"guildid"`
+	ChannelID string `gorethink:"channelid"`
+}
 
 type DB_NotificationSetting struct {
 	ID        string `gorethink:"id,omitempty"`
@@ -36,7 +43,7 @@ func (m *Notifications) Init(session *discordgo.Session) {
 	go m.refreshNotificationSettingsCache()
 }
 
-// @TODO: add ignore channels command
+// @TODO: add command to make a keyword global (owner only)
 
 func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Split(content, " ")
@@ -142,7 +149,66 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
 			helpers.Relax(err)
-			go m.refreshNotificationSettingsCache()
+		case "ignore-channel":
+			if len(args) < 2 {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+			commandIssueChannel, err := session.Channel(msg.ChannelID)
+			helpers.Relax(err)
+			switch args[1] {
+			case "list": // [p]notifications ignore-channel list
+				var entryBucket []DB_IgnoredChannel
+				listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
+					rethink.Or(
+						rethink.Row.Field("guildid").Eq(commandIssueChannel.GuildID),
+					),
+				).Run(helpers.GetDB())
+				helpers.Relax(err)
+				defer listCursor.Close()
+				err = listCursor.All(&entryBucket)
+
+				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.notifications.ignoredchannels-list-no-keywords-error"))
+					return
+				} else if err != nil {
+					helpers.Relax(err)
+				}
+
+				resultMessage := fmt.Sprintf("Ignored channels on this server:\n")
+				for _, entry := range entryBucket {
+					resultMessage += fmt.Sprintf("<#%s>\n", entry.ChannelID)
+				}
+				resultMessage += fmt.Sprintf("Found **%d** Ignored Channels in total.", len(entryBucket))
+
+				_, err = session.ChannelMessageSend(msg.ChannelID, resultMessage)
+				helpers.Relax(err)
+			default: // [p]notifications ignore-channel <channel>
+				helpers.RequireAdmin(msg, func() {
+					targetChannel, err := helpers.GetChannelFromMention(args[1])
+					helpers.Relax(err)
+
+					if targetChannel.GuildID != commandIssueChannel.GuildID {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-addorremove-error-server"))
+						return
+					}
+
+					ignoredChannel := m.getIgnoredChannelBy("channelid", targetChannel.ID)
+					if ignoredChannel.ID == "" {
+						// Add to list
+						ignoredChannel := m.getIgnoredChannelByOrCreateEmpty("id", "")
+						ignoredChannel.ChannelID = targetChannel.ID
+						ignoredChannel.GuildID = targetChannel.GuildID
+						m.setIgnoredChannel(ignoredChannel)
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-add-success", targetChannel.ID))
+					} else {
+						// Remove from list
+						m.deleteIgnoredChannel(ignoredChannel.ID)
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
+					}
+					go m.refreshNotificationSettingsCache()
+				})
+			}
 		}
 	}
 
@@ -170,6 +236,13 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 	// ignore bot messages
 	if msg.Author.Bot == true {
 		return
+	}
+
+	// ignore messages in ignored channels
+	for _, ignoredChannel := range ignoredChannelsCache {
+		if ignoredChannel.ChannelID == msg.ChannelID {
+			return
+		}
 	}
 
 	var pendingNotifications []PendingNotification
@@ -207,14 +280,23 @@ NextKeyword:
 				helpers.Relax(err)
 				messageAuthor, err := session.GuildMember(guild.ID, msg.Author.ID)
 				helpers.Relax(err)
+				everyoneRoleId := ""
+				guildRoles, err := session.GuildRoles(guild.ID)
+				for _, guildRole := range guildRoles {
+					if guildRole.Name == "@everyone" {
+						everyoneRoleId = guildRole.ID
+					}
+				}
 				hasPermissions := true
 				// ignore messages if the users roles have no read permission to the server
 				memberAllPermissions := helpers.GetAllPermissions(guild, memberToNotify)
 				if memberAllPermissions&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
-					hasPermissions = false
+					hasPermissions = true
+					//fmt.Println("allowed: A")
 				}
 				if memberAllPermissions&discordgo.PermissionReadMessages != discordgo.PermissionReadMessages {
-					hasPermissions = false
+					hasPermissions = true
+					//fmt.Println("allowed: B")
 				}
 				// ignore messages if the users roles have no read permission to the channel
 				for _, overwrite := range channel.PermissionOverwrites {
@@ -222,32 +304,40 @@ NextKeyword:
 						if memberToNotify.User.ID == overwrite.ID {
 							if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 								hasPermissions = true
+								//fmt.Println("allowed: C")
 							}
 							if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 								hasPermissions = true
+								//fmt.Println("allowed: D")
 							}
 							if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 								hasPermissions = false
+								//fmt.Println("rejected: E")
 							}
 							if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 								hasPermissions = false
+								//fmt.Println("rejected: F")
 							}
 						}
 					}
 					if overwrite.Type == "role" {
 						for _, memberRoleId := range memberToNotify.Roles {
-							if memberRoleId == overwrite.ID {
+							if memberRoleId == overwrite.ID || everyoneRoleId == overwrite.ID {
 								if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 									hasPermissions = true
+									//fmt.Println("allowed: G")
 								}
 								if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 									hasPermissions = true
+									//fmt.Println("allowed: H")
 								}
 								if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 									hasPermissions = false
+									//fmt.Println("rejected: I")
 								}
 								if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 									hasPermissions = false
+									//fmt.Println("rejected: J")
 								}
 							}
 						}
@@ -308,6 +398,60 @@ func (m *Notifications) OnGuildMemberRemove(member *discordgo.Member, session *d
 
 }
 
+func (m *Notifications) getIgnoredChannelBy(key string, id string) DB_IgnoredChannel {
+	var entryBucket DB_IgnoredChannel
+	listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
+		rethink.Row.Field(key).Eq(id),
+	).Run(helpers.GetDB())
+	defer listCursor.Close()
+	err = listCursor.One(&entryBucket)
+
+	if err == rethink.ErrEmptyResult {
+		return entryBucket
+	} else if err != nil {
+		panic(err)
+	}
+
+	return entryBucket
+}
+
+func (m *Notifications) getIgnoredChannelByOrCreateEmpty(key string, id string) DB_IgnoredChannel {
+	var entryBucket DB_IgnoredChannel
+	listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
+		rethink.Row.Field(key).Eq(id),
+	).Run(helpers.GetDB())
+	defer listCursor.Close()
+	err = listCursor.One(&entryBucket)
+
+	// If user has no DB entries create an empty document
+	if err == rethink.ErrEmptyResult {
+		insert := rethink.Table("notifications_ignored_channels").Insert(DB_IgnoredChannel{})
+		res, e := insert.RunWrite(helpers.GetDB())
+		// If the creation was successful read the document
+		if e != nil {
+			panic(e)
+		} else {
+			return m.getIgnoredChannelByOrCreateEmpty("id", res.GeneratedKeys[0])
+		}
+	} else if err != nil {
+		panic(err)
+	}
+
+	return entryBucket
+}
+
+func (m *Notifications) setIgnoredChannel(entry DB_IgnoredChannel) {
+	_, err := rethink.Table("notifications_ignored_channels").Update(entry).Run(helpers.GetDB())
+	helpers.Relax(err)
+}
+
+func (m *Notifications) deleteIgnoredChannel(id string) {
+	_, err := rethink.Table("notifications_ignored_channels").Filter(
+		rethink.Row.Field("id").Eq(id),
+	).Delete().RunWrite(helpers.GetDB())
+	helpers.Relax(err)
+}
+
 func (m *Notifications) getNotificationSettingBy(key string, id string) DB_NotificationSetting {
 	var entryBucket DB_NotificationSetting
 	listCursor, err := rethink.Table("notifications").Filter(
@@ -365,10 +509,15 @@ func (m *Notifications) deleteNotificationSettingByID(id string) {
 func (m *Notifications) refreshNotificationSettingsCache() {
 	cursor, err := rethink.Table("notifications").Run(helpers.GetDB())
 	helpers.Relax(err)
-
 	err = cursor.All(&notificationSettingsCache)
 	helpers.Relax(err)
-	logger.INFO.L("notifications", fmt.Sprintf("Refreshed Notification Settings Cache: Got %d keywords", len(notificationSettingsCache)))
+	cursor, err = rethink.Table("notifications_ignored_channels").Run(helpers.GetDB())
+	helpers.Relax(err)
+	err = cursor.All(&ignoredChannelsCache)
+	helpers.Relax(err)
+
+	logger.INFO.L("notifications", fmt.Sprintf("Refreshed Notification Settings Cache: Got %d keywords and %d ignored channels",
+		len(notificationSettingsCache), len(ignoredChannelsCache)))
 }
 
 type delimiterCombination struct {

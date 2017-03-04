@@ -21,6 +21,7 @@ var migrations = []helpers.Callback{
 	m10_create_table_guild_announcements,
 	m11_create_table_twitch,
 	m12_create_table_notifications,
+	m13_create_table_notifications_ignored_channels,
 }
 
 // Run executes all registered migrations
