@@ -8,6 +8,15 @@
       "Seems like you're not an admin :thinking:"
     ]
   },
+  "mod": {
+    "no_permission": [
+      "Uhm I'm sorry but only guild mods may do that :frowning:",
+      "Don't tell anyone but that command - totally dangerous!\nOnly mods are brave enough to use it.",
+      "These are not the druids you're looking for :see_no_evil:",
+      "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
+      "Seems like you're not a mod :thinking:"
+    ]
+  },
   "bot": {
     "ratelimit": {
       "hit": "<@%s> Woah there. Way too spicy.\nYou're executing commands too fast, so i put you into the chill zone for ~15 seconds.\nNo more commands for you until you get out :no_good:"

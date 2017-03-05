@@ -46,6 +46,7 @@ var (
         //&plugins.Stone{},
         //&plugins.Support{},
         //&plugins.XKCD{},
+        &plugins.Ratelimit{},
     }
 
     // PluginList is the list of active plugins

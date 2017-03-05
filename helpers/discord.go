@@ -1,211 +1,260 @@
 package helpers
 
 import (
-	"errors"
-	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/bwmarrin/discordgo"
-	"math/big"
-	"regexp"
-	"strings"
-	"time"
-	"strconv"
-	"fmt"
+    "errors"
+    "github.com/Seklfreak/Robyul2/cache"
+    "github.com/bwmarrin/discordgo"
+    "math/big"
+    "regexp"
+    "strings"
+    "time"
+    "strconv"
+    "fmt"
 )
 
 var botAdmins = []string{
-	"116620585638821891", // Sekl
+    "116620585638821891", // Sekl
 }
+var adminRoleNames = []string{"Admin"}
+var modRoleNames = []string{"Mod", "Mod Trainee"}
+
+// @TODO: add mod role
 
 // IsBotAdmin checks if $id is in $botAdmins
 func IsBotAdmin(id string) bool {
-	for _, s := range botAdmins {
-		if s == id {
-			return true
-		}
-	}
+    for _, s := range botAdmins {
+        if s == id {
+            return true
+        }
+    }
 
-	return false
+    return false
 }
 
 func IsAdmin(msg *discordgo.Message) bool {
-	channel, e := cache.GetSession().Channel(msg.ChannelID)
-	if e != nil {
-		return false
-	}
+    channel, e := cache.GetSession().Channel(msg.ChannelID)
+    if e != nil {
+        return false
+    }
 
-	guild, e := cache.GetSession().Guild(channel.GuildID)
-	if e != nil {
-		return false
-	}
+    guild, e := cache.GetSession().Guild(channel.GuildID)
+    if e != nil {
+        return false
+    }
 
-	if msg.Author.ID == guild.OwnerID || IsBotAdmin(msg.Author.ID) {
-		return true
-	}
+    if msg.Author.ID == guild.OwnerID || IsBotAdmin(msg.Author.ID) {
+        return true
+    }
 
-	guildMember, e := cache.GetSession().GuildMember(guild.ID, msg.Author.ID)
-	// Check if role may manage server
-	for _, role := range guild.Roles {
-		for _, userRole := range guildMember.Roles {
-			if userRole == role.ID && role.Permissions&8 == 8 {
-				return true
-			}
-		}
-	}
+    guildMember, e := cache.GetSession().GuildMember(guild.ID, msg.Author.ID)
+    // Check if role may manage server or a role is in admin role list
+    for _, role := range guild.Roles {
+        for _, userRole := range guildMember.Roles {
+            if userRole == role.ID {
+                if role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+                    return true
+                }
+                for _, adminRoleName := range adminRoleNames {
+                    if role.Name == adminRoleName {
+                        return true
+                    }
+                }
+            }
+        }
+    }
+    return false
+}
 
-	return false
+func IsMod(msg *discordgo.Message) bool {
+    if IsAdmin(msg) == true {
+        return true
+    } else {
+        channel, e := cache.GetSession().Channel(msg.ChannelID)
+        if e != nil {
+            return false
+        }
+        guild, e := cache.GetSession().Guild(channel.GuildID)
+        if e != nil {
+            return false
+        }
+        guildMember, e := cache.GetSession().GuildMember(guild.ID, msg.Author.ID)
+        // check if a role is in mod role list
+        for _, role := range guild.Roles {
+            for _, userRole := range guildMember.Roles {
+                if userRole == role.ID {
+                    for _, modRoleName := range modRoleNames {
+                        if role.Name == modRoleName {
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false
 }
 
 // RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireAdmin(msg *discordgo.Message, cb Callback) {
-	if !IsAdmin(msg) {
-		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
-		return
-	}
+    if !IsAdmin(msg) {
+        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+        return
+    }
 
-	cb()
+    cb()
 }
 
-// RequireOwner only calls $cb if the author is a bot admin
-func RequireOwner(msg *discordgo.Message, cb Callback) {
-	if !IsBotAdmin(msg.Author.ID) {
-		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
-		return
-	}
+// RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
+func RequireMod(msg *discordgo.Message, cb Callback) {
+    if !IsMod(msg) {
+        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("mod.no_permission"))
+        return
+    }
 
-	cb()
+    cb()
+}
+
+// RequireBotAdmin only calls $cb if the author is a bot admin
+func RequireBotAdmin(msg *discordgo.Message, cb Callback) {
+    if !IsBotAdmin(msg.Author.ID) {
+        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+        return
+    }
+
+    cb()
 }
 
 func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText string, confirmEmojiID string, abortEmojiID string) bool {
-	// send embed asking the user to confirm
-	confirmMessage, err := cache.GetSession().ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
-		Title:       GetTextF("bot.embeds.please-confirm-title", author.Username),
-		Description: confirmMessageText,
-	})
-	if err != nil {
-		cache.GetSession().ChannelMessageSend(channelID, GetTextF("bot.errors.general", err.Error()))
-	}
+    // send embed asking the user to confirm
+    confirmMessage, err := cache.GetSession().ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
+        Title:       GetTextF("bot.embeds.please-confirm-title", author.Username),
+        Description: confirmMessageText,
+    })
+    if err != nil {
+        cache.GetSession().ChannelMessageSend(channelID, GetTextF("bot.errors.general", err.Error()))
+    }
 
-	// delete embed after everything is done
-	defer cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
+    // delete embed after everything is done
+    defer cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
 
-	// add default reactions to embed
-	cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID)
-	cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID)
+    // add default reactions to embed
+    cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID)
+    cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID)
 
-	// check every second if a reaction has been clicked
-	for {
-		confirmes, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID, 100)
-		for _, confirm := range confirmes {
-			if confirm.ID == author.ID {
-				// user has confirmed the call
-				return true
-			}
-		}
-		aborts, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID, 100)
-		for _, abort := range aborts {
-			if abort.ID == author.ID {
-				// User has aborted the call
-				return false
-			}
-		}
+    // check every second if a reaction has been clicked
+    for {
+        confirmes, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID, 100)
+        for _, confirm := range confirmes {
+            if confirm.ID == author.ID {
+                // user has confirmed the call
+                return true
+            }
+        }
+        aborts, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID, 100)
+        for _, abort := range aborts {
+            if abort.ID == author.ID {
+                // User has aborted the call
+                return false
+            }
+        }
 
-		time.Sleep(1 * time.Second)
-	}
+        time.Sleep(1 * time.Second)
+    }
 }
 
 func GetMuteRole(guildID string) (*discordgo.Role, error) {
-	guild, err := cache.GetSession().Guild(guildID)
-	Relax(err)
-	var muteRole *discordgo.Role
-	settings, err := GuildSettingsGet(guildID)
-	for _, role := range guild.Roles {
-		Relax(err)
-		if role.Name == settings.MutedRoleName {
-			muteRole = role
-		}
-	}
-	if muteRole == nil {
-		muteRole, err = cache.GetSession().GuildRoleCreate(guildID)
-		if err != nil {
-			return muteRole, err
-		}
-		muteRole, err = cache.GetSession().GuildRoleEdit(guildID, muteRole.ID, settings.MutedRoleName, muteRole.Color, muteRole.Hoist, 0, muteRole.Mentionable)
-		if err != nil {
-			return muteRole, err
-		}
-		for _, channel := range guild.Channels {
-			err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
-			if err != nil {
-				return muteRole, err
-			}
-		}
-	}
-	return muteRole, nil
+    guild, err := cache.GetSession().Guild(guildID)
+    Relax(err)
+    var muteRole *discordgo.Role
+    settings, err := GuildSettingsGet(guildID)
+    for _, role := range guild.Roles {
+        Relax(err)
+        if role.Name == settings.MutedRoleName {
+            muteRole = role
+        }
+    }
+    if muteRole == nil {
+        muteRole, err = cache.GetSession().GuildRoleCreate(guildID)
+        if err != nil {
+            return muteRole, err
+        }
+        muteRole, err = cache.GetSession().GuildRoleEdit(guildID, muteRole.ID, settings.MutedRoleName, muteRole.Color, muteRole.Hoist, 0, muteRole.Mentionable)
+        if err != nil {
+            return muteRole, err
+        }
+        for _, channel := range guild.Channels {
+            err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
+            if err != nil {
+                return muteRole, err
+            }
+        }
+    }
+    return muteRole, nil
 }
 
 func GetChannelFromMention(mention string) (*discordgo.Channel, error) {
-	var targetChannel *discordgo.Channel
-	re := regexp.MustCompile("(<#)?(\\d+)(>)?")
-	result := re.FindStringSubmatch(mention)
-	if len(result) == 4 {
-		targetChannel, err := cache.GetSession().Channel(result[2])
-		return targetChannel, err
-	} else {
-		return targetChannel, errors.New("Channel not found.")
-	}
+    var targetChannel *discordgo.Channel
+    re := regexp.MustCompile("(<#)?(\\d+)(>)?")
+    result := re.FindStringSubmatch(mention)
+    if len(result) == 4 {
+        targetChannel, err := cache.GetSession().Channel(result[2])
+        return targetChannel, err
+    } else {
+        return targetChannel, errors.New("Channel not found.")
+    }
 }
 
 func GetUserFromMention(mention string) (*discordgo.User, error) {
-	var targetUser *discordgo.User
-	re := regexp.MustCompile("(<@)?(\\d+)(>)?")
-	result := re.FindStringSubmatch(mention)
-	if len(result) == 4 {
-		targetUser, err := cache.GetSession().User(result[2])
-		return targetUser, err
-	} else {
-		return targetUser, errors.New("User not found.")
-	}
+    var targetUser *discordgo.User
+    re := regexp.MustCompile("(<@)?(\\d+)(>)?")
+    result := re.FindStringSubmatch(mention)
+    if len(result) == 4 {
+        targetUser, err := cache.GetSession().User(result[2])
+        return targetUser, err
+    } else {
+        return targetUser, errors.New("User not found.")
+    }
 }
 
 func GetDiscordColorFromHex(hex string) int {
-	colorInt, ok := new(big.Int).SetString(strings.Replace(hex, "#", "", 1), 16)
-	if ok == true {
-		return int(colorInt.Int64())
-	} else {
-		return 0x0FADED
-	}
+    colorInt, ok := new(big.Int).SetString(strings.Replace(hex, "#", "", 1), 16)
+    if ok == true {
+        return int(colorInt.Int64())
+    } else {
+        return 0x0FADED
+    }
 }
 
 func GetTimeFromSnowflake(id string) time.Time {
-	IDi, err := strconv.Atoi(id)
-	Relax(err)
-	createdAtTime := time.Unix(int64(((IDi>>22)+1420070400000)/1000), 0)
-	return createdAtTime.UTC()
+    IDi, err := strconv.Atoi(id)
+    Relax(err)
+    createdAtTime := time.Unix(int64(((IDi>>22)+1420070400000)/1000), 0)
+    return createdAtTime.UTC()
 }
 
 func GetAvatarUrl(user *discordgo.User) string {
-	if user.Avatar == "" {
-		return ""
-	}
+    if user.Avatar == "" {
+        return ""
+    }
 
-	avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=1024"
+    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=1024"
 
-	if strings.HasPrefix(user.Avatar, "a_") {
-		avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif")
-	} else {
-		avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp")
-	}
-	return avatarUrl
+    if strings.HasPrefix(user.Avatar, "a_") {
+        avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif")
+    } else {
+        avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp")
+    }
+    return avatarUrl
 }
 
 func GetAllPermissions(guild *discordgo.Guild, member *discordgo.Member) int64 {
-	var perms int64 = 0
-	for _, r := range member.Roles {
-		for _, x := range guild.Roles {
-			if x.ID == r {
-				perms |= int64(x.Permissions)
-			}
-		}
-	}
-	return perms
+    var perms int64 = 0
+    for _, r := range member.Roles {
+        for _, x := range guild.Roles {
+            if x.ID == r {
+                perms |= int64(x.Permissions)
+            }
+        }
+    }
+    return perms
 }

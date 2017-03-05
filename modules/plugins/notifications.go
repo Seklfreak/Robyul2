@@ -47,9 +47,6 @@ func (m *Notifications) Init(session *discordgo.Session) {
 
 func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     args := strings.Split(content, " ")
-    fmt.Println(content)
-    fmt.Println(args)
-    fmt.Println(len(args))
     if len(args) > 0 {
         switch args[0] {
         case "add": // [p]notifications add <keyword(s)>
