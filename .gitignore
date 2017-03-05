@@ -2,6 +2,7 @@ helpers/assets.go
 assets.go
 config.json
 .idea
+.vscode
 *.iml
 **/*/token
 karen

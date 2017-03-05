@@ -10,6 +10,7 @@ type Config struct {
     CleanupEnabled         bool `rethink:"cleanup_enabled"`
 
     AnnouncementsEnabled   bool   `rethink:"announcements_enabled"`
+    // AnnouncementsChannel stores the channel ID
     AnnouncementsChannel   string `rethink:"announcements_channel"`
 
     WelcomeNewUsersEnabled bool   `rethink:"welcome_new_users_enabled"`
