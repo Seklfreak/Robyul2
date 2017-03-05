@@ -265,9 +265,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Check what the user wants from us
-    session.ChannelTyping(channel.ID)
     switch command {
     case "leave":
+        session.ChannelTyping(channel.ID)
+
         m.guildConnections[guild.ID].leaveLock.RLock()
         voiceConnection.Disconnect()
         m.guildConnections[guild.ID].CloseChannels()
@@ -301,6 +302,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "stop":
+        session.ChannelTyping(channel.ID)
+
         m.guildConnections[guild.ID].RecreateChannels()
 
         m.guildConnections[guild.ID].Lock()
@@ -316,6 +319,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "playing", "np":
+        session.ChannelTyping(channel.ID)
+
         if !m.guildConnections[guild.ID].playing {
             session.ChannelMessageSend(
                 channel.ID,
@@ -339,6 +344,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "list", "playlist":
+        session.ChannelTyping(channel.ID)
+
         if len(*playlist) == 0 {
             session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
             return
@@ -381,6 +388,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "random", "rand":
+        session.ChannelTyping(channel.ID)
+
         cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed": true}).Run(helpers.GetDB())
         helpers.Relax(err)
         defer cursor.Close()
@@ -420,6 +429,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "add":
+        session.ChannelTyping(channel.ID)
+
         content = strings.TrimSpace(content)
 
         // Trim masquerade if present
@@ -554,7 +565,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         )
         go m.waitForSong(channel.ID, guild.ID, match, msg, session)
         break
+
     case "search", "find":
+        session.ChannelTyping(channel.ID)
+
         if len(content) < 4 {
             session.ChannelMessageSend(
                 channel.ID,
