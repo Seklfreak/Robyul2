@@ -22,7 +22,7 @@ func (a *Announcement) Init(s *discordgo.Session) {}
 
 // Action of the announcement
 func (a *Announcement) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    if !helpers.IsAdmin(msg) {
+    if !helpers.IsBotAdmin(msg) {
         return
     }
     title := ""
