@@ -432,6 +432,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(channel.ID)
 
         content = strings.TrimSpace(content)
+        if content == "" {
+            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link :neutral_face:")
+            helpers.Relax(err)
+            return
+        }
 
         // Trim masquerade if present
         contentRune := []rune(content)
