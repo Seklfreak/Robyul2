@@ -10,9 +10,7 @@ type Announcement struct {}
 // Commands that are availble to trigger an announcement
 func (a *Announcement) Commands() []string {
     return []string {
-        "announce_u", // For updates
-        "announce_d", // For downtimes
-        "announce_m", // For maintenance
+        "announce",
     }
 }
 
@@ -22,26 +20,29 @@ func (a *Announcement) Init(s *discordgo.Session) {}
 // Action of the announcement
 func (a *Announcement) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     title := ""
-    switch command {
-    case "anounce_u":
+    contentSplit := strings.Fields(content)
+    subcommand := contentSplit[0]
+    text := content[len(subcommand):]
+    switch subcommand {
+    case "update":
         title = ":loudspeaker: **UPDATE**"
-    case "announce_d":
+    case "downtime":
         title = ":warning: **DOWNTIME**"
-    case "announce_m":
+    case "maintenance":
         title = ":clock5: **MAINTENANCE**"
     }
+    // Iterate through all joined guilds
     for _, guild := range session.State.Guilds {
-        // Always announce on #general
-        chID := ""
-        for _, ch := range guild.Channels {
-            if ch.Name == "general" {
-                chID = ch.ID
-            }
+        // Check if we have an announcement channel set for this guild
+        if helpers.GuildSettingsGetCached(guild.ID).AnnouncementsEnabled {
+            // Get the announcement channel id
+            channelID := helpers.GuildSettingsGetCached(guild.ID).AnnouncementsChannel
+            // Send the announce to the channel
+            session.ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
+                Title: title,
+                Description: text,
+                Color: 0x0FADED,
+            })
         }
-        session.ChannelMessageSendEmbed(chID, &discordgo.MessageEmbed{
-            Title: title,
-            Description: content,
-            Color: 0x0FADED,
-        })
     }
 }
