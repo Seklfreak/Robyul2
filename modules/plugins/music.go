@@ -181,6 +181,8 @@ func (m *Music) Init(session *discordgo.Session) {
     } else {
         Logger.PLUGIN.L("music", "Not Found. Music disabled!")
     }
+
+    go m.updateGameStatus()
 }
 
 func (m *Music) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -846,12 +848,8 @@ func (m *Music) play(
     session *discordgo.Session,
 ) {
     // @formatter:on
-
     // Announce track
     session.ChannelMessageSend(msg.ChannelID, ":arrow_forward: Now playing `"+song.Title+"`")
-    session.UpdateStatus(0, song.Title)
-    // @TODO: test
-    defer session.UpdateStatus(0, "")
 
     // Mark as speaking
     vc.Speaking(true)
@@ -978,6 +976,7 @@ func (m *Music) janitor() {
 
 // autoLeave disconnects from VC if the users leave anf forget to !leave
 func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.Session, closer <-chan struct{}) {
+    Logger.PLUGIN.L("music", "Starting Auto Leave loop (5s)")
     defer helpers.Recover()
 
     for {
@@ -1020,5 +1019,26 @@ func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.S
         }
 
         m.guildConnections[guildId].RUnlock()
+    }
+}
+
+func (m *Music) updateGameStatus() {
+    Logger.PLUGIN.L("music", "Starting Game Status loop (15s)")
+    for {
+        time.Sleep(15 * time.Second)
+
+        activeConnections := 0
+        for _, guildConnection := range m.guildConnections {
+            if guildConnection != nil && guildConnection.playing == true {
+                activeConnections += 1
+            }
+        }
+        newGameStatusText := ""
+        if activeConnections == 1 {
+            newGameStatusText = "music on 1 server"
+        } else if activeConnections > 1 {
+            newGameStatusText = fmt.Sprintf("music on %d servers", activeConnections)
+        }
+        cache.GetSession().UpdateStatus(0, newGameStatusText)
     }
 }
