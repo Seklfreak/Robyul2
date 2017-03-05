@@ -4,6 +4,7 @@ import (
     "strings"
     
     "github.com/bwmarrin/discordgo"
+    "git.lukas.moe/sn0w/Karen/helpers"
 )
 
 // Announcement such as updates, downtimes...
@@ -21,6 +22,9 @@ func (a *Announcement) Init(s *discordgo.Session) {}
 
 // Action of the announcement
 func (a *Announcement) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+    if !helpers.IsAdmin(msg) {
+        return
+    }
     title := ""
     contentSplit := strings.Fields(content)
     subcommand := contentSplit[0]
