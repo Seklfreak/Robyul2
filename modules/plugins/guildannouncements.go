@@ -114,9 +114,11 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
     guild, err := session.Guild(member.GuildID)
     helpers.Relax(err)
     for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
-        if guildAnnouncementSetting.GuildJoinEnabled && guildAnnouncementSetting.GuildID == guild.ID {
+        if guildAnnouncementSetting.GuildJoinEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
+            guildJoinChannelID := guildAnnouncementSetting.GuildJoinChannelID
+            guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member)
             go func() {
-                _, err := session.ChannelMessageSend(guildAnnouncementSetting.GuildJoinChannelID, m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member))
+                _, err := session.ChannelMessageSend(guildJoinChannelID, guildJoinText)
                 helpers.Relax(err)
             }()
         }
@@ -128,9 +130,11 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
     guild, err := session.Guild(member.GuildID)
     helpers.Relax(err)
     for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
-        if guildAnnouncementSetting.GuildLeaveEnabled && guildAnnouncementSetting.GuildID == guild.ID {
+        if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
+            guildLeaveChannelID := guildAnnouncementSetting.GuildLeaveChannelID
+            guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member)
             go func() {
-                _, err := session.ChannelMessageSend(guildAnnouncementSetting.GuildLeaveChannelID, m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member))
+                _, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
                 helpers.Relax(err)
             }()
         }
