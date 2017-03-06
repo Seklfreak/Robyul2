@@ -5,10 +5,10 @@ stages:
 
 before_script:
   - mkdir -p /go/src/git.lukas.moe
-  - mkdir /glide
+  - mkdir -p /cache/glide
   - cp -r /builds/* /go/src/git.lukas.moe
   - cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
-  - glide --home /glide install
+  - glide --home /cache/glide install
 
 after_script:
   - cp -r /go/src/git.lukas.moe/* /builds
