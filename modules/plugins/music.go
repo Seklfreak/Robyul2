@@ -672,7 +672,13 @@ func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild
 
 // processorLoop is a endless coroutine that checks for new songs and spawns youtube-dl as needed
 func (m *Music) processorLoop() {
-    defer helpers.Recover()
+    defer func() {
+        helpers.Recover()
+
+        Logger.ERROR.L("music", "The processorLoop died. Please investigate!")
+        time.Sleep(5 * time.Second)
+        go m.processorLoop()
+    }()
 
     // Define vars once and override later as needed
     var err error
