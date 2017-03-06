@@ -418,7 +418,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         channel, err := session.Channel(msg.ChannelID)
         helpers.Relax(err)
-        currentConnectionText := "currently not connected to any Voice Channel on this server"
+        currentConnectionText := "Currently not connected to any Voice Channel on this server."
         for _, voiceStateWithTime := range voiceStatesWithTime {
             if voiceStateWithTime.VoiceState.GuildID == channel.GuildID && voiceStateWithTime.VoiceState.UserID == targetUser.ID {
                 //duration := time.Since(voiceStateWithTime.JoinTimeUtc)
@@ -460,7 +460,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             Color:       0x0FADED,
             Title:       title,
             Description: currentConnectionText,
-            Footer:      &discordgo.MessageEmbedFooter{Text: "Total times exclude the currently active session"},
+            Footer:      &discordgo.MessageEmbedFooter{Text: "Total durations exclude the currently active session. Stats are refreshed every 30 seconds."},
             Fields:      []*discordgo.MessageEmbedField{},
         }
 
@@ -477,7 +477,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                     voiceChannel, err := session.Channel(voiceChannelID)
                     helpers.Relax(err)
                     voicestatsEmbed.Fields = append(voicestatsEmbed.Fields, &discordgo.MessageEmbedField{
-                        Name:   fmt.Sprintf("Total time connected for #%s", voiceChannel.Name),
+                        Name:   fmt.Sprintf("Total duration connected to #%s", voiceChannel.Name),
                         Value:  fmt.Sprintf("%s", helpers.HumanizedTimesSinceText(time.Now().UTC().Add(voiceChannelDuration))),
                         Inline: false,
                     })
