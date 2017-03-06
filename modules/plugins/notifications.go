@@ -50,6 +50,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
     if len(args) > 0 {
         switch args[0] {
         case "add": // [p]notifications add <keyword(s)>
+            // @TODO: check if keyword already exists in the db
             if len(args) < 2 {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
@@ -58,6 +59,29 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             helpers.Relax(err)
             guild, err := session.Guild(channel.GuildID)
             helpers.Relax(err)
+
+            var entryBucket DB_NotificationSetting
+            listCursor, err := rethink.Table("notifications").Filter(
+                rethink.Or(
+                    rethink.Row.Field("guildid").Eq(guild.ID),
+                    rethink.Row.Field("guildid").Eq("global"),
+                ),
+            ).Filter(
+                rethink.Row.Field("userid").Eq(msg.Author.ID),
+            ).Filter(
+                rethink.Row.Field("keyword").Eq(strings.Join(args[1:], " ")),
+            ).Run(helpers.GetDB())
+            defer listCursor.Close()
+            err = listCursor.One(&entryBucket)
+
+            if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-error-duplicate", msg.Author.ID))
+                session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
+                return
+            } else if err != nil && err != rethink.ErrEmptyResult {
+                helpers.Relax(err)
+            }
+
             entry := m.getNotificationSettingByOrCreateEmpty("id", "")
             entry.Keyword = strings.Join(args[1:], " ")
             entry.GuildID = guild.ID
@@ -221,6 +245,7 @@ type PendingNotification struct {
 }
 
 func (m *Notifications) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+    // @TODO: Less API request for every message: cache?
     channel, err := session.Channel(msg.ChannelID)
     helpers.Relax(err)
     guild, err := session.Guild(channel.GuildID)
@@ -347,8 +372,16 @@ NextKeyword:
                     addedToExistingPendingNotifications := false
                     for i, pendingNotification := range pendingNotifications {
                         if pendingNotification.Member.User.ID == memberToNotify.User.ID {
-                            pendingNotifications[i].Keywords = append(pendingNotification.Keywords, notificationSetting.Keyword)
                             addedToExistingPendingNotifications = true
+                            alreadyInKeywordList := false
+                            for _, keyword := range pendingNotifications[i].Keywords {
+                                if keyword == notificationSetting.Keyword {
+                                    alreadyInKeywordList = true
+                                }
+                            }
+                            if alreadyInKeywordList == false {
+                                pendingNotifications[i].Keywords = append(pendingNotification.Keywords, notificationSetting.Keyword)
+                            }
                         }
                     }
                     if addedToExistingPendingNotifications == false {

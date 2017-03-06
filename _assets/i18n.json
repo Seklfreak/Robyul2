@@ -541,7 +541,8 @@
       "ignore-channel-addorremove-error-server": "You can only add or remove channels from the ignore list on the server you are on.",
       "ignore-channel-add-success": "I won't look in <#%s> for keywords anymore. :see_no_evil:",
       "ignore-channel-remove-success": "I will start to look in <#%s> for keywords again. :no_mouth:",
-      "ignoredchannels-list-no-keywords-error": "There are currently no ignored channels on this server."
+      "ignoredchannels-list-no-keywords-error": "There are currently no ignored channels on this server.",
+      "keyword-add-error-duplicate": "<@%s> I'm already notifying you about this keyword. :thinking:"
     }
   }
 }
