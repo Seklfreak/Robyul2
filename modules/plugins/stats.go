@@ -101,11 +101,11 @@ func (s *Stats) Init(session *discordgo.Session) {
             }
             voiceStatesBefore = voiceStatesCurrently
 
-            time.Sleep(3 * time.Second)
+            time.Sleep(30 * time.Second)
         }
     }()
 
-    logger.PLUGIN.L("stats", "Started voice stats loop (3s)") // @TODO: increase time
+    logger.PLUGIN.L("stats", "Started voice stats loop (30s)")
 }
 
 func (s *Stats) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
