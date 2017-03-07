@@ -543,6 +543,11 @@
       "ignore-channel-remove-success": "I will start to look in <#%s> for keywords again. :no_mouth:",
       "ignoredchannels-list-no-keywords-error": "There are currently no ignored channels on this server.",
       "keyword-add-error-duplicate": "<@%s> I'm already notifying you about this keyword. :thinking:"
+    },
+    "stats": {
+      "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
+      "voicestats-toplist-embed-title": "Voice Channel Duration Leaderbord for this server",
+      "voicestats-embed-footer": "Total durations exclude the currently active session. Stats are refreshed every 30 seconds."
     }
   }
 }
