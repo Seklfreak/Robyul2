@@ -2,13 +2,13 @@ stages:
   - test
   - build
   - deploy
-  
+
 before_script:
   - mkdir -p /go/src/git.lukas.moe
-  - mkdir /glide
+  - mkdir -p /cache/glide
   - cp -r /builds/* /go/src/git.lukas.moe
   - cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
-  - glide --home /glide install
+  - glide --home /cache/glide install
 
 after_script:
   - cp -r /go/src/git.lukas.moe/* /builds
@@ -18,18 +18,13 @@ cache:
     - /glide/
     - vendor/
 
-vet:
-  stage: test
-  image: sn0w/go-ci
-  script: go vet
-
 cyclo:
   stage: test
   image: sn0w/go-ci
   allow_failure: true
   script: gocyclo -over 15 . | grep -v vendor
 
-typo:
+misspell:
   stage: test
   image: sn0w/go-ci
   allow_failure: true
@@ -43,7 +38,7 @@ build:linux:
     GOARCH: amd64
     GOTARGET: karen.o
   script:
-    - ./build.sh
+    - ./build.sh -v
   artifacts:
     expire_in: 15 mins
     paths:
@@ -57,7 +52,7 @@ build:osx:
     GOARCH: amd64
     GOTARGET: karen.xo
   script:
-    - ./build.sh
+    - ./build.sh -v
   artifacts:
       expire_in: 15 mins
       paths:
@@ -71,7 +66,7 @@ build:windows:
     GOARCH: amd64
     GOTARGET: karen.exe
   script:
-    - ./build.sh
+    - ./build.sh -v
   artifacts:
       expire_in: 15 mins
       paths:

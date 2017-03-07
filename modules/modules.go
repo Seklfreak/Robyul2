@@ -13,6 +13,10 @@ var (
     PluginList = []Plugin{
         &plugins.About{},
         &plugins.Stats{},
+        //&plugins.Stone{},
+        //&plugins.Support{},
+        &plugins.Announcement{},
+        //&plugins.Translator{},
         &plugins.Uptime{},
         &plugins.Mod{},
         &plugins.Music{},

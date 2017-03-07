@@ -275,9 +275,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Check what the user wants from us
-    session.ChannelTyping(channel.ID)
     switch command {
     case "leave":
+        session.ChannelTyping(channel.ID)
+
         m.guildConnections[guild.ID].leaveLock.RLock()
         voiceConnection.Disconnect()
         m.guildConnections[guild.ID].CloseChannels()
@@ -311,6 +312,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "stop":
+        session.ChannelTyping(channel.ID)
+
         m.guildConnections[guild.ID].RecreateChannels()
 
         m.guildConnections[guild.ID].Lock()
@@ -326,6 +329,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "playing", "np":
+        session.ChannelTyping(channel.ID)
+
         if !m.guildConnections[guild.ID].playing {
             session.ChannelMessageSend(
                 channel.ID,
@@ -349,6 +354,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "list", "playlist", "queue":
+        session.ChannelTyping(channel.ID)
+
         if len(*playlist) == 0 {
             session.ChannelMessageSend(channel.ID, "Playlist is empty ¯\\_(ツ)_/¯")
             return
@@ -391,6 +398,8 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "random", "rand":
+        session.ChannelTyping(channel.ID)
+
         cursor, err := rethink.Table("music").Filter(map[string]interface{}{"processed": true}).Run(helpers.GetDB())
         helpers.Relax(err)
         defer cursor.Close()
@@ -430,7 +439,14 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         break
 
     case "add":
+        session.ChannelTyping(channel.ID)
+
         content = strings.TrimSpace(content)
+        if content == "" {
+            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link :neutral_face:")
+            helpers.Relax(err)
+            return
+        }
 
         if content == "" {
             _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link :neutral_face:")
@@ -574,7 +590,10 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         )
         go m.waitForSong(channel.ID, guild.ID, match, msg, session)
         break
+
     case "search", "find":
+        session.ChannelTyping(channel.ID)
+
         if len(content) < 4 {
             session.ChannelMessageSend(
                 channel.ID,
@@ -585,13 +604,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         term := "(?i).*" + strings.Join(strings.Split(content, " "), ".*") + ".*"
 
-        // @formatter:off
         cursor, err := rethink.
         Table("music").
             Filter(map[string]interface{}{"processed": true}).
             Filter(rethink.Row.Field("title").Match(term)).
             Run(helpers.GetDB())
-        // @formatter:on
 
         helpers.Relax(err)
         defer cursor.Close()
@@ -675,7 +692,13 @@ func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild
 
 // processorLoop is a endless coroutine that checks for new songs and spawns youtube-dl as needed
 func (m *Music) processorLoop() {
-    defer helpers.Recover()
+    defer func() {
+        helpers.Recover()
+
+        Logger.ERROR.L("music", "The processorLoop died. Please investigate!")
+        time.Sleep(5 * time.Second)
+        go m.processorLoop()
+    }()
 
     // Define vars once and override later as needed
     var err error
@@ -843,7 +866,6 @@ func (m *Music) startPlayer(guild string, vc *discordgo.VoiceConnection, msg *di
     }
 }
 
-// @formatter:off
 // play is responsible for streaming the OPUS data to discord
 func (m *Music) play(
     vc *discordgo.VoiceConnection,
