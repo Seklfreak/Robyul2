@@ -388,7 +388,11 @@
     "translator": {
       "unknown_lang": "The language-code `%s` is invalid.\nCheck <https://cloud.google.com/translate/docs/languages> for a list of supported codes.",
       "error": "I don't know :(",
-      "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`"
+      "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
+      "translation-embed-title": "Translation from **%s** to **%s**",
+      "embed-footer": "via translate.google.com",
+      "embed-footer-plus-naver": "via translate.google.com and labspace.naver.com/nmt/",
+      "embed-title-alternative-naver": "Alternative translation"
     },
     "reminders": {
       "empty": "You don't have any active reminders :shrug:",
