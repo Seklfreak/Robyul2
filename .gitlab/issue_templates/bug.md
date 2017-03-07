@@ -1,21 +1,16 @@
-What are the steps to reproduce your issue?
--------------------------------------------
+#### What are the steps to reproduce your issue?
 1. ...
 2. ...
 3. ...
 
-What happens?
--------------
+#### What happens?
 ...
 
-What were you expecting to happen?
-----------------------------------
+#### What were you expecting to happen?
 ...
 
-Any logs, error output, etc?
-----------------------------
+#### Any logs, error output, etc?
 ...
 
-Any other comments?
--------------------
+#### Any other comments?
 ...
