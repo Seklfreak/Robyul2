@@ -40,7 +40,7 @@ var (
 func Init() {
     logger.INFO.L("metrics", "Listening on TCP/1337")
     Uptime.Set(time.Now().Unix())
-    go http.ListenAndServe(helpers.GetConfig().Path("metrics_ip").Data().(string) + ":1337", nil)
+    go http.ListenAndServe(helpers.GetConfig().Path("metrics_ip").Data().(string)+":1337", nil)
 }
 
 // OnReady listens for said discord event

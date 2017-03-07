@@ -32,9 +32,7 @@ func (s *Stone) Action(command string, content string, msg *discordgo.Message, s
     }
 
     session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
-        "<@%s> IS GOING TO DIE!!!\n" +
-            "COME ON GUYS! THROW SOME STONES WITH MEE!!!\n" +
-            ":grimacing: :wavy_dash::anger::dizzy_face:",
+        "<@%s> IS GOING TO DIE!!!\n"+"COME ON GUYS! THROW SOME STONES WITH MEE!!!\n"+":grimacing: :wavy_dash::anger::dizzy_face:",
         msg.Mentions[0].ID,
     ))
 }

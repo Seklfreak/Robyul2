@@ -51,7 +51,7 @@ func (x *XKCD) Action(command string, content string, msg *discordgo.Message, se
             return
         }
 
-        link = "https://xkcd.com/" + strconv.Itoa(rand.Intn(int(max - 1)) + 1) + "/info.0.json"
+        link = "https://xkcd.com/" + strconv.Itoa(rand.Intn(int(max-1))+1) + "/info.0.json"
     } else {
         link = "https://xkcd.com/info.0.json"
     }

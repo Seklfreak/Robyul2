@@ -54,10 +54,10 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
     session.ChannelMessageSendEmbed(
         msg.ChannelID,
         &discordgo.MessageEmbed{
-            Color: 0x134FE6,
-            Title: object["word"].Data().(string),
+            Color:       0x134FE6,
+            Title:       object["word"].Data().(string),
             Description: object["definition"].Data().(string),
-            URL: object["permalink"].Data().(string),
+            URL:         object["permalink"].Data().(string),
             Fields: []*discordgo.MessageEmbedField{
                 {Name: "Example(s)", Value: object["example"].Data().(string), Inline: false},
                 {Name: "Tags", Value: tags, Inline: false},

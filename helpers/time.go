@@ -8,12 +8,12 @@ func SecondsToDuration(input int) string {
     minutes := 0
     seconds := input
 
-    if seconds % 60 != seconds {
+    if seconds%60 != seconds {
         minutes = seconds / 60
         seconds %= 60
     }
 
-    if minutes % 60 != minutes {
+    if minutes%60 != minutes {
         hours = minutes / 60
         minutes %= 60
     }

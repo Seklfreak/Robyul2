@@ -2,7 +2,7 @@ package modules
 
 import "github.com/bwmarrin/discordgo"
 
-type BaseModule interface {}
+type BaseModule interface{}
 
 type Plugin interface {
     BaseModule
@@ -12,10 +12,10 @@ type Plugin interface {
     Init(session *discordgo.Session)
 
     Action(
-    command string,
-    content string,
-    msg *discordgo.Message,
-    session *discordgo.Session,
+        command string,
+        content string,
+        msg *discordgo.Message,
+        session *discordgo.Session,
     )
 }
 

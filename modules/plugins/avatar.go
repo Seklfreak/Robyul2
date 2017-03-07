@@ -31,7 +31,7 @@ func (a *Avatar) Action(command string, content string, msg *discordgo.Message, 
         return
     }
 
-    session.ChannelMessageSend(msg.ChannelID, "Here you go :smiley: \n " + fmt.Sprintf(
+    session.ChannelMessageSend(msg.ChannelID, "Here you go :smiley: \n "+fmt.Sprintf(
         "https://cdn.discordapp.com/avatars/%s/%s.jpg",
         msg.Mentions[0].ID,
         msg.Mentions[0].Avatar,

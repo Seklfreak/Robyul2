@@ -7,15 +7,15 @@ import (
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/radio-b"
-    "github.com/gorilla/websocket"
     "github.com/bwmarrin/discordgo"
+    "github.com/getsentry/raven-go"
+    "github.com/gorilla/websocket"
     "io"
     "net/url"
     "os/exec"
     "strings"
     "sync"
     "time"
-    "github.com/getsentry/raven-go"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ type RadioGuildConnection struct {
     sync.RWMutex
 
     // Closer channel for stop commands
-    closer    chan struct{}
+    closer chan struct{}
 
     // Marks this guild as streaming music
     streaming bool

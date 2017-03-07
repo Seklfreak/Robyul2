@@ -38,7 +38,7 @@ func IsAdmin(msg *discordgo.Message) bool {
 
     // Check if role may manage server
     for _, role := range guild.Roles {
-        if role.Permissions & 8 == 8 {
+        if role.Permissions&8 == 8 {
             return true
         }
     }

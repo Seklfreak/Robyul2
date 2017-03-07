@@ -29,7 +29,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
         return
     }
 
-    text := string(helpers.NetGetUA("http://wttr.in/" + url.QueryEscape(content), "curl/7.51.0"))
+    text := string(helpers.NetGetUA("http://wttr.in/"+url.QueryEscape(content), "curl/7.51.0"))
     if text == "ERROR" {
         session.ChannelMessageSend(msg.ChannelID, "Couldn't find that city :frowning:")
         return
@@ -39,8 +39,6 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 
     session.ChannelMessageSend(
         msg.ChannelID,
-        "```\n" +
-            regexp.MustCompile("\\[.*?m").ReplaceAllString(strings.Join(lines[0:7], "\n"), "") +
-            "\n```",
+        "```\n"+regexp.MustCompile("\\[.*?m").ReplaceAllString(strings.Join(lines[0:7], "\n"), "")+"\n```",
     )
 }

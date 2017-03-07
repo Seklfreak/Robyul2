@@ -67,6 +67,6 @@ func VoiceFree(guild string) {
 func VoiceSendStatus(channel string, guild string, session *discordgo.Session) {
     session.ChannelMessageSend(
         channel,
-        "Sorry but voice is currently occupied by `" + connections[guild] + "`.\nCall leave for that plugin first.",
+        "Sorry but voice is currently occupied by `"+connections[guild]+"`.\nCall leave for that plugin first.",
     )
 }

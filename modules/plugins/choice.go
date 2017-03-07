@@ -27,5 +27,5 @@ func (c *Choice) Action(command string, content string, msg *discordgo.Message, 
 
     choices := strings.Split(content, "|")
 
-    session.ChannelMessageSend(msg.ChannelID, "I've chosen `" + choices[rand.Intn(len(choices))] + "` :smiley:")
+    session.ChannelMessageSend(msg.ChannelID, "I've chosen `"+choices[rand.Intn(len(choices))]+"` :smiley:")
 }

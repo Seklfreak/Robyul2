@@ -1,9 +1,9 @@
 package ratelimits
 
 import (
-    "time"
-    "sync"
     "errors"
+    "sync"
+    "time"
 )
 
 const (

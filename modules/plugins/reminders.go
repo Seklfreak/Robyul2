@@ -4,11 +4,11 @@ import (
     "git.lukas.moe/sn0w/Karen/cache"
     "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
+    "github.com/bwmarrin/discordgo"
+    rethink "github.com/gorethink/gorethink"
     "github.com/olebedev/when"
     "github.com/olebedev/when/rules/common"
     "github.com/olebedev/when/rules/en"
-    "github.com/bwmarrin/discordgo"
-    rethink "github.com/gorethink/gorethink"
     "strings"
     "time"
 )
@@ -65,11 +65,10 @@ func (r *Reminders) Init(session *discordgo.Session) {
                     if reminder.Timestamp <= time.Now().Unix() {
                         session.ChannelMessageSend(
                             reminder.ChannelID,
-                            ":alarm_clock: Ring! Ring! <@" + reminders.UserID + ">\n" +
-                                "You wanted me to remind you to `" + reminder.Message + "` :slight_smile:",
+                            ":alarm_clock: Ring! Ring! <@"+reminders.UserID+">\n"+"You wanted me to remind you to `"+reminder.Message+"` :slight_smile:",
                         )
 
-                        reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx + 1:]...)
+                        reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx+1:]...)
                         changes = true
                     }
                 }
@@ -139,8 +138,8 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 
             embedFields = append(embedFields, &discordgo.MessageEmbedField{
                 Inline: false,
-                Name: reminder.Message,
-                Value: "At " + ts.String() + " in #" + channel + " of " + guild,
+                Name:   reminder.Message,
+                Value:  "At " + ts.String() + " in #" + channel + " of " + guild,
             })
         }
 
@@ -150,9 +149,9 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
         }
 
         session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-            Title: "Pending reminders",
+            Title:  "Pending reminders",
             Fields: embedFields,
-            Color: 0x0FADED,
+            Color:  0x0FADED,
         })
         break
     }

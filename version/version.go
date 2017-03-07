@@ -20,8 +20,8 @@ var (
 
 // DumpInfo dumps all above vars
 func DumpInfo() {
-    logger.VERBOSE.L("version", "BOT VERSION: " + BOT_VERSION)
-    logger.VERBOSE.L("version", "BUILD TIME: " + BUILD_TIME)
-    logger.VERBOSE.L("version", "BUILD USER: " + BUILD_USER)
-    logger.VERBOSE.L("version", "BUILD HOST: " + BUILD_HOST)
+    logger.VERBOSE.L("version", "BOT VERSION: "+BOT_VERSION)
+    logger.VERBOSE.L("version", "BUILD TIME: "+BUILD_TIME)
+    logger.VERBOSE.L("version", "BUILD USER: "+BUILD_USER)
+    logger.VERBOSE.L("version", "BUILD HOST: "+BUILD_HOST)
 }

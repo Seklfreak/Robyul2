@@ -1,13 +1,13 @@
 package modules
 
 import (
-    "github.com/bwmarrin/discordgo"
-    "git.lukas.moe/sn0w/Karen/ratelimits"
-    "git.lukas.moe/sn0w/Karen/helpers"
-    "git.lukas.moe/sn0w/Karen/cache"
-    "git.lukas.moe/sn0w/Karen/metrics"
     "fmt"
+    "git.lukas.moe/sn0w/Karen/cache"
+    "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
+    "git.lukas.moe/sn0w/Karen/metrics"
+    "git.lukas.moe/sn0w/Karen/ratelimits"
+    "github.com/bwmarrin/discordgo"
     "strconv"
 )
 
@@ -58,7 +58,7 @@ func Init(session *discordgo.Session) {
 
     logger.INFO.L(
         "modules",
-        "Initializer finished. Loaded " + strconv.Itoa(len(PluginList)) + " plugins and " + strconv.Itoa(len(TriggerPluginList)) + " triggers",
+        "Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
     )
 }
 

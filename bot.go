@@ -7,18 +7,18 @@ import (
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/modules"
-    "github.com/getsentry/raven-go"
+    "git.lukas.moe/sn0w/Karen/ratelimits"
     "github.com/bwmarrin/discordgo"
+    "github.com/getsentry/raven-go"
     "regexp"
     "strings"
     "time"
-    "git.lukas.moe/sn0w/Karen/ratelimits"
 )
 
 // BotOnReady gets called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INFO.L("bot", "Connected to discord!")
-    Logger.VERBOSE.L("bot", "Invite link: " + fmt.Sprintf(
+    Logger.VERBOSE.L("bot", "Invite link: "+fmt.Sprintf(
         "https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s",
         helpers.GetConfig().Path("discord.id").Data().(string),
         helpers.GetConfig().Path("discord.perms").Data().(string),
@@ -115,7 +115,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         msg := message.Content
 
         /// Remove our @mention
-        msg = strings.Replace(msg, "<@" + session.State.User.ID + ">", "", -1)
+        msg = strings.Replace(msg, "<@"+session.State.User.ID+">", "", -1)
 
         // Trim message
         msg = strings.Trim(msg, " ")
@@ -188,7 +188,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
             // Resolve other @mentions before sending the message
             for _, user := range message.Mentions {
-                msg = strings.Replace(msg, "<@" + user.ID + ">", user.Username, -1)
+                msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
             }
 
             // Remove smileys
@@ -226,7 +226,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Separate arguments from the command
-    content := strings.Replace(message.Content, prefix + cmd, "", -1)
+    content := strings.Replace(message.Content, prefix+cmd, "", -1)
 
     // Check if a module matches said command
     modules.CallBotPlugin(cmd, content, message.Message)

@@ -1,8 +1,8 @@
 package plugins
 
 import (
-    "github.com/marcmak/calc/calc"
     "github.com/bwmarrin/discordgo"
+    "github.com/marcmak/calc/calc"
     "strconv"
 )
 
@@ -27,5 +27,5 @@ func (c *Calc) Action(command string, content string, msg *discordgo.Message, se
         }
     }()
 
-    session.ChannelMessageSend(msg.ChannelID, ":nerd: " + strconv.FormatFloat(calc.Solve(content), 'E', 4, 64))
+    session.ChannelMessageSend(msg.ChannelID, ":nerd: "+strconv.FormatFloat(calc.Solve(content), 'E', 4, 64))
 }
