@@ -2,17 +2,17 @@ package plugins
 
 import (
     "strings"
-    
+
     "github.com/bwmarrin/discordgo"
-    "git.lukas.moe/sn0w/Karen/helpers"
+    "github.com/Seklfreak/Robyul2/helpers"
 )
 
 // Announcement such as updates, downtimes...
-type Announcement struct {}
+type Announcement struct{}
 
 // Commands that are availble to trigger an announcement
 func (a *Announcement) Commands() []string {
-    return []string {
+    return []string{
         "announce",
     }
 }
@@ -22,7 +22,7 @@ func (a *Announcement) Init(s *discordgo.Session) {}
 
 // Action of the announcement
 func (a *Announcement) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    if !helpers.IsBotAdmin(msg) {
+    if !helpers.IsBotAdmin(msg.Author.ID) {
         return
     }
     title := ""
@@ -45,9 +45,9 @@ func (a *Announcement) Action(command string, content string, msg *discordgo.Mes
             channelID := helpers.GuildSettingsGetCached(guild.ID).AnnouncementsChannel
             // Send the announce to the channel
             session.ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
-                Title: title,
+                Title:       title,
                 Description: text,
-                Color: 0x0FADED,
+                Color:       0x0FADED,
             })
         }
     }

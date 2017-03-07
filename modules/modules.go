@@ -42,7 +42,7 @@ var (
         //&plugins.Leet{},
         //&plugins.ListenDotMoe{},
         //&plugins.Minecraft{},
-        //&plugins.Osu{},
+        &plugins.Osu{},
         //&plugins.RandomCat{},
         &plugins.Reminders{},
         //&plugins.Roll{},
