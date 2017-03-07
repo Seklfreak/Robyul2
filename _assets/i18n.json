@@ -550,8 +550,14 @@
     },
     "stats": {
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
-      "voicestats-toplist-embed-title": "Voice Channel Duration Leaderbord for this server",
+      "voicestats-toplist-embed-title": "Voice Channel Duration Leaderboard for this server",
       "voicestats-embed-footer": "Total durations exclude the currently active session. Stats are refreshed every 30 seconds."
+    },
+    "levels": {
+      "level-no-stats": "No stats for this user yet. Chat more! :nerd:",
+      "top-server-no-stats": "No stats for this server yet. Chat more! :nerd:",
+      "top-server-embed-title": "Top chatters on this server",
+      "user-embed-title": "Stats of %s"
     }
   }
 }

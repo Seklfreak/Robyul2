@@ -251,7 +251,7 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
     guild, err := session.Guild(channel.GuildID)
     helpers.Relax(err)
 
-    // ignorebla commands
+    // ignore commands
     prefix := helpers.GetPrefixForServer(guild.ID)
     if prefix != "" {
         if strings.HasPrefix(content, prefix) {

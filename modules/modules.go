@@ -58,6 +58,7 @@ var (
         &plugins.Bias{},
         &plugins.GuildAnnouncements{},
         &plugins.Notifications{},
+        &plugins.Levels{},
     }
 
     // TriggerPluginList is the list of plugins that activate on normal chat
