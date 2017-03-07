@@ -22,13 +22,15 @@ func (a *Announcement) Init(s *discordgo.Session) {}
 
 // Action of the announcement
 func (a *Announcement) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    if !helpers.IsBotAdmin(msg) {
+    if !helpers.IsBotAdmin(msg.Author.ID) {
         return
     }
+
     title := ""
     contentSplit := strings.Fields(content)
     subcommand := contentSplit[0]
     text := content[len(subcommand):]
+
     switch subcommand {
     case "update":
         title = ":loudspeaker: **UPDATE**"
