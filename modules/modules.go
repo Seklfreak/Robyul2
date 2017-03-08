@@ -51,6 +51,7 @@ var (
         //&plugins.Support{},
         //&plugins.XKCD{},
         &plugins.Ratelimit{},
+        &plugins.Gfycat{},
     }
 
     // PluginList is the list of active plugins
