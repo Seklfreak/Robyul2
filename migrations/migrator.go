@@ -22,7 +22,7 @@ func Run() {
             reflect.ValueOf(migration).Pointer(),
         ).Name()
 
-        logger.BOOT.L("migrator", "Running " + migrationName)
+        logger.BOOT.L("migrator", "Running "+migrationName)
         migration()
     }
 

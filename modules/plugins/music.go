@@ -25,7 +25,7 @@ import (
 type controlMessage int
 
 const (
-    Skip controlMessage = iota
+    Skip   controlMessage = iota
     Pause
     Resume
 )
@@ -38,19 +38,19 @@ type GuildConnection struct {
     controller chan controlMessage
 
     // Closer channel for Stop commands
-    closer     chan struct{}
+    closer chan struct{}
 
     // Slice of waiting songs
-    playlist   []Song
+    playlist []Song
 
     // Slice of waiting but unprocessed songs
-    queue      []Song
+    queue []Song
 
     // Whether this is playing music or not
-    playing    bool
+    playing bool
 
     // A lock that stops the autoleaver while disconnecting
-    leaveLock  sync.RWMutex
+    leaveLock sync.RWMutex
 }
 
 // Helper to generate a guild connection
@@ -339,7 +339,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         session.ChannelMessageSend(
             channel.ID,
-            ":musical_note: Currently playing `" + (*playlist)[0].Title + "`",
+            ":musical_note: Currently playing `"+(*playlist)[0].Title+"`",
         )
         break
 
@@ -365,11 +365,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         for i, song := range *playlist {
             if i > 11 {
-                embed.Footer.Text = strconv.Itoa(len(*playlist) - i) + " entries omitted."
+                embed.Footer.Text = strconv.Itoa(len(*playlist)-i) + " entries omitted."
                 break
             }
 
-            num := "`[" + strconv.Itoa(i + 1) + "]` "
+            num := "`[" + strconv.Itoa(i+1) + "]` "
 
             if i == 0 {
                 embed.Fields[0].Value = num + " " + song.Title
@@ -425,18 +425,23 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         *playlist = append(*playlist, match)
         m.guildConnections[guild.ID].Unlock()
 
-        session.ChannelMessageSend(channel.ID, ":ballot_box_with_check: Added `" + match.Title + "`")
+        session.ChannelMessageSend(channel.ID, ":ballot_box_with_check: Added `"+match.Title+"`")
         break
 
     case "add":
         session.ChannelTyping(channel.ID)
 
         content = strings.TrimSpace(content)
+        if content == "" {
+            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link :neutral_face:")
+            helpers.Relax(err)
+            return
+        }
 
         // Trim masquerade if present
         contentRune := []rune(content)
-        if contentRune[0] == '<' && contentRune[len(contentRune) - 1] == '>' {
-            content = string(contentRune[1 : len(contentRune) - 1])
+        if contentRune[0] == '<' && contentRune[len(contentRune)-1] == '>' {
+            content = string(contentRune[1: len(contentRune)-1])
         }
 
         // Check if the url is a playlist
@@ -500,7 +505,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Check if the video is not too long
             // Bot owners may bypass this
             if !helpers.IsBotAdmin(msg.Author.ID) && match.Duration > int((65 * time.Minute).Seconds()) {
-                session.ChannelMessageSend(channel.ID, "Whoa `" + match.Title + "` is a big video!\nPlease use something shorter :neutral_face:")
+                session.ChannelMessageSend(channel.ID, "Whoa `"+match.Title+"` is a big video!\nPlease use something shorter :neutral_face:")
                 return
             }
 
@@ -516,7 +521,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Inform users
             session.ChannelMessageSend(
                 channel.ID,
-                "`" + match.Title + "` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
+                "`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
             )
             go m.waitForSong(channel.ID, guild.ID, match, msg, session)
             return
@@ -550,7 +555,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if songPresent {
             session.ChannelMessageSend(
                 channel.ID,
-                "`" + match.Title + "` is already in your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
+                "`"+match.Title+"` is already in your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
             )
             return
         }
@@ -561,7 +566,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         session.ChannelMessageSend(
             channel.ID,
-            "`" + match.Title + "` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
+            "`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
         )
         go m.waitForSong(channel.ID, guild.ID, match, msg, session)
         break
@@ -579,13 +584,11 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         term := "(?i).*" + strings.Join(strings.Split(content, " "), ".*") + ".*"
 
-        // @formatter:off
-		cursor, err := rethink.
-			Table("music").
-			Filter(map[string]interface{}{"processed": true}).
-			Filter(rethink.Row.Field("title").Match(term)).
-			Run(helpers.GetDB())
-			// @formatter:on
+        cursor, err := rethink.
+        Table("music").
+            Filter(map[string]interface{}{"processed": true}).
+            Filter(rethink.Row.Field("title").Match(term)).
+            Run(helpers.GetDB())
 
         helpers.Relax(err)
         defer cursor.Close()
@@ -607,7 +610,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             rows[i] = []string{result.Title, result.URL}
         }
 
-        session.ChannelMessageSend(channel.ID, ":mag: Search results:\n" + helpers.DrawTable(headers, rows))
+        session.ChannelMessageSend(channel.ID, ":mag: Search results:\n"+helpers.DrawTable(headers, rows))
         break
     }
 }
@@ -635,7 +638,7 @@ func (m *Music) waitForSong(channel string, guild string, match Song, msg *disco
             for idx, song := range *queue {
                 if song.URL == match.URL {
                     m.guildConnections[guild].Lock()
-                    *queue = append((*queue)[:idx], (*queue)[idx + 1:]...)
+                    *queue = append((*queue)[:idx], (*queue)[idx+1:]...)
                     m.guildConnections[guild].Unlock()
                 }
             }
@@ -645,7 +648,7 @@ func (m *Music) waitForSong(channel string, guild string, match Song, msg *disco
             *playlist = append(*playlist, res)
             m.guildConnections[guild].Unlock()
 
-            session.ChannelMessageSend(channel, ":ballot_box_with_check: `" + res.Title + "` finished downloading :smiley:")
+            session.ChannelMessageSend(channel, ":ballot_box_with_check: `"+res.Title+"` finished downloading :smiley:")
             break
         }
     }
@@ -669,7 +672,13 @@ func (m *Music) resolveVoiceChannel(user *discordgo.User, guild *discordgo.Guild
 
 // processorLoop is a endless coroutine that checks for new songs and spawns youtube-dl as needed
 func (m *Music) processorLoop() {
-    defer helpers.Recover()
+    defer func() {
+        helpers.Recover()
+
+        Logger.ERROR.L("music", "The processorLoop died. Please investigate!")
+        time.Sleep(5 * time.Second)
+        go m.processorLoop()
+    }()
 
     // Define vars once and override later as needed
     var err error
@@ -694,7 +703,7 @@ func (m *Music) processorLoop() {
             continue
         }
 
-        Logger.INFO.L("music", "Found " + strconv.Itoa(len(songs)) + " unprocessed items!")
+        Logger.INFO.L("music", "Found "+strconv.Itoa(len(songs))+" unprocessed items!")
 
         // Loop through songs
         for _, song := range songs {
@@ -702,7 +711,7 @@ func (m *Music) processorLoop() {
 
             name := helpers.BtoA(song.URL)
 
-            Logger.INFO.L("music", "Downloading " + song.URL + " as " + name)
+            Logger.INFO.L("music", "Downloading "+song.URL+" as "+name)
 
             // Download with youtube-dl
             ytdl := exec.Command(
@@ -715,7 +724,7 @@ func (m *Music) processorLoop() {
                 "-x",
                 "--audio-format", "wav",
                 "--audio-quality", "0",
-                "-o", name + ".%(ext)s",
+                "-o", name+".%(ext)s",
                 "--exec", "mv {} /srv/karen-data",
                 song.URL,
             )
@@ -726,7 +735,7 @@ func (m *Music) processorLoop() {
 
             // WAV => RAW OPUS
             cstart := time.Now().Unix()
-            Logger.INFO.L("music", "PCM => ROPUS | " + name)
+            Logger.INFO.L("music", "PCM => ROPUS | "+name)
 
             // Create file
             opusFile, err := os.Create("/srv/karen-data/" + name + ".ro")
@@ -736,7 +745,7 @@ func (m *Music) processorLoop() {
             // Read wav
             cat := exec.Command(
                 "ffmpeg",
-                "-i", "/srv/karen-data/" + name + ".wav",
+                "-i", "/srv/karen-data/"+name+".wav",
                 "-f", "s16le",
                 "-ar", "48000",
                 "-ac", "2",
@@ -784,8 +793,7 @@ func (m *Music) processorLoop() {
             end := time.Now().Unix()
             Logger.INFO.L(
                 "music",
-                "Download took " + strconv.Itoa(int(end - start)) + "s " +
-                    "| Conversion took " + strconv.Itoa(int(cend - cstart)) + "s | File: " + name,
+                "Download took "+strconv.Itoa(int(end-start))+"s "+"| Conversion took "+strconv.Itoa(int(cend-cstart))+"s | File: "+name,
             )
         }
     }
@@ -838,18 +846,15 @@ func (m *Music) startPlayer(guild string, vc *discordgo.VoiceConnection, msg *di
     }
 }
 
-// @formatter:off
 // play is responsible for streaming the OPUS data to discord
 func (m *Music) play(
-	vc *discordgo.VoiceConnection,
-	closer <-chan struct{},
-	controller <-chan controlMessage,
-	song Song,
-	msg *discordgo.Message,
-	session *discordgo.Session,
+    vc *discordgo.VoiceConnection,
+    closer <-chan struct{},
+    controller <-chan controlMessage,
+    song Song,
+    msg *discordgo.Message,
+    session *discordgo.Session,
 ) {
-	// @formatter:on
-
     // Mark as speaking
     vc.Speaking(true)
 
@@ -956,14 +961,14 @@ func (m *Music) janitor() {
             foundFile := false
 
             for _, song := range songs {
-                if strings.Contains("/srv/karen-data/" + file.Name(), helpers.BtoA(song.URL)) {
+                if strings.Contains("/srv/karen-data/"+file.Name(), helpers.BtoA(song.URL)) {
                     foundFile = true
                     break
                 }
             }
 
             if !foundFile {
-                Logger.INFO.L("music", "[JANITOR] Removing " + file.Name())
+                Logger.INFO.L("music", "[JANITOR] Removing "+file.Name())
                 err = os.Remove("/srv/karen-data/" + file.Name())
                 helpers.Relax(err)
             }

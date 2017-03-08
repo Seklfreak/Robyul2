@@ -6,8 +6,8 @@ import (
     "git.lukas.moe/sn0w/Karen/metrics"
     "git.lukas.moe/sn0w/Karen/migrations"
     "git.lukas.moe/sn0w/Karen/version"
-    "github.com/getsentry/raven-go"
     "github.com/bwmarrin/discordgo"
+    "github.com/getsentry/raven-go"
     "math/rand"
     "os"
     "os/signal"
@@ -40,7 +40,7 @@ func main() {
     }
 
     // Print UA
-    Logger.BOOT.L("launcher", "USERAGENT: '" + helpers.DEFAULT_UA + "'")
+    Logger.BOOT.L("launcher", "USERAGENT: '"+helpers.DEFAULT_UA+"'")
 
     // Call home
     Logger.BOOT.L("launcher", "[SENTRY] Calling home...")

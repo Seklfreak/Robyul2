@@ -38,7 +38,7 @@ func autoLeaver(session *discordgo.Session) {
             }
 
             if !match {
-                logger.WARNING.L("beta", "Leaving guild " + guild.ID + " (" + guild.Name + ") because it didn't apply for the beta")
+                logger.WARNING.L("beta", "Leaving guild "+guild.ID+" ("+guild.Name+") because it didn't apply for the beta")
                 session.GuildLeave(guild.ID)
             }
         }

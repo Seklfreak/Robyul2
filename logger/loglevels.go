@@ -7,7 +7,7 @@ import (
 type LogLevel int
 
 const (
-    ERROR LogLevel = iota
+    ERROR   LogLevel = iota
     WARNING
     PLUGIN
     BOOT

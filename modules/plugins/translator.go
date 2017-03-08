@@ -1,13 +1,13 @@
 package plugins
 
 import (
-    "github.com/bwmarrin/discordgo"
-    "context"
     "cloud.google.com/go/translate"
+    "context"
     "git.lukas.moe/sn0w/Karen/helpers"
-    "strings"
+    "github.com/bwmarrin/discordgo"
     "golang.org/x/text/language"
     "google.golang.org/api/option"
+    "strings"
 )
 
 type Translator struct {
@@ -78,6 +78,6 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 
     session.ChannelMessageSend(
         msg.ChannelID,
-        ":earth_africa: " + strings.ToUpper(source.String()) + " => " + strings.ToUpper(target.String()) + "\n```\n" + m + "\n```",
+        ":earth_africa: "+strings.ToUpper(source.String())+" => "+strings.ToUpper(target.String())+"\n```\n"+m+"\n```",
     )
 }

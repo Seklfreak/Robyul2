@@ -42,6 +42,6 @@ func (m *Minecraft) Action(command string, content string, msg *discordgo.Messag
     helpers.NetGet(url)
 
     // If NetGet didn't panic send the url
-    session.ChannelMessageSend(msg.ChannelID, "Here you go :smiley: \n " + url)
+    session.ChannelMessageSend(msg.ChannelID, "Here you go :smiley: \n "+url)
 
 }

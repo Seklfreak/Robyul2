@@ -1,25 +1,25 @@
 package helpers
 
 import (
+    "git.lukas.moe/sn0w/Karen/cache"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/models"
-    rethink "github.com/gorethink/gorethink"
-    "git.lukas.moe/sn0w/Karen/cache"
-    "time"
-    "sync"
     "github.com/getsentry/raven-go"
+    rethink "github.com/gorethink/gorethink"
+    "sync"
+    "time"
 )
 
 var (
     dbSession *rethink.Session
 
     guildSettingsCache map[string]models.Config
-    cacheMutex sync.RWMutex
+    cacheMutex         sync.RWMutex
 )
 
 // ConnectDB connects to rethink and stores the session
 func ConnectDB(url string, db string) {
-    Logger.INFO.L("db", "Connecting to " + url)
+    Logger.INFO.L("db", "Connecting to "+url)
 
     rethink.SetTags("rethink", "json")
 

@@ -2,8 +2,8 @@ package cache
 
 import (
     "github.com/bwmarrin/discordgo"
-    "time"
     "sync"
+    "time"
 )
 
 // How long a cached channel pointer is valid (seconds)
@@ -50,7 +50,7 @@ func Channel(id string) (ch *discordgo.Channel, e error) {
     meta := channelMeta[id]
     mutex.RUnlock()
 
-    if time.Now().Unix() - meta > channelTimeout {
+    if time.Now().Unix()-meta > channelTimeout {
         e = updateChannel(id)
     }
 

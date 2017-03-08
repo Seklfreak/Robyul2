@@ -140,7 +140,7 @@ func drawContent(start string, separator string, end string, paddings []int, dat
         content = sanitizer.ReplaceAllString(content, "")
         content = unifier.ReplaceAllString(content, " ")
         sb += fmt.Sprintf(
-            "%-" + strconv.Itoa(paddings[idx]) + "s",
+            "%-"+strconv.Itoa(paddings[idx])+"s",
             content,
         )
     }

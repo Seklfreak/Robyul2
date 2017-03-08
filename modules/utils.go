@@ -1,18 +1,21 @@
 package modules
 
 import (
-    "github.com/bwmarrin/discordgo"
-    "git.lukas.moe/sn0w/Karen/ratelimits"
-    "git.lukas.moe/sn0w/Karen/helpers"
-    "git.lukas.moe/sn0w/Karen/cache"
-    "git.lukas.moe/sn0w/Karen/metrics"
     "fmt"
+    "git.lukas.moe/sn0w/Karen/cache"
+    "git.lukas.moe/sn0w/Karen/helpers"
     "git.lukas.moe/sn0w/Karen/logger"
+    "git.lukas.moe/sn0w/Karen/metrics"
+    "git.lukas.moe/sn0w/Karen/ratelimits"
+    "github.com/bwmarrin/discordgo"
     "strconv"
+    "os"
 )
 
 // Init warms the caches and initializes the plugins
 func Init(session *discordgo.Session) {
+    checkDuplicateCommands()
+
     pluginCount := len(PluginList)
     triggerCount := len(TriggerPluginList)
     pluginCache = make(map[string]*Plugin)
@@ -58,7 +61,7 @@ func Init(session *discordgo.Session) {
 
     logger.INFO.L(
         "modules",
-        "Initializer finished. Loaded " + strconv.Itoa(len(PluginList)) + " plugins and " + strconv.Itoa(len(TriggerPluginList)) + " triggers",
+        "Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
     )
 }
 
@@ -97,5 +100,35 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
             msg.ChannelID,
             (*ref).Response(trigger, content),
         )
+    }
+}
+
+func checkDuplicateCommands() {
+    cmds := make(map[string]string)
+
+    for _, plug := range PluginList {
+        for _, cmd := range plug.Commands() {
+            t := helpers.Typeof(plug)
+
+            if occupant, ok := cmds[cmd]; ok {
+                logger.ERROR.L("modules", "Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
+                os.Exit(1)
+            }
+
+            cmds[cmd] = t
+        }
+    }
+
+    for _, trig := range TriggerPluginList {
+        for _, cmd := range trig.Triggers() {
+            t := helpers.Typeof(trig)
+
+            if occupant, ok := cmds[cmd]; ok {
+                logger.ERROR.L("modules", "Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
+                os.Exit(1)
+            }
+
+            cmds[cmd] = t
+        }
     }
 }

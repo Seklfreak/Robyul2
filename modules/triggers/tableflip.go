@@ -5,8 +5,7 @@ type TableFlip struct{}
 func (t *TableFlip) Triggers() []string {
     return []string{
         "tableflip",
-        "flip",
-        "tbf",
+        "table",
     }
 }
 

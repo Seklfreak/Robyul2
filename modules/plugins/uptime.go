@@ -28,5 +28,5 @@ func (u *Uptime) Action(command string, content string, msg *discordgo.Message, 
 
     uptime := time.Now().Sub(time.Unix(bootTime, 0)).String()
 
-    session.ChannelMessageSend(msg.ChannelID, ":hourglass_flowing_sand: " + uptime)
+    session.ChannelMessageSend(msg.ChannelID, ":hourglass_flowing_sand: "+uptime)
 }

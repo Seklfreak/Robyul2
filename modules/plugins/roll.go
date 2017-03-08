@@ -49,7 +49,7 @@ func (r *Roll) Action(command string, content string, msg *discordgo.Message, se
 
         session.ChannelMessageSend(
             msg.ChannelID,
-            ":crystal_ball: " + strconv.Itoa(rand.Intn(int(max - min)) + int(min)),
+            ":crystal_ball: "+strconv.Itoa(rand.Intn(int(max-min))+int(min)),
         )
     } else {
         session.ChannelMessageSend(msg.ChannelID, ":x: You need to pass two numbers")
