@@ -13,7 +13,6 @@ import (
     "github.com/Seklfreak/Robyul2/ratelimits"
     "fmt"
     "github.com/bradfitz/slice"
-    "github.com/dustin/go-humanize"
     "strconv"
 )
 
@@ -178,13 +177,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   "Experience",
-                    Value:  humanize.Comma(levelThisServerUser.Exp) + " EXP",
+                    Name:   "Next Level Progress",
+                    Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)) + " %",
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   ":white_circle: ",
-                    Value:  ":white_circle: ",
+                    Name:   ":white_circle:",
+                    Value:  ":white_circle:",
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
@@ -193,13 +192,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   "Global Experience",
-                    Value:  humanize.Comma(totalExp) + " EXP",
+                    Name:   "Next Global Level Progress",
+                    Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(totalExp)) + " %",
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   ":white_circle: ",
-                    Value:  ":white_circle: ",
+                    Name:   ":white_circle:",
+                    Value:  ":white_circle:",
                     Inline: true,
                 },
             },
@@ -228,7 +227,7 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
     }
     // check if bucket is empty
     if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
-        m.BucketSet(channel.GuildID+msg.Author.ID, -1)
+        //m.BucketSet(channel.GuildID+msg.Author.ID, -1)
         return
     }
 
@@ -283,6 +282,21 @@ func (m *Levels) getLevelFromExp(exp int64) int {
     calculatedLevel := 0.1 * math.Sqrt(float64(exp))
 
     return int(math.Floor(calculatedLevel))
+}
+
+func (m *Levels) getExpForLevel(level int) int64 {
+    if level <= 0 {
+        return 0
+    }
+
+    calculatedExp := math.Pow(float64(level)/0.1, 2)
+    return int64(calculatedExp)
+}
+
+func (m *Levels) getProgressToNextLevelFromExp(exp int64) int {
+    expLevelCurrently := exp - m.getExpForLevel(m.getLevelFromExp(exp))
+    expLevelNext := m.getExpForLevel((m.getLevelFromExp(exp) + 1)) - m.getExpForLevel(m.getLevelFromExp(exp))
+    return int(expLevelCurrently / (expLevelNext / 100))
 }
 
 func (m *Levels) getRandomExpForMessage() int64 {
