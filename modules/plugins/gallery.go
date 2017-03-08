@@ -8,6 +8,7 @@ import (
     rethink "github.com/gorethink/gorethink"
     "strings"
     "regexp"
+    "github.com/Seklfreak/Robyul2/metrics"
 )
 
 type Gallery struct{}
@@ -203,7 +204,6 @@ TryNextGallery:
                 }
             }
             // post mirror links
-            fmt.Printf("reposting %d links\n", len(linksToRepost))
             if len(linksToRepost) > 0 {
                 for _, linkToRepost := range linksToRepost {
                     err := session.WebhookExecute(gallery.TargetChannelWebhookID, gallery.TargetChannelWebhookToken,
@@ -213,6 +213,7 @@ TryNextGallery:
                             AvatarURL: helpers.GetAvatarUrl(msg.Author),
                         })
                     helpers.Relax(err)
+                    metrics.GalleryPostsSent.Add(1)
                 }
             }
         }
