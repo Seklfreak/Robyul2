@@ -242,7 +242,7 @@ func GetAvatarUrl(user *discordgo.User) string {
     if strings.HasPrefix(user.Avatar, "a_") {
         avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif")
     } else {
-        avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp")
+        avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "jpg")
     }
     return avatarUrl
 }
