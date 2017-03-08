@@ -558,6 +558,14 @@
       "top-server-no-stats": "No stats for this server yet. Chat more! :nerd:",
       "top-server-embed-title": "Top chatters on this server",
       "user-embed-title": "Stats of %s"
+    },
+    "gallery": {
+      "add-success": "Gallery successfully added. :ok_hand:",
+      "list-empty": "No galleries set up on this server yet! :mag:",
+      "delete-not-found": "I wasn't able to find this gallery on this server. :thinking:",
+      "delete-success": "I successfully removed the gallery from the database.",
+      "add-progress": "I'm on it! :arrows_counterclockwise:",
+      "refreshed-config": "I loaded the newest config from the Database. :ok_hand:"
     }
   }
 }

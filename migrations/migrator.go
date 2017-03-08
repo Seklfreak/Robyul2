@@ -24,6 +24,7 @@ var migrations = []helpers.Callback{
     m13_create_table_notifications_ignored_channels,
     m14_create_table_stats_voicetimes,
     m15_create_table_levels_serverusers,
+    m16_create_table_galleries,
 }
 
 // Run executes all registered migrations
