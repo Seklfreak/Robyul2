@@ -107,7 +107,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     helpers.Relax(err)
                     topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:   fmt.Sprintf("#%d: %s", i+1, fullUsername),
-                        Value:  fmt.Sprintf("Level: %d, Experience: %d EXP", m.getLevelFromExp(levelsServersUser.Exp), levelsServersUser.Exp),
+                        Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUser.Exp)),
                         Inline: false,
                     })
                     i++
