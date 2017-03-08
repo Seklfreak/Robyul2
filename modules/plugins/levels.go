@@ -49,7 +49,7 @@ type DB_Levels_ServerUser struct {
     ID      string  `gorethink:"id,omitempty"`
     UserID  string  `gorethink:"userid"`
     GuildID string  `gorethink:"guildid"`
-    Exp     int64  `gorethink:"exp"`
+    Exp     int64   `gorethink:"exp"`
 }
 
 func (m *Levels) Init(session *discordgo.Session) {
@@ -228,6 +228,7 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
     }
     // check if bucket is empty
     if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
+        m.BucketSet(channel.GuildID+msg.Author.ID, -1)
         return
     }
 

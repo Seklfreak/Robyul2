@@ -442,6 +442,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 var totalDuration time.Duration
 
                 for _, voiceTime := range entryBucket {
+                    if voiceTime.UserID == session.State.User.ID { // Don't show Robyul in the stats
+                        continue
+                    }
+
                     voiceChannelDuration := voiceTime.LeaveTimeUtc.Sub(voiceTime.JoinTimeUtc)
                     totalDuration += voiceChannelDuration
                     if _, ok := voiceChannelsDurationPerUser[voiceTime.ChannelID]; ok {
@@ -454,6 +458,12 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                         voiceChannelsDurationPerUser[voiceTime.ChannelID] = map[string]time.Duration{}
                         voiceChannelsDurationPerUser[voiceTime.ChannelID][voiceTime.UserID] = voiceChannelDuration
                     }
+                }
+
+                if totalDuration <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
+                    helpers.Relax(err)
+                    return
                 }
 
                 totalVoiceStatsEmbed := &discordgo.MessageEmbed{
