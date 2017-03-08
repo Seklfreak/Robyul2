@@ -59,6 +59,7 @@ func (m *Levels) Init(session *discordgo.Session) {
     m.BucketInit()
 }
 
+// @TODO: Global Top 10
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "level", "levels": // [p]level <user> or [p]level top
@@ -97,7 +98,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Color: 0x0FADED,
                     Title: helpers.GetText("plugins.levels.top-server-embed-title"),
                     //Description: "",
-                    //Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.stats.voicestats-embed-footer")},
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
                     Fields: []*discordgo.MessageEmbedField{},
                 }
 
@@ -278,7 +279,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             Color: 0x0FADED,
             Title: helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
             //Description: "",
-            //Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.stats.voicestats-embed-footer")},
+            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
             Fields: []*discordgo.MessageEmbedField{
                 &discordgo.MessageEmbedField{
                     Name:   "Level",

@@ -557,7 +557,8 @@
       "level-no-stats": "No stats for this user yet. Chat more! :nerd:",
       "top-server-no-stats": "No stats for this server yet. Chat more! :nerd:",
       "top-server-embed-title": "Top chatters on this server",
-      "user-embed-title": "Stats of %s"
+      "user-embed-title": "Stats of %s",
+      "embed-footer": "Robyul is currently on %d servers."
     },
     "gallery": {
       "add-success": "Gallery successfully added. :ok_hand:",

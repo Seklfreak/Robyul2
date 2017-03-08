@@ -43,7 +43,6 @@ func (g *Gallery) Init(session *discordgo.Session) {
     galleries = g.GetGalleries()
 }
 
-// @TODO: Add metrics (total galleries, gallery posts mirrored)
 func (g *Gallery) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     args := strings.Split(content, " ")
     if len(args) >= 1 {
