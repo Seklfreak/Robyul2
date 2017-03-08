@@ -14,6 +14,7 @@ import (
     "fmt"
     "github.com/bradfitz/slice"
     "strconv"
+    "git.lukas.moe/sn0w/Karen/logger"
 )
 
 type Levels struct {
@@ -36,11 +37,14 @@ var (
 
     // How many keys may drop at a time
     DROP_SIZE int8 = 1
+
+    temporaryIgnoredGuilds []string
 )
 
 func (m *Levels) Commands() []string {
     return []string{
         "level",
+        "levels",
     }
 }
 
@@ -57,7 +61,7 @@ func (m *Levels) Init(session *discordgo.Session) {
 
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
-    case "level": // [p]level <user> or [p]level top
+    case "level", "levels": // [p]level <user> or [p]level top
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
@@ -119,6 +123,111 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topLevelEmbed)
                 helpers.Relax(err)
                 return
+            case "process-history": // [p]level process-history
+                helpers.RequireBotAdmin(msg, func() {
+                    session.ChannelTyping(msg.ChannelID)
+                    channel, err := session.Channel(msg.ChannelID)
+                    helpers.Relax(err)
+                    guild, err := session.Guild(channel.GuildID)
+                    helpers.Relax(err)
+                    // pause new message processing for that guild
+                    temporaryIgnoredGuilds = append(temporaryIgnoredGuilds, channel.GuildID)
+                    _, err = session.ChannelMessageSend(msg.ChannelID, "Temporary disabled EXP Processing for this server while processing the Message History.")
+                    helpers.Relax(err)
+                    // reset accounts on this server
+                    var levelsServersUsers []DB_Levels_ServerUser
+                    listCursor, err := rethink.Table("levels_serverusers").Filter(
+                        rethink.Row.Field("guildid").Eq(channel.GuildID),
+                    ).Run(helpers.GetDB())
+                    helpers.Relax(err)
+                    defer listCursor.Close()
+                    err = listCursor.All(&levelsServersUsers)
+                    for _, levelsServerUser := range levelsServersUsers {
+                        levelsServerUser.Exp = 0
+                        m.setLevelsServerUser(levelsServerUser)
+                    }
+                    _, err = session.ChannelMessageSend(msg.ChannelID, "Resetted the EXP for every User on this server.")
+                    helpers.Relax(err)
+                    // process history
+                    //var wg sync.WaitGroup
+                    //wg.Add(len(guild.Channels))
+                    for _, guildChannel := range guild.Channels {
+                        guildChannelCurrent := guildChannel
+                        //go func() {
+                        prefix := helpers.GetPrefixForServer(guildChannelCurrent.GuildID)
+                        expForUsers := make(map[string]int64)
+                        //defer wg.Done()
+                        if guildChannelCurrent.Type == "voice" {
+                            continue
+                        }
+
+                        logger.VERBOSE.L("levels", fmt.Sprintf("Started processing of Channel #%s (#%s) on Guild %s (#%s)",
+                            guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
+                        // (asynchronous)
+                        _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Started processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
+                        helpers.Relax(err)
+                        lastBefore := ""
+                        for {
+                            messages, err := session.ChannelMessages(guildChannelCurrent.ID, 100, lastBefore, "")
+                            if err != nil {
+                                logger.ERROR.L("levels", err.Error())
+                                break
+                            }
+                            logger.VERBOSE.L("levels", fmt.Sprintf("Processing %d messages for Channel #%s (#%s) from before \"%s\" on Guild %s (#%s)",
+                                len(messages), guildChannelCurrent.Name, guildChannelCurrent.ID, lastBefore, guild.Name, guild.ID))
+                            if len(messages) <= 0 {
+                                break
+                            }
+                            for _, message := range messages {
+                                // ignore bot messages
+                                if message.Author.Bot == true {
+                                    continue
+                                }
+                                // ignore commands
+                                if prefix != "" {
+                                    if strings.HasPrefix(message.Content, prefix) {
+                                        continue
+                                    }
+                                }
+                                if _, ok := expForUsers[message.Author.ID]; ok {
+                                    expForUsers[message.Author.ID] += 5
+                                } else {
+                                    expForUsers[message.Author.ID] = 5
+                                }
+
+                            }
+                            lastBefore = messages[len(messages)-1].ID
+                        }
+
+                        for userId, expForuser := range expForUsers {
+                            levelsServerUser := m.getLevelsServerUserOrCreateNew(guildChannelCurrent.GuildID, userId)
+                            levelsServerUser.Exp += expForuser
+                            m.setLevelsServerUser(levelsServerUser)
+                        }
+
+                        logger.VERBOSE.L("levels", fmt.Sprintf("Completed processing of Channel #%s (#%s) on Guild %s (#%s)",
+                            guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
+                        _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Completed processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
+                        helpers.Relax(err)
+                        //}()
+                    }
+                    //fmt.Println("Waiting for all channels")
+                    //wg.Wait()
+                    // enable new message processing again
+                    var newTemporaryIgnoredGuilds []string
+                    for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {
+                        if temporaryIgnoredGuild != channel.GuildID {
+                            newTemporaryIgnoredGuilds = append(newTemporaryIgnoredGuilds, temporaryIgnoredGuild)
+                        }
+                    }
+                    temporaryIgnoredGuilds = newTemporaryIgnoredGuilds
+                    _, err = session.ChannelMessageSend(msg.ChannelID, "Enabled EXP Processing for this server again.")
+                    helpers.Relax(err)
+                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Done!", msg.Author.ID))
+                    helpers.Relax(err)
+                    return
+                })
+                return
             }
             targetUser, err = helpers.GetUserFromMention(args[0])
             if targetUser == nil || targetUser.ID == "" {
@@ -177,7 +286,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   "Next Level Progress",
+                    Name:   "Level Progress",
                     Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)) + " %",
                     Inline: true,
                 },
@@ -192,7 +301,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   "Next Global Level Progress",
+                    Name:   "Global Level Progress",
                     Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(totalExp)) + " %",
                     Inline: true,
                 },
@@ -212,8 +321,18 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+    m.ProcessMessage(msg, session)
+}
+
+func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Session) {
     channel, err := session.Channel(msg.ChannelID)
     helpers.Relax(err)
+    // ignore temporary ignored guilds
+    for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {
+        if temporaryIgnoredGuild == channel.GuildID {
+            return
+        }
+    }
     // ignore bot messages
     if msg.Author.Bot == true {
         return
@@ -221,7 +340,7 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
     // ignore commands
     prefix := helpers.GetPrefixForServer(channel.GuildID)
     if prefix != "" {
-        if strings.HasPrefix(content, prefix) {
+        if strings.HasPrefix(msg.Content, prefix) {
             return
         }
     }
