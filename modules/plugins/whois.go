@@ -7,6 +7,7 @@ import (
 
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "github.com/bwmarrin/discordgo"
+    "git.lukas.moe/sn0w/Karen/helpers"
 )
 
 // WhoIs command
@@ -51,11 +52,6 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         return
     }
 
-    // The @user's avatar url
-    avatarURL := func(width int) string {
-        return fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.webp?size=%v", target.User.ID, target.User.Avatar, width)
-    }
-
     // Parses a string -> time.Time
     // tim must be RFC3339 formatted (works with discord)
     // i.e:
@@ -84,7 +80,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         Title: target.Nick + "#" + target.User.Discriminator,
         Image: &discordgo.MessageEmbedImage{
             // Make it 128x128 -> this may change
-            URL:    avatarURL(128),
+            URL:    helpers.GetAvatarUrlWithSize(target.User, 128),
             Width:  128,
             Height: 128,
         },
@@ -102,7 +98,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
             },
             {
                 Name:  "Avatar link",
-                Value: avatarURL(1024),
+                Value: helpers.GetAvatarUrl(target.User),
             },
             {
                 Name: "UserID",
