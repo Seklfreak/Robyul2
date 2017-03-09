@@ -7,7 +7,7 @@ $TARGET=""
 if (Get-Variable GOTARGET -Scope Global -ErrorAction SilentlyContinue) {
     $TARGET = $env:GOTARGET    
 } else {
-    $TARGET = "Karen"
+    $TARGET = "Karen.exe"
 }
 
 go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
