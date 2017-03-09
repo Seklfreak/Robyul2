@@ -67,7 +67,7 @@ func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
         return ""
     }
 
-    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=%i"
+    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=%d"
 
     if strings.HasPrefix(user.Avatar, "a_") {
         return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif", size)

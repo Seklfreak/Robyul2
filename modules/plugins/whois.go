@@ -75,7 +75,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
     }
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        Title: target.Nick + "#" + target.User.Discriminator,
+        Title: target.User.Username + "#" + target.User.Discriminator,
         Image: &discordgo.MessageEmbedImage{
             // Make it 128x128 -> this may change
             URL:    helpers.GetAvatarUrlWithSize(target.User, 128),
@@ -96,7 +96,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
             },
             {
                 Name:  "Avatar link",
-                Value: helpers.GetAvatarUrl(target.User),
+                Value: "[Click here](" + helpers.GetAvatarUrl(target.User) + ")",
             },
             {
                 Name: "UserID",
