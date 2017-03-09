@@ -3,6 +3,10 @@ package helpers
 import (
     "git.lukas.moe/sn0w/Karen/cache"
     "github.com/bwmarrin/discordgo"
+    "time"
+    "strconv"
+    "strings"
+    "fmt"
 )
 
 var botAdmins = []string{
@@ -54,4 +58,22 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
     }
 
     cb()
+}
+
+func GetAvatarUrl(user *discordgo.User) string {
+    return GetAvatarUrlWithSize(user, 1024)
+}
+
+func GetAvatarUrlWithSize(user *discordgo.User, size uint8) string {
+    if user.Avatar == "" {
+        return ""
+    }
+
+    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=%i"
+
+    if strings.HasPrefix(user.Avatar, "a_") {
+        return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif", size)
+    }
+
+    return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp", size)
 }
