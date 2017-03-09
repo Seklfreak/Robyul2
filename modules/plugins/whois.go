@@ -26,7 +26,7 @@ func (w *WhoIs) Init(s *discord) {}
 func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Check if the msg contains at least 1 mention
     if len(msg.Mentions) == 0 {
-        session.ChannelMessageSend(msg.ChannelID, msg.Author.ID+" you need to @mention someone")
+        session.ChannelMessageSend(msg.ChannelID, "you need to @mention someone")
         return
     }
     // Get channel info
