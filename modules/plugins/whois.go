@@ -20,7 +20,7 @@ func (w *WhoIs) Commands() []string {
 }
 
 // Init func
-func (w *WhoIs) Init(s *discord) {}
+func (w *WhoIs) Init(s *discordgo.Session) {}
 
 // Action will return info about the first @user
 func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -42,7 +42,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         return
     }
     // Get the member object for the @user
-    target, err := session.GuildMember(guild.ID, msg.Mentions[0])
+    target, err := session.GuildMember(guild.ID, msg.Mentions[0].ID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return
@@ -86,11 +86,11 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         },
         Color: 0x0FADED,
         // All info
-        Fields: []*discordgo.MessageEmbedFields {
+        Fields: []*discordgo.MessageEmbedField {
             // Joined guild date and time since
             &discordgo.MessageEmbedField {
                 Name:   "Joined server",
-                Value:  parseTimeAndMakeItReadable(target.Joined),
+                Value:  parseTimeAndMakeItReadable(target.JoinedAt),
                 Inline: true,
             },
             // Roles
@@ -98,7 +98,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
                 Name:   "Roles",
                 Value:  strings.Join(roles, ","),
                 Inline: true,
-            }
+            },
             // Avatar link
             &discordgo.MessageEmbedField {
                 Name:  "Avatar link",
