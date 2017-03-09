@@ -29,28 +29,33 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelMessageSend(msg.ChannelID, "you need to @mention someone")
         return
     }
+
     // Get channel info
     channel, err := session.Channel(msg.ChannelID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return
     }
+
     // Guild info
     guild, err := session.Guild(channel.GuildID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return
     }
+
     // Get the member object for the @user
     target, err := session.GuildMember(guild.ID, msg.Mentions[0].ID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return
     }
+
     // The @user's avatar url
     avatarURL := func(width int) string {
         return fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.webp?size=%v", target.User.ID, target.User.Avatar, width)
     }
+
     // Parses a string -> time.Time
     // tim must be RFC3339 formatted (works with discord)
     // i.e:
@@ -64,6 +69,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         date += "Time since: " + duration.String()
         return date
     }
+
     // The roles name of the @user
     roles := []string{}
     for _, grole := range guild.Roles {
