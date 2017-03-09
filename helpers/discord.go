@@ -5,6 +5,8 @@ import (
     "github.com/bwmarrin/discordgo"
     "strings"
     "fmt"
+    "time"
+    "strconv"
 )
 
 var botAdmins = []string{
@@ -74,4 +76,11 @@ func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
     }
 
     return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp", size)
+}
+
+func GetTimeFromSnowflake(id string) time.Time {
+    iid, err := strconv.Atoi(id)
+    Relax(err)
+
+    return time.Unix(int64(((iid>>22)+1420070400000)/1000), 0).UTC()
 }

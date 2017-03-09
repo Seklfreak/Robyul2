@@ -1,11 +1,11 @@
 package plugins
 
 import (
-    "time"
     "strings"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "github.com/bwmarrin/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
+    "time"
 )
 
 // WhoIs command
@@ -50,20 +50,6 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         return
     }
 
-    // Parses a string -> time.Time
-    // tim must be RFC3339 formatted (works with discord)
-    // i.e:
-    // 18-05-2017
-    // Time since: XyXhXmXs -> see time.Duration.String() for more info on this
-    parseTimeAndMakeItReadable := func(tim string) string {
-        t, _ := time.Parse(time.RFC3339, tim)
-        date := t.Format("02-01-2006")
-        date += "\n"
-        duration := time.Since(t)
-        date += "Time since: " + duration.String()
-        return date
-    }
-
     // The roles name of the @user
     roles := []string{}
     for _, grole := range guild.Roles {
@@ -74,8 +60,10 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         }
     }
 
+    joined, _ := time.Parse(time.RFC3339, target.JoinedAt)
+
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        Title: target.User.Username + "#" + target.User.Discriminator,
+        Title: "Information about " + target.User.Username + "#" + target.User.Discriminator,
         Thumbnail: &discordgo.MessageEmbedThumbnail{
             URL: helpers.GetAvatarUrl(target.User),
         },
@@ -83,22 +71,27 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
         Fields: []*discordgo.MessageEmbedField {
             {
                 Name:   "Joined server",
-                Value:  parseTimeAndMakeItReadable(target.JoinedAt),
+                Value:  joined.Format(time.RFC1123),
                 Inline: true,
+            },
+            {
+                Name:   "Joined Discord",
+                Value:  helpers.GetTimeFromSnowflake(target.User.ID).Format(time.RFC1123),
+                Inline: true,
+            },
+            {
+                Name:  "Avatar link",
+                Value: helpers.GetAvatarUrl(target.User),
+                Inline: false,
             },
             {
                 Name:   "Roles",
                 Value:  strings.Join(roles, ","),
                 Inline: true,
             },
-            {
-                Name:  "Avatar link",
-                Value: "[Click here](" + helpers.GetAvatarUrl(target.User) + ")",
-            },
-            {
-                Name: "UserID",
-                Value: target.User.ID,
-            },
+        },
+        Footer: &discordgo.MessageEmbedFooter{
+            Text: "UserID: " + target.User.ID,
         },
     })
 }
