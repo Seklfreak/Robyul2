@@ -3,8 +3,6 @@ package helpers
 import (
     "git.lukas.moe/sn0w/Karen/cache"
     "github.com/bwmarrin/discordgo"
-    "time"
-    "strconv"
     "strings"
     "fmt"
 )
@@ -64,7 +62,7 @@ func GetAvatarUrl(user *discordgo.User) string {
     return GetAvatarUrlWithSize(user, 1024)
 }
 
-func GetAvatarUrlWithSize(user *discordgo.User, size uint8) string {
+func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
     if user.Avatar == "" {
         return ""
     }

@@ -1,10 +1,8 @@
 package plugins
 
 import (
-    "fmt"
     "time"
     "strings"
-
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "github.com/bwmarrin/discordgo"
     "git.lukas.moe/sn0w/Karen/helpers"
