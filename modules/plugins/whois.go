@@ -84,6 +84,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
             Width:  128,
             Height: 128,
         },
+        Color: 0x0FADED,
         // All info
         Fields: []*discordgo.MessageEmbedFields {
             // Joined guild date and time since
