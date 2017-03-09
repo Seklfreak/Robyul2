@@ -4,14 +4,13 @@ stages:
   - deploy
 
 before_script:
-  - mkdir -p /go/src/git.lukas.moe
-  - mkdir -p /cache/glide
-  - cp -r /builds/* /go/src/git.lukas.moe
-  - cd /go/src/git.lukas.moe/$CI_PROJECT_PATH
+  - mkdir -p /go/src/git.lukas.moe/sn0w/Karen /cache/glide
+  - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w/Karen
+  - cd /go/src/git.lukas.moe/sn0w/Karen
   - glide --home /cache/glide install
 
 after_script:
-  - cp -r /go/src/git.lukas.moe/* /builds
+  - mv /go/src/git.lukas.moe/sn0w/Karen /builds/$CI_PROJECT_PATH
 
 cache:
   paths:
@@ -86,3 +85,7 @@ collect_artifacts:
       expire_in: 2 weeks
       paths:
         - karen.*
+  before_script:
+    - exit 0
+  after_script:
+    - exit 0
