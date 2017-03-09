@@ -73,11 +73,9 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
             }
         }
     }
+
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-        // User nick | discriminator
-        // Shixz#6899
         Title: target.Nick + "#" + target.User.Discriminator,
-        // User profile img
         Image: &discordgo.MessageEmbedImage{
             // Make it 128x128 -> this may change
             URL:    avatarURL(128),
@@ -85,27 +83,22 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
             Height: 128,
         },
         Color: 0x0FADED,
-        // All info
         Fields: []*discordgo.MessageEmbedField {
-            // Joined guild date and time since
-            &discordgo.MessageEmbedField {
+            {
                 Name:   "Joined server",
                 Value:  parseTimeAndMakeItReadable(target.JoinedAt),
                 Inline: true,
             },
-            // Roles
-            &discordgo.MessageEmbedField {
+            {
                 Name:   "Roles",
                 Value:  strings.Join(roles, ","),
                 Inline: true,
             },
-            // Avatar link
-            &discordgo.MessageEmbedField {
+            {
                 Name:  "Avatar link",
                 Value: avatarURL(1024),
             },
-            // UserID
-            &discordgo.MessageEmbedField {
+            {
                 Name: "UserID",
                 Value: target.User.ID,
             },
