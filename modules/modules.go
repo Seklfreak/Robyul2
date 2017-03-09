@@ -12,6 +12,7 @@ var (
     PluginList = []Plugin{
         &plugins.About{},
         &plugins.Avatar{},
+        &plguins.WhoIs{},
         &plugins.Calc{},
         &plugins.Changelog{},
         &plugins.Choice{},
