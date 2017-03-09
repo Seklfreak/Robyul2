@@ -76,11 +76,8 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
 
     session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
         Title: target.User.Username + "#" + target.User.Discriminator,
-        Image: &discordgo.MessageEmbedImage{
-            // Make it 128x128 -> this may change
-            URL:    helpers.GetAvatarUrlWithSize(target.User, 128),
-            Width:  128,
-            Height: 128,
+        Thumbnail: &discordgo.MessageEmbedThumbnail{
+            URL: helpers.GetAvatarUrl(target.User),
         },
         Color: 0x0FADED,
         Fields: []*discordgo.MessageEmbedField {
