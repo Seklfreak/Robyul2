@@ -14,7 +14,14 @@ import (
     "fmt"
     "github.com/bradfitz/slice"
     "strconv"
-    "git.lukas.moe/sn0w/Karen/logger"
+    "github.com/fogleman/gg"
+    "github.com/Seklfreak/Robyul2/logger"
+    "bytes"
+    "net/http"
+    "image"
+    "image/gif"
+    "image/jpeg"
+    "github.com/nfnt/resize"
 )
 
 type Levels struct {
@@ -45,6 +52,7 @@ func (m *Levels) Commands() []string {
     return []string{
         "level",
         "levels",
+        "profile",
     }
 }
 
@@ -62,6 +70,140 @@ func (m *Levels) Init(session *discordgo.Session) {
 // @TODO: Global Top 10
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
+    case "profile": // [p]profile
+        session.ChannelTyping(msg.ChannelID)
+        channel, err := session.Channel(msg.ChannelID)
+        helpers.Relax(err)
+        targetUser, err := session.User(msg.Author.ID)
+        helpers.Relax(err)
+        helpers.Relax(err)
+        targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
+        args := strings.Split(content, " ")
+        if len(args) >= 1 && args[0] != "" {
+            targetUser, err = helpers.GetUserFromMention(args[0])
+            if targetUser == nil || targetUser.ID == "" {
+                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                helpers.Relax(err)
+                return
+            }
+        }
+
+        var levelsServersUser []DB_Levels_ServerUser
+        listCursor, err := rethink.Table("levels_serverusers").Filter(
+            rethink.Row.Field("userid").Eq(targetUser.ID),
+        ).Run(helpers.GetDB())
+        helpers.Relax(err)
+        defer listCursor.Close()
+        err = listCursor.All(&levelsServersUser)
+
+        var levelThisServerUser DB_Levels_ServerUser
+        var totalExp int64
+        for _, levelsServerUser := range levelsServersUser {
+            if levelsServerUser.GuildID == channel.GuildID {
+                levelThisServerUser = levelsServerUser
+            }
+            totalExp += levelsServerUser.Exp
+        }
+
+        avatarUrl := helpers.GetAvatarUrl(targetUser)
+
+        client := &http.Client{}
+        request, err := http.NewRequest("GET", avatarUrl, nil)
+        if err != nil {
+            panic(err)
+        }
+        request.Header.Set("User-Agent", helpers.DEFAULT_UA)
+        response, err := client.Do(request)
+        helpers.Relax(err)
+        defer response.Body.Close()
+
+        var avatarImage image.Image
+
+        if strings.Contains(avatarUrl, ".gif") {
+            avatarImage, err = gif.Decode(response.Body)
+            helpers.Relax(err)
+        } else {
+            avatarImage, err = jpeg.Decode(response.Body)
+            helpers.Relax(err)
+        }
+
+        usernameText := strings.ToUpper(targetUser.Username)
+        if targetMember.Nick != "" {
+            usernameText += fmt.Sprintf(" (%s)", targetMember.Nick)
+        }
+
+        dc := gg.NewContext(300, 300)
+        // load fonts
+        // @TODO: Asset path
+        err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 20)
+        helpers.Relax(err)
+        // draw grey background
+        //dc.SetRGBA255(0, 0, 0, 32)
+        dc.SetRGB255(230, 230, 230)
+        dc.Clear()
+        // draw username box + username
+        dc.DrawRectangle(50, 89, 245, 22)
+        dc.SetRGB255(100, 100, 100)
+        dc.Fill()
+        dc.SetRGB255(255, 255, 255)
+        dc.DrawStringAnchored(usernameText, 100, 107, 0, 0)
+        // draw user title
+        dc.DrawRectangle(95, 111, 200, 22)
+        dc.SetRGBA255(100, 100, 100, 128)
+        dc.Fill()
+        dc.SetRGB255(255, 255, 255)
+        dc.DrawStringAnchored(strings.ToUpper("<USER TITLE>"), 100, 129, 0, 0)
+        // draw round user profile picture
+        dc.DrawCircle(50, 90, 44)
+        dc.SetRGB255(100, 100, 100)
+        dc.Fill()
+        avatarImage = resize.Resize(80, 80, avatarImage, resize.NearestNeighbor)
+        dc.DrawCircle(50, 90, 40)
+        dc.Clip()
+        dc.DrawImage(avatarImage, 10, 50)
+        dc.ResetClip()
+        // draw levels
+        dc.DrawRectangle(95, 135, 200, 22)
+        dc.SetRGBA255(100, 100, 100, 128)
+        dc.Fill()
+        dc.SetRGB255(255, 255, 255)
+        err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 8)
+        helpers.Relax(err)
+        dc.DrawStringAnchored(strings.ToUpper("Level"), 97, 143, 0, 0)
+        err = dc.LoadFontFace("_assets/Roboto/Roboto-Bold.ttf", 15)
+        helpers.Relax(err)
+        dc.DrawStringAnchored(strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), 106.5, 155, 0.5, 0)
+        dc.DrawRectangle(121, 137, 73, 18)
+        dc.SetRGBA255(100, 100, 100, 128)
+        dc.Fill()
+        dc.DrawRectangle(121, 137, float64(73)/float64(100)*float64(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), 18)
+        dc.SetRGBA255(65, 125, 100, 215)
+        dc.Fill()
+        dc.SetRGB255(255, 255, 255)
+        err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 8)
+        helpers.Relax(err)
+        dc.DrawStringAnchored(strings.ToUpper("Global"), 196.5, 143, 0, 0)
+        err = dc.LoadFontFace("_assets/Roboto/Roboto-Bold.ttf", 15)
+        helpers.Relax(err)
+        dc.DrawStringAnchored(strconv.Itoa(m.getLevelFromExp(totalExp)), 210.5, 155, 0.5, 0)
+        dc.DrawRectangle(226, 137, 67, 18)
+        dc.SetRGBA255(100, 100, 100, 128)
+        dc.Fill()
+        dc.DrawRectangle(226, 137, float64(67)/float64(100)*float64(m.getProgressToNextLevelFromExp(totalExp)), 18)
+        dc.SetRGBA255(65, 125, 100, 215)
+        dc.Fill()
+
+        var buffer bytes.Buffer
+        err = dc.EncodePNG(&buffer)
+        helpers.Relax(err)
+
+        _, err = session.ChannelFileSendWithMessage(
+            msg.ChannelID,
+            fmt.Sprintf("Profile for %s", targetUser.Username),
+            fmt.Sprintf("%s.png", targetUser.ID), bytes.NewReader(buffer.Bytes()))
+        helpers.Relax(err)
+
+        return
     case "level", "levels": // [p]level <user> or [p]level top
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
