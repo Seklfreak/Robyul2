@@ -13,7 +13,7 @@ This guide assumes that [git](http://git-scm.com) and [go](http://golang.org)  a
 
 - Hardware
     - A 64bit CPU
-    - CPU-Support for AVX2, AVX or SSE3+ instructions is a plus but not (yet)mandatory
+    - CPU-Support for AVX2, AVX or SSE3+ instructions is a plus but not (yet) mandatory
 - OS
     - Any recent Linux Distro, Windows 7+ or macOS 10.9+
 - Shell
