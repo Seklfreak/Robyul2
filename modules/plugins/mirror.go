@@ -49,7 +49,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
     args := strings.Split(content, " ")
     if len(args) >= 1 {
         switch args[0] {
-        case "create": // [p]mirror new
+        case "create": // [p]mirror create
             helpers.RequireBotAdmin(msg, func() {
                 channel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
@@ -138,7 +138,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                 }
                 helpers.Relax(err)
 
-                resultMessage := ":frame_photo: Mirrors:\n"
+                resultMessage := ":fax: Mirrors:\n"
                 for _, entry := range entryBucket {
                     resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (%d channels):\n", entry.ID, len(entry.ConnectedChannels))
                     for _, mirroredChannelEntry := range entry.ConnectedChannels {
@@ -150,7 +150,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                             mirroredChannel.Name, mirroredChannel.ID,
                             mirroredChannelGuild.Name, mirroredChannelGuild.ID,
                             mirroredChannel.ID,
-                            mirroredChannelEntry.ChannelWebhookToken,
+                            mirroredChannelEntry.ChannelWebhookID,
                         )
                     }
                 }
