@@ -1067,6 +1067,7 @@ func (m *Music) updateGameStatus() {
         } else if activeConnections > 1 {
             newGameStatusText = fmt.Sprintf("music on %d servers", activeConnections)
         }
-        cache.GetSession().UpdateStatus(0, newGameStatusText)
+        _ = newGameStatusText
+        //cache.GetSession().UpdateStatus(0, newGameStatusText) // @TODO: better implementation
     }
 }

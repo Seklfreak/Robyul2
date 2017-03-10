@@ -75,7 +75,8 @@ func main() {
 
     discord.Lock()
     discord.Debug = false
-    discord.LogLevel = discordgo.LogError
+    discord.LogLevel = discordgo.LogInformational
+    discord.StateEnabled = true
     discord.Unlock()
 
     discord.AddHandler(BotOnReady)
