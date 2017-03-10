@@ -58,7 +58,7 @@ func (m *Twitter) Init(session *discordgo.Session) {
         defer helpers.Recover()
 
         for {
-            var entryBucket []DB_Twitter_Entry
+            entryBucket := make([]DB_Twitter_Entry, 0)
             cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
             helpers.Relax(err)
 

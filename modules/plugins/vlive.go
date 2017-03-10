@@ -108,7 +108,7 @@ func (r *VLive) Init(session *discordgo.Session) {
         defer helpers.Recover()
 
         for {
-            var entryBucket []DB_VLive_Entry
+            entryBucket := make([]DB_VLive_Entry, 0)
             cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
             helpers.Relax(err)
 

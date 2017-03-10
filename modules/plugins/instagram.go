@@ -105,7 +105,7 @@ func (m *Instagram) Init(session *discordgo.Session) {
         defer helpers.Recover()
 
         for {
-            var entryBucket []DB_Instagram_Entry
+            entryBucket := make([]DB_Instagram_Entry, 0)
             cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
             helpers.Relax(err)
 
