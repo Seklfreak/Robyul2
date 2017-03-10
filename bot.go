@@ -233,9 +233,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
     // Check if a trigger matches
     modules.CallTriggerPlugin(cmd, content, message.Message)
-
-    // Else exit
-    return
 }
 
 func sendHelp(message *discordgo.MessageCreate) {
