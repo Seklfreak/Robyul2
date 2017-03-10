@@ -303,7 +303,10 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 resultMessage += fmt.Sprintf("`%s`: V Live Channel `%s` posting to <#%s>\n", entry.ID, entry.VLiveChannel.Name, entry.ChannelID)
             }
             resultMessage += fmt.Sprintf("Found **%d** V Live Channels in total.", len(entryBucket))
-            session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
+            for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                _, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+                helpers.Relax(err)
+            }
         default:
             session.ChannelTyping(msg.ChannelID)
             // try to find channel by search

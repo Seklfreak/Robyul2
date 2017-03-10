@@ -248,7 +248,10 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 resultMessage += fmt.Sprintf("`%s`: Instagram Account `@%s` posting to <#%s>\n", entry.ID, entry.Username, entry.ChannelID)
             }
             resultMessage += fmt.Sprintf("Found **%d** Instagram Accounts in total.", len(entryBucket))
-            session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
+            for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                _, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+                helpers.Relax(err)
+            }
         default:
             session.ChannelTyping(msg.ChannelID)
             instagramUsername := strings.Replace(args[0], "@", "", 1)

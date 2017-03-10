@@ -126,8 +126,11 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                     entry.ID, entry.SourceChannelID, entry.TargetChannelID, entry.TargetChannelWebhookID)
             }
             resultMessage += fmt.Sprintf("Found **%d** Galleries in total.", len(entryBucket))
-            _, err = session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
-            helpers.Relax(err)
+
+            for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                _, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+                helpers.Relax(err)
+            }
             return
         case "delete", "del": // [p]gallery delete <gallery id>
             helpers.RequireAdmin(msg, func() {

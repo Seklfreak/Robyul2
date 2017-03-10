@@ -211,7 +211,10 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                 resultMessage += fmt.Sprintf("`%s`: Facebook Page `%s` posting to <#%s>\n", entry.ID, entry.Username, entry.ChannelID)
             }
             resultMessage += fmt.Sprintf("Found **%d** Facebook Pages in total.", len(entryBucket))
-            session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
+            for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                _, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+                helpers.Relax(err)
+            }
         default:
             session.ChannelTyping(msg.ChannelID)
 

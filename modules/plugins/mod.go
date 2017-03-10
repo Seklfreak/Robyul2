@@ -311,8 +311,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             }
             resultText += fmt.Sprintf("Total Stats: Servers `%d`, Channels: `%d`, Members: `%d`", len(session.State.Guilds), totalChannels, totalMembers)
 
-            _, err := session.ChannelMessageSend(msg.ChannelID, resultText) // TODO: pagify
-            helpers.Relax(err)
+            for _, resultPage := range helpers.Pagify(resultText, "\n") {
+                _, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+                helpers.Relax(err)
+            }
         })
     case "echo": // [p]echo <channel> <message>
         helpers.RequireMod(msg, func() {

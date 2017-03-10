@@ -219,7 +219,10 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                 resultMessage += fmt.Sprintf("`%s`: Twitch Channel `%s` posting to <#%s>\n", entry.ID, entry.TwitchChannelName, entry.ChannelID)
             }
             resultMessage += fmt.Sprintf("Found **%d** Twitch Channels in total.", len(entryBucket))
-            session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
+            for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                _, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+                helpers.Relax(err)
+            }
         default:
             if args[0] == "" {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))

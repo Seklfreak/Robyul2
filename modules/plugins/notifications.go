@@ -168,8 +168,10 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             dmChannel, err := session.UserChannelCreate(msg.Author.ID)
             helpers.Relax(err)
 
-            _, err = session.ChannelMessageSend(dmChannel.ID, resultMessage) // TODO: Pagify message
-            helpers.Relax(err)
+            for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                _, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
+                helpers.Relax(err)
+            }
 
             _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
             helpers.Relax(err)
@@ -410,15 +412,16 @@ NextKeyword:
             }
         }
 
-        _, err = session.ChannelMessageSend(dmChannel.ID,
-            fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```%s```",
-                pendingNotification.Author.User.Username,
-                keywordsTriggeredText,
-                fmt.Sprintf("<#%s>", channel.ID),
-                guild.Name,
-                content,
-            )) // TODO: Pagify message
-        helpers.Relax(err)
+        for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```%s```",
+            pendingNotification.Author.User.Username,
+            keywordsTriggeredText,
+            fmt.Sprintf("<#%s>", channel.ID),
+            guild.Name,
+            content,
+        ), "\n") {
+            _, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
+            helpers.Relax(err)
+        }
         metrics.KeywordNotificationsSentCount.Add(1)
     }
 }

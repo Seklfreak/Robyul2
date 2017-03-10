@@ -155,8 +155,10 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                     }
                 }
                 resultMessage += fmt.Sprintf("Found **%d** Mirrors in total.", len(entryBucket))
-                _, err = session.ChannelMessageSend(msg.ChannelID, resultMessage) // TODO: Pagify message
-                helpers.Relax(err)
+                for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+                    helpers.Relax(err)
+                }
                 return
             })
         case "delete", "del": // [p]mirror delete <mirror id>

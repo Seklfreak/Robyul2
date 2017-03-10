@@ -258,3 +258,23 @@ func GetAllPermissions(guild *discordgo.Guild, member *discordgo.Member) int64 {
     }
     return perms
 }
+func Pagify(text string, delimiter string) []string {
+    result := make([]string, 0)
+    textParts := strings.Split(text, delimiter)
+    currentOutputPart := ""
+    for _, textPart := range textParts {
+        if len(currentOutputPart)+len(textPart)+len(delimiter) <= 1992 {
+            currentOutputPart += delimiter + textPart
+        } else {
+            result = append(result, currentOutputPart)
+            currentOutputPart = ""
+            if len(textPart) <= 1992 { // @TODO: else: split text somehow
+                currentOutputPart = textPart
+            }
+        }
+    }
+    if currentOutputPart != "" {
+        result = append(result, currentOutputPart)
+    }
+    return result
+}
