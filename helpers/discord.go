@@ -9,6 +9,10 @@ import (
     "strconv"
 )
 
+const (
+    DISCORD_EPOCH int64 = 1420070400000
+)
+
 var botAdmins = []string{
     "157834823594016768", // 0xFADED#3237
     "165345731706748929", // Serraniel#8978
@@ -82,5 +86,5 @@ func GetTimeFromSnowflake(id string) time.Time {
     iid, err := strconv.Atoi(id)
     Relax(err)
 
-    return time.Unix(int64(((iid>>22)+1420070400000)/1000), 0).UTC()
+    return time.Unix(((int64(iid)>>22)+DISCORD_EPOCH)/1000, 0).UTC()
 }
