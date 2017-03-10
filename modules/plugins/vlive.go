@@ -259,7 +259,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID))
                 logger.INFO.L("vlive", fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s)", entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
-        case "delete": // [p]vlive delete <id>
+        case "delete", "del": // [p]vlive delete <id>
             helpers.RequireMod(msg, func() {
                 if len(args) >= 2 {
                     session.ChannelTyping(msg.ChannelID)

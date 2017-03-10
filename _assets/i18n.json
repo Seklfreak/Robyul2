@@ -17,6 +17,9 @@
       "Seems like you're not a mod :thinking:"
     ]
   },
+  "botadmin": {
+    "no_permission": "Only the Bot Owner can do that."
+  },
   "bot": {
     "ratelimit": {
       "hit": "<@%s> Woah there. Way too spicy.\nYou're executing commands too fast, so i put you into the chill zone for ~15 seconds.\nNo more commands for you until you get out :no_good:"
@@ -488,7 +491,7 @@
     },
     "bias": {
       "role-not-found": "I couldn't find the Role. :thinking:",
-      "add-role-already": "You already got this bias role. :thinking:",
+      "add-role-already": "You already got this role. :thinking:",
       "remove-role-not-found": "You don't have this role. :thinking:",
       "role-added": [
         "I added the Role for you! :clap:",

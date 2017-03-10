@@ -198,12 +198,14 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
                 }
                 if roleToAddOrDelete.Role.Name != "" {
                     if requestIsAddRole == true {
-                        session.GuildMemberRoleAdd(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
+                        err := session.GuildMemberRoleAdd(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
+                        helpers.Relax(err)
                         newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-added")))
                         helpers.Relax(err)
                         messagesToDelete = append(messagesToDelete, newMessage)
                     } else {
-                        session.GuildMemberRoleRemove(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
+                        err := session.GuildMemberRoleRemove(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
+                        helpers.Relax(err)
                         newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-removed")))
                         helpers.Relax(err)
                         messagesToDelete = append(messagesToDelete, newMessage)
@@ -278,9 +280,10 @@ func (m *Bias) MemberHasRole(member *discordgo.Member, role *discordgo.Role) boo
 }
 
 func (m *Bias) CleanUpRoleName(inputName string) string {
-    inputName = strings.Replace(inputName, "+", "", 1)
-    inputName = strings.Replace(inputName, "-", "", 1)
-    inputName = strings.Replace(inputName, "name", "", 1)
+    inputName = strings.TrimPrefix(inputName, "+")
+    inputName = strings.TrimPrefix(inputName, "-")
+    inputName = strings.Trim(inputName, " ")
+    inputName = strings.TrimPrefix(inputName, "name")
     inputName = strings.Trim(inputName, " ")
     inputName = strings.ToLower(inputName)
     return inputName

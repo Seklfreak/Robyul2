@@ -247,6 +247,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 i := 0
                 for _, levelsServersUser := range levelsServersUsers {
                     currentMember, err := session.GuildMember(channel.GuildID, levelsServersUser.UserID)
+                    helpers.Relax(err)
                     fullUsername := currentMember.User.Username
                     if currentMember.Nick != "" {
                         fullUsername += " ~ " + currentMember.Nick

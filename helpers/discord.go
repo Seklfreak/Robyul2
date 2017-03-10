@@ -117,7 +117,7 @@ func RequireMod(msg *discordgo.Message, cb Callback) {
 // RequireBotAdmin only calls $cb if the author is a bot admin
 func RequireBotAdmin(msg *discordgo.Message, cb Callback) {
     if !IsBotAdmin(msg.Author.ID) {
-        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("botadmin.no_permission"))
         return
     }
 

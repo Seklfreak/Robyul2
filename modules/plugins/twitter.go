@@ -183,7 +183,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
                 logger.INFO.L("twitter", fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
-        case "delete": // [p]twitter delete <id>
+        case "delete", "del": // [p]twitter delete <id>
             helpers.RequireMod(msg, func() {
                 if len(args) >= 2 {
                     session.ChannelTyping(msg.ChannelID)
