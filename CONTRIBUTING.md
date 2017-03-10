@@ -1,7 +1,7 @@
 # Contributing
 
 Hi fellow developer!<br>
-Thanks for your interest in helping with Karen.
+Thanks for your interest in developing Karen.
 
 In order to get you started, I wrote this little guide that explains how Karen is structured and which tools are used to develop her.
 
