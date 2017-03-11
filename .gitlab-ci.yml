@@ -5,7 +5,6 @@ stages:
 
 variables:
   GLIDE_HOME: /cache/glide
-  CI_DEBUG_TRACE: "true"
 
 before_script:
   - mkdir -p /go/src/git.lukas.moe/sn0w /cache/glide
