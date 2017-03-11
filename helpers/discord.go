@@ -83,7 +83,7 @@ func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
 }
 
 func GetTimeFromSnowflake(id string) time.Time {
-    iid, err := strconv.Atoi(id)
+    iid, err := strconv.ParseInt(id, 10, 64)
     Relax(err)
 
     return time.Unix(((int64(iid)>>22)+DISCORD_EPOCH)/1000, 0).UTC()
