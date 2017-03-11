@@ -13,8 +13,6 @@ import (
     "google.golang.org/api/option"
     "net/http"
     "strings"
-    "golang.org/x/text/transform"
-    "golang.org/x/text/unicode/norm"
 )
 
 type Translator struct {
@@ -94,7 +92,7 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
         for _, partInputText := range parts[2:] {
             fullInputText += " " + partInputText
         }
-        fullInputText = strings.Trim(t.stripCtlAndExtFromUnicode(strings.Replace(fullInputText, "\n", " ", -1)), " ")
+        fullInputText = strings.Trim(strings.Replace(fullInputText, "\n", " ", -1), " ")
         targetInput := ""
         var targetInputs []string
         for _, word := range strings.Split(fullInputText, " ") {
@@ -161,22 +159,4 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 
     _, err = session.ChannelMessageSendEmbed(msg.ChannelID, translateEmbed)
     helpers.Relax(err)
-}
-
-// soruce: https://rosettacode.org/wiki/Strip_control_codes_and_extended_characters_from_a_string#Go
-// Advanced Unicode normalization and filtering,
-// see http://blog.golang.org/normalization and
-// http://godoc.org/golang.org/x/text/unicode/norm for more
-// details.
-func (t *Translator) stripCtlAndExtFromUnicode(str string) string {
-    isOk := func(r rune) bool {
-        return r < 32 || r >= 127
-    }
-    // The isOk filter is such that there is no need to chain to norm.NFC
-    tr := transform.Chain(norm.NFKD, transform.RemoveFunc(isOk))
-    // This Transformer could also trivially be applied as an io.Reader
-    // or io.Writer filter to automatically do such filtering when reading
-    // or writing data anywhere.
-    str, _, _ = transform.String(tr, str)
-    return str
 }
