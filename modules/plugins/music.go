@@ -720,7 +720,7 @@ func (m *Music) processorLoop() {
                 "--no-color",
                 "--no-playlist",
                 "--max-filesize", "1024m",
-                "-f", "bestaudio/best[height<=720][fps<=30]/best[height<=720]/[abr<=192]",
+                "-f", "bestaudio/best[height<=720]/best",
                 "-x",
                 "--audio-format", "wav",
                 "--audio-quality", "0",
@@ -728,6 +728,11 @@ func (m *Music) processorLoop() {
                 "--exec", "mv {} /srv/karen-data",
                 song.URL,
             )
+
+            if helpers.DEBUG_MODE {
+                fmt.Printf("YTDL ARGS: %#v\n", ytdl.Args)
+            }
+
             ytdl.Stdout = os.Stdout
             ytdl.Stderr = os.Stderr
             helpers.Relax(ytdl.Start())
@@ -749,9 +754,13 @@ func (m *Music) processorLoop() {
                 "-f", "s16le",
                 "-ar", "48000",
                 "-ac", "2",
-                "-v", "128",
+                "-af", "volume=-24dB",
                 "pipe:1",
             )
+
+            if helpers.DEBUG_MODE {
+                fmt.Printf("FFMPEG ARGS: %#v\n", cat.Args)
+            }
 
             // Convert wav to raw opus
             ro := exec.Command("ropus")
