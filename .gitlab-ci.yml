@@ -3,6 +3,9 @@ stages:
   - build
   - deploy
 
+variables:
+  GLIDE_HOME: /cache/glide
+
 before_script:
   - mkdir -p /go/src/git.lukas.moe/sn0w/Karen /cache/glide
   - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w/Karen
@@ -44,9 +47,9 @@ build:linux:
     expire_in: 15 mins
     paths:
       - karen.o
-  script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen
-    glide --home /cache/glide install
+  script:
+    cd /go/src/git.lukas.moe/sn0w/Karen && \
+    glide install && \
     ./build.sh -v
 
 build:osx:
@@ -61,8 +64,8 @@ build:osx:
       paths:
         - karen.xo
   script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen
-    glide --home /cache/glide install
+    cd /go/src/git.lukas.moe/sn0w/Karen && \
+    glide install && \
     ./build.sh -v
 
 build:windows:
@@ -77,8 +80,8 @@ build:windows:
       paths:
         - karen.exe
   script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen
-    glide --home /cache/glide install
+    cd /go/src/git.lukas.moe/sn0w/Karen && \
+    glide install && \
     ./build.sh -v
 
 collect_artifacts:
