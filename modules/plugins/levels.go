@@ -22,6 +22,7 @@ import (
     "image/gif"
     "image/jpeg"
     "github.com/nfnt/resize"
+    "github.com/Seklfreak/Robyul2/metrics"
 )
 
 type Levels struct {
@@ -202,6 +203,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             fmt.Sprintf("Profile for %s", targetUser.Username),
             fmt.Sprintf("%s.png", targetUser.ID), bytes.NewReader(buffer.Bytes()))
         helpers.Relax(err)
+
+        metrics.LevelImagesGeneratedCount.Add(1)
 
         return
     case "level", "levels": // [p]level <user> or [p]level top

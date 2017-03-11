@@ -65,6 +65,15 @@ var (
 
     // GalleryPostsSent increased with every link reposted
     GalleryPostsSent = expvar.NewInt("gallery_posts_sent")
+
+    // GalleriesCount counts all galleries in the db
+    MirrorsCount = expvar.NewInt("mirrors_count")
+
+    // GalleryPostsSent increased with every link reposted
+    MirrorsPostsSent = expvar.NewInt("mirrors_posts_sent")
+
+    // LevelImagesGeneratedCount increased with every level image generated
+    LevelImagesGeneratedCount = expvar.NewInt("levels_images_generated_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -155,5 +164,11 @@ func CollectRuntimeMetrics() {
         cursor.One(&cnt)
         cursor.Close()
         GalleriesCount.Set(int64(cnt))
+
+        cursor, err = rethink.Table("mirrors").Count().Run(helpers.GetDB())
+        helpers.Relax(err)
+        cursor.One(&cnt)
+        cursor.Close()
+        MirrorsCount.Set(int64(cnt))
     }
 }

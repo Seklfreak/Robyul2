@@ -248,7 +248,7 @@ TryNextMirror:
                                         AvatarURL: helpers.GetAvatarUrl(msg.Author),
                                     })
                                 helpers.Relax(err)
-                                metrics.GalleryPostsSent.Add(1)
+                                metrics.MirrorsPostsSent.Add(1)
                             }
                         }
                     }
