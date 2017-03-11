@@ -24,17 +24,13 @@ cyclo:
   stage: test
   image: sn0w/go-ci
   allow_failure: true
-  script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen
-    gocyclo -over 15 . | grep -v vendor
+  script: gocyclo -over 15 . | grep -v vendor
 
 misspell:
   stage: test
   image: sn0w/go-ci
   allow_failure: true
-  script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen
-    misspell . | grep -v vendor
+  script: misspell . | grep -v vendor
 
 build:linux:
   stage: build
@@ -47,10 +43,7 @@ build:linux:
     expire_in: 15 mins
     paths:
       - karen.o
-  script:
-    cd /go/src/git.lukas.moe/sn0w/Karen && \
-    glide install && \
-    ./build.sh -v
+  script: cd /go/src/git.lukas.moe/sn0w/Karen && glide install && ./build.sh -v
 
 build:osx:
   stage: build
@@ -63,10 +56,7 @@ build:osx:
       expire_in: 15 mins
       paths:
         - karen.xo
-  script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen && \
-    glide install && \
-    ./build.sh -v
+  script: cd /go/src/git.lukas.moe/sn0w/Karen && glide install && ./build.sh -v
 
 build:windows:
   stage: build
@@ -79,10 +69,7 @@ build:windows:
       expire_in: 15 mins
       paths:
         - karen.exe
-  script: |+
-    cd /go/src/git.lukas.moe/sn0w/Karen && \
-    glide install && \
-    ./build.sh -v
+  script: cd /go/src/git.lukas.moe/sn0w/Karen && glide install && ./build.sh -v
 
 collect_artifacts:
   stage: deploy
