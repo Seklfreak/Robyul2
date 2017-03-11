@@ -25,7 +25,7 @@ var (
         &plugins.Music{},
         &plugins.Osu{},
         &plugins.Ping{},
-        &plugins.Pool{},
+        &plugins.Poll{},
         &plugins.RandomCat{},
         &plugins.Ratelimit{},
         &plugins.Reminders{},

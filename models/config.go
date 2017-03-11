@@ -18,10 +18,10 @@ type Config struct {
     WelcomeNewUsersEnabled bool   `rethink:"welcome_new_users_enabled"`
     WelcomeNewUsersText    string `rethink:"welcome_new_users_text"`
 
-    // Pools contains all active pools for the guild,
-    // inactive pools are also stored but will be auto-deleted
+    // Polls contains all open polls for the guild,
+    // closed polls are also stored but will be auto-deleted
     // one day after its state changes to closed
-    Pools []*Pool `rethink:"pools"`
+    Polls []Poll `rethink:"polls"`
 }
 
 // Default is a helper for generating default config values
