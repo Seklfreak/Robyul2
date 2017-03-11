@@ -52,7 +52,7 @@ func GetPoll(guild, pollID string) (models.Poll, error) {
             return p, nil
         }
     }
-    return nil, errors.New("Poll not found")
+    return models.Poll{}, errors.New("Poll not found")
 }
 
 // UpdatePoll updates a poll
@@ -100,4 +100,42 @@ func RemovePollField(guild, pollID, fieldID string) {
         }
     }
     GuildSettingsSet(guild, settings)
+}
+
+// CanVotePoll returns true if the user didn't vote yet
+func CanVotePoll(guild, pollID, userID string) bool {
+    settings := GuildSettingsGetCached(guild)
+    for _, p := range settings.Polls {
+        if p.ID == pollID {
+            for _, participant := range p.Participants {
+                if participant.ID == userID {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+    return false
+}
+
+// PollTotalVotes returns the total votes for a poll
+func PollTotalVotes(guild, pollID string) int64 {
+    settings := GuildSettingsGetCached(guild)
+    for _, p := range settings.Polls {
+        if p.ID == pollID {
+            return p.TotalVotes
+        }
+    }
+    return 0
+}
+
+// PollTotalParticipants returns the total participants for a poll
+func PollTotalParticipants(guild, pollID string) int64 {
+    settings := GuildSettingsGetCached(guild)
+    for _, p := range settings.Polls {
+        if p.ID == pollID {
+            return p.TotalParticipants
+        }
+    }
+    return 0
 }

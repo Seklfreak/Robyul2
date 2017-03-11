@@ -3,10 +3,12 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "strings"
+	"git.lukas.moe/sn0w/Karen/models"
+	"git.lukas.moe/sn0w/Karen/helpers"
 )
 
 // Poll command usage:
-//  poll create <TITLE> /// <FIELD_1>, <FIELD_2>, <FIELD3_>  => creates a poll
+//  poll create <TITLE> /// <FIELD_1>, <FIELD_2>, <FIELD3_>,  => creates a poll
 //  poll remove <POOL_ID>                                    => removes a poll
 //  poll <POOL_ID> add field <FIELD>                         => adds a field
 //  poll <POOL_ID> remove field <FIELD_ID>                   => removes a field
@@ -19,13 +21,14 @@ type Poll struct {}
 //Commands func
 func (p *Poll) Commands() []string {
     return []string {
-        "poll",
+        "poll", 
     }
 }
 
 // Init func
 func (p *Poll) Init(s *discordgo.Session) {}
 
+// Action func 
 func (p *Poll) Action(command, content string, msg *discordgo.Message, session *discordgo.Session) {
     msgSplit := strings.Fields(content)
     if len(msgSplit) < 1 {
@@ -58,7 +61,42 @@ func (p *Poll) Action(command, content string, msg *discordgo.Message, session *
     }
 }
 
-func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo.Session) {}
+func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo.Session) {
+    msgSplit := strings.Fields(content)
+    msgSplit = msgSplit[1:]
+    title := []string{}
+    separator := 0
+    for i, v := range msgSplit {
+        if v != "///" {
+            title = append(title, v)
+        }
+        if v == "///" {
+            separator = i
+            break
+        }
+    }
+    rest := msgSplit[separator+1:]
+    fields := []models.PollField{}
+    temp := ""
+    for _, v := range rest {
+        if strings.HasSuffix(v, ",") {
+            if temp != "" {
+                temp += v[:len(v)-1]
+                fields = append(fields, helpers.NewPollField(temp))
+                temp = ""
+            } else {
+                fields = append(fields, helpers.NewPollField(v[:len(v)-1]))
+            }
+        } else {
+            temp += v + " "
+        }
+    }
+    channel, err := session.Channel(msg.ChannelID)
+    if err != nil {
+        return
+    }
+    helpers.NewPoll(strings.Join(title, " "), channel.GuildID, msg, fields...)
+}
 
 func (p *Poll) remove(content string, msg *discordgo.Message, session *discordgo.Session) {}
 
