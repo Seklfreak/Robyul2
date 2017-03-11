@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	pluginCache  map[string]*Plugin
-	triggerCache map[string]*TriggerPlugin
+    pluginCache  map[string]*Plugin
+    triggerCache map[string]*TriggerPlugin
 
-	PluginList = []Plugin{
+    PluginList = []Plugin{
         &plugins.About{},
         &plugins.Avatar{},
         &plugins.Calc{},
@@ -39,9 +39,9 @@ var (
         &plugins.UrbanDict{},
         &plugins.Weather{},
         &plugins.XKCD{},
-	}
+    }
 
-	TriggerPluginList = []TriggerPlugin{
+    TriggerPluginList = []TriggerPlugin{
         &triggers.CSS{},
         &triggers.Donate{},
         &triggers.Git{},
@@ -57,5 +57,5 @@ var (
         &triggers.Shrug{},
         &triggers.TableFlip{},
         &triggers.Triggered{},
-	}
+    }
 )
