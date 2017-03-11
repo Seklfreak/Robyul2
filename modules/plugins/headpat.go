@@ -1,19 +1,19 @@
 package plugins
 
 import (
-	"git.lukas.moe/sn0w/Karen/helpers"
-	"github.com/bwmarrin/discordgo"
+    "git.lukas.moe/sn0w/Karen/helpers"
+    "github.com/bwmarrin/discordgo"
     "fmt"
-	"strings"
+    "strings"
 )
 
 type Headpat struct{}
 
 func (h *Headpat) Commands() []string {
-	return []string{
-		"headpat",
-		"pat",
-	}
+    return []string{
+        "headpat",
+        "pat",
+    }
 }
 
 func (l *Headpat) Init(session *discordgo.Session) {
@@ -50,7 +50,7 @@ func (l *Headpat) Action(command string, content string, msg *discordgo.Message,
         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.pat-group"))
         return
     }
-    	// Case 4: no params || wrong params
-        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.who-to-pat"))
+    // Case 4: no params || wrong params
+    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.who-to-pat"))
 
 }
