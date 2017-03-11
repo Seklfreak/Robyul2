@@ -2,31 +2,34 @@ package helpers
 
 import (
     "time"
-    "github.com/bwmarrin/discordgo"
     "git.lukas.moe/sn0w/Karen/models"
     "errors"
 )
 
 // NewPoll creates a pool for the guild
-func NewPoll(title, guild string, msg *discordgo.Message, fields ...models.PollField) {
+func NewPoll(title, guild, id, author string, fields ...models.PollField) {
     settings := GuildSettingsGetCached(guild)
     settings.Polls = append(settings.Polls, models.Poll{
-        ID:        msg.ID,
+        ID:        id,
         Title:     title,
         Fields:    fields,
         Open:      true,
         CreatedAt: time.Now(),
-        CreatedBy: msg.Author.ID,
+        CreatedBy: author,
     })
     GuildSettingsSet(guild, settings)
 }
 
-//NewPollField returns a new PollField
-func NewPollField(title string) models.PollField {
-    return models.PollField{
-        ID: "", // TODO: generate some kind of id?
-        Title: title,
-        Votes: 0,
+//NewPollFieldGenerator returns a new PollField
+func NewPollFieldGenerator() func(title string) models.PollField {
+    id := -1
+    return func(title string) models.PollField {
+            id++
+            return models.PollField{
+            ID: id,
+            Title: title,
+            Votes: 0,
+        }
     }
 }
 
@@ -67,24 +70,9 @@ func UpdatePoll(guild string, poll models.Poll) {
     GuildSettingsSet(guild, settings)
 }
 
-// AddPollField adds the new field
-func AddPollField(guild, pollID, title string) {
-    settings := GuildSettingsGetCached(guild)
-    for _, p := range settings.Polls {
-        if p.ID == pollID {
-            p.Fields = append(p.Fields, models.PollField{
-                ID:    "", // TODO: find some kind of ID
-                Title: title,
-                Votes: 0,
-            })
-            break
-        }
-    }
-    GuildSettingsSet(guild, settings)
-}
 
 // RemovePollField removes the pool field with ID = fieldID
-func RemovePollField(guild, pollID, fieldID string) {
+func RemovePollField(guild, pollID string, fieldID int) {
     settings := GuildSettingsGetCached(guild)
     for _, p := range settings.Polls {
         if p.ID == pollID {
@@ -138,4 +126,9 @@ func PollTotalParticipants(guild, pollID string) int64 {
         }
     }
     return 0
+}
+
+// PollCount returns the number of polls currently has
+func PollCount(guild string) int64 {
+    return int64(len(GuildSettingsGetCached(guild).Polls))
 }

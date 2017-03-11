@@ -35,7 +35,7 @@ type Poll struct {
 // PollField is a field for a Poll
 type PollField struct {
     // TODO: Choose how this id will be handled/generated
-    ID    string `rethink:"id"`
+    ID    int `rethink:"id"`
     Title string `rethink:"name"`
     Votes int64  `rehink:"votes"`
 }
