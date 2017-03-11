@@ -6,8 +6,10 @@ stages:
 before_script:
   - mkdir -p /go/src/git.lukas.moe/sn0w/Karen /cache/glide
   - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w/Karen
+  - mkdir -p /builds/$CI_PROJECT_PATH
 
 after_script:
+  - rm -r /builds/$CI_PROJECT_PATH
   - mv /go/src/git.lukas.moe/sn0w/Karen /builds/$CI_PROJECT_PATH
 
 cache:
@@ -44,7 +46,7 @@ build:linux:
       - karen.o
   script: |+
     cd /go/src/git.lukas.moe/sn0w/Karen
-    glide install --home /cache/glide
+    glide --home /cache/glide install
     ./build.sh -v
 
 build:osx:
@@ -60,7 +62,7 @@ build:osx:
         - karen.xo
   script: |+
     cd /go/src/git.lukas.moe/sn0w/Karen
-    glide install --home /cache/glide
+    glide --home /cache/glide install
     ./build.sh -v
 
 build:windows:
@@ -76,7 +78,7 @@ build:windows:
         - karen.exe
   script: |+
     cd /go/src/git.lukas.moe/sn0w/Karen
-    glide install --home /cache/glide
+    glide --home /cache/glide install
     ./build.sh -v
 
 collect_artifacts:
