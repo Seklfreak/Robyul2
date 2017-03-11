@@ -22,7 +22,7 @@ Mirror: https://github.com/sn0w/Karen
   <br>
   Got any problems or just want to chat with me and other devs?<br>
   Join the Discord Server! :)<br>
-  <a href="https://discord.meetkaren.xyz">
+  <a href="https://discord.karen.vc">
     <img src="https://discordapp.com/api/guilds/180818466847064065/widget.png">
   </a>
 </p>
@@ -52,7 +52,7 @@ I want to create a bot that:
  - Can play music for free, forever. (Not like that freemium stuff Mee6 does)
  - Will **never** use more resources than absolutely needed
  - Never crashes (or to be precise: be able to recover from almost any `panic()`)
- 
+
 To archieve these goals I defined some basic rules:
  - Plugins are compiled into the bot instead of lazy-loading
  - All commands are stateless
@@ -65,7 +65,7 @@ To archieve these goals I defined some basic rules:
  - If you wait for something in an endless loop let it `sleep()` as long as possible between iterations.
  - A function's cyclomatic complexity should be as low as possible
  - A function should have as few responsibilities as possible
- 
+
 ### Achievements
 
 - Never exceeded 1% CPU usage at the time of writing.

@@ -80,7 +80,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             {Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
 
             // Link
-            {Name: "Want more stats and awesome graphs?", Value: "Visit [stats.meetkaren.xyz](https://stats.meetkaren.xyz)", Inline: false},
+            {Name: "Want more stats and awesome graphs?", Value: "Visit [stats.karen.vc](https://stats.karen.vc)", Inline: false},
         },
     })
 }
