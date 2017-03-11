@@ -521,7 +521,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Inform users
             session.ChannelMessageSend(
                 channel.ID,
-                "`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
+                "`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://karen.vc/music>",
             )
             go m.waitForSong(channel.ID, guild.ID, match, msg, session)
             return
@@ -555,7 +555,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if songPresent {
             session.ChannelMessageSend(
                 channel.ID,
-                "`"+match.Title+"` is already in your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
+                "`"+match.Title+"` is already in your download-queue.\nLive progress at: <https://karen.vc/music>",
             )
             return
         }
@@ -566,7 +566,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         session.ChannelMessageSend(
             channel.ID,
-            "`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://meetkaren.xyz/music>",
+            "`"+match.Title+"` was added to your download-queue.\nLive progress at: <https://karen.vc/music>",
         )
         go m.waitForSong(channel.ID, guild.ID, match, msg, session)
         break

@@ -39,8 +39,8 @@
       "refreshed": ":cyclone: Refreshed!"
     },
     "help": [
-      "<@%s> Check out <http://meetkaren.xyz/commands>",
-      "<@%s> It's at <http://meetkaren.xyz/commands> :smiley:"
+      "<@%s> Check out <http://karen.vc/commands>",
+      "<@%s> It's at <http://karen.vc/commands> :smiley:"
     ]
   },
   "triggers": {
