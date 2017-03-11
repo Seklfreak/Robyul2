@@ -8,8 +8,8 @@ variables:
   CI_DEBUG_TRACE: "true"
 
 before_script:
-  - mkdir -p /go/src/git.lukas.moe/sn0w/Karen /cache/glide
-  - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w/Karen
+  - mkdir -p /go/src/git.lukas.moe/sn0w /cache/glide
+  - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w
   - mkdir -p /builds/$CI_PROJECT_PATH
 
 after_script:
