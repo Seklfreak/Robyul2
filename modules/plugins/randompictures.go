@@ -39,7 +39,7 @@ var (
 
 const (
     driveSearchText string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\")"
-    driveFieldsText string = "nextPageToken, files(id, name, size, modifiedTime, imageMediaMetadata)"
+    driveFieldsText string = "nextPageToken, files(id, name, size, modifiedTime)"
 )
 
 func (rp *RandomPictures) Commands() []string {
@@ -160,6 +160,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
             slice.Sort(guildRoles, func(i, j int) bool {
                 return guildRoles[i].Position > guildRoles[j].Position
             })
+        CheckRoles:
             for _, guildRole := range guildRoles {
                 for _, userRole := range targetMember.Roles {
                     if guildRole.ID == userRole {
@@ -168,6 +169,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                                 for _, alias := range sourceEntry.Aliases {
                                     if strings.Contains(strings.ToLower(guildRole.Name), strings.ToLower(alias)) {
                                         matchEntry = sourceEntry
+                                        break CheckRoles
                                     }
                                 }
                             }
@@ -243,8 +245,10 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                     }
                     listText += fmt.Sprintf("Found **%d** Sources in total and **%s** Cached Images.", totalSources, humanize.Comma(int64(totalCachedImages)))
 
-                    _, err = session.ChannelMessageSend(msg.ChannelID, listText)
-                    helpers.Relax(err)
+                    for _, page := range helpers.Pagify(listText, "\n") {
+                        _, err = session.ChannelMessageSend(msg.ChannelID, page)
+                        helpers.Relax(err)
+                    }
                 })
                 return
             case "refresh": // [p]randompictures refresh <source id>
