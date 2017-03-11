@@ -86,5 +86,5 @@ func GetTimeFromSnowflake(id string) time.Time {
     iid, err := strconv.ParseInt(id, 10, 64)
     Relax(err)
 
-    return time.Unix(((int64(iid)>>22)+DISCORD_EPOCH)/1000, 0).UTC()
+    return time.Unix(((iid>>22)+DISCORD_EPOCH)/1000, 0).UTC()
 }
