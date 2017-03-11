@@ -6,7 +6,8 @@
     "key": ""
   },
   "google": {
-    "api_key": ""
+    "api_key": "",
+    "client_credentials_json_location": ""
   },
   "rethink": {
     "db": "YOUR_DB_NAME",

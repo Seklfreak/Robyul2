@@ -26,6 +26,7 @@ var migrations = []helpers.Callback{
     m15_create_table_levels_serverusers,
     m16_create_table_galleries,
     m17_create_table_mirrors,
+    m18_create_table_randompictures_sources,
 }
 
 // Run executes all registered migrations

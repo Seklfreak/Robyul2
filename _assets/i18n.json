@@ -579,6 +579,13 @@
       "delete-not-found": "I wasn't able to find this mirror. :thinking:",
       "delete-success": "I successfully removed the mirror from the database.",
       "refreshed-config": "I loaded the newest config from the Database. :ok_hand:"
+    },
+    "randompictures": {
+      "pic-no-picture": "I wasn't able to find a picture for you. :disappointed:",
+      "list-no-entries-error": "No sources set up on this server yet! :mag:",
+      "refresh-success": "Source successfully refresh! :ok_hand:",
+      "refresh-not-found-error": "I wasn't able to find this source. :no_mouth:",
+      "refresh-started": "Refreshing started, this may take a while! :sleeping:"
     }
   }
 }

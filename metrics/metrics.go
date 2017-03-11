@@ -73,7 +73,13 @@ var (
     MirrorsPostsSent = expvar.NewInt("mirrors_posts_sent")
 
     // LevelImagesGeneratedCount increased with every level image generated
-    LevelImagesGeneratedCount = expvar.NewInt("levels_images_generated_count")
+    LevelImagesGenerated = expvar.NewInt("levels_images_generated")
+
+    // RandomPictureSourcesCount counts all randompicture sources connected
+    RandomPictureSourcesCount = expvar.NewInt("randompictures_sources_count")
+
+    // RandomPictureSourcesImagesCachedCount counts all randompicture images in cache
+    RandomPictureSourcesImagesCachedCount = expvar.NewInt("randompictures_sources_imagescached_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -170,5 +176,11 @@ func CollectRuntimeMetrics() {
         cursor.One(&cnt)
         cursor.Close()
         MirrorsCount.Set(int64(cnt))
+
+        cursor, err = rethink.Table("randompictures_sources").Count().Run(helpers.GetDB())
+        helpers.Relax(err)
+        cursor.One(&cnt)
+        cursor.Close()
+        RandomPictureSourcesCount.Set(int64(cnt))
     }
 }

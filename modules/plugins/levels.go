@@ -204,7 +204,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             fmt.Sprintf("%s.png", targetUser.ID), bytes.NewReader(buffer.Bytes()))
         helpers.Relax(err)
 
-        metrics.LevelImagesGeneratedCount.Add(1)
+        metrics.LevelImagesGenerated.Add(1)
 
         return
     case "level", "levels": // [p]level <user> or [p]level top
