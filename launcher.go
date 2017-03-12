@@ -37,6 +37,7 @@ func main() {
     // Check if the bot is being debugged
     if config.Path("debug").Data().(bool) {
         helpers.DEBUG_MODE = true
+        Logger.DEBUG_MODE = true
     }
 
     // Print UA
