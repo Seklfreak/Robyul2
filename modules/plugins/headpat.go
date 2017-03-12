@@ -16,11 +16,11 @@ func (h *Headpat) Commands() []string {
     }
 }
 
-func (l *Headpat) Init(session *discordgo.Session) {
+func (h *Headpat) Init(session *discordgo.Session) {
 
 }
 
-func (l *Headpat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (h *Headpat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Check mentions in the message
     mentionUsers := len(msg.Mentions)
     mentionRoles := len(msg.MentionRoles)
