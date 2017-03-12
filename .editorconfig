@@ -8,6 +8,6 @@ indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
 
-[_assets/i18n.json]
+[*.{json,yml,yaml}]
 indent_style = space
 indent_size = 2

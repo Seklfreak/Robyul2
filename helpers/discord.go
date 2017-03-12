@@ -3,6 +3,14 @@ package helpers
 import (
     "git.lukas.moe/sn0w/Karen/cache"
     "github.com/bwmarrin/discordgo"
+    "strings"
+    "fmt"
+    "time"
+    "strconv"
+)
+
+const (
+    DISCORD_EPOCH int64 = 1420070400000
 )
 
 var botAdmins = []string{
@@ -54,4 +62,29 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
     }
 
     cb()
+}
+
+func GetAvatarUrl(user *discordgo.User) string {
+    return GetAvatarUrlWithSize(user, 1024)
+}
+
+func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
+    if user.Avatar == "" {
+        return ""
+    }
+
+    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=%d"
+
+    if strings.HasPrefix(user.Avatar, "a_") {
+        return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif", size)
+    }
+
+    return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "webp", size)
+}
+
+func GetTimeFromSnowflake(id string) time.Time {
+    iid, err := strconv.ParseInt(id, 10, 64)
+    Relax(err)
+
+    return time.Unix(((int64(iid)>>22)+DISCORD_EPOCH)/1000, 0).UTC()
 }

@@ -3,13 +3,17 @@ stages:
   - build
   - deploy
 
+variables:
+  GLIDE_HOME: /cache/glide
+
 before_script:
-  - mkdir -p /go/src/git.lukas.moe/sn0w/Karen /cache/glide
-  - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w/Karen
-  - cd /go/src/git.lukas.moe/sn0w/Karen
-  - glide --home /cache/glide install
+
+  - mkdir -p /go/src/git.lukas.moe/sn0w /cache/glide
+  - mv /builds/$CI_PROJECT_PATH /go/src/git.lukas.moe/sn0w
+  - mkdir -p /builds/$CI_PROJECT_PATH
 
 after_script:
+  - rm -r /builds/$CI_PROJECT_PATH
   - mv /go/src/git.lukas.moe/sn0w/Karen /builds/$CI_PROJECT_PATH
 
 cache:
@@ -36,12 +40,11 @@ build:linux:
     GOOS: linux
     GOARCH: amd64
     GOTARGET: karen.o
-  script:
-    - ./build.sh -v
   artifacts:
     expire_in: 15 mins
     paths:
       - karen.o
+  script: cd /go/src/git.lukas.moe/sn0w/Karen && glide install && ./build.sh -v
 
 build:osx:
   stage: build
@@ -50,12 +53,11 @@ build:osx:
     GOOS: darwin
     GOARCH: amd64
     GOTARGET: karen.xo
-  script:
-    - ./build.sh -v
   artifacts:
       expire_in: 15 mins
       paths:
         - karen.xo
+  script: cd /go/src/git.lukas.moe/sn0w/Karen && glide install && ./build.sh -v
 
 build:windows:
   stage: build
@@ -64,12 +66,11 @@ build:windows:
     GOOS: windows
     GOARCH: amd64
     GOTARGET: karen.exe
-  script:
-    - ./build.sh -v
   artifacts:
       expire_in: 15 mins
       paths:
         - karen.exe
+  script: cd /go/src/git.lukas.moe/sn0w/Karen && glide install && ./build.sh -v
 
 collect_artifacts:
   stage: deploy
@@ -82,9 +83,9 @@ collect_artifacts:
   only:
     - tags
   artifacts:
-      expire_in: 2 weeks
-      paths:
-        - karen.*
+    expire_in: 2 weeks
+    paths:
+      - karen.*
   before_script:
     - exit 0
   after_script:
