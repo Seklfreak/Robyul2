@@ -4,7 +4,7 @@ set -e
 
 BOT_VERSION=$(git describe --tags)
 BUILD_TIME=$(date +%T-%D)
-BUILD_USER="$USER"
+BUILD_USER=$(whoami)
 BUILD_HOST=$(hostname)
 
 if [[ "$CI" == "true" ]]; then
