@@ -559,7 +559,8 @@
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! :nerd:",
       "top-server-no-stats": "No stats for this server yet. Chat more! :nerd:",
-      "top-server-embed-title": "Top chatters on this server",
+      "top-server-embed-title": "Top #10",
+      "global-top-server-embed-title": "Global Top #10",
       "user-embed-title": "Stats of %s",
       "embed-footer": "Robyul is currently on %d servers."
     },

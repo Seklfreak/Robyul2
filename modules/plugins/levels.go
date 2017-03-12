@@ -23,6 +23,7 @@ import (
     "image/jpeg"
     "github.com/nfnt/resize"
     "github.com/Seklfreak/Robyul2/metrics"
+    "sort"
 )
 
 type Levels struct {
@@ -243,7 +244,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Color: 0x0FADED,
                     Title: helpers.GetText("plugins.levels.top-server-embed-title"),
                     //Description: "",
-                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
+                    //Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
                     Fields: []*discordgo.MessageEmbedField{},
                 }
 
@@ -251,13 +252,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 for _, levelsServersUser := range levelsServersUsers {
                     currentMember, err := session.GuildMember(channel.GuildID, levelsServersUser.UserID)
                     if err != nil {
+                        logger.ERROR.L("levels", fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUser.UserID, err.Error()))
                         continue
                     }
                     fullUsername := currentMember.User.Username
                     if currentMember.Nick != "" {
                         fullUsername += " ~ " + currentMember.Nick
                     }
-                    helpers.Relax(err)
                     topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:   fmt.Sprintf("#%d: %s", i+1, fullUsername),
                         Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUser.Exp)),
@@ -270,6 +271,62 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
 
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topLevelEmbed)
+                helpers.Relax(err)
+                return
+            case "global-leaderboard", "global-top", "globaltop":
+                var levelsUsers []DB_Levels_ServerUser
+                listCursor, err := rethink.Table("levels_serverusers").Run(helpers.GetDB())
+                helpers.Relax(err)
+                defer listCursor.Close()
+                err = listCursor.All(&levelsUsers)
+
+                if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
+                    helpers.Relax(err)
+                    return
+                } else if err != nil {
+                    helpers.Relax(err)
+                }
+
+                totalExpMap := make(map[string]int64, 0)
+                for _, levelsUser := range levelsUsers {
+                    if _, ok := totalExpMap[levelsUser.UserID]; ok {
+                        totalExpMap[levelsUser.UserID] += levelsUser.Exp
+                    } else {
+                        totalExpMap[levelsUser.UserID] = levelsUser.Exp
+                    }
+                }
+
+                rankedTotalExpMap := m.rankMapByExp(totalExpMap)
+
+                globalTopLevelEmbed := &discordgo.MessageEmbed{
+                    Color: 0x0FADED,
+                    Title: helpers.GetText("plugins.levels.global-top-server-embed-title"),
+                    //Description: "",
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
+                    Fields: []*discordgo.MessageEmbedField{},
+                }
+
+                i := 0
+                for _, userRanked := range rankedTotalExpMap {
+                    currentUser, err := session.User(userRanked.Key)
+                    if err != nil {
+                        logger.ERROR.L("levels", fmt.Sprintf("error fetching user data for user #%s: %s", userRanked.Key, err.Error()))
+                        continue
+                    }
+                    fullUsername := currentUser.Username
+                    globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
+                        Name:   fmt.Sprintf("#%d: %s", i+1, fullUsername),
+                        Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(userRanked.Value)),
+                        Inline: false,
+                    })
+                    i++
+                    if i >= 10 {
+                        break
+                    }
+                }
+
+                _, err = session.ChannelMessageSendEmbed(msg.ChannelID, globalTopLevelEmbed)
                 helpers.Relax(err)
                 return
             case "process-history": // [p]level process-history
@@ -573,6 +630,28 @@ func (m *Levels) getRandomExpForMessage() int64 {
     rand.Seed(time.Now().Unix())
     return int64(rand.Intn(max-min) + min)
 }
+
+func (m *Levels) rankMapByExp(exp map[string]int64) PairList {
+    pl := make(PairList, len(exp))
+    i := 0
+    for k, v := range exp {
+        pl[i] = Pair{k, v}
+        i++
+    }
+    sort.Sort(sort.Reverse(pl))
+    return pl
+}
+
+type Pair struct {
+    Key   string
+    Value int64
+}
+
+type PairList []Pair
+
+func (p PairList) Len() int           { return len(p) }
+func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
+func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func (b *Levels) BucketInit() {
     b.Lock()
