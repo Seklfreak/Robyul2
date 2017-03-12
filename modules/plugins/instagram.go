@@ -127,9 +127,9 @@ func (m *Instagram) checkInstagramFeedsLoop() {
             changes := false
             logger.VERBOSE.L("instagram", fmt.Sprintf("checking Instagram Account @%s", entry.Username))
 
-            instagramUser := m.lookupInstagramUser(entry.Username)
-            if instagramUser.Username == "" {
-                logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed", entry.Username))
+            err, instagramUser := m.lookupInstagramUser(entry.Username)
+            if err != nil || instagramUser.Username == "" {
+                logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
                 continue
             }
 
@@ -189,8 +189,8 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 helpers.Relax(err)
                 // get instagram account
                 instagramUsername := strings.Replace(args[1], "@", "", 1)
-                instagramUser := m.lookupInstagramUser(instagramUsername)
-                if instagramUser.Username == "" {
+                err, instagramUser := m.lookupInstagramUser(instagramUsername)
+                if err != nil || instagramUser.Username == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
                     return
                 }
@@ -262,9 +262,9 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
         default:
             session.ChannelTyping(msg.ChannelID)
             instagramUsername := strings.Replace(args[0], "@", "", 1)
-            instagramUser := m.lookupInstagramUser(instagramUsername)
+            err, instagramUser := m.lookupInstagramUser(instagramUsername)
 
-            if instagramUser.Username == "" {
+            if err != nil || instagramUser.Username == "" {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
                 return
             }
@@ -302,7 +302,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 })
             }
             _, _ = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)))
-            _, err := session.ChannelMessageSendEmbed(msg.ChannelID, accountEmbed)
+            _, err = session.ChannelMessageSendEmbed(msg.ChannelID, accountEmbed)
             helpers.Relax(err)
             return
         }
@@ -443,37 +443,55 @@ func (m *Instagram) login() {
     rankToken = fmt.Sprintf("%s_%s", usernameId, usedUuid)
 }
 
-func (m *Instagram) lookupInstagramUser(username string) Instagram_User {
+func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User) {
     var instagramUser Instagram_User
 
     userEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("users/%s/usernameinfo/", username))
     request, err := http.NewRequest("GET", userEndpoint, nil)
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     m.applyHeaders(request)
     response, err := httpClient.Do(request)
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     buf := bytes.NewBuffer(nil)
     _, err = io.Copy(buf, response.Body)
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     jsonResult, err := gabs.ParseJSON(buf.Bytes())
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     json.Unmarshal([]byte(jsonResult.Path("user").String()), &instagramUser)
 
     userFeedEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/?max_id=%s&min_timestamp=%s&rank_token=%s&ranked_content=true", strconv.Itoa(instagramUser.Pk), "", "", rankToken))
     request, err = http.NewRequest("GET", userFeedEndpoint, nil)
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     m.applyHeaders(request)
     response, err = httpClient.Do(request)
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     buf = bytes.NewBuffer(nil)
     _, err = io.Copy(buf, response.Body)
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     jsonResult, err = gabs.ParseJSON(buf.Bytes())
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
 
     var instagramPosts []Instagram_Post
     instagramPostsJsons, err := jsonResult.Path("items").Children()
-    helpers.Relax(err)
+    if err != nil {
+        return err, instagramUser
+    }
     for _, instagramPostJson := range instagramPostsJsons {
         var instagramPost Instagram_Post
         json.Unmarshal([]byte(instagramPostJson.String()), &instagramPost)
@@ -481,7 +499,7 @@ func (m *Instagram) lookupInstagramUser(username string) Instagram_User {
     }
     instagramUser.Posts = instagramPosts
 
-    return instagramUser
+    return nil, instagramUser
 }
 
 func (m *Instagram) getEntryBy(key string, id string) DB_Instagram_Entry {
