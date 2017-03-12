@@ -26,7 +26,7 @@ func (h *Headpat) Action(command string, content string, msg *discordgo.Message,
     mentionRoles := len(msg.MentionRoles)
 
     // Delete spaces from params
-    params := strings.Trim(content, " ")
+    params := strings.TrimSpace(content)
 
     // Case 1: pat yourself
     if params == "me" || mentionUsers == 1 && (msg.Author.Username == msg.Mentions[0].Username) {
