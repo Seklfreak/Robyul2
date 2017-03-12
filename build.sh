@@ -10,7 +10,7 @@ BUILD_HOST=$(hostname)
 if [[ "$CI" == "true" ]]; then
     GOTARGET="${GOTARGET?:'A target is mandatory'}"
 else
-    GOTARGET="Karen"
+    GOTARGET="karen"
 fi
 
 set -x

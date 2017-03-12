@@ -5,9 +5,9 @@ $BUILD_HOST=$env:ComputerName
 $TARGET=""
 
 if (Get-Variable GOTARGET -Scope Global -ErrorAction SilentlyContinue) {
-    $TARGET = $env:GOTARGET    
+    $TARGET = $env:GOTARGET
 } else {
-    $TARGET = "Karen.exe"
+    $TARGET = "karen.exe"
 }
 
 go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
