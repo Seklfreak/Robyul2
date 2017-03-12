@@ -99,45 +99,51 @@ func (m *Twitch) Commands() []string {
 }
 
 func (m *Twitch) Init(session *discordgo.Session) {
-    go func() {
-        defer helpers.Recover()
+    go m.checkTwitchFeedsLoop()
+    logger.PLUGIN.L("twitch", "Started twitch loop (60s)")
+}
+func (m *Twitch) checkTwitchFeedsLoop() {
+    defer func() {
+        helpers.Recover()
 
-        for {
-            var entryBucket []DB_TwitchChannel
-            cursor, err := rethink.Table("twitch").Run(helpers.GetDB())
-            helpers.Relax(err)
+        logger.ERROR.L("twitch", "The checkTwitchFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.checkTwitchFeedsLoop()
+    }()
 
-            err = cursor.All(&entryBucket)
-            helpers.Relax(err)
+    for {
+        var entryBucket []DB_TwitchChannel
+        cursor, err := rethink.Table("twitch").Run(helpers.GetDB())
+        helpers.Relax(err)
 
-            // TODO: Check multiple entries at once
-            for _, entry := range entryBucket {
-                changes := false
-                logger.VERBOSE.L("twitch", fmt.Sprintf("checking Twitch Channel %s", entry.TwitchChannelName))
-                twitchStatus := m.getTwitchStatus(entry.TwitchChannelName)
-                if entry.IsLive == false {
-                    if twitchStatus.Stream.ID != 0 {
-                        go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
-                        entry.IsLive = true
-                        changes = true
-                    }
-                } else {
-                    if twitchStatus.Stream.ID == 0 {
-                        entry.IsLive = false
-                        changes = true
-                    }
+        err = cursor.All(&entryBucket)
+        helpers.Relax(err)
+
+        // TODO: Check multiple entries at once
+        for _, entry := range entryBucket {
+            changes := false
+            logger.VERBOSE.L("twitch", fmt.Sprintf("checking Twitch Channel %s", entry.TwitchChannelName))
+            twitchStatus := m.getTwitchStatus(entry.TwitchChannelName)
+            if entry.IsLive == false {
+                if twitchStatus.Stream.ID != 0 {
+                    go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
+                    entry.IsLive = true
+                    changes = true
                 }
-
-                if changes == true {
-                    m.setEntry(entry)
+            } else {
+                if twitchStatus.Stream.ID == 0 {
+                    entry.IsLive = false
+                    changes = true
                 }
             }
 
-            time.Sleep(60 * time.Second)
+            if changes == true {
+                m.setEntry(entry)
+            }
         }
-    }()
 
-    logger.PLUGIN.L("twitch", "Started twitch loop (60s)")
+        time.Sleep(60 * time.Second)
+    }
 }
 
 func (m *Twitch) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

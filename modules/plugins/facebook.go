@@ -60,59 +60,65 @@ func (m *Facebook) Commands() []string {
 }
 
 func (m *Facebook) Init(session *discordgo.Session) {
-    go func() {
-        defer helpers.Recover()
+    go m.checkFacebookFeedsLoop()
+    logger.PLUGIN.L("facebook", "Started Facebook loop (10m)")
+}
+func (m *Facebook) checkFacebookFeedsLoop() {
+    defer func() {
+        helpers.Recover()
 
-        for {
-            entryBucket := make([]DB_Facebook_Page, 0)
-            cursor, err := rethink.Table("facebook").Run(helpers.GetDB())
-            helpers.Relax(err)
-
-            err = cursor.All(&entryBucket)
-            helpers.Relax(err)
-
-            // TODO: Check multiple entries at once
-            for _, entry := range entryBucket {
-                changes := false
-                logger.VERBOSE.L("facebook", fmt.Sprintf("checking Facebook Page %s", entry.Username))
-
-                facebookPage, err := m.lookupFacebookPage(entry.Username)
-                if err != nil {
-                    logger.ERROR.L("facebook", fmt.Sprintf("updating facebook account %s failed: %s", entry.Username, err.Error()))
-                    continue
-                }
-
-                // https://github.com/golang/go/wiki/SliceTricks#reversing
-                for i := len(facebookPage.Posts)/2 - 1; i >= 0; i-- {
-                    opp := len(facebookPage.Posts) - 1 - i
-                    facebookPage.Posts[i], facebookPage.Posts[opp] = facebookPage.Posts[opp], facebookPage.Posts[i]
-                }
-
-                for _, post := range facebookPage.Posts {
-                    postAlreadyPosted := false
-                    for _, postedPost := range entry.PostedPosts {
-                        if postedPost.ID == post.ID {
-                            postAlreadyPosted = true
-                        }
-                    }
-                    if postAlreadyPosted == false {
-                        logger.VERBOSE.L("facebook", fmt.Sprintf("Posting Post: #%s", post.ID))
-                        entry.PostedPosts = append(entry.PostedPosts, DB_Facebook_Post{ID: post.ID, CreatedAt: post.CreatedAt})
-                        changes = true
-                        go m.postPostToChannel(entry.ChannelID, post, facebookPage)
-                    }
-
-                }
-                if changes == true {
-                    m.setEntry(entry)
-                }
-            }
-
-            time.Sleep(10 * time.Minute)
-        }
+        logger.ERROR.L("facebook", "The checkFacebookFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.checkFacebookFeedsLoop()
     }()
 
-    logger.PLUGIN.L("facebook", "Started Facebook loop (10m)")
+    for {
+        entryBucket := make([]DB_Facebook_Page, 0)
+        cursor, err := rethink.Table("facebook").Run(helpers.GetDB())
+        helpers.Relax(err)
+
+        err = cursor.All(&entryBucket)
+        helpers.Relax(err)
+
+        // TODO: Check multiple entries at once
+        for _, entry := range entryBucket {
+            changes := false
+            logger.VERBOSE.L("facebook", fmt.Sprintf("checking Facebook Page %s", entry.Username))
+
+            facebookPage, err := m.lookupFacebookPage(entry.Username)
+            if err != nil {
+                logger.ERROR.L("facebook", fmt.Sprintf("updating facebook account %s failed: %s", entry.Username, err.Error()))
+                continue
+            }
+
+            // https://github.com/golang/go/wiki/SliceTricks#reversing
+            for i := len(facebookPage.Posts)/2 - 1; i >= 0; i-- {
+                opp := len(facebookPage.Posts) - 1 - i
+                facebookPage.Posts[i], facebookPage.Posts[opp] = facebookPage.Posts[opp], facebookPage.Posts[i]
+            }
+
+            for _, post := range facebookPage.Posts {
+                postAlreadyPosted := false
+                for _, postedPost := range entry.PostedPosts {
+                    if postedPost.ID == post.ID {
+                        postAlreadyPosted = true
+                    }
+                }
+                if postAlreadyPosted == false {
+                    logger.VERBOSE.L("facebook", fmt.Sprintf("Posting Post: #%s", post.ID))
+                    entry.PostedPosts = append(entry.PostedPosts, DB_Facebook_Post{ID: post.ID, CreatedAt: post.CreatedAt})
+                    changes = true
+                    go m.postPostToChannel(entry.ChannelID, post, facebookPage)
+                }
+
+            }
+            if changes == true {
+                m.setEntry(entry)
+            }
+        }
+
+        time.Sleep(10 * time.Minute)
+    }
 }
 
 func (m *Facebook) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

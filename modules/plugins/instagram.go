@@ -101,59 +101,66 @@ func (m *Instagram) Commands() []string {
 func (m *Instagram) Init(session *discordgo.Session) {
     m.login()
 
-    go func() {
-        defer helpers.Recover()
+    go m.checkInstagramFeedsLoop()
+    logger.PLUGIN.L("instagram", "Started Instagram loop (10m)")
+}
 
-        for {
-            entryBucket := make([]DB_Instagram_Entry, 0)
-            cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
-            helpers.Relax(err)
+func (m *Instagram) checkInstagramFeedsLoop() {
+    defer func() {
+        helpers.Recover()
 
-            err = cursor.All(&entryBucket)
-            helpers.Relax(err)
-
-            // TODO: Check multiple entries at once
-            for _, entry := range entryBucket {
-                changes := false
-                logger.VERBOSE.L("instagram", fmt.Sprintf("checking Instagram Account @%s", entry.Username))
-
-                instagramUser := m.lookupInstagramUser(entry.Username)
-                if instagramUser.Username == "" {
-                    logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed", entry.Username))
-                    continue
-                }
-
-                // https://github.com/golang/go/wiki/SliceTricks#reversing
-                for i := len(instagramUser.Posts)/2 - 1; i >= 0; i-- {
-                    opp := len(instagramUser.Posts) - 1 - i
-                    instagramUser.Posts[i], instagramUser.Posts[opp] = instagramUser.Posts[opp], instagramUser.Posts[i]
-                }
-
-                for _, post := range instagramUser.Posts {
-                    postAlreadyPosted := false
-                    for _, postedPosts := range entry.PostedPosts {
-                        if postedPosts.ID == post.ID {
-                            postAlreadyPosted = true
-                        }
-                    }
-                    if postAlreadyPosted == false {
-                        logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Post: #%s", post.ID))
-                        entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
-                        changes = true
-                        go m.postPostToChannel(entry.ChannelID, post, instagramUser)
-                    }
-
-                }
-                if changes == true {
-                    m.setEntry(entry)
-                }
-            }
-
-            time.Sleep(10 * time.Minute)
-        }
+        logger.ERROR.L("instagram", "The checkInstagramFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.checkInstagramFeedsLoop()
     }()
 
-    logger.PLUGIN.L("instagram", "Started Instagram loop (10m)")
+    for {
+        entryBucket := make([]DB_Instagram_Entry, 0)
+        cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
+        helpers.Relax(err)
+
+        err = cursor.All(&entryBucket)
+        helpers.Relax(err)
+
+        // TODO: Check multiple entries at once
+        for _, entry := range entryBucket {
+            changes := false
+            logger.VERBOSE.L("instagram", fmt.Sprintf("checking Instagram Account @%s", entry.Username))
+
+            instagramUser := m.lookupInstagramUser(entry.Username)
+            if instagramUser.Username == "" {
+                logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed", entry.Username))
+                continue
+            }
+
+            // https://github.com/golang/go/wiki/SliceTricks#reversing
+            for i := len(instagramUser.Posts)/2 - 1; i >= 0; i-- {
+                opp := len(instagramUser.Posts) - 1 - i
+                instagramUser.Posts[i], instagramUser.Posts[opp] = instagramUser.Posts[opp], instagramUser.Posts[i]
+            }
+
+            for _, post := range instagramUser.Posts {
+                postAlreadyPosted := false
+                for _, postedPosts := range entry.PostedPosts {
+                    if postedPosts.ID == post.ID {
+                        postAlreadyPosted = true
+                    }
+                }
+                if postAlreadyPosted == false {
+                    logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Post: #%s", post.ID))
+                    entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
+                    changes = true
+                    go m.postPostToChannel(entry.ChannelID, post, instagramUser)
+                }
+
+            }
+            if changes == true {
+                m.setEntry(entry)
+            }
+        }
+
+        time.Sleep(10 * time.Minute)
+    }
 }
 
 func (m *Instagram) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

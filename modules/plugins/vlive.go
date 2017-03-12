@@ -104,106 +104,112 @@ func (r *VLive) Commands() []string {
 }
 
 func (r *VLive) Init(session *discordgo.Session) {
-    go func() {
-        defer helpers.Recover()
+    go r.checkVliveFeedsLoop()
+    logger.PLUGIN.L("VLive", "Started vlive loop (60s)")
+}
+func (r *VLive) checkVliveFeedsLoop() {
+    defer func() {
+        helpers.Recover()
 
-        for {
-            entryBucket := make([]DB_VLive_Entry, 0)
-            cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
-            helpers.Relax(err)
-
-            err = cursor.All(&entryBucket)
-            helpers.Relax(err)
-
-            // TODO: Check multiple entries at once
-            for _, entry := range entryBucket {
-                changes := false
-                logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s", entry.VLiveChannel.Name))
-                updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(entry.VLiveChannel.Code)
-                if err != nil {
-                    logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", entry.VLiveChannel.Name, err.Error()))
-                    continue
-                }
-                for _, vod := range updatedVliveChannel.VOD {
-                    videoAlreadyPosted := false
-                    for _, postedVod := range entry.PostedVOD {
-                        if postedVod.Seq == vod.Seq {
-                            videoAlreadyPosted = true
-                        }
-                    }
-                    if videoAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting VOD: #%d", vod.Seq))
-                        entry.PostedVOD = append(entry.PostedVOD, vod)
-                        changes = true
-                        go r.postVodToChannel(entry.ChannelID, vod, updatedVliveChannel)
-                    }
-                }
-                for _, upcoming := range updatedVliveChannel.Upcoming {
-                    videoAlreadyPosted := false
-                    for _, postedUpcoming := range entry.PostedUpcoming {
-                        if postedUpcoming.Seq == upcoming.Seq {
-                            videoAlreadyPosted = true
-                        }
-                    }
-                    if videoAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
-                        entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
-                        changes = true
-                        go r.postUpcomingToChannel(entry.ChannelID, upcoming, updatedVliveChannel)
-                    }
-                }
-                for _, live := range updatedVliveChannel.Live {
-                    videoAlreadyPosted := false
-                    for _, postedLive := range entry.PostedLive {
-                        if postedLive.Seq == live.Seq {
-                            videoAlreadyPosted = true
-                        }
-                    }
-                    if videoAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Live: #%d", live.Seq))
-                        entry.PostedLive = append(entry.PostedLive, live)
-                        changes = true
-                        go r.postLiveToChannel(entry.ChannelID, live, updatedVliveChannel)
-                    }
-                }
-                for _, notice := range updatedVliveChannel.Notices {
-                    noticeAlreadyPosted := false
-                    for _, postedNotice := range entry.PostedNotices {
-                        if postedNotice.Number == notice.Number {
-                            noticeAlreadyPosted = true
-                        }
-                    }
-                    if noticeAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Notice: #%d", notice.Number))
-                        entry.PostedNotices = append(entry.PostedNotices, notice)
-                        changes = true
-                        go r.postNoticeToChannel(entry.ChannelID, notice, updatedVliveChannel)
-                    }
-                }
-                for _, celeb := range updatedVliveChannel.Celebs {
-                    celebAlreadyPosted := false
-                    for _, postedCeleb := range entry.PostedCelebs {
-                        if postedCeleb.ID == celeb.ID {
-                            celebAlreadyPosted = true
-                        }
-                    }
-                    if celebAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
-                        entry.PostedCelebs = append(entry.PostedCelebs, celeb)
-                        changes = true
-                        go r.postCelebToChannel(entry.ChannelID, celeb, updatedVliveChannel)
-                    }
-                }
-                if changes == true {
-                    r.setEntry(entry)
-                }
-            }
-
-            time.Sleep(60 * time.Second)
-        }
+        logger.ERROR.L("VLive", "The checkVliveFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(5 * time.Second)
+        r.checkVliveFeedsLoop()
     }()
 
-    logger.PLUGIN.L("VLive", "Started vlive loop (60s)")
+    for {
+        entryBucket := make([]DB_VLive_Entry, 0)
+        cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
+        helpers.Relax(err)
+
+        err = cursor.All(&entryBucket)
+        helpers.Relax(err)
+
+        // TODO: Check multiple entries at once
+        for _, entry := range entryBucket {
+            changes := false
+            logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s", entry.VLiveChannel.Name))
+            updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(entry.VLiveChannel.Code)
+            if err != nil {
+                logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", entry.VLiveChannel.Name, err.Error()))
+                continue
+            }
+            for _, vod := range updatedVliveChannel.VOD {
+                videoAlreadyPosted := false
+                for _, postedVod := range entry.PostedVOD {
+                    if postedVod.Seq == vod.Seq {
+                        videoAlreadyPosted = true
+                    }
+                }
+                if videoAlreadyPosted == false {
+                    logger.VERBOSE.L("vlive", fmt.Sprintf("Posting VOD: #%d", vod.Seq))
+                    entry.PostedVOD = append(entry.PostedVOD, vod)
+                    changes = true
+                    go r.postVodToChannel(entry.ChannelID, vod, updatedVliveChannel)
+                }
+            }
+            for _, upcoming := range updatedVliveChannel.Upcoming {
+                videoAlreadyPosted := false
+                for _, postedUpcoming := range entry.PostedUpcoming {
+                    if postedUpcoming.Seq == upcoming.Seq {
+                        videoAlreadyPosted = true
+                    }
+                }
+                if videoAlreadyPosted == false {
+                    logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
+                    entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
+                    changes = true
+                    go r.postUpcomingToChannel(entry.ChannelID, upcoming, updatedVliveChannel)
+                }
+            }
+            for _, live := range updatedVliveChannel.Live {
+                videoAlreadyPosted := false
+                for _, postedLive := range entry.PostedLive {
+                    if postedLive.Seq == live.Seq {
+                        videoAlreadyPosted = true
+                    }
+                }
+                if videoAlreadyPosted == false {
+                    logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Live: #%d", live.Seq))
+                    entry.PostedLive = append(entry.PostedLive, live)
+                    changes = true
+                    go r.postLiveToChannel(entry.ChannelID, live, updatedVliveChannel)
+                }
+            }
+            for _, notice := range updatedVliveChannel.Notices {
+                noticeAlreadyPosted := false
+                for _, postedNotice := range entry.PostedNotices {
+                    if postedNotice.Number == notice.Number {
+                        noticeAlreadyPosted = true
+                    }
+                }
+                if noticeAlreadyPosted == false {
+                    logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Notice: #%d", notice.Number))
+                    entry.PostedNotices = append(entry.PostedNotices, notice)
+                    changes = true
+                    go r.postNoticeToChannel(entry.ChannelID, notice, updatedVliveChannel)
+                }
+            }
+            for _, celeb := range updatedVliveChannel.Celebs {
+                celebAlreadyPosted := false
+                for _, postedCeleb := range entry.PostedCelebs {
+                    if postedCeleb.ID == celeb.ID {
+                        celebAlreadyPosted = true
+                    }
+                }
+                if celebAlreadyPosted == false {
+                    logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
+                    entry.PostedCelebs = append(entry.PostedCelebs, celeb)
+                    changes = true
+                    go r.postCelebToChannel(entry.ChannelID, celeb, updatedVliveChannel)
+                }
+            }
+            if changes == true {
+                r.setEntry(entry)
+            }
+        }
+
+        time.Sleep(60 * time.Second)
+    }
 }
 
 func (r *VLive) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

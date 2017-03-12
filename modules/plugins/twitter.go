@@ -54,72 +54,79 @@ func (m *Twitter) Init(session *discordgo.Session) {
         helpers.GetConfig().Path("twitter.access_secret").Data().(string))
     httpClient := config.Client(oauth1.NoContext, token)
     twitterClient = twitter.NewClient(httpClient)
-    go func() {
-        defer helpers.Recover()
 
-        for {
-            entryBucket := make([]DB_Twitter_Entry, 0)
-            cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
-            helpers.Relax(err)
+    go m.checkTwitterFeedsLoop()
+    logger.PLUGIN.L("twitter", "Started Twitter loop (10m)")
+}
+func (m *Twitter) checkTwitterFeedsLoop() {
+    defer func() {
+        helpers.Recover()
 
-            err = cursor.All(&entryBucket)
-            helpers.Relax(err)
-
-            // TODO: Check multiple entries at once
-            for _, entry := range entryBucket {
-                changes := false
-                logger.VERBOSE.L("twitter", fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
-
-                twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
-                    ScreenName: entry.AccountScreenName,
-                })
-                if err != nil {
-                    logger.ERROR.L("twitter", fmt.Sprintf("updating twitter account @%s failed: %s", entry.AccountScreenName, err.Error()))
-                    continue
-                }
-
-                twitterUserTweets, _, err := twitterClient.Timelines.UserTimeline(&twitter.UserTimelineParams{
-                    ScreenName:      entry.AccountScreenName,
-                    Count:           10,
-                    ExcludeReplies:  twitter.Bool(true),
-                    IncludeRetweets: twitter.Bool(true),
-                })
-                if err != nil {
-                    logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
-                    continue
-                }
-
-                // https://github.com/golang/go/wiki/SliceTricks#reversing
-                for i := len(twitterUserTweets)/2 - 1; i >= 0; i-- {
-                    opp := len(twitterUserTweets) - 1 - i
-                    twitterUserTweets[i], twitterUserTweets[opp] = twitterUserTweets[opp], twitterUserTweets[i]
-                }
-
-                for _, tweet := range twitterUserTweets {
-                    tweetAlreadyPosted := false
-                    for _, postedTweet := range entry.PostedTweets {
-                        if postedTweet.ID == tweet.IDStr {
-                            tweetAlreadyPosted = true
-                        }
-                    }
-                    if tweetAlreadyPosted == false {
-                        logger.VERBOSE.L("twitter", fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
-                        entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
-                        changes = true
-                        go m.postTweetToChannel(entry.ChannelID, tweet, twitterUser)
-                    }
-
-                }
-                if changes == true {
-                    m.setEntry(entry)
-                }
-            }
-
-            time.Sleep(10 * time.Minute)
-        }
+        logger.ERROR.L("twitter", "The checkTwitterFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.checkTwitterFeedsLoop()
     }()
 
-    logger.PLUGIN.L("twitter", "Started Twitter loop (10m)")
+    for {
+        entryBucket := make([]DB_Twitter_Entry, 0)
+        cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
+        helpers.Relax(err)
+
+        err = cursor.All(&entryBucket)
+        helpers.Relax(err)
+
+        // TODO: Check multiple entries at once
+        for _, entry := range entryBucket {
+            changes := false
+            logger.VERBOSE.L("twitter", fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
+
+            twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
+                ScreenName: entry.AccountScreenName,
+            })
+            if err != nil {
+                logger.ERROR.L("twitter", fmt.Sprintf("updating twitter account @%s failed: %s", entry.AccountScreenName, err.Error()))
+                continue
+            }
+
+            twitterUserTweets, _, err := twitterClient.Timelines.UserTimeline(&twitter.UserTimelineParams{
+                ScreenName:      entry.AccountScreenName,
+                Count:           10,
+                ExcludeReplies:  twitter.Bool(true),
+                IncludeRetweets: twitter.Bool(true),
+            })
+            if err != nil {
+                logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
+                continue
+            }
+
+            // https://github.com/golang/go/wiki/SliceTricks#reversing
+            for i := len(twitterUserTweets)/2 - 1; i >= 0; i-- {
+                opp := len(twitterUserTweets) - 1 - i
+                twitterUserTweets[i], twitterUserTweets[opp] = twitterUserTweets[opp], twitterUserTweets[i]
+            }
+
+            for _, tweet := range twitterUserTweets {
+                tweetAlreadyPosted := false
+                for _, postedTweet := range entry.PostedTweets {
+                    if postedTweet.ID == tweet.IDStr {
+                        tweetAlreadyPosted = true
+                    }
+                }
+                if tweetAlreadyPosted == false {
+                    logger.VERBOSE.L("twitter", fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
+                    entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
+                    changes = true
+                    go m.postTweetToChannel(entry.ChannelID, tweet, twitterUser)
+                }
+
+            }
+            if changes == true {
+                m.setEntry(entry)
+            }
+        }
+
+        time.Sleep(10 * time.Minute)
+    }
 }
 
 func (m *Twitter) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
