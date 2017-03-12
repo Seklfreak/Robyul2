@@ -20,6 +20,18 @@
       "too-many": [
         "Whait what? Those are too many mentions :neutral_face:",
         "I can't decide which mention to use :neutral_face:"
+      ],
+      "who-to-pat": [
+        "Wait, you forgot to tell me who to pat! :rolling_eyes:",
+        "Can you mention who you do you want to pat? :neutral_face:"
+      ],
+      "pat-group": [
+        "Whoa, it does not work like this! You can only pat a single person, silly! :eyes:",
+        "Umm... I cant pat everyone at the same time, please, can you pick a single person to pat? :eyes:"
+      ],
+      "pat-yourself": [
+        "You can't pat yourself. That would be weird, wouldn't it?! :nerd:",
+        "Umm... Why do you patting yourself? Are you okay? :ghost:"
       ]
     },
     "prefix": {
@@ -309,7 +321,37 @@
       "http://i.imgur.com/UgYbH8O.jpg",
       "http://i.imgur.com/BkAeFbP.gif",
       "http://i.imgur.com/QWt5k4x.jpg"
-    ]
+    ],
+    "headpat": {
+      "link": [
+        "https://media.giphy.com/media/HxDOijFIr4g3S/giphy.gif",
+        "https://media.giphy.com/media/ye7OTQgwmVuVy/giphy.gif",
+        "https://media.giphy.com/media/109ltuoSQT212w/source.gif",
+        "https://media.giphy.com/media/4HP0ddZnNVvKU/giphy.gif",
+        "https://media.giphy.com/media/ERUkEhOS1diV2/giphy.gif",
+        "https://media.giphy.com/media/ZxnfBQHNHVgpG/giphy.gif",
+        "https://media.giphy.com/media/xLm9fux5DSodq/giphy.gif",
+        "https://media.giphy.com/media/r61gZfqvJZMtO/giphy.gif",
+        "https://media.giphy.com/media/SvQ7tWn8zeY2k/source.gif",
+        "https://media.giphy.com/media/3ohzdLjvu2Q8rQLspq/source.gif",
+        "https://media.giphy.com/media/xUPGcGazbIjLjOWChq/source.gif",
+        "https://media.giphy.com/media/3ohzdOeedjptT47Gec/source.gif",
+        "https://media.giphy.com/media/3ohzdOxJzL26abdaGA/giphy.gif",
+        "https://media.giphy.com/media/3o7TKTcWt2AlRUdJDy/giphy.gif",
+        "https://media.giphy.com/media/3o6ZsYxNnbWGKZrMqY/giphy.gif",
+        "https://media.giphy.com/media/3ohzdPu4EqfMowYpB6/giphy.gif",
+        "https://media.giphy.com/media/l1KVcdXjta4fnex1u/source.gif",
+        "https://media.giphy.com/media/3ohzdWBeBu4zHeOtVe/source.gif",
+        "https://media.giphy.com/media/xUPGct3Bw0LVS8Nc7C/source.gif",
+        "https://media.giphy.com/media/3ohze2w0oKKnbamKgo/source.gif",
+        "https://media.giphy.com/media/xUPGcBeTVQi5b1dZza/giphy.gif",
+        "https://media.giphy.com/media/3ohzdSbiyyqqnyu0Ok/giphy.gif",
+        "https://media.giphy.com/media/3ohzdDdCU7mKQfXRJK/source.gif",
+        "https://media.giphy.com/media/3ohzdMN3yF5yi8OKLS/giphy.gif",
+        "https://media.giphy.com/media/l1KVaFOGAY2OuJqVi/source.gif",
+        "https://media.giphy.com/media/xUPGcphmwCfOXqFs2s/source.gif"
+      ]
+    }
   },
   "games": [
     "async is the future!",
