@@ -29,7 +29,7 @@ func (h *Headpat) Action(command string, content string, msg *discordgo.Message,
     params := strings.TrimSpace(content)
 
     // Case 1: pat yourself
-    if params == "me" || mentionUsers == 1 && (msg.Author.Username == msg.Mentions[0].Username) {
+    if params == "me" || mentionUsers == 1 && (msg.Author.ID == msg.Mentions[0].ID) {
         session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
         "%s https://media.giphy.com/media/wUArrd4mE3pyU/giphy.gif",
         helpers.GetText("bot.mentions.pat-yourself"),
