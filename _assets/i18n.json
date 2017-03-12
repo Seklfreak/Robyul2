@@ -23,7 +23,7 @@
       ],
       "who-to-pat": [
         "Wait, you forgot to tell me who to pat! :rolling_eyes:",
-        "Can you mention who you do you want to pat? :neutral_face:"
+        "Can you mention the person you want to pat? :neutral_face:"
       ],
       "pat-group": [
         "Whoa, it does not work like this! You can only pat a single person, silly! :eyes:",
@@ -350,6 +350,11 @@
         "https://media.giphy.com/media/3ohzdMN3yF5yi8OKLS/giphy.gif",
         "https://media.giphy.com/media/l1KVaFOGAY2OuJqVi/source.gif",
         "https://media.giphy.com/media/xUPGcphmwCfOXqFs2s/source.gif"
+      ],
+      "msg" : [
+        "<@%s> is patting you <@%s> (◕‿◕✿)",
+        "<@%s> is patting you <@%s> (ᵔᴥᵔ)",
+        "<@%s> is patting you <@%s> ( ﾟヮﾟ)"
       ]
     }
   },

@@ -3,7 +3,6 @@ package plugins
 import (
     "git.lukas.moe/sn0w/Karen/helpers"
     "github.com/bwmarrin/discordgo"
-    "fmt"
     "strings"
 )
 
@@ -23,32 +22,32 @@ func (h *Headpat) Init(session *discordgo.Session) {
 func (h *Headpat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Check mentions in the message
     mentionUsers := len(msg.Mentions)
-    mentionRoles := len(msg.MentionRoles)
 
     // Delete spaces from params
     params := strings.TrimSpace(content)
 
     // Case 1: pat yourself
     if params == "me" || mentionUsers == 1 && (msg.Author.ID == msg.Mentions[0].ID) {
-        session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
-            "%s https://media.giphy.com/media/wUArrd4mE3pyU/giphy.gif",
-            helpers.GetText("bot.mentions.pat-yourself"),
-        ))
+        session.ChannelMessageSend(msg.ChannelID,
+            helpers.GetText("bot.mentions.pat-yourself")+"\n"+"https://media.giphy.com/media/wUArrd4mE3pyU/giphy.gif",
+        )
         return
     }
 
     // Case 2: pat @User#1234
     if mentionUsers == 1 {
-        session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
-            "%s , %s",
-            msg.Mentions[0].Username,
-            helpers.GetText("triggers.headpat.link"),
-        ))
+        session.ChannelMessageSend(msg.ChannelID,
+            helpers.GetTextF(
+                "triggers.headpat.msg",
+                msg.Author.ID,
+                msg.Mentions[0].ID,
+            )+"\n"+helpers.GetText("triggers.headpat.link"),
+        )
         return
     }
 
     // Case 3: pat multiple users
-    if mentionUsers > 1 || mentionRoles >= 1 {
+    if msg.MentionEveryone || mentionUsers > 1 {
         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.pat-group"))
         return
     }
