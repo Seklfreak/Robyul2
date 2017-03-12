@@ -73,6 +73,21 @@ type Instagram_Post struct {
     } `json:"image_versions2"`
     MediaType int    `json:"media_type"`
     Code      string `json:"code"`
+    CarouselMedia []struct {
+        CarouselParentID string `json:"carousel_parent_id"`
+        ID               string `json:"id"`
+        ImageVersions2 struct {
+            Candidates []struct {
+                Height int `json:"height"`
+                URL    string `json:"url"`
+                Width  int `json:"width"`
+            } `json:"candidates"`
+        } `json:"image_versions2"`
+        MediaType      int `json:"media_type"`
+        OriginalHeight int `json:"original_height"`
+        OriginalWidth  int `json:"original_width"`
+        Pk             int64 `json:"pk"`
+    } `json:"carousel_media"`
 }
 
 var (
@@ -85,8 +100,8 @@ var (
 const (
     hexColor              string = "#fcaf45"
     apiBaseUrl            string = "https://i.instagram.com/api/v1/%s"
-    apiUserAgent          string = "Instagram 9.2.0 Android (18/4.3; 320dpi; 720x1280; Xiaomi; HM 1SW; armani; qcom; en_US)"
-    instagramSignKey      string = "012a54f51c49aa8c5c322416ab1410909add32c966bbaa0fe3dc58ac43fd7ede"
+    apiUserAgent          string = "Instagram 10.8.0 Android (18/4.3; 320dpi; 720x1280; Xiaomi; HM 1SW; armani; qcom; en_US)"
+    instagramSignKey      string = "68a04945eb02970e2e8d15266fc256f7295da123e123f44b88f09d594a5902df"
     deviceId              string = "android-3deeb2d04b2ab0ee" // TODO: generate a random device id
     instagramFriendlyUser string = "https://www.instagram.com/%s/"
     instagramFriendlyPost string = "https://www.instagram.com/p/%s/"
@@ -330,6 +345,12 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
     if post.MediaType == 2 {
         mediaModifier = "Video"
     }
+    if post.MediaType == 8 {
+        mediaModifier = "Album"
+        if len(post.CarouselMedia) > 0 {
+            mediaModifier = fmt.Sprintf("Album (%d pictures)", len(post.CarouselMedia))
+        }
+    }
 
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier),
@@ -342,6 +363,9 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 
     if len(post.ImageVersions2.Candidates) > 0 {
         channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.ImageVersions2.Candidates[0].URL}
+    }
+    if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions2.Candidates) > 0 {
+        channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.CarouselMedia[0].ImageVersions2.Candidates[0].URL}
     }
 
     _, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)))
