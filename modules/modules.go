@@ -11,11 +11,12 @@ var (
 
     PluginList = []Plugin{
         &plugins.About{},
+        &plugins.Announcement{},
         &plugins.Avatar{},
-        &plugins.WhoIs{},
         &plugins.Calc{},
         &plugins.Changelog{},
         &plugins.Choice{},
+        &plugins.CPS{},
         &plugins.FlipCoin{},
         &plugins.Giphy{},
         &plugins.Google{},
@@ -35,11 +36,11 @@ var (
         &plugins.Stats{},
         &plugins.Stone{},
         &plugins.Support{},
-        &plugins.Announcement{},
         //&plugins.Translator{},
         &plugins.Uptime{},
         &plugins.UrbanDict{},
         &plugins.Weather{},
+        &plugins.WhoIs{},
         &plugins.XKCD{},
     }
 
