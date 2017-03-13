@@ -2,6 +2,7 @@ package plugins
 
 import (
     "fmt"
+    "git.lukas.moe/sn0w/Karen/emojis"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
@@ -150,7 +151,7 @@ func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo
     }
 
     for _, field := range fields {
-        emoji := helpers.GetEmoji(strconv.Itoa(field.ID))
+        emoji := emojis.From(strconv.Itoa(field.ID))
         err = session.MessageReactionAdd(m.ChannelID, m.ID, emoji)
         if err != nil {
             Logger.PLUGIN.L("polls.go", err.Error())

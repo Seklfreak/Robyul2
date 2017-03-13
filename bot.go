@@ -3,6 +3,7 @@ package main
 import (
     "fmt"
     "git.lukas.moe/sn0w/Karen/cache"
+    "git.lukas.moe/sn0w/Karen/emojis"
     "git.lukas.moe/sn0w/Karen/helpers"
     Logger "git.lukas.moe/sn0w/Karen/logger"
     "git.lukas.moe/sn0w/Karen/metrics"
@@ -247,7 +248,7 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
     if err != nil {
         return
     }
-    if helpers.NumberFromEmoji(reaction.Emoji.Name) == -1 {
+    if emojis.ToNumber(reaction.Emoji.Name) == -1 {
         session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
         return
     }
