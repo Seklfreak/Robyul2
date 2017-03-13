@@ -19,6 +19,7 @@ var (
         &plugins.FlipCoin{},
         &plugins.Giphy{},
         &plugins.Google{},
+        &plugins.Headpat{},
         &plugins.Leet{},
         &plugins.ListenDotMoe{},
         &plugins.Minecraft{},
