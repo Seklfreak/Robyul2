@@ -7,7 +7,9 @@ import (
 // Poll struct
 type Poll struct {
     // ID is the ID of the msg that created the current Poll
-    ID string `rethink:"id"`
+    ID  string `rethink:"id"`
+    // The ID of the channel where the poll was created
+    ChannelID string `rethink:"channel_id"`
     // Title of the Poll
     Title string `rethink:"title"`
     // Fields of the Poll
@@ -34,16 +36,15 @@ type Poll struct {
 
 // PollField is a field for a Poll
 type PollField struct {
-    // TODO: Choose how this id will be handled/generated
-    ID    int `rethink:"id"`
+    ID    int    `rethink:"id"`
     Title string `rethink:"name"`
-    Votes int64  `rehink:"votes"`
+    Votes int64  `rethink:"votes"`
 }
 
 // Participant represents an user that already voted
 type Participant struct {
     // ID is the user.ID
-    ID string `rethink:"id"`
+    ID  string `rethink:"id"`
     // The ID of the field the current Participant voted for
-    FieldID string `rethink:"field_id"`
+    FieldID int `rethink:"field_id"`
 }

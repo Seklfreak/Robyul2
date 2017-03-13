@@ -235,6 +235,28 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     modules.CallTriggerPlugin(cmd, content, message.Message)
 }
 
+// BotOnReactionAdd gets called after a reaction is added
+// This will be called after *every* reaction added on *every* server so it
+// should die as soon as possible or spawn costly work inside of coroutines.
+// This is currently used for the *poll* plugin.
+func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+    if user, err := session.User(reaction.UserID); err == nil && user.Bot {
+        return
+    }
+    channel, err := session.Channel(reaction.ChannelID)
+    if err != nil {
+        return
+    }
+    if helpers.NumberFromEmoji(reaction.Emoji.Name) == -1 {
+        session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+        return
+    }
+    if helpers.VotePollIfItsOne(channel.GuildID, reaction.MessageReaction) {
+        helpers.UpdatePollMsg(channel.GuildID, reaction.MessageID)
+    }
+
+}
+
 func sendHelp(message *discordgo.MessageCreate) {
     cache.GetSession().ChannelMessageSend(
         message.ChannelID,
