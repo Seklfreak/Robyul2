@@ -123,10 +123,6 @@ func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo
         return
     }
 
-    for _, field := range fields {
-        session.MessageReactionAdd(m.ChannelID, m.ID, fmt.Sprintf(":%v:", helpers.HumanizeNumber(field.ID)))
-    }
-
     embed.Footer = &discordgo.MessageEmbedFooter {
         Text: fmt.Sprintf("Poll ID: %v", m.ID),
     }
