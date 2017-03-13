@@ -2,9 +2,9 @@ helpers/assets.go
 assets.go
 config.json
 .idea
-.vscode
 *.iml
 **/*/token
+config.json
 karen
 
 # Created by https://www.gitignore.io/api/go,windows,osx,linux

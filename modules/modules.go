@@ -11,8 +11,8 @@ var (
 
     PluginList = []Plugin{
         &plugins.About{},
+        &plugins.Announcement{},
         &plugins.Avatar{},
-        &plugins.WhoIs{},
         &plugins.Calc{},
         &plugins.Changelog{},
         &plugins.Choice{},
@@ -26,6 +26,7 @@ var (
         &plugins.Music{},
         &plugins.Osu{},
         &plugins.Ping{},
+        &plugins.Poll{},
         &plugins.RandomCat{},
         &plugins.Ratelimit{},
         &plugins.Reminders{},
@@ -34,11 +35,11 @@ var (
         &plugins.Stats{},
         &plugins.Stone{},
         &plugins.Support{},
-        &plugins.Announcement{},
         //&plugins.Translator{},
         &plugins.Uptime{},
         &plugins.UrbanDict{},
         &plugins.Weather{},
+        &plugins.WhoIs{},
         &plugins.XKCD{},
     }
 

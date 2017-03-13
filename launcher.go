@@ -78,6 +78,7 @@ func main() {
 
     discord.AddHandler(BotOnReady)
     discord.AddHandler(BotOnMessageCreate)
+    discord.AddHandler(BotOnReactionAdd)
     discord.AddHandler(metrics.OnReady)
     discord.AddHandler(metrics.OnMessageCreate)
 

@@ -2,6 +2,7 @@
     "listen_moe": "YOUR_LISTEN.MOE_TOKEN",
     "osu": "YOUR_OSU_API_TOKEN",
     "sentry": "https://YOU_SENTRY_TOKEN_1:YOUR_SENTRY_TOKEN_2@sentry.io/YOUR_SENTRY_TOKEN_3",
+    "metrics_ip": "YOUR_METRICS_IP",
     "cleverbot": {
         "user": "",
         "key": ""
