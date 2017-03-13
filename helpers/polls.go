@@ -4,6 +4,7 @@ import (
     "errors"
     "fmt"
     "git.lukas.moe/sn0w/Karen/cache"
+    "git.lukas.moe/sn0w/Karen/emojis"
     "git.lukas.moe/sn0w/Karen/models"
     "github.com/bwmarrin/discordgo"
     "strconv"
@@ -130,7 +131,7 @@ func AddPollField(guild, pollID, title string, msg *discordgo.Message) bool {
                     Votes: 0,
                 })
                 session := cache.GetSession()
-                session.MessageReactionAdd(msg.ChannelID, pollID, GetEmoji(strconv.Itoa(ID)))
+                session.MessageReactionAdd(msg.ChannelID, pollID, emojis.From(strconv.Itoa(ID)))
                 return GuildSettingsSet(guild, settings) == nil
             }
         }
@@ -229,7 +230,7 @@ func VotePollIfItsOne(guild string, r *discordgo.MessageReaction) bool {
                 return false
             }
             userID := r.UserID
-            fieldID := NumberFromEmoji(r.Emoji.Name)
+            fieldID := emojis.ToNumber(r.Emoji.Name)
             if fieldID == -1 {
                 session := cache.GetSession()
                 session.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)

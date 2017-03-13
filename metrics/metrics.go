@@ -27,7 +27,7 @@ var (
     CommandsExecuted = expvar.NewInt("commands_executed")
 
     // PollsCreated increases everytime a new pool is created
-    PollsCreated = expvar.NewInt("pools_created")
+    PollsCreated = expvar.NewInt("polls_created")
 
     // CleverbotRequests increases after each request to cleverbot.com
     CleverbotRequests = expvar.NewInt("cleverbot_requests")
@@ -62,16 +62,18 @@ func CollectDiscordMetrics(session *discordgo.Session) {
     for {
         time.Sleep(15 * time.Second)
 
-        users := 0
+        users := make(map[string]string)
         channels := 0
         guilds := session.State.Guilds
 
         for _, guild := range guilds {
             channels += len(guild.Channels)
-            users += len(guild.Members)
+            for _, u := range guild.Members {
+                users[u.User.ID] = u.User.Username
+            }
         }
 
-        UserCount.Set(int64(users))
+        UserCount.Set(int64(len(users)))
         ChannelCount.Set(int64(channels))
         GuildCount.Set(int64(len(guilds)))
     }
