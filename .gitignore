@@ -4,6 +4,7 @@ config.json
 .idea
 *.iml
 **/*/token
+config.json
 karen
 
 # Created by https://www.gitignore.io/api/go,windows,osx,linux

@@ -251,10 +251,6 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
         session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
         return
     }
-    if helpers.NumberFromEmoji(reaction.Emoji.ID) == -1 {
-        session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.ID, reaction.UserID)
-        return
-    }
     if helpers.VotePollIfItsOne(channel.GuildID, reaction.MessageReaction) {
         helpers.UpdatePollMsg(channel.GuildID, reaction.MessageID)
     }
