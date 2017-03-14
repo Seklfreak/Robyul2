@@ -331,14 +331,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 return
             case "process-history": // [p]level process-history
                 helpers.RequireBotAdmin(msg, func() {
+                    dmChannel, err := session.UserChannelCreate(msg.Author.ID)
+                    helpers.Relax(err)
                     session.ChannelTyping(msg.ChannelID)
                     channel, err := session.Channel(msg.ChannelID)
                     helpers.Relax(err)
                     guild, err := session.Guild(channel.GuildID)
                     helpers.Relax(err)
+                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Check your DMs.", msg.Author.ID))
                     // pause new message processing for that guild
                     temporaryIgnoredGuilds = append(temporaryIgnoredGuilds, channel.GuildID)
-                    _, err = session.ChannelMessageSend(msg.ChannelID, "Temporary disabled EXP Processing for this server while processing the Message History.")
+                    _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Temporary disabled EXP Processing for `%s` while processing the Message History.", guild.Name))
                     helpers.Relax(err)
                     // reset accounts on this server
                     var levelsServersUsers []DB_Levels_ServerUser
@@ -352,7 +355,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         levelsServerUser.Exp = 0
                         m.setLevelsServerUser(levelsServerUser)
                     }
-                    _, err = session.ChannelMessageSend(msg.ChannelID, "Resetted the EXP for every User on this server.")
+                    _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Resetted the EXP for every User on `%s`.", guild.Name))
                     helpers.Relax(err)
                     // process history
                     //var wg sync.WaitGroup
@@ -370,7 +373,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         logger.VERBOSE.L("levels", fmt.Sprintf("Started processing of Channel #%s (#%s) on Guild %s (#%s)",
                             guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
                         // (asynchronous)
-                        _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Started processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
+                        _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Started processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
                         helpers.Relax(err)
                         lastBefore := ""
                         for {
@@ -413,7 +416,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                         logger.VERBOSE.L("levels", fmt.Sprintf("Completed processing of Channel #%s (#%s) on Guild %s (#%s)",
                             guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
-                        _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Completed processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
+                        _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Completed processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
                         helpers.Relax(err)
                         //}()
                     }
@@ -427,9 +430,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         }
                     }
                     temporaryIgnoredGuilds = newTemporaryIgnoredGuilds
-                    _, err = session.ChannelMessageSend(msg.ChannelID, "Enabled EXP Processing for this server again.")
+                    _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Enabled EXP Processing for `%s` again.", guild.Name))
                     helpers.Relax(err)
-                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Done!", msg.Author.ID))
+                    _, err = session.ChannelMessageSend(dmChannel.ID, "Done!")
                     helpers.Relax(err)
                     return
                 })
