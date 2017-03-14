@@ -69,10 +69,11 @@ func (m *Levels) Init(session *discordgo.Session) {
     m.BucketInit()
 }
 
-// @TODO: Global Top 10
+// @TODO: Show EXP numbers (exp until next level?)
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "profile": // [p]profile
+        //backgroundUrl := "http://g2.slmn.de/robyul/backgrounds/ioi-nayoung-01.jpg"
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.Channel(msg.ChannelID)
         helpers.Relax(err)
@@ -136,7 +137,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
         dc := gg.NewContext(300, 300)
         // load fonts
-        // @TODO: Asset path
         err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 20)
         helpers.Relax(err)
         // draw grey background
@@ -201,7 +201,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
         _, err = session.ChannelFileSendWithMessage(
             msg.ChannelID,
-            fmt.Sprintf("Profile for %s", targetUser.Username),
+            fmt.Sprintf("Profile for %s", targetUser.Username), // @TODO: Add mention because generation can take a while
             fmt.Sprintf("%s.png", targetUser.ID), bytes.NewReader(buffer.Bytes()))
         helpers.Relax(err)
 

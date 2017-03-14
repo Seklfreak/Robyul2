@@ -47,12 +47,14 @@ func (m *Bias) Init(session *discordgo.Session) {
     biasChannels = m.GetBiasChannels()
 }
 
+// @TODO: Make "bias role stuff text" optional
 func (m *Bias) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     args := strings.Split(content, " ")
     if len(args) >= 1 {
         switch args[0] {
         case "help":
             helpers.RequireAdmin(msg, func() {
+                session.ChannelTyping(msg.ChannelID)
                 for _, biasChannel := range biasChannels {
                     if msg.ChannelID == biasChannel.ChannelID {
                         exampleRoleName := ""

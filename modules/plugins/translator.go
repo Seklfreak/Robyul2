@@ -13,6 +13,7 @@ import (
     "google.golang.org/api/option"
     "net/http"
     "strings"
+    "google.golang.org/api/googleapi"
 )
 
 type Translator struct {
@@ -65,6 +66,8 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
         return
     }
 
+    fmt.Println(source)
+
     translations, err := t.client.Translate(
         t.ctx,
         parts[2:],
@@ -76,6 +79,12 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
     )
 
     if err != nil {
+        if err, ok := err.(*googleapi.Error); ok {
+            if err.Code == 400 {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[1]))
+                return
+            }
+        }
         //session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.translator.error"))
         helpers.SendError(msg, err)
         return

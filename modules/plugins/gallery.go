@@ -48,7 +48,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
     if len(args) >= 1 {
         switch args[0] {
         case "add": // [p]gallery add <source channel> <target channel> <webhook id> <webhook token>
-            // @TODO: more secure way to exchange token
+            // @TODO: more secure way to exchange token: create own webhook if no arguments passed
             helpers.RequireAdmin(msg, func() {
                 session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
                 progressMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.add-progress"))

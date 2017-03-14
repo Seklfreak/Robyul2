@@ -112,6 +112,7 @@ func (s *Stats) Init(session *discordgo.Session) {
 func (s *Stats) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "stats":
+        session.ChannelTyping(msg.ChannelID)
         // Count guilds, channels and users
         users := make(map[string]string)
         channels := 0

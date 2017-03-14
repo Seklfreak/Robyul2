@@ -66,7 +66,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                 return
             })
         case "add-channel": // [p]mirror add-channel <mirror id> <channel> <webhook id> <webhook token>
-            // @TODO: more secure way to exchange token
+            // @TODO: more secure way to exchange token: create own webhook if no arguments passed
             helpers.RequireBotAdmin(msg, func() {
                 session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
                 progressMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-progress"))
