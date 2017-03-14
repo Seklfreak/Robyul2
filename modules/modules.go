@@ -35,7 +35,7 @@ var (
         //&plugins.Avatar{},
         //&plugins.Calc{},
         //&plugins.Changelog{},
-        //&plugins.Choice{},
+        &plugins.Choice{},
         //&plugins.FlipCoin{},
         //&plugins.Giphy{},
         //&plugins.Google{},
