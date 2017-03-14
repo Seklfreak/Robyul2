@@ -3,9 +3,11 @@ import:
 - package: github.com/Jeffail/gabs
   version: ^1.0.0
 - package: github.com/dustin/go-humanize
+  version: master
 - package: github.com/getsentry/raven-go
+  version: master
 - package: github.com/PuerkitoBio/goquery
-  version: ^1.0.2
+  version: ^1.1.0
 - package: golang.org/x/net
   subpackages:
   - html
@@ -15,18 +17,20 @@ import:
 - package: github.com/ttacon/chalk
   version: ^0.1.0
 - package: github.com/marcmak/calc
+  version: master
 - package: github.com/olebedev/when
+  version: master
 - package: github.com/bwmarrin/discordgo
   version: develop
 - package: github.com/gorethink/gorethink
   version: ^3.0.1
 - package: git.lukas.moe/sn0w/radio-b
-  version: 215aee1c5c495c3ddc5a2e31970eab5c65c47f7e
+  version: master
 - package: github.com/gorilla/websocket
-  version: ^1.1.0
+  version: master
 - package: cloud.google.com/go
   version: ^0.6.0
   subpackages:
   - translate
 - package: github.com/ugjka/cleverbot-go
-  version: 19404e6e029ce2e79f0b16f1c9b72980e8951237
+  version: master

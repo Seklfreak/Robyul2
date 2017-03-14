@@ -27,6 +27,9 @@ var (
     // CommandsExecuted increases after each command execution
     CommandsExecuted = expvar.NewInt("commands_executed")
 
+    // PollsCreated increases everytime a new pool is created
+    PollsCreated = expvar.NewInt("polls_created")
+
     // CleverbotRequests increases after each request to cleverbot.com
     CleverbotRequests = expvar.NewInt("cleverbot_requests")
 

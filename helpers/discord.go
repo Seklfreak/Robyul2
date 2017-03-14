@@ -4,12 +4,16 @@ import (
     "errors"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/bwmarrin/discordgo"
-    "math/big"
-    "regexp"
-    "strings"
     "time"
+    "regexp"
+    "math/big"
+    "strings"
     "strconv"
     "fmt"
+)
+
+const (
+    DISCORD_EPOCH int64 = 1420070400000
 )
 
 var botAdmins = []string{
@@ -226,25 +230,10 @@ func GetDiscordColorFromHex(hex string) int {
 }
 
 func GetTimeFromSnowflake(id string) time.Time {
-    IDi, err := strconv.Atoi(id)
+    iid, err := strconv.ParseInt(id, 10, 64)
     Relax(err)
-    createdAtTime := time.Unix(int64(((IDi>>22)+1420070400000)/1000), 0)
-    return createdAtTime.UTC()
-}
 
-func GetAvatarUrl(user *discordgo.User) string {
-    if user.Avatar == "" {
-        return ""
-    }
-
-    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=1024"
-
-    if strings.HasPrefix(user.Avatar, "a_") {
-        avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif")
-    } else {
-        avatarUrl = fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "jpg")
-    }
-    return avatarUrl
+    return time.Unix(((iid>>22)+DISCORD_EPOCH)/1000, 0).UTC()
 }
 
 func GetAllPermissions(guild *discordgo.Guild, member *discordgo.Member) int64 {
@@ -277,4 +266,22 @@ func Pagify(text string, delimiter string) []string {
         result = append(result, currentOutputPart)
     }
     return result
+}
+
+func GetAvatarUrl(user *discordgo.User) string {
+    return GetAvatarUrlWithSize(user, 1024)
+}
+
+func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
+    if user.Avatar == "" {
+        return ""
+    }
+
+    avatarUrl := "https://cdn.discordapp.com/avatars/%s/%s.%s?size=%d"
+
+    if strings.HasPrefix(user.Avatar, "a_") {
+        return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "gif", size)
+    }
+
+    return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "jpg", size)
 }

@@ -2,7 +2,7 @@ FROM sn0w/go-ci
 
 # Install deps
 RUN apk add --no-cache --virtual .karen-deps python py-setuptools ffmpeg
-RUN apk add --no-cache --virtual .build-deps curl wget gnupg alpine-sdk
+RUN apk add --no-cache --virtual .ci wget gnupg
 
 # Get youtube-dl
 RUN wget https://yt-dl.org/downloads/latest/youtube-dl.sig -O /tmp/youtube-dl.sig
@@ -16,10 +16,10 @@ RUN chmod a+rx /usr/bin/youtube-dl
 RUN rm /tmp/youtube-dl.sig
 
 # Get ropus
-RUN go get -v git.lukas.moe/sn0w/ropus
+RUN go get -v -u git.lukas.moe/sn0w/ropus
 
 # Strip down
-RUN apk del .build-deps
+RUN apk del .ci
 
 # Expose karen's api
 EXPOSE 1337

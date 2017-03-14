@@ -2,8 +2,8 @@ package cache
 
 import (
     "github.com/bwmarrin/discordgo"
-    "time"
     "sync"
+    "time"
 )
 
 // How long a cached channel pointer is valid (seconds)

@@ -10,10 +10,13 @@ import (
     "github.com/Seklfreak/Robyul2/logger"
     "strconv"
     "strings"
+    "os"
 )
 
 // Init warms the caches and initializes the plugins
 func Init(session *discordgo.Session) {
+    checkDuplicateCommands()
+
     pluginCount := len(PluginList)
     extendedPluginCount := len(PluginExtendedList)
     triggerCount := len(TriggerPluginList)
@@ -150,5 +153,35 @@ func CallExtendedPluginOnGuildMemberRemove(member *discordgo.Member) {
     // Iterate over all plugins
     for _, extendedPlugin := range PluginExtendedList {
         extendedPlugin.OnGuildMemberRemove(member, cache.GetSession())
+    }
+}
+
+func checkDuplicateCommands() {
+    cmds := make(map[string]string)
+
+    for _, plug := range PluginList {
+        for _, cmd := range plug.Commands() {
+            t := helpers.Typeof(plug)
+
+            if occupant, ok := cmds[cmd]; ok {
+                logger.ERROR.L("modules", "Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
+                os.Exit(1)
+            }
+
+            cmds[cmd] = t
+        }
+    }
+
+    for _, trig := range TriggerPluginList {
+        for _, cmd := range trig.Triggers() {
+            t := helpers.Typeof(trig)
+
+            if occupant, ok := cmds[cmd]; ok {
+                logger.ERROR.L("modules", "Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
+                os.Exit(1)
+            }
+
+            cmds[cmd] = t
+        }
     }
 }

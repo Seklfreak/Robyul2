@@ -37,6 +37,7 @@ func main() {
     // Check if the bot is being debugged
     if config.Path("debug").Data().(bool) {
         helpers.DEBUG_MODE = true
+        Logger.DEBUG_MODE = true
     }
 
     // Print UA
@@ -83,6 +84,7 @@ func main() {
     discord.AddHandler(BotOnMessageCreate)
     discord.AddHandler(BotOnGuildMemberAdd)
     discord.AddHandler(BotOnGuildMemberRemove)
+    discord.AddHandler(BotOnReactionAdd)
     discord.AddHandler(metrics.OnReady)
     discord.AddHandler(metrics.OnMessageCreate)
 

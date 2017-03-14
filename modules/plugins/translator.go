@@ -1,6 +1,7 @@
 package plugins
 
 import (
+    "google.golang.org/api/option"
     "bytes"
     "cloud.google.com/go/translate"
     "context"
@@ -10,7 +11,6 @@ import (
     "github.com/Seklfreak/Robyul2/helpers"
     "github.com/bwmarrin/discordgo"
     "golang.org/x/text/language"
-    "google.golang.org/api/option"
     "net/http"
     "strings"
     "google.golang.org/api/googleapi"

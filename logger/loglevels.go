@@ -13,6 +13,7 @@ const (
     BOOT
     INFO
     VERBOSE
+    DEBUG
 )
 
 var nicenames = map[LogLevel]string{
@@ -22,6 +23,7 @@ var nicenames = map[LogLevel]string{
     BOOT:    "BOOT",
     INFO:    "INFO",
     VERBOSE: "VERBOSE",
+    DEBUG:   "DEBUG",
 }
 
 var colors = map[LogLevel]chalk.Color{
@@ -31,4 +33,5 @@ var colors = map[LogLevel]chalk.Color{
     BOOT:    chalk.Blue,
     INFO:    chalk.Green,
     VERBOSE: chalk.White,
+    DEBUG:   chalk.ResetColor,
 }

@@ -2,7 +2,6 @@ package plugins
 
 import (
     "strings"
-
     "github.com/bwmarrin/discordgo"
     "github.com/Seklfreak/Robyul2/helpers"
 )
@@ -25,10 +24,12 @@ func (a *Announcement) Action(command string, content string, msg *discordgo.Mes
     if !helpers.IsBotAdmin(msg.Author.ID) {
         return
     }
+
     title := ""
     contentSplit := strings.Fields(content)
     subcommand := contentSplit[0]
     text := content[len(subcommand):]
+
     switch subcommand {
     case "update":
         title = ":loudspeaker: **UPDATE**"
