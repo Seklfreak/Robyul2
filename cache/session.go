@@ -7,7 +7,7 @@ import (
 )
 
 var (
-    session *discordgo.Session
+    session      *discordgo.Session
     sessionMutex sync.RWMutex
 )
 

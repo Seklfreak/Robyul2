@@ -9,13 +9,13 @@ import "github.com/Seklfreak/Robyul2/helpers"
 type Nep struct{}
 
 func (n *Nep) Triggers() []string {
-	return []string{
-		"nep",
-		"nepgear",
-		"neptune",
-	}
+    return []string{
+        "nep",
+        "nepgear",
+        "neptune",
+    }
 }
 
 func (n *Nep) Response(trigger string, content string) string {
-	return helpers.GetText("triggers.nep.text") + "\n" + helpers.GetText("triggers.nep.link")
+    return helpers.GetText("triggers.nep.text") + "\n" + helpers.GetText("triggers.nep.link")
 }

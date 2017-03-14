@@ -37,5 +37,5 @@ func (l *Leet) Action(command string, content string, msg *discordgo.Message, se
         content = strings.Replace(content, ascii, leet, -1)
     }
 
-    session.ChannelMessageSend(msg.ChannelID, "```\n" + content + "\n```")
+    session.ChannelMessageSend(msg.ChannelID, "```\n"+content+"\n```")
 }

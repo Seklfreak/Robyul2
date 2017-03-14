@@ -9,15 +9,15 @@ import "github.com/Seklfreak/Robyul2/helpers"
 type Hi struct{}
 
 func (h *Hi) Triggers() []string {
-	return []string{
-		"wave",
-		"hi",
-		"hello",
-		"ohai",
-		"ohayou",
-	}
+    return []string{
+        "wave",
+        "hi",
+        "hello",
+        "ohai",
+        "ohayou",
+    }
 }
 
 func (h *Hi) Response(trigger string, content string) string {
-	return ":wave: " + helpers.GetText("triggers.hi.link")
+    return ":wave: " + helpers.GetText("triggers.hi.link")
 }

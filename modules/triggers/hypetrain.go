@@ -9,12 +9,12 @@ import "github.com/Seklfreak/Robyul2/helpers"
 type HypeTrain struct{}
 
 func (h *HypeTrain) Triggers() []string {
-	return []string{
-		"hype",
-		"hypu",
-	}
+    return []string{
+        "hype",
+        "hypu",
+    }
 }
 
 func (h *HypeTrain) Response(trigger string, content string) string {
-	return helpers.GetText("triggers.hypetrain.text") + "\n" + helpers.GetText("triggers.hypetrain.link")
+    return helpers.GetText("triggers.hypetrain.text") + "\n" + helpers.GetText("triggers.hypetrain.link")
 }

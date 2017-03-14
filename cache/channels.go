@@ -50,7 +50,7 @@ func Channel(id string) (ch *discordgo.Channel, e error) {
     meta := channelMeta[id]
     mutex.RUnlock()
 
-    if time.Now().Unix() - meta > channelTimeout {
+    if time.Now().Unix()-meta > channelTimeout {
         e = updateChannel(id)
     }
 
