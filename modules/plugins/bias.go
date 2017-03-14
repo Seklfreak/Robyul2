@@ -20,11 +20,12 @@ type AssignableRole_Channel struct {
 }
 
 type AssignableRole_Category struct {
-    Label  string
-    Pool   string
-    Hidden bool
-    Limit  int
-    Roles  []AssignableRole_Role
+    Label   string
+    Pool    string
+    Hidden  bool
+    Limit   int
+    Roles   []AssignableRole_Role
+    Message string
 }
 
 type AssignableRole_Role struct {
@@ -63,6 +64,9 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                             if biasCategory.Hidden == true {
                                 continue
                             }
+                            if biasCategory.Message != "" {
+                                biasListText += "\n" + biasCategory.Message
+                            }
                             biasListText += fmt.Sprintf("\n%s: ", biasCategory.Label)
                             for i, biasRole := range biasCategory.Roles {
                                 if exampleRoleName == "" {
@@ -92,7 +96,8 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                                 biasListText += fmt.Sprintf(" (**`%s Roles`** Max)", strings.Title(helpers.HumanizeNumber(calculatedLimit)))
                             }
                         }
-                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.bias.bias-help-message", biasListText, exampleRoleName, exampleRoleName))
+                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.bias.bias-help-message",
+                            biasListText, exampleRoleName, exampleRoleName))
                         helpers.Relax(err)
                         return
                     }
