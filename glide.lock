@@ -1,39 +1,39 @@
-hash: c4e4e2980cc5071a3bbfb4766b3709ba435ec29cbfdb727241ae3b5ba0d657c8
-updated: 2017-03-01T22:40:06.942441871+01:00
+hash: c036be91cc57259859bdcff329fe0f82de54f0af54ff89352734311a25f659bd
+updated: 2017-03-14T19:56:15.194430143+01:00
 imports:
 - name: cloud.google.com/go
-  version: c116c7972ec94f148459a304d07a67ecbc770d4b
+  version: 2e6a95edb1071d750f6d7db777bf66cd2997af6c
   subpackages:
   - compute/metadata
   - internal
   - translate
   - translate/internal/translate/v2
 - name: git.lukas.moe/sn0w/radio-b
-  version: 215aee1c5c495c3ddc5a2e31970eab5c65c47f7e
+  version: 19bfa0f2525ad3c8b4439fa6b85e8f444c004d3b
 - name: github.com/AlekSi/pointer
   version: 08a25bac605b3fcb6cc27f3917b2c2c87451963d
 - name: github.com/andybalholm/cascadia
   version: 349dd0209470eabd9514242c688c403c0926d266
 - name: github.com/bwmarrin/discordgo
-  version: c34affbc570dee6050ae15e42b08d9c061a0a3aa
+  version: d4f874c0f4c3752f5d18503415307106ed7c3837
 - name: github.com/cenkalti/backoff
-  version: b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
+  version: 3db60c813733fce657c114634171689bbf1f8dee
 - name: github.com/certifi/gocertifi
   version: 03be5e6bb9874570ea7fb0961225d193cbc374c5
 - name: github.com/dustin/go-humanize
-  version: 7a41df006ff9af79a29f0ffa9c5f21fbe6314a2d
+  version: 259d2a102b871d17f30e3cd9881a642961a1e486
 - name: github.com/getsentry/raven-go
-  version: 3f7439d3e74d88e21d196ba20eb61a5a958bc118
+  version: b68337dbf03e7fbb53d9fd9b63fd09b28e8f13f7
 - name: github.com/golang/protobuf
-  version: 8ee79997227bf9b34611aee7946ae64735e6fd93
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
   subpackages:
   - proto
 - name: github.com/googleapis/gax-go
-  version: da06d194a00e19ce00d9011a13931c3f6f6887c7
+  version: 8c5154c0fe5bf18cf649634d4c6df50897a32751
 - name: github.com/gorethink/gorethink
   version: 610fcc04c971a9fa42f1b6625c7c52b5bb472c51
 - name: github.com/gorilla/websocket
-  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+  version: b258b4fadb573ac412f187b9f31974ea99d32f50
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/Jeffail/gabs
@@ -54,20 +54,20 @@ imports:
 - name: github.com/PuerkitoBio/goquery
   version: e1271ee34c6a305e38566ecd27ae374944907ee9
 - name: github.com/Sirupsen/logrus
-  version: 3f603f494d61c73457fb234161d8982b9f0f0b71
+  version: 1deb2db2a6fff8a35532079061b903c3a25eed52
 - name: github.com/ttacon/chalk
   version: 76b3c8b611dea8f83e49e9ce81fc2b189e0ef3d2
 - name: github.com/ugjka/cleverbot-go
-  version: 19404e6e029ce2e79f0b16f1c9b72980e8951237
+  version: 8c40b3daf02485c397f72111332355ed86bd4aad
 - name: golang.org/x/crypto
-  version: 537c9dfe43c8ca78e68e340fc140bca4d8bfaaa0
+  version: 728b753d0135da6801d45a38e6f43ff55779c5c2
   subpackages:
   - nacl/secretbox
   - pbkdf2
   - poly1305
   - salsa20/salsa
 - name: golang.org/x/net
-  version: 236b8f043b920452504e263bc21d354427127473
+  version: a6577fac2d73be281a500b310739095313165611
   subpackages:
   - context
   - context/ctxhttp
@@ -80,25 +80,25 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/oauth2
-  version: 810daf0509f84359cfa9527f6ea4886f1dbabfc5
+  version: 1611bb46e67abc64a71ecc5c3ae67f1cbbc2b921
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 7a6e5648d140666db5d920909e082ca00a87ba2c
+  version: 99f16d856c9836c42d24e7ab64ea72916925fa97
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: dafb3384ad25363d928a9e97ce4ad3a2f0667e34
+  version: f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd
   subpackages:
   - internal/tag
   - language
   - transform
   - unicode/norm
 - name: google.golang.org/api
-  version: 64485db7e8c8be51e572801d06cdbcfadd3546c1
+  version: 1202890e803f07684581b575fda809bf335a533f
   subpackages:
   - gensupport
   - googleapi
@@ -108,7 +108,7 @@ imports:
   - option
   - transport
 - name: google.golang.org/appengine
-  version: 3a452f9e00122ead39586d68ffdb9c6e1326af3c
+  version: b79c28f0197795b4050bfcd7c4c2209136c594b1
   subpackages:
   - internal
   - internal/app_identity
@@ -122,13 +122,14 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/grpc
-  version: d122f1dfe6ecece11d0c914ce4b2d9cab6d4b4ff
+  version: 0713829b980f4ddd276689a36235c5fcc82a21bf
   subpackages:
   - codes
   - credentials
   - credentials/oauth
   - grpclog
   - internal
+  - keepalive
   - metadata
   - naming
   - peer

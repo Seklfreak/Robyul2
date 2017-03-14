@@ -300,7 +300,7 @@ func (l *ListenDotMoe) streamer() {
             helpers.Relax(err)
 
             // Send to discord
-            RadioChan.Broadcast(&opus)
+            RadioChan.Broadcast(opus)
         }
 
         logger.ERROR.L("listen_moe", "Stream died :(")
@@ -343,7 +343,7 @@ func (l *ListenDotMoe) pipeStream(guildID string, session *discordgo.Session) {
         }
 
         // Send a frame to discord
-        vc.OpusSend <- *(<-audioChan)
+        vc.OpusSend <- <-audioChan
     }
 
     vc.Speaking(false)
