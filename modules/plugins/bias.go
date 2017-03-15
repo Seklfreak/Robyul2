@@ -289,9 +289,9 @@ func (m *Bias) MemberHasRole(member *discordgo.Member, role *discordgo.Role) boo
 func (m *Bias) CleanUpRoleName(inputName string) string {
     inputName = strings.TrimPrefix(inputName, "+")
     inputName = strings.TrimPrefix(inputName, "-")
-    inputName = strings.Trim(inputName, " ")
+    inputName = strings.TrimSpace(inputName)
     inputName = strings.TrimPrefix(inputName, "name")
-    inputName = strings.Trim(inputName, " ")
+    inputName = strings.TrimSpace(inputName)
     inputName = strings.ToLower(inputName)
     return inputName
 }

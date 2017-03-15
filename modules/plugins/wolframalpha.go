@@ -68,7 +68,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
         for _, subPodResult := range subPodResultItems {
             for _, line := range strings.Split(subPodResult.Path("plaintext").Data().(string), "|") {
                 if line != "" {
-                    valueText += strings.Trim(line, " ") + "; "
+                    valueText += strings.TrimSpace(line) + "; "
                 }
             }
         }

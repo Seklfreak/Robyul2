@@ -101,21 +101,21 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
         for _, partInputText := range parts[2:] {
             fullInputText += " " + partInputText
         }
-        fullInputText = strings.Trim(strings.Replace(fullInputText, "\n", " ", -1), " ")
+        fullInputText = strings.TrimSpace(strings.Replace(fullInputText, "\n", " ", -1))
         targetInput := ""
         var targetInputs []string
         for _, word := range strings.Split(fullInputText, " ") {
             if len(targetInput)+len(word)+1 < 200 {
                 targetInput += " " + word
             } else {
-                targetInputs = append(targetInputs, strings.Trim(targetInput, " "))
+                targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
                 targetInput = ""
                 if len(word) < 200 {
                     targetInput = word
                 }
             }
         }
-        targetInputs = append(targetInputs, strings.Trim(targetInput, " "))
+        targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
 
         for _, partToTranslaste := range targetInputs {
             jsonData := fmt.Sprintf("{\"source\": \"%s\", \"target\": \"%s\", \"text\": \"%s\"}",

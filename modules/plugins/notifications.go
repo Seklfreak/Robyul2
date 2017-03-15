@@ -282,7 +282,7 @@ NextKeyword:
                 continue NextKeyword
             }
 
-            matchContent := strings.ToLower(strings.Trim(content, " "))
+            matchContent := strings.ToLower(strings.TrimSpace(content))
             doesMatch := false
             for _, combination := range m.getAllDelimiterCombinations(ValidTextDelimiters) {
                 if strings.Contains(matchContent, strings.ToLower(combination.Start+notificationSetting.Keyword+combination.End)) {

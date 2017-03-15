@@ -403,7 +403,7 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
     doc, err := goquery.NewDocument(ichartPageRealtimeCharts)
     helpers.Relax(err)
 
-    time := strings.Trim(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1), " ")
+    time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
     var ranks []GenericSongScore
     for i := 0; i < 10; i++ {
         ranks = append(ranks,
@@ -458,7 +458,7 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
     doc, err := goquery.NewDocument(ichartPageWeeklyCharts)
     helpers.Relax(err)
 
-    time := strings.Trim(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1), " ")
+    time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
     var ranks []GenericSongScore
     for i := 0; i < 10; i++ {
         ranks = append(ranks,
@@ -513,7 +513,7 @@ func (m *Charts) GetGaonWeekStats() (string, []GenericAlbumScore) {
     doc, err := goquery.NewDocument(gaonPageWeeklyCharts)
     helpers.Relax(err)
 
-    time := strings.Trim(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1), " ")
+    time := strings.TrimSpace(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1))
     var ranks []GenericAlbumScore
     for i := 0; i < 10; i++ {
         ranks = append(ranks,
@@ -547,7 +547,7 @@ func (m *Charts) GetGaonMonthStats() (string, []GenericAlbumScore) {
     doc, err := goquery.NewDocument(gaonPageMonthlyCharts)
     helpers.Relax(err)
 
-    time := strings.Trim(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1), " ")
+    time := strings.TrimSpace(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1))
     var ranks []GenericAlbumScore
     for i := 0; i < 10; i++ {
         ranks = append(ranks,
@@ -581,7 +581,7 @@ func (m *Charts) GetGaonYearStats() (string, []GenericAlbumScore) {
     doc, err := goquery.NewDocument(gaonPageYearlyCharts)
     helpers.Relax(err)
 
-    time := strings.Trim(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1), " ")
+    time := strings.TrimSpace(strings.Replace(doc.Find("#wrap > div.now > div.fl").Text(), "Album Chart", "", -1))
     var ranks []GenericAlbumScore
     for i := 0; i < 10; i++ {
         ranks = append(ranks,

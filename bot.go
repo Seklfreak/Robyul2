@@ -137,7 +137,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         msg = strings.Replace(msg, "<@"+session.State.User.ID+">", "", -1)
 
         // Trim message
-        msg = strings.Trim(msg, " ")
+        msg = strings.TrimSpace(msg)
 
         // Convert to []byte before matching
         bmsg := []byte(msg)
@@ -250,7 +250,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Separate arguments from the command
-    content := strings.Trim(strings.Replace(message.Content, prefix+cmd, "", -1), " ")
+    content := strings.TrimSpace(strings.Replace(message.Content, prefix+cmd, "", -1))
 
     // Check if a module matches said command
     modules.CallBotPlugin(cmd, content, message.Message)
