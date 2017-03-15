@@ -25,6 +25,8 @@ func (s *Stats) Commands() []string {
         "serverinfo",
         "userinfo",
         "voicestats",
+        "emotes",
+        "emojis",
     }
 }
 
@@ -584,6 +586,28 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         _, err = session.ChannelMessageSendEmbed(msg.ChannelID, voicestatsEmbed)
         helpers.Relax(err)
+    case "emotes", "emojis": // [p]emotes
+        session.ChannelTyping(msg.ChannelID)
+        channel, err := session.Channel(msg.ChannelID)
+        helpers.Relax(err)
+        guild, err := session.Guild(channel.GuildID)
+        helpers.Relax(err)
+
+        if len(guild.Emojis) <= 0 {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.no-emotes"))
+            helpers.Relax(err)
+            return
+        }
+
+        resultText := ""
+        for _, emote := range guild.Emojis {
+            resultText += fmt.Sprintf("<:%s:%s> `:%s:`\n", emote.Name, emote.ID, emote.Name)
+        }
+        resultText += fmt.Sprintf("There are **%d** custom emotes on this server.", len(guild.Emojis))
+
+        _, err = session.ChannelMessageSend(msg.ChannelID, resultText)
+        helpers.Relax(err)
+        return
     }
 }
 
