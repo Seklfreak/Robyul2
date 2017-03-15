@@ -272,7 +272,7 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
         return
     }
     if emojis.ToNumber(reaction.Emoji.Name) == -1 {
-        session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+        //session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
         return
     }
     if helpers.VotePollIfItsOne(channel.GuildID, reaction.MessageReaction) {

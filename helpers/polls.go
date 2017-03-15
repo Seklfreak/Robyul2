@@ -232,15 +232,15 @@ func VotePollIfItsOne(guild string, r *discordgo.MessageReaction) bool {
             userID := r.UserID
             fieldID := emojis.ToNumber(r.Emoji.Name)
             if fieldID == -1 {
-                session := cache.GetSession()
-                session.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+                //session := cache.GetSession()
+                //session.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
                 return false
             }
             // Check if user voted
             for _, participant := range p.Participants {
                 if participant.ID == userID {
-                    session := cache.GetSession()
-                    session.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+                    //session := cache.GetSession()
+                    //session.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
                     return false
                 }
             }
