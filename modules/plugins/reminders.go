@@ -49,7 +49,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
         defer helpers.Recover()
 
         for {
-            var reminderBucket []DB_Reminders
+            reminderBucket := make([]DB_Reminders, 0)
             cursor, err := rethink.Table("reminders").Run(helpers.GetDB())
             helpers.Relax(err)
 
