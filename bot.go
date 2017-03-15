@@ -250,7 +250,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Separate arguments from the command
-    content := strings.Replace(message.Content, prefix+cmd, "", -1)
+    content := strings.Trim(strings.Replace(message.Content, prefix+cmd, "", -1), " ")
 
     // Check if a module matches said command
     modules.CallBotPlugin(cmd, content, message.Message)
