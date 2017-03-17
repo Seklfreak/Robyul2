@@ -232,7 +232,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
                     helpers.Relax(err)
                     return
-                } else if err != nil {
+            } else if err != nil {
                     helpers.Relax(err)
                 }
 

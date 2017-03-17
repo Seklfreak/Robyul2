@@ -83,6 +83,12 @@ var (
 
     // RandomPictureSourcesImagesCachedCount counts all randompicture images in cache
     RandomPictureSourcesImagesCachedCount = expvar.NewInt("randompictures_sources_imagescached_count")
+
+    // CustomCommandsCount counts all custom commands
+    CustomCommandsCount = expvar.NewInt("customcommands_count")
+
+    // CustomCommandsTriggered increased with every time a custom command is triggered
+    CustomCommandsTriggered = expvar.NewInt("customcommands_triggered")
 )
 
 // Init starts a http server on 127.0.0.1:1337

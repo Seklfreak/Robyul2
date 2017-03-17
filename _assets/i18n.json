@@ -609,7 +609,7 @@
       "top-server-no-stats": "No stats for this server yet. Chat more! :nerd:",
       "top-server-embed-title": "Top #10",
       "global-top-server-embed-title": "Global Top #10",
-      "user-embed-title": "Stats of %s",
+      "user-embed-title": "Stats for %s",
       "embed-footer": "Robyul is currently on %d servers."
     },
     "gallery": {
@@ -635,6 +635,19 @@
       "refresh-success": "Source successfully refresh! :ok_hand:",
       "refresh-not-found-error": "I wasn't able to find this source. :no_mouth:",
       "refresh-started": "Refreshing started, this may take a while! :sleeping:"
+    },
+    "customcommands": {
+      "add-keyword-already-exists": "There is already a custom command with this keyword. :weary:",
+      "add-success": "I successfully added the command! :pencil2:",
+      "list-empty": "There are no custom commands on this server yet! :mag_right:",
+      "delete-not-found": "I wasn't able to find a command with that name on this server! :scream:",
+      "delete-success": "I successfully deleted the command with this name. :wave:",
+      "edit-not-found": "I wasn't able to find a command with that name on this server! :scream:",
+      "edit-success": "I successfully edited the command. :scissors:",
+      "refreshed-commands": "I refreshed the command cache. :clipboard:",
+      "search-empty": "I couldn't find any command including `%s` in the name on this server. :weary:",
+      "info-not-found": "I wasn't able to find a command with this name. :thinking:",
+      "add-command-already-exists": "There is already a command with this keyword. :weary:"
     }
   }
 }
