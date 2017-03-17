@@ -41,7 +41,7 @@ func (m *LastFm) Init(session *discordgo.Session) {
 }
 
 func (m *LastFm) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     lastfmUsername := m.getLastFmUsername(msg.Author.ID)
     subCom := ""
     if len(args) >= 1 {

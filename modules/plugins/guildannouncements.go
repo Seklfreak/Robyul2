@@ -36,7 +36,7 @@ func (m *GuildAnnouncements) Init(session *discordgo.Session) {
 }
 
 func (m *GuildAnnouncements) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) >= 2 {
         switch args[0] {
         case "set":

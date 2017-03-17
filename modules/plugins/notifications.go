@@ -46,7 +46,7 @@ func (m *Notifications) Init(session *discordgo.Session) {
 // @TODO: add command to make a keyword global (owner only)
 
 func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) > 0 {
         switch args[0] {
         case "add": // [p]notifications add <keyword(s)>

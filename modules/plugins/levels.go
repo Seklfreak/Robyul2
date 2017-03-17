@@ -81,7 +81,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         helpers.Relax(err)
         targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
-        args := strings.Split(content, " ")
+        args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
             targetUser, err = helpers.GetUserFromMention(args[0])
             if targetUser == nil || targetUser.ID == "" {
@@ -212,7 +212,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
-        args := strings.Split(content, " ")
+        args := strings.Fields(content)
 
         channel, err := session.Channel(msg.ChannelID)
         helpers.Relax(err)
@@ -232,7 +232,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
                     helpers.Relax(err)
                     return
-            } else if err != nil {
+                } else if err != nil {
                     helpers.Relax(err)
                 }
 

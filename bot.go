@@ -179,10 +179,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
             metrics.CommandsExecuted.Add(1)
             helpers.RequireAdmin(message.Message, func() {
                 // Extract prefix
-                prefix := strings.Split(
-                    regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""),
-                    " ",
-                )[0]
+                prefix := strings.Fields(regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""))[0]
 
                 // Set new prefix
                 err := helpers.SetPrefixForServer(
@@ -237,7 +234,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     }
 
     // Split the message into parts
-    parts := strings.Split(message.Content, " ")
+    parts := strings.Fields(message.Content)
 
     // Save a sanitized version of the command (no prefix)
     cmd := strings.Replace(parts[0], prefix, "", 1)

@@ -272,7 +272,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
-        args := strings.Split(content, " ")
+        args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
             targetUser, err = helpers.GetUserFromMention(args[0])
             helpers.Relax(err)
@@ -410,7 +410,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
-        args := strings.Split(content, " ")
+        args := strings.Fields(content)
 
         channel, err := session.Channel(msg.ChannelID)
         helpers.Relax(err)

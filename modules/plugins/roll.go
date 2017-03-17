@@ -22,7 +22,7 @@ func (r *Roll) Init(session *discordgo.Session) {
 
 func (r *Roll) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     regex := regexp.MustCompile(`[^\d-]`)
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
 
     if len(args) == 2 {
         min, e := strconv.ParseInt(regex.ReplaceAllString(args[0], ""), 10, 64)

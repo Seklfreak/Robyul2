@@ -602,7 +602,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             return
         }
 
-        term := "(?i).*" + strings.Join(strings.Split(content, " "), ".*") + ".*"
+        term := "(?i).*" + strings.Join(strings.Fields(content), ".*") + ".*"
 
         cursor, err := rethink.
         Table("music").

@@ -95,7 +95,7 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
         channel, err := cache.Channel(msg.ChannelID)
         helpers.Relax(err)
 
-        parts := strings.Split(content, " ")
+        parts := strings.Fields(content)
 
         if len(parts) < 3 {
             session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")

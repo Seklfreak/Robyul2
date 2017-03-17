@@ -43,7 +43,7 @@ func (cc *CustomCommands) Init(session *discordgo.Session) {
 }
 
 func (cc *CustomCommands) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
         case "add": // [p]commands add <command name> <command text>

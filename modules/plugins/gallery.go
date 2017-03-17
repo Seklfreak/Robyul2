@@ -44,7 +44,7 @@ func (g *Gallery) Init(session *discordgo.Session) {
 }
 
 func (g *Gallery) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
         case "add": // [p]gallery add <source channel> <target channel> <webhook id> <webhook token>

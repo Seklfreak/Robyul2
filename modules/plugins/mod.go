@@ -34,7 +34,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
     switch command {
     case "cleanup":
         helpers.RequireMod(msg, func() {
-            args := strings.Split(content, " ")
+            args := strings.Fields(content)
             if len(args) > 0 {
                 switch args[0] {
                 case "after": // [p]cleanup after <after message id> [<until message id>]
@@ -137,7 +137,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "mute": // [p]mute server <User>
         helpers.RequireMod(msg, func() {
-            args := strings.Split(content, " ")
+            args := strings.Fields(content)
             if len(args) >= 2 {
                 targetUser, err := helpers.GetUserFromMention(args[1])
                 if err != nil {
@@ -161,7 +161,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "unmute": // [p]unmute server <User>
         helpers.RequireMod(msg, func() {
-            args := strings.Split(content, " ")
+            args := strings.Fields(content)
             if len(args) >= 2 {
                 targetUser, err := helpers.GetUserFromMention(args[1])
                 if err != nil {
@@ -185,7 +185,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "ban": // [p]ban <User> [<Days>], checks for IsMod and Ban Permissions
         helpers.RequireMod(msg, func() {
-            args := strings.Split(content, " ")
+            args := strings.Fields(content)
             if len(args) >= 1 {
                 // Days Argument
                 days := 0
@@ -248,7 +248,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "kick": // [p]kick <User>, checks for IsMod and Kick Permissions
         helpers.RequireMod(msg, func() {
-            args := strings.Split(content, " ")
+            args := strings.Fields(content)
             if len(args) >= 1 {
                 targetUser, err := helpers.GetUserFromMention(args[0])
                 if err != nil {
@@ -318,7 +318,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "echo": // [p]echo <channel> <message>
         helpers.RequireMod(msg, func() {
-            args := strings.Split(content, " ")
+            args := strings.Fields(content)
             if len(args) >= 2 {
                 sourceChannel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)

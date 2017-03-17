@@ -47,7 +47,7 @@ func (t *Translator) Init(session *discordgo.Session) {
 
 func (t *Translator) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     // Assumed format: <lang_in> <lang_out> <text>
-    parts := strings.Split(content, " ")
+    parts := strings.Fields(content)
 
     if len(parts) < 3 {
         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.check_format"))
@@ -104,7 +104,7 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
         fullInputText = strings.TrimSpace(strings.Replace(fullInputText, "\n", " ", -1))
         targetInput := ""
         var targetInputs []string
-        for _, word := range strings.Split(fullInputText, " ") {
+        for _, word := range strings.Fields(fullInputText) {
             if len(targetInput)+len(word)+1 < 200 {
                 targetInput += " " + word
             } else {

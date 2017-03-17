@@ -122,7 +122,7 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 }
 
 func (m *Facebook) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
         case "add": // [p]facebook add <facebook page name> <discord channel>

@@ -130,7 +130,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 }
 
 func (m *Twitter) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
         case "add": // [p]twitter add <twitter account name (with or without @)> <discord channel>

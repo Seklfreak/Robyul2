@@ -193,7 +193,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
         }
         return
     default:
-        args := strings.Split(content, " ")
+        args := strings.Fields(content)
         if len(args) > 0 {
             switch args[0] {
             case "new-config": // [p]randompictures new-config

@@ -123,7 +123,7 @@ func (m *Charts) Init(session *discordgo.Session) {
 }
 
 func (m *Charts) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
 
     switch command {
     case "melon":

@@ -147,7 +147,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 }
 
 func (m *Twitch) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    args := strings.Split(content, " ")
+    args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
         case "add": // [p]twitch add <channel> <twitch channel name>
