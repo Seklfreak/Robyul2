@@ -22,8 +22,6 @@ import (
 
 type RandomPictures struct{}
 
-// @TODO: Metrics
-
 type DB_RandomPictures_Source struct {
     ID               string            `gorethink:"id,omitempty"`
     GuildID          string            `gorethink:"guildid"`
@@ -118,7 +116,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                 }
             }
 
-            time.Sleep(1 * time.Hour)
+            time.Sleep(time.Duration(rand.Intn(30)+60) * time.Minute)
         }
     }()
     logger.PLUGIN.L("randompictures", "Started post loop (1h)")
@@ -332,6 +330,7 @@ func (rp *RandomPictures) postItem(channelID string, file *drive.File) {
     helpers.Relax(err)
     defer result.Body.Close()
 
+    // @TODO: Include camera model
     _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf("`%s`", file.Name), file.Name, result.Body)
     helpers.Relax(err)
 }
