@@ -57,12 +57,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 channel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
 
-                // @TODO: Check if keyword is already a real command
-                //if modules.CheckIfCommandExists(args[1]) {
-                //    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
-                //    helpers.Relax(err)
-                //    return
-                // }
+                if helpers.CommandExists(args[1]) {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
+                    helpers.Relax(err)
+                    return
+                }
 
                 var entryBucket DB_CustomCommands_Command
                 listCursor, err := rethink.Table("customcommands").Filter(

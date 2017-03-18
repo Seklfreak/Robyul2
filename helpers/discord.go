@@ -285,3 +285,22 @@ func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
 
     return fmt.Sprintf(avatarUrl, user.ID, user.Avatar, "jpg", size)
 }
+
+func CommandExists(name string) bool {
+    for _, command := range cache.GetPluginList() {
+        if command == strings.ToLower(name) {
+            return true
+        }
+    }
+    for _, command := range cache.GetPluginExtendedList() {
+        if command == strings.ToLower(name) {
+            return true
+        }
+    }
+    for _, command := range cache.GetTriggerPluginList() {
+        if command == strings.ToLower(name) {
+            return true
+        }
+    }
+    return false
+}

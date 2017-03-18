@@ -82,6 +82,22 @@ func Init(session *discordgo.Session) {
         listeners = ""
     }
 
+    pluginCommands := make([]string, 0, len(pluginCache))
+    for k := range pluginCache {
+        pluginCommands = append(pluginCommands, k)
+    }
+    cache.SetPluginList(pluginCommands)
+    extendedPluginCommands := make([]string, 0, len(extendedPluginCache))
+    for k := range pluginCache {
+        extendedPluginCommands = append(extendedPluginCommands, k)
+    }
+    cache.SetPluginExtendedList(extendedPluginCommands)
+    triggerCommands := make([]string, 0, len(triggerCache))
+    for k := range pluginCache {
+        triggerCommands = append(triggerCommands, k)
+    }
+    cache.SetTriggerPluginList(triggerCommands)
+
     logger.INFO.L(
         "modules",
         "Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
