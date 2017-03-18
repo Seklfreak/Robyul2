@@ -14,6 +14,7 @@ import (
     "regexp"
     "strings"
     "time"
+    "sync"
 )
 
 var (
@@ -97,6 +98,11 @@ type DB_VLive_Celeb struct {
     Url     string `json:"-"`
 }
 
+type VLive_Safe_Entries struct {
+    entries []DB_VLive_Entry
+    mux     sync.Mutex
+}
+
 func (r *VLive) Commands() []string {
     return []string{
         "vlive",
@@ -108,6 +114,8 @@ func (r *VLive) Init(session *discordgo.Session) {
     logger.PLUGIN.L("VLive", "Started vlive loop (60s)")
 }
 func (r *VLive) checkVliveFeedsLoop() {
+    var safeEntries VLive_Safe_Entries
+
     defer func() {
         helpers.Recover()
 
@@ -117,20 +125,21 @@ func (r *VLive) checkVliveFeedsLoop() {
     }()
 
     for {
-        entryBucket := make([]DB_VLive_Entry, 0)
         cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
         helpers.Relax(err)
 
-        err = cursor.All(&entryBucket)
+        err = cursor.All(&safeEntries.entries)
         helpers.Relax(err)
 
         // TODO: Check multiple entries at once
-        for _, entry := range entryBucket {
+        for _, entry := range safeEntries.entries {
+            safeEntries.mux.Lock()
             changes := false
             logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s", entry.VLiveChannel.Name))
             updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(entry.VLiveChannel.Code)
             if err != nil {
                 logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", entry.VLiveChannel.Name, err.Error()))
+                safeEntries.mux.Unlock()
                 continue
             }
             for _, vod := range updatedVliveChannel.VOD {
@@ -206,6 +215,7 @@ func (r *VLive) checkVliveFeedsLoop() {
             if changes == true {
                 r.setEntry(entry)
             }
+            safeEntries.mux.Unlock()
         }
 
         time.Sleep(60 * time.Second)
