@@ -96,6 +96,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
             session.ChannelTyping(msg.ChannelID)
             channel, err := session.Channel(msg.ChannelID)
             helpers.Relax(err)
+            guild, err := session.Guild(channel.GuildID)
+            helpers.Relax(err)
 
             var entryBucket []DB_CustomCommands_Command
             listCursor, err := rethink.Table("customcommands").Filter(
@@ -112,15 +114,20 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 helpers.Relax(err)
             }
 
-            commandListText := "Custom commands on this server:\n"
+            dmChannel, err := session.UserChannelCreate(msg.Author.ID)
+            helpers.Relax(err)
+
+            commandListText := fmt.Sprintf("Custom commands on `%s`:\n", guild.Name)
             for _, customCommand := range entryBucket {
                 commandListText += fmt.Sprintf("`%s%s` (used %s times)\n",
                     helpers.GetPrefixForServer(channel.GuildID), customCommand.Keyword, humanize.Comma(int64(customCommand.Triggered)))
             }
             commandListText += fmt.Sprintf("There are **%s** custom commands on this server.", humanize.Comma(int64(len(entryBucket))))
 
+            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
+
             for _, page := range helpers.Pagify(commandListText, "\n") {
-                _, err = session.ChannelMessageSend(msg.ChannelID, page)
+                _, err = session.ChannelMessageSend(dmChannel.ID, page)
                 helpers.Relax(err)
             }
             return
