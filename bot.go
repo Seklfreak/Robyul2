@@ -261,9 +261,12 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 // should die as soon as possible or spawn costly work inside of coroutines.
 // This is currently used for the *poll* plugin.
 func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+    modules.CallExtendedPluginOnReactionAdd(reaction)
+
     if user, err := session.User(reaction.UserID); err == nil && user.Bot {
         return
     }
+
     channel, err := session.Channel(reaction.ChannelID)
     if err != nil {
         return
@@ -276,6 +279,10 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
         helpers.UpdatePollMsg(channel.GuildID, reaction.MessageID)
     }
 
+}
+
+func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.MessageReactionRemove) {
+    modules.CallExtendedPluginOnReactionRemove(reaction)
 }
 
 func sendHelp(message *discordgo.MessageCreate) {

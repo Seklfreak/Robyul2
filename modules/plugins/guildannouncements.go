@@ -224,3 +224,9 @@ func (m *GuildAnnouncements) setEntry(entry Announcement_Setting) {
     _, err := rethink.Table("guild_announcements").Update(entry).Run(helpers.GetDB())
     helpers.Relax(err)
 }
+func (m *GuildAnnouncements) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (m *GuildAnnouncements) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}

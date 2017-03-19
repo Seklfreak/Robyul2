@@ -89,6 +89,9 @@ var (
 
     // CustomCommandsTriggered increased with every time a custom command is triggered
     CustomCommandsTriggered = expvar.NewInt("customcommands_triggered")
+
+    // ReactionPollsCount increased with every time a new ReactionPoll is created
+    ReactionPollsCount = expvar.NewInt("reactionpolls_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337

@@ -55,4 +55,14 @@ type ExtendedPlugin interface {
         member *discordgo.Member,
         session *discordgo.Session,
     )
+
+    OnReactionAdd(
+        reaction *discordgo.MessageReactionAdd,
+        session *discordgo.Session,
+    )
+
+    OnReactionRemove(
+        reaction *discordgo.MessageReactionRemove,
+        session *discordgo.Session,
+    )
 }

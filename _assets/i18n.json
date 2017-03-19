@@ -648,6 +648,11 @@
       "search-empty": "I couldn't find any command including `%s` in the name on this server. :weary:",
       "info-not-found": "I wasn't able to find a command with this name. :thinking:",
       "add-command-already-exists": "There is already a command with this keyword. :weary:"
+    },
+    "reactionpolls": {
+      "create-too-many-reactions": "You can only add up to 20 possible reactions. :no_good:",
+      "create-external-emote": "You can only use custom emotes from the server you are on! :warning:",
+      "refreshed-polls": "Reaction Poll Cache successfully refreshed. :clipboard:"
     }
   }
 }

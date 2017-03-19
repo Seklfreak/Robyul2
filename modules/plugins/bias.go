@@ -302,3 +302,9 @@ func (m *Bias) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Ses
 func (m *Bias) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 
 }
+func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (m *Bias) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}

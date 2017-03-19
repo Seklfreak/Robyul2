@@ -749,3 +749,10 @@ func (b *Levels) BucketSet(user string, value int8) {
     b.buckets[user] = value
     b.Unlock()
 }
+
+func (b *Levels) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (b *Levels) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}

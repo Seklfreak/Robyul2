@@ -327,3 +327,10 @@ func (m *Mirror) GetMirrors() []DB_Mirror_Entry {
     helpers.Relax(err)
     return entryBucket
 }
+
+func (m *Mirror) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (m *Mirror) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}

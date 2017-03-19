@@ -584,3 +584,10 @@ func (m *Notifications) increaseNotificationEntryById(id string) {
     entryBucket.Triggered += 1
     m.setNotificationSetting(entryBucket)
 }
+
+func (m *Notifications) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (m *Notifications) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}

@@ -437,3 +437,10 @@ func (cc *CustomCommands) getAllCustomCommands() []DB_CustomCommands_Command {
     metrics.CustomCommandsCount.Set(int64(len(entryBucket)))
     return entryBucket
 }
+
+func (cc *CustomCommands) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (cc *CustomCommands) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}

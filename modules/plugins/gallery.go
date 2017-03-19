@@ -291,3 +291,10 @@ func (g *Gallery) GetGalleries() []DB_Gallery_Entry {
     helpers.Relax(err)
     return entryBucket
 }
+
+func (g *Gallery) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+func (g *Gallery) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}
