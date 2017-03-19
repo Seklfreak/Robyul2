@@ -230,16 +230,19 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             ownerText = fmt.Sprintf("%s#%s ~ %s", owner.Username, owner.Discriminator, member.Nick)
         }
 
-        emoteText := ""
+        emoteText := "None"
         emoteN := 0
         for _, emote := range guild.Emojis {
-            emoteText += fmt.Sprintf("<:%s> ", emote.APIName())
+            if emoteN == 0 {
+                emoteText = fmt.Sprintf("`:%s:`", emote.Name)
+            } else {
+
+                emoteText += fmt.Sprintf(", `:%s:`", emote.Name)
+            }
             emoteN += 1
         }
-        if emoteText != "" {
-            emoteText += fmt.Sprintf("(%d in Total)", emoteN)
-        } else {
-            emoteText = "None"
+        if emoteText != "None" {
+            emoteText += fmt.Sprintf(" (%d in Total)", emoteN)
         }
 
         serverinfoEmbed := &discordgo.MessageEmbed{
