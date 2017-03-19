@@ -233,7 +233,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         emoteText := ""
         emoteN := 0
         for _, emote := range guild.Emojis {
-            emoteText += fmt.Sprintf("<:%s> `:%s:` ", emote.APIName(), emote.Name)
+            emoteText += fmt.Sprintf("<:%s> ", emote.APIName())
             emoteN += 1
         }
         if emoteText != "" {
