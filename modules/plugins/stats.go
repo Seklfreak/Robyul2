@@ -230,19 +230,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             ownerText = fmt.Sprintf("%s#%s ~ %s", owner.Username, owner.Discriminator, member.Nick)
         }
 
-        emoteText := "None"
+        emoteText := ""
         emoteN := 0
         for _, emote := range guild.Emojis {
-            if emoteN == 0 {
-                emoteText = fmt.Sprintf("`%s`", emote.Name)
-            } else {
-
-                emoteText += fmt.Sprintf(", `%s`", emote.Name)
-            }
+            emoteText += fmt.Sprintf("<:%s> `:%s:` ", emote.APIName(), emote.Name)
             emoteN += 1
         }
-        if emoteText != "None" {
-            emoteText += fmt.Sprintf(" (%d in Total)", emoteN)
+        if emoteText != "" {
+            emoteText += fmt.Sprintf("(%d in Total)", emoteN)
+        } else {
+            emoteText = "None"
         }
 
         serverinfoEmbed := &discordgo.MessageEmbed{
@@ -407,6 +404,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         _, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
         helpers.Relax(err)
     case "voicestats": // [p]voicestats <user> or [p]voicestats top
+        // @TODO: sort by time connected
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)

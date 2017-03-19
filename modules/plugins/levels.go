@@ -483,6 +483,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             fullUsername += " ~ " + currentMember.Nick
         }
 
+        zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
+        helpers.Relax(err)
+
         userLevelEmbed := &discordgo.MessageEmbed{
             Color: 0x0FADED,
             Title: helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
@@ -500,8 +503,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   ":white_circle:",
-                    Value:  ":white_circle:",
+                    Name:   zeroWidthWhitespace,
+                    Value:  zeroWidthWhitespace,
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
@@ -515,8 +518,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Inline: true,
                 },
                 &discordgo.MessageEmbedField{
-                    Name:   ":white_circle:",
-                    Value:  ":white_circle:",
+                    Name:   zeroWidthWhitespace,
+                    Value:  zeroWidthWhitespace,
                     Inline: true,
                 },
             },
