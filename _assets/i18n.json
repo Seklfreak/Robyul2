@@ -556,7 +556,8 @@
       "role-limit-reached": "You already got enough Roles! :no_good:",
       "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**",
       "no-bias-config": "No Bias Config set for this Channel.",
-      "refreshed-config": "I loaded the newest config from the Database. :ok_hand:"
+      "refreshed-config": "I loaded the newest config from the Database. :ok_hand:",
+      "generic-error": "Something went wrong. :confounded:"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",
