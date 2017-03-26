@@ -18,7 +18,6 @@ var (
         &plugins.Announcement{},
         //&plugins.Translator{},
         &plugins.Uptime{},
-        &plugins.Mod{},
         &plugins.Music{},
         &plugins.Translator{},
         &plugins.Ping{},
@@ -65,6 +64,7 @@ var (
         &plugins.Mirror{},
         &plugins.CustomCommands{},
         &plugins.ReactionPolls{},
+        &plugins.Mod{},
     }
 
     // TriggerPluginList is the list of plugins that activate on normal chat

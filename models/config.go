@@ -23,6 +23,9 @@ type Config struct {
     // closed polls are also stored but will be auto-deleted
     // one day after its state changes to closed
     Polls []Poll `rethink:"polls"`
+
+    InspectsEnabled bool   `rethink:"inspects_enabled"`
+    InspectsChannel string `rethink:"inspects_channel"`
 }
 
 // Default is a helper for generating default config values

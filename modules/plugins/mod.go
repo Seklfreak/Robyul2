@@ -8,6 +8,8 @@ import (
     "regexp"
     "strconv"
     "strings"
+    "github.com/Seklfreak/Robyul2/cache"
+    "github.com/getsentry/raven-go"
 )
 
 type Mod struct{}
@@ -21,6 +23,8 @@ func (m *Mod) Commands() []string {
         "kick",
         "serverlist",
         "echo",
+        "inspect",
+        "auto-inspects-channel",
     }
 }
 
@@ -337,5 +341,179 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+    case "inspect": // [p]inspect <user>
+        helpers.RequireMod(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
+            args := strings.Fields(content)
+            var targetUser *discordgo.User
+            var err error
+            if len(args) >= 1 && args[0] != "" {
+                targetUser, err = helpers.GetUserFromMention(args[0])
+                helpers.Relax(err)
+                if targetUser.ID == "" {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    helpers.Relax(err)
+                    return
+                }
+            } else {
+                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                helpers.Relax(err)
+                return
+            }
+            channel, err := session.Channel(msg.ChannelID)
+            helpers.Relax(err)
+
+            resultEmbed := &discordgo.MessageEmbed{
+                Title:       helpers.GetTextF("plugins.mod.inspect-embed-title", targetUser.Username, targetUser.Discriminator),
+                Description: helpers.GetTextF("plugins.mod.inspect-embed-description-in-progress", 0, len(session.State.Guilds)),
+                URL:         helpers.GetAvatarUrl(targetUser),
+                Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)},
+                Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", targetUser.ID, len(session.State.Guilds))},
+                Color:       0x0FADED,
+            }
+            resultMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+
+            bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, func(progressN int) {
+                resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-in-progress", progressN, len(session.State.Guilds))
+                session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+            })
+
+            resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-done")
+
+            resultBansText := ""
+            if len(bannedOnServerList) <= 0 {
+                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\nChecked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+            } else {
+                resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+            }
+
+            resultEmbed.Fields = []*discordgo.MessageEmbedField{
+                {Name: "Bans", Value: resultBansText, Inline: false},
+            }
+
+            for _, failedServer := range checkFailedServerList {
+                if failedServer.ID == channel.GuildID {
+                    resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+                    break
+                }
+            }
+
+            _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+            helpers.Relax(err)
+        })
+    case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
+        helpers.RequireAdmin(msg, func() {
+            channel, err := session.State.Channel(msg.ChannelID)
+            helpers.Relax(err)
+            settings := helpers.GuildSettingsGetCached(channel.GuildID)
+            args := strings.Fields(content)
+            successMessage := ""
+            // Add Text
+            if len(args) >= 1 {
+                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                if err != nil || targetChannel.ID == "" {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    return
+                }
+
+                settings.InspectsEnabled = true
+                settings.InspectsChannel = targetChannel.ID
+
+                successMessage = helpers.GetText("plugins.mod.inspects-channel-set")
+            } else {
+                settings.InspectsEnabled = false
+                successMessage = helpers.GetText("plugins.mod.inspects-channel-disabled")
+            }
+            err = helpers.GuildSettingsSet(channel.GuildID, settings)
+            helpers.Relax(err)
+            _, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
+            helpers.Relax(err)
+        })
     }
+}
+
+func (m *Mod) inspectUserBans(user *discordgo.User, callbackProgress func(progressN int)) ([]*discordgo.Guild, []*discordgo.Guild) {
+    bannedOnServerList := make([]*discordgo.Guild, 0)
+    checkFailedServerList := make([]*discordgo.Guild, 0)
+
+    i := 1
+    for _, botGuild := range cache.GetSession().State.Guilds {
+        callbackProgress(i)
+        guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
+        if err != nil {
+            checkFailedServerList = append(checkFailedServerList, botGuild)
+        } else {
+            for _, guildBan := range guildBans {
+                if guildBan.User.ID == user.ID {
+                    bannedOnServerList = append(bannedOnServerList, botGuild)
+                }
+            }
+        }
+        i++
+    }
+    return bannedOnServerList, checkFailedServerList
+}
+
+func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+    go func() {
+        if helpers.GuildSettingsGetCached(member.GuildID).InspectsEnabled {
+            guild, err := session.State.Guild(member.GuildID)
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                return
+            }
+
+            bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, func(_ int) {})
+
+            logger.INFO.L("mod", fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
+                member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
+
+            if len(bannedOnServerList) > 0 {
+                resultEmbed := &discordgo.MessageEmbed{
+                    Title:       helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
+                    Description: helpers.GetText("plugins.mod.inspect-embed-description-done"),
+                    URL:         helpers.GetAvatarUrl(member.User),
+                    Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
+                    Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
+                    Color:       0x0FADED,
+                }
+
+                resultBansText := ""
+                if len(bannedOnServerList) <= 0 {
+                    resultBansText += fmt.Sprintf("✅ User is banned on none servers.\nChecked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+                } else {
+                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                }
+
+                resultEmbed.Fields = []*discordgo.MessageEmbedField{
+                    {Name: "Bans", Value: resultBansText, Inline: false},
+                }
+
+                for _, failedServer := range checkFailedServerList {
+                    if failedServer.ID == member.GuildID {
+                        resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+                        break
+                    }
+                }
+
+                _, err := session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
+                if err != nil {
+                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    return
+                }
+            }
+        }
+    }()
+}
+
+func (m *Mod) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+}
+
+func (m *Mod) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
+}
+
+func (m *Mod) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+}
+
+func (m *Mod) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
 }

@@ -461,7 +461,13 @@
       "bot-disallowed": "I am not allowed to do this!",
       "user-banned-success": "User `%s (#%s)` has been banned. :no_entry:",
       "user-kicked-success": "User `%s (#%s)` has been kicked. :door:",
-      "echo-error-wrong-server": "You can only post stuff to the server you are on! :no_good:"
+      "echo-error-wrong-server": "You can only post stuff to the server you are on! :no_good:",
+      "inspect-embed-title": "Results for user `%s#%s` 🔎",
+      "inspect-embed-footer": "User ID: %s | Robyul is on %d servers",
+      "inspect-embed-description-in-progress": "User is being inspected.\nChecking server %d of %d servers.",
+      "inspect-embed-description-done": "Inspecting completed.",
+      "inspects-channel-disabled": "Successfully disabled automatic inspect messages.",
+      "inspects-channel-set": "Successfully set channel for automatic inspect messages."
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
@@ -603,11 +609,7 @@
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
       "voicestats-toplist-embed-title": "Voice Channel Duration Leaderboard for this server",
       "voicestats-embed-footer": "Total durations exclude the currently active session. Stats are refreshed every 30 seconds.",
-      "no-emotes": "No custom emotes on this server yet. :flushed:",
-      "inspect-embed-title": "Result for user `%s#%s` 🔎",
-      "inspect-embed-footer": "User ID: %s | Robyul is on %d servers",
-      "inspect-embed-description-in-progress": "User is being inspected.\nChecking server %d of %d servers.",
-      "inspect-embed-description-done": "Inspecting completed."
+      "no-emotes": "No custom emotes on this server yet. :flushed:"
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! :nerd:",
