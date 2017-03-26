@@ -603,7 +603,11 @@
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
       "voicestats-toplist-embed-title": "Voice Channel Duration Leaderboard for this server",
       "voicestats-embed-footer": "Total durations exclude the currently active session. Stats are refreshed every 30 seconds.",
-      "no-emotes": "No custom emotes on this server yet. :flushed:"
+      "no-emotes": "No custom emotes on this server yet. :flushed:",
+      "inspect-embed-title": "Result for user `%s#%s` 🔎",
+      "inspect-embed-footer": "User ID: %s | Robyul is on %d servers",
+      "inspect-embed-description-in-progress": "User is being inspected.\nChecking server %d of %d servers.",
+      "inspect-embed-description-done": "Inspecting completed."
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! :nerd:",

@@ -35,7 +35,9 @@ type DB_NotificationSetting struct {
 func (m *Notifications) Commands() []string {
     return []string{
         "notifications",
+        "notification",
         "noti",
+        "notis",
     }
 }
 
@@ -93,7 +95,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             logger.INFO.L("notifications", fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", entry.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
             session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
             go m.refreshNotificationSettingsCache()
-        case "delete": // [p]notifications delete <keyword(s)>
+        case "delete", "del": // [p]notifications delete <keyword(s)>
             channel, err := session.Channel(msg.ChannelID)
             helpers.Relax(err)
             guild, err := session.Guild(channel.GuildID)

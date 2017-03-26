@@ -92,7 +92,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 customCommandsCache = cc.getAllCustomCommands()
             })
             return
-        case "list": // [p]commands list // @TODO: optional sort by times triggered
+        case "list": // [p]commands list // @TODO: sort after name, and optional sort by times triggered
             session.ChannelTyping(msg.ChannelID)
             channel, err := session.Channel(msg.ChannelID)
             helpers.Relax(err)
