@@ -227,6 +227,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 helpers.Relax(err)
                 defer listCursor.Close()
                 err = listCursor.All(&levelsServersUsers)
+                // @TODO: order by size, only get top 10
 
                 if err == rethink.ErrEmptyResult || len(levelsServersUsers) <= 0 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
@@ -533,7 +534,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-    m.ProcessMessage(msg, session)
+    go m.ProcessMessage(msg, session)
 }
 
 func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Session) {

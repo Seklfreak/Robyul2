@@ -150,7 +150,8 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
     args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
-        case "add": // [p]twitch add <channel> <twitch channel name>
+        // @TODO: fix argument order (currently it's <channel> <twitch channel name>)
+        case "add": // [p]twitch add <twitch channel name> <channel>
             helpers.RequireMod(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 // get target channel
@@ -349,6 +350,7 @@ func (m *Twitch) deleteEntryById(id string) {
     helpers.Relax(err)
 }
 
+// @TODO: Only show Channel Name if unlike DisplayName
 func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchStatus) {
     twitchChannelEmbed := &discordgo.MessageEmbed{
         Title:  helpers.GetTextF("plugins.twitch.wentlive-embed-title", twitchStatus.Stream.Channel.DisplayName, twitchStatus.Stream.Channel.Name),

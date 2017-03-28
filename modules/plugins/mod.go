@@ -398,6 +398,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
             }
 
+            // TODO: check common servers
+
             _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
             helpers.Relax(err)
         })
