@@ -12,7 +12,6 @@ import (
     "errors"
     "github.com/Seklfreak/Robyul2/ratelimits"
     "fmt"
-    "github.com/bradfitz/slice"
     "strconv"
     "github.com/fogleman/gg"
     "github.com/Seklfreak/Robyul2/logger"
@@ -223,7 +222,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 var levelsServersUsers []DB_Levels_ServerUser
                 listCursor, err := rethink.Table("levels_serverusers").Filter(
                     rethink.Row.Field("guildid").Eq(channel.GuildID),
-                ).Run(helpers.GetDB())
+                ).OrderBy(rethink.Desc("exp")).Limit(10).Run(helpers.GetDB())
                 helpers.Relax(err)
                 defer listCursor.Close()
                 err = listCursor.All(&levelsServersUsers)
@@ -236,10 +235,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 } else if err != nil {
                     helpers.Relax(err)
                 }
-
-                slice.Sort(levelsServersUsers, func(i, j int) bool {
-                    return levelsServersUsers[i].Exp > levelsServersUsers[j].Exp
-                })
 
                 topLevelEmbed := &discordgo.MessageEmbed{
                     Color: 0x0FADED,

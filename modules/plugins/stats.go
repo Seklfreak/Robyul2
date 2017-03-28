@@ -179,7 +179,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 {Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
 
                 // Link
-                {Name: "Want more stats and awesome graphs?", Value: "Visit my [datadog dashboard](https://p.datadoghq.com/sb/066f13da3-7607f827de)", Inline: false},
+                {Name: "Want more stats and awesome graphs?", Value: "Visit my [datadog dashboard](https://p.datadoghq.com/sb/bde759469-fe3b1d3515)", Inline: false},
             },
         })
     case "serverinfo":
