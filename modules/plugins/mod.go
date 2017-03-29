@@ -387,8 +387,17 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
             }
 
+            isOnServerList := m.inspectCommonServers(targetUser)
+            commonGuildsText := ""
+            if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+                commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+            } else {
+                commonGuildsText += "❓ User is on **none** other servers with Robyul."
+            }
+
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
                 {Name: "Bans", Value: resultBansText, Inline: false},
+                {Name: "Common Servers", Value: commonGuildsText, Inline: false},
             }
 
             for _, failedServer := range checkFailedServerList {
@@ -398,7 +407,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
             }
 
-            // TODO: check common servers
+            // @TODO: check accoutn age
 
             _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
             helpers.Relax(err)
@@ -456,6 +465,17 @@ func (m *Mod) inspectUserBans(user *discordgo.User, callbackProgress func(progre
     return bannedOnServerList, checkFailedServerList
 }
 
+func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
+    isOnServerList := make([]*discordgo.Guild, 0)
+    for _, botGuild := range cache.GetSession().State.Guilds {
+        _, err := cache.GetSession().GuildMember(botGuild.ID, user.ID)
+        if err == nil {
+            isOnServerList = append(isOnServerList, botGuild)
+        }
+    }
+    return isOnServerList
+}
+
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
     go func() {
         if helpers.GuildSettingsGetCached(member.GuildID).InspectsEnabled {
@@ -488,8 +508,17 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                     resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
                 }
 
+                isOnServerList := m.inspectCommonServers(member.User)
+                commonGuildsText := ""
+                if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+                } else {
+                    commonGuildsText += "❓ User is on **none** other servers with Robyul."
+                }
+
                 resultEmbed.Fields = []*discordgo.MessageEmbedField{
                     {Name: "Bans", Value: resultBansText, Inline: false},
+                    {Name: "Common Servers", Value: commonGuildsText, Inline: false},
                 }
 
                 for _, failedServer := range checkFailedServerList {
@@ -561,8 +590,17 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                         resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
                     }
 
+                    isOnServerList := m.inspectCommonServers(user.User)
+                    commonGuildsText := ""
+                    if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+                        commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+                    } else {
+                        commonGuildsText += "❓ User is on **none** other servers with Robyul."
+                    }
+
                     resultEmbed.Fields = []*discordgo.MessageEmbedField{
                         {Name: "Bans", Value: resultBansText, Inline: false},
+                        {Name: "Common Servers", Value: commonGuildsText, Inline: false},
                     }
 
                     for _, failedServer := range checkFailedServerList {
