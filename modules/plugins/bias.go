@@ -48,7 +48,6 @@ func (m *Bias) Init(session *discordgo.Session) {
     biasChannels = m.GetBiasChannels()
 }
 
-// @TODO: Make "bias role stuff text" optional
 func (m *Bias) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     args := strings.Fields(content)
     if len(args) >= 1 {
@@ -312,5 +311,11 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 
 }
 func (m *Bias) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}
+func (m *Bias) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (m *Bias) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }

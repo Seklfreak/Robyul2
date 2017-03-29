@@ -371,3 +371,11 @@ func (rp *ReactionPolls) getAllReactionPolls() []DB_ReactionPoll {
     metrics.ReactionPollsCount.Set(int64(len(entryBucket)))
     return entryBucket
 }
+
+func (rp *ReactionPolls) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (rp *ReactionPolls) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+

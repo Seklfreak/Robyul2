@@ -334,3 +334,9 @@ func (m *Mirror) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *
 func (m *Mirror) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
 
 }
+func (m *Mirror) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (m *Mirror) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}

@@ -150,7 +150,6 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
     args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
-        // @TODO: fix argument order (currently it's <channel> <twitch channel name>)
         case "add": // [p]twitch add <twitch channel name> <channel>
             helpers.RequireMod(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
@@ -160,12 +159,12 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                 var targetGuild *discordgo.Guild
                 var targetTwitchChannelName string
                 if len(args) >= 3 {
-                    targetChannel, err = helpers.GetChannelFromMention(args[1])
+                    targetChannel, err = helpers.GetChannelFromMention(args[2])
                     if err != nil {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                         return
                     }
-                    targetTwitchChannelName = args[2]
+                    targetTwitchChannelName = args[1]
                 } else {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                     return
@@ -182,7 +181,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
                 logger.INFO.L("twitch", fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
-        case "delete": // [p]twitch delete <id>
+        case "delete", "del": // [p]twitch delete <id>
             helpers.RequireMod(msg, func() {
                 if len(args) >= 2 {
                     session.ChannelTyping(msg.ChannelID)
@@ -350,10 +349,14 @@ func (m *Twitch) deleteEntryById(id string) {
     helpers.Relax(err)
 }
 
-// @TODO: Only show Channel Name if unlike DisplayName
 func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchStatus) {
+    twitchStreamName := twitchStatus.Stream.Channel.DisplayName
+    if strings.ToLower(twitchStatus.Stream.Channel.Name) != strings.ToLower(twitchStatus.Stream.Channel.DisplayName) {
+        twitchStreamName += fmt.Sprintf(" (%s)", twitchStatus.Stream.Channel.Name)
+    }
+
     twitchChannelEmbed := &discordgo.MessageEmbed{
-        Title:  helpers.GetTextF("plugins.twitch.wentlive-embed-title", twitchStatus.Stream.Channel.DisplayName, twitchStatus.Stream.Channel.Name),
+        Title:  helpers.GetTextF("plugins.twitch.wentlive-embed-title", twitchStreamName),
         URL:    twitchStatus.Stream.Channel.URL,
         Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitch.embed-footer")},
         Fields: []*discordgo.MessageEmbedField{

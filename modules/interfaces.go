@@ -65,4 +65,14 @@ type ExtendedPlugin interface {
         reaction *discordgo.MessageReactionRemove,
         session *discordgo.Session,
     )
+
+    OnGuildBanAdd(
+        user *discordgo.GuildBanAdd,
+        session *discordgo.Session,
+    )
+
+    OnGuildBanRemove(
+        user *discordgo.GuildBanRemove,
+        session *discordgo.Session,
+    )
 }

@@ -230,3 +230,9 @@ func (m *GuildAnnouncements) OnReactionAdd(reaction *discordgo.MessageReactionAd
 func (m *GuildAnnouncements) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
 
 }
+func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (m *GuildAnnouncements) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}

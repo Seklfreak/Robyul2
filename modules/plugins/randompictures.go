@@ -36,8 +36,9 @@ var (
 )
 
 const (
-    driveSearchText string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\")"
-    driveFieldsText string = "nextPageToken, files(id, name, size, modifiedTime)"
+    driveSearchText       string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\")"
+    driveFieldsText       string = "nextPageToken, files(id, size)"
+    driveFieldsSingleText string = "id, name, size, modifiedTime, imageMediaMetadata"
 )
 
 func (rp *RandomPictures) Commands() []string {
@@ -310,7 +311,9 @@ func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*
             result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
             helpers.Relax(err)
             for _, file := range result.Files {
-                allFiles = append(allFiles, file)
+                if file.Size <= 8000000 { // smaller than 8 MB? (discords file size limit)
+                    allFiles = append(allFiles, file)
+                }
             }
         }
     }
@@ -326,11 +329,18 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 }
 
 func (rp *RandomPictures) postItem(channelID string, file *drive.File) {
+    file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
+    helpers.Relax(err)
+
     result, err := driveService.Files.Get(file.Id).Download()
     helpers.Relax(err)
     defer result.Body.Close()
 
-    // @TODO: Include camera model
-    _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf("`%s`", file.Name), file.Name, result.Body)
+    camerModelText := ""
+    if file.ImageMediaMetadata.CameraModel != "" {
+        camerModelText = fmt.Sprintf(" 📷 `%s`", file.ImageMediaMetadata.CameraModel)
+    }
+
+    _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText), file.Name, result.Body)
     helpers.Relax(err)
 }

@@ -19,7 +19,7 @@ import (
 // BotOnReady gets called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     Logger.INFO.L("bot", "Connected to discord!")
-    Logger.VERBOSE.L("bot", "Invite link: "+fmt.Sprintf(
+    Logger.VERBOSE.L("bot", "Invite link: "+ fmt.Sprintf(
         "https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s",
         helpers.GetConfig().Path("discord.id").Data().(string),
         helpers.GetConfig().Path("discord.perms").Data().(string),
@@ -88,6 +88,18 @@ func BotOnGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemb
 func BotOnGuildMemberRemove(session *discordgo.Session, member *discordgo.GuildMemberRemove) {
     modules.CallExtendedPluginOnGuildMemberRemove(
         member.Member,
+    )
+}
+
+func BotOnGuildBanAdd(session *discordgo.Session, user *discordgo.GuildBanAdd) {
+    modules.CallExtendedPluginOnGuildBanAdd(
+        user,
+    )
+}
+
+func BotOnGuildBanRemove(session *discordgo.Session, user *discordgo.GuildBanRemove) {
+    modules.CallExtendedPluginOnGuildBanRemove(
+        user,
     )
 }
 

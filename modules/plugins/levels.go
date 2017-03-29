@@ -68,7 +68,6 @@ func (m *Levels) Init(session *discordgo.Session) {
     m.BucketInit()
 }
 
-// @TODO: Show EXP numbers (exp until next level?)
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "profile": // [p]profile
@@ -200,7 +199,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
         _, err = session.ChannelFileSendWithMessage(
             msg.ChannelID,
-            fmt.Sprintf("Profile for %s", targetUser.Username), // @TODO: Add mention because generation can take a while
+            fmt.Sprintf("<@%s> Profile for %s", targetUser.ID, targetUser.Username),
             fmt.Sprintf("%s.png", targetUser.ID), bytes.NewReader(buffer.Bytes()))
         helpers.Relax(err)
 
@@ -226,7 +225,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 helpers.Relax(err)
                 defer listCursor.Close()
                 err = listCursor.All(&levelsServersUsers)
-                // @TODO: order by size, only get top 10
 
                 if err == rethink.ErrEmptyResult || len(levelsServersUsers) <= 0 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
@@ -753,5 +751,11 @@ func (b *Levels) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *
 
 }
 func (b *Levels) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}
+func (b *Levels) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (b *Levels) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }

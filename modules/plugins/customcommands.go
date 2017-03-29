@@ -92,7 +92,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 customCommandsCache = cc.getAllCustomCommands()
             })
             return
-        case "list": // [p]commands list // @TODO: sort after name, and optional sort by times triggered
+        case "list": // [p]commands list // @TODO: optional sort by times triggered
             session.ChannelTyping(msg.ChannelID)
             channel, err := session.Channel(msg.ChannelID)
             helpers.Relax(err)
@@ -102,7 +102,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
             var entryBucket []DB_CustomCommands_Command
             listCursor, err := rethink.Table("customcommands").Filter(
                 rethink.Row.Field("guildid").Eq(channel.GuildID),
-            ).Run(helpers.GetDB())
+            ).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
             helpers.Relax(err)
             defer listCursor.Close()
             err = listCursor.All(&entryBucket)
@@ -442,5 +442,11 @@ func (cc *CustomCommands) OnReactionAdd(reaction *discordgo.MessageReactionAdd, 
 
 }
 func (cc *CustomCommands) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}
+func (cc *CustomCommands) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (cc *CustomCommands) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }

@@ -187,6 +187,22 @@ func CallExtendedPluginOnReactionRemove(reaction *discordgo.MessageReactionRemov
         extendedPlugin.OnReactionRemove(reaction, cache.GetSession())
     }
 }
+func CallExtendedPluginOnGuildBanAdd(user *discordgo.GuildBanAdd) {
+    defer helpers.Recover()
+
+    // Iterate over all plugins
+    for _, extendedPlugin := range PluginExtendedList {
+        extendedPlugin.OnGuildBanAdd(user, cache.GetSession())
+    }
+}
+func CallExtendedPluginOnGuildBanRemove(user *discordgo.GuildBanRemove) {
+    defer helpers.Recover()
+
+    // Iterate over all plugins
+    for _, extendedPlugin := range PluginExtendedList {
+        extendedPlugin.OnGuildBanRemove(user, cache.GetSession())
+    }
+}
 
 func checkDuplicateCommands() {
     cmds := make(map[string]string)

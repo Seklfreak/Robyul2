@@ -52,7 +52,6 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
     if len(args) > 0 {
         switch args[0] {
         case "add": // [p]notifications add <keyword(s)>
-            // @TODO: check if keyword already exists in the db
             if len(args) < 2 {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
@@ -249,10 +248,9 @@ type PendingNotification struct {
 }
 
 func (m *Notifications) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-    // @TODO: Less API request for every message: cache?
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := session.State.Channel(msg.ChannelID)
     helpers.Relax(err)
-    guild, err := session.Guild(channel.GuildID)
+    guild, err := session.State.Guild(channel.GuildID)
     helpers.Relax(err)
 
     // ignore commands
@@ -591,5 +589,11 @@ func (m *Notifications) OnReactionAdd(reaction *discordgo.MessageReactionAdd, se
 
 }
 func (m *Notifications) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}
+func (m *Notifications) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+func (m *Notifications) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
