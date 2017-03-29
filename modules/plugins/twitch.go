@@ -14,6 +14,7 @@ import (
     rethink "github.com/gorethink/gorethink"
     "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/cache"
+    "strconv"
 )
 
 type Twitch struct{}
@@ -367,8 +368,9 @@ func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchSt
     if twitchStatus.Stream.Channel.Logo != "" {
         twitchChannelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: twitchStatus.Stream.Channel.Logo}
     }
-    if twitchStatus.Stream.Channel.VideoBanner != "" {
-        twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Channel.VideoBanner}
+    if twitchStatus.Stream.Preview.Medium != "" {
+        twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10)}
+        fmt.Println(twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10))
     }
     if twitchStatus.Stream.Game != "" {
         twitchChannelEmbed.Description = fmt.Sprintf("playing **%s**", twitchStatus.Stream.Game)

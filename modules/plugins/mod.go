@@ -10,6 +10,7 @@ import (
     "strings"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/getsentry/raven-go"
+    "time"
 )
 
 type Mod struct{}
@@ -382,9 +383,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             resultBansText := ""
             if len(bannedOnServerList) <= 0 {
-                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\nChecked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n▪Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
             } else {
-                resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n▪Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
             }
 
             isOnServerList := m.inspectCommonServers(targetUser)
@@ -395,9 +396,22 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 commonGuildsText += "❓ User is on **none** other servers with Robyul."
             }
 
+            joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
+            oneDayAgo := time.Now().AddDate(0, 0, -1)
+            oneWeekAgo := time.Now().AddDate(0, 0, -7)
+            joinedTimeText := ""
+            if !joinedTime.After(oneWeekAgo) {
+                joinedTimeText += fmt.Sprintf("✅ User Account is %s old.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+            } else if !joinedTime.After(oneDayAgo) {
+                joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+            } else {
+                joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+            }
+
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
                 {Name: "Bans", Value: resultBansText, Inline: false},
                 {Name: "Common Servers", Value: commonGuildsText, Inline: false},
+                {Name: "Account Age", Value: joinedTimeText, Inline: false},
             }
 
             for _, failedServer := range checkFailedServerList {
@@ -503,9 +517,9 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
                 resultBansText := ""
                 if len(bannedOnServerList) <= 0 {
-                    resultBansText += fmt.Sprintf("✅ User is banned on none servers.\nChecked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+                    resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n▪Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
                 } else {
-                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n▪Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
                 }
 
                 isOnServerList := m.inspectCommonServers(member.User)
@@ -516,9 +530,22 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                     commonGuildsText += "❓ User is on **none** other servers with Robyul."
                 }
 
+                joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
+                oneDayAgo := time.Now().AddDate(0, 0, -1)
+                oneWeekAgo := time.Now().AddDate(0, 0, -7)
+                joinedTimeText := ""
+                if !joinedTime.After(oneWeekAgo) {
+                    joinedTimeText += fmt.Sprintf("✅ User Account is %s old.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                } else if !joinedTime.After(oneDayAgo) {
+                    joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+                } else {
+                    joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+                }
+
                 resultEmbed.Fields = []*discordgo.MessageEmbedField{
                     {Name: "Bans", Value: resultBansText, Inline: false},
                     {Name: "Common Servers", Value: commonGuildsText, Inline: false},
+                    {Name: "Account Age", Value: joinedTimeText, Inline: false},
                 }
 
                 for _, failedServer := range checkFailedServerList {
@@ -585,9 +612,9 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
                     resultBansText := ""
                     if len(bannedOnServerList) <= 0 {
-                        resultBansText += fmt.Sprintf("✅ User is banned on none servers.\nChecked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+                        resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n▪Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
                     } else {
-                        resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\nChecked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                        resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n▪Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
                     }
 
                     isOnServerList := m.inspectCommonServers(user.User)
@@ -598,9 +625,22 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                         commonGuildsText += "❓ User is on **none** other servers with Robyul."
                     }
 
+                    joinedTime := helpers.GetTimeFromSnowflake(user.User.ID)
+                    oneDayAgo := time.Now().AddDate(0, 0, -1)
+                    oneWeekAgo := time.Now().AddDate(0, 0, -7)
+                    joinedTimeText := ""
+                    if !joinedTime.After(oneWeekAgo) {
+                        joinedTimeText += fmt.Sprintf("✅ User Account is %s old.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                    } else if !joinedTime.After(oneDayAgo) {
+                        joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+                    } else {
+                        joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+                    }
+
                     resultEmbed.Fields = []*discordgo.MessageEmbedField{
                         {Name: "Bans", Value: resultBansText, Inline: false},
                         {Name: "Common Servers", Value: commonGuildsText, Inline: false},
+                        {Name: "Account Age", Value: joinedTimeText, Inline: false},
                     }
 
                     for _, failedServer := range checkFailedServerList {
