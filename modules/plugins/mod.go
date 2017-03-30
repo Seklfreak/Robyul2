@@ -11,6 +11,7 @@ import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/getsentry/raven-go"
     "time"
+    "github.com/Seklfreak/Robyul2/emojis"
 )
 
 type Mod struct{}
@@ -421,8 +422,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
             }
 
-            // @TODO: check accoutn age
-
             _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
             helpers.Relax(err)
         })
@@ -441,12 +440,129 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     return
                 }
 
-                settings.InspectsEnabled = true
+                chooseEmbed := &discordgo.MessageEmbed{
+                    Title:       fmt.Sprintf("@%s Enable Auto Inspect Triggers", msg.Author.Username),
+                    Description: "**Please wait a second...** :construction_site:",
+                    Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Robyul is currently on %d servers.", len(session.State.Guilds))},
+                    Color:       0x0FADED,
+                }
+                chooseMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, chooseEmbed)
+
+                allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), "💾"}
+                for _, allowedEmote := range allowedEmotes {
+                    err = session.MessageReactionAdd(msg.ChannelID, chooseMessage.ID, allowedEmote)
+                    helpers.Relax(err)
+                }
+
+                needEmbedUpdate := true
+                emotesLocked := false
+
+            HandleChooseReactions:
+                for {
+                    saveAndExits, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, "💾", 100)
+                    for _, saveAndExit := range saveAndExits {
+                        if saveAndExit.ID == msg.Author.ID {
+                            // user wants to exit
+                            session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, "💾", msg.Author.ID)
+                            break HandleChooseReactions
+                        }
+                    }
+                    numberOnes, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("1"), 100)
+                    for _, numberOne := range numberOnes {
+                        if numberOne.ID == msg.Author.ID {
+                            if settings.InspectTriggersEnabled.UserBannedOnOtherServers && emotesLocked == false {
+                                settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
+                            } else {
+                                settings.InspectTriggersEnabled.UserBannedOnOtherServers = true
+                            }
+                            needEmbedUpdate = true
+                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("1"), msg.Author.ID)
+                            if err != nil {
+                                emotesLocked = true
+                            }
+                        }
+                    }
+                    numberTwos, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("2"), 100)
+                    for _, numberTwo := range numberTwos {
+                        if numberTwo.ID == msg.Author.ID {
+                            if settings.InspectTriggersEnabled.UserNoCommonServers && emotesLocked == false {
+                                settings.InspectTriggersEnabled.UserNoCommonServers = false
+                            } else {
+                                settings.InspectTriggersEnabled.UserNoCommonServers = true
+                            }
+                            needEmbedUpdate = true
+                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("2"), msg.Author.ID)
+                            if err != nil {
+                                emotesLocked = true
+                            }
+                        }
+                    }
+                    NumberThrees, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("3"), 100)
+                    for _, NumberThree := range NumberThrees {
+                        if NumberThree.ID == msg.Author.ID {
+                            if settings.InspectTriggersEnabled.UserNewlyCreatedAccount && emotesLocked == false {
+                                settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
+                            } else {
+                                settings.InspectTriggersEnabled.UserNewlyCreatedAccount = true
+                            }
+                            needEmbedUpdate = true
+                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("3"), msg.Author.ID)
+                            if err != nil {
+                                emotesLocked = true
+                            }
+                        }
+                    }
+
+                    if needEmbedUpdate == true {
+                        chooseEmbed.Description = fmt.Sprintf(
+                            "Choose which warnings should trigger an automatic inspect post in <#%s>.\n"+
+                                "**Available Triggers**\n",
+                            targetChannel.ID)
+                        enabledEmote := "🔲"
+                        if settings.InspectTriggersEnabled.UserBannedOnOtherServers {
+                            enabledEmote = "✔"
+                        }
+                        chooseEmbed.Description += fmt.Sprintf("%s %s User is banned on a different server with Robyul on. Gets checked everytime an user joins or gets banned on a different server with Robyul on.\n",
+                            emojis.From("1"), enabledEmote)
+                        enabledEmote = "🔲"
+                        if settings.InspectTriggersEnabled.UserNoCommonServers {
+                            enabledEmote = "✔"
+                        }
+                        chooseEmbed.Description += fmt.Sprintf("%s %s User has none other common servers with Robyul. Gets checked everytime an user joins.\n",
+                            emojis.From("2"), enabledEmote)
+                        enabledEmote = "🔲"
+                        if settings.InspectTriggersEnabled.UserNewlyCreatedAccount {
+                            enabledEmote = "✔"
+                        }
+                        chooseEmbed.Description += fmt.Sprintf("%s %s Account is less than one week old. Gets checked everytime an user joins.\n",
+                            emojis.From("3"), enabledEmote)
+                        if emotesLocked == true {
+                            chooseEmbed.Description += fmt.Sprintf("⚠ Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
+                                helpers.GetPrefixForServer(channel.GuildID),
+                            )
+                        }
+                        chooseEmbed.Description += "Use 💾 to save and exit."
+                        chooseMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
+                        helpers.Relax(err)
+                        needEmbedUpdate = false
+                    }
+
+                    time.Sleep(1 * time.Second)
+                }
+
+                for _, allowedEmote := range allowedEmotes {
+                    session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, allowedEmote, session.State.User.ID)
+                }
                 settings.InspectsChannel = targetChannel.ID
+
+                chooseEmbed.Description = strings.Replace(chooseEmbed.Description, "Use 💾 to save and exit.", "Saved.", -1)
+                session.ChannelMessageEditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
 
                 successMessage = helpers.GetText("plugins.mod.inspects-channel-set")
             } else {
-                settings.InspectsEnabled = false
+                settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
+                settings.InspectTriggersEnabled.UserNoCommonServers = false
+                settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
                 successMessage = helpers.GetText("plugins.mod.inspects-channel-disabled")
             }
             err = helpers.GuildSettingsSet(channel.GuildID, settings)
@@ -492,7 +608,9 @@ func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
 
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
     go func() {
-        if helpers.GuildSettingsGetCached(member.GuildID).InspectsEnabled {
+        if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
+            helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
+            helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount {
             guild, err := session.State.Guild(member.GuildID)
             if err != nil {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -504,62 +622,68 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
             logger.INFO.L("mod", fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
                 member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
 
-            if len(bannedOnServerList) > 0 {
-                resultEmbed := &discordgo.MessageEmbed{
-                    Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
-                    Description: helpers.GetText("plugins.mod.inspect-embed-description-done") +
-                        "\n_inspected because User joined this Server._",
-                    URL:       helpers.GetAvatarUrl(member.User),
-                    Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
-                    Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
-                    Color:     0x0FADED,
-                }
+            isOnServerList := m.inspectCommonServers(member.User)
 
-                resultBansText := ""
-                if len(bannedOnServerList) <= 0 {
-                    resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n▪Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
-                } else {
-                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n▪Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
-                }
+            joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
+            oneDayAgo := time.Now().AddDate(0, 0, -1)
+            oneWeekAgo := time.Now().AddDate(0, 0, -7)
 
-                isOnServerList := m.inspectCommonServers(member.User)
-                commonGuildsText := ""
-                if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
-                } else {
-                    commonGuildsText += "❓ User is on **none** other servers with Robyul."
-                }
+            if !(
+                (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
+                    (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) > 0) ||
+                    (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo))) {
+                return
+            }
 
-                joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
-                oneDayAgo := time.Now().AddDate(0, 0, -1)
-                oneWeekAgo := time.Now().AddDate(0, 0, -7)
-                joinedTimeText := ""
-                if !joinedTime.After(oneWeekAgo) {
-                    joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
-                } else if !joinedTime.After(oneDayAgo) {
-                    joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
-                } else {
-                    joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
-                }
+            resultEmbed := &discordgo.MessageEmbed{
+                Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
+                Description: helpers.GetText("plugins.mod.inspect-embed-description-done") +
+                    "\n_inspected because User joined this Server._",
+                URL:       helpers.GetAvatarUrl(member.User),
+                Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
+                Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
+                Color:     0x0FADED,
+            }
 
-                resultEmbed.Fields = []*discordgo.MessageEmbedField{
-                    {Name: "Bans", Value: resultBansText, Inline: false},
-                    {Name: "Common Servers", Value: commonGuildsText, Inline: false},
-                    {Name: "Account Age", Value: joinedTimeText, Inline: false},
-                }
+            resultBansText := ""
+            if len(bannedOnServerList) <= 0 {
+                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n▪Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+            } else {
+                resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n▪Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+            }
 
-                for _, failedServer := range checkFailedServerList {
-                    if failedServer.ID == member.GuildID {
-                        resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
-                        break
-                    }
-                }
+            commonGuildsText := ""
+            if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+                commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+            } else {
+                commonGuildsText += "❓ User is on **none** other servers with Robyul."
+            }
+            joinedTimeText := ""
+            if !joinedTime.After(oneWeekAgo) {
+                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+            } else if !joinedTime.After(oneDayAgo) {
+                joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+            } else {
+                joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
+            }
 
-                _, err := session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
-                if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                    return
+            resultEmbed.Fields = []*discordgo.MessageEmbedField{
+                {Name: "Bans", Value: resultBansText, Inline: false},
+                {Name: "Common Servers", Value: commonGuildsText, Inline: false},
+                {Name: "Account Age", Value: joinedTimeText, Inline: false},
+            }
+
+            for _, failedServer := range checkFailedServerList {
+                if failedServer.ID == member.GuildID {
+                    resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+                    break
                 }
+            }
+
+            _, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                return
             }
         }
     }()
@@ -585,7 +709,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
             return
         }
         for _, targetGuild := range cache.GetSession().State.Guilds {
-            if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectsEnabled {
+            if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
                 _, err := cache.GetSession().GuildMember(targetGuild.ID, user.User.ID)
                 // check if user is on this guild
                 if err == nil {

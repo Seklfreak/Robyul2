@@ -24,7 +24,11 @@ type Config struct {
     // one day after its state changes to closed
     Polls []Poll `rethink:"polls"`
 
-    InspectsEnabled bool   `rethink:"inspects_enabled"`
+    InspectTriggersEnabled struct {
+        UserBannedOnOtherServers bool
+        UserNoCommonServers      bool
+        UserNewlyCreatedAccount  bool
+    }   `rethink:"inspect_triggers_enabled"`
     InspectsChannel string `rethink:"inspects_channel"`
 }
 
