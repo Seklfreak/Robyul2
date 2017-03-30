@@ -371,8 +371,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                     Inline: false,
                 })
             }
-            _, _ = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<%s>", vliveChannel.Url))
-            _, err = session.ChannelMessageSendEmbed(msg.ChannelID, channelEmbed)
+            _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, fmt.Sprintf("<%s>", vliveChannel.Url), channelEmbed)
             if err != nil {
                 helpers.Relax(err)
             }
@@ -519,8 +518,7 @@ func (r *VLive) postVodToChannel(channelID string, vod DB_VLive_Video, vliveChan
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", vod.Url))
-    _, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", vod.Url), channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
     }
@@ -536,8 +534,7 @@ func (r *VLive) postUpcomingToChannel(channelID string, vod DB_VLive_Video, vliv
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", vod.Url))
-    _, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", vod.Url), channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
     }
@@ -553,8 +550,7 @@ func (r *VLive) postLiveToChannel(channelID string, vod DB_VLive_Video, vliveCha
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", vod.Url))
-    _, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", vod.Url), channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
     }
@@ -570,8 +566,7 @@ func (r *VLive) postNoticeToChannel(channelID string, notice DB_VLive_Notice, vl
         Image:       &discordgo.MessageEmbedImage{URL: notice.ImageUrl},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", notice.Url))
-    _, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", notice.Url), channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, channelID, err))
     }
@@ -586,8 +581,7 @@ func (r *VLive) postCelebToChannel(channelID string, celeb DB_VLive_Celeb, vlive
         Description: fmt.Sprintf("%s ...", celeb.Summary),
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, _ = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", celeb.Url))
-    _, err := cache.GetSession().ChannelMessageSendEmbed(channelID, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", celeb.Url), channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, channelID, err))
     }
