@@ -60,10 +60,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                                 return
                             }
                         }
-                        messagesToDeleteAfter, _ := session.ChannelMessages(msg.ChannelID, 100, "", afterMessageId)
+                        messagesToDeleteAfter, _ := session.ChannelMessages(msg.ChannelID, 100, "", afterMessageId, "")
                         messagesToDeleteBefore := []*discordgo.Message{}
                         if untilMessageId != "" {
-                            messagesToDeleteBefore, _ = session.ChannelMessages(msg.ChannelID, 100, "", untilMessageId)
+                            messagesToDeleteBefore, _ = session.ChannelMessages(msg.ChannelID, 100, "", untilMessageId, "")
                         }
                         messagesToDeleteIds := []string{msg.ID}
                         for _, messageToDelete := range messagesToDeleteAfter {
@@ -114,7 +114,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             return
                         }
 
-                        messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, numOfMessagesToDelete+1, "", "")
+                        messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, numOfMessagesToDelete+1, "", "", "")
                         messagesToDeleteIds := []string{}
                         for _, messageToDelete := range messagesToDelete {
                             messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
@@ -401,7 +401,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             oneWeekAgo := time.Now().AddDate(0, 0, -7)
             joinedTimeText := ""
             if !joinedTime.After(oneWeekAgo) {
-                joinedTimeText += fmt.Sprintf("✅ User Account is %s old.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
             } else if !joinedTime.After(oneDayAgo) {
                 joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
             } else {
@@ -535,7 +535,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                 oneWeekAgo := time.Now().AddDate(0, 0, -7)
                 joinedTimeText := ""
                 if !joinedTime.After(oneWeekAgo) {
-                    joinedTimeText += fmt.Sprintf("✅ User Account is %s old.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                    joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
                 } else if !joinedTime.After(oneDayAgo) {
                     joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
                 } else {
@@ -630,7 +630,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                     oneWeekAgo := time.Now().AddDate(0, 0, -7)
                     joinedTimeText := ""
                     if !joinedTime.After(oneWeekAgo) {
-                        joinedTimeText += fmt.Sprintf("✅ User Account is %s old.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                        joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n▪Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
                     } else if !joinedTime.After(oneDayAgo) {
                         joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n▪Joined at %s.", joinedTime.Format(time.ANSIC))
                     } else {

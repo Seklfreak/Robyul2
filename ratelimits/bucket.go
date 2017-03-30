@@ -71,6 +71,10 @@ func (b *BucketContainer) Refiller() {
 
 // Check if the user has a bucket. If not create one
 func (b *BucketContainer) CreateBucketIfNotExists(user string) {
+    if b.buckets == nil {
+        return
+    }
+
     b.RLock()
     _, e := b.buckets[user]
     b.RUnlock()
@@ -121,6 +125,10 @@ func (b *BucketContainer) Get(user string) int8 {
 }
 
 func (b *BucketContainer) Set(user string, value int8) {
+    if b.buckets == nil {
+        return
+    }
+
     b.Lock()
     b.buckets[user] = value
     b.Unlock()

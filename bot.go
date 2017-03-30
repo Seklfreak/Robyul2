@@ -112,14 +112,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         return
     }
 
-    // Check if the user is allowed to request commands
-    if !ratelimits.Container.HasKeys(message.Author.ID) {
-        session.ChannelMessageSend(message.ChannelID, helpers.GetTextF("bot.ratelimit.hit", message.Author.ID))
-
-        ratelimits.Container.Set(message.Author.ID, -1)
-        return
-    }
-
     // Get the channel
     // Ignore the event if we cannot resolve the channel
     channel, err := cache.Channel(message.ChannelID)
@@ -242,6 +234,14 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     // Check if the message is prefixed for us
     // If not exit
     if !strings.HasPrefix(message.Content, prefix) {
+        return
+    }
+
+    // Check if the user is allowed to request commands
+    if !ratelimits.Container.HasKeys(message.Author.ID) {
+        session.ChannelMessageSend(message.ChannelID, helpers.GetTextF("bot.ratelimit.hit", message.Author.ID))
+
+        ratelimits.Container.Set(message.Author.ID, -1)
         return
     }
 

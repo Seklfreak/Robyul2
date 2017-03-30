@@ -569,7 +569,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
 
         slice.Sort(guildChannels, func(i, j int) bool {
-            return guildChannels[i].Position > guildChannels[j].Position
+            return guildChannels[i].Position < guildChannels[j].Position
         })
 
         for _, guildChannel := range guildChannels {

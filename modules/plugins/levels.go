@@ -371,7 +371,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         helpers.Relax(err)
                         lastBefore := ""
                         for {
-                            messages, err := session.ChannelMessages(guildChannelCurrent.ID, 100, lastBefore, "")
+                            messages, err := session.ChannelMessages(guildChannelCurrent.ID, 100, lastBefore, "", "")
                             if err != nil {
                                 logger.ERROR.L("levels", err.Error())
                                 break
