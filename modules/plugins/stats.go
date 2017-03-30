@@ -87,19 +87,21 @@ func (s *Stats) Init(session *discordgo.Session) {
                         }
                     }
                 }
-                if voiceStateWithTimeIndex != -1 {
-                    channel, err := session.Channel(voiceStateBefore.ChannelID)
+                if voiceStateWithTimeIndex != -1 && voiceStateWithTimeIndex < len(voiceStatesWithTime) {
+                    channel, err := session.State.Channel(voiceStateBefore.ChannelID)
+                    if err == nil {
+                        newVoiceTime := s.getVoiceTimeEntryByOrCreateEmpty("id", "")
+                        newVoiceTime.GuildID = channel.GuildID
+                        newVoiceTime.ChannelID = channel.ID
+                        newVoiceTime.UserID = voiceStateBefore.UserID
+                        newVoiceTime.LeaveTimeUtc = time.Now().UTC()
+                        newVoiceTime.JoinTimeUtc = voiceStatesWithTime[voiceStateWithTimeIndex].JoinTimeUtc
+                        s.setVoiceTimeEntry(newVoiceTime)
+                        voiceStatesWithTime = append(voiceStatesWithTime[:voiceStateWithTimeIndex], voiceStatesWithTime[voiceStateWithTimeIndex+1:]...)
+                        logger.PLUGIN.L("stats", fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
+                            newVoiceTime.UserID, newVoiceTime.ChannelID, newVoiceTime.GuildID))
+                    }
                     helpers.Relax(err)
-                    newVoiceTime := s.getVoiceTimeEntryByOrCreateEmpty("id", "")
-                    newVoiceTime.GuildID = channel.GuildID
-                    newVoiceTime.ChannelID = channel.ID
-                    newVoiceTime.UserID = voiceStateBefore.UserID
-                    newVoiceTime.LeaveTimeUtc = time.Now().UTC()
-                    newVoiceTime.JoinTimeUtc = voiceStatesWithTime[voiceStateWithTimeIndex].JoinTimeUtc
-                    s.setVoiceTimeEntry(newVoiceTime)
-                    voiceStatesWithTime = append(voiceStatesWithTime[:voiceStateWithTimeIndex], voiceStatesWithTime[voiceStateWithTimeIndex+1:]...)
-                    logger.PLUGIN.L("stats", fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
-                        newVoiceTime.UserID, newVoiceTime.ChannelID, newVoiceTime.GuildID))
                 }
             }
             voiceStatesBefore = voiceStatesCurrently
@@ -275,8 +277,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
             targetUser, err = helpers.GetUserFromMention(args[0])
-            helpers.Relax(err)
-            if targetUser.ID == "" {
+            if err != nil || targetUser.ID == "" {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                 helpers.Relax(err)
                 return

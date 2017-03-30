@@ -4,11 +4,11 @@ import (
     "github.com/bwmarrin/discordgo"
     "math/rand"
     "strings"
-    "unicode"
     "github.com/Seklfreak/Robyul2/helpers"
     "strconv"
     "fmt"
     "time"
+    "regexp"
 )
 
 type Choice struct{}
@@ -21,30 +21,18 @@ func (c *Choice) Commands() []string {
     }
 }
 
-func (c *Choice) Init(session *discordgo.Session) {
+var (
+    splitChooseRegex *regexp.Regexp
+)
 
+func (c *Choice) Init(session *discordgo.Session) {
+    splitChooseRegex = regexp.MustCompile(`'.*?'|".*?"|\S+`)
 }
 
 func (c *Choice) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "choose", "choice": // [p]choose <option a> <option b> [...]
-        lastQuote := rune(0)
-        f := func(c rune) bool {
-            switch {
-            case c == lastQuote:
-                lastQuote = rune(0)
-                return false
-            case lastQuote != rune(0):
-                return false
-            case unicode.In(c, unicode.Quotation_Mark):
-                lastQuote = c
-                return false
-            default:
-                return unicode.IsSpace(c)
-
-            }
-        }
-        choices := strings.FieldsFunc(content, f)
+        choices := splitChooseRegex.FindAllString(content, -1)
 
         if len(choices) <= 1 {
             _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
