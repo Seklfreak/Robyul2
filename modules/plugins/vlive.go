@@ -135,7 +135,7 @@ func (r *VLive) checkVliveFeedsLoop() {
         for _, entry := range safeEntries.entries {
             safeEntries.mux.Lock()
             changes := false
-            logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s", entry.VLiveChannel.Name))
+            logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s for Channel #%s", entry.VLiveChannel.Name, entry.ChannelID))
             updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(entry.VLiveChannel.Code)
             if err != nil {
                 logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", entry.VLiveChannel.Name, err.Error()))

@@ -692,6 +692,10 @@ func (b *Levels) BucketRefiller() {
 
 // Check if the user has a bucket. If not create one
 func (b *Levels) CreateBucketIfNotExists(user string) {
+    if b.buckets == nil {
+        return
+    }
+
     b.RLock()
     _, e := b.buckets[user]
     b.RUnlock()
@@ -742,6 +746,10 @@ func (b *Levels) BucketGet(user string) int8 {
 }
 
 func (b *Levels) BucketSet(user string, value int8) {
+    if b.buckets == nil {
+        return
+    }
+
     b.Lock()
     b.buckets[user] = value
     b.Unlock()

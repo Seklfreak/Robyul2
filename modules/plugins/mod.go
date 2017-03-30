@@ -708,6 +708,11 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             return
         }
+        // don't post if bot can't access the ban list of the server the user got banned on
+        _, err = session.GuildBans(user.GuildID)
+        if err != nil {
+            return
+        }
         for _, targetGuild := range cache.GetSession().State.Guilds {
             if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
                 _, err := cache.GetSession().GuildMember(targetGuild.ID, user.User.ID)
@@ -768,7 +773,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                     }
 
                     for _, failedServer := range checkFailedServerList {
-                        if failedServer.ID == user.GuildID {
+                        if failedServer.ID == targetGuild.ID {
                             resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
                             break
                         }
