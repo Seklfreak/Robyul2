@@ -28,14 +28,20 @@ import (
 type Instagram struct{}
 
 type DB_Instagram_Entry struct {
-    ID          string              `gorethink:"id,omitempty"`
-    ServerID    string              `gorethink:"serverid"`
-    ChannelID   string              `gorethink:"channelid"`
-    Username    string              `gorethink:"username"`
-    PostedPosts []DB_Instagram_Post `gorethink:"posted_posts"`
+    ID               string              `gorethink:"id,omitempty"`
+    ServerID         string              `gorethink:"serverid"`
+    ChannelID        string              `gorethink:"channelid"`
+    Username         string              `gorethink:"username"`
+    PostedPosts      []DB_Instagram_Post `gorethink:"posted_posts"`
+    PostedReelMedias []DB_Instagram_ReelMedia `gorethink:"posted_reelmedias"`
 }
 
 type DB_Instagram_Post struct {
+    ID        string `gorethink:"id,omitempty"`
+    CreatedAt int    `gorethink:"createdat"`
+}
+
+type DB_Instagram_ReelMedia struct {
     ID        string `gorethink:"id,omitempty"`
     CreatedAt int    `gorethink:"createdat"`
 }
@@ -57,6 +63,7 @@ type Instagram_User struct {
     Pk         int              `json:"pk"`
     Username   string           `json:"username"`
     Posts      []Instagram_Post `json:"-"`
+    ReelMedias []Instagram_ReelMedia `json:"-"`
 }
 
 type Instagram_Post struct {
@@ -89,6 +96,64 @@ type Instagram_Post struct {
         OriginalWidth  int `json:"original_width"`
         Pk             int64 `json:"pk"`
     } `json:"carousel_media"`
+}
+
+type Instagram_ReelMedia struct {
+    CanViewerSave       bool `json:"can_viewer_save"`
+    Caption             string `json:"caption"`
+    CaptionIsEdited     bool `json:"caption_is_edited"`
+    CaptionPosition     int `json:"caption_position"`
+    ClientCacheKey      string `json:"client_cache_key"`
+    Code                string `json:"code"`
+    CommentCount        int `json:"comment_count"`
+    CommentLikesEnabled bool `json:"comment_likes_enabled"`
+    DeviceTimestamp     int `json:"device_timestamp"`
+    ExpiringAt          int `json:"expiring_at"`
+    FilterType          int `json:"filter_type"`
+    HasAudio            bool `json:"has_audio"`
+    HasLiked            bool `json:"has_liked"`
+    HasMoreComments     bool `json:"has_more_comments"`
+    ID                  string `json:"id"`
+    ImageVersions2 struct {
+        Candidates []struct {
+            Height int `json:"height"`
+            URL    string `json:"url"`
+            Width  int `json:"width"`
+        } `json:"candidates"`
+    } `json:"image_versions2"`
+    IsReelMedia                  bool `json:"is_reel_media"`
+    LikeCount                    int `json:"like_count"`
+    Likers                       []interface{} `json:"likers"`
+    MaxNumVisiblePreviewComments int `json:"max_num_visible_preview_comments"`
+    MediaType                    int `json:"media_type"`
+    OrganicTrackingToken         string `json:"organic_tracking_token"`
+    OriginalHeight               int `json:"original_height"`
+    OriginalWidth                int `json:"original_width"`
+    PhotoOfYou                   bool `json:"photo_of_you"`
+    Pk                           int64 `json:"pk"`
+    PreviewComments              []interface{} `json:"preview_comments"`
+    ReelMentions                 []interface{} `json:"reel_mentions"`
+    StoryLocations               []interface{} `json:"story_locations"`
+    TakenAt                      int `json:"taken_at"`
+    User struct {
+        FullName                   string `json:"full_name"`
+        HasAnonymousProfilePicture bool `json:"has_anonymous_profile_picture"`
+        IsFavorite                 bool `json:"is_favorite"`
+        IsPrivate                  bool `json:"is_private"`
+        IsUnpublished              bool `json:"is_unpublished"`
+        IsVerified                 bool `json:"is_verified"`
+        Pk                         int `json:"pk"`
+        ProfilePicID               string `json:"profile_pic_id"`
+        ProfilePicURL              string `json:"profile_pic_url"`
+        Username                   string `json:"username"`
+    } `json:"user"`
+    VideoDuration float64 `json:"video_duration"`
+    VideoVersions []struct {
+        Height int `json:"height"`
+        Type   int `json:"type"`
+        URL    string `json:"url"`
+        Width  int `json:"width"`
+    } `json:"video_versions"`
 }
 
 type Instagram_Safe_Entries struct {
@@ -162,6 +227,10 @@ func (m *Instagram) checkInstagramFeedsLoop() {
                 opp := len(instagramUser.Posts) - 1 - i
                 instagramUser.Posts[i], instagramUser.Posts[opp] = instagramUser.Posts[opp], instagramUser.Posts[i]
             }
+            for i := len(instagramUser.ReelMedias)/2 - 1; i >= 0; i-- {
+                opp := len(instagramUser.ReelMedias) - 1 - i
+                instagramUser.ReelMedias[i], instagramUser.ReelMedias[opp] = instagramUser.ReelMedias[opp], instagramUser.ReelMedias[i]
+            }
 
             for _, post := range instagramUser.Posts {
                 postAlreadyPosted := false
@@ -175,6 +244,22 @@ func (m *Instagram) checkInstagramFeedsLoop() {
                     entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
                     changes = true
                     go m.postPostToChannel(entry.ChannelID, post, instagramUser)
+                }
+
+            }
+
+            for _, reelMedia := range instagramUser.ReelMedias {
+                reelMediaAlreadyPosted := false
+                for _, reelMediaPostPosted := range entry.PostedReelMedias {
+                    if reelMediaPostPosted.ID == reelMedia.ID {
+                        reelMediaAlreadyPosted = true
+                    }
+                }
+                if reelMediaAlreadyPosted == false {
+                    logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
+                    entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: reelMedia.DeviceTimestamp})
+                    changes = true
+                    go m.postReelMediaToChannel(entry.ChannelID, reelMedia, instagramUser)
                 }
 
             }
@@ -225,12 +310,19 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                     dbPosts = append(dbPosts, postEntry)
 
                 }
+                var dbRealMedias []DB_Instagram_ReelMedia
+                for _, reelMedia := range instagramUser.ReelMedias {
+                    reelMediaEntry := DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: reelMedia.DeviceTimestamp}
+                    dbRealMedias = append(dbRealMedias, reelMediaEntry)
+
+                }
                 // create new entry in db
                 entry := m.getEntryByOrCreateEmpty("id", "")
                 entry.ServerID = targetChannel.GuildID
                 entry.ChannelID = targetChannel.ID
                 entry.Username = instagramUser.Username
                 entry.PostedPosts = dbPosts
+                entry.PostedReelMedias = dbRealMedias
                 m.setEntry(entry)
 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID))
@@ -332,6 +424,59 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
         }
     } else {
         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+    }
+}
+
+func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram_ReelMedia, instagramUser Instagram_User) {
+    instagramNameModifier := ""
+    if instagramUser.IsVerified {
+        instagramNameModifier += " :ballot_box_with_check:"
+    }
+    if instagramUser.IsPrivate {
+        instagramNameModifier += " :lock:"
+    }
+    if instagramUser.IsBusiness {
+        instagramNameModifier += " :office:"
+    }
+    if instagramUser.IsFavorite {
+        instagramNameModifier += " :star:"
+    }
+
+    mediaModifier := "Picture"
+    if reelMedia.MediaType == 2 {
+        mediaModifier = "Video"
+    }
+
+    channelEmbed := &discordgo.MessageEmbed{
+        Title:       helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier),
+        URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
+        Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
+        Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
+        Description: reelMedia.Caption,
+        Color:       helpers.GetDiscordColorFromHex(hexColor),
+    }
+
+    mediaUrl := ""
+
+    if len(reelMedia.ImageVersions2.Candidates) > 0 {
+        channelEmbed.Image = &discordgo.MessageEmbedImage{URL: reelMedia.ImageVersions2.Candidates[0].URL}
+        mediaUrl = reelMedia.ImageVersions2.Candidates[0].URL
+    }
+    if len(reelMedia.VideoVersions) > 0 {
+        channelEmbed.Video = &discordgo.MessageEmbedVideo{
+            URL: reelMedia.VideoVersions[0].URL, Height: reelMedia.VideoVersions[0].Height, Width: reelMedia.VideoVersions[0].Width}
+        mediaUrl = reelMedia.VideoVersions[0].URL
+    }
+
+    if mediaUrl != "" {
+        channelEmbed.URL = mediaUrl
+    } else {
+        mediaUrl = channelEmbed.URL
+    }
+
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", mediaUrl), channelEmbed)
+    if err != nil {
+        logger.ERROR.L("vlive", fmt.Sprintf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err))
     }
 }
 
@@ -530,6 +675,38 @@ func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User)
         instagramPosts = append(instagramPosts, instagramPost)
     }
     instagramUser.Posts = instagramPosts
+
+    userReelEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/reel_media/", strconv.Itoa(instagramUser.Pk)))
+    request, err = http.NewRequest("GET", userReelEndpoint, nil)
+    if err != nil {
+        return err, instagramUser
+    }
+    m.applyHeaders(request)
+    response, err = httpClient.Do(request)
+    if err != nil {
+        return err, instagramUser
+    }
+    buf = bytes.NewBuffer(nil)
+    _, err = io.Copy(buf, response.Body)
+    if err != nil {
+        return err, instagramUser
+    }
+    jsonResult, err = gabs.ParseJSON(buf.Bytes())
+    if err != nil {
+        return err, instagramUser
+    }
+
+    var instagramReelMedias []Instagram_ReelMedia
+    instagramReelMediasJsons, err := jsonResult.Path("items").Children()
+    if err != nil {
+        return err, instagramUser
+    }
+    for _, instagramReelMediaJson := range instagramReelMediasJsons {
+        var instagramReelMedia Instagram_ReelMedia
+        json.Unmarshal([]byte(instagramReelMediaJson.String()), &instagramReelMedia)
+        instagramReelMedias = append(instagramReelMedias, instagramReelMedia)
+    }
+    instagramUser.ReelMedias = instagramReelMedias
 
     return nil, instagramUser
 }

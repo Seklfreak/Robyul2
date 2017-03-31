@@ -504,7 +504,8 @@
       "account-delete-not-found-error": "Unable to find Instagram Account in the Database!",
       "account-delete-success": "Deleted Instagram Account `@%s` from the Database!",
       "account-list-no-accounts-error": "No Instagram Accounts found on this server!",
-      "post-embed-title": "%s (@%s)%s posted a new %s"
+      "post-embed-title": "%s (@%s)%s posted a new %s",
+      "reelmedia-embed-title": "%s (@%s)%s posted a new %s to their story"
     },
     "facebook": {
       "page-not-found": "Page not found!",
