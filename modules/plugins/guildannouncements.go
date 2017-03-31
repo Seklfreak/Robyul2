@@ -56,10 +56,10 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
                             return
                         }
 
-                        newText := args[3:]
+                        newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:3], " "), "", 1))
                         guildAnnouncementSetting.GuildJoinEnabled = true
                         guildAnnouncementSetting.GuildJoinChannelID = targetChannel.ID
-                        guildAnnouncementSetting.GuildJoinText = strings.Join(newText, " ")
+                        guildAnnouncementSetting.GuildJoinText = newText
                         successMessage = helpers.GetText("plugins.guildannouncements.message-edited")
                     } else {
                         // Remove Text
@@ -86,10 +86,10 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
                             return
                         }
 
-                        newText := args[3:]
+                        newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:3], " "), "", 1))
                         guildAnnouncementSetting.GuildLeaveEnabled = true
                         guildAnnouncementSetting.GuildLeaveChannelID = targetChannel.ID
-                        guildAnnouncementSetting.GuildLeaveText = strings.Join(newText, " ")
+                        guildAnnouncementSetting.GuildLeaveText = newText
                         successMessage = helpers.GetText("plugins.guildannouncements.message-edited")
                     } else {
                         // Remove Text
