@@ -11,6 +11,7 @@ import (
     fb "github.com/huandu/facebook"
     "strings"
     "time"
+    "sync"
 )
 
 type Facebook struct{}
@@ -48,6 +49,11 @@ type Facebook_Post struct {
     Url        string
 }
 
+type Facebook_Safe_Entries struct {
+    entries []DB_Facebook_Page
+    mux     sync.Mutex
+}
+
 const (
     facebookHexColor     string = "#3b5998"
     FacebookFriendlyPage string = "https://facebook.com/%s/"
@@ -64,6 +70,8 @@ func (m *Facebook) Init(session *discordgo.Session) {
     logger.PLUGIN.L("facebook", "Started Facebook loop (10m)")
 }
 func (m *Facebook) checkFacebookFeedsLoop() {
+    var safeEntries Facebook_Safe_Entries
+
     defer func() {
         helpers.Recover()
 
@@ -73,21 +81,22 @@ func (m *Facebook) checkFacebookFeedsLoop() {
     }()
 
     for {
-        entryBucket := make([]DB_Facebook_Page, 0)
         cursor, err := rethink.Table("facebook").Run(helpers.GetDB())
         helpers.Relax(err)
 
-        err = cursor.All(&entryBucket)
+        err = cursor.All(&safeEntries.entries)
         helpers.Relax(err)
 
         // TODO: Check multiple entries at once
-        for _, entry := range entryBucket {
+        for _, entry := range safeEntries.entries {
+            safeEntries.mux.Lock()
             changes := false
             logger.VERBOSE.L("facebook", fmt.Sprintf("checking Facebook Page %s", entry.Username))
 
             facebookPage, err := m.lookupFacebookPage(entry.Username)
             if err != nil {
                 logger.ERROR.L("facebook", fmt.Sprintf("updating facebook account %s failed: %s", entry.Username, err.Error()))
+                safeEntries.mux.Unlock()
                 continue
             }
 
@@ -115,6 +124,7 @@ func (m *Facebook) checkFacebookFeedsLoop() {
             if changes == true {
                 m.setEntry(entry)
             }
+            safeEntries.mux.Unlock()
         }
 
         time.Sleep(10 * time.Minute)

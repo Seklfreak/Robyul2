@@ -22,6 +22,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "sync"
 )
 
 type Instagram struct{}
@@ -90,6 +91,11 @@ type Instagram_Post struct {
     } `json:"carousel_media"`
 }
 
+type Instagram_Safe_Entries struct {
+    entries []DB_Instagram_Entry
+    mux     sync.Mutex
+}
+
 var (
     usedUuid   string
     sessionId  string
@@ -121,6 +127,8 @@ func (m *Instagram) Init(session *discordgo.Session) {
 }
 
 func (m *Instagram) checkInstagramFeedsLoop() {
+    var safeEntries Instagram_Safe_Entries
+
     defer func() {
         helpers.Recover()
 
@@ -130,21 +138,22 @@ func (m *Instagram) checkInstagramFeedsLoop() {
     }()
 
     for {
-        entryBucket := make([]DB_Instagram_Entry, 0)
         cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
         helpers.Relax(err)
 
-        err = cursor.All(&entryBucket)
+        err = cursor.All(&safeEntries.entries)
         helpers.Relax(err)
 
         // TODO: Check multiple entries at once
-        for _, entry := range entryBucket {
+        for _, entry := range safeEntries.entries {
+            safeEntries.mux.Lock()
             changes := false
             logger.VERBOSE.L("instagram", fmt.Sprintf("checking Instagram Account @%s", entry.Username))
 
             err, instagramUser := m.lookupInstagramUser(entry.Username)
             if err != nil || instagramUser.Username == "" {
                 logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
+                safeEntries.mux.Unlock()
                 continue
             }
 
@@ -172,6 +181,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
             if changes == true {
                 m.setEntry(entry)
             }
+            safeEntries.mux.Unlock()
         }
 
         time.Sleep(10 * time.Minute)

@@ -12,6 +12,7 @@ import (
     rethink "github.com/gorethink/gorethink"
     "strings"
     "time"
+    "sync"
 )
 
 type Twitter struct{}
@@ -27,6 +28,11 @@ type DB_Twitter_Entry struct {
 type DB_Twitter_Tweet struct {
     ID        string `gorethink:"id,omitempty"`
     CreatedAt string `gorethink:"createdat`
+}
+
+type Twitter_Safe_Entries struct {
+    entries []DB_Twitter_Entry
+    mux     sync.Mutex
 }
 
 var (
@@ -59,6 +65,8 @@ func (m *Twitter) Init(session *discordgo.Session) {
     logger.PLUGIN.L("twitter", "Started Twitter loop (10m)")
 }
 func (m *Twitter) checkTwitterFeedsLoop() {
+    var safeEntries Twitter_Safe_Entries
+
     defer func() {
         helpers.Recover()
 
@@ -68,15 +76,15 @@ func (m *Twitter) checkTwitterFeedsLoop() {
     }()
 
     for {
-        entryBucket := make([]DB_Twitter_Entry, 0)
         cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
         helpers.Relax(err)
 
-        err = cursor.All(&entryBucket)
+        err = cursor.All(&safeEntries.entries)
         helpers.Relax(err)
 
         // TODO: Check multiple entries at once
-        for _, entry := range entryBucket {
+        for _, entry := range safeEntries.entries {
+            safeEntries.mux.Lock()
             changes := false
             logger.VERBOSE.L("twitter", fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
 
@@ -85,6 +93,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
             })
             if err != nil {
                 logger.ERROR.L("twitter", fmt.Sprintf("updating twitter account @%s failed: %s", entry.AccountScreenName, err.Error()))
+                safeEntries.mux.Unlock()
                 continue
             }
 
@@ -96,6 +105,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
             })
             if err != nil {
                 logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
+                safeEntries.mux.Unlock()
                 continue
             }
 
@@ -123,6 +133,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
             if changes == true {
                 m.setEntry(entry)
             }
+            safeEntries.mux.Unlock()
         }
 
         time.Sleep(10 * time.Minute)
