@@ -87,7 +87,7 @@ func (s *Stats) Init(session *discordgo.Session) {
                         }
                     }
                 }
-                if voiceStateWithTimeIndex != -1 && voiceStateWithTimeIndex < len(voiceStatesWithTime) {
+                if voiceStateWithTimeIndex >= 0 && voiceStateWithTimeIndex < len(voiceStatesWithTime) {
                     channel, err := session.State.Channel(voiceStateBefore.ChannelID)
                     if err == nil {
                         newVoiceTime := s.getVoiceTimeEntryByOrCreateEmpty("id", "")
