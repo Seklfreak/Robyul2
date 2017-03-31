@@ -34,6 +34,7 @@ type DB_Instagram_Entry struct {
     Username         string              `gorethink:"username"`
     PostedPosts      []DB_Instagram_Post `gorethink:"posted_posts"`
     PostedReelMedias []DB_Instagram_ReelMedia `gorethink:"posted_reelmedias"`
+    IsLive           bool              `gorethink:"islive"`
 }
 
 type DB_Instagram_Post struct {
@@ -64,6 +65,7 @@ type Instagram_User struct {
     Username   string           `json:"username"`
     Posts      []Instagram_Post `json:"-"`
     ReelMedias []Instagram_ReelMedia `json:"-"`
+    Broadcast  Instagram_Broadcast `json:"-"`
 }
 
 type Instagram_Post struct {
@@ -154,6 +156,37 @@ type Instagram_ReelMedia struct {
         URL    string `json:"url"`
         Width  int `json:"width"`
     } `json:"video_versions"`
+}
+
+type Instagram_Broadcast struct {
+    BroadcastMessage string `json:"broadcast_message"`
+    BroadcastOwner struct {
+        FriendshipStatus struct {
+            Blocking        bool `json:"blocking"`
+            FollowedBy      bool `json:"followed_by"`
+            Following       bool `json:"following"`
+            IncomingRequest bool `json:"incoming_request"`
+            IsPrivate       bool `json:"is_private"`
+            OutgoingRequest bool `json:"outgoing_request"`
+        } `json:"friendship_status"`
+        FullName      string `json:"full_name"`
+        IsPrivate     bool `json:"is_private"`
+        IsVerified    bool `json:"is_verified"`
+        Pk            int `json:"pk"`
+        ProfilePicID  string `json:"profile_pic_id"`
+        ProfilePicURL string `json:"profile_pic_url"`
+        Username      string `json:"username"`
+    } `json:"broadcast_owner"`
+    BroadcastStatus      string `json:"broadcast_status"`
+    CoverFrameURL        string `json:"cover_frame_url"`
+    DashAbrPlaybackURL   string `json:"dash_abr_playback_url"`
+    DashPlaybackURL      string `json:"dash_playback_url"`
+    ID                   int64 `json:"id"`
+    MediaID              string `json:"media_id"`
+    OrganicTrackingToken string `json:"organic_tracking_token"`
+    PublishedTime        int `json:"published_time"`
+    RtmpPlaybackURL      string `json:"rtmp_playback_url"`
+    ViewerCount          int `json:"viewer_count"`
 }
 
 type Instagram_Safe_Entries struct {
@@ -263,6 +296,21 @@ func (m *Instagram) checkInstagramFeedsLoop() {
                 }
 
             }
+
+            if entry.IsLive == false {
+                if instagramUser.Broadcast.ID != 0 {
+                    logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Live: #%s", instagramUser.Broadcast.ID))
+                    go m.postLiveToChannel(entry.ChannelID, instagramUser)
+                    entry.IsLive = true
+                    changes = true
+                }
+            } else {
+                if instagramUser.Broadcast.ID == 0 {
+                    entry.IsLive = false
+                    changes = true
+                }
+            }
+
             if changes == true {
                 m.setEntry(entry)
             }
@@ -424,6 +472,44 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
         }
     } else {
         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+    }
+}
+
+func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_User) {
+    instagramNameModifier := ""
+    if instagramUser.IsVerified {
+        instagramNameModifier += " :ballot_box_with_check:"
+    }
+    if instagramUser.IsPrivate {
+        instagramNameModifier += " :lock:"
+    }
+    if instagramUser.IsBusiness {
+        instagramNameModifier += " :office:"
+    }
+    if instagramUser.IsFavorite {
+        instagramNameModifier += " :star:"
+    }
+
+    channelEmbed := &discordgo.MessageEmbed{
+        Title:     helpers.GetTextF("plugins.instagram.live-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
+        URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
+        Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
+        Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
+        Image:     &discordgo.MessageEmbedImage{URL: instagramUser.Broadcast.CoverFrameURL},
+        Color:     helpers.GetDiscordColorFromHex(hexColor),
+    }
+
+    mediaUrl := ""
+
+    if mediaUrl != "" {
+        channelEmbed.URL = mediaUrl
+    } else {
+        mediaUrl = channelEmbed.URL
+    }
+
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", mediaUrl), channelEmbed)
+    if err != nil {
+        logger.ERROR.L("vlive", fmt.Sprintf("posting broadcast: #%s to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err))
     }
 }
 
@@ -676,7 +762,7 @@ func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User)
     }
     instagramUser.Posts = instagramPosts
 
-    userReelEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/reel_media/", strconv.Itoa(instagramUser.Pk)))
+    userReelEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/story/", strconv.Itoa(instagramUser.Pk)))
     request, err = http.NewRequest("GET", userReelEndpoint, nil)
     if err != nil {
         return err, instagramUser
@@ -696,17 +782,23 @@ func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User)
         return err, instagramUser
     }
 
-    var instagramReelMedias []Instagram_ReelMedia
-    instagramReelMediasJsons, err := jsonResult.Path("items").Children()
-    if err != nil {
-        return err, instagramUser
+    if jsonResult.ExistsP("reel.items") {
+        var instagramReelMedias []Instagram_ReelMedia
+        instagramReelMediasJsons, err := jsonResult.Path("reel.items").Children()
+        if err != nil {
+            return err, instagramUser
+        }
+        for _, instagramReelMediaJson := range instagramReelMediasJsons {
+            var instagramReelMedia Instagram_ReelMedia
+            json.Unmarshal([]byte(instagramReelMediaJson.String()), &instagramReelMedia)
+            instagramReelMedias = append(instagramReelMedias, instagramReelMedia)
+        }
+        instagramUser.ReelMedias = instagramReelMedias
     }
-    for _, instagramReelMediaJson := range instagramReelMediasJsons {
-        var instagramReelMedia Instagram_ReelMedia
-        json.Unmarshal([]byte(instagramReelMediaJson.String()), &instagramReelMedia)
-        instagramReelMedias = append(instagramReelMedias, instagramReelMedia)
+
+    if jsonResult.ExistsP("broadcast.id") {
+        json.Unmarshal([]byte(jsonResult.Path("broadcast").String()), &instagramUser.Broadcast)
     }
-    instagramUser.ReelMedias = instagramReelMedias
 
     return nil, instagramUser
 }
