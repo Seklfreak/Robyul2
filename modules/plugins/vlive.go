@@ -534,7 +534,11 @@ func (r *VLive) postUpcomingToChannel(channelID string, vod DB_VLive_Video, vliv
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", vod.Url), channelEmbed)
+    postText := ""
+    if vod.Url != "" {
+        postText = fmt.Sprintf("<%s>", vod.Url)
+    }
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, postText, channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
     }
