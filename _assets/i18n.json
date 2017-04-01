@@ -465,7 +465,7 @@
       "inspect-embed-title": "Results for user `%s#%s` 🔎",
       "inspect-embed-footer": "User ID: %s | Robyul is on %d servers",
       "inspect-embed-description-in-progress": "User is being inspected.\nChecking server %d of %d servers.",
-      "inspect-embed-description-done": "Inspecting completed.",
+      "inspect-embed-description-done": "Inspecting of <@%s> completed.",
       "inspects-channel-disabled": "Successfully disabled automatic inspect messages.",
       "inspects-channel-set": "Successfully set channel for automatic inspect messages."
     },

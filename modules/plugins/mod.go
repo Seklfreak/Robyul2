@@ -380,7 +380,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
             })
 
-            resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-done")
+            resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-done", targetUser.ID)
 
             resultBansText := ""
             if len(bannedOnServerList) <= 0 {
@@ -637,7 +637,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
             resultEmbed := &discordgo.MessageEmbed{
                 Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
-                Description: helpers.GetText("plugins.mod.inspect-embed-description-done") +
+                Description: helpers.GetTextF("plugins.mod.inspect-embed-description-done", member.User.ID) +
                     "\n_inspected because User joined this Server._",
                 URL:       helpers.GetAvatarUrl(member.User),
                 Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
@@ -731,7 +731,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
                     resultEmbed := &discordgo.MessageEmbed{
                         Title: helpers.GetTextF("plugins.mod.inspect-embed-title", user.User.Username, user.User.Discriminator),
-                        Description: helpers.GetText("plugins.mod.inspect-embed-description-done") +
+                        Description: helpers.GetTextF("plugins.mod.inspect-embed-description-done", user.User.ID) +
                             "\n_inspected because User got banned on a different Server._",
                         URL:       helpers.GetAvatarUrl(user.User),
                         Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(user.User)},
