@@ -611,8 +611,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         for _, page := range helpers.Pagify(resultText, "\n") {
             _, err = session.ChannelMessageSend(msg.ChannelID, page)
             helpers.Relax(err)
-            return
         }
+        return
     }
 }
 
