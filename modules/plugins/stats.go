@@ -608,9 +608,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         }
         resultText += fmt.Sprintf("There are **%d** custom emotes on this server.", len(guild.Emojis))
 
-        _, err = session.ChannelMessageSend(msg.ChannelID, resultText)
-        helpers.Relax(err)
-        return
+        for _, page := range helpers.Pagify(resultText, "\n") {
+            _, err = session.ChannelMessageSend(msg.ChannelID, page)
+            helpers.Relax(err)
+            return
+        }
     }
 }
 
