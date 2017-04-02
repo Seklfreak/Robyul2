@@ -457,6 +457,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 needEmbedUpdate := true
                 emotesLocked := false
 
+                // @TODO: use reaction event, see stats.go
             HandleChooseReactions:
                 for {
                     saveAndExits, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, "💾", 100)

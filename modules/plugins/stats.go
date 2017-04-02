@@ -15,6 +15,8 @@ import (
     "github.com/Seklfreak/Robyul2/logger"
     rethink "github.com/gorethink/gorethink"
     "sort"
+    "math"
+    "github.com/Seklfreak/Robyul2/emojis"
 )
 
 type Stats struct{}
@@ -591,7 +593,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
     case "emotes", "emojis": // [p]emotes
         session.ChannelTyping(msg.ChannelID)
-        channel, err := session.Channel(msg.ChannelID)
+        channel, err := session.State.Channel(msg.ChannelID)
         helpers.Relax(err)
         guild, err := session.Guild(channel.GuildID)
         helpers.Relax(err)
@@ -602,18 +604,89 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             return
         }
 
-        resultText := ""
-        for _, emote := range guild.Emojis {
-            resultText += fmt.Sprintf("<:%s:%s> `:%s:`\n", emote.Name, emote.ID, emote.Name)
-        }
-        resultText += fmt.Sprintf("There are **%d** custom emotes on this server.", len(guild.Emojis))
+        numberOfPages := int(math.Ceil(float64(len(guild.Emojis)) / float64(9)))
 
-        for _, page := range helpers.Pagify(resultText, "\n") {
-            _, err = session.ChannelMessageSend(msg.ChannelID, page)
-            helpers.Relax(err)
+        reactionEmbed := &discordgo.MessageEmbed{
+            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.reaction-embed-footer", len(guild.Emojis))},
         }
+
+        s.setEmbedEmojiPage(reactionEmbed, msg.Author, guild, 1, numberOfPages)
+        reactionEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, reactionEmbed)
+        helpers.Relax(err)
+
+        reactionsAdded := 0
+        if numberOfPages > 1 {
+            go func() {
+                for {
+                    err = session.MessageReactionAdd(msg.ChannelID, reactionEmbedMessage.ID, emojis.From(strconv.Itoa(reactionsAdded+1)))
+                    helpers.Relax(err)
+                    reactionsAdded++
+                    if reactionsAdded >= numberOfPages {
+                        break
+                    }
+                }
+            }()
+        }
+
+        closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+            if reaction.MessageID == reactionEmbedMessage.ID {
+                if reaction.UserID == session.State.User.ID {
+                    return
+                }
+
+                if reaction.UserID == msg.Author.ID {
+                    newPageN := emojis.ToNumber(reaction.Emoji.Name)
+                    if newPageN >= 1 && newPageN <= numberOfPages {
+                        s.setEmbedEmojiPage(reactionEmbed, msg.Author, guild, newPageN, numberOfPages)
+                        reactionEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, reactionEmbedMessage.ID, reactionEmbed)
+                        helpers.Relax(err)
+                    }
+                }
+                err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                helpers.Relax(err)
+            }
+        })
+        time.Sleep(3 * time.Minute)
+        closeHandler()
+        reactionsRemoved := 0
+        if numberOfPages > 1 {
+            for {
+                session.MessageReactionRemove(msg.ChannelID, reactionEmbedMessage.ID, emojis.From(strconv.Itoa(reactionsRemoved+1)), session.State.User.ID)
+                reactionsRemoved++
+                if reactionsRemoved >= numberOfPages {
+                    break
+                }
+            }
+
+        }
+
         return
     }
+}
+
+func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author *discordgo.User, guild *discordgo.Guild, pageN int, maxPagesN int) {
+    reactionEmbed.Fields = []*discordgo.MessageEmbedField{}
+    pageText := ""
+    if maxPagesN > 1 {
+        pageText = fmt.Sprintf(" | Page %d of %d", pageN, maxPagesN)
+    }
+    reactionEmbed.Title = helpers.GetTextF("plugins.stats.reaction-embed-title", author.Username, guild.Name) + pageText
+    startEmoteN := (pageN - 1) * 9
+    i := startEmoteN
+    for {
+        if i < len(guild.Emojis) {
+            reactionEmbed.Fields = append(reactionEmbed.Fields, &discordgo.MessageEmbedField{
+                Name:   fmt.Sprintf("`:%s:`", guild.Emojis[i].Name),
+                Value:  fmt.Sprintf("<:%s>", guild.Emojis[i].APIName()),
+                Inline: true,
+            })
+        }
+        i++
+        if i >= startEmoteN+9 {
+            break
+        }
+    }
+    return
 }
 
 func (r *Stats) setVoiceTimeEntry(entry DB_VoiceTime) {
