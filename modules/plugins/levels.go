@@ -531,37 +531,39 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
 }
 
 func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Session) {
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := session.State.Channel(msg.ChannelID)
     helpers.Relax(err)
-    // ignore temporary ignored guilds
-    for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {
-        if temporaryIgnoredGuild == channel.GuildID {
+    if channel.GuildID != "287388526117388289" { // @TODO: add list via command
+        // ignore temporary ignored guilds
+        for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {
+            if temporaryIgnoredGuild == channel.GuildID {
+                return
+            }
+        }
+        // ignore bot messages
+        if msg.Author.Bot == true {
             return
         }
-    }
-    // ignore bot messages
-    if msg.Author.Bot == true {
-        return
-    }
-    // ignore commands
-    prefix := helpers.GetPrefixForServer(channel.GuildID)
-    if prefix != "" {
-        if strings.HasPrefix(msg.Content, prefix) {
+        // ignore commands
+        prefix := helpers.GetPrefixForServer(channel.GuildID)
+        if prefix != "" {
+            if strings.HasPrefix(msg.Content, prefix) {
+                return
+            }
+        }
+        // check if bucket is empty
+        if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
+            //m.BucketSet(channel.GuildID+msg.Author.ID, -1)
             return
         }
-    }
-    // check if bucket is empty
-    if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
-        //m.BucketSet(channel.GuildID+msg.Author.ID, -1)
-        return
-    }
 
-    err = m.BucketDrain(1, channel.GuildID+msg.Author.ID)
-    helpers.Relax(err)
+        err = m.BucketDrain(1, channel.GuildID+msg.Author.ID)
+        helpers.Relax(err)
 
-    levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, msg.Author.ID)
-    levelsServerUser.Exp += m.getRandomExpForMessage()
-    m.setLevelsServerUser(levelsServerUser)
+        levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, msg.Author.ID)
+        levelsServerUser.Exp += m.getRandomExpForMessage()
+        m.setLevelsServerUser(levelsServerUser)
+    }
 }
 
 func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
