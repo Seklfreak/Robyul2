@@ -593,10 +593,6 @@ func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Sessi
         helpers.Relax(err)
 
         expStack.Push(ProcessExpInfo{UserID: msg.Author.ID, GuildID: channel.GuildID})
-
-        //levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, msg.Author.ID)
-        //levelsServerUser.Exp += m.getRandomExpForMessage()
-        //m.setLevelsServerUser(levelsServerUser)
     }
 }
 
@@ -610,10 +606,10 @@ func (m *Levels) OnGuildMemberRemove(member *discordgo.Member, session *discordg
 
 func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) DB_Levels_ServerUser {
     var levelsServerUser DB_Levels_ServerUser
-    listCursor, err := rethink.Table("levels_serverusers").Filter(
-        rethink.Row.Field("guildid").Eq(guildid),
+    listCursor, err := rethink.Table("levels_serverusers").GetAllByIndex(
+        "userid", userid,
     ).Filter(
-        rethink.Row.Field("userid").Eq(userid),
+        rethink.Row.Field("guildid").Eq(guildid),
     ).Run(helpers.GetDB())
     helpers.Relax(err)
     defer listCursor.Close()
@@ -635,7 +631,7 @@ func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) D
 }
 
 func (m *Levels) setLevelsServerUser(entry DB_Levels_ServerUser) {
-    _, err := rethink.Table("levels_serverusers").Update(entry).Run(helpers.GetDB())
+    _, err := rethink.Table("levels_serverusers").Get(entry.ID).Update(entry).Run(helpers.GetDB())
     helpers.Relax(err)
 }
 
