@@ -120,7 +120,7 @@ func (r *VLive) checkVliveFeedsLoop() {
         helpers.Recover()
 
         logger.ERROR.L("VLive", "The checkVliveFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-        time.Sleep(5 * time.Second)
+        time.Sleep(60 * time.Second)
         r.checkVliveFeedsLoop()
     }()
 

@@ -23,12 +23,18 @@ import (
     "github.com/nfnt/resize"
     "github.com/Seklfreak/Robyul2/metrics"
     "sort"
+    lane "gopkg.in/oleiade/lane.v1"
 )
 
 type Levels struct {
     sync.RWMutex
 
     buckets map[string]int8
+}
+
+type ProcessExpInfo struct {
+    GuildID string
+    UserID  string
 }
 
 var (
@@ -47,6 +53,8 @@ var (
     DROP_SIZE int8 = 1
 
     temporaryIgnoredGuilds []string
+
+    expStack *lane.Stack = lane.NewStack()
 )
 
 func (m *Levels) Commands() []string {
@@ -66,6 +74,30 @@ type DB_Levels_ServerUser struct {
 
 func (m *Levels) Init(session *discordgo.Session) {
     m.BucketInit()
+
+    go m.processExpStackLoop()
+    logger.PLUGIN.L("VLive", "Started processExpStackLoop")
+}
+
+func (m *Levels) processExpStackLoop() {
+    defer func() {
+        helpers.Recover()
+
+        logger.ERROR.L("levels", "The processExpStackLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.processExpStackLoop()
+    }()
+
+    for {
+        if !expStack.Empty() {
+            expItem := expStack.Pop().(ProcessExpInfo)
+            levelsServerUser := m.getLevelsServerUserOrCreateNew(expItem.GuildID, expItem.UserID)
+            levelsServerUser.Exp += m.getRandomExpForMessage()
+            m.setLevelsServerUser(levelsServerUser)
+        } else {
+            time.Sleep(1 * time.Second)
+        }
+    }
 }
 
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -560,9 +592,11 @@ func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Sessi
         err = m.BucketDrain(1, channel.GuildID+msg.Author.ID)
         helpers.Relax(err)
 
-        levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, msg.Author.ID)
-        levelsServerUser.Exp += m.getRandomExpForMessage()
-        m.setLevelsServerUser(levelsServerUser)
+        expStack.Push(ProcessExpInfo{UserID: msg.Author.ID, GuildID: channel.GuildID})
+
+        //levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, msg.Author.ID)
+        //levelsServerUser.Exp += m.getRandomExpForMessage()
+        //m.setLevelsServerUser(levelsServerUser)
     }
 }
 
