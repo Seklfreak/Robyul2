@@ -600,7 +600,7 @@ func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.S
 
 func (m *Levels) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 
-}DSC_1366.jpg
+}
 
 func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) DB_Levels_ServerUser {
     var levelsServerUser DB_Levels_ServerUser
