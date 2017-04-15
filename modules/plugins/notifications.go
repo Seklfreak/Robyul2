@@ -304,9 +304,13 @@ NextKeyword:
             }
             if doesMatch == true {
                 memberToNotify, err := session.GuildMember(guild.ID, notificationSetting.UserID)
-                helpers.Relax(err)
+                if err != nil {
+                    continue NextKeyword
+                }
                 messageAuthor, err := session.GuildMember(guild.ID, msg.Author.ID)
-                helpers.Relax(err)
+                if err != nil {
+                    continue NextKeyword
+                }
                 everyoneRoleId := ""
                 guildRoles, err := session.GuildRoles(guild.ID)
                 for _, guildRole := range guildRoles {

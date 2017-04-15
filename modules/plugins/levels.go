@@ -565,35 +565,33 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
 func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Session) {
     channel, err := session.State.Channel(msg.ChannelID)
     helpers.Relax(err)
-    if channel.GuildID != "287388526117388289" { // @TODO: add list via command
-        // ignore temporary ignored guilds
-        for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {
-            if temporaryIgnoredGuild == channel.GuildID {
-                return
-            }
-        }
-        // ignore bot messages
-        if msg.Author.Bot == true {
+    // ignore temporary ignored guilds
+    for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {
+        if temporaryIgnoredGuild == channel.GuildID {
             return
         }
-        // ignore commands
-        prefix := helpers.GetPrefixForServer(channel.GuildID)
-        if prefix != "" {
-            if strings.HasPrefix(msg.Content, prefix) {
-                return
-            }
-        }
-        // check if bucket is empty
-        if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
-            //m.BucketSet(channel.GuildID+msg.Author.ID, -1)
-            return
-        }
-
-        err = m.BucketDrain(1, channel.GuildID+msg.Author.ID)
-        helpers.Relax(err)
-
-        expStack.Push(ProcessExpInfo{UserID: msg.Author.ID, GuildID: channel.GuildID})
     }
+    // ignore bot messages
+    if msg.Author.Bot == true {
+        return
+    }
+    // ignore commands
+    prefix := helpers.GetPrefixForServer(channel.GuildID)
+    if prefix != "" {
+        if strings.HasPrefix(msg.Content, prefix) {
+            return
+        }
+    }
+    // check if bucket is empty
+    if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
+        //m.BucketSet(channel.GuildID+msg.Author.ID, -1)
+        return
+    }
+
+    err = m.BucketDrain(1, channel.GuildID+msg.Author.ID)
+    helpers.Relax(err)
+
+    expStack.Push(ProcessExpInfo{UserID: msg.Author.ID, GuildID: channel.GuildID})
 }
 
 func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
@@ -602,7 +600,7 @@ func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.S
 
 func (m *Levels) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 
-}
+}DSC_1366.jpg
 
 func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) DB_Levels_ServerUser {
     var levelsServerUser DB_Levels_ServerUser

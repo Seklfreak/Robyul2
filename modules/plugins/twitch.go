@@ -375,8 +375,6 @@ func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchSt
     if twitchStatus.Stream.Game != "" {
         twitchChannelEmbed.Description = fmt.Sprintf("playing **%s**", twitchStatus.Stream.Game)
     }
-    _, err := cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf("<%s>", twitchStatus.Stream.Channel.URL))
-    helpers.Relax(err)
-    _, err = cache.GetSession().ChannelMessageSendEmbed(channelID, twitchChannelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", twitchStatus.Stream.Channel.URL), twitchChannelEmbed)
     helpers.Relax(err)
 }
