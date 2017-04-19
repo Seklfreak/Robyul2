@@ -248,7 +248,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
             changes := false
             logger.VERBOSE.L("instagram", fmt.Sprintf("checking Instagram Account @%s", entry.Username))
 
-            err, instagramUser := m.lookupInstagramUser(entry.Username)
+            instagramUser, err := m.lookupInstagramUser(entry.Username)
             if err != nil || instagramUser.Username == "" {
                 logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
                 safeEntries.mux.Unlock()
@@ -346,7 +346,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 helpers.Relax(err)
                 // get instagram account
                 instagramUsername := strings.Replace(args[1], "@", "", 1)
-                err, instagramUser := m.lookupInstagramUser(instagramUsername)
+                instagramUser, err := m.lookupInstagramUser(instagramUsername)
                 if err != nil || instagramUser.Username == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
                     return
@@ -426,7 +426,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
         default:
             session.ChannelTyping(msg.ChannelID)
             instagramUsername := strings.Replace(args[0], "@", "", 1)
-            err, instagramUser := m.lookupInstagramUser(instagramUsername)
+            instagramUser, err := m.lookupInstagramUser(instagramUsername)
 
             if err != nil || instagramUser.Username == "" {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
@@ -706,54 +706,70 @@ func (m *Instagram) login() {
     rankToken = fmt.Sprintf("%s_%s", usernameId, usedUuid)
 }
 
-func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User) {
+func (m *Instagram) lookupInstagramUser(username string) (Instagram_User, error) {
     var instagramUser Instagram_User
 
     userEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("users/%s/usernameinfo/", username))
     request, err := http.NewRequest("GET", userEndpoint, nil)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     m.applyHeaders(request)
     response, err := httpClient.Do(request)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     buf := bytes.NewBuffer(nil)
     _, err = io.Copy(buf, response.Body)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     jsonResult, err := gabs.ParseJSON(buf.Bytes())
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
+    }
+    retry, errorMessage := m.checkInstagramResult(jsonResult)
+    if retry == true {
+        logger.VERBOSE.L("instagram", fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
+        time.Sleep(20 * time.Second)
+        return m.lookupInstagramUser(username)
+    } else if errorMessage != "" {
+        return instagramUser, errors.New(fmt.Sprintf("Instagram API Error: %s", errorMessage))
     }
     json.Unmarshal([]byte(jsonResult.Path("user").String()), &instagramUser)
 
     userFeedEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/?max_id=%s&min_timestamp=%s&rank_token=%s&ranked_content=true", strconv.Itoa(instagramUser.Pk), "", "", rankToken))
     request, err = http.NewRequest("GET", userFeedEndpoint, nil)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     m.applyHeaders(request)
     response, err = httpClient.Do(request)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     buf = bytes.NewBuffer(nil)
     _, err = io.Copy(buf, response.Body)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     jsonResult, err = gabs.ParseJSON(buf.Bytes())
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
+    }
+    retry, errorMessage = m.checkInstagramResult(jsonResult)
+    if retry == true {
+        logger.VERBOSE.L("instagram", fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
+        time.Sleep(20 * time.Second)
+        return m.lookupInstagramUser(username)
+    } else if errorMessage != "" {
+        return instagramUser, errors.New(fmt.Sprintf("Instagram API Error: %s", errorMessage))
     }
 
     var instagramPosts []Instagram_Post
     instagramPostsJsons, err := jsonResult.Path("items").Children()
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     for _, instagramPostJson := range instagramPostsJsons {
         var instagramPost Instagram_Post
@@ -765,28 +781,36 @@ func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User)
     userReelEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/story/", strconv.Itoa(instagramUser.Pk)))
     request, err = http.NewRequest("GET", userReelEndpoint, nil)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     m.applyHeaders(request)
     response, err = httpClient.Do(request)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     buf = bytes.NewBuffer(nil)
     _, err = io.Copy(buf, response.Body)
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
     }
     jsonResult, err = gabs.ParseJSON(buf.Bytes())
     if err != nil {
-        return err, instagramUser
+        return instagramUser, err
+    }
+    retry, errorMessage = m.checkInstagramResult(jsonResult)
+    if retry == true {
+        logger.VERBOSE.L("instagram", fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
+        time.Sleep(20 * time.Second)
+        return m.lookupInstagramUser(username)
+    } else if errorMessage != "" {
+        return instagramUser, errors.New(fmt.Sprintf("Instagram API Error: %s", errorMessage))
     }
 
     if jsonResult.ExistsP("reel.items") {
         var instagramReelMedias []Instagram_ReelMedia
         instagramReelMediasJsons, err := jsonResult.Path("reel.items").Children()
         if err != nil {
-            return err, instagramUser
+            return instagramUser, err
         }
         for _, instagramReelMediaJson := range instagramReelMediasJsons {
             var instagramReelMedia Instagram_ReelMedia
@@ -800,7 +824,19 @@ func (m *Instagram) lookupInstagramUser(username string) (error, Instagram_User)
         json.Unmarshal([]byte(jsonResult.Path("broadcast").String()), &instagramUser.Broadcast)
     }
 
-    return nil, instagramUser
+    return instagramUser, nil
+}
+
+func (m *Instagram) checkInstagramResult(jsonResult *gabs.Container) (bool, string) {
+    if jsonResult.Path("status").Data().(string) == "fail" {
+        errorMessage := jsonResult.Path("message").Data().(string)
+        if errorMessage == "Please wait a few minutes before you try again." {
+            return true, errorMessage
+        } else {
+            return false, errorMessage
+        }
+    }
+    return false, ""
 }
 
 func (m *Instagram) getEntryBy(key string, id string) DB_Instagram_Entry {
