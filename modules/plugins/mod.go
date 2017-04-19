@@ -588,6 +588,8 @@ func (m *Mod) inspectUserBans(user *discordgo.User, callbackProgress func(progre
             for _, guildBan := range guildBans {
                 if guildBan.User.ID == user.ID {
                     bannedOnServerList = append(bannedOnServerList, botGuild)
+                    logger.INFO.L("mod", fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
+                        user.Username, user.ID, botGuild.Name, botGuild.ID))
                 }
             }
         }

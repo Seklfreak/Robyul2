@@ -382,6 +382,34 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             }
         }
 
+        // Bots cannot use the search endpoint...
+        //totalMessagesText := "failed to acquire"
+        //searchUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/messages/search?author_id=%s", currentChannel.GuildID, targetUser.ID)
+        //resp, err := session.Request("GET", searchUrl, nil)
+        //if err == nil {
+        //    searchResult, err := gabs.ParseJSON(resp)
+        //    if err == nil {
+        //        totalMessagesText = humanize.Comma(searchResult.Path("total_results").Data().(int64)) + " Messages"
+        //    }
+        //}
+        //if err != nil {
+        //    fmt.Println(err)
+        //    raven.SetUserContext(&raven.User{
+        //        ID:       msg.ID,
+        //        Username: msg.Author.Username + "#" + msg.Author.Discriminator,
+        //    })
+        //    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+        //        "ChannelID":       msg.ChannelID,
+        //        "Content":         msg.Content,
+        //        "Timestamp":       string(msg.Timestamp),
+        //        "TTS":             strconv.FormatBool(msg.Tts),
+        //        "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+        //        "IsBot":           strconv.FormatBool(msg.Author.Bot),
+        //    })
+        //    err = nil
+        //}
+        //{Name: "Total Messages", Value: totalMessagesText, Inline: false},
+
         userinfoEmbed := &discordgo.MessageEmbed{
             Color:  0x0FADED,
             Title:  title,
