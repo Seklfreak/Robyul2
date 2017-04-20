@@ -42,6 +42,7 @@ var (
 const (
     TwitterFriendlyUser   string = "https://twitter.com/%s"
     TwitterFriendlyStatus string = "https://twitter.com/%s/status/%s"
+    TwitterFooterIconUrl  string = "https://abs.twimg.com/favicons/favicon.ico"
     rfc2822               string = "Mon Jan 02 15:04:05 -0700 2006"
 )
 
@@ -263,6 +264,17 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
             createdAtTime, err := time.Parse(rfc2822, twitterUser.CreatedAt)
             helpers.Relax(err)
 
+            twitterUserDescription := twitterUser.Description
+            if twitterUser.Entities != nil {
+                if len(twitterUser.Entities.Description.Urls) > 0 {
+                    for _, urlEntity := range twitterUser.Entities.Description.Urls {
+                        if len(urlEntity.ExpandedURL) <= 100 {
+                            twitterUserDescription = strings.Replace(twitterUserDescription, urlEntity.URL, urlEntity.ExpandedURL, -1)
+                        }
+                    }
+                }
+            }
+
             twitterNameModifier := ""
             if twitterUser.Verified {
                 twitterNameModifier += " :ballot_box_with_check:"
@@ -271,11 +283,14 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                 twitterNameModifier += " :lock:"
             }
             accountEmbed := &discordgo.MessageEmbed{
-                Title:       helpers.GetTextF("plugins.twitter.account-embed-title", twitterUser.Name, twitterUser.ScreenName, twitterNameModifier),
-                URL:         fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName),
-                Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: twitterUser.ProfileImageURLHttps},
-                Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitter.embed-footer")},
-                Description: twitterUser.Description,
+                Title:     helpers.GetTextF("plugins.twitter.account-embed-title", twitterUser.Name, twitterUser.ScreenName, twitterNameModifier),
+                URL:       fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName),
+                Thumbnail: &discordgo.MessageEmbedThumbnail{URL: twitterUser.ProfileImageURLHttps},
+                Footer: &discordgo.MessageEmbedFooter{
+                    Text:    helpers.GetText("plugins.twitter.embed-footer"),
+                    IconURL: TwitterFooterIconUrl,
+                },
+                Description: twitterUserDescription,
                 Fields: []*discordgo.MessageEmbedField{
                     {Name: "Followers", Value: humanize.Comma(int64(twitterUser.FollowersCount)), Inline: true},
                     {Name: "Following", Value: humanize.Comma(int64(twitterUser.FriendsCount)), Inline: true},
@@ -302,10 +317,10 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twitterUser *twitter.User) {
     twitterNameModifier := ""
     if twitterUser.Verified {
-        twitterNameModifier += " :ballot_box_with_check:"
+        twitterNameModifier += " ☑"
     }
     if twitterUser.Protected {
-        twitterNameModifier += " :lock:"
+        twitterNameModifier += " 🔒"
     }
 
     mediaModifier := ""
@@ -317,19 +332,39 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
     //	}
     //	mediaModifier += ")"
     //}
-    if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
-        if tweet.ExtendedEntities.Media[0].Type == "video" {
-            mediaModifier += " (video)"
+    tweetText := tweet.Text
+
+    if tweet.ExtendedEntities != nil {
+        if len(tweet.ExtendedEntities.Media) > 0 {
+            if tweet.ExtendedEntities.Media[0].Type == "video" {
+                mediaModifier += " (video)"
+            }
+        }
+    }
+    if tweet.Entities != nil {
+        if len(tweet.Entities.Urls) > 0 {
+            for _, urlEntity := range tweet.Entities.Urls {
+                if len(urlEntity.ExpandedURL) <= 100 {
+                    tweetText = strings.Replace(tweetText, urlEntity.URL, urlEntity.ExpandedURL, -1)
+                }
+            }
         }
     }
 
     channelEmbed := &discordgo.MessageEmbed{
-        Title:       helpers.GetTextF("plugins.twitter.tweet-embed-title", twitterUser.Name, twitterUser.ScreenName, twitterNameModifier) + mediaModifier,
-        URL:         fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr),
-        Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: twitterUser.ProfileImageURLHttps},
-        Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitter.embed-footer")},
-        Description: tweet.Text,
+        Title: helpers.GetText("plugins.twitter.tweet-embed-title") + mediaModifier,
+        URL:   fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr),
+        Footer: &discordgo.MessageEmbedFooter{
+            Text:    helpers.GetText("plugins.twitter.embed-footer"),
+            IconURL: TwitterFooterIconUrl,
+        },
+        Description: tweetText,
         Color:       helpers.GetDiscordColorFromHex(twitterUser.ProfileLinkColor),
+        Author: &discordgo.MessageEmbedAuthor{
+            Name:    fmt.Sprintf("%s (@%s)%s", twitterUser.Name, twitterUser.ScreenName, twitterNameModifier),
+            URL:     fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName),
+            IconURL: twitterUser.ProfileImageURLHttps,
+        },
     }
 
     if tweet.Entities != nil && len(tweet.Entities.Media) > 0 {

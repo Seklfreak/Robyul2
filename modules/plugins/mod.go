@@ -429,7 +429,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             oneWeekAgo := time.Now().AddDate(0, 0, -7)
             joinedTimeText := ""
             if !joinedTime.After(oneWeekAgo) {
-                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\nJoined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
             } else if !joinedTime.After(oneDayAgo) {
                 joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
             } else {
