@@ -617,17 +617,26 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 usersMatched := make([]*discordgo.User, 0)
                 for _, serverGuild := range session.State.Guilds {
                     if globalCheck == true || serverGuild.ID == currentChannel.GuildID {
-                        for _, serverMember := range serverGuild.Members {
-                            fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
-                            if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
-                                userIsAlreadyInList := false
-                                for _, userAlreadyInList := range usersMatched {
-                                    if userAlreadyInList.ID == serverMember.User.ID {
-                                        userIsAlreadyInList = true
+                        lastAfterMemberId := ""
+                        for {
+                            members, err := session.GuildMembers(serverGuild.ID, lastAfterMemberId, 1000)
+                            if len(members) <= 0 {
+                                break
+                            }
+                            lastAfterMemberId = members[len(members)-1].User.ID
+                            helpers.Relax(err)
+                            for _, serverMember := range members {
+                                fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
+                                if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
+                                    userIsAlreadyInList := false
+                                    for _, userAlreadyInList := range usersMatched {
+                                        if userAlreadyInList.ID == serverMember.User.ID {
+                                            userIsAlreadyInList = true
+                                        }
                                     }
-                                }
-                                if userIsAlreadyInList == false {
-                                    usersMatched = append(usersMatched, serverMember.User)
+                                    if userIsAlreadyInList == false {
+                                        usersMatched = append(usersMatched, serverMember.User)
+                                    }
                                 }
                             }
                         }
