@@ -12,6 +12,7 @@ import (
     "github.com/getsentry/raven-go"
     "time"
     "github.com/Seklfreak/Robyul2/emojis"
+    "github.com/renstrom/fuzzysearch/fuzzy"
 )
 
 type Mod struct{}
@@ -28,6 +29,7 @@ func (m *Mod) Commands() []string {
         "inspect",
         "inspect-extended",
         "auto-inspects-channel",
+        "search-user",
     }
 }
 
@@ -597,6 +599,60 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             helpers.Relax(err)
             _, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
             helpers.Relax(err)
+        })
+    case "search-user": // [p]search-user <name>
+        helpers.RequireMod(msg, func() {
+            searchText := strings.TrimSpace(content)
+            if len(searchText) > 3 {
+                globalCheck := helpers.IsBotAdmin(msg.Author.ID)
+                if globalCheck == true {
+                    session.ChannelMessageSend(msg.ChannelID, "Searching for users on all servers with Robyul. 💬")
+                } else {
+                    session.ChannelMessageSend(msg.ChannelID, "Searching for users on this server. 💬")
+                }
+
+                currentChannel, err := session.State.Channel(msg.ChannelID)
+                helpers.Relax(err)
+
+                usersMatched := make([]*discordgo.User, 0)
+                for _, serverGuild := range session.State.Guilds {
+                    if globalCheck == true || serverGuild.ID == currentChannel.GuildID {
+                        for _, serverMember := range serverGuild.Members {
+                            fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
+                            if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
+                                userIsAlreadyInList := false
+                                for _, userAlreadyInList := range usersMatched {
+                                    if userAlreadyInList.ID == serverMember.User.ID {
+                                        userIsAlreadyInList = true
+                                    }
+                                }
+                                if userIsAlreadyInList == false {
+                                    usersMatched = append(usersMatched, serverMember.User)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if len(usersMatched) <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, "Found no user who matches your search text. 🕵")
+                    helpers.Relax(err)
+                    return
+                } else {
+                    resultText := fmt.Sprintf("Found %d users which matches your search text:\n", len(usersMatched))
+                    for _, userMatched := range usersMatched {
+                        resultText += fmt.Sprintf("`%s#%s` (User ID: `%s`)\n", userMatched.Username, userMatched.Discriminator, userMatched.ID)
+                    }
+                    for _, page := range helpers.Pagify(resultText, "\n") {
+                        _, err := session.ChannelMessageSend(msg.ChannelID, page)
+                        helpers.Relax(err)
+                    }
+                    return
+                }
+            } else {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+                return
+            }
         })
     }
 }
