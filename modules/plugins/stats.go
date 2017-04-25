@@ -633,9 +633,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         }
 
         numberOfPages := int(math.Ceil(float64(len(guild.Emojis)) / float64(9)))
+        footerAdditionalText := ""
+        if numberOfPages > 1 {
+            footerAdditionalText += " Click on the numbers below to change the page."
+        }
 
         reactionEmbed := &discordgo.MessageEmbed{
-            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.reaction-embed-footer", len(guild.Emojis))},
+            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.reaction-embed-footer", len(guild.Emojis)) + footerAdditionalText},
         }
 
         s.setEmbedEmojiPage(reactionEmbed, msg.Author, guild, 1, numberOfPages)

@@ -31,7 +31,7 @@ func (m *Gfycat) Init(session *discordgo.Session) {
 
 }
 
-func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) { // [p]gfy [<link>] or attachment
+func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) { // [p]gfy [<link>] or attachment [<start in seconds> <duration in seconds>]
     session.ChannelTyping(msg.ChannelID)
 
     if len(content) <= 0 && len(msg.Attachments) <= 0 {
@@ -40,7 +40,22 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
         return
     }
 
+    args := strings.Fields(content)
     sourceUrl := content
+    cutArgJson := ""
+    duration := ""
+    start := ""
+    if len(args) >= 3 || (len(args) >= 2 && len(msg.Attachments) > 0) {
+        duration = args[len(args)-1]
+        start = args[len(args)-2]
+        cutArgJson = fmt.Sprintf(`,
+        "cut": {
+        "duration": "%s",
+        "start": "%s"
+        }`, duration, start)
+        sourceUrl = strings.Join(args[0:len(args)-2], " ")
+    }
+
     if len(msg.Attachments) > 0 {
         sourceUrl = msg.Attachments[0].URL
     }
@@ -52,8 +67,8 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
     postGfycatEndpoint := fmt.Sprintf(gfycatApiBaseUrl, "gfycats")
     postData, err := gabs.ParseJSON([]byte(fmt.Sprintf(
         `{"private": true,
-    "fetchUrl": "%s"}`,
-        sourceUrl,
+    "fetchUrl": "%s"%s}`,
+        sourceUrl, cutArgJson,
     )))
     helpers.Relax(err)
     request, err := http.NewRequest("POST", postGfycatEndpoint, strings.NewReader(postData.String()))
