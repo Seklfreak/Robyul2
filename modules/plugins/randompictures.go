@@ -301,7 +301,9 @@ func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*
         result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
         helpers.Relax(err)
         for _, file := range result.Files {
-            allFiles = append(allFiles, file)
+            if rp.isValidDriveFile(file) {
+                allFiles = append(allFiles, file)
+            }
         }
 
         for {
@@ -311,13 +313,20 @@ func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*
             result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
             helpers.Relax(err)
             for _, file := range result.Files {
-                if file.Size <= 8000000 { // smaller than 8 MB? (discords file size limit)
+                if rp.isValidDriveFile(file) {
                     allFiles = append(allFiles, file)
                 }
             }
         }
     }
     return allFiles
+}
+
+func (rp *RandomPictures) isValidDriveFile(file *drive.File) bool {
+    if file.Size > 8000000 { // bigger than 8 MB? (discords file size limit)
+        return false
+    }
+    return true
 }
 
 func (rp *RandomPictures) updateImagesCachedMetric() {
