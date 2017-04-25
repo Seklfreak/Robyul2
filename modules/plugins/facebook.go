@@ -12,6 +12,7 @@ import (
     "strings"
     "time"
     "sync"
+    "github.com/pkg/errors"
 )
 
 type Facebook struct{}
@@ -291,11 +292,27 @@ func (m *Facebook) lookupFacebookPage(siteName string) (Facebook_Page, error) {
         return facebookPage, err
     }
 
-    facebookPage.ID = facebookPageResult["id"].(string)
-    facebookPage.Name = facebookPageResult["name"].(string)
-    facebookPage.About = facebookPageResult["about"].(string)
-    facebookPage.Username = facebookPageResult["username"].(string)
-    facebookPage.Website = facebookPageResult["website"].(string)
+    if _, ok := facebookPageResult["id"]; ok && facebookPageResult["id"] != "" {
+        facebookPage.ID = facebookPageResult["id"].(string)
+    } else {
+        return facebookPage, errors.New("Unable to find facebook page ID")
+    }
+    if _, ok := facebookPageResult["name"]; ok && facebookPageResult["name"] != "" {
+        facebookPage.Name = facebookPageResult["name"].(string)
+    } else {
+        return facebookPage, errors.New("Unable to find facebook page Name")
+    }
+    if _, ok := facebookPageResult["username"]; ok && facebookPageResult["username"] != "" {
+        facebookPage.Username = facebookPageResult["username"].(string)
+    } else {
+        return facebookPage, errors.New("Unable to find facebook page Username")
+    }
+    if _, ok := facebookPageResult["about"]; ok && facebookPageResult["about"] != "" {
+        facebookPage.About = facebookPageResult["about"].(string)
+    }
+    if _, ok := facebookPageResult["website"]; ok && facebookPageResult["website"] != "" {
+        facebookPage.Website = facebookPageResult["website"].(string)
+    }
 
     err = facebookPageResult.DecodeField("picture.data.url", &facebookPage.ProfilePictureUrl)
     if err != nil {
