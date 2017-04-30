@@ -13,6 +13,7 @@ import (
     "time"
     "github.com/Seklfreak/Robyul2/emojis"
     "github.com/renstrom/fuzzysearch/fuzzy"
+    "github.com/Jeffail/gabs"
 )
 
 type Mod struct{}
@@ -30,6 +31,8 @@ func (m *Mod) Commands() []string {
         "inspect-extended",
         "auto-inspects-channel",
         "search-user",
+        "audit-log",
+        "invites",
     }
 }
 
@@ -661,6 +664,83 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
+            }
+        })
+    case "audit-log":
+        helpers.RequireBotAdmin(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
+            channel, err := session.State.Channel(msg.ChannelID)
+            helpers.Relax(err)
+            auditLogUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/audit-logs?limit=10", channel.GuildID)
+            resp, err := session.Request("GET", auditLogUrl, nil)
+            helpers.Relax(err)
+            parsedResult, err := gabs.ParseJSON(resp)
+            helpers.Relax(err)
+
+            logMessage := ""
+
+            var user *discordgo.Member
+            var target *discordgo.Member
+
+            logEntries, err := parsedResult.Path("audit_log_entries").Children()
+            for _, logEntry := range logEntries {
+                user, err = session.State.Member(channel.GuildID, strings.Replace(logEntry.Path("user_id").String(), "\"", "", -1))
+                if err != nil {
+                    user = new(discordgo.Member)
+                    user.User = new(discordgo.User)
+                    user.User.Username = "N/A"
+                }
+                target, err = session.State.Member(channel.GuildID, strings.Replace(logEntry.Path("target_id").String(), "\"", "", -1))
+                if err != nil {
+                    target = new(discordgo.Member)
+                    target.User = new(discordgo.User)
+                    target.User.Username = "N/A"
+                }
+                logMessage += "**Action** `" + logEntry.Path("action_type").String() + "` from `" + user.User.Username + "` for `" + target.User.Username + "`:\n"
+                logEntryChanges, err := logEntry.Path("changes").Children()
+                helpers.Relax(err)
+                for _, logEntryChange := range logEntryChanges {
+                    logMessage += logEntryChange.Path("key").String() + ": " + logEntryChange.Path("new_value").String() + "\n"
+                }
+            }
+
+            for _, page := range helpers.Pagify(logMessage, "\n") {
+                _, err := session.ChannelMessageSend(msg.ChannelID, page)
+                helpers.Relax(err)
+            }
+        })
+    case "invites":
+        helpers.RequireBotAdmin(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
+            channel, err := session.State.Channel(msg.ChannelID)
+            helpers.Relax(err)
+            invitesUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/invites", channel.GuildID)
+            resp, err := session.Request("GET", invitesUrl, nil)
+            helpers.Relax(err)
+            parsedResult, err := gabs.ParseJSON(resp)
+            helpers.Relax(err)
+
+            invites, err := parsedResult.Children()
+            helpers.Relax(err)
+
+            inviteMessage := ""
+            for _, invite := range invites {
+                inviteCode := strings.Trim(invite.Path("code").String(), "\"")
+                inviteInviter, err := session.State.Member(channel.GuildID, strings.Trim(invite.Path("inviter.id").String(), "\""))
+                if err != nil {
+                    inviteInviter = new(discordgo.Member)
+                    inviteInviter.User = new(discordgo.User)
+                    inviteInviter.User.Username = "N/A"
+                }
+                inviteUses := invite.Path("uses").String()
+                inviteChannelID := strings.Trim(invite.Path("channel.id").String(), "\"")
+                inviteMessage += fmt.Sprintf("`%s` by `%s` to <#%s>: **%s** uses\n",
+                    inviteCode, inviteInviter.User.Username, inviteChannelID, inviteUses)
+            }
+
+            for _, page := range helpers.Pagify(inviteMessage, "\n") {
+                _, err := session.ChannelMessageSend(msg.ChannelID, page)
+                helpers.Relax(err)
             }
         })
     }

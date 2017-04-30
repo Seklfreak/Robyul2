@@ -43,6 +43,9 @@ func SoftRelax(err error, cb Callback) {
 // If $err is nil this is a no-op. Panics otherwise.
 func Relax(err error) {
     if err != nil {
+        if DEBUG_MODE == true {
+            fmt.Println(err)
+        }
         panic(err)
     }
 }
