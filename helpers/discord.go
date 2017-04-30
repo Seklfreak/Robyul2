@@ -20,9 +20,7 @@ var botAdmins = []string{
     "116620585638821891", // Sekl
 }
 var adminRoleNames = []string{"Admin"}
-var modRoleNames = []string{"Mod", "Mod Trainee"}
-
-// @TODO: add mod role
+var modRoleNames = []string{"Mod", "Mod Trainee", "Moderators"}
 
 // IsBotAdmin checks if $id is in $botAdmins
 func IsBotAdmin(id string) bool {
