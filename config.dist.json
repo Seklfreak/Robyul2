@@ -56,5 +56,8 @@
   "gfycat": {
     "client_id": "",
     "client_secret": ""
+  },
+  "imgur": {
+    "client_id": ""
   }
 }

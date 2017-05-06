@@ -18,6 +18,13 @@ import (
     rethink "github.com/gorethink/gorethink"
     "github.com/dustin/go-humanize"
     "github.com/Seklfreak/Robyul2/metrics"
+    "io"
+    "net/url"
+    "net/http"
+    "encoding/json"
+    "encoding/base64"
+    "bytes"
+    "github.com/pkg/errors"
 )
 
 type RandomPictures struct{}
@@ -39,6 +46,7 @@ const (
     driveSearchText       string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\")"
     driveFieldsText       string = "nextPageToken, files(id, size)"
     driveFieldsSingleText string = "id, name, size, modifiedTime, imageMediaMetadata"
+    imgurApiUploadBaseUrl string = "https://api.imgur.com/3/image"
 )
 
 func (rp *RandomPictures) Commands() []string {
@@ -109,7 +117,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                                 randomItem := filesCache[sourceEntry.ID][rand.Intn(len(filesCache[sourceEntry.ID]))]
                                 go func() {
                                     defer helpers.Recover()
-                                    rp.postItem(postToChannelID, randomItem)
+                                    rp.postItem(postToChannelID, "", randomItem)
                                 }()
                             }
                         }
@@ -129,7 +137,6 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.Channel(msg.ChannelID)
         helpers.Relax(err)
-        var matchEntry DB_RandomPictures_Source
         postedPic := false
 
         var rpSources []DB_RandomPictures_Source
@@ -141,54 +148,38 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
             helpers.Relax(err)
         }
 
-        if content != "" { // match <name>
-            for _, sourceEntry := range rpSources {
-                if sourceEntry.GuildID == channel.GuildID {
-                    for _, alias := range sourceEntry.Aliases {
-                        if strings.ToLower(alias) == strings.ToLower(content) {
-                            matchEntry = sourceEntry
+        initialMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
+        helpers.Relax(err)
+
+        postedPic = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
+        if postedPic == false {
+            session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+        } else {
+            isPostingNewPic := false
+            err = session.MessageReactionAdd(msg.ChannelID, initialMessage.ID, "🎲")
+            if err == nil {
+                randomHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+                    if reaction.MessageID == initialMessage.ID {
+                        if reaction.UserID == session.State.User.ID {
+                            return
                         }
-                    }
-                }
-            }
-        } else { // match roles
-            guildRoles, err := session.GuildRoles(channel.GuildID)
-            helpers.Relax(err)
-            targetMember, err := session.GuildMember(channel.GuildID, msg.Author.ID)
-            helpers.Relax(err)
-            slice.Sort(guildRoles, func(i, j int) bool {
-                return guildRoles[i].Position > guildRoles[j].Position
-            })
-        CheckRoles:
-            for _, guildRole := range guildRoles {
-                for _, userRole := range targetMember.Roles {
-                    if guildRole.ID == userRole {
-                        for _, sourceEntry := range rpSources {
-                            if sourceEntry.GuildID == channel.GuildID {
-                                for _, alias := range sourceEntry.Aliases {
-                                    if strings.Contains(strings.ToLower(guildRole.Name), strings.ToLower(alias)) {
-                                        matchEntry = sourceEntry
-                                        break CheckRoles
-                                    }
-                                }
+
+                        if reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
+                            postedPic = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
+                            if postedPic == false {
+                                session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+                                err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                                return
                             }
                         }
+                        err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                        helpers.Relax(err)
                     }
-                }
+                })
+                time.Sleep(5 * time.Minute)
+                randomHandler()
+                session.MessageReactionRemove(msg.ChannelID, initialMessage.ID, "🎲", session.State.User.ID)
             }
-        }
-        if matchEntry.ID != "" {
-            if _, ok := filesCache[matchEntry.ID]; ok {
-                if len(filesCache[matchEntry.ID]) > 0 {
-                    randomItem := filesCache[matchEntry.ID][rand.Intn(len(filesCache[matchEntry.ID]))]
-                    rp.postItem(msg.ChannelID, randomItem)
-                    postedPic = true
-                    break
-                }
-            }
-        }
-        if postedPic == false {
-            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.pic-no-picture"))
         }
         return
     default:
@@ -293,6 +284,56 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 
 }
 
+func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, msg *discordgo.Message, content string, initialMessage *discordgo.Message, rpSources []DB_RandomPictures_Source) bool {
+    var matchEntry DB_RandomPictures_Source
+    if content != "" { // match <name>
+        for _, sourceEntry := range rpSources {
+            if sourceEntry.GuildID == channel.GuildID {
+                for _, alias := range sourceEntry.Aliases {
+                    if strings.ToLower(alias) == strings.ToLower(content) {
+                        matchEntry = sourceEntry
+                    }
+                }
+            }
+        }
+    } else { // match roles
+        guildRoles, err := cache.GetSession().GuildRoles(channel.GuildID)
+        helpers.Relax(err)
+        targetMember, err := cache.GetSession().GuildMember(channel.GuildID, msg.Author.ID)
+        helpers.Relax(err)
+        slice.Sort(guildRoles, func(i, j int) bool {
+            return guildRoles[i].Position > guildRoles[j].Position
+        })
+    CheckRoles:
+        for _, guildRole := range guildRoles {
+            for _, userRole := range targetMember.Roles {
+                if guildRole.ID == userRole {
+                    for _, sourceEntry := range rpSources {
+                        if sourceEntry.GuildID == channel.GuildID {
+                            for _, alias := range sourceEntry.Aliases {
+                                if strings.Contains(strings.ToLower(guildRole.Name), strings.ToLower(alias)) {
+                                    matchEntry = sourceEntry
+                                    break CheckRoles
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if matchEntry.ID != "" {
+        if _, ok := filesCache[matchEntry.ID]; ok {
+            if len(filesCache[matchEntry.ID]) > 0 {
+                randomItem := filesCache[matchEntry.ID][rand.Intn(len(filesCache[matchEntry.ID]))]
+                rp.postItem(msg.ChannelID, initialMessage.ID, randomItem)
+                return true
+            }
+        }
+    }
+    return false
+}
+
 func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*drive.File {
     var allFiles []*drive.File
 
@@ -337,7 +378,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
     metrics.RandomPictureSourcesImagesCachedCount.Set(totalImages)
 }
 
-func (rp *RandomPictures) postItem(channelID string, file *drive.File) {
+func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File) {
     file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
     helpers.Relax(err)
 
@@ -350,6 +391,61 @@ func (rp *RandomPictures) postItem(channelID string, file *drive.File) {
         camerModelText = fmt.Sprintf(" 📷 `%s`", file.ImageMediaMetadata.CameraModel)
     }
 
-    _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText), file.Name, result.Body)
+    if messageID == "" {
+        _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText), file.Name, result.Body)
+        helpers.Relax(err)
+    } else {
+        imgurLink, err := rp.uploadToImgur(result.Body)
+        helpers.Relax(err)
+
+        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, imgurLink))
+        helpers.Relax(err)
+    }
+}
+
+func (rp *RandomPictures) uploadToImgur(body io.ReadCloser) (string, error) {
+    buf := new(bytes.Buffer)
+    buf.ReadFrom(body)
+    parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(buf.Bytes())}}
+
+    req, err := http.NewRequest("POST", imgurApiUploadBaseUrl, strings.NewReader(parameters.Encode()))
     helpers.Relax(err)
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    req.Header.Set("Authorization", "Client-ID "+helpers.GetConfig().Path("imgur.client_id").Data().(string))
+    res, err := http.DefaultClient.Do(req)
+    helpers.Relax(err)
+
+    var imgurResponse ImgurResponse
+    json.NewDecoder(res.Body).Decode(&imgurResponse)
+    if imgurResponse.Success == false {
+        return "", errors.New(fmt.Sprintf("Imgur API Error: %d", imgurResponse.Status))
+    } else {
+        return imgurResponse.Data.Link, nil
+    }
+}
+
+type ImgurResponse struct {
+    Data    ImageData `json:"data"`
+    Status  int       `json:"status"`
+    Success bool      `json:"success"`
+}
+
+type ImageData struct {
+    Account_id int    `json:"account_id"`
+    Animated   bool   `json:"animated"`
+    Bandwidth  int    `json:"bandwidth"`
+    DateTime   int    `json:"datetime"`
+    Deletehash string `json:"deletehash"`
+    Favorite   bool   `json:"favorite"`
+    Height     int    `json:"height"`
+    Id         string `json:"id"`
+    In_gallery bool   `json:"in_gallery"`
+    Is_ad      bool   `json:"is_ad"`
+    Link       string `json:"link"`
+    Name       string `json:"name"`
+    Size       int    `json:"size"`
+    Title      string `json:"title"`
+    Type       string `json:"type"`
+    Views      int    `json:"views"`
+    Width      int    `json:"width"`
 }

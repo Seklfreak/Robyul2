@@ -645,7 +645,8 @@
       "list-no-entries-error": "No sources set up on this server yet! :mag:",
       "refresh-success": "Source successfully refresh! :ok_hand:",
       "refresh-not-found-error": "I wasn't able to find this source. :no_mouth:",
-      "refresh-started": "Refreshing started, this may take a while! :sleeping:"
+      "refresh-started": "Refreshing started, this may take a while! :sleeping:",
+      "waiting-for-picture": ":gift: Looking for a picture for you."
     },
     "customcommands": {
       "add-keyword-already-exists": "There is already a custom command with this keyword. :weary:",
