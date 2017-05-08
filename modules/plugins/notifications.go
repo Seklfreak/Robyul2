@@ -303,12 +303,14 @@ NextKeyword:
                 doesMatch = true
             }
             if doesMatch == true {
-                memberToNotify, err := session.GuildMember(guild.ID, notificationSetting.UserID)
+                memberToNotify, err := session.State.Member(guild.ID, notificationSetting.UserID)
                 if err != nil {
+                    logger.ERROR.L("notifications", "error getting member to notify: "+err.Error())
                     continue NextKeyword
                 }
-                messageAuthor, err := session.GuildMember(guild.ID, msg.Author.ID)
+                messageAuthor, err := session.State.Member(guild.ID, msg.Author.ID)
                 if err != nil {
+                    logger.ERROR.L("notifications", "error getting message author: "+err.Error())
                     continue NextKeyword
                 }
                 everyoneRoleId := ""

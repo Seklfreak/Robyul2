@@ -366,6 +366,15 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             var err error
             if len(args) >= 1 && args[0] != "" {
                 targetUser, err = helpers.GetUserFromMention(args[0])
+                if err != nil {
+                    if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
+                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
+                        helpers.Relax(err)
+                        return
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
                 helpers.Relax(err)
                 if targetUser.ID == "" {
                     _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))

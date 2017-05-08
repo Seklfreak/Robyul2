@@ -337,28 +337,37 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*drive.File {
     var allFiles []*drive.File
 
-    for _, driveFolderID := range sourceEntry.DriveFolderIDs {
-        logger.INFO.L("randompictures", fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
-        result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
-        helpers.Relax(err)
-        for _, file := range result.Files {
-            if rp.isValidDriveFile(file) {
-                allFiles = append(allFiles, file)
+Loop:
+    for {
+        for _, driveFolderID := range sourceEntry.DriveFolderIDs {
+            logger.VERBOSE.L("randompictures", fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
+            result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
+            if err != nil {
+                logger.ERROR.L("randompictures", fmt.Sprintf("google drive error: %s, retrying in 10 seconds", err.Error()))
+                time.Sleep(10 * time.Second)
+                continue Loop
             }
-        }
-
-        for {
-            if result.NextPageToken == "" {
-                break
-            }
-            result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
             helpers.Relax(err)
             for _, file := range result.Files {
                 if rp.isValidDriveFile(file) {
                     allFiles = append(allFiles, file)
                 }
             }
+
+            for {
+                if result.NextPageToken == "" {
+                    break
+                }
+                result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
+                helpers.Relax(err)
+                for _, file := range result.Files {
+                    if rp.isValidDriveFile(file) {
+                        allFiles = append(allFiles, file)
+                    }
+                }
+            }
         }
+        break
     }
     return allFiles
 }

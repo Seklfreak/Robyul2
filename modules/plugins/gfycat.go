@@ -89,7 +89,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
     session.ChannelTyping(msg.ChannelID)
 
     if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {
-        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.errors.general", "Gfycat Error"))
+        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease try again later.")
         helpers.Relax(err)
         logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Error: %s", jsonResult.String()))
         return
@@ -111,7 +111,7 @@ CheckGfycatStatusLoop:
             break CheckGfycatStatusLoop
         default:
             logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Status Error: %s", result.String()))
-            _, err := session.ChannelMessage(msg.ChannelID, helpers.GetTextF("bot.errors.general", "Gfycat Status Error"))
+            _, err := session.ChannelMessage(msg.ChannelID, helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease try again later.")
             helpers.Relax(err)
             return
         }

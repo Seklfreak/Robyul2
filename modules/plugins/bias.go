@@ -183,7 +183,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
                                                 for _, poolRole := range poolCategories.Roles {
                                                     if poolRole.Print == role.Print {
                                                         poolDiscordRole := m.GetDiscordRole(poolRole, guild)
-                                                        if poolDiscordRole.ID != "" && m.MemberHasRole(member, poolDiscordRole) {
+                                                        if poolDiscordRole != nil && poolDiscordRole.ID != "" && m.MemberHasRole(member, poolDiscordRole) {
                                                             denyReason = helpers.GetText("plugins.bias.add-role-already")
                                                             continue TryRoleLoop
                                                         }

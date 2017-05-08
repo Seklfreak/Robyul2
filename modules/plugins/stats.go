@@ -102,8 +102,11 @@ func (s *Stats) Init(session *discordgo.Session) {
                         voiceStatesWithTime = append(voiceStatesWithTime[:voiceStateWithTimeIndex], voiceStatesWithTime[voiceStateWithTimeIndex+1:]...)
                         logger.PLUGIN.L("stats", fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
                             newVoiceTime.UserID, newVoiceTime.ChannelID, newVoiceTime.GuildID))
+                    } else {
+                        if err.Error() != "channel not found" {
+                            helpers.Relax(err)
+                        }
                     }
-                    helpers.Relax(err)
                 }
             }
             voiceStatesBefore = voiceStatesCurrently
