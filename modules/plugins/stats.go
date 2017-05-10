@@ -282,10 +282,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
             targetUser, err = helpers.GetUserFromMention(args[0])
-            if err != nil || targetUser.ID == "" {
-                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                helpers.Relax(err)
-                return
+            if err != nil {
+                if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
+                    helpers.Relax(err)
+                    return
+                } else {
+                    helpers.Relax(err)
+                }
             }
         }
 
@@ -294,7 +298,15 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         currentGuild, err := session.Guild(currentChannel.GuildID)
         helpers.Relax(err)
         targetMember, err := session.GuildMember(currentGuild.ID, targetUser.ID)
-        helpers.Relax(err)
+        if err != nil {
+            if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10007 {
+                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
+                helpers.Relax(err)
+                return
+            } else {
+                helpers.Relax(err)
+            }
+        }
 
         status := ""
         game := ""

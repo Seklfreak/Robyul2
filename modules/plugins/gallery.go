@@ -148,7 +148,17 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 }
                 galleryGuild, _ := session.Guild(entryBucket.GuildID)
                 sourceChannel, _ := session.Channel(entryBucket.SourceChannelID)
+                if sourceChannel == nil {
+                    sourceChannel = new(discordgo.Channel)
+                    sourceChannel.Name = "N/A"
+                    sourceChannel.ID = "N/A"
+                }
                 targetChannel, _ := session.Channel(entryBucket.TargetChannelID)
+                if targetChannel == nil {
+                    targetChannel = new(discordgo.Channel)
+                    targetChannel.Name = "N/A"
+                    targetChannel.ID = "N/A"
+                }
                 g.deleteEntryById(entryBucket.ID)
 
                 logger.INFO.L("galleries", fmt.Sprintf("Deleted Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",

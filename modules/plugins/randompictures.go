@@ -168,12 +168,11 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                             postedPic = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
                             if postedPic == false {
                                 session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
-                                err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                                session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
                                 return
                             }
                         }
-                        err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-                        helpers.Relax(err)
+                        session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
                     }
                 })
                 time.Sleep(5 * time.Minute)
@@ -298,8 +297,14 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
         }
     } else { // match roles
         guildRoles, err := cache.GetSession().GuildRoles(channel.GuildID)
-        helpers.Relax(err)
-        targetMember, err := cache.GetSession().GuildMember(channel.GuildID, msg.Author.ID)
+        if err != nil {
+            if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+                guildRoles = []*discordgo.Role{}
+            } else {
+                helpers.Relax(err)
+            }
+        }
+        targetMember, err := cache.GetSession().State.Member(channel.GuildID, msg.Author.ID)
         helpers.Relax(err)
         slice.Sort(guildRoles, func(i, j int) bool {
             return guildRoles[i].Position > guildRoles[j].Position

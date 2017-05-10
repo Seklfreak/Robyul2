@@ -468,7 +468,8 @@
       "inspect-embed-description-done": "Inspecting of <@%s> completed.",
       "inspects-channel-disabled": "Successfully disabled automatic inspect messages.",
       "inspects-channel-set": "Successfully set channel for automatic inspect messages.",
-      "user-not-found": "User not found!"
+      "user-not-found": "User not found!",
+      "get-mute-role-no-permissions": "I was unable to create the mute role."
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
@@ -614,7 +615,8 @@
       "voicestats-embed-footer": "Total durations exclude the currently active session. Stats are refreshed every 30 seconds.",
       "no-emotes": "No custom emotes on this server yet. :flushed:",
       "reaction-embed-title": "@%s: Custom Emotes on %s",
-      "reaction-embed-footer": "There are %d custom emotes on this server."
+      "reaction-embed-footer": "There are %d custom emotes on this server.",
+      "user-not-found": "User not found!"
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! :nerd:",

@@ -11,6 +11,7 @@ import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/getsentry/raven-go"
     "github.com/Seklfreak/Robyul2/metrics"
+    "encoding/json"
 )
 
 type CustomCommands struct{}
@@ -311,6 +312,20 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
                 channel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
+
+                defer func() {
+                    err := recover()
+
+                    if err != nil {
+                        if err, ok := err.(*json.SyntaxError); ok {
+                            _, errNew := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("JSON Error: `%s` (Offset %d)", err.Error(), err.Offset))
+                            helpers.Relax(errNew)
+                            return
+                        }
+                    }
+
+                    panic(err)
+                }()
 
                 commandsContainerJson := helpers.GetJSON(msg.Attachments[0].URL)
                 commandsContainer, err := commandsContainerJson.ChildrenMap()

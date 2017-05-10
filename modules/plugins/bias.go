@@ -2,7 +2,6 @@ package plugins
 
 import (
     "fmt"
-    "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
     "github.com/bwmarrin/discordgo"
     "strings"
@@ -136,6 +135,21 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
             helpers.Relax(err)
             member, err := session.GuildMember(guild.ID, msg.Author.ID)
             helpers.Relax(err)
+            guildRoles, err := session.GuildRoles(guild.ID)
+            if err != nil {
+                if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+                    newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+                    helpers.Relax(err)
+                    // Delete messages after ten seconds
+                    time.Sleep(10 * time.Second)
+                    session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+                    session.ChannelMessageDelete(msg.ChannelID, msg.ID)
+                    return
+                } else {
+                    helpers.Relax(err)
+                }
+            }
+            helpers.Relax(err)
             var messagesToDelete []*discordgo.Message
             messagesToDelete = append(messagesToDelete, msg)
             var requestIsAddRole bool
@@ -172,7 +186,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
                                         denyReason = helpers.GetText("plugins.bias.remove-role-not-found")
                                         continue TryRoleLoop
                                     }
-                                    categoryRolesAssigned := m.CategoryRolesAssigned(member, guild.ID, category)
+                                    categoryRolesAssigned := m.CategoryRolesAssigned(member, guildRoles, category)
                                     if requestIsAddRole == true && (category.Limit >= 0 && len(categoryRolesAssigned) >= category.Limit) {
                                         denyReason = helpers.GetText("plugins.bias.role-limit-reached")
                                         continue TryRoleLoop
@@ -206,7 +220,9 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
                     if requestIsAddRole == true {
                         err := session.GuildMemberRoleAdd(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
                         if err != nil {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+                            newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+                            helpers.Relax(err)
+                            messagesToDelete = append(messagesToDelete, newMessage)
                         } else {
                             newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-added")))
                             helpers.Relax(err)
@@ -215,7 +231,9 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
                     } else {
                         err := session.GuildMemberRoleRemove(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
                         if err != nil {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+                            newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+                            helpers.Relax(err)
+                            messagesToDelete = append(messagesToDelete, newMessage)
                         } else {
                             newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-removed")))
                             helpers.Relax(err)
@@ -236,7 +254,6 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
             time.Sleep(10 * time.Second)
             for _, messagsToDelete := range messagesToDelete {
                 session.ChannelMessageDelete(msg.ChannelID, messagsToDelete.ID)
-
             }
         }
     }
@@ -253,10 +270,8 @@ func (m *Bias) GetBiasChannels() []AssignableRole_Channel {
     return entryBucket
 }
 
-func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildID string, category AssignableRole_Category) []AssignableRole_Role {
+func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildRoles []*discordgo.Role, category AssignableRole_Category) []AssignableRole_Role {
     var rolesAssigned []AssignableRole_Role
-    guildRoles, err := cache.GetSession().GuildRoles(guildID)
-    helpers.Relax(err)
     for _, discordRoleId := range member.Roles {
         for _, discordGuildRole := range guildRoles {
             if discordRoleId == discordGuildRole.ID {

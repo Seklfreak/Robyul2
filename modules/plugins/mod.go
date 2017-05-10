@@ -161,7 +161,13 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     channel, err := session.Channel(msg.ChannelID)
                     helpers.Relax(err)
                     muteRole, err := helpers.GetMuteRole(channel.GuildID)
-                    helpers.Relax(err)
+                    if err != nil {
+                        if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.mod.get-mute-role-no-permissions"))
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    }
                     err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
                     helpers.Relax(err)
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
