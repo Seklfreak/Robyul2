@@ -415,7 +415,10 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
     if err != nil {
         return err
     }
-    defer result.Body.Close()
+    defer func() {
+        helpers.Recover()
+        result.Body.Close()
+    }()
 
     camerModelText := ""
     if file.ImageMediaMetadata.CameraModel != "" {
