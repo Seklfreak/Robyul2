@@ -277,9 +277,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 displayRanking := 1
                 offset := 0
                 for i := 0; displayRanking <= 10; i++ {
-                    fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
+                    //fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
                     if len(levelsServersUsers) <= i-offset {
-                        fmt.Println("i-offset:", i-offset)
                         offset += i
                         listCursor, err := rethink.Table("levels_serverusers").Filter(
                             rethink.Row.Field("guildid").Eq(channel.GuildID),
@@ -289,7 +288,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         err = listCursor.All(&levelsServersUsers)
                     }
                     if len(levelsServersUsers) <= i-offset {
-                        fmt.Println("<= i-offset")
                         break
                     }
 
@@ -304,7 +302,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     }
                     topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:   fmt.Sprintf("#%d: %s", displayRanking, fullUsername),
-                        Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUsers[i-offset].Exp)),// + fmt.Sprintf(", EXP: %d", levelsServersUsers[i-offset].Exp),
+                        Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUsers[i-offset].Exp)), // + fmt.Sprintf(", EXP: %d", levelsServersUsers[i-offset].Exp),
                         Inline: false,
                     })
                     displayRanking++

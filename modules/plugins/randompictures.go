@@ -160,6 +160,17 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
             err = session.MessageReactionAdd(msg.ChannelID, initialMessage.ID, "🎲")
             if err == nil {
                 randomHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+                    defer func() {
+                        helpers.Recover()
+
+                        if err != nil {
+                            if strings.Contains(err.Error(), "imgur") {
+                                session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
+                                session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                            }
+                        }
+                    }()
+
                     if reaction.MessageID == initialMessage.ID {
                         if reaction.UserID == session.State.User.ID {
                             return

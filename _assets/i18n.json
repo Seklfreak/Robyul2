@@ -649,7 +649,8 @@
       "refresh-success": "Source successfully refresh! :ok_hand:",
       "refresh-not-found-error": "I wasn't able to find this source. :no_mouth:",
       "refresh-started": "Refreshing started, this may take a while! :sleeping:",
-      "waiting-for-picture": ":gift: Looking for a picture for you."
+      "waiting-for-picture": ":gift: Looking for a picture for you.",
+      "upload-failed": "The upload failed. :persevere:"
     },
     "customcommands": {
       "add-keyword-already-exists": "There is already a custom command with this keyword. :weary:",
