@@ -274,11 +274,28 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     Fields: []*discordgo.MessageEmbedField{},
                 }
 
-                i := 0
-                for _, levelsServersUser := range levelsServersUsers {
-                    currentMember, err := session.GuildMember(channel.GuildID, levelsServersUser.UserID)
+                displayRanking := 1
+                offset := 0
+                for i := 0; displayRanking <= 10; i++ {
+                    fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
+                    if len(levelsServersUsers) <= i-offset {
+                        fmt.Println("i-offset:", i-offset)
+                        offset += i
+                        listCursor, err := rethink.Table("levels_serverusers").Filter(
+                            rethink.Row.Field("guildid").Eq(channel.GuildID),
+                        ).OrderBy(rethink.Desc("exp")).Skip(offset).Limit(5).Run(helpers.GetDB())
+                        helpers.Relax(err)
+                        defer listCursor.Close()
+                        err = listCursor.All(&levelsServersUsers)
+                    }
+                    if len(levelsServersUsers) <= i-offset {
+                        fmt.Println("<= i-offset")
+                        break
+                    }
+
+                    currentMember, err := session.GuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
                     if err != nil {
-                        logger.ERROR.L("levels", fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUser.UserID, err.Error()))
+                        logger.ERROR.L("levels", fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
                         continue
                     }
                     fullUsername := currentMember.User.Username
@@ -286,14 +303,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         fullUsername += " ~ " + currentMember.Nick
                     }
                     topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
-                        Name:   fmt.Sprintf("#%d: %s", i+1, fullUsername),
-                        Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUser.Exp)),
+                        Name:   fmt.Sprintf("#%d: %s", displayRanking, fullUsername),
+                        Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUsers[i-offset].Exp)),// + fmt.Sprintf(", EXP: %d", levelsServersUsers[i-offset].Exp),
                         Inline: false,
                     })
-                    i++
-                    if i >= 10 {
-                        break
-                    }
+                    displayRanking++
                 }
 
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topLevelEmbed)
