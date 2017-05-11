@@ -170,7 +170,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                         if reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
                             postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
                             if err != nil || postedPic == false {
-                                if strings.Contains(err.Error(), "imgur") {
+                                if strings.Contains(err.Error(), "Imgur") {
                                     session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
                                 } else {
                                     session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
