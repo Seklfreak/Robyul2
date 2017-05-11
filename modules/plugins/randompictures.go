@@ -152,7 +152,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
         initialMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
         helpers.Relax(err)
 
-        postedPic = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
+        postedPic, _ = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
         if postedPic == false {
             session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
         } else {
@@ -160,16 +160,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
             err = session.MessageReactionAdd(msg.ChannelID, initialMessage.ID, "🎲")
             if err == nil {
                 randomHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
-                    defer func() {
-                        helpers.Recover()
-
-                        if err != nil {
-                            if strings.Contains(err.Error(), "imgur") {
-                                session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
-                                session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-                            }
-                        }
-                    }()
+                    defer helpers.Recover()
 
                     if reaction.MessageID == initialMessage.ID {
                         if reaction.UserID == session.State.User.ID {
@@ -177,9 +168,16 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                         }
 
                         if reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
-                            postedPic = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
+                            postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
                             if postedPic == false {
                                 session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+
+                                if err != nil {
+                                    if strings.Contains(err.Error(), "imgur") {
+                                        session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
+                                    }
+                                }
+
                                 session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
                                 return
                             }
@@ -295,7 +293,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 
 }
 
-func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, msg *discordgo.Message, content string, initialMessage *discordgo.Message, rpSources []DB_RandomPictures_Source) bool {
+func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, msg *discordgo.Message, content string, initialMessage *discordgo.Message, rpSources []DB_RandomPictures_Source) (bool, error) {
     var matchEntry DB_RandomPictures_Source
     if content != "" { // match <name>
         for _, sourceEntry := range rpSources {
@@ -313,11 +311,13 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
             if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
                 guildRoles = []*discordgo.Role{}
             } else {
-                helpers.Relax(err)
+                return false, err
             }
         }
         targetMember, err := cache.GetSession().State.Member(channel.GuildID, msg.Author.ID)
-        helpers.Relax(err)
+        if err != nil {
+            return false, err
+        }
         slice.Sort(guildRoles, func(i, j int) bool {
             return guildRoles[i].Position > guildRoles[j].Position
         })
@@ -344,12 +344,11 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
             if len(filesCache[matchEntry.ID]) > 0 {
                 randomItem := filesCache[matchEntry.ID][rand.Intn(len(filesCache[matchEntry.ID]))]
                 err := rp.postItem(msg.ChannelID, initialMessage.ID, randomItem)
-                helpers.Relax(err)
-                return true
+                return true, err
             }
         }
     }
-    return false
+    return false, nil
 }
 
 func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*drive.File {
