@@ -339,7 +339,11 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
             if len(filesCache[matchEntry.ID]) > 0 {
                 randomItem := filesCache[matchEntry.ID][rand.Intn(len(filesCache[matchEntry.ID]))]
                 err := rp.postItem(msg.ChannelID, initialMessage.ID, randomItem)
-                return true, err
+                if err == nil {
+                    return true, nil
+                } else {
+                    return false, err
+                }
             }
         }
     }
