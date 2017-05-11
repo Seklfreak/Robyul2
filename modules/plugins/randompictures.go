@@ -169,17 +169,12 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 
                         if reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
                             postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
-                            if postedPic == false {
-                                session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
-
-                                if err != nil {
-                                    if strings.Contains(err.Error(), "imgur") {
-                                        session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
-                                    }
+                            if err != nil || postedPic == false {
+                                if strings.Contains(err.Error(), "imgur") {
+                                    session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
+                                } else {
+                                    session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
                                 }
-
-                                session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-                                return
                             }
                         }
                         session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
