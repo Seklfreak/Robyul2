@@ -457,7 +457,7 @@ func (rp *RandomPictures) uploadToImgur(body io.ReadCloser) (string, error) {
     var imgurResponse ImgurResponse
     json.NewDecoder(res.Body).Decode(&imgurResponse)
     if imgurResponse.Success == false {
-        return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data)))
+        return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data.Error)))
     } else {
         return imgurResponse.Data.Link, nil
     }
@@ -487,4 +487,7 @@ type ImageData struct {
     Type       string `json:"type"`
     Views      int    `json:"views"`
     Width      int    `json:"width"`
+    Error      string `json:"error"`
+    Request    string `json:"request"`
+    Method     string `json:"method"`
 }
