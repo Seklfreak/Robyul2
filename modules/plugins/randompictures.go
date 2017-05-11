@@ -457,7 +457,7 @@ func (rp *RandomPictures) uploadToImgur(body io.ReadCloser) (string, error) {
     var imgurResponse ImgurResponse
     json.NewDecoder(res.Body).Decode(&imgurResponse)
     if imgurResponse.Success == false {
-        return "", errors.New(fmt.Sprintf("Imgur API Error: %d", imgurResponse.Status))
+        return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data)))
     } else {
         return imgurResponse.Data.Link, nil
     }
