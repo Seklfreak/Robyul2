@@ -117,7 +117,8 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                                 randomItem := filesCache[sourceEntry.ID][rand.Intn(len(filesCache[sourceEntry.ID]))]
                                 go func() {
                                     defer helpers.Recover()
-                                    rp.postItem(postToChannelID, "", randomItem)
+                                    err = rp.postItem(postToChannelID, "", randomItem)
+                                    helpers.Relax(err)
                                 }()
                             }
                         }
@@ -331,7 +332,8 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
         if _, ok := filesCache[matchEntry.ID]; ok {
             if len(filesCache[matchEntry.ID]) > 0 {
                 randomItem := filesCache[matchEntry.ID][rand.Intn(len(filesCache[matchEntry.ID]))]
-                rp.postItem(msg.ChannelID, initialMessage.ID, randomItem)
+                err := rp.postItem(msg.ChannelID, initialMessage.ID, randomItem)
+                helpers.Relax(err)
                 return true
             }
         }
@@ -392,12 +394,16 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
     metrics.RandomPictureSourcesImagesCachedCount.Set(totalImages)
 }
 
-func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File) {
+func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File) error {
     file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
-    helpers.Relax(err)
+    if err != nil {
+        return err
+    }
 
     result, err := driveService.Files.Get(file.Id).Download()
-    helpers.Relax(err)
+    if err != nil {
+        return err
+    }
     defer result.Body.Close()
 
     camerModelText := ""
@@ -407,14 +413,22 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
 
     if messageID == "" {
         _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText), file.Name, result.Body)
-        helpers.Relax(err)
+        if err != nil {
+            return err
+        }
     } else {
         imgurLink, err := rp.uploadToImgur(result.Body)
-        helpers.Relax(err)
+        if err != nil {
+            logger.ERROR.L("randompictures", fmt.Sprintf("uploading \"%s\" failed, error: %s", file.Name, err.Error()))
+            return err
+        }
 
         _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, imgurLink))
-        helpers.Relax(err)
+        if err != nil {
+            return err
+        }
     }
+    return nil
 }
 
 func (rp *RandomPictures) uploadToImgur(body io.ReadCloser) (string, error) {
