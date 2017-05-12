@@ -479,6 +479,7 @@
       "channel-embed-name-vod": ":mega: Last video on %s KST",
       "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST",
       "channel-added-success": "Added V Live Channel `%s` to the Channel <#%s>!",
+      "channel-added-success-additional-role": " I will mention `@%s`.",
       "channel-list-no-channels-error": "No V Live Channels found on this server!",
       "channel-embed-title-vod": ":film_frames: %s uploaded a new video!",
       "channel-embed-title-upcoming": ":calendar_spiral: %s scheduled a new video for %s KST!",

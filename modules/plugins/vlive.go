@@ -48,6 +48,7 @@ type DB_VLive_Entry struct {
     PostedVOD      []DB_VLive_Video  `gorethink:"posted_vod"`
     PostedNotices  []DB_VLive_Notice `gorethink:"posted_notices"`
     PostedCelebs   []DB_VLive_Celeb  `gorethink:"posted_celebs"`
+    MentionRoleID  string `gorethink:"mention_role_id"`
 }
 
 type DB_VLive_Channel struct {
@@ -153,7 +154,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                     logger.VERBOSE.L("vlive", fmt.Sprintf("Posting VOD: #%d", vod.Seq))
                     entry.PostedVOD = append(entry.PostedVOD, vod)
                     changes = true
-                    go r.postVodToChannel(entry.ChannelID, vod, updatedVliveChannel)
+                    go r.postVodToChannel(entry, vod, updatedVliveChannel)
                 }
             }
             for _, upcoming := range updatedVliveChannel.Upcoming {
@@ -167,7 +168,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                     logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
                     entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
                     changes = true
-                    go r.postUpcomingToChannel(entry.ChannelID, upcoming, updatedVliveChannel)
+                    go r.postUpcomingToChannel(entry, upcoming, updatedVliveChannel)
                 }
             }
             for _, live := range updatedVliveChannel.Live {
@@ -181,7 +182,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                     logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Live: #%d", live.Seq))
                     entry.PostedLive = append(entry.PostedLive, live)
                     changes = true
-                    go r.postLiveToChannel(entry.ChannelID, live, updatedVliveChannel)
+                    go r.postLiveToChannel(entry, live, updatedVliveChannel)
                 }
             }
             for _, notice := range updatedVliveChannel.Notices {
@@ -195,7 +196,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                     logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Notice: #%d", notice.Number))
                     entry.PostedNotices = append(entry.PostedNotices, notice)
                     changes = true
-                    go r.postNoticeToChannel(entry.ChannelID, notice, updatedVliveChannel)
+                    go r.postNoticeToChannel(entry, notice, updatedVliveChannel)
                 }
             }
             for _, celeb := range updatedVliveChannel.Celebs {
@@ -209,7 +210,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                     logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
                     entry.PostedCelebs = append(entry.PostedCelebs, celeb)
                     changes = true
-                    go r.postCelebToChannel(entry.ChannelID, celeb, updatedVliveChannel)
+                    go r.postCelebToChannel(entry, celeb, updatedVliveChannel)
                 }
             }
             if changes == true {
@@ -226,7 +227,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
     args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
-        case "add": // [p]vlive add <vlive channel name/vlive channel id> <discord channel>
+        case "add": // [p]vlive add <vlive channel name/vlive channel id> <discord channel> [<mention>]
             helpers.RequireMod(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 // get target channel
@@ -234,7 +235,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 var targetChannel *discordgo.Channel
                 var targetGuild *discordgo.Guild
                 if len(args) >= 3 {
-                    targetChannel, err = helpers.GetChannelFromMention(args[len(args)-1])
+                    targetChannel, err = helpers.GetChannelFromMention(args[2])
                     if err != nil {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                         return
@@ -245,6 +246,22 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 }
                 targetGuild, err = session.Guild(targetChannel.GuildID)
                 helpers.Relax(err)
+
+                mentionRole := new(discordgo.Role)
+                if len(args) >= 4 {
+                    mentionRoleName := args[3]
+                    serverRoles, err := session.GuildRoles(targetGuild.ID)
+                    helpers.Relax(err)
+                    for _, serverRole := range serverRoles {
+                        if serverRole.Mentionable == true && serverRole.Name == mentionRoleName {
+                            mentionRole = serverRole
+                        }
+                    }
+                    if mentionRole.ID == "" {
+                        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+                        return
+                    }
+                }
                 // try to find channel by search
                 vliveChannelId := ""
                 if len(args[1]) >= 2 {
@@ -269,10 +286,17 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 entry.PostedLive = vliveChannel.Live
                 entry.PostedCelebs = vliveChannel.Celebs
                 entry.PostedNotices = vliveChannel.Notices
+                entry.MentionRoleID = mentionRole.ID
                 r.setEntry(entry)
 
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID))
-                logger.INFO.L("vlive", fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s)", entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+                successMessage := helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID)
+                if mentionRole.ID != "" {
+                    successMessage += helpers.GetTextF("plugins.vlive.channel-added-success-additional-role", mentionRole.Name)
+                }
+                session.ChannelMessageSend(msg.ChannelID, successMessage)
+                logger.INFO.L("vlive", fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s) Mention @%s (#%s)",
+                    entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID,
+                    mentionRole.Name, mentionRole.ID))
             })
         case "delete", "del": // [p]vlive delete <id>
             helpers.RequireMod(msg, func() {
@@ -508,7 +532,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
     return vliveChannel, nil
 }
 
-func (r *VLive) postVodToChannel(channelID string, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-vod", vliveChannel.Name),
         URL:         vod.Url,
@@ -518,13 +542,17 @@ func (r *VLive) postVodToChannel(channelID string, vod DB_VLive_Video, vliveChan
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", vod.Url), channelEmbed)
+    mentionText := ""
+    if entry.MentionRoleID != "" {
+        mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
+    }
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", vod.Url), channelEmbed)
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
+        logger.ERROR.L("vlive", fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
 }
 
-func (r *VLive) postUpcomingToChannel(channelID string, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-upcoming", vliveChannel.Name, vod.Date),
         URL:         vod.Url,
@@ -534,17 +562,21 @@ func (r *VLive) postUpcomingToChannel(channelID string, vod DB_VLive_Video, vliv
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
+    mentionText := ""
+    if entry.MentionRoleID != "" {
+        mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
+    }
     postText := ""
     if vod.Url != "" {
         postText = fmt.Sprintf("<%s>", vod.Url)
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, postText, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+postText, channelEmbed)
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
+        logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
 }
 
-func (r *VLive) postLiveToChannel(channelID string, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-live", vliveChannel.Name),
         URL:         vod.Url,
@@ -554,13 +586,17 @@ func (r *VLive) postLiveToChannel(channelID string, vod DB_VLive_Video, vliveCha
         Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", vod.Url), channelEmbed)
+    mentionText := ""
+    if entry.MentionRoleID != "" {
+        mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
+    }
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", vod.Url), channelEmbed)
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, channelID, err))
+        logger.ERROR.L("vlive", fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
 }
 
-func (r *VLive) postNoticeToChannel(channelID string, notice DB_VLive_Notice, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice, vliveChannel DB_VLive_Channel) {
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-notice", vliveChannel.Name),
         URL:         notice.Url,
@@ -570,13 +606,17 @@ func (r *VLive) postNoticeToChannel(channelID string, notice DB_VLive_Notice, vl
         Image:       &discordgo.MessageEmbedImage{URL: notice.ImageUrl},
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", notice.Url), channelEmbed)
+    mentionText := ""
+    if entry.MentionRoleID != "" {
+        mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
+    }
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", notice.Url), channelEmbed)
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, channelID, err))
+        logger.ERROR.L("vlive", fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err))
     }
 }
 
-func (r *VLive) postCelebToChannel(channelID string, celeb DB_VLive_Celeb, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, vliveChannel DB_VLive_Channel) {
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-celeb", vliveChannel.Name),
         URL:         celeb.Url,
@@ -585,9 +625,13 @@ func (r *VLive) postCelebToChannel(channelID string, celeb DB_VLive_Celeb, vlive
         Description: fmt.Sprintf("%s ...", celeb.Summary),
         Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", celeb.Url), channelEmbed)
+    mentionText := ""
+    if entry.MentionRoleID != "" {
+        mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
+    }
+    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", celeb.Url), channelEmbed)
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, channelID, err))
+        logger.ERROR.L("vlive", fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err))
     }
 }
 
