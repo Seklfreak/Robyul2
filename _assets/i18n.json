@@ -453,7 +453,7 @@
       "embed-title-alternative-naver": "Alternative translation"
     },
     "mod": {
-      "deleting-messages-failed": "Deleting messages failed: `%s`",
+      "deleting-messages-failed-too-old": "I can only delete messages that are under 14 days old. :worried:",
       "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?",
       "user-muted-success": "User `%s (#%s)` has been muted. :mute:",
       "user-unmuted-success": "User `%s (#%s)` has been unmuted. :speaker:",

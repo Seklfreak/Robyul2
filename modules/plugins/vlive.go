@@ -227,7 +227,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
     args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
-        case "add": // [p]vlive add <vlive channel name/vlive channel id> <discord channel> [<mention>]
+        case "add": // [p]vlive add <vlive channel name/vlive channel id> <discord channel> [<Name of the role to mention>]
             helpers.RequireMod(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 // get target channel

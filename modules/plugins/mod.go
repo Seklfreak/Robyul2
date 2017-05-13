@@ -14,6 +14,7 @@ import (
     "github.com/Seklfreak/Robyul2/emojis"
     "github.com/renstrom/fuzzysearch/fuzzy"
     "github.com/Jeffail/gabs"
+    "github.com/bradfitz/slice"
 )
 
 type Mod struct{}
@@ -67,37 +68,66 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                                 return
                             }
                         }
-                        messagesToDeleteAfter, _ := session.ChannelMessages(msg.ChannelID, 100, "", afterMessageId, "")
-                        messagesToDeleteBefore := []*discordgo.Message{}
-                        if untilMessageId != "" {
-                            messagesToDeleteBefore, _ = session.ChannelMessages(msg.ChannelID, 100, "", untilMessageId, "")
-                        }
-                        messagesToDeleteIds := []string{msg.ID}
-                        for _, messageToDelete := range messagesToDeleteAfter {
-                            isExcluded := false
-                            for _, messageBefore := range messagesToDeleteBefore {
-                                if messageToDelete.ID == messageBefore.ID {
-                                    isExcluded = true
+
+                        messagesToDeleteIds := []string{}
+
+                        nextAfterID := afterMessageId
+                    AllMessagesLoop:
+                        for {
+                            messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, 100, "", nextAfterID, "")
+                            slice.Sort(messagesToDelete, func(i, j int) bool {
+                                return messagesToDelete[i].Timestamp < messagesToDelete[j].Timestamp
+                            })
+                            for _, messageToDelete := range messagesToDelete {
+                                messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
+                                nextAfterID = messageToDelete.ID
+                                if messageToDelete.ID == untilMessageId {
+                                    break AllMessagesLoop
                                 }
                             }
-                            if isExcluded == false {
-                                messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
+                            if len(messagesToDelete) <= 0 {
+                                break AllMessagesLoop
                             }
                         }
+
+                        msgAlreadyIn := false
+                        for _, messageID := range messagesToDeleteIds {
+                            if messageID == msg.ID {
+                                msgAlreadyIn = true
+                            }
+                        }
+                        if msgAlreadyIn == false {
+                            messagesToDeleteIds = append(messagesToDeleteIds, msg.ID)
+                        }
+
                         if len(messagesToDeleteIds) <= 10 {
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
                             logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
                             if err != nil {
-                                session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(helpers.GetTextF("plugins.mod.deleting-messages-failed"), err.Error()))
+                                if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
+                                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+                                } else {
+                                    helpers.Relax(err)
+                                }
+                                return
                             }
                         } else {
                             if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)), "✅", "🚫") == true {
-                                err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
-                                logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
-                                if err != nil {
-                                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.deleting-messages-failed", err.Error()))
-                                    return
+                                for i := 0; i < len(messagesToDeleteIds); i += 100 {
+                                    batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
+                                    err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
+                                    logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
+                                    if err != nil {
+                                        if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
+                                            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+                                        } else {
+                                            helpers.Relax(err)
+                                        }
+                                        return
+                                    }
                                 }
+                            } else {
+                                session.ChannelMessageDelete(msg.ChannelID, msg.ID)
                             }
                             return
                         }
@@ -121,25 +151,59 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             return
                         }
 
-                        messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, numOfMessagesToDelete+1, "", "", "")
                         messagesToDeleteIds := []string{}
-                        for _, messageToDelete := range messagesToDelete {
-                            messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
+
+                        messagesLeft := numOfMessagesToDelete + 1
+                        lastBeforeID := ""
+                        for {
+                            messagesToGet := messagesLeft
+                            if messagesLeft > 100 {
+                                messagesToGet = 100
+                            }
+                            messagesLeft -= messagesToGet
+
+                            messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, messagesToGet, lastBeforeID, "", "")
+                            slice.Sort(messagesToDelete, func(i, j int) bool {
+                                return messagesToDelete[i].Timestamp < messagesToDelete[j].Timestamp
+                            })
+                            for _, messageToDelete := range messagesToDelete {
+                                messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
+                                lastBeforeID = messageToDelete.ID
+                            }
+
+                            if messagesLeft <= 0 {
+                                break
+                            }
                         }
+
                         if len(messagesToDeleteIds) <= 10 {
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
                             logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
                             if err != nil {
-                                session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(helpers.GetTextF("plugins.mod.deleting-messages-failed"), err.Error()))
+                                if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
+                                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+                                } else {
+                                    helpers.Relax(err)
+                                }
+                                return
                             }
                         } else {
                             if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)-1), "✅", "🚫") == true {
-                                err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
-                                logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
-                                if err != nil {
-                                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.deleting-messages-failed", err.Error()))
-                                    return
+                                for i := 0; i < len(messagesToDeleteIds); i += 100 {
+                                    batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
+                                    err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
+                                    logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
+                                    if err != nil {
+                                        if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
+                                            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+                                        } else {
+                                            helpers.Relax(err)
+                                        }
+                                        return
+                                    }
                                 }
+                            } else {
+                                session.ChannelMessageDelete(msg.ChannelID, msg.ID)
                             }
                             return
                         }
@@ -982,4 +1046,11 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 func (m *Mod) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
+}
+
+func (m *Mod) Min(a, b int) int {
+    if a <= b {
+        return a
+    }
+    return b
 }
