@@ -339,7 +339,13 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 
             resultMessage := ""
             for _, entry := range entryBucket {
-                resultMessage += fmt.Sprintf("`%s`: V Live Channel `%s` posting to <#%s>\n", entry.ID, entry.VLiveChannel.Name, entry.ChannelID)
+                mentionText := ""
+                if entry.MentionRoleID != "" {
+                    role, err := session.State.Role(currentChannel.GuildID, entry.MentionRoleID)
+                    helpers.Relax(err)
+                    mentionText += fmt.Sprintf(" mentioning `@%s`", role.Name)
+                }
+                resultMessage += fmt.Sprintf("`%s`: V Live Channel `%s` posting to <#%s>%s\n", entry.ID, entry.VLiveChannel.Name, entry.ChannelID, mentionText)
             }
             resultMessage += fmt.Sprintf("Found **%d** V Live Channels in total.", len(entryBucket))
             for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
