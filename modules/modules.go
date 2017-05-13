@@ -52,6 +52,7 @@ var (
         &plugins.Ratelimit{},
         &plugins.Gfycat{},
         &plugins.RandomPictures{},
+        &plugins.YouTube{},
     }
 
     // PluginList is the list of active plugins

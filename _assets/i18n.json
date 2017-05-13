@@ -670,6 +670,9 @@
       "create-too-many-reactions": "You can only add up to 20 possible reactions. :no_good:",
       "create-external-emote": "You can only use custom emotes from the server you are on! :warning:",
       "refreshed-polls": "Reaction Poll Cache successfully refreshed. :clipboard:"
+    },
+    "youtube": {
+      "video-not-found": "I could't find that video."
     }
   }
 }
