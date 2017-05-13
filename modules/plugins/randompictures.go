@@ -167,7 +167,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                             return
                         }
 
-                        if reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
+                        if reaction.UserID == msg.Author.ID && reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
                             postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
                             if err != nil || postedPic == false {
                                 if strings.Contains(err.Error(), "Imgur") {
@@ -460,6 +460,7 @@ func (rp *RandomPictures) uploadToImgur(body io.ReadCloser) (string, error) {
     if imgurResponse.Success == false {
         return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data.Error)))
     } else {
+        logger.VERBOSE.L("randompictures", "uploaded a picture to imgur: "+imgurResponse.Data.Link)
         return imgurResponse.Data.Link, nil
     }
 }
