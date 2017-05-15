@@ -53,6 +53,7 @@ var (
         &plugins.Gfycat{},
         &plugins.RandomPictures{},
         &plugins.YouTube{},
+        &plugins.Spoiler{},
     }
 
     // PluginList is the list of active plugins

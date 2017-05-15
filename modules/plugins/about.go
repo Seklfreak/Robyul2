@@ -7,9 +7,7 @@ type About struct{}
 func (a *About) Commands() []string {
     return []string{
         "about",
-        "a",
         "info",
-        "inf",
     }
 }
 
