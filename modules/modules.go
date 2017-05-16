@@ -42,10 +42,8 @@ var (
         //&plugins.ListenDotMoe{},
         //&plugins.Minecraft{},
         &plugins.Osu{},
-        //&plugins.RandomCat{},
         &plugins.Reminders{},
         //&plugins.Roll{},
-        //&plugins.RPS{},
         //&plugins.Stone{},
         //&plugins.Support{},
         //&plugins.XKCD{},
@@ -54,6 +52,8 @@ var (
         &plugins.RandomPictures{},
         &plugins.YouTube{},
         &plugins.Spoiler{},
+        &plugins.RandomCat{},
+        &plugins.RPS{},
     }
 
     // PluginList is the list of active plugins
