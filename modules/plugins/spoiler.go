@@ -10,11 +10,15 @@ import (
     "bytes"
     "image/png"
     "fmt"
+    "regexp"
 )
 
 type Spoiler struct{}
 
-var ()
+var (
+    BuiltinEmotePattern *regexp.Regexp
+    CustomEmotePattern  *regexp.Regexp
+)
 
 const (
     SpoilerWidth = float64(400)
@@ -27,6 +31,12 @@ func (s *Spoiler) Commands() []string {
 }
 
 func (s *Spoiler) Init(session *discordgo.Session) {
+    var err error
+    BuiltinEmotePattern, err = regexp.Compile(`[\x{1F600}-\x{1F6FF}|[\x{2600}-\x{26FF}]`)
+    helpers.Relax(err)
+    CustomEmotePattern, err = regexp.Compile(`\<(\:[^:]+\:)[0-9]+\>`)
+    helpers.Relax(err)
+
 }
 
 func (s *Spoiler) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -41,6 +51,16 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
     }
 
     session.ChannelMessageDelete(msg.ChannelID, msg.ID)
+
+    allUnicodeEmotes := BuiltinEmotePattern.FindAllString(content, -1)
+    for _, unicodeEmote := range allUnicodeEmotes {
+        content = strings.Replace(content, unicodeEmote, "[emote]", 1)
+    }
+
+    allCustomEmotes := CustomEmotePattern.FindAllStringSubmatch(content, -1)
+    for _, customEmoteSubstrings := range allCustomEmotes {
+        content = strings.Replace(content, customEmoteSubstrings[0], customEmoteSubstrings[1], 1)
+    }
 
     lines := s.breakIntoLines(content)
     lineHeight := float64(40)
