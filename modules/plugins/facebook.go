@@ -252,7 +252,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 
             facebookNameModifier := ""
             if facebookPage.Verified {
-                facebookNameModifier += " :ballot_box_with_check:"
+                facebookNameModifier += " ☑"
             }
 
             accountEmbed := &discordgo.MessageEmbed{
@@ -361,7 +361,7 @@ func (m *Facebook) lookupFacebookPage(siteName string) (Facebook_Page, error) {
 func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, facebookPage Facebook_Page) {
     facebookNameModifier := ""
     if facebookPage.Verified {
-        facebookNameModifier += " :ballot_box_with_check:"
+        facebookNameModifier += " ☑"
     }
 
     channelEmbed := &discordgo.MessageEmbed{

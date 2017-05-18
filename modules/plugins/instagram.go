@@ -435,16 +435,16 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 
             instagramNameModifier := ""
             if instagramUser.IsVerified {
-                instagramNameModifier += " :ballot_box_with_check:"
+                instagramNameModifier += " ☑"
             }
             if instagramUser.IsPrivate {
-                instagramNameModifier += " :lock:"
+                instagramNameModifier += " 🔒"
             }
             if instagramUser.IsBusiness {
-                instagramNameModifier += " :office:"
+                instagramNameModifier += " 🏢"
             }
             if instagramUser.IsFavorite {
-                instagramNameModifier += " :star:"
+                instagramNameModifier += " ⭐"
             }
             accountEmbed := &discordgo.MessageEmbed{
                 Title:       helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
@@ -478,16 +478,16 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_User) {
     instagramNameModifier := ""
     if instagramUser.IsVerified {
-        instagramNameModifier += " :ballot_box_with_check:"
+        instagramNameModifier += " ☑"
     }
     if instagramUser.IsPrivate {
-        instagramNameModifier += " :lock:"
+        instagramNameModifier += " 🔒"
     }
     if instagramUser.IsBusiness {
-        instagramNameModifier += " :office:"
+        instagramNameModifier += " 🏢"
     }
     if instagramUser.IsFavorite {
-        instagramNameModifier += " :star:"
+        instagramNameModifier += " ⭐"
     }
 
     channelEmbed := &discordgo.MessageEmbed{
@@ -516,16 +516,16 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram_ReelMedia, instagramUser Instagram_User) {
     instagramNameModifier := ""
     if instagramUser.IsVerified {
-        instagramNameModifier += " :ballot_box_with_check:"
+        instagramNameModifier += " ☑"
     }
     if instagramUser.IsPrivate {
-        instagramNameModifier += " :lock:"
+        instagramNameModifier += " 🔒"
     }
     if instagramUser.IsBusiness {
-        instagramNameModifier += " :office:"
+        instagramNameModifier += " 🏢"
     }
     if instagramUser.IsFavorite {
-        instagramNameModifier += " :star:"
+        instagramNameModifier += " ⭐"
     }
 
     mediaModifier := "Picture"
@@ -569,16 +569,16 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
 func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, instagramUser Instagram_User) {
     instagramNameModifier := ""
     if instagramUser.IsVerified {
-        instagramNameModifier += " :ballot_box_with_check:"
+        instagramNameModifier += " ☑"
     }
     if instagramUser.IsPrivate {
-        instagramNameModifier += " :lock:"
+        instagramNameModifier += " 🔒"
     }
     if instagramUser.IsBusiness {
-        instagramNameModifier += " :office:"
+        instagramNameModifier += " 🏢"
     }
     if instagramUser.IsFavorite {
-        instagramNameModifier += " :star:"
+        instagramNameModifier += " ⭐"
     }
 
     mediaModifier := "Picture"

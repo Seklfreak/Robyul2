@@ -475,17 +475,17 @@
       "channel-not-found": "Unable to find V Live Channel!",
       "channel-embed-title": "%s V LIVE CHANNEL",
       "embed-footer": "via vlive.tv",
-      "channel-embed-name-live": ":mega: Live since %s KST",
-      "channel-embed-name-vod": ":mega: Last video on %s KST",
+      "channel-embed-name-live": "📣 Live since %s KST",
+      "channel-embed-name-vod": "📣 Last video on %s KST",
       "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST",
       "channel-added-success": "Added V Live Channel `%s` to the Channel <#%s>!",
       "channel-added-success-additional-role": " I will mention `@%s`.",
       "channel-list-no-channels-error": "No V Live Channels found on this server!",
-      "channel-embed-title-vod": ":film_frames: %s uploaded a new video!",
-      "channel-embed-title-upcoming": ":calendar_spiral: %s scheduled a new video for %s KST!",
-      "channel-embed-title-live": ":mega: %s just went live!",
-      "channel-embed-title-notice": ":pencil: %s posted a new notice!",
-      "channel-embed-title-celeb": ":star2: %s posted a new celeb post!",
+      "channel-embed-title-vod": "🎞 %s uploaded a new video!",
+      "channel-embed-title-upcoming": "🗓 %s scheduled a new video for %s KST!",
+      "channel-embed-title-live": "📣 %s just went live!",
+      "channel-embed-title-notice": "📝 %s posted a new notice!",
+      "channel-embed-title-celeb": "🌟 %s posted a new celeb post!",
       "channel-delete-not-found-error": "Unable to find V Live Channel in the Database!",
       "channel-delete-success": "Deleted V Live Channel `%s` from the Database!"
     },
@@ -509,7 +509,7 @@
       "account-list-no-accounts-error": "No Instagram Accounts found on this server!",
       "post-embed-title": "%s (@%s)%s posted a new %s",
       "reelmedia-embed-title": "%s (@%s)%s posted a new %s to their story",
-      "live-embed-title": ":mega: %s (@%s)%s just went live!"
+      "live-embed-title": "📣 %s (@%s)%s just went live!"
     },
     "facebook": {
       "page-not-found": "Page not found!",
@@ -576,8 +576,8 @@
     },
     "twitch": {
       "no-channel-information": "This channel is offline :slight_frown:",
-      "channel-embed-title": ":mega: **%s** (%s) is live!",
-      "wentlive-embed-title": ":mega: **%s** just went live!",
+      "channel-embed-title": "📣 **%s** (%s) is live!",
+      "wentlive-embed-title": "📣 **%s** just went live!",
       "embed-footer": "via twitch.tv",
       "channel-added-success": "Added Twitch Channel `%s` to the Channel <#%s>!",
       "channel-delete-success": "Deleted Twitch Channel `%s` from the Database!",
@@ -600,7 +600,7 @@
       "year-gaon-embed-title": "**%s** | Gaon Yearly Charts (domestic and overseas)"
     },
     "notifications": {
-      "keyword-added-success": "<@%s> I will notify you about this keyword! :pencil:",
+      "keyword-added-success": "<@%s> I will notify you about this keyword! 📝",
       "keyword-list-no-keywords-error": "<@%s> You haven't told me to notify you about any keywords yet. :thinking:",
       "keyword-delete-not-found-error": "<@%s> I wasn't able to find this keyword in your active keywords on this server. :open_mouth:",
       "keyword-delete-success": "<@%s> I removed the keyword from your list. :ok_hand:",
