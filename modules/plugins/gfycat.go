@@ -89,9 +89,22 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
     session.ChannelTyping(msg.ChannelID)
 
     if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {
-        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease check the link or try again later.")
+        errorMessage := ""
+        fmt.Println(jsonResult.Path("errorMessage").Data().(string))
+        if jsonResult.ExistsP("errorMessage") && jsonResult.Path("errorMessage").Data().(string) != "" {
+            parsedErrorMessage, err := gabs.ParseJSON([]byte(jsonResult.Path("errorMessage").Data().(string))) // weird gfycat api is weird?
+            helpers.Relax(err)
+            if parsedErrorMessage.ExistsP("description") {
+                errorMessage = parsedErrorMessage.Path("description").Data().(string)
+            }
+        }
+        if errorMessage == "" {
+            _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease check the link or try again later.")
+            logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Error: %s", jsonResult.String()))
+        } else {
+            _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+fmt.Sprintf("Error: `%s`.", errorMessage))
+        }
         helpers.Relax(err)
-        logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Error: %s", jsonResult.String()))
         return
     }
 
@@ -110,8 +123,8 @@ CheckGfycatStatusLoop:
             gfyName = result.Path("gfyname").Data().(string)
             break CheckGfycatStatusLoop
         default:
-            logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Status Error: %s", result.String()))
-            _, err := session.ChannelMessage(msg.ChannelID, helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
+            logger.ERROR.L("gfycat", fmt.Sprintf("<@%s> ", msg.Author.ID)+fmt.Sprintf("Gfycat Status Error: %s", result.String()))
+            _, err := session.ChannelMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
             helpers.Relax(err)
             return
         }
