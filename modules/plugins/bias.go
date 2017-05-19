@@ -122,6 +122,75 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                 _, err = session.ChannelMessageSend(msg.ChannelID, "Created a new entry in the Database. Please fill it manually.")
                 helpers.Relax(err)
             })
+        case "stats":
+            session.ChannelTyping(msg.ChannelID)
+
+            channel, err := session.State.Channel(msg.ChannelID)
+            helpers.Relax(err)
+            guild, err := session.State.Guild(channel.GuildID)
+            helpers.Relax(err)
+
+            members := make([]*discordgo.Member, 0)
+            lastAfterMemberId := ""
+            for {
+                additionalMembers, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
+                if len(additionalMembers) <= 0 {
+                    break
+                }
+                lastAfterMemberId = additionalMembers[len(additionalMembers)-1].User.ID
+                helpers.Relax(err)
+                for _, member := range additionalMembers {
+                    members = append(members, member)
+                }
+            }
+
+            statsText := ""
+
+            statsPrinted := 0
+            for _, biasChannel := range biasChannels {
+                if biasChannel.ServerID == channel.GuildID {
+                    for _, biasCategory := range biasChannel.Categories {
+                        categoryNumbers := make(map[string]int, 0)
+                        if biasCategory.Hidden == true && biasCategory.Pool == "" {
+                            continue
+                        }
+                        for _, biasRole := range biasCategory.Roles {
+                            discordRole := m.GetDiscordRole(biasRole, guild)
+                            if discordRole != nil {
+                                for _, member := range members {
+                                    for _, memberRole := range member.Roles {
+                                        if memberRole == discordRole.ID {
+                                            // user has the role
+                                            if _, ok := categoryNumbers[discordRole.Name]; ok {
+                                                categoryNumbers[discordRole.Name]++
+                                            } else {
+                                                categoryNumbers[discordRole.Name] = 1
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if len(categoryNumbers) > 0 {
+                            statsText += fmt.Sprintf("__**%s:**__\n", biasCategory.Label)
+                            for roleName, roleNumber := range categoryNumbers {
+                                statsText += fmt.Sprintf("**%s**: %d Members\n", roleName, roleNumber)
+                            }
+                        }
+                    }
+                    statsPrinted++
+                }
+            }
+
+            if statsPrinted <= 0 {
+                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-stats"))
+                helpers.Relax(err)
+            } else {
+                for _, page := range helpers.Pagify(statsText, "\n") {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, page)
+                    helpers.Relax(err)
+                }
+            }
         }
     }
 }
