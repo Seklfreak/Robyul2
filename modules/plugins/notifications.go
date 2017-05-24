@@ -313,13 +313,6 @@ NextKeyword:
                     logger.ERROR.L("notifications", "error getting message author: "+err.Error())
                     continue NextKeyword
                 }
-                everyoneRoleId := ""
-                guildRoles, err := session.GuildRoles(guild.ID)
-                for _, guildRole := range guildRoles {
-                    if guildRole.Name == "@everyone" {
-                        everyoneRoleId = guildRole.ID
-                    }
-                }
                 hasReadPermissions := false
                 hasHistoryPermissions := false
                 // ignore messages if the users roles have no read permission to the server
@@ -339,7 +332,7 @@ NextKeyword:
                         helpers.Relax(err)
                         fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
 
-                        if everyoneRoleId == overwrite.ID {
+                        if roleToCheck.Name == "@everyone" {
                             fmt.Println("checking @everyone")
                             if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
                                 hasHistoryPermissions = true
