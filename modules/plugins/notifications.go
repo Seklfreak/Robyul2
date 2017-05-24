@@ -15,7 +15,7 @@ type Notifications struct{}
 var (
     notificationSettingsCache []DB_NotificationSetting
     ignoredChannelsCache      []DB_IgnoredChannel
-    ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-"}
+    ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/"}
 )
 
 type DB_IgnoredChannel struct {
@@ -320,63 +320,93 @@ NextKeyword:
                         everyoneRoleId = guildRole.ID
                     }
                 }
-                hasPermissions := true
+                hasReadPermissions := false
+                hasHistoryPermissions := false
                 // ignore messages if the users roles have no read permission to the server
                 memberAllPermissions := helpers.GetAllPermissions(guild, memberToNotify)
                 if memberAllPermissions&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
-                    hasPermissions = true
-                    //fmt.Println("allowed: A")
+                    hasHistoryPermissions = true
+                    //fmt.Println("allowed History: A")
                 }
-                if memberAllPermissions&discordgo.PermissionReadMessages != discordgo.PermissionReadMessages {
-                    hasPermissions = true
-                    //fmt.Println("allowed: B")
+                if memberAllPermissions&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
+                    hasReadPermissions = true
+                    //fmt.Println("allowed Read: B")
                 }
                 // ignore messages if the users roles have no read permission to the channel
                 for _, overwrite := range channel.PermissionOverwrites {
-                    if overwrite.Type == "member" {
-                        if memberToNotify.User.ID == overwrite.ID {
+                    if overwrite.Type == "role" {
+                        //roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
+                        //helpers.Relax(err)
+                        //fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
+
+                        if everyoneRoleId == overwrite.ID {
                             if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
-                                hasPermissions = true
-                                //fmt.Println("allowed: C")
+                                hasHistoryPermissions = true
+                                //fmt.Println("allowed History: C")
                             }
                             if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
-                                hasPermissions = true
-                                //fmt.Println("allowed: D")
+                                hasReadPermissions = true
+                                //fmt.Println("allowed Read: D")
                             }
                             if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
-                                hasPermissions = false
-                                //fmt.Println("rejected: E")
+                                hasHistoryPermissions = false
+                                //fmt.Println("rejected History: E")
                             }
                             if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
-                                hasPermissions = false
-                                //fmt.Println("rejected: F")
+                                hasReadPermissions = false
+                                //fmt.Println("rejected Read: F")
                             }
-                        }
-                    }
-                    if overwrite.Type == "role" {
-                        for _, memberRoleId := range memberToNotify.Roles {
-                            if memberRoleId == overwrite.ID || everyoneRoleId == overwrite.ID {
-                                if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
-                                    hasPermissions = true
-                                    //fmt.Println("allowed: G")
-                                }
-                                if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
-                                    hasPermissions = true
-                                    //fmt.Println("allowed: H")
-                                }
-                                if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
-                                    hasPermissions = false
-                                    //fmt.Println("rejected: I")
-                                }
-                                if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
-                                    hasPermissions = false
-                                    //fmt.Println("rejected: J")
+                        } else {
+                            for _, memberRoleId := range memberToNotify.Roles {
+                                if memberRoleId == overwrite.ID {
+                                    if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
+                                        hasHistoryPermissions = true
+                                        //fmt.Println("allowed History: G")
+                                    }
+                                    if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
+                                        hasReadPermissions = true
+                                        //fmt.Println("allowed Read: H")
+                                    }
+                                    if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
+                                        hasHistoryPermissions = false
+                                        //fmt.Println("rejected History: I")
+                                    }
+                                    if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
+                                        hasReadPermissions = false
+                                        //fmt.Println("rejected Read: J")
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                if hasPermissions == true {
+                for _, overwrite := range channel.PermissionOverwrites {
+                    if overwrite.Type == "member" {
+                        //memberToCheck, err := session.State.Member(channel.GuildID, overwrite.ID)
+                        //helpers.Relax(err)
+                        //fmt.Printf("%s: %#v\n", memberToCheck.User.Username, overwrite)
+
+                        if memberToNotify.User.ID == overwrite.ID {
+                            if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
+                                hasHistoryPermissions = true
+                                //fmt.Println("allowed History: K")
+                            }
+                            if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
+                                hasReadPermissions = true
+                                //fmt.Println("allowed Read: L")
+                            }
+                            if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
+                                hasHistoryPermissions = false
+                                //fmt.Println("rejected History: M")
+                            }
+                            if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
+                                hasReadPermissions = false
+                                //fmt.Println("rejected Read: N")
+                            }
+                        }
+                    }
+                }
+                if hasReadPermissions == true && hasHistoryPermissions == true {
                     addedToExistingPendingNotifications := false
                     for i, pendingNotification := range pendingNotifications {
                         if pendingNotification.Member.User.ID == memberToNotify.User.ID {

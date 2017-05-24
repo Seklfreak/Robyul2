@@ -236,6 +236,11 @@ func GetTimeFromSnowflake(id string) time.Time {
 
 func GetAllPermissions(guild *discordgo.Guild, member *discordgo.Member) int64 {
     var perms int64 = 0
+    for _, x := range guild.Roles {
+        if x.Name == "@everyone" {
+            perms |= int64(x.Permissions)
+        }
+    }
     for _, r := range member.Roles {
         for _, x := range guild.Roles {
             if x.ID == r {
