@@ -336,7 +336,6 @@ NextKeyword:
                         //fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
 
                         if roleToCheck.Name == "@everyone" {
-                            fmt.Println("checking @everyone")
                             if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
                                 hasHistoryPermissions = true
                                 //fmt.Println("allowed History: C")
