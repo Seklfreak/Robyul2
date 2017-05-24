@@ -110,7 +110,7 @@ func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo
     }
     // Check that there are at least 2 fields
     if len(fields) < 2 {
-        session.ChannelMessageSend(msg.ChannelID, "Common... Give us options!! :rolling_eyes:")
+        session.ChannelMessageSend(msg.ChannelID, "Common... Give us options!! <:blobrollingeyes:317029802785898498>")
         return
     }
     // If there are more than 10 fields, just use the first 10
@@ -249,7 +249,7 @@ func (p *Poll) removeField(content string, msg *discordgo.Message, session *disc
 func (p *Poll) open(content string, msg *discordgo.Message, session *discordgo.Session) {
     msgSplit := strings.Fields(content)
     if len(msgSplit) < 2 {
-        session.ChannelMessageSend(msg.ChannelID, "Wait.. Where's the poll ID??¿ :eyes:")
+        session.ChannelMessageSend(msg.ChannelID, "Wait.. Where's the poll ID??¿ <:blobeyes:317029938568101890>")
         return
     }
     pollID := msgSplit[0]
@@ -270,7 +270,7 @@ func (p *Poll) open(content string, msg *discordgo.Message, session *discordgo.S
 func (p *Poll) close(content string, msg *discordgo.Message, session *discordgo.Session) {
     msgSplit := strings.Fields(content)
     if len(msgSplit) < 2 {
-        session.ChannelMessageSend(msg.ChannelID, "Wait.. Where's the poll ID??¿ :eyes:")
+        session.ChannelMessageSend(msg.ChannelID, "Wait.. Where's the poll ID??¿ <:blobeyes:317029938568101890>")
         return
     }
     pollID := msgSplit[0]

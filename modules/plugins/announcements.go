@@ -34,7 +34,7 @@ func (a *Announcement) Action(command string, content string, msg *discordgo.Mes
     case "update":
         title = ":loudspeaker: **UPDATE**"
     case "downtime":
-        title = ":warning: **DOWNTIME**"
+        title = "<:blobsplosion:317044658213748746> **DOWNTIME**"
     case "maintenance":
         title = ":clock5: **MAINTENANCE**"
     }

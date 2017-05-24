@@ -118,7 +118,7 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
         })
         setReminders(msg.Author.ID, reminders)
 
-        session.ChannelMessageSend(msg.ChannelID, "Ok I'll remind you :ok_hand:")
+        session.ChannelMessageSend(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
         break
 
     case "rms", "reminders":

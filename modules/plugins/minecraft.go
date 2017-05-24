@@ -26,7 +26,7 @@ func (m *Minecraft) Action(command string, content string, msg *discordgo.Messag
 
         if err != nil {
             if regexp.MustCompile("(?i)expected status 200.*").Match([]byte(err.(string))) {
-                session.ChannelMessageSend(msg.ChannelID, "Make sure that name is correct. \n I didn't find a thing :neutral_face:")
+                session.ChannelMessageSend(msg.ChannelID, "Make sure that name is correct. \n I didn't find a thing <:blobneutral:317029459720929281>")
                 return
             }
         }
@@ -42,6 +42,6 @@ func (m *Minecraft) Action(command string, content string, msg *discordgo.Messag
     helpers.NetGet(url)
 
     // If NetGet didn't panic send the url
-    session.ChannelMessageSend(msg.ChannelID, "Here you go :smiley: \n "+url)
+    session.ChannelMessageSend(msg.ChannelID, "Here you go <:googlesmile:317031693951434752> \n "+url)
 
 }

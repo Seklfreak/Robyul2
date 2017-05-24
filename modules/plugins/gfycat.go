@@ -85,7 +85,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
     jsonResult, err := gabs.ParseJSON(buf.Bytes())
     helpers.Relax(err)
 
-    session.ChannelMessageSend(msg.ChannelID, "Your gfycat is processing, this may take a while. :sleeping:")
+    session.ChannelMessageSend(msg.ChannelID, "Your gfycat is processing, this may take a while. <:blobsleeping:317047101534109696>")
     session.ChannelTyping(msg.ChannelID)
 
     if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {

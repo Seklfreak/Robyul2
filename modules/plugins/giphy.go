@@ -44,7 +44,7 @@ func (g *Giphy) Action(command string, content string, msg *discordgo.Message, s
     // Get gifs
     gifs, err := json.Path("data").Children()
     if err != nil {
-        session.ChannelMessageSend(msg.ChannelID, "Error parsing Giphy's response :frowning:")
+        session.ChannelMessageSend(msg.ChannelID, "Error parsing Giphy's response <:blobfrowningbig:317028438693117962>")
         return
     }
 
@@ -53,7 +53,7 @@ func (g *Giphy) Action(command string, content string, msg *discordgo.Message, s
     if len(gifs) > 0 {
         m = gifs[rand.Intn(len(gifs))].Path("bitly_url").Data().(string)
     } else {
-        m = "No gifs found :frowning:"
+        m = "No gifs found <:blobfrowningbig:317028438693117962>"
     }
 
     // Send the result

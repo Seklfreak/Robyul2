@@ -47,7 +47,7 @@ func (x *XKCD) Action(command string, content string, msg *discordgo.Message, se
 
         max, err := strconv.ParseInt(num, 10, 32)
         if err != nil {
-            session.ChannelMessageSend(msg.ChannelID, "Error getting latest comic. Try again later :frowning:")
+            session.ChannelMessageSend(msg.ChannelID, "Error getting latest comic. Try again later <:blobfrowningbig:317028438693117962>")
             return
         }
 

@@ -72,18 +72,18 @@ func SendError(msg *discordgo.Message, err interface{}) {
 
         cache.GetSession().ChannelMessageSend(
             msg.ChannelID,
-            "Error :frowning:\n```\n"+fmt.Sprintf("%#v\n", err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
+            "Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v\n", err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
         )
     } else {
         if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
             cache.GetSession().ChannelMessageSend(
                 msg.ChannelID,
-                "Error :frowning:\nSekl#7397 has been notified.\n```\n"+fmt.Sprintf("%#v", err.Message.Message)+"\n```",
+                "Error <:blobfrowningbig:317028438693117962>\nSekl#7397 has been notified.\n```\n"+fmt.Sprintf("%#v", err.Message.Message)+"\n```",
             )
         } else {
             cache.GetSession().ChannelMessageSend(
                 msg.ChannelID,
-                "Error :frowning:\nSekl#7397 has been notified.\n```\n"+fmt.Sprintf("%#v", err)+"\n```",
+                "Error <:blobfrowningbig:317028438693117962>\nSekl#7397 has been notified.\n```\n"+fmt.Sprintf("%#v", err)+"\n```",
             )
         }
     }

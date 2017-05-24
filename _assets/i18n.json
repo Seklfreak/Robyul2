@@ -1,20 +1,20 @@
 {
   "admin": {
     "no_permission": [
-      "Uhm I'm sorry but only guild admins may do that :frowning:",
+      "Uhm I'm sorry but only guild admins may do that <:blobfrowningbig:317028438693117962>",
       "Don't tell anyone but that command - totally dangerous!\nOnly admins are brave enough to use it.",
-      "These are not the druids you're looking for :see_no_evil:",
+      "These are not the druids you're looking for <:googleseenoevil:317027974622740490>",
       "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
-      "Seems like you're not an admin :thinking:"
+      "Seems like you're not an admin <:blobthinking:317028940885524490>"
     ]
   },
   "mod": {
     "no_permission": [
-      "Uhm I'm sorry but only guild mods may do that :frowning:",
+      "Uhm I'm sorry but only guild mods may do that <:blobfrowningbig:317028438693117962>",
       "Don't tell anyone but that command - totally dangerous!\nOnly mods are brave enough to use it.",
-      "These are not the druids you're looking for :see_no_evil:",
+      "These are not the druids you're looking for <:googleseenoevil:317027974622740490>",
       "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
-      "Seems like you're not a mod :thinking:"
+      "Seems like you're not a mod <:blobthinking:317028940885524490>"
     ]
   },
   "botadmin": {
@@ -22,28 +22,28 @@
   },
   "bot": {
     "ratelimit": {
-      "hit": "<@%s> Woah there. Way too spicy.\nYou're executing commands too fast, so i put you into the chill zone for ~15 seconds.\nNo more commands for you until you get out :no_good:"
+      "hit": "<@%s> Woah there. Way too spicy.\nYou're executing commands too fast, so i put you into the chill zone for ~15 seconds.\nNo more commands for you until you get out <:blobnogood:317029275742109706>"
     },
     "mentions": {
       "too-few": [
-        "You should mention someone :thinking:",
-        "I can't see a mention in your message :see_no_evil:"
+        "You should mention someone <:blobthinking:317028940885524490>",
+        "I can't see a mention in your message <:googleseenoevil:317027974622740490>"
       ],
       "too-many": [
-        "Whait what? Those are too many mentions :neutral_face:",
-        "I can't decide which mention to use :neutral_face:"
+        "Whait what? Those are too many mentions <:blobneutral:317029459720929281>",
+        "I can't decide which mention to use <:blobneutral:317029459720929281>"
       ],
       "who-to-pat": [
-        "Wait, you forgot to tell me who to pat! :rolling_eyes:",
-        "Can you mention the person you want to pat? :neutral_face:"
+        "Wait, you forgot to tell me who to pat! <:blobrollingeyes:317029802785898498>",
+        "Can you mention the person you want to pat? <:blobneutral:317029459720929281>"
       ],
       "pat-group": [
-        "Whoa, it does not work like this! You can only pat a single person, silly! :eyes:",
-        "Umm... I cant pat everyone at the same time, please, can you pick a single person to pat? :eyes:"
+        "Whoa, it does not work like this! You can only pat a single person, silly! <:blobeyes:317029938568101890>",
+        "Umm... I cant pat everyone at the same time, please, can you pick a single person to pat? <:blobeyes:317029938568101890>"
       ],
       "pat-yourself": [
-        "You can't pat yourself. That would be weird, wouldn't it?! :nerd:",
-        "Umm... Why do you patting yourself? Are you okay? :ghost:"
+        "You can't pat yourself. That would be weird, wouldn't it?! <:googlenerd:317030369205682186>",
+        "Umm... Why do you patting yourself? Are you okay? <:googleghost:317030645786476545>"
       ]
     },
     "arguments": {
@@ -57,16 +57,16 @@
       "general": "Unexpected error: `%s`"
     },
     "prefix": {
-      "not-set": "Seems like there is no prefix yet :thinking:\nAdmins can set one by typing for example `@Karen set prefix ?`",
+      "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Karen set prefix ?`",
       "is": [
-        "The prefix is `%s` :smiley:",
-        "Last time I checked it was `%s` :wink:",
-        "iirc it's `%s` :thinking:"
+        "The prefix is `%s` <:googlesmile:317031693951434752>",
+        "Last time I checked it was `%s` <:blobwink:317030948577476608>",
+        "iirc it's `%s` <:blobthinking:317028940885524490>"
       ],
       "saved": [
-        "Ok I'll try to remember `%s` :sweat_smile:",
-        "Ok the prefix is now `%s` :smiley:",
-        "Ok it's now `%s` :ok_hand:"
+        "Ok I'll try to remember `%s` <:blobsmilesweat2:317031354405748747>",
+        "Ok the prefix is now `%s` <:googlesmile:317031693951434752>",
+        "Ok it's now `%s` <:blobokhand:317032017164238848>"
       ]
     },
     "cleverbot": {
@@ -74,9 +74,9 @@
     },
     "help": [
       "<@%s> Check out <https://github.com/Seklfreak/Robyul2/wiki/Commands>",
-      "<@%s> It's at <https://github.com/Seklfreak/Robyul2/wiki/Commands> :smiley:"
+      "<@%s> It's at <https://github.com/Seklfreak/Robyul2/wiki/Commands> <:googlesmile:317031693951434752>"
     ],
-    "check-your-dms": "<@%s> Please check your DMs. :eyes:"
+    "check-your-dms": "<@%s> Please check your DMs. <:blobeyes:317029938568101890>"
   },
   "triggers": {
     "8ball": {
@@ -100,7 +100,7 @@
         "outlook not so good.",
         "very doubtful."
       ],
-      "ask_a_question": "I cannot respond if you don't ask a question :thinking:"
+      "ask_a_question": "I cannot respond if you don't ask a question <:blobthinking:317028940885524490>"
     },
     "css": "http://i.imgur.com/TgPKFTz.gif",
     "git": "https://github.com/Seklfreak/Robyul2",
@@ -433,11 +433,11 @@
   ],
   "plugins": {
     "listen_moe": {
-      "unknown_command": "I don't know that command :neutral_face:\nYou can either `join` or `leave` but not `%s`"
+      "unknown_command": "I don't know that command <:blobneutral:317029459720929281>\nYou can either `join` or `leave` but not `%s`"
     },
     "translator": {
       "unknown_lang": "The language-code `%s` is invalid.\nCheck <https://cloud.google.com/translate/docs/languages> for a list of supported codes.",
-      "error": "I don't know :(",
+      "error": "I don't know <:blobsad:317033054931648517>",
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
       "embed-footer": "via translate.google.com",
@@ -445,7 +445,7 @@
       "embed-title-alternative-naver": "Alternative translation"
     },
     "reminders": {
-      "empty": "You don't have any active reminders :shrug:",
+      "empty": "You don't have any active reminders <:blobshrug:317033590292742147>",
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
       "embed-footer": "via translate.google.com",
@@ -453,15 +453,15 @@
       "embed-title-alternative-naver": "Alternative translation"
     },
     "mod": {
-      "deleting-messages-failed-too-old": "I can only delete messages that are under 14 days old. :worried:",
+      "deleting-messages-failed-too-old": "I can only delete messages that are under 14 days old. <:blobonfire:317034288896016384>",
       "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?",
-      "user-muted-success": "User `%s (#%s)` has been muted. :mute:",
-      "user-unmuted-success": "User `%s (#%s)` has been unmuted. :speaker:",
+      "user-muted-success": "User `%s (#%s)` has been muted. <:blobstop:317034621953114112>",
+      "user-unmuted-success": "User `%s (#%s)` has been unmuted. <:blobgo:317034640181297163>",
       "disallowed": "You are not allowed to do this!",
       "bot-disallowed": "I am not allowed to do this!",
-      "user-banned-success": "User `%s (#%s)` has been banned. :no_entry:",
-      "user-kicked-success": "User `%s (#%s)` has been kicked. :door:",
-      "echo-error-wrong-server": "You can only post stuff to the server you are on! :no_good:",
+      "user-banned-success": "User `%s (#%s)` has been banned. <:blobhammer:317035118403387393>",
+      "user-kicked-success": "User `%s (#%s)` has been kicked. <:blobpolice:317035504581345282>",
+      "echo-error-wrong-server": "You can only post stuff to the server you are on! <:blobnogood:317029275742109706>",
       "inspect-embed-title": "Results for user `%s#%s` 🔎",
       "inspect-embed-footer": "User ID: %s | Robyul is on %d servers",
       "inspect-embed-description-in-progress": "User is being inspected.\nChecking server %d of %d servers.",
@@ -522,7 +522,7 @@
       "post-embed-title": "%s (@%s)%s posted a new Update"
     },
     "wolframalpha": {
-      "error": "Sorry, I couldn't find an answer to that. :disappointed:",
+      "error": "Sorry, I couldn't find an answer to that. <:blobweary:317036265071575050>",
       "result-embed-title": "Results for \"%s\"",
       "embed-footer": "via wolframalpha.com"
     },
@@ -537,46 +537,50 @@
       "topalbums-embed-title": "%s Top Albums",
       "topartists-embed-title": "%s Top Artists",
       "toptracks-embed-title": "%s Top Tracks",
-      "set-username-success": "You set `%s` as your username. :clap:\n(This is saved across servers.)"
+      "set-username-success": "You set `%s` as your username. <:blobsalute:317043033004703744>\n(This is saved across servers.)"
     },
     "weather": {
-      "address-not-found": "I can't find the location you are looking for. :thinking:",
-      "no-weather": "I couldn't find any weather for the given location. :speak_no_evil:",
+      "address-not-found": "I can't find the location you are looking for. <:blobthinking:317028940885524490>",
+      "no-weather": "I couldn't find any weather for the given location. <:googlespeaknoevil:317036753074651139>",
       "weather-embed-title": "Weather for %s",
       "embed-footer": "Powered by Dark Sky",
       "current-weather-description": "**Currently**\n**%s**\nTemperature: **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\nWind: **%s m/s** (%s mph)\nHumidity: **%s %%**",
       "week-title": "This week"
     },
     "bias": {
-      "role-not-found": "I couldn't find the Role. :thinking:",
-      "add-role-already": "You already got this role. :thinking:",
-      "remove-role-not-found": "You don't have this role. :thinking:",
+      "role-not-found": "I couldn't find the Role. <:blobthinking:317028940885524490>",
+      "add-role-already": "You already got this role. <:blobthinking:317028940885524490>",
+      "remove-role-not-found": "You don't have this role. <:blobthinking:317028940885524490>",
       "role-added": [
-        "I added the Role for you! :clap:",
-        "I added the Role for you! :thumbsup:",
-        "I added the Role for you! :blush:",
+        "I added the Role for you! <:blobsalute:317043033004703744>",
+        "I added the Role for you! <:blobthumbsup:317043177028714497>",
+        "I added the Role for you! <:blobblush:317043283916226562>",
+        "I added the Role for you! <:blobokhand:317032017164238848>",
+        "I added the Role for you! <:blobhighfive:317043673047236609>",
         "I added the Role for you! :sparkles:"
       ],
       "role-removed": [
-        "I removed the Role from you! :scream:",
-        "I removed the Role from you! :thumbsdown:",
-        "I removed the Role from you! :mask:",
-        "I removed the Role from you! :flushed:",
-        "I removed the Role from you! :worried:"
+        "I removed the Role from you! <:blobscream:317043778823389184>",
+        "I removed the Role from you! <:blobthumbsdown:317043878043582474>",
+        "I removed the Role from you! <:blobglare:317044032658341888>",
+        "I removed the Role from you! <:blobshh:317044272161357824>",
+        "I removed the Role from you! <:blobonfire:317034288896016384>",
+        "I removed the Role from you! <:blobthinkingeyes:317044481499201538>",
+        "I removed the Role from you! <:blobsplosion:317044658213748746>"
       ],
-      "role-limit-reached": "You already got enough Roles! :no_good:",
+      "role-limit-reached": "You already got enough Roles! <:blobnogood:317029275742109706>",
       "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**",
       "no-bias-config": "No Bias Config set for this Channel.",
-      "refreshed-config": "I loaded the newest config from the Database. :ok_hand:",
-      "generic-error": "Something went wrong. :confounded:",
-      "no-stats": "No stats available for this server. :frowning:"
+      "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
+      "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
+      "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",
       "message-disabled": "I disabled this announcement."
     },
     "twitch": {
-      "no-channel-information": "This channel is offline :slight_frown:",
+      "no-channel-information": "This channel is offline <:blobfrown:317045049760415744>",
       "channel-embed-title": "📣 **%s** (%s) is live!",
       "wentlive-embed-title": "📣 **%s** just went live!",
       "embed-footer": "via twitch.tv",
@@ -602,75 +606,75 @@
     },
     "notifications": {
       "keyword-added-success": "<@%s> I will notify you about this keyword! 📝",
-      "keyword-list-no-keywords-error": "<@%s> You haven't told me to notify you about any keywords yet. :thinking:",
-      "keyword-delete-not-found-error": "<@%s> I wasn't able to find this keyword in your active keywords on this server. :open_mouth:",
-      "keyword-delete-success": "<@%s> I removed the keyword from your list. :ok_hand:",
+      "keyword-list-no-keywords-error": "<@%s> You haven't told me to notify you about any keywords yet. <:blobthinking:317028940885524490>",
+      "keyword-delete-not-found-error": "<@%s> I wasn't able to find this keyword in your active keywords on this server. <:blobfrown:317045049760415744>",
+      "keyword-delete-success": "<@%s> I removed the keyword from your list. <:blobokhand:317032017164238848>",
       "ignore-channel-addorremove-error-server": "You can only add or remove channels from the ignore list on the server you are on.",
-      "ignore-channel-add-success": "I won't look in <#%s> for keywords anymore. :see_no_evil:",
-      "ignore-channel-remove-success": "I will start to look in <#%s> for keywords again. :no_mouth:",
+      "ignore-channel-add-success": "I won't look in <#%s> for keywords anymore. <:googleseenoevil:317027974622740490>",
+      "ignore-channel-remove-success": "I will start to look in <#%s> for keywords again. <:blobnomouth:317045295286583296>",
       "ignoredchannels-list-no-keywords-error": "There are currently no ignored channels on this server.",
-      "keyword-add-error-duplicate": "<@%s> I'm already notifying you about this keyword. :thinking:"
+      "keyword-add-error-duplicate": "<@%s> I'm already notifying you about this keyword. <:blobthinking:317028940885524490>"
     },
     "stats": {
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
       "voicestats-toplist-embed-title": "Voice Channel Duration Leaderboard for this server",
       "voicestats-embed-footer": "Total durations exclude the currently active session. Stats are refreshed every 30 seconds.",
-      "no-emotes": "No custom emotes on this server yet. :flushed:",
+      "no-emotes": "No custom emotes on this server yet. <:blobflushed:317045406951538688>",
       "reaction-embed-title": "@%s: Custom Emotes on %s",
       "reaction-embed-footer": "There are %d custom emotes on this server.",
       "user-not-found": "User not found!"
     },
     "levels": {
-      "level-no-stats": "No stats for this user yet. Chat more! :nerd:",
-      "top-server-no-stats": "No stats for this server yet. Chat more! :nerd:",
+      "level-no-stats": "No stats for this user yet. Chat more! <:googlenerd:317030369205682186>",
+      "top-server-no-stats": "No stats for this server yet. Chat more! <:googlenerd:317030369205682186>",
       "top-server-embed-title": "Top #10",
       "global-top-server-embed-title": "Global Top #10",
       "user-embed-title": "Stats for %s",
       "embed-footer": "Robyul is currently on %d servers."
     },
     "gallery": {
-      "add-success": "Gallery successfully added. :ok_hand:",
-      "list-empty": "No galleries set up on this server yet! :mag:",
-      "delete-not-found": "I wasn't able to find this gallery on this server. :thinking:",
+      "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
+      "list-empty": "No galleries set up on this server yet! <:blobdetective:317045632856489985>",
+      "delete-not-found": "I wasn't able to find this gallery on this server. <:blobthinking:317028940885524490>",
       "delete-success": "I successfully removed the gallery from the database.",
-      "add-progress": "I'm on it! :arrows_counterclockwise:",
-      "refreshed-config": "I loaded the newest config from the Database. :ok_hand:"
+      "add-progress": "I'm on it! <:blobpopcorn:317046791478575111>",
+      "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>"
     },
     "mirror": {
-      "create-success": "Created successfully an empty Mirror. :ok_hand:\nUse `%smirror add-channel %s <channel> <webhook id> <webhook token>` to add a channel to this mirror.",
-      "add-channel-progress": "I'm on it! :arrows_counterclockwise:",
-      "add-channel-success": "Channel successfully added to Mirror. :ok_hand:",
-      "list-empty": "No mirrors set up on this server yet! :mag:",
-      "delete-not-found": "I wasn't able to find this mirror. :thinking:",
+      "create-success": "Created successfully an empty Mirror. <:blobokhand:317032017164238848>\nUse `%smirror add-channel %s <channel> <webhook id> <webhook token>` to add a channel to this mirror.",
+      "add-channel-progress": "I'm on it! <:blobpopcorn:317046791478575111>",
+      "add-channel-success": "Channel successfully added to Mirror. <:blobokhand:317032017164238848>",
+      "list-empty": "No mirrors set up on this server yet! <:blobdetective:317045632856489985>",
+      "delete-not-found": "I wasn't able to find this mirror. <:blobthinking:317028940885524490>",
       "delete-success": "I successfully removed the mirror from the database.",
-      "refreshed-config": "I loaded the newest config from the Database. :ok_hand:"
+      "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>"
     },
     "randompictures": {
-      "pic-no-picture": "I wasn't able to find a picture for you. :disappointed:",
-      "list-no-entries-error": "No sources set up on this server yet! :mag:",
-      "refresh-success": "Source successfully refresh! :ok_hand:",
-      "refresh-not-found-error": "I wasn't able to find this source. :no_mouth:",
-      "refresh-started": "Refreshing started, this may take a while! :sleeping:",
-      "waiting-for-picture": ":gift: Looking for a picture for you.",
-      "upload-failed": "The upload failed. :persevere:"
+      "pic-no-picture": "I wasn't able to find a picture for you. <:blobweary:317036265071575050>",
+      "list-no-entries-error": "No sources set up on this server yet! <:blobdetective:317045632856489985>",
+      "refresh-success": "Source successfully refresh! <:blobokhand:317032017164238848>",
+      "refresh-not-found-error": "I wasn't able to find this source. <:blobnomouth:317045295286583296>",
+      "refresh-started": "Refreshing started, this may take a while! <:blobsleeping:317047101534109696>",
+      "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you.",
+      "upload-failed": "The upload failed. <:blobugh:317047327443517442>"
     },
     "customcommands": {
-      "add-keyword-already-exists": "There is already a custom command with this keyword. :weary:",
-      "add-success": "I successfully added the command! :pencil2:",
-      "list-empty": "There are no custom commands on this server yet! :mag_right:",
-      "delete-not-found": "I wasn't able to find a command with that name on this server! :scream:",
-      "delete-success": "I successfully deleted the command with this name. :wave:",
-      "edit-not-found": "I wasn't able to find a command with that name on this server! :scream:",
-      "edit-success": "I successfully edited the command. :scissors:",
-      "refreshed-commands": "I refreshed the command cache. :clipboard:",
-      "search-empty": "I couldn't find any command including `%s` in the name on this server. :weary:",
-      "info-not-found": "I wasn't able to find a command with this name. :thinking:",
-      "add-command-already-exists": "There is already a command with this keyword. :weary:"
+      "add-keyword-already-exists": "There is already a custom command with this keyword. <:blobweary:317036265071575050>",
+      "add-success": "I successfully added the command! <:blobidea:317047867036663809>",
+      "list-empty": "There are no custom commands on this server yet! <:blobspy:317048109832208385>",
+      "delete-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",
+      "delete-success": "I successfully deleted the command with this name. <:blobwave:317048219098021888>",
+      "edit-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",
+      "edit-success": "I successfully edited the command. <:blobcouncil:317048423142522900>",
+      "refreshed-commands": "I refreshed the command cache. <:blobgo:317034640181297163>",
+      "search-empty": "I couldn't find any command including `%s` in the name on this server. <:blobweary:317036265071575050>",
+      "info-not-found": "I wasn't able to find a command with this name. <:blobthinking:317028940885524490>",
+      "add-command-already-exists": "There is already a command with this keyword. <:blobweary:317036265071575050>"
     },
     "reactionpolls": {
-      "create-too-many-reactions": "You can only add up to 20 possible reactions. :no_good:",
-      "create-external-emote": "You can only use custom emotes from the server you are on! :warning:",
-      "refreshed-polls": "Reaction Poll Cache successfully refreshed. :clipboard:"
+      "create-too-many-reactions": "You can only add up to 20 possible reactions. <:blobnogood:317029275742109706>",
+      "create-external-emote": "You can only use custom emotes from the server you are on! <:blobsplosion:317044658213748746>",
+      "refreshed-polls": "Reaction Poll Cache successfully refreshed. <:blobgo:317034640181297163>"
     },
     "youtube": {
       "video-not-found": "I could't find that video."

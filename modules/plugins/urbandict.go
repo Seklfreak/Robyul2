@@ -24,7 +24,7 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
     session.ChannelTyping(msg.ChannelID)
 
     if content == "" {
-        session.ChannelMessageSend(msg.ChannelID, "You should pass a word to define :thinking:")
+        session.ChannelMessageSend(msg.ChannelID, "You should pass a word to define <:blobthinking:317028940885524490>")
         return
     }
 
@@ -36,7 +36,7 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
     helpers.Relax(e)
 
     if len(res) == 0 {
-        session.ChannelMessageSend(msg.ChannelID, "No results :neutral_face:")
+        session.ChannelMessageSend(msg.ChannelID, "No results <:blobneutral:317029459720929281>")
         return
     }
 

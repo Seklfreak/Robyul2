@@ -23,9 +23,9 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
     response, err := cleverbotSessions[channel].Ask(message)
     if err != nil {
         if err == cleverbot.ErrTooManyRequests {
-            msg = "I cannot talk to you right now. :speak_no_evil:\n"
+            msg = "I cannot talk to you right now. <:googlespeaknoevil:317036753074651139>\n"
         } else {
-            msg = "Error :frowning:\n```\n" + err.Error() + "\n```"
+            msg = "Error <:blobfrowningbig:317028438693117962>\n```\n" + err.Error() + "\n```"
         }
     } else {
         msg = response

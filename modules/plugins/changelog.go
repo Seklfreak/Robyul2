@@ -49,7 +49,7 @@ func (c *Changelog) Init(session *discordgo.Session) {
     if release.ExistsP("release.description") && release.Path("release.description").Data() != nil {
         c.log["body"] = release.Path("release.description").Data().(string)
     } else {
-        c.log["body"] = "No changelog provided :("
+        c.log["body"] = "No changelog provided <:blobsad:317033054931648517>"
     }
 
     c.log["body"] = strings.Replace(c.log["body"], "### New stuff", ":eight_spoked_asterisk: **NEW STUFF**", 1)

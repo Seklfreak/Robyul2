@@ -213,7 +213,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
     // Check if the user is connected to voice at all
     if vc == nil {
-        session.ChannelMessageSend(channel.ID, "You're either not in the voice-chat or I can't see you :neutral_face:")
+        session.ChannelMessageSend(channel.ID, "You're either not in the voice-chat or I can't see you <:blobneutral:317029459720929281>")
         return
     }
 
@@ -227,7 +227,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if command == "join" {
             helpers.VoiceOccupy(guild.ID, "music")
 
-            message, merr := session.ChannelMessageSend(channel.ID, ":arrows_counterclockwise: Joining...")
+            message, merr := session.ChannelMessageSend(channel.ID, "<:blobpopcorn:317046791478575111> Joining...")
 
             voiceConnection, err = session.ChannelVoiceJoin(guild.ID, vc.ID, false, false)
             if err != nil {
@@ -236,7 +236,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             }
 
             if merr == nil {
-                session.ChannelMessageEdit(channel.ID, message.ID, "Joined! :smiley:")
+                session.ChannelMessageEdit(channel.ID, message.ID, "Joined! <:googlesmile:317031693951434752>")
 
                 // Make guild connection
                 if m.guildConnections[guild.ID] == nil {
@@ -251,7 +251,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
             helpers.Relax(merr)
         } else {
-            session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff :thinking:")
+            session.ChannelMessageSend(channel.ID, "You should join the channel I'm in or make me join yours before telling me to do stuff <:blobthinking:317028940885524490>")
         }
 
         return
@@ -286,17 +286,17 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         delete(m.guildConnections, guild.ID)
         helpers.VoiceFree(guild.ID)
 
-        session.ChannelMessageSend(channel.ID, "OK, bye :frowning:")
+        session.ChannelMessageSend(channel.ID, "OK, bye <:blobfrowningbig:317028438693117962>")
         break
 
     case "play":
         if len(*playlist) == 0 {
             if len(*queue) > 0 {
-                session.ChannelMessageSend(channel.ID, "Please wait until your downloads are finished :wink:")
+                session.ChannelMessageSend(channel.ID, "Please wait until your downloads are finished <:blobwink:317030948577476608>")
                 return
             }
 
-            session.ChannelMessageSend(channel.ID, "You should add some music first :thinking:")
+            session.ChannelMessageSend(channel.ID, "You should add some music first <:blobthinking:317028940885524490>")
             return
         }
 
@@ -342,7 +342,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if len(*playlist) == 0 {
             session.ChannelMessageSend(
                 channel.ID,
-                "Seems like you cleared the Playlist. \n I don't know what's playing :neutral_face:",
+                "Seems like you cleared the Playlist. \n I don't know what's playing <:blobneutral:317029459720929281>",
             )
             return
         }
@@ -427,7 +427,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         }
 
         if match == (Song{}) {
-            session.ChannelMessageSend(channel.ID, "Sorry but there are no more songs that aren't already in your playlist :shrug:")
+            session.ChannelMessageSend(channel.ID, "Sorry but there are no more songs that aren't already in your playlist <:blobshrug:317033590292742147>")
             return
         }
 
@@ -443,13 +443,13 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
         content = strings.TrimSpace(content)
         if content == "" {
-            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link :neutral_face:")
+            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link <:blobneutral:317029459720929281>")
             helpers.Relax(err)
             return
         }
 
         if content == "" {
-            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link :neutral_face:")
+            _, err := session.ChannelMessageSend(channel.ID, "You have to send me a link <:blobneutral:317029459720929281>")
             helpers.Relax(err)
             return
         }
@@ -464,7 +464,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if strings.Contains(content, "list") ||
             strings.Contains(content, "/set") ||
             strings.Contains(content, "/mix") {
-            _, err := session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported :neutral_face:")
+            _, err := session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported <:blobneutral:317029459720929281>")
             helpers.Relax(err)
             return
         }
@@ -487,7 +487,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
 
             // If youtube-dl exits with 0 the link is valid
             if yerr != nil {
-                session.ChannelMessageSend(channel.ID, "That looks like an invalid or unspported download link :frowning:")
+                session.ChannelMessageSend(channel.ID, "That looks like an invalid or unspported download link <:blobfrowningbig:317028438693117962>")
                 return
             }
 
@@ -498,7 +498,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Exit if the link is a live stream
             // (archived live streams are allowed though)
             if json.ExistsP("is_live") && json.Path("is_live").Data().(bool) {
-                session.ChannelMessageSend(channel.ID, "Livestreams are not supported :neutral_face:")
+                session.ChannelMessageSend(channel.ID, "Livestreams are not supported <:blobneutral:317029459720929281>")
                 return
             }
 
@@ -506,7 +506,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             if json.ExistsP("_type") && json.Path("_type").Data() != nil {
                 switch json.Path("_type").Data().(string) {
                 case "playlist":
-                    session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported :neutral_face:")
+                    session.ChannelMessageSend(channel.ID, "Sorry but playlists are not supported <:blobneutral:317029459720929281>")
                     return
                 }
             }
@@ -522,7 +522,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             // Check if the video is not too long
             // Bot owners may bypass this
             if !helpers.IsBotAdmin(msg.Author.ID) && match.Duration > int((65 * time.Minute).Seconds()) {
-                session.ChannelMessageSend(channel.ID, "Whoa `"+match.Title+"` is a big video!\nPlease use something shorter :neutral_face:")
+                session.ChannelMessageSend(channel.ID, "Whoa `"+match.Title+"` is a big video!\nPlease use something shorter <:blobneutral:317029459720929281>")
                 return
             }
 
@@ -557,7 +557,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             *playlist = append(*playlist, match)
             m.guildConnections[guild.ID].Unlock()
 
-            _, err := session.ChannelMessageSend(channel.ID, "Added from cache! :ok_hand:")
+            _, err := session.ChannelMessageSend(channel.ID, "Added from cache! <:blobokhand:317032017164238848>")
             helpers.Relax(err)
             return
         }
@@ -597,7 +597,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if len(content) < 4 {
             session.ChannelMessageSend(
                 channel.ID,
-                "Kinda short search term :thinking:\nTry something longer!",
+                "Kinda short search term <:blobthinking:317028940885524490>\nTry something longer!",
             )
             return
         }
@@ -618,7 +618,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
         if err == rethink.ErrEmptyResult || len(results) == 0 {
             session.ChannelMessageSend(
                 channel.ID,
-                "No results :frowning:",
+                "No results <:blobfrowningbig:317028438693117962>",
             )
             return
         }
@@ -630,7 +630,7 @@ func (m *Music) Action(command string, content string, msg *discordgo.Message, s
             rows[i] = []string{result.Title, result.URL}
         }
 
-        session.ChannelMessageSend(channel.ID, ":mag: Search results:\n"+helpers.DrawTable(headers, rows))
+        session.ChannelMessageSend(channel.ID, "<:blobdetective:317045632856489985> Search results:\n"+helpers.DrawTable(headers, rows))
         break
     }
 }
@@ -668,7 +668,7 @@ func (m *Music) waitForSong(channel string, guild string, match Song, msg *disco
             *playlist = append(*playlist, res)
             m.guildConnections[guild].Unlock()
 
-            session.ChannelMessageSend(channel, ":ballot_box_with_check: `"+res.Title+"` finished downloading :smiley:")
+            session.ChannelMessageSend(channel, ":ballot_box_with_check: `"+res.Title+"` finished downloading <:googlesmile:317031693951434752>")
             break
         }
     }
@@ -1046,7 +1046,7 @@ func (m *Music) autoLeave(guildId string, channelId string, session *discordgo.S
         }
 
         if fellows == 1 {
-            session.ChannelMessageSend(channelId, "Where did everyone go? :frowning:")
+            session.ChannelMessageSend(channelId, "Where did everyone go? <:blobfrowningbig:317028438693117962>")
 
             voiceChannel.Disconnect()
             (*m.guildConnections[guild.ID]).CloseChannels()

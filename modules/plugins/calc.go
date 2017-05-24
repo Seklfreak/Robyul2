@@ -27,5 +27,5 @@ func (c *Calc) Action(command string, content string, msg *discordgo.Message, se
         }
     }()
 
-    session.ChannelMessageSend(msg.ChannelID, ":nerd: "+strconv.FormatFloat(calc.Solve(content), 'E', 4, 64))
+    session.ChannelMessageSend(msg.ChannelID, "<:googlenerd:317030369205682186> "+strconv.FormatFloat(calc.Solve(content), 'E', 4, 64))
 }
