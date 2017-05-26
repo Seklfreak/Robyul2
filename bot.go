@@ -123,6 +123,31 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     // We only do things in guilds.
     // Get a friend already and stop chatting with bots
     if channel.IsPrivate {
+        // Track usage
+        metrics.CleverbotRequests.Add(1)
+
+        // Mark typing
+        session.ChannelTyping(message.ChannelID)
+
+        // Prepare content for editing
+        msg := message.Content
+
+        /// Remove our @mention
+        msg = strings.Replace(msg, "<@"+session.State.User.ID+">", "", -1)
+
+        // Trim message
+        msg = strings.TrimSpace(msg)
+
+        // Resolve other @mentions before sending the message
+        for _, user := range message.Mentions {
+            msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
+        }
+
+        // Remove smileys
+        msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
+
+        // Send to cleverbot
+        helpers.CleverbotSend(session, channel.ID, msg)
         return
     }
 
