@@ -326,12 +326,13 @@ NextKeyword:
                     //fmt.Println("allowed Read: B")
                 }
                 // ignore messages if the users roles have no read permission to the channel
+            NextPermOverwrite:
                 for _, overwrite := range channel.PermissionOverwrites {
                     if overwrite.Type == "role" {
                         roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
                         if err != nil {
                             logger.ERROR.L("notifications", "error getting role: "+err.Error())
-                            continue NextKeyword
+                            continue NextPermOverwrite
                         }
                         //fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
 
@@ -379,7 +380,9 @@ NextKeyword:
                 for _, overwrite := range channel.PermissionOverwrites {
                     if overwrite.Type == "member" {
                         //memberToCheck, err := session.State.Member(channel.GuildID, overwrite.ID)
-                        //fmt.Printf("%s: %#v\n", memberToCheck.User.Username, overwrite)
+                        //if err == nil {
+                        //    fmt.Printf("%s: %#v\n", memberToCheck.User.Username, overwrite)
+                        //}
 
                         if memberToNotify.User.ID == overwrite.ID {
                             if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
