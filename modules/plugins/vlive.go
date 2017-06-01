@@ -112,7 +112,7 @@ func (r *VLive) Commands() []string {
 
 func (r *VLive) Init(session *discordgo.Session) {
     go r.checkVliveFeedsLoop()
-    logger.PLUGIN.L("VLive", "Started vlive loop (60s)")
+    logger.PLUGIN.L("VLive", "Started vlive loop (0s)")
 }
 func (r *VLive) checkVliveFeedsLoop() {
     var safeEntries VLive_Safe_Entries
@@ -219,7 +219,7 @@ func (r *VLive) checkVliveFeedsLoop() {
             safeEntries.mux.Unlock()
         }
 
-        time.Sleep(60 * time.Second)
+        time.Sleep(0 * time.Second)
     }
 }
 
