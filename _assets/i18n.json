@@ -623,7 +623,8 @@
       "reaction-embed-title": "@%s: Custom Emotes on %s",
       "reaction-embed-footer": "There are %d custom emotes on this server.",
       "user-not-found": "User not found!",
-      "memberlist-embed-footer": "There are %d members on this server.",
+      "memberlist-gathering": "Gathering the list of all members... <:blobdetective:317045632856489985>",
+      "memberlist-embed-footer": "There are %s members on this server.",
       "memberlist-embed-title": "@%s: Members on %s"
     },
     "levels": {

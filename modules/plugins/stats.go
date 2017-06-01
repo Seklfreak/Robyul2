@@ -717,6 +717,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         guild, err := session.Guild(channel.GuildID)
         helpers.Relax(err)
 
+        memberlistEmbedMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.memberlist-gathering"))
+        helpers.Relax(err)
+
         lastAfterMemberId := ""
         var allMembers []*discordgo.Member
         for {
@@ -758,11 +761,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         }
 
         memberlistEmbed := &discordgo.MessageEmbed{
-            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.memberlist-embed-footer", len(allMembers)) + footerAdditionalText},
+            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.memberlist-embed-footer", humanize.Comma(int64(len(allMembers)))) + footerAdditionalText},
         }
 
         s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
-        memberlistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, memberlistEmbed)
+        memberlistEmbedMessage, err = session.ChannelMessageEdit(msg.ChannelID, memberlistEmbedMessage.ID, "")
+        helpers.Relax(err)
+        memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
         helpers.Relax(err)
 
         if numberOfPages > 1 {
