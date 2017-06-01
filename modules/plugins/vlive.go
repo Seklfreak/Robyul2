@@ -572,10 +572,7 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
     if entry.MentionRoleID != "" {
         mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
     }
-    postText := ""
-    if vod.Url != "" {
-        postText = fmt.Sprintf("<%s>", vod.Url)
-    }
+    postText := fmt.Sprintf("<%s>", vliveChannel.Url)
     _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+postText, channelEmbed)
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
