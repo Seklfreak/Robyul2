@@ -29,6 +29,8 @@ func (s *Stats) Commands() []string {
         "voicestats",
         "emotes",
         "emojis",
+        "memberlist",
+        "members",
     }
 }
 
@@ -708,6 +710,105 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         }
 
         return
+    case "memberlist", "members": // [p]memberlist [<page #>]
+        session.ChannelTyping(msg.ChannelID)
+        channel, err := session.State.Channel(msg.ChannelID)
+        helpers.Relax(err)
+        guild, err := session.Guild(channel.GuildID)
+        helpers.Relax(err)
+
+        lastAfterMemberId := ""
+        var allMembers []*discordgo.Member
+        for {
+            members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
+            if len(members) <= 0 {
+                break
+            }
+            lastAfterMemberId = members[len(members)-1].User.ID
+            helpers.Relax(err)
+            for _, u := range members {
+                allMembers = append(allMembers, u)
+            }
+        }
+        slice.Sort(allMembers[:], func(i, j int) bool {
+            iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
+            helpers.Relax(err)
+            jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
+            helpers.Relax(err)
+            return iMemberTime.Before(jMemberTime)
+        })
+
+        numberOfPages := int(math.Ceil(float64(len(allMembers)) / float64(10)))
+        footerAdditionalText := ""
+        if numberOfPages > 1 {
+            footerAdditionalText += " Click on the arrows below to change the page."
+        }
+
+        currentPage := 1
+        args := strings.Fields(content)
+        if len(args) > 0 {
+            currentPage, err = strconv.Atoi(args[0])
+            if err != nil {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+                return
+            }
+        }
+        if currentPage > numberOfPages {
+            currentPage = 1
+        }
+
+        memberlistEmbed := &discordgo.MessageEmbed{
+            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.memberlist-embed-footer", len(allMembers)) + footerAdditionalText},
+        }
+
+        s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
+        memberlistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, memberlistEmbed)
+        helpers.Relax(err)
+
+        if numberOfPages > 1 {
+            err = session.MessageReactionAdd(msg.ChannelID, memberlistEmbedMessage.ID, "⬅")
+            helpers.Relax(err)
+            err = session.MessageReactionAdd(msg.ChannelID, memberlistEmbedMessage.ID, "➡")
+            helpers.Relax(err)
+        }
+
+        closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+            if reaction.MessageID == memberlistEmbedMessage.ID {
+                if reaction.UserID == session.State.User.ID {
+                    return
+                }
+
+                if reaction.UserID == msg.Author.ID {
+                    if reaction.Emoji.Name == "➡" {
+                        if currentPage+1 <= numberOfPages {
+                            currentPage += 1
+                            s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
+                            memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
+                            helpers.Relax(err)
+                        }
+                    } else if reaction.Emoji.Name == "⬅" {
+                        if currentPage-1 >= 1 {
+                            currentPage -= 1
+                            s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
+                            memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
+                            helpers.Relax(err)
+                        }
+                    }
+                }
+                err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                helpers.Relax(err)
+            }
+        })
+        time.Sleep(3 * time.Minute)
+        closeHandler()
+        if numberOfPages > 1 {
+            err = session.MessageReactionRemove(msg.ChannelID, memberlistEmbedMessage.ID, "⬅", session.State.User.ID)
+            helpers.Relax(err)
+            err = session.MessageReactionRemove(msg.ChannelID, memberlistEmbedMessage.ID, "➡", session.State.User.ID)
+            helpers.Relax(err)
+        }
+
+        return
     }
 }
 
@@ -730,6 +831,30 @@ func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author 
         }
         i++
         if i >= startEmoteN+9 {
+            break
+        }
+    }
+    return
+}
+
+func (r *Stats) setEmbedMemberlistPage(memberlistEmbed *discordgo.MessageEmbed, author *discordgo.User, guild *discordgo.Guild, allMembers []*discordgo.Member, pageN int, maxPagesN int) {
+    memberlistEmbed.Fields = []*discordgo.MessageEmbedField{}
+    pageText := ""
+    if maxPagesN > 1 {
+        pageText = fmt.Sprintf(" | Page %s of %s", humanize.Comma(int64(pageN)), humanize.Comma(int64(maxPagesN)))
+    }
+    memberlistEmbed.Title = helpers.GetTextF("plugins.stats.memberlist-embed-title", author.Username, guild.Name) + pageText
+    memberlistEmbed.Description = ""
+    startMemberN := (pageN - 1) * 10
+    i := startMemberN
+    for {
+        if i < len(allMembers) {
+            joinedServerTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
+            helpers.Relax(err)
+            memberlistEmbed.Description += fmt.Sprintf("%d: <@%s> joined %s\n", i+1, allMembers[i].User.ID, helpers.SinceInDaysText(joinedServerTime))
+        }
+        i++
+        if i >= startMemberN+10 {
             break
         }
     }

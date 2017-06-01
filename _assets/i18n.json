@@ -622,7 +622,9 @@
       "no-emotes": "No custom emotes on this server yet. <:blobflushed:317045406951538688>",
       "reaction-embed-title": "@%s: Custom Emotes on %s",
       "reaction-embed-footer": "There are %d custom emotes on this server.",
-      "user-not-found": "User not found!"
+      "user-not-found": "User not found!",
+      "memberlist-embed-footer": "There are %d members on this server.",
+      "memberlist-embed-title": "@%s: Members on %s"
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! <:googlenerd:317030369205682186>",
