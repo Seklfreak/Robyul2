@@ -561,7 +561,7 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
 func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
     channelEmbed := &discordgo.MessageEmbed{
         Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-upcoming", vliveChannel.Name, vod.Date),
-        URL:         vod.Url,
+        URL:         vliveChannel.Url,
         Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
         Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
         Description: fmt.Sprintf("**%s**", vod.Title),
