@@ -54,6 +54,7 @@ var (
         &plugins.Spoiler{},
         &plugins.RandomCat{},
         &plugins.RPS{},
+        &plugins.Nuke{},
     }
 
     // PluginList is the list of active plugins

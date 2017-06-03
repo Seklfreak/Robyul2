@@ -128,10 +128,12 @@ func RequireBotAdmin(msg *discordgo.Message, cb Callback) {
 
 func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText string, confirmEmojiID string, abortEmojiID string) bool {
     // send embed asking the user to confirm
-    confirmMessage, err := cache.GetSession().ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
-        Title:       GetTextF("bot.embeds.please-confirm-title", author.Username),
-        Description: confirmMessageText,
-    })
+    confirmMessage, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID,
+        "<@"+author.ID+">",
+        &discordgo.MessageEmbed{
+            Title:       GetText("bot.embeds.please-confirm-title"),
+            Description: confirmMessageText,
+        })
     if err != nil {
         cache.GetSession().ChannelMessageSend(channelID, GetTextF("bot.errors.general", err.Error()))
     }

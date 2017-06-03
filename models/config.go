@@ -30,6 +30,9 @@ type Config struct {
         UserNewlyCreatedAccount  bool
     }   `rethink:"inspect_triggers_enabled"`
     InspectsChannel string `rethink:"inspects_channel"`
+
+    NukeIsParticipating bool `rethink:"nuke_participation"`
+    NukeLogChannel      string `rethink:"nuke_channel"`
 }
 
 // Default is a helper for generating default config values
