@@ -34,6 +34,7 @@ func (m *Mod) Commands() []string {
         "search-user",
         "audit-log",
         "invites",
+        "leave-server",
     }
 }
 
@@ -819,6 +820,26 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             for _, page := range helpers.Pagify(inviteMessage, "\n") {
                 _, err := session.ChannelMessageSend(msg.ChannelID, page)
+                helpers.Relax(err)
+            }
+        })
+    case "leave-server":
+        helpers.RequireBotAdmin(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
+            args := strings.Fields(content)
+            if len(args) < 1 {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                return
+            }
+
+            targetGuild, err := session.Guild(args[0])
+            helpers.Relax(err)
+
+            if helpers.ConfirmEmbed(msg.ChannelID, msg.Author,
+                fmt.Sprintf("Are you sure you want me to leave the server `%s` (`#%s`)?",
+                    targetGuild.Name, targetGuild.ID), "✅", "🚫") {
+                session.ChannelMessageSend(msg.ChannelID, "Goodbye <:blobwave:317048219098021888>")
+                err = session.GuildLeave(targetGuild.ID)
                 helpers.Relax(err)
             }
         })

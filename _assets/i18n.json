@@ -695,7 +695,7 @@
       "onserver-banned-success": "<:blobhammer:317035118403387393> **Nuke:**\nUser `%s` (`#%s`) got banned on this server.\nUser issuing the nuke: `%s` (<@%s>)\nReason: `%s`.",
       "onserver-banned-error": ":warning: **Nuke failed:**\nUser `%s` (`#%s`) should get banned on this server, but there was an error.\nError: `%s`.\nUser issuing the nuke: `%s` (<@%s>)\nReason: `%s`.",
       "nuke-completed": "The user got banned on %d servers. <:blobsalute:317043033004703744>",
-      "already-nuked": "User got already nuked."
+      "already-nuked": "User already got nuked."
     }
   }
 }
