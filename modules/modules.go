@@ -55,6 +55,7 @@ var (
         &plugins.RandomCat{},
         &plugins.RPS{},
         &plugins.Nuke{},
+        &plugins.Dig{},
     }
 
     // PluginList is the list of active plugins
