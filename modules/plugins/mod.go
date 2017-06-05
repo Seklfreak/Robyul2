@@ -427,6 +427,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.RequireBotAdmin(msg, func() {
                     isExtendedInspect = true
                 })
+                if helpers.IsNukeMod(msg.Author.ID) {
+                    isExtendedInspect = true
+                }
                 if isExtendedInspect == false {
                     return
                 }

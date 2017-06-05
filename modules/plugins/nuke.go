@@ -27,11 +27,6 @@ func (n *Nuke) Commands() []string {
     }
 }
 
-var nukeMods = []string{
-    "116620585638821891", // Sekl
-    "134298438559858688", // Kakkela
-}
-
 func (n *Nuke) Init(session *discordgo.Session) {
     splitChooseRegex = regexp.MustCompile(`'.*?'|".*?"|\S+`)
 }
@@ -41,7 +36,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
     if len(args) >= 1 {
         switch args[0] {
         case "user": // [p]nuke user <user id/mention> "<reason>"
-            if !n.IsNukeMod(msg.Author.ID) {
+            if !helpers.IsNukeMod(msg.Author.ID) {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.no-nukemod-permissions"))
                 helpers.Relax(err)
                 return
@@ -164,7 +159,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
                     }
 
                     nukeModMentions := make([]string, 0)
-                    for _, nukeMod := range nukeMods {
+                    for _, nukeMod := range helpers.NukeMods {
                         nukeModMentions = append(nukeModMentions, "<@"+nukeMod+">")
                     }
 
@@ -242,14 +237,4 @@ func (n *Nuke) getEntryByOrCreateEmpty(key string, id string) DBNukeLogEntry {
 func (n *Nuke) setEntry(entry DBNukeLogEntry) {
     _, err := rethink.Table("nukelog").Update(entry).Run(helpers.GetDB())
     helpers.Relax(err)
-}
-
-func (n *Nuke) IsNukeMod(id string) bool {
-    for _, s := range nukeMods {
-        if s == id {
-            return true
-        }
-    }
-
-    return false
 }

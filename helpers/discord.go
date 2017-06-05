@@ -19,8 +19,22 @@ const (
 var botAdmins = []string{
     "116620585638821891", // Sekl
 }
+var NukeMods = []string{
+    "116620585638821891", // Sekl
+    "134298438559858688", // Kakkela
+}
 var adminRoleNames = []string{"Admin", "Admins"}
 var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators"}
+
+func IsNukeMod(id string) bool {
+    for _, s := range NukeMods {
+        if s == id {
+            return true
+        }
+    }
+
+    return false
+}
 
 // IsBotAdmin checks if $id is in $botAdmins
 func IsBotAdmin(id string) bool {
