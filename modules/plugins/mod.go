@@ -424,13 +424,15 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         helpers.RequireMod(msg, func() {
             isExtendedInspect := false
             if command == "inspect-extended" {
-                helpers.RequireBotAdmin(msg, func() {
+                if helpers.IsBotAdmin(msg.Author.ID) {
                     isExtendedInspect = true
-                })
+                }
                 if helpers.IsNukeMod(msg.Author.ID) {
                     isExtendedInspect = true
                 }
                 if isExtendedInspect == false {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, "You aren't allowed to do this!")
+                    helpers.Relax(err)
                     return
                 }
             }
