@@ -222,7 +222,15 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
             if reactionPoll.MaxAllowedVotes > -1 && votesOnMessage > reactionPoll.MaxAllowedVotes {
                 err := session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.APIName(), reaction.UserID)
                 if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+                        if err.Message.Code == 50013 {
+                            logger.WARNING.L("reactionpolls", fmt.Sprintf("can not remove reaction from message #%s, missing permissions", reaction.MessageID))
+                        } else {
+                            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                        }
+                    } else {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    }
                 }
                 return
             }
@@ -378,4 +386,3 @@ func (rp *ReactionPolls) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *dis
 func (rp *ReactionPolls) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
-
