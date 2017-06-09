@@ -348,21 +348,32 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         }
         rolesText := "None"
         guildRoles, err := session.GuildRoles(currentGuild.ID)
-        helpers.Relax(err)
-        isFirst := true
-        slice.Sort(guildRoles, func(i, j int) bool {
-            return guildRoles[i].Position > guildRoles[j].Position
-        })
-        for _, guildRole := range guildRoles {
-            for _, userRole := range targetMember.Roles {
-                if guildRole.ID == userRole {
-                    if isFirst == true {
-                        rolesText = fmt.Sprintf("%s", guildRole.Name)
-                    } else {
+        if err != nil {
+            if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+                if err.Message.Code == 50013 {
+                    rolesText = "Unable to gather roles"
+                } else {
+                    helpers.Relax(err)
+                }
+            } else {
+                helpers.Relax(err)
+            }
+        } else {
+            isFirst := true
+            slice.Sort(guildRoles, func(i, j int) bool {
+                return guildRoles[i].Position > guildRoles[j].Position
+            })
+            for _, guildRole := range guildRoles {
+                for _, userRole := range targetMember.Roles {
+                    if guildRole.ID == userRole {
+                        if isFirst == true {
+                            rolesText = fmt.Sprintf("%s", guildRole.Name)
+                        } else {
 
-                        rolesText += fmt.Sprintf(", %s", guildRole.Name)
+                            rolesText += fmt.Sprintf(", %s", guildRole.Name)
+                        }
+                        isFirst = false
                     }
-                    isFirst = false
                 }
             }
         }
