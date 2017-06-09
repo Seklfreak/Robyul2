@@ -454,6 +454,7 @@
     },
     "mod": {
       "deleting-messages-failed-too-old": "I can only delete messages that are under 14 days old. <:blobonfire:317034288896016384>",
+      "deleting-messages-failed-no-permissions": "I am not allowed to delete messages. <:blobnogood:317029275742109706>",
       "deleting-message-bulkdelete-confirm": "Are you sure you want to delete **%d** messages?",
       "user-muted-success": "User `%s (#%s)` has been muted. <:blobstop:317034621953114112>",
       "user-unmuted-success": "User `%s (#%s)` has been unmuted. <:blobgo:317034640181297163>",
