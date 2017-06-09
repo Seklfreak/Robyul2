@@ -435,7 +435,10 @@ NextKeyword:
 
     for _, pendingNotification := range pendingNotifications {
         dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
-        helpers.Relax(err)
+        if err != nil {
+            logger.ERROR.L("notifications", "error creating DM channel: "+err.Error())
+            continue
+        }
         keywordsTriggeredText := ""
         for i, keyword := range pendingNotification.Keywords {
             keywordsTriggeredText += fmt.Sprintf("`%s`", keyword)
