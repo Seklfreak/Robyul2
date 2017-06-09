@@ -321,7 +321,18 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 // Ban user
                 err = session.GuildBanCreate(guild.ID, targetUser.ID, days)
-                helpers.Relax(err)
+                if err != nil {
+                    if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+                        if err.Message.Code == 0 {
+                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-failed-too-low"))
+                            return
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
                 logger.INFO.L("mod", fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
             } else {
