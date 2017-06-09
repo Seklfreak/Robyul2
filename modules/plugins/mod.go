@@ -474,6 +474,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 Color:       0x0FADED,
             }
             resultMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+            helpers.Relax(err)
 
             bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, func(progressN int) {
                 resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-in-progress", progressN, len(session.State.Guilds))
