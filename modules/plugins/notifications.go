@@ -457,7 +457,10 @@ NextKeyword:
             content,
         ), "\n") {
             _, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
-            helpers.Relax(err)
+            if err != nil {
+                logger.ERROR.L("notifications", "error sending DM: "+err.Error())
+                continue
+            }
         }
         metrics.KeywordNotificationsSentCount.Add(1)
     }
