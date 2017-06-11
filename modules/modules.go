@@ -56,6 +56,7 @@ var (
         &plugins.RPS{},
         &plugins.Nuke{},
         &plugins.Dig{},
+        &plugins.Streamable{},
     }
 
     // PluginList is the list of active plugins
