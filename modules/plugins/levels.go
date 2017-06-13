@@ -367,6 +367,127 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, globalTopLevelEmbed)
                 helpers.Relax(err)
                 return
+            case "ignore":
+                    if len(args) >= 2 {
+                        switch args[1] {
+                        case "list": // [p]levels ignore list
+                            helpers.RequireMod(msg, func() {
+                                settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                                ignoredMessage := "**Ignored Users:**"
+                                if len(settings.LevelsIgnoredUserIDs) > 0 {
+                                    for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
+                                        ignoredUser, err := session.State.Member(channel.GuildID, ignoredUserID)
+                                        if err != nil {
+                                            ignoredMessage += " N/A"
+                                        } else {
+                                            ignoredMessage += " " + ignoredUser.User.Username + "#" + ignoredUser.User.Discriminator
+                                        }
+                                        if i+1 < len(settings.LevelsIgnoredUserIDs) {
+                                            ignoredMessage += ","
+                                        }
+                                    }
+                                } else {
+                                    ignoredMessage += " None"
+                                }
+
+                                ignoredMessage += "\n**Ignored Channels:**"
+                                if len(settings.LevelsIgnoredChannelIDs) > 0 {
+                                    for i, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
+                                        ignoredMessage += " <#" + ignoredChannelID + ">"
+                                        if i+1 < len(settings.LevelsIgnoredChannelIDs) {
+                                            ignoredMessage += ","
+                                        }
+                                    }
+                                } else {
+                                    ignoredMessage += " None"
+                                }
+
+                                for _, page := range helpers.Pagify(ignoredMessage, " ") {
+                                    _, err = session.ChannelMessageSend(msg.ChannelID, page)
+                                    helpers.Relax(err)
+                                }
+                                return
+                            })
+                            return
+                        case "user": // [p]levels ignore user <user>
+                            if len(args) < 3 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            helpers.RequireAdmin(msg, func() {
+                                targetUser, err = helpers.GetUserFromMention(args[2])
+                                if targetUser == nil || targetUser.ID == "" {
+                                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                    helpers.Relax(err)
+                                    return
+                                }
+
+                                settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                                for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
+                                    if ignoredUserID == targetUser.ID {
+                                        settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs[:i], settings.LevelsIgnoredUserIDs[i+1:]...)
+                                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                                        helpers.Relax(err)
+
+                                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-removed"))
+                                        helpers.Relax(err)
+                                        return
+                                    }
+                                }
+
+                                settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs, targetUser.ID)
+                                err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                                helpers.Relax(err)
+
+                                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-added"))
+                                helpers.Relax(err)
+                                return
+                            })
+                            return
+                        case "channel": // [p]levels ignore channel <channel>
+                            if len(args) < 3 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            helpers.RequireAdmin(msg, func() {
+                                targetChannel, err := helpers.GetChannelFromMention(args[2])
+                                if targetChannel == nil || targetChannel.ID == "" {
+                                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                    helpers.Relax(err)
+                                    return
+                                }
+
+                                settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                                for i, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
+                                    if ignoredChannelID == targetChannel.ID {
+                                        settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs[:i], settings.LevelsIgnoredChannelIDs[i+1:]...)
+                                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                                        helpers.Relax(err)
+
+                                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-removed"))
+                                        helpers.Relax(err)
+                                        return
+                                    }
+                                }
+
+                                settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs, targetChannel.ID)
+                                err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                                helpers.Relax(err)
+
+                                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-added"))
+                                helpers.Relax(err)
+                                return
+                            })
+                            return
+                        }
+                    }
             case "process-history": // [p]level process-history
                 helpers.RequireBotAdmin(msg, func() {
                     dmChannel, err := session.UserChannelCreate(msg.Author.ID)
@@ -594,6 +715,19 @@ func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Sessi
             return
         }
     }
+
+    settings := helpers.GuildSettingsGetCached(channel.GuildID)
+    for _, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
+        if ignoredChannelID == msg.ChannelID {
+            return
+        }
+    }
+    for _, ignoredUserID := range settings.LevelsIgnoredUserIDs {
+        for ignoredUserID == msg.Author.ID {
+            return
+        }
+    }
+
     // check if bucket is empty
     if !m.BucketHasKeys(channel.GuildID + msg.Author.ID) {
         //m.BucketSet(channel.GuildID+msg.Author.ID, -1)

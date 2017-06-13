@@ -635,7 +635,11 @@
       "top-server-embed-title": "Top #10",
       "global-top-server-embed-title": "Global Top #10",
       "user-embed-title": "Stats for %s",
-      "embed-footer": "Robyul is currently on %d servers."
+      "embed-footer": "Robyul is currently on %d servers.",
+      "ignore-user-removed": "I will start calculating EXP for this user again.",
+      "ignore-user-added": "I will no longer calculate EXP for this user. Use `_levels reset user <user>` to reset their EXP.",
+      "ignore-channel-removed": "I will start calculating EXP for this channel again.",
+      "ignore-channel-added": "I will no longer calculate EXP for this channel."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

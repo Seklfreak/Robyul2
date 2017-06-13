@@ -33,6 +33,9 @@ type Config struct {
 
     NukeIsParticipating bool `rethink:"nuke_participation"`
     NukeLogChannel      string `rethink:"nuke_channel"`
+
+    LevelsIgnoredUserIDs []string `rethink:"levels_ignored_user_ids"`
+    LevelsIgnoredChannelIDs []string `rethink:"levels_ignored_channel_ids"`
 }
 
 // Default is a helper for generating default config values
