@@ -396,6 +396,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         return
                     }
                 }
+                return
             case "ignore":
                     if len(args) >= 2 {
                         switch args[1] {
@@ -517,6 +518,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             return
                         }
                     }
+                return
             case "process-history": // [p]level process-history
                 helpers.RequireBotAdmin(msg, func() {
                     dmChannel, err := session.UserChannelCreate(msg.Author.ID)
