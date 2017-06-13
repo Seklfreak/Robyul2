@@ -431,21 +431,25 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
                 ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
             }
         } else {
-            ranks[i].Title = doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_song > div.ichart_score2_song1", i*4)).Text()
-            ranks[i].Artist = doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_artist > div.ichart_score2_artist1", i*4)).Text()
-            ranks[i].Album = doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_song > div.ichart_score2_song2 > span > a", i*4)).Text()
+            itemDoc := goquery.NewDocumentFromNode(doc.Find("#content > div.spage_intistore_body > div.spage_score_item").Get(i - 1))
+            ranks[i].Title = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song1").Text()
+            ranks[i].Artist = itemDoc.Find("div.ichart_score2_artist > div.ichart_score2_artist1").Text()
+            ranks[i].Album = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song2 > span > a").Text()
             ranks[i].PastRank = ranks[i].CurrentRank
-            if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow1", i*4)).Nodes) > 0 {
-                pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow1", i*4)).Parent().Text())
+            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes)
+            if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes) > 0 {
+                pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
             }
-            if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow2", i*4)).Nodes) > 0 {
-                pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow2", i*4)).Parent().Text())
+            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes)
+            if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes) > 0 {
+                pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
             }
-            if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow4", i*4)).Nodes) > 0 {
+            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes)
+            if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes) > 0 {
                 ranks[i].IsNew = true
             }
         }
@@ -486,21 +490,25 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
                 ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
             }
         } else {
-            ranks[i].Title = doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_song > div.ichart_score2_song1", i*4)).Text()
-            ranks[i].Artist = doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_artist > div.ichart_score2_artist1", i*4)).Text()
-            ranks[i].Album = doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_song > div.ichart_score2_song2 > span > a", i*4)).Text()
+            itemDoc := goquery.NewDocumentFromNode(doc.Find("#content > div.spage_intistore_body > div.spage_score_item").Get(i - 1))
+            ranks[i].Title = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song1").Text()
+            ranks[i].Artist = itemDoc.Find("div.ichart_score2_artist > div.ichart_score2_artist1").Text()
+            ranks[i].Album = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song2 > span > a").Text()
             ranks[i].PastRank = ranks[i].CurrentRank
-            if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow1", i*4)).Nodes) > 0 {
-                pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow1", i*4)).Parent().Text())
+            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes)
+            if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes) > 0 {
+                pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
             }
-            if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow2", i*4)).Nodes) > 0 {
-                pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow2", i*4)).Parent().Text())
+            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes)
+            if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes) > 0 {
+                pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
             }
-            if len(doc.Find(fmt.Sprintf("#content > div.spage_intistore_body > div.spage_score_bottom > div:nth-child(%d) > div.ichart_score2_change.rank > .arrow4", i*4)).Nodes) > 0 {
+            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes)
+            if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes) > 0 {
                 ranks[i].IsNew = true
             }
         }
