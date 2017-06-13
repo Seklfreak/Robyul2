@@ -367,6 +367,35 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, globalTopLevelEmbed)
                 helpers.Relax(err)
                 return
+            case "reset":
+                if len(args) >= 2 {
+                    switch args[1] {
+                    case "user": // [p]levels reset user <user>
+                        if len(args) < 3 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                            helpers.Relax(err)
+                            return
+                        }
+
+                        helpers.RequireAdmin(msg, func() {
+                            targetUser, err = helpers.GetUserFromMention(args[2])
+                            if targetUser == nil || targetUser.ID == "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, targetUser.ID)
+                            levelsServerUser.Exp = 0
+                            m.setLevelsServerUser(levelsServerUser)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.user-resetted"))
+                            helpers.Relax(err)
+                            return
+                        })
+                        return
+                    }
+                }
             case "ignore":
                     if len(args) >= 2 {
                         switch args[1] {
