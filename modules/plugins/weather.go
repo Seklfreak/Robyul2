@@ -8,7 +8,6 @@ import (
     "github.com/bwmarrin/discordgo"
     "net/url"
     "strconv"
-    "time"
 )
 
 type Weather struct{}
@@ -156,22 +155,8 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
             strconv.FormatFloat(darkSkyForecast.Currently.Humidity*100, 'f', 0, 64),
         ),
         Fields: []*discordgo.MessageEmbedField{
-            {Name: helpers.GetText("plugins.weather.week-title"), Value: fmt.Sprintf("**%s**", darkSkyForecast.Daily.Summary), Inline: false}},
+            {Name: helpers.GetText("plugins.weather.week-title"), Value: darkSkyForecast.Daily.Summary, Inline: false}},
         Color: helpers.GetDiscordColorFromHex(darkSkyHexColor),
-    }
-
-    shownDays := 0
-    for _, dayForecast := range darkSkyForecast.Daily.Data {
-        dayTime := time.Unix(int64(dayForecast.Time+(darkSkyForecast.Offset*3600)), 0)
-        weatherEmbed.Fields = append(weatherEmbed.Fields, &discordgo.MessageEmbedField{
-            Name:   dayTime.Weekday().String(),
-            Value:  dayForecast.Summary,
-            Inline: true,
-        })
-        shownDays += 1
-        if shownDays >= 3 {
-            break
-        }
     }
 
     _, err = session.ChannelMessageSendEmbed(msg.ChannelID, weatherEmbed)
