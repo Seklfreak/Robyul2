@@ -35,7 +35,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     go helpers.GuildSettingsUpdater()
 
     // Run async game-changer
-    //go changeGameInterval(session)
+    go changeGameInterval(session)
 
     // Run auto-leaver for non-beta guilds
     //go autoLeaver(session)
@@ -332,11 +332,29 @@ func sendHelp(message *discordgo.MessageCreate) {
 // Changes the game interval every 10 seconds after called
 func changeGameInterval(session *discordgo.Session) {
     for {
-        err := session.UpdateStatus(0, helpers.GetText("games"))
+        users := make(map[string]string)
+        guilds := session.State.Guilds
+
+        for _, guild := range guilds {
+            lastAfterMemberId := ""
+            for {
+                members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
+                if len(members) <= 0 {
+                    break
+                }
+                lastAfterMemberId = members[len(members)-1].User.ID
+                helpers.Relax(err)
+                for _, u := range members {
+                    users[u.User.ID] = u.User.Username
+                }
+            }
+        }
+
+        err := session.UpdateStatus(0, fmt.Sprintf("with %d people on %d servers", len(users), len(guilds)))
         if err != nil {
             raven.CaptureError(err, map[string]string{})
         }
 
-        time.Sleep(10 * time.Second)
+        time.Sleep(1 * time.Hour)
     }
 }
