@@ -96,6 +96,11 @@ func (w *Weather) Init(session *discordgo.Session) {
 func (w *Weather) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     session.ChannelTyping(msg.ChannelID)
 
+    if content == "" {
+        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+        return
+    }
+
     geocodingUrl := fmt.Sprintf(googleMapsGeocodingEndpoint,
         helpers.GetConfig().Path("google.api_key").Data().(string),
         url.QueryEscape(content),

@@ -101,6 +101,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             messagesToDeleteIds = append(messagesToDeleteIds, msg.ID)
                         }
 
+                        messagesToDeleteIds = m.removeDuplicates(messagesToDeleteIds)
+
                         if len(messagesToDeleteIds) <= 10 {
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
                             logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
@@ -192,6 +194,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                                 break
                             }
                         }
+
+                        messagesToDeleteIds = m.removeDuplicates(messagesToDeleteIds)
 
                         if len(messagesToDeleteIds) <= 10 {
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
@@ -1137,4 +1141,21 @@ func (m *Mod) Min(a, b int) int {
         return a
     }
     return b
+}
+
+// https://www.dotnetperls.com/duplicates-go
+func (m *Mod) removeDuplicates(elements []string) []string {
+    encountered := map[string]bool{}
+
+    // Create a map of all unique elements.
+    for v:= range elements {
+        encountered[elements[v]] = true
+    }
+
+    // Place all keys from the map into a slice.
+    result := []string{}
+    for key, _ := range encountered {
+        result = append(result, key)
+    }
+    return result
 }

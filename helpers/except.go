@@ -45,7 +45,7 @@ func Relax(err error) {
     if err != nil {
         if DEBUG_MODE == true {
             if err, ok := err.(*discordgo.RESTError); ok && err != nil && err.Message != nil {
-                fmt.Println(err.Message.Code, err.Message.Message)
+                fmt.Println(strconv.Itoa(err.Message.Code)+":", err.Message.Message)
             } else {
                 fmt.Println(err)
             }
