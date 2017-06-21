@@ -93,7 +93,7 @@ func GuildSettingsGet(guild string) (models.Config, error) {
     var cursor *rethink.Cursor
     var err error
 
-    cursor, err = rethink.Table("guild_configs").Filter(map[string]interface{}{"guild": guild}).Run(GetDB())
+    cursor, err = rethink.Table("guild_configs").Filter(rethink.Row.Field("guild").Eq(guild)).Run(GetDB())
     defer cursor.Close()
 
     if err != nil {
