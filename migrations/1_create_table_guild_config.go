@@ -8,5 +8,5 @@ import (
 func m1_create_table_guild_config() {
     CreateTableIfNotExists("guild_configs")
 
-    rethink.Table("levels_serverusers").IndexCreate("guild").Run(helpers.GetDB())
+    rethink.Table("guild_configs").IndexCreate("guild").Run(helpers.GetDB())
 }

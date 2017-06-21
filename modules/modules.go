@@ -3,6 +3,7 @@ package modules
 import (
     "github.com/Seklfreak/Robyul2/modules/plugins"
     //"github.com/Seklfreak/Robyul2/modules/triggers"
+    "github.com/Seklfreak/Robyul2/modules/triggers"
 )
 
 var (
@@ -74,6 +75,7 @@ var (
 
     // TriggerPluginList is the list of plugins that activate on normal chat
     TriggerPluginList = []TriggerPlugin{
+        &triggers.Donators{},
         //&triggers.CSS{},
         //&triggers.Donate{},
         //&triggers.Git{},
