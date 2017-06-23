@@ -170,7 +170,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 return
             })
         case "refresh": // [p]gallery refresh
-            helpers.RequireAdmin(msg, func() {
+            helpers.RequireBotAdmin(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 galleries = g.GetGalleries()
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.refreshed-config"))
