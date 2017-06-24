@@ -110,6 +110,7 @@ type GenericSongScore struct {
     CurrentRank int
     PastRank    int
     IsNew       bool
+    MusicVideoUrl string
 }
 type GenericAlbumScore struct {
     Artist      string
@@ -226,9 +227,14 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                         rankChange += ":new:"
                     }
 
+                    chartsFieldValue := fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album)
+                    if song.MusicVideoUrl != "" {
+                        chartsFieldValue = fmt.Sprintf("[%s](%s)", chartsFieldValue, song.MusicVideoUrl)
+                    }
+
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-                        Value: fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album),
+                        Value: chartsFieldValue,
                     })
                 }
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
@@ -254,10 +260,14 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     if song.IsNew == true {
                         rankChange += ":new:"
                     }
+                    chartsFieldValue := fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album)
+                    if song.MusicVideoUrl != "" {
+                        chartsFieldValue = fmt.Sprintf("[%s](%s)", chartsFieldValue, song.MusicVideoUrl)
+                    }
 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-                        Value: fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album),
+                        Value: chartsFieldValue,
                     })
                 }
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
@@ -420,6 +430,9 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
             ranks[i].Album = doc.Find("#score_1st > div.ichart_score_song > div.ichart_score_song2 > span > a").Text()
             helpers.Relax(err)
             ranks[i].PastRank = ranks[i].CurrentRank
+            if musicVideoUrl, ok := doc.Find("#yttop").Attr("href"); ok {
+                ranks[i].MusicVideoUrl = m.IChartHrefExtractMVUrl(musicVideoUrl)
+            }
             if len(doc.Find("#score_1st > div.ichart_score_change.rank > .arrow1").Nodes) > 0 {
                 pastRankUncalculated, err := strconv.Atoi(doc.Find("#score_1st > div.ichart_score_change.rank > .arrow1").Parent().Text())
                 helpers.Relax(err)
@@ -432,23 +445,24 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
             }
         } else {
             itemDoc := goquery.NewDocumentFromNode(doc.Find("#content > div.spage_intistore_body > div.spage_score_item").Get(i - 1))
+            submenuDoc := goquery.NewDocumentFromNode(doc.Find("#content > div.spage_intistore_body > div.ichart_submenu").Get(i - 1))
             ranks[i].Title = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song1").Text()
             ranks[i].Artist = itemDoc.Find("div.ichart_score2_artist > div.ichart_score2_artist1").Text()
             ranks[i].Album = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song2 > span > a").Text()
             ranks[i].PastRank = ranks[i].CurrentRank
-            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes)
+            if musicVideoUrl, ok := submenuDoc.Find("ul > li.ichart_mv > a").Attr("href"); ok {
+                ranks[i].MusicVideoUrl = m.IChartHrefExtractMVUrl(musicVideoUrl)
+            }
             if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes) > 0 {
                 pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
             }
-            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes)
             if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes) > 0 {
                 pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
             }
-            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes)
             if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes) > 0 {
                 ranks[i].IsNew = true
             }
@@ -456,6 +470,16 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
     }
 
     return time, ranks
+}
+
+func (m *Charts) IChartHrefExtractMVUrl(musicVideoUrl string) string {
+    if strings.Contains(musicVideoUrl, "javascript:show_youtube") {
+        parts := strings.Split(musicVideoUrl, "'")
+        if len(parts) == 3 {
+            return "https://youtu.be/" + parts[1]
+        }
+    }
+    return ""
 }
 
 func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
@@ -479,6 +503,9 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
             ranks[i].Album = doc.Find("#score_1st > div.ichart_score_song > div.ichart_score_song2 > span > a").Text()
             helpers.Relax(err)
             ranks[i].PastRank = ranks[i].CurrentRank
+            if musicVideoUrl, ok := doc.Find("#yttop").Attr("href"); ok {
+                ranks[i].MusicVideoUrl = m.IChartHrefExtractMVUrl(musicVideoUrl)
+            }
             if len(doc.Find("#score_1st > div.ichart_score_change.rank > .arrow1").Nodes) > 0 {
                 pastRankUncalculated, err := strconv.Atoi(doc.Find("#score_1st > div.ichart_score_change.rank > .arrow1").Parent().Text())
                 helpers.Relax(err)
@@ -491,23 +518,24 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
             }
         } else {
             itemDoc := goquery.NewDocumentFromNode(doc.Find("#content > div.spage_intistore_body > div.spage_score_item").Get(i - 1))
+            submenuDoc := goquery.NewDocumentFromNode(doc.Find("#content > div.spage_intistore_body > div.ichart_submenu").Get(i - 1))
             ranks[i].Title = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song1").Text()
             ranks[i].Artist = itemDoc.Find("div.ichart_score2_artist > div.ichart_score2_artist1").Text()
             ranks[i].Album = itemDoc.Find("div.ichart_score2_song > div.ichart_score2_song2 > span > a").Text()
             ranks[i].PastRank = ranks[i].CurrentRank
-            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes)
+            if musicVideoUrl, ok := submenuDoc.Find("ul > li.ichart_mv > a").Attr("href"); ok {
+                ranks[i].MusicVideoUrl = m.IChartHrefExtractMVUrl(musicVideoUrl)
+            }
             if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow1").Nodes) > 0 {
                 pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
             }
-            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes)
             if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow2").Nodes) > 0 {
                 pastRankUncalculated, err := strconv.Atoi(itemDoc.Find("div.ichart_score2_change.rank").Text())
                 helpers.Relax(err)
                 ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
             }
-            fmt.Println(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes)
             if len(itemDoc.Find("div.ichart_score2_change.rank > .arrow4").Nodes) > 0 {
                 ranks[i].IsNew = true
             }
