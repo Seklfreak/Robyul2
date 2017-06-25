@@ -207,7 +207,14 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
             switch args[0] {
             case "realtime":
                 session.ChannelTyping(msg.ChannelID)
-                time, songRanks := m.GetIChartRealtimeStats()
+                time, songRanks, maintenance := m.GetIChartRealtimeStats()
+
+                if maintenance == true {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
+                    helpers.Relax(err)
+                    return
+                }
+
                 chartsEmbed := &discordgo.MessageEmbed{
                     Title:  helpers.GetTextF("plugins.charts.realtime-ichart-embed-title", time),
                     URL:    ichartFriendlyRealtimeStats,
@@ -241,7 +248,14 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 helpers.Relax(err)
             case "week", "weekly":
                 session.ChannelTyping(msg.ChannelID)
-                time, songRanks := m.GetIChartWeekStats()
+                time, songRanks, maintenance := m.GetIChartWeekStats()
+
+                if maintenance == true {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
+                    helpers.Relax(err)
+                    return
+                }
+
                 chartsEmbed := &discordgo.MessageEmbed{
                     Title:  helpers.GetTextF("plugins.charts.week-ichart-embed-title", time),
                     URL:    ichartFriendlyWeeklyStats,
@@ -409,12 +423,17 @@ func (m *Charts) DoMelonRequest(endpoint string) []byte {
     return buf.Bytes()
 }
 
-func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
+func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore, bool) {
     doc, err := goquery.NewDocument(ichartPageRealtimeCharts)
     helpers.Relax(err)
 
-    time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
     var ranks []GenericSongScore
+
+    if m.IChartInMaintenance(doc) == true {
+        return "", ranks, true
+    }
+
+    time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
     for i := 0; i < 10; i++ {
         ranks = append(ranks,
             GenericSongScore{
@@ -469,7 +488,17 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore) {
         }
     }
 
-    return time, ranks
+    return time, ranks, false
+}
+
+func (m *Charts) IChartInMaintenance(doc *goquery.Document) bool {
+    isMaintenance := false
+    doc.Find("script").Each(func(_ int, s *goquery.Selection) {
+        if strings.Contains(s.Text(), "www.instiz.net/index.htm") { // maintenance
+            isMaintenance = true
+        }
+    })
+    return isMaintenance
 }
 
 func (m *Charts) IChartHrefExtractMVUrl(musicVideoUrl string) string {
@@ -482,12 +511,17 @@ func (m *Charts) IChartHrefExtractMVUrl(musicVideoUrl string) string {
     return ""
 }
 
-func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
+func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore, bool) {
     doc, err := goquery.NewDocument(ichartPageWeeklyCharts)
     helpers.Relax(err)
 
-    time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
     var ranks []GenericSongScore
+
+    if m.IChartInMaintenance(doc) == true {
+        return "", ranks, true
+    }
+
+    time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
     for i := 0; i < 10; i++ {
         ranks = append(ranks,
             GenericSongScore{
@@ -542,7 +576,7 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore) {
         }
     }
 
-    return time, ranks
+    return time, ranks, false
 }
 
 func (m *Charts) GetGaonWeekStats() (string, []GenericAlbumScore) {
