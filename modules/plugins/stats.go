@@ -254,6 +254,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             emoteText += fmt.Sprintf(" (%d in Total)", emoteN)
         }
 
+        numberOfRoles := 0
+        for _, role := range guild.Roles {
+            if role.Name != "@everyone" {
+                numberOfRoles += 1
+            }
+        }
+
         serverinfoEmbed := &discordgo.MessageEmbed{
             Color:       0x0FADED,
             Title:       guild.Name,
@@ -264,7 +271,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 {Name: "Users", Value: fmt.Sprintf("%d/%d", online, len(users)), Inline: true},
                 {Name: "Text Channels", Value: strconv.Itoa(textChannels), Inline: true},
                 {Name: "Voice Channels", Value: strconv.Itoa(voiceChannels), Inline: true},
-                {Name: "Roles", Value: strconv.Itoa(len(guild.Roles)), Inline: true},
+                {Name: "Roles", Value: strconv.Itoa(numberOfRoles), Inline: true},
                 {Name: "Owner", Value: ownerText, Inline: true},
                 {Name: "Emotes", Value: emoteText, Inline: false},
             },
