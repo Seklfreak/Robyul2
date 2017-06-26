@@ -590,10 +590,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             if voiceStateWithTime.VoiceState.GuildID == channel.GuildID && voiceStateWithTime.VoiceState.UserID == targetUser.ID {
                 //duration := time.Since(voiceStateWithTime.JoinTimeUtc)
                 currentVoiceChannel, err := session.Channel(voiceStateWithTime.VoiceState.ChannelID)
-                helpers.Relax(err)
-                currentConnectionText = fmt.Sprintf("Connected to **<#%s>** since **%s**",
-                    currentVoiceChannel.ID,
-                    helpers.HumanizedTimesSinceText(voiceStateWithTime.JoinTimeUtc))
+                if err == nil {
+                    currentConnectionText = fmt.Sprintf("Connected to **<#%s>** since **%s**",
+                        currentVoiceChannel.ID,
+                        helpers.HumanizedTimesSinceText(voiceStateWithTime.JoinTimeUtc))
+                }
             }
         }
 
@@ -642,12 +643,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             for voiceChannelID, voiceChannelDuration := range voiceChannelsDuration {
                 if voiceChannelID == guildChannel.ID {
                     voiceChannel, err := session.Channel(voiceChannelID)
-                    helpers.Relax(err)
-                    voicestatsEmbed.Fields = append(voicestatsEmbed.Fields, &discordgo.MessageEmbedField{
-                        Name:   fmt.Sprintf("Total duration connected to #%s", voiceChannel.Name),
-                        Value:  fmt.Sprintf("%s", helpers.HumanizedTimesSinceText(time.Now().UTC().Add(voiceChannelDuration))),
-                        Inline: false,
-                    })
+                    if err == nil {
+                        voicestatsEmbed.Fields = append(voicestatsEmbed.Fields, &discordgo.MessageEmbedField{
+                            Name:   fmt.Sprintf("Total duration connected to #%s", voiceChannel.Name),
+                            Value:  fmt.Sprintf("%s", helpers.HumanizedTimesSinceText(time.Now().UTC().Add(voiceChannelDuration))),
+                            Inline: false,
+                        })
+                    }
                 }
             }
         }
