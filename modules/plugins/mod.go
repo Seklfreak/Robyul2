@@ -35,6 +35,7 @@ func (m *Mod) Commands() []string {
         "audit-log",
         "invites",
         "leave-server",
+        "say",
     }
 }
 
@@ -271,6 +272,21 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     }
                     err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
                     helpers.Relax(err)
+
+                    settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                    alreadyMutedInSettings := false
+                    for _, mutedMember := range settings.MutedMembers {
+                        if mutedMember == targetUser.ID {
+                            alreadyMutedInSettings = true
+                        }
+                    }
+                    if alreadyMutedInSettings == false {
+                        settings.MutedMembers = append(settings.MutedMembers, targetUser.ID)
+                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                        helpers.Relax(err)
+                    }
+
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
                 }
             } else {
@@ -282,20 +298,54 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
             if len(args) >= 2 {
-                targetUser, err := helpers.GetUserFromMention(args[1])
-                if err != nil {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                    return
+                targetUser, _ := helpers.GetUserFromMention(args[1])
+                if targetUser == nil {
+                    targetUser = new(discordgo.User)
+                    targetUser.ID = args[1]
+                    targetUser.Username = "N/A"
                 }
                 switch args[0] {
-                case "server":
+                case "server", "global":
                     channel, err := session.Channel(msg.ChannelID)
                     helpers.Relax(err)
                     muteRole, err := helpers.GetMuteRole(channel.GuildID)
                     helpers.Relax(err)
                     err = session.GuildMemberRoleRemove(channel.GuildID, targetUser.ID, muteRole.ID)
-                    helpers.Relax(err)
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
+                    roleRemoved := true
+                    if err != nil {
+                        roleRemoved = false
+                        if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code != 0 {
+                            if err.Message.Code != 10007 && err.Message.Code != 10013 {
+                                helpers.Relax(err)
+                            }
+                        } else if err.Response.StatusCode != 400 {
+                            helpers.Relax(err)
+                        }
+                    }
+
+                    settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                    removedFromDb := false
+                    newMutedMembers := make([]string, 0)
+                    for _, mutedMember := range settings.MutedMembers {
+                        if mutedMember != targetUser.ID {
+                            newMutedMembers = append(newMutedMembers, mutedMember)
+                        } else {
+                            removedFromDb = true
+                        }
+                    }
+
+                    if removedFromDb {
+                        settings.MutedMembers = newMutedMembers
+                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                        helpers.Relax(err)
+                    }
+
+                    if !removedFromDb && !roleRemoved {
+                        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-unmuted-error"))
+                    } else {
+                        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
+                    }
                 }
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
@@ -446,7 +496,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
             }
         })
-    case "echo": // [p]echo <channel> <message>
+    case "echo", "say": // [p]echo <channel> <message>
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
             if len(args) >= 2 {
@@ -950,6 +1000,24 @@ func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
 
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
     go func() {
+        settings := helpers.GuildSettingsGetCached(member.GuildID)
+
+        for _, mutedMember := range settings.MutedMembers {
+            if mutedMember == member.User.ID {
+                muteRole, err := helpers.GetMuteRole(member.GuildID)
+                if err != nil {
+                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    return
+                }
+                err = session.GuildMemberRoleAdd(member.GuildID, member.User.ID, muteRole.ID)
+                if err != nil {
+                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    return
+                }
+            }
+        }
+    }()
+    go func() {
         if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
             helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
             helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount {
@@ -1154,7 +1222,7 @@ func (m *Mod) removeDuplicates(elements []string) []string {
 
     // Place all keys from the map into a slice.
     result := []string{}
-    for key, _ := range encountered {
+    for key := range encountered {
         result = append(result, key)
     }
     return result
