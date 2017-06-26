@@ -517,7 +517,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
                     return
                 }
-                session.ChannelMessageSend(targetChannel.ID, strings.Join(args[1:], " "))
+
+                newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+                session.ChannelMessageSend(targetChannel.ID, newText)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
                 return
@@ -547,7 +549,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         helpers.Relax(err)
                     }
                 }
-                session.ChannelMessageEdit(targetChannel.ID, targetMessage.ID, strings.Join(args[2:], " "))
+                newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+                session.ChannelMessageEdit(targetChannel.ID, targetMessage.ID, newText)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
