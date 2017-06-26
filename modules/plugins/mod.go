@@ -549,7 +549,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         helpers.Relax(err)
                     }
                 }
-                newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+                newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
                 session.ChannelMessageEdit(targetChannel.ID, targetMessage.ID, newText)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
