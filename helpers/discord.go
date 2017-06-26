@@ -10,6 +10,7 @@ import (
     "strings"
     "strconv"
     "fmt"
+    "github.com/Seklfreak/Robyul2/logger"
 )
 
 const (
@@ -203,8 +204,13 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
         for _, channel := range guild.Channels {
             err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
             if err != nil {
-                return muteRole, err
+                logger.ERROR.L("discord", "Error disabling send messages on mute Role: " + err.Error())
             }
+            // TODO: update discordgo
+            //err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionAddReactions)
+            //if err != nil {
+            //    logger.ERROR.L("discord", "Error disabling add reactions on mute Role: " + err.Error())
+            //}
         }
     }
     return muteRole, nil

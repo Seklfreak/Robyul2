@@ -251,6 +251,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "mute": // [p]mute server <User>
         helpers.RequireMod(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
             args := strings.Fields(content)
             if len(args) >= 2 {
                 targetUser, err := helpers.GetUserFromMention(args[1])
@@ -265,7 +266,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     muteRole, err := helpers.GetMuteRole(channel.GuildID)
                     if err != nil {
                         if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.mod.get-mute-role-no-permissions"))
+                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.get-mute-role-no-permissions"))
+                            return
                         } else {
                             helpers.Relax(err)
                         }
@@ -296,6 +298,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
     case "unmute": // [p]unmute server <User>
         helpers.RequireMod(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
             args := strings.Fields(content)
             if len(args) >= 2 {
                 targetUser, _ := helpers.GetUserFromMention(args[1])
