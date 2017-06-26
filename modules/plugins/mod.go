@@ -15,6 +15,7 @@ import (
     "github.com/renstrom/fuzzysearch/fuzzy"
     "github.com/Jeffail/gabs"
     "github.com/bradfitz/slice"
+    "bytes"
 )
 
 type Mod struct{}
@@ -36,6 +37,8 @@ func (m *Mod) Commands() []string {
         "invites",
         "leave-server",
         "say",
+        "edit",
+        "upload",
     }
 }
 
@@ -507,16 +510,68 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
                 targetChannel, err := helpers.GetChannelFromMention(args[0])
                 if err != nil || targetChannel.ID == "" {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     return
                 }
                 if sourceChannel.GuildID != targetChannel.GuildID {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.echo-error-wrong-server"))
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
                     return
                 }
                 session.ChannelMessageSend(targetChannel.ID, strings.Join(args[1:], " "))
             } else {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                return
+            }
+        })
+    case "edit": // [p]edit <channel> <message id> <message>
+        helpers.RequireAdmin(msg, func() {
+            args := strings.Fields(content)
+            if len(args) >= 3 {
+                sourceChannel, err := session.Channel(msg.ChannelID)
+                helpers.Relax(err)
+                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                if err != nil || targetChannel.ID == "" {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    return
+                }
+                if sourceChannel.GuildID != targetChannel.GuildID {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+                    return
+                }
+                targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+                if err != nil {
+                    if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10008 {
+                        session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+                        return
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
+                session.ChannelMessageEdit(targetChannel.ID, targetMessage.ID, strings.Join(args[2:], " "))
+            } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+                return
+            }
+        })
+    case "upload": // [p]upload <channel> + UPLOAD
+        helpers.RequireMod(msg, func() {
+            args := strings.Fields(content)
+            if len(args) >= 1 && len(msg.Attachments) > 0 {
+                fileToUpload := helpers.NetGet(msg.Attachments[0].URL)
+                sourceChannel, err := session.Channel(msg.ChannelID)
+                helpers.Relax(err)
+                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                if err != nil || targetChannel.ID == "" {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    return
+                }
+                if sourceChannel.GuildID != targetChannel.GuildID {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+                    return
+                }
+                session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
+            } else {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
                 return
             }
         })
