@@ -17,11 +17,13 @@ type Charts struct{}
 
 const (
     melonEndpointCharts         string = "http://apis.skplanetx.com/melon/charts/%s?version=1&page=1&count=10"
-    melonEndpointSongSearch     string = "http://apis.skplanetx.com/melon/songs?version=1&page=1&count=1&searchKeyword=%s"
+    melonEndpointSongSearch     string = "http://apis.skplanetx.com/melon/songs?version=1&page=1&count=2&searchKeyword=%s"
+    melonEndpointArtistSearch     string = "http://apis.skplanetx.com/melon/artists?version=1&page=1&count=2&searchKeyword=%s"
+    melonEndpointAlbumSearch     string = "http://apis.skplanetx.com/melon/albums?version=1&page=1&count=2&searchKeyword=%s"
     melonFriendlyRealtimeStats  string = "http://www.melon.com/chart/index.htm"
     melonFriendlyDailyStats     string = "http://www.melon.com/chart/day/index.htm"
     melonFriendlySongDetails    string = "http://www.melon.com/song/detail.htm?songId=%s"
-    melonFriendlyArtistDetails  string = "http://www.melon.com/artist/timeline.htm?artistId=%d"
+    melonFriendlyArtistDetails  string = "http://www.melon.com/artist/detail.htm?artistId=%d"
     melonFriendlyAlbumDetails   string = "http://www.melon.com/album/detail.htm?albumId=%d"
     ichartPageRealtimeCharts    string = "http://www.instiz.net/iframe_ichart_score.htm?real=1"
     ichartPageWeeklyCharts      string = "http://www.instiz.net/iframe_ichart_score.htm?week=1"
@@ -137,6 +139,50 @@ type MelonSearchSongResults struct {
     } `json:"melon"`
 }
 
+type MelonSearchArtistsResults struct {
+    Melon struct {
+        MenuID int `json:"menuId"`
+        Count int `json:"count"`
+        Page int `json:"page"`
+        TotalPages int `json:"totalPages"`
+        TotalCount int `json:"totalCount"`
+        Artists struct {
+            Artist []struct {
+                ArtistID int `json:"artistId"`
+                ArtistName string `json:"artistName"`
+                Sex string `json:"sex"`
+                NationalityName string `json:"nationalityName"`
+                ActTypeName string `json:"actTypeName"`
+                GenreNames string `json:"genreNames"`
+            } `json:"artist"`
+        } `json:"artists"`
+    } `json:"melon"`
+}
+
+type MelonSearchAlbumsResults struct {
+    Melon struct {
+        MenuID int `json:"menuId"`
+        Count int `json:"count"`
+        Page int `json:"page"`
+        TotalPages int `json:"totalPages"`
+        TotalCount int `json:"totalCount"`
+        Albums struct {
+            Album []struct {
+                AlbumID int `json:"albumId"`
+                AlbumName string `json:"albumName"`
+                Artists struct {
+                    Artist []struct {
+                        ArtistID int `json:"artistId"`
+                        ArtistName string `json:"artistName"`
+                    } `json:"artist"`
+                } `json:"artists"`
+                AverageScore string `json:"averageScore"`
+                IssueDate string `json:"issueDate"`
+            } `json:"album"`
+        } `json:"albums"`
+    } `json:"melon"`
+}
+
 type GenericSongScore struct {
     Title       string
     Artist      string
@@ -175,7 +221,6 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
                 }
                 for _, song := range realtimeStats.Melon.Songs.Song {
-                    fmt.Println(song.SongName)
                     artistText := ""
                     for i, artist := range song.Artists.Artist {
                         artistText += fmt.Sprintf("[%s](%s)",
@@ -196,7 +241,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-                        Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))]",
+                        Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))",
                             song.SongName, fmt.Sprintf(melonFriendlySongDetails, strconv.Itoa(song.SongID)),
                             artistText,
                             song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
@@ -236,7 +281,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-                        Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))]",
+                        Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))",
                             song.SongName, fmt.Sprintf(melonFriendlySongDetails, strconv.Itoa(song.SongID)),
                             artistText,
                             song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
@@ -245,9 +290,9 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
                 helpers.Relax(err)
                 return
-            default:
+            case "song":
                 session.ChannelTyping(msg.ChannelID)
-                searchString, err := helpers.UrlEncode(strings.TrimSpace(content))
+                searchString, err := helpers.UrlEncode(strings.Join(args[1:], " "))
                 helpers.Relax(err)
 
                 var searchResult MelonSearchSongResults
@@ -282,11 +327,10 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 }
 
                 songEmbed := &discordgo.MessageEmbed{
-                    Title:  helpers.GetText("plugins.charts.song-melon-embed-title"),
+                    Title:  helpers.GetText("plugins.charts.search-melon-embed-title"),
                     Description: fmt.Sprintf("[**%s**](%s) by **%s**",
                         melonSong.SongName, fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID),
                         artistText),
-                    //URL:    fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID),
                     Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
                     Fields: []*discordgo.MessageEmbedField{
                         { Name: "Album", Value: fmt.Sprintf("[%s](%s)", melonSong.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, melonSong.AlbumID)), Inline: true, },
@@ -296,6 +340,98 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 }
 
                 _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID) + ">", songEmbed)
+                helpers.Relax(err)
+                return
+            case "artist":
+                session.ChannelTyping(msg.ChannelID)
+                searchString, err := helpers.UrlEncode(strings.Join(args[1:], " "))
+                helpers.Relax(err)
+
+                var searchResult MelonSearchArtistsResults
+                result := m.DoMelonRequest(fmt.Sprintf(melonEndpointArtistSearch, searchString))
+
+                json.Unmarshal(result, &searchResult)
+
+                if searchResult.Melon.Count <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                melonArtist := searchResult.Melon.Artists.Artist[0]
+
+                genderText := "Not specified"
+                if melonArtist.Sex != "" {
+                    genderText = melonArtist.Sex
+                    if melonArtist.Sex == "M" {
+                        genderText = "Male"
+                    } else if melonArtist.Sex == "F" {
+                        genderText = "Female"
+                    }
+                }
+                genreText := "Not specified"
+                if melonArtist.GenreNames != "" {
+                    genreText = melonArtist.GenreNames
+                }
+
+                artistEmbed := &discordgo.MessageEmbed{
+                    Title:  helpers.GetText("plugins.charts.search-melon-embed-title"),
+                    Description: fmt.Sprintf("[**%s**](%s)",
+                        melonArtist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID)),
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
+                    Fields: []*discordgo.MessageEmbedField{
+                        { Name: "Gender", Value: genderText, Inline: true, },
+                        { Name: "Genres", Value: genreText, Inline: true, },
+                    },
+                    Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
+                }
+
+                _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID) + ">", artistEmbed)
+                helpers.Relax(err)
+                return
+            case "album":
+                session.ChannelTyping(msg.ChannelID)
+                searchString, err := helpers.UrlEncode(strings.Join(args[1:], " "))
+                helpers.Relax(err)
+
+                var searchResult MelonSearchAlbumsResults
+                result := m.DoMelonRequest(fmt.Sprintf(melonEndpointAlbumSearch, searchString))
+
+                json.Unmarshal(result, &searchResult)
+
+                if searchResult.Melon.Count <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                melonAlbum := searchResult.Melon.Albums.Album[0]
+
+                artistText := ""
+                for i, artist := range melonAlbum.Artists.Artist {
+                    artistText += fmt.Sprintf("[%s](%s)",
+                        artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
+                    if i+1 < len(melonAlbum.Artists.Artist) {
+                        artistText += ", "
+                    } else if (len(melonAlbum.Artists.Artist) - (i + 1)) > 0 {
+                        artistText += " and "
+                    }
+                }
+
+
+                artistEmbed := &discordgo.MessageEmbed{
+                    Title:  helpers.GetText("plugins.charts.search-melon-embed-title"),
+                    Description: fmt.Sprintf("[**%s**](%s)",
+                        melonAlbum.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID)),
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
+                    Fields: []*discordgo.MessageEmbedField{
+                        { Name: "Artists", Value: artistText, Inline: true, },
+                        { Name: "Date", Value: melonAlbum.IssueDate, Inline: true, },
+                    },
+                    Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
+                }
+
+                _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID) + ">", artistEmbed)
                 helpers.Relax(err)
                 return
             }
