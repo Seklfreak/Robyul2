@@ -19,6 +19,9 @@ const (
     melonEndpointCharts         string = "http://apis.skplanetx.com/melon/charts/%s?version=1&page=1&count=10"
     melonFriendlyRealtimeStats  string = "http://www.melon.com/chart/index.htm"
     melonFriendlyDailyStats     string = "http://www.melon.com/chart/day/index.htm"
+    melonFriendlySongDetails    string = "http://www.melon.com/song/detail.htm?songId=%d"
+    melonFriendlyArtistDetails  string = "http://www.melon.com/artist/timeline.htm?artistId=%d"
+    melonFriendlyAlbumDetails   string = "http://www.melon.com/album/detail.htm?albumId=%d"
     ichartPageRealtimeCharts    string = "http://www.instiz.net/iframe_ichart_score.htm?real=1"
     ichartPageWeeklyCharts      string = "http://www.instiz.net/iframe_ichart_score.htm?week=1"
     ichartFriendlyRealtimeStats string = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
@@ -143,7 +146,8 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 for _, song := range realtimeStats.Melon.Songs.Song {
                     artistText := ""
                     for i, artist := range song.Artists.Artist {
-                        artistText += artist.ArtistName
+                        artistText += fmt.Sprintf("[%s](%s)",
+                            artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
                         if i+1 < len(song.Artists.Artist) {
                             artistText += ", "
                         } else if (len(song.Artists.Artist) - (i + 1)) > 0 {
@@ -160,7 +164,10 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-                        Value: fmt.Sprintf("**%s** by **%s** (on %s)", song.SongName, artistText, song.AlbumName),
+                        Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))]",
+                            song.SongName, fmt.Sprintf(melonFriendlySongDetails, song.SongID),
+                            artistText,
+                            song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
                     })
                 }
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
@@ -178,7 +185,8 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 for _, song := range dailyStats.Melon.Songs.Song {
                     artistText := ""
                     for i, artist := range song.Artists.Artist {
-                        artistText += artist.ArtistName
+                        artistText += fmt.Sprintf("[%s](%s)",
+                            artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
                         if i+1 < len(song.Artists.Artist) {
                             artistText += ", "
                         } else if (len(song.Artists.Artist) - (i + 1)) > 0 {
@@ -195,7 +203,10 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-                        Value: fmt.Sprintf("**%s** by **%s** (on %s)", song.SongName, artistText, song.AlbumName),
+                        Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))]",
+                            song.SongName, fmt.Sprintf(melonFriendlySongDetails, song.SongID),
+                            artistText,
+                            song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
                     })
                 }
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
