@@ -17,9 +17,10 @@ type Charts struct{}
 
 const (
     melonEndpointCharts         string = "http://apis.skplanetx.com/melon/charts/%s?version=1&page=1&count=10"
+    melonEndpointSongSearch     string = "http://apis.skplanetx.com/melon/songs?version=1&page=1&count=1&searchKeyword=%s"
     melonFriendlyRealtimeStats  string = "http://www.melon.com/chart/index.htm"
     melonFriendlyDailyStats     string = "http://www.melon.com/chart/day/index.htm"
-    melonFriendlySongDetails    string = "http://www.melon.com/song/detail.htm?songId=%d"
+    melonFriendlySongDetails    string = "http://www.melon.com/song/detail.htm?songId=%s"
     melonFriendlyArtistDetails  string = "http://www.melon.com/artist/timeline.htm?artistId=%d"
     melonFriendlyAlbumDetails   string = "http://www.melon.com/album/detail.htm?albumId=%d"
     ichartPageRealtimeCharts    string = "http://www.instiz.net/iframe_ichart_score.htm?real=1"
@@ -106,6 +107,36 @@ type MelonDailyStats struct {
     } `json:"melon"`
 }
 
+type MelonSearchSongResults struct {
+    Melon struct {
+        MenuID int `json:"menuId"`
+        Count int `json:"count"`
+        Page int `json:"page"`
+        TotalPages int `json:"totalPages"`
+        TotalCount int `json:"totalCount"`
+        Songs struct {
+            Song []struct {
+                SongID string `json:"songId"`
+                SongName string `json:"songName"`
+                AlbumID int `json:"albumId"`
+                AlbumName string `json:"albumName"`
+                Artists struct {
+                    Artist []struct {
+                        ArtistID int `json:"artistId"`
+                        ArtistName string `json:"artistName"`
+                    } `json:"artist"`
+                } `json:"artists"`
+                PlayTime int `json:"playTime"`
+                IssueDate string `json:"issueDate"`
+                IsTitleSong string `json:"isTitleSong"`
+                IsHitSong string `json:"isHitSong"`
+                IsAdult string `json:"isAdult"`
+                IsFree string `json:"isFree"`
+            } `json:"song"`
+        } `json:"songs"`
+    } `json:"melon"`
+}
+
 type GenericSongScore struct {
     Title       string
     Artist      string
@@ -144,6 +175,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
                 }
                 for _, song := range realtimeStats.Melon.Songs.Song {
+                    fmt.Println(song.SongName)
                     artistText := ""
                     for i, artist := range song.Artists.Artist {
                         artistText += fmt.Sprintf("[%s](%s)",
@@ -165,13 +197,14 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
                         Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))]",
-                            song.SongName, fmt.Sprintf(melonFriendlySongDetails, song.SongID),
+                            song.SongName, fmt.Sprintf(melonFriendlySongDetails, strconv.Itoa(song.SongID)),
                             artistText,
                             song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
                     })
                 }
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
                 helpers.Relax(err)
+                return
             case "daily":
                 session.ChannelTyping(msg.ChannelID)
                 dailyStats := m.GetMelonDailyStats()
@@ -204,13 +237,67 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
                         Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
                         Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))]",
-                            song.SongName, fmt.Sprintf(melonFriendlySongDetails, song.SongID),
+                            song.SongName, fmt.Sprintf(melonFriendlySongDetails, strconv.Itoa(song.SongID)),
                             artistText,
                             song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
                     })
                 }
                 _, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
                 helpers.Relax(err)
+                return
+            default:
+                session.ChannelTyping(msg.ChannelID)
+                searchString, err := helpers.UrlEncode(strings.TrimSpace(content))
+                helpers.Relax(err)
+
+                var searchResult MelonSearchSongResults
+                result := m.DoMelonRequest(fmt.Sprintf(melonEndpointSongSearch, searchString))
+
+                json.Unmarshal(result, &searchResult)
+
+                if searchResult.Melon.Count <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                melonSong := searchResult.Melon.Songs.Song[0]
+
+                artistText := ""
+                for i, artist := range melonSong.Artists.Artist {
+                    artistText += fmt.Sprintf("[%s](%s)",
+                        artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
+                    if i+1 < len(melonSong.Artists.Artist) {
+                        artistText += ", "
+                    } else if (len(melonSong.Artists.Artist) - (i + 1)) > 0 {
+                        artistText += " and "
+                    }
+                }
+
+                durationText := strconv.Itoa(melonSong.PlayTime) + "s"
+                if melonSong.PlayTime >= 60 {
+                    minutes := melonSong.PlayTime / 60
+                    seconds := melonSong.PlayTime % 60
+                    durationText = fmt.Sprintf("%dm%ds", minutes, seconds)
+                }
+
+                songEmbed := &discordgo.MessageEmbed{
+                    Title:  helpers.GetText("plugins.charts.song-melon-embed-title"),
+                    Description: fmt.Sprintf("[**%s**](%s) by **%s**",
+                        melonSong.SongName, fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID),
+                        artistText),
+                    //URL:    fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID),
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
+                    Fields: []*discordgo.MessageEmbedField{
+                        { Name: "Album", Value: fmt.Sprintf("[%s](%s)", melonSong.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, melonSong.AlbumID)), Inline: true, },
+                        { Name: "Duration", Value: durationText, Inline: true, },
+                    },
+                    Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
+                }
+
+                _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID) + ">", songEmbed)
+                helpers.Relax(err)
+                return
             }
         }
     case "ichart":
@@ -396,7 +483,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 
 func (m *Charts) GetMelonRealtimeStats() MelonRealTimeStats {
     var realtimeStats MelonRealTimeStats
-    result := m.DoMelonRequest("realtime")
+    result := m.DoMelonRequest(fmt.Sprintf(melonEndpointCharts, "realtime"))
 
     json.Unmarshal(result, &realtimeStats)
     return realtimeStats
@@ -404,16 +491,16 @@ func (m *Charts) GetMelonRealtimeStats() MelonRealTimeStats {
 
 func (m *Charts) GetMelonDailyStats() MelonDailyStats {
     var dailyStats MelonDailyStats
-    result := m.DoMelonRequest("todaytopsongs")
+    result := m.DoMelonRequest(fmt.Sprintf(melonEndpointCharts, "todaytopsongs"))
 
     json.Unmarshal(result, &dailyStats)
     return dailyStats
 }
 
-func (m *Charts) DoMelonRequest(endpoint string) []byte {
+func (m *Charts) DoMelonRequest(url string) []byte {
     client := &http.Client{}
 
-    request, err := http.NewRequest("GET", fmt.Sprintf(melonEndpointCharts, endpoint), nil)
+    request, err := http.NewRequest("GET", url, nil)
     if err != nil {
         panic(err)
     }
