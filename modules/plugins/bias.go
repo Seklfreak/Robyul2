@@ -99,7 +99,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                             _, err := session.ChannelMessageSend(msg.ChannelID, page)
                             if err != nil {
                                 for _, subPage := range helpers.Pagify(page, ",") {
-                                    session.ChannelMessageSend(subPage)
+                                    session.ChannelMessageSend(msg.ChannelID, subPage)
                                 }
                             }
                         }
