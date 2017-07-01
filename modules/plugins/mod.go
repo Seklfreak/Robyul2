@@ -39,6 +39,7 @@ func (m *Mod) Commands() []string {
         "say",
         "edit",
         "upload",
+        "get",
     }
 }
 
@@ -575,6 +576,38 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                return
+            }
+        })
+    case "get": // [p]get <channel> <message id>
+        helpers.RequireMod(msg, func() {
+            args := strings.Fields(content)
+            if len(args) >= 2 {
+                sourceChannel, err := session.Channel(msg.ChannelID)
+                helpers.Relax(err)
+                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                if err != nil || targetChannel.ID == "" {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    return
+                }
+                if sourceChannel.GuildID != targetChannel.GuildID {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+                    return
+                }
+                targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+                if err != nil {
+                    if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10008 {
+                        session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+                        return
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
+                newMessage := fmt.Sprintf("```%s```", targetMessage.Content)
+                _, err = session.ChannelMessageSend(msg.ChannelID, newMessage)
+                helpers.Relax(err)
+            } else {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
             }
         })
