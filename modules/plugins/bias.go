@@ -94,9 +94,10 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                                 biasListText += fmt.Sprintf(" (**`%s Roles`** Max)", strings.Title(helpers.HumanizeNumber(calculatedLimit)))
                             }
                         }
-                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.bias.bias-help-message",
-                            biasListText, exampleRoleName, exampleRoleName))
-                        helpers.Relax(err)
+                        for _, page := range helpers.Pagify(helpers.GetTextF("plugins.bias.bias-help-message",
+                            biasListText, exampleRoleName, exampleRoleName), "\n") {
+                            session.ChannelMessageSend(msg.ChannelID, page)
+                        }
                         return
                     }
                 }
