@@ -278,7 +278,11 @@ func Pagify(text string, delimiter string) []string {
     currentOutputPart := ""
     for _, textPart := range textParts {
         if len(currentOutputPart)+len(textPart)+len(delimiter) <= 1992 {
-            currentOutputPart += delimiter + textPart
+            if len(result) > 0 {
+                currentOutputPart += delimiter + textPart
+            } else {
+                currentOutputPart += textPart
+            }
         } else {
             result = append(result, currentOutputPart)
             currentOutputPart = ""

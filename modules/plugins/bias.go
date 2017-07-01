@@ -95,13 +95,8 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                             }
                         }
                         for _, page := range helpers.Pagify(helpers.GetTextF("plugins.bias.bias-help-message",
-                            biasListText, exampleRoleName, exampleRoleName), "\n") {
-                            _, err := session.ChannelMessageSend(msg.ChannelID, page)
-                            if err != nil {
-                                for _, subPage := range helpers.Pagify(page, ",") {
-                                    session.ChannelMessageSend(msg.ChannelID, subPage)
-                                }
-                            }
+                            biasListText, exampleRoleName, exampleRoleName), ",") {
+                            session.ChannelMessageSend(msg.ChannelID, page)
                         }
                         return
                     }
