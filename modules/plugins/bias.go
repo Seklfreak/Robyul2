@@ -7,6 +7,7 @@ import (
     "strings"
     "time"
     rethink "github.com/gorethink/gorethink"
+    "sort"
 )
 
 type Bias struct{}
@@ -151,31 +152,36 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
             for _, biasChannel := range biasChannels {
                 if biasChannel.ServerID == channel.GuildID {
                     for _, biasCategory := range biasChannel.Categories {
-                        categoryNumbers := make(map[string]int, 0)
+                        categoryNumbers := make(BiasRoleStatList, 0)
                         if biasCategory.Hidden == true && biasCategory.Pool == "" {
                             continue
                         }
                         for _, biasRole := range biasCategory.Roles {
                             discordRole := m.GetDiscordRole(biasRole, guild)
                             if discordRole != nil {
+                                categoryNumbers = append(categoryNumbers, BiasRoleStat{
+                                    RoleName: discordRole.Name, Members: 0,
+                                })
                                 for _, member := range members {
                                     for _, memberRole := range member.Roles {
                                         if memberRole == discordRole.ID {
                                             // user has the role
-                                            if _, ok := categoryNumbers[discordRole.Name]; ok {
-                                                categoryNumbers[discordRole.Name]++
-                                            } else {
-                                                categoryNumbers[discordRole.Name] = 1
+                                            for i, biasRoleStat := range categoryNumbers {
+                                                if biasRoleStat.RoleName == discordRole.Name {
+                                                    categoryNumbers[i].Members++
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                        sort.Sort(categoryNumbers)
                         if len(categoryNumbers) > 0 {
                             statsText += fmt.Sprintf("__**%s:**__\n", biasCategory.Label)
-                            for roleName, roleNumber := range categoryNumbers {
-                                statsText += fmt.Sprintf("**%s**: %d Members\n", roleName, roleNumber)
+                            for _, biasRoleStat := range categoryNumbers {
+                                statsText += fmt.Sprintf("**%s**: %d Members\n",
+                                    biasRoleStat.RoleName, biasRoleStat.Members )
                             }
                         }
                     }
@@ -404,3 +410,14 @@ func (m *Bias) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Ses
 func (m *Bias) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+
+type BiasRoleStat struct {
+    RoleName string
+    Members int
+}
+
+type BiasRoleStatList []BiasRoleStat
+
+func (p BiasRoleStatList) Len() int { return len(p) }
+func (p BiasRoleStatList) Less(i, j int) bool { return p[i].Members > p[j].Members }
+func (p BiasRoleStatList) Swap(i, j int){ p[i], p[j] = p[j], p[i] }
