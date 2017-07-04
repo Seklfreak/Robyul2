@@ -26,6 +26,7 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
             msg = "I cannot talk to you right now. <:googlespeaknoevil:317036753074651139>\n"
         } else {
             msg = "Error <:blobfrowningbig:317028438693117962>\n```\n" + err.Error() + "\n```"
+            CleverbotRefreshSession(channel)
         }
     } else {
         msg = response
