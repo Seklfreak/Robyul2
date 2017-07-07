@@ -667,7 +667,7 @@
     "randompictures": {
       "pic-no-picture": "I wasn't able to find a picture for you. <:blobweary:317036265071575050>",
       "list-no-entries-error": "No sources set up on this server yet! <:blobdetective:317045632856489985>",
-      "refresh-success": "Source successfully refresh! <:blobokhand:317032017164238848>",
+      "refresh-success": "Source successfully refreshed! <:blobokhand:317032017164238848>",
       "refresh-not-found-error": "I wasn't able to find this source. <:blobnomouth:317045295286583296>",
       "refresh-started": "Refreshing started, this may take a while! <:blobsleeping:317047101534109696>",
       "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you.",
