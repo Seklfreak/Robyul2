@@ -134,9 +134,6 @@ func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Me
                                     Color:     0x0FADED,
                                     Fields: []*discordgo.MessageEmbedField{
                                         {Name: "Reason stated", Value: reasonText, Inline: false},
-                                        {Name: "Reported by", Value: fmt.Sprintf("**%s** (#%s) <@%s>\non **%s** (#%s)",
-                                            msg.Author.Username, msg.Author.ID, msg.Author.ID, guild.Name, guild.ID,
-                                        ), Inline: false},
                                     },
                                 }
 
@@ -149,6 +146,11 @@ func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Me
                                         Name: "Member status", Value: "✅ User is not on this server", Inline: false,
                                     })
                                 }
+
+                                reportEmbed.Fields = append(reportEmbed.Fields, &discordgo.MessageEmbedField{
+                                    Name: "Reported by", Value: fmt.Sprintf("**%s** (#%s) <@%s>\non **%s** (#%s)",
+                                    msg.Author.Username, msg.Author.ID, msg.Author.ID, guild.Name, guild.ID,
+                                ), Inline: false})
 
                                 _, err = session.ChannelMessageSendEmbed(guildToNotifySettings.TroublemakerLogChannel, reportEmbed)
                                 if err != nil {
