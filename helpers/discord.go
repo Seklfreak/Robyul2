@@ -24,8 +24,8 @@ var NukeMods = []string{
     "116620585638821891", // Sekl
     "134298438559858688", // Kakkela
 }
-var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board"}
-var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor"}
+var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
+var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
 
 func IsNukeMod(id string) bool {
     for _, s := range NukeMods {
