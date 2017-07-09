@@ -714,7 +714,7 @@
       "participation-enabled": "Troublemakers will now get posted there. <:blobsalute:317043033004703744>",
       "report-successful": "Thank you very much for your report. <:blobsalute:317043033004703744>\nI will notify %d servers about this user.",
       "report-embed-title": "The Troublemaker `%s#%s` has been reported",
-      "report-embed-description": "User: <@%s>",
+      "report-embed-description": "User: <@%s> ID: `#%s`",
       "report-embed-footer": "Report has been sent to %d servers. | If you think this report is unjustified please contact Sekl#7397 on discord.",
       "report-confirm": "Are you sure you want to report\n`%s#%s` (`#%s`, <@%s>)\nbecause of \"`%s`\"?\n_Please note that abuse of this feature will lead to the removal of Robyul from your server and possibly more actions._"
     }

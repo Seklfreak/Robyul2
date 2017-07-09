@@ -70,7 +70,6 @@ func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Me
             break
         default:
             helpers.RequireMod(msg, func() {
-                // TODO: Confirm dialog
                 session.ChannelTyping(msg.ChannelID)
 
                 channel, err := session.State.Channel(msg.ChannelID)
@@ -128,15 +127,15 @@ func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Me
 
                                 reportEmbed := &discordgo.MessageEmbed{
                                     Title: helpers.GetTextF("plugins.troublemaker.report-embed-title", targetUser.Username, targetUser.Discriminator),
-                                    Description: helpers.GetTextF("plugins.troublemaker.report-embed-description", targetUser.ID),
+                                    Description: helpers.GetTextF("plugins.troublemaker.report-embed-description", targetUser.ID, targetUser.ID),
                                     URL:       helpers.GetAvatarUrl(targetUser),
                                     Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)},
                                     Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.troublemaker.report-embed-footer", len(guildsToNotify))},
                                     Color:     0x0FADED,
                                     Fields: []*discordgo.MessageEmbedField{
                                         {Name: "Reason stated", Value: reasonText, Inline: false},
-                                        {Name: "Reported by", Value: fmt.Sprintf("%s\n#%s\n<@%s>",
-                                            msg.Author.Username, msg.Author.ID, msg.Author.ID,
+                                        {Name: "Reported by", Value: fmt.Sprintf("**%s** (#%s) <@%s>\non **%s** (#%s)",
+                                            msg.Author.Username, msg.Author.ID, msg.Author.ID, guild.Name, guild.ID,
                                         ), Inline: false},
                                     },
                                 }
