@@ -58,6 +58,7 @@ var (
         &plugins.Nuke{},
         &plugins.Dig{},
         &plugins.Streamable{},
+        &plugins.Troublemaker{},
     }
 
     // PluginList is the list of active plugins

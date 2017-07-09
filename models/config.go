@@ -38,6 +38,9 @@ type Config struct {
     LevelsIgnoredChannelIDs []string `rethink:"levels_ignored_channel_ids"`
 
     MutedMembers []string `rethink:"muted_member_ids"`
+
+    TroublemakerIsParticipating bool `rethink:"troublemaker_participation"`
+    TroublemakerLogChannel      string `rethink:"troublemaker_channel"`
 }
 
 // Default is a helper for generating default config values
