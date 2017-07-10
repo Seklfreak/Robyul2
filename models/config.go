@@ -28,6 +28,7 @@ type Config struct {
         UserBannedOnOtherServers bool
         UserNoCommonServers      bool
         UserNewlyCreatedAccount  bool
+        UserReported             bool
     }   `rethink:"inspect_triggers_enabled"`
     InspectsChannel string `rethink:"inspects_channel"`
 

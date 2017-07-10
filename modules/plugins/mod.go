@@ -16,6 +16,7 @@ import (
     "github.com/Jeffail/gabs"
     "github.com/bradfitz/slice"
     "bytes"
+    rethink "github.com/gorethink/gorethink"
 )
 
 type Mod struct{}
@@ -732,8 +733,17 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
             }
 
+            troublemakerReports := m.getTroublemakerReports(targetUser)
+            troublemakerReportsText := ""
+            if len(troublemakerReports) <= 0 {
+                troublemakerReportsText = "✅ User never got reported"
+            } else {
+                troublemakerReportsText = fmt.Sprintf("⚠ User get reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), targetUser.ID)
+            }
+
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
                 {Name: "Bans", Value: resultBansText, Inline: false},
+                {Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
                 {Name: "Common Servers", Value: commonGuildsText, Inline: false},
                 {Name: "Account Age", Value: joinedTimeText, Inline: false},
             }
@@ -771,7 +781,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 chooseMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, chooseEmbed)
 
-                allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), "💾"}
+                allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), emojis.From("4"), "💾"}
                 for _, allowedEmote := range allowedEmotes {
                     err = session.MessageReactionAdd(msg.ChannelID, chooseMessage.ID, allowedEmote)
                     helpers.Relax(err)
@@ -836,6 +846,21 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             }
                         }
                     }
+                    NumberFours, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("4"), 100)
+                    for _, NumberFour := range NumberFours {
+                        if NumberFour.ID == msg.Author.ID {
+                            if settings.InspectTriggersEnabled.UserReported && emotesLocked == false {
+                                settings.InspectTriggersEnabled.UserReported = false
+                            } else {
+                                settings.InspectTriggersEnabled.UserReported = true
+                            }
+                            needEmbedUpdate = true
+                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("4"), msg.Author.ID)
+                            if err != nil {
+                                emotesLocked = true
+                            }
+                        }
+                    }
 
                     if needEmbedUpdate == true {
                         chooseEmbed.Description = fmt.Sprintf(
@@ -860,6 +885,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         }
                         chooseEmbed.Description += fmt.Sprintf("%s %s Account is less than one week old. Gets checked everytime an user joins.\n",
                             emojis.From("3"), enabledEmote)
+                        enabledEmote = "🔲"
+                        if settings.InspectTriggersEnabled.UserReported {
+                            enabledEmote = "✔"
+                        }
+                        chooseEmbed.Description += fmt.Sprintf("%s %s Account got reported as a troublemaker. Gets checked everytime an user joins.\n",
+                            emojis.From("4"), enabledEmote)
                         if emotesLocked == true {
                             chooseEmbed.Description += fmt.Sprintf("⚠ Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
                                 helpers.GetPrefixForServer(channel.GuildID),
@@ -1092,6 +1123,18 @@ func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
     return isOnServerList
 }
 
+func (m *Mod) getTroublemakerReports(user *discordgo.User) []DB_Troublemaker_Entry {
+    var entryBucket []DB_Troublemaker_Entry
+    listCursor, err := rethink.Table("troublemakerlog").Filter(
+        rethink.Row.Field("userid").Eq(user.ID),
+    ).Run(helpers.GetDB())
+    helpers.Relax(err)
+    defer listCursor.Close()
+    listCursor.All(&entryBucket)
+
+    return entryBucket
+}
+
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
     go func() {
         settings := helpers.GuildSettingsGetCached(member.GuildID)
@@ -1122,9 +1165,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
             }
 
             bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, func(_ int) {})
+            troublemakerReports := m.getTroublemakerReports(member.User)
 
-            logger.INFO.L("mod", fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
-                member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
+            logger.INFO.L("mod", fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d",
+                member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList), len(troublemakerReports)))
 
             isOnServerList := m.inspectCommonServers(member.User)
 
@@ -1135,7 +1179,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
             if !(
                 (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
                     (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
-                    (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo))) {
+                    (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
+                    (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported && len(troublemakerReports) > 0) ) {
                 return
             }
 
@@ -1171,8 +1216,16 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                 joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
             }
 
+            troublemakerReportsText := ""
+            if len(troublemakerReports) <= 0 {
+                troublemakerReportsText = "✅ User never got reported"
+            } else {
+                troublemakerReportsText = fmt.Sprintf("⚠ User get reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
+            }
+
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
                 {Name: "Bans", Value: resultBansText, Inline: false},
+                {Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
                 {Name: "Common Servers", Value: commonGuildsText, Inline: false},
                 {Name: "Account Age", Value: joinedTimeText, Inline: false},
             }
@@ -1270,8 +1323,17 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                         joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
                     }
 
+                    troublemakerReports := m.getTroublemakerReports(user.User)
+                    troublemakerReportsText := ""
+                    if len(troublemakerReports) <= 0 {
+                        troublemakerReportsText = "✅ User never got reported"
+                    } else {
+                        troublemakerReportsText = fmt.Sprintf("⚠ User get reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
+                    }
+
                     resultEmbed.Fields = []*discordgo.MessageEmbedField{
                         {Name: "Bans", Value: resultBansText, Inline: false},
+                        {Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
                         {Name: "Common Servers", Value: commonGuildsText, Inline: false},
                         {Name: "Account Age", Value: joinedTimeText, Inline: false},
                     }
