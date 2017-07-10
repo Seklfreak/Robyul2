@@ -716,7 +716,8 @@
       "report-embed-title": "The Troublemaker `%s#%s` has been reported",
       "report-embed-description": "User: <@%s> ID: `#%s`",
       "report-embed-footer": "Report has been sent to %d servers. | If you think this report is unjustified please contact Sekl#7397 on discord.",
-      "report-confirm": "Are you sure you want to report\n`%s#%s` (`#%s`, <@%s>)\nbecause of \"`%s`\"?\n_Please note that abuse of this feature will lead to the removal of Robyul from your server and possibly more actions._"
+      "report-confirm": "Are you sure you want to report\n`%s#%s` (`#%s`, <@%s>)\nbecause of \"`%s`\"?\n_Please note that abuse of this feature will lead to the removal of Robyul from your server and possibly more actions._",
+      "list-no-reports": "I wasn't able to find any reports for %s! <:blobsnuggle:333989876695302144>"
     }
   }
 }
