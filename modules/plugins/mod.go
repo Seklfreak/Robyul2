@@ -738,7 +738,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             if len(troublemakerReports) <= 0 {
                 troublemakerReportsText = "✅ User never got reported"
             } else {
-                troublemakerReportsText = fmt.Sprintf("⚠ User get reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), targetUser.ID)
+                troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), targetUser.ID)
             }
 
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
@@ -1220,7 +1220,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
             if len(troublemakerReports) <= 0 {
                 troublemakerReportsText = "✅ User never got reported"
             } else {
-                troublemakerReportsText = fmt.Sprintf("⚠ User get reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
+                troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
             }
 
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
@@ -1328,7 +1328,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                     if len(troublemakerReports) <= 0 {
                         troublemakerReportsText = "✅ User never got reported"
                     } else {
-                        troublemakerReportsText = fmt.Sprintf("⚠ User get reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
+                        troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
                     }
 
                     resultEmbed.Fields = []*discordgo.MessageEmbedField{
