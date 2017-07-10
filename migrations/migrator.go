@@ -30,6 +30,7 @@ var migrations = []helpers.Callback{
     m19_create_table_customcommands,
     m20_create_table_reactionpolls,
     m21_create_table_nukelog,
+    m22_create_table_troublemakerlog,
 }
 
 // Run executes all registered migrations

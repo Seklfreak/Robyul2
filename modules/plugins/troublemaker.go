@@ -8,6 +8,8 @@ import (
     "fmt"
     "strconv"
     "github.com/getsentry/raven-go"
+    "time"
+    rethink "github.com/gorethink/gorethink"
 )
 
 type Troublemaker struct{}
@@ -20,11 +22,20 @@ func (t *Troublemaker) Commands() []string {
     }
 }
 
+type DB_Troublemaker_Entry struct {
+    ID                string         `gorethink:"id,omitempty"`
+    UserID            string         `gorethink:"userid"`
+    Reason            string         `gorethink:"reason"`
+    CreatedAt         time.Time      `gorethink:"createdat"`
+    ReportedByGuildID string         `gorethink:"reportedby_guildid"`
+    ReportedByUserID  string         `gorethink:"reportedby_userid"`
+}
+
 func (t *Troublemaker) Init(session *discordgo.Session) {
 
 }
 
-func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (t *Troublemaker) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     args := strings.Fields(content)
     if len(args) >= 1 {
         switch args[0] {
@@ -93,6 +104,15 @@ func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Me
                 if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.troublemaker.report-confirm",
                     targetUser.Username, targetUser.Discriminator, targetUser.ID, targetUser.ID, reasonText,
                 ), "✅", "🚫") == true {
+                    // Save to log DB
+                    troublemakerLogEntry := t.getEntryByOrCreateEmpty("id", "")
+                    troublemakerLogEntry.UserID = targetUser.ID
+                    troublemakerLogEntry.Reason = reasonText
+                    troublemakerLogEntry.CreatedAt = time.Now()
+                    troublemakerLogEntry.ReportedByGuildID = guild.ID
+                    troublemakerLogEntry.ReportedByUserID = msg.Author.ID
+                    t.setEntry(troublemakerLogEntry)
+
                     logger.INFO.L("troublemaker", fmt.Sprintf("will notify about troublemaker %s (#%s) by %s (#%s) on %s (#%s) reason %s",
                         targetUser.Username, targetUser.ID,
                         msg.Author.Username, msg.Author.ID,
@@ -178,4 +198,34 @@ func (ts *Troublemaker) Action(command string, content string, msg *discordgo.Me
             break
         }
     }
+}
+
+func (t *Troublemaker) getEntryByOrCreateEmpty(key string, id string) DB_Troublemaker_Entry {
+    var entryBucket DB_Troublemaker_Entry
+    listCursor, err := rethink.Table("troublemakerlog").Filter(
+        rethink.Row.Field(key).Eq(id),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.One(&entryBucket)
+
+    // If user has no DB entries create an empty document
+    if err == rethink.ErrEmptyResult {
+        insert := rethink.Table("troublemakerlog").Insert(DB_Troublemaker_Entry{})
+        res, e := insert.RunWrite(helpers.GetDB())
+        // If the creation was successful read the document
+        if e != nil {
+            panic(e)
+        } else {
+            return t.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
+        }
+    } else if err != nil {
+        panic(err)
+    }
+
+    return entryBucket
+}
+
+func (t *Troublemaker) setEntry(entry DB_Troublemaker_Entry) {
+    _, err := rethink.Table("troublemakerlog").Update(entry).Run(helpers.GetDB())
+    helpers.Relax(err)
 }
