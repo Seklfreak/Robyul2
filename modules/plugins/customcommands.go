@@ -132,7 +132,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 helpers.Relax(err)
             }
             return
-        case "delete", "del": // [p]commands delete <command name>
+        case "delete", "del", "remove": // [p]commands delete <command name>
             helpers.RequireMod(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 if len(args) < 2 {

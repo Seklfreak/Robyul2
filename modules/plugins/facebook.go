@@ -184,7 +184,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", entry.Username, entry.ChannelID))
                 logger.INFO.L("facebook", fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
-        case "delete", "del": // [p]facebook delete <id>
+        case "delete", "del", "remove": // [p]facebook delete <id>
             helpers.RequireAdmin(msg, func() {
                 if len(args) >= 2 {
                     session.ChannelTyping(msg.ChannelID)

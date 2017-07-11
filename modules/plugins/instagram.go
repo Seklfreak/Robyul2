@@ -377,7 +377,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID))
                 logger.INFO.L("instagram", fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
-        case "delete", "del": // [p]instagram delete <id>
+        case "delete", "del", "remove": // [p]instagram delete <id>
             helpers.RequireMod(msg, func() {
                 if len(args) >= 2 {
                     session.ChannelTyping(msg.ChannelID)

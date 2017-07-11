@@ -298,7 +298,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                     entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID,
                     mentionRole.Name, mentionRole.ID))
             })
-        case "delete", "del": // [p]vlive delete <id>
+        case "delete", "del", "remove": // [p]vlive delete <id>
             helpers.RequireMod(msg, func() {
                 if len(args) >= 2 {
                     session.ChannelTyping(msg.ChannelID)

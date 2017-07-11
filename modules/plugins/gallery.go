@@ -132,7 +132,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 helpers.Relax(err)
             }
             return
-        case "delete", "del": // [p]gallery delete <gallery id>
+        case "delete", "del", "remove": // [p]gallery delete <gallery id>
             helpers.RequireAdmin(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 if len(args) < 2 {
