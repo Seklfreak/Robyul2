@@ -299,7 +299,7 @@ func (m *LastFm) generateDiscordStats() {
 
         lastfmCombinedGuildStats = newCombinedGuildStats
 
-        time.Sleep(1 * time.Hour)
+        time.Sleep(6 * time.Hour)
     }
 }
 
