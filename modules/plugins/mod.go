@@ -689,7 +689,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         resultBansText += fmt.Sprintf("▪`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
                         i++
                         if i >= 4 {
-                            resultBansText += fmt.Sprintf("▪ and %d other servers\n", len(bannedOnServerList)-(i+1))
+                            resultBansText += fmt.Sprintf("▪ and %d other server(s)\n", len(bannedOnServerList)-(i+1))
                             break BannedOnLoop
                         }
                     }
@@ -699,21 +699,19 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             isOnServerList := m.inspectCommonServers(targetUser)
             commonGuildsText := ""
-            if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+            if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
                 if isExtendedInspect == false {
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
                 } else {
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul:\n", len(isOnServerList)-1)
+                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList)-1)
                     i := 0
                     ServerListLoop:
                     for _, isOnServer := range isOnServerList {
-                        if isOnServer.ID != channel.GuildID {
-                            commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
-                            i++
-                            if i >= 4 {
-                                commonGuildsText += fmt.Sprintf("▪ and %d other servers\n", len(isOnServerList)-(i+1))
-                                break ServerListLoop
-                            }
+                        commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
+                        i++
+                        if i >= 4 {
+                            commonGuildsText += fmt.Sprintf("▪ and %d other server(s)\n", len(isOnServerList)-(i+1))
+                            break ServerListLoop
                         }
                     }
                 }
@@ -1198,12 +1196,12 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
             if len(bannedOnServerList) <= 0 {
                 resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
             } else {
-                resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
             }
 
             commonGuildsText := ""
             if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-                commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+                commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
             } else {
                 commonGuildsText += "❓ User is on **none** other servers with Robyul."
             }
@@ -1300,13 +1298,13 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                     if len(bannedOnServerList) <= 0 {
                         resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
                     } else {
-                        resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                        resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
                     }
 
                     isOnServerList := m.inspectCommonServers(user.User)
                     commonGuildsText := ""
                     if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-                        commonGuildsText += fmt.Sprintf("✅ User is on **%d** other servers with Robyul.", len(isOnServerList)-1)
+                        commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
                     } else {
                         commonGuildsText += "❓ User is on **none** other servers with Robyul."
                     }
