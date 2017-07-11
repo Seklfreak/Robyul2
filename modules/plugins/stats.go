@@ -550,7 +550,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                     resultPairs := s.rankByDuration(voiceChannelDurations)
 
                     voiceChannel, err := session.Channel(voiceChannelID)
-                    helpers.Relax(err)
+                    if err != nil {
+                        continue
+                    }
 
                     channelToplistText := ""
 
