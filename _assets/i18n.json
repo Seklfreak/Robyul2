@@ -541,7 +541,8 @@
       "topalbums-embed-title": "%s Top Albums",
       "topartists-embed-title": "%s Top Artists",
       "toptracks-embed-title": "%s Top Tracks",
-      "set-username-success": "You set `%s` as your username. <:blobsalute:317043033004703744>\n(This is saved across servers.)"
+      "set-username-success": "You set `%s` as your username. <:blobsalute:317043033004703744>\n(This is saved across servers.)",
+      "no-stats-available": "No stats available on this server yet. <:blobweary:317036265071575050>"
     },
     "weather": {
       "address-not-found": "I can't find the location you are looking for. <:blobthinking:317028940885524490>",

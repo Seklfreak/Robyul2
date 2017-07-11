@@ -11,6 +11,10 @@ import (
     "strconv"
     "strings"
     "time"
+    "github.com/Seklfreak/Robyul2/logger"
+    "sync"
+    "github.com/Seklfreak/Robyul2/cache"
+    "github.com/bradfitz/slice"
 )
 
 type LastFm struct{}
@@ -22,11 +26,48 @@ const (
 
 var (
     lastfmClient *lastfm.Api
+    lastfmCachedStats []LastFMAccountCachedStats
+    lastfmCombinedGuildStats []LastFMCombinedGuildStats
 )
 
 type DB_LastFmAccount struct {
     UserID         string `gorethink:"userid,omitempty"`
     LastFmUsername string `gorethink:"lastfmusername"`
+}
+
+type LastFMAccount_Safe_Entries struct {
+    entries []DB_LastFmAccount
+    mux     sync.Mutex
+}
+
+type LastFMSongInfo struct {
+    Name string
+    Url string
+    ArtistName string
+    ArtistURL string
+    ImageURL string
+    Plays int
+}
+
+type LastFMAccountCachedStats struct {
+    UserID string
+    Overall []LastFMSongInfo
+    SevenDay []LastFMSongInfo
+    OneMonth []LastFMSongInfo
+    ThreeMonth []LastFMSongInfo
+    SixMonth []LastFMSongInfo
+    TwelveMonth []LastFMSongInfo
+}
+
+type LastFMCombinedGuildStats struct {
+    GuildID string
+    NumberOfUsers int
+    Overall []LastFMSongInfo
+    SevenDay []LastFMSongInfo
+    OneMonth []LastFMSongInfo
+    ThreeMonth []LastFMSongInfo
+    SixMonth []LastFMSongInfo
+    TwelveMonth []LastFMSongInfo
 }
 
 func (m *LastFm) Commands() []string {
@@ -38,7 +79,230 @@ func (m *LastFm) Commands() []string {
 
 func (m *LastFm) Init(session *discordgo.Session) {
     lastfmClient = lastfm.New(helpers.GetConfig().Path("lastfm.api_key").Data().(string), helpers.GetConfig().Path("lastfm.api_secret").Data().(string))
+    lastfmCachedStats = make([]LastFMAccountCachedStats, 0)
+    lastfmCombinedGuildStats = make([]LastFMCombinedGuildStats, 0)
+
+    go m.generateDiscordStats()
 }
+
+func (m *LastFm) generateDiscordStats() {
+    var safeEntries LastFMAccount_Safe_Entries
+
+    defer func() {
+        helpers.Recover()
+
+        logger.ERROR.L("lastfm", "The generateDiscordStats died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.generateDiscordStats()
+    }()
+
+    for {
+        cursor, err := rethink.Table("lastfm").Run(helpers.GetDB())
+        helpers.Relax(err)
+
+        err = cursor.All(&safeEntries.entries)
+        helpers.Relax(err)
+
+        // Get Stats from LastFM
+        newLastfmCachedStats := make([]LastFMAccountCachedStats, 0)
+        for _, safeAccount := range safeEntries.entries {
+            safeEntries.mux.Lock()
+            newLastFmCachedStat := new(LastFMAccountCachedStats)
+            newLastFmCachedStat.UserID = safeAccount.UserID
+            periods := []string{"overall", "7day", "1month", "3month", "6month", "12month"}
+
+            for _, period := range periods {
+                lastfmTopTracks, err := lastfmClient.User.GetTopTracks(lastfm.P{
+                    "limit": 50,
+                    "user":  safeAccount.LastFmUsername,
+                    "period": period,
+                })
+                metrics.LastFmRequests.Add(1)
+                if err != nil {
+                    logger.ERROR.L("lastfm", fmt.Sprintf("getting %s stats for last.fm user %s failed: %s", period, safeAccount.LastFmUsername, err.Error()))
+                    continue
+                }
+
+                if lastfmTopTracks.Total > 0 {
+                    for _, track := range lastfmTopTracks.Tracks {
+                        imageUrl := ""
+                        if len(track.Images) > 0 {
+                            imageUrl = track.Images[0].Url
+                        }
+                        playCount, err := strconv.Atoi(track.PlayCount)
+                        if err != nil {
+                            playCount = 1
+                        }
+                        songInfo := LastFMSongInfo{
+                            Name: track.Name,
+                            Url: track.Url,
+                            ArtistName: track.Artist.Name,
+                            ArtistURL: track.Artist.Url,
+                            ImageURL: imageUrl,
+                            Plays: playCount,
+                        }
+                        switch period {
+                        case "overall":
+                            newLastFmCachedStat.Overall = append(newLastFmCachedStat.Overall, songInfo)
+                            break
+                        case "7day":
+                            newLastFmCachedStat.SevenDay = append(newLastFmCachedStat.SevenDay, songInfo)
+                            break
+                        case "1month":
+                            newLastFmCachedStat.OneMonth = append(newLastFmCachedStat.OneMonth, songInfo)
+                            break
+                        case "3month":
+                            newLastFmCachedStat.ThreeMonth = append(newLastFmCachedStat.ThreeMonth, songInfo)
+                            break
+                        case "6month":
+                            newLastFmCachedStat.SixMonth = append(newLastFmCachedStat.SixMonth, songInfo)
+                            break
+                        case "12month":
+                            newLastFmCachedStat.TwelveMonth = append(newLastFmCachedStat.TwelveMonth, songInfo)
+                            break
+                        }
+                    }
+                }
+            }
+            newLastfmCachedStats = append(newLastfmCachedStats, *newLastFmCachedStat)
+            safeEntries.mux.Unlock()
+        }
+        lastfmCachedStats = newLastfmCachedStats
+
+        // Combine Stats
+        newCombinedGuildStats := make([]LastFMCombinedGuildStats, 0)
+        for _, guild := range cache.GetSession().State.Guilds {
+            newCombinedGuildStat := new(LastFMCombinedGuildStats)
+            newCombinedGuildStat.GuildID = guild.ID
+            newCombinedGuildStat.NumberOfUsers = 0
+
+            lastAfterMemberId := ""
+            for {
+                members, err := cache.GetSession().GuildMembers(guild.ID, lastAfterMemberId, 1000)
+                if err != nil {
+                    continue
+                }
+                if len(members) <= 0 {
+                    break
+                }
+                lastAfterMemberId = members[len(members)-1].User.ID
+                for _, member := range members {
+                    for _, cachedStat := range lastfmCachedStats {
+                        if cachedStat.UserID == member.User.ID {
+                            // User is on Guild
+                            newCombinedGuildStat.NumberOfUsers += 1
+                            // Append tracks
+                            for _, track := range cachedStat.Overall {
+                                added := false
+                                for i, trackInDb := range newCombinedGuildStat.Overall {
+                                    if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
+                                    strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+                                        newCombinedGuildStat.Overall[i].Plays += track.Plays
+                                        added = true
+                                    }
+                                }
+                                if added == false {
+                                    newCombinedGuildStat.Overall = append(newCombinedGuildStat.Overall, track)
+                                }
+                            }
+                            for _, track := range cachedStat.SevenDay {
+                                added := false
+                                for i, trackInDb := range newCombinedGuildStat.SevenDay {
+                                    if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
+                                        strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+                                        newCombinedGuildStat.SevenDay[i].Plays += track.Plays
+                                        added = true
+                                    }
+                                }
+                                if added == false {
+                                    newCombinedGuildStat.SevenDay = append(newCombinedGuildStat.SevenDay, track)
+                                }
+                            }
+                            for _, track := range cachedStat.OneMonth {
+                                added := false
+                                for i, trackInDb := range newCombinedGuildStat.OneMonth {
+                                    if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
+                                        strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+                                        newCombinedGuildStat.OneMonth[i].Plays += track.Plays
+                                        added = true
+                                    }
+                                }
+                                if added == false {
+                                    newCombinedGuildStat.OneMonth = append(newCombinedGuildStat.OneMonth, track)
+                                }
+                            }
+                            for _, track := range cachedStat.ThreeMonth {
+                                added := false
+                                for i, trackInDb := range newCombinedGuildStat.ThreeMonth {
+                                    if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
+                                        strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+                                        newCombinedGuildStat.ThreeMonth[i].Plays += track.Plays
+                                        added = true
+                                    }
+                                }
+                                if added == false {
+                                    newCombinedGuildStat.ThreeMonth = append(newCombinedGuildStat.ThreeMonth, track)
+                                }
+                            }
+                            for _, track := range cachedStat.SixMonth {
+                                added := false
+                                for i, trackInDb := range newCombinedGuildStat.SixMonth {
+                                    if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
+                                        strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+                                        newCombinedGuildStat.SixMonth[i].Plays += track.Plays
+                                        added = true
+                                    }
+                                }
+                                if added == false {
+                                    newCombinedGuildStat.SixMonth = append(newCombinedGuildStat.SixMonth, track)
+                                }
+                            }
+                            for _, track := range cachedStat.TwelveMonth {
+                                added := false
+                                for i, trackInDb := range newCombinedGuildStat.TwelveMonth {
+                                    if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
+                                        strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+                                        newCombinedGuildStat.TwelveMonth[i].Plays += track.Plays
+                                        added = true
+                                    }
+                                }
+                                if added == false {
+                                    newCombinedGuildStat.TwelveMonth = append(newCombinedGuildStat.TwelveMonth, track)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            newCombinedGuildStats = append(newCombinedGuildStats, *newCombinedGuildStat)
+        }
+        for n := range newCombinedGuildStats {
+            slice.Sort(newCombinedGuildStats[n].Overall[:], func(i, j int) bool {
+                return newCombinedGuildStats[n].Overall[i].Plays > newCombinedGuildStats[n].Overall[j].Plays
+            })
+            slice.Sort(newCombinedGuildStats[n].SevenDay[:], func(i, j int) bool {
+                return newCombinedGuildStats[n].SevenDay[i].Plays > newCombinedGuildStats[n].SevenDay[j].Plays
+            })
+            slice.Sort(newCombinedGuildStats[n].OneMonth[:], func(i, j int) bool {
+                return newCombinedGuildStats[n].OneMonth[i].Plays > newCombinedGuildStats[n].OneMonth[j].Plays
+            })
+            slice.Sort(newCombinedGuildStats[n].ThreeMonth[:], func(i, j int) bool {
+                return newCombinedGuildStats[n].ThreeMonth[i].Plays > newCombinedGuildStats[n].ThreeMonth[j].Plays
+            })
+            slice.Sort(newCombinedGuildStats[n].SixMonth[:], func(i, j int) bool {
+                return newCombinedGuildStats[n].SixMonth[i].Plays > newCombinedGuildStats[n].SixMonth[j].Plays
+            })
+            slice.Sort(newCombinedGuildStats[n].TwelveMonth[:], func(i, j int) bool {
+                return newCombinedGuildStats[n].TwelveMonth[i].Plays > newCombinedGuildStats[n].TwelveMonth[j].Plays
+            })
+        }
+
+        lastfmCombinedGuildStats = newCombinedGuildStats
+
+        time.Sleep(1 * time.Hour)
+    }
+}
+
 
 func (m *LastFm) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     args := strings.Fields(content)
@@ -254,6 +518,81 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
                 return
             }
+        case "discord-top", "server-top":
+            if len(args) < 2 {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                return
+            }
+            channel, err := session.State.Channel(msg.ChannelID)
+            helpers.Relax(err)
+            guild, err := session.State.Guild(channel.GuildID)
+            helpers.Relax(err)
+
+            var combinedStats LastFMCombinedGuildStats
+            for _, combinedStatsN := range lastfmCombinedGuildStats {
+                if combinedStatsN.GuildID == guild.ID {
+                    combinedStats = combinedStatsN
+                }
+            }
+
+            if combinedStats.GuildID == "" {
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-stats-available"))
+                return
+            }
+
+            topTracks := make([]LastFMSongInfo, 0)
+            timeString := "N/A"
+            switch args[1] {
+                case "overall":
+                    timeString = "all time"
+                    topTracks = combinedStats.Overall
+                    break
+                case "7days", "week":
+                    timeString = "the last seven days"
+                    topTracks = combinedStats.SevenDay
+                    break
+                case "1month", "month":
+                    timeString = "the last month"
+                    topTracks = combinedStats.OneMonth
+                    break
+                case "3month":
+                    timeString = "the last three months"
+                    topTracks = combinedStats.ThreeMonth
+                    break
+                case "6month":
+                    timeString = "the last six months"
+                    topTracks = combinedStats.SixMonth
+                    break
+                case "12month", "year":
+                    timeString = "the last twelve months"
+                    topTracks = combinedStats.TwelveMonth
+                    break
+                default:
+                    timeString = "all time"
+                    topTracks = combinedStats.Overall
+                    break
+            }
+
+            topTracksEmbed := &discordgo.MessageEmbed{
+                Title:       helpers.GetTextF("plugins.lastfm.toptracks-embed-title", fmt.Sprintf("%s Server", guild.Name)),
+                Description: fmt.Sprintf("of **%s**", timeString),
+                Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("%s | %d last.fm users on this server",
+                    helpers.GetText("plugins.lastfm.embed-footer"), combinedStats.NumberOfUsers)},
+                Fields:      []*discordgo.MessageEmbedField{},
+                Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
+            }
+            for i, topTrack := range topTracks {
+                topTracksEmbed.Fields = append(topTracksEmbed.Fields, &discordgo.MessageEmbedField{
+                    Name:   fmt.Sprintf("**#%s** (%s plays)", strconv.Itoa(i+1), strconv.Itoa(topTrack.Plays)),
+                    Value:  fmt.Sprintf("**%s** by **%s**", topTrack.Name, topTrack.ArtistName),
+                    Inline: false})
+                if i == 9 {
+                    break
+                }
+            }
+            _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topTracksEmbed)
+            helpers.Relax(err)
+            break
         default:
             if subCom != "" {
                 lastfmUsername = subCom
