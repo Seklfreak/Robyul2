@@ -519,7 +519,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                 return
             }
         case "discord-top", "server-top":
-            if len(args) < 2 {
+            if len(args) < 1 {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
                 return
             }
@@ -541,8 +541,10 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
             }
 
             topTracks := make([]LastFMSongInfo, 0)
-            timeString := "N/A"
-            switch args[1] {
+            timeString := "all time"
+            topTracks = combinedStats.Overall
+            if len(args) >= 2 {
+                switch args[1] {
                 case "overall":
                     timeString = "all time"
                     topTracks = combinedStats.Overall
@@ -567,10 +569,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                     timeString = "the last twelve months"
                     topTracks = combinedStats.TwelveMonth
                     break
-                default:
-                    timeString = "all time"
-                    topTracks = combinedStats.Overall
-                    break
+                }
             }
 
             topTracksEmbed := &discordgo.MessageEmbed{
