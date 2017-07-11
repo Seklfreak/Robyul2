@@ -654,33 +654,56 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
                 return
             }
+            textVersion := false
+            if len(args) >= 2 && args[1] == "text" {
+                textVersion = true
+            }
             channel, err := session.Channel(msg.ChannelID)
             helpers.Relax(err)
 
             resultEmbed := &discordgo.MessageEmbed{
                 Title:       helpers.GetTextF("plugins.mod.inspect-embed-title", targetUser.Username, targetUser.Discriminator),
-                Description: helpers.GetTextF("plugins.mod.inspect-embed-description-in-progress", 0, len(session.State.Guilds)),
+                Description: helpers.GetTextF("plugins.mod.inspect-in-progress", 0, len(session.State.Guilds)),
                 URL:         helpers.GetAvatarUrl(targetUser),
                 Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)},
                 Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", targetUser.ID, len(session.State.Guilds))},
                 Color:       0x0FADED,
             }
-            resultMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
-            helpers.Relax(err)
+            resultMessage := new(discordgo.Message)
+            if textVersion == false {
+                resultMessage, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+                helpers.Relax(err)
+            } else {
+                resultMessage, err = session.ChannelMessageSend(msg.ChannelID,
+                    helpers.GetTextF("plugins.mod.inspect-in-progress", 0, len(session.State.Guilds)))
+                helpers.Relax(err)
+            }
 
             bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, func(progressN int) {
-                resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-in-progress", progressN, len(session.State.Guilds))
-                session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+                progressText := helpers.GetTextF("plugins.mod.inspect-in-progress", progressN, len(session.State.Guilds))
+                if textVersion == false {
+                    resultEmbed.Description = progressText
+                    session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+                } else {
+                    session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, progressText)
+                }
             })
 
-            resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-embed-description-done", targetUser.ID)
+            resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
+            resultText := helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
+            resultText += fmt.Sprintf("Username: `%s#%s,` ID: `#%s`",
+                targetUser.Username, targetUser.Discriminator, targetUser.ID)
+            if helpers.GetAvatarUrl(targetUser) != "" {
+                resultText += fmt.Sprintf(", DP: <%s>", helpers.GetAvatarUrl(targetUser))
+            }
+            resultText += "\n"
 
             resultBansText := ""
             if len(bannedOnServerList) <= 0 {
-                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
             } else {
                 if isExtendedInspect == false {
-                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.\n", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
                 } else {
                     resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers:\n", len(bannedOnServerList))
                     i := 0
@@ -688,12 +711,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     for _, bannedOnServer := range bannedOnServerList {
                         resultBansText += fmt.Sprintf("▪`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
                         i++
-                        if i >= 4 {
+                        if i >= 4 && textVersion == false {
                             resultBansText += fmt.Sprintf("▪ and %d other server(s)\n", len(bannedOnServerList)-(i+1))
                             break BannedOnLoop
                         }
                     }
-                    resultBansText += fmt.Sprintf("◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+                    resultBansText += fmt.Sprintf("◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
                 }
             }
 
@@ -701,22 +724,22 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             commonGuildsText := ""
             if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
                 if isExtendedInspect == false {
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
+                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.\n", len(isOnServerList))
                 } else {
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList)-1)
+                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList))
                     i := 0
                     ServerListLoop:
                     for _, isOnServer := range isOnServerList {
                         commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
                         i++
-                        if i >= 4 {
-                            commonGuildsText += fmt.Sprintf("▪ and %d other server(s)\n", len(isOnServerList)-(i+1))
+                        if i >= 4 && textVersion == false {
+                            commonGuildsText += fmt.Sprintf("▪ and %d other server(s)\n", len(isOnServerList)-(i))
                             break ServerListLoop
                         }
                     }
                 }
             } else {
-                commonGuildsText += "❓ User is on **none** other servers with Robyul."
+                commonGuildsText += "❓ User is on **none** other servers with Robyul.\n"
             }
 
             joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
@@ -724,19 +747,19 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             oneWeekAgo := time.Now().AddDate(0, 0, -7)
             joinedTimeText := ""
             if !joinedTime.After(oneWeekAgo) {
-                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.\n", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
             } else if !joinedTime.After(oneDayAgo) {
-                joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+                joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
             } else {
-                joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+                joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
             }
 
             troublemakerReports := m.getTroublemakerReports(targetUser)
             troublemakerReportsText := ""
             if len(troublemakerReports) <= 0 {
-                troublemakerReportsText = "✅ User never got reported"
+                troublemakerReportsText = "✅ User never got reported\n"
             } else {
-                troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), targetUser.ID)
+                troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.\n", len(troublemakerReports), targetUser.ID)
             }
 
             resultEmbed.Fields = []*discordgo.MessageEmbedField{
@@ -745,16 +768,37 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 {Name: "Common Servers", Value: commonGuildsText, Inline: false},
                 {Name: "Account Age", Value: joinedTimeText, Inline: false},
             }
+            resultText += resultBansText
+            resultText += troublemakerReportsText
+            resultText += commonGuildsText
+            resultText += joinedTimeText
 
             for _, failedServer := range checkFailedServerList {
                 if failedServer.ID == channel.GuildID {
-                    resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+                    noAccessToBansText := "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers.\n"
+                    resultEmbed.Description += noAccessToBansText
+                    resultText += noAccessToBansText
                     break
                 }
             }
 
-            _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
-            helpers.Relax(err)
+            if textVersion == false {
+                _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+                helpers.Relax(err)
+            } else {
+                pages := helpers.Pagify(resultText, "\n")
+                if len(pages) <= 1 {
+                    _, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, resultText)
+                    helpers.Relax(err)
+                } else {
+                    session.ChannelMessageDelete(msg.ChannelID, resultMessage.ID)
+                    session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, "Inspect completed.")
+                    for _, page := range pages {
+                        _, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, page)
+                        helpers.Relax(err)
+                    }
+                }
+            }
         })
     case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
         helpers.RequireAdmin(msg, func() {
@@ -1184,7 +1228,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
             resultEmbed := &discordgo.MessageEmbed{
                 Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
-                Description: helpers.GetTextF("plugins.mod.inspect-embed-description-done", member.User.ID) +
+                Description: helpers.GetTextF("plugins.mod.inspect-description-done", member.User.ID) +
                     "\n_inspected because User joined this Server._",
                 URL:       helpers.GetAvatarUrl(member.User),
                 Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
@@ -1286,7 +1330,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
                     resultEmbed := &discordgo.MessageEmbed{
                         Title: helpers.GetTextF("plugins.mod.inspect-embed-title", user.User.Username, user.User.Discriminator),
-                        Description: helpers.GetTextF("plugins.mod.inspect-embed-description-done", user.User.ID) +
+                        Description: helpers.GetTextF("plugins.mod.inspect-description-done", user.User.ID) +
                             "\n_inspected because User got banned on a different Server._",
                         URL:       helpers.GetAvatarUrl(user.User),
                         Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(user.User)},
