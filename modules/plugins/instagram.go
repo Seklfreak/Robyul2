@@ -23,6 +23,7 @@ import (
     "strings"
     "time"
     "sync"
+    "github.com/Seklfreak/Robyul2/emojis"
 )
 
 type Instagram struct{}
@@ -588,7 +589,7 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
     if post.MediaType == 8 {
         mediaModifier = "Album"
         if len(post.CarouselMedia) > 0 {
-            mediaModifier = fmt.Sprintf("Album (%d pictures)", len(post.CarouselMedia))
+            mediaModifier = fmt.Sprintf("Album (%d items)", len(post.CarouselMedia))
         }
     }
 
@@ -606,6 +607,22 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
     }
     if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions2.Candidates) > 0 {
         channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.CarouselMedia[0].ImageVersions2.Candidates[0].URL}
+    }
+
+    mediaUrls := make([]string, 0)
+    if len(post.CarouselMedia) <= 0 {
+        mediaUrls = append(mediaUrls, post.ImageVersions2.Candidates[0].URL)
+    } else {
+        for _, carouselMedia := range post.CarouselMedia {
+            mediaUrls = append(mediaUrls, carouselMedia.ImageVersions2.Candidates[0].URL)
+        }
+    }
+
+    if len(mediaUrls) > 0 {
+        channelEmbed.Description += "\n\n`Links:` "
+        for i, mediaUrl := range mediaUrls {
+            channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)
+        }
     }
 
     _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)), channelEmbed)
