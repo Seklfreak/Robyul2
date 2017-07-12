@@ -216,12 +216,25 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
     return muteRole, nil
 }
 
-func GetChannelFromMention(mention string) (*discordgo.Channel, error) {
+func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
     var targetChannel *discordgo.Channel
     re := regexp.MustCompile("(<#)?(\\d+)(>)?")
     result := re.FindStringSubmatch(mention)
     if len(result) == 4 {
-        targetChannel, err := cache.GetSession().Channel(result[2])
+        sourceChannel, err := cache.GetSession().State.Channel(msg.ChannelID)
+        if err != nil {
+            return targetChannel, err
+        }
+        if sourceChannel == nil {
+            return targetChannel, errors.New("Channel not found.")
+        }
+        targetChannel, err := cache.GetSession().State.Channel(result[2])
+        if err != nil {
+            return targetChannel, err
+        }
+        if sourceChannel.GuildID != targetChannel.GuildID {
+            return targetChannel, errors.New("Channel on different guild.")
+        }
         return targetChannel, err
     } else {
         return targetChannel, errors.New("Channel not found.")

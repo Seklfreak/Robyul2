@@ -212,7 +212,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
                 helpers.Relax(err)
             default: // [p]notifications ignore-channel <channel>
                 helpers.RequireAdmin(msg, func() {
-                    targetChannel, err := helpers.GetChannelFromMention(args[1])
+                    targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
                     helpers.Relax(err)
 
                     if targetChannel.GuildID != commandIssueChannel.GuildID {

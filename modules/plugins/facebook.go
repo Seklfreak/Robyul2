@@ -144,7 +144,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                 var targetChannel *discordgo.Channel
                 var targetGuild *discordgo.Guild
                 if len(args) >= 3 {
-                    targetChannel, err = helpers.GetChannelFromMention(args[2])
+                    targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
                     if err != nil {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                         return

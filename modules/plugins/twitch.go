@@ -160,7 +160,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                 var targetGuild *discordgo.Guild
                 var targetTwitchChannelName string
                 if len(args) >= 3 {
-                    targetChannel, err = helpers.GetChannelFromMention(args[2])
+                    targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
                     if err != nil {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                         return

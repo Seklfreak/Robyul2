@@ -510,7 +510,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             if len(args) >= 2 {
                 sourceChannel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     return
@@ -533,7 +533,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             if len(args) >= 3 {
                 sourceChannel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     return
@@ -565,7 +565,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 fileToUpload := helpers.NetGet(msg.Attachments[0].URL)
                 sourceChannel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     return
@@ -586,7 +586,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             if len(args) >= 2 {
                 sourceChannel, err := session.Channel(msg.ChannelID)
                 helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     return
@@ -809,7 +809,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             successMessage := ""
             // Add Text
             if len(args) >= 1 {
-                targetChannel, err := helpers.GetChannelFromMention(args[0])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     return

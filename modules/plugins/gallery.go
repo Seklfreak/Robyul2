@@ -62,13 +62,13 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 helpers.Relax(err)
                 guild, err := session.Guild(channel.GuildID)
                 helpers.Relax(err)
-                sourceChannel, err := helpers.GetChannelFromMention(args[1])
+                sourceChannel, err := helpers.GetChannelFromMention(msg, args[1])
                 if err != nil || sourceChannel.ID == "" || sourceChannel.GuildID != channel.GuildID {
                     _, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
                     helpers.Relax(err)
                     return
                 }
-                targetChannel, err := helpers.GetChannelFromMention(args[2])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
                 if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
                     _, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
                     helpers.Relax(err)

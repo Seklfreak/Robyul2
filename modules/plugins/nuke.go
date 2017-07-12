@@ -152,7 +152,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
                 settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
                 if len(args) >= 2 {
-                    targetChannel, err := helpers.GetChannelFromMention(args[1])
+                    targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
                     if err != nil {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                         return

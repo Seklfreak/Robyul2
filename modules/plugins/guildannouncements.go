@@ -50,7 +50,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
                     successMessage := ""
                     // Add Text
                     if len(args) >= 4 {
-                        targetChannel, err := helpers.GetChannelFromMention(args[2])
+                        targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
                         if err != nil || targetChannel.ID == "" {
                             session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                             return
@@ -80,7 +80,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
                     successMessage := ""
                     // Add Text
                     if len(args) >= 4 {
-                        targetChannel, err := helpers.GetChannelFromMention(args[2])
+                        targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
                         if err != nil || targetChannel.ID == "" {
                             session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                             return

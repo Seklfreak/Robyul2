@@ -153,7 +153,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                 var targetChannel *discordgo.Channel
                 var targetGuild *discordgo.Guild
                 if len(args) >= 3 {
-                    targetChannel, err = helpers.GetChannelFromMention(args[len(args)-1])
+                    targetChannel, err = helpers.GetChannelFromMention(msg, args[len(args)-1])
                     if err != nil {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
                         return

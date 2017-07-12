@@ -23,7 +23,7 @@ import (
     "github.com/nfnt/resize"
     "github.com/Seklfreak/Robyul2/metrics"
     "sort"
-    lane "gopkg.in/oleiade/lane.v1"
+    "gopkg.in/oleiade/lane.v1"
 )
 
 type Levels struct {
@@ -486,7 +486,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             }
 
                             helpers.RequireAdmin(msg, func() {
-                                targetChannel, err := helpers.GetChannelFromMention(args[2])
+                                targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
                                 if targetChannel == nil || targetChannel.ID == "" {
                                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                                     helpers.Relax(err)
@@ -682,32 +682,32 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             //Description: "",
             Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
             Fields: []*discordgo.MessageEmbedField{
-                &discordgo.MessageEmbedField{
+                {
                     Name:   "Level",
                     Value:  strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)),
                     Inline: true,
                 },
-                &discordgo.MessageEmbedField{
+                {
                     Name:   "Level Progress",
                     Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)) + " %",
                     Inline: true,
                 },
-                &discordgo.MessageEmbedField{
+                {
                     Name:   zeroWidthWhitespace,
                     Value:  zeroWidthWhitespace,
                     Inline: true,
                 },
-                &discordgo.MessageEmbedField{
+                {
                     Name:   "Global Level",
                     Value:  strconv.Itoa(m.getLevelFromExp(totalExp)),
                     Inline: true,
                 },
-                &discordgo.MessageEmbedField{
+                {
                     Name:   "Global Level Progress",
                     Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(totalExp)) + " %",
                     Inline: true,
                 },
-                &discordgo.MessageEmbedField{
+                {
                     Name:   zeroWidthWhitespace,
                     Value:  zeroWidthWhitespace,
                     Inline: true,
@@ -827,7 +827,7 @@ func (m *Levels) getExpForLevel(level int) int64 {
 
 func (m *Levels) getProgressToNextLevelFromExp(exp int64) int {
     expLevelCurrently := exp - m.getExpForLevel(m.getLevelFromExp(exp))
-    expLevelNext := m.getExpForLevel((m.getLevelFromExp(exp) + 1)) - m.getExpForLevel(m.getLevelFromExp(exp))
+    expLevelNext := m.getExpForLevel(m.getLevelFromExp(exp) + 1) - m.getExpForLevel(m.getLevelFromExp(exp))
     return int(expLevelCurrently / (expLevelNext / 100))
 }
 

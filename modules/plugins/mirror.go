@@ -89,7 +89,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                     return
                 }
 
-                targetChannel, err := helpers.GetChannelFromMention(args[2])
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
                 if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
                     _, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
                     helpers.Relax(err)

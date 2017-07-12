@@ -50,7 +50,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 
                 if len(args) >= 2 {
                     // Set new log channel
-                    targetChannel, err := helpers.GetChannelFromMention(args[1])
+                    targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
                     if err != nil || targetChannel.ID == "" {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                         return
