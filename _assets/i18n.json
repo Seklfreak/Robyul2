@@ -577,6 +577,7 @@
       "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**",
       "no-bias-config": "No Bias Config set for this Channel.",
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
+      "updated-config": "I updated the config for the channel. <:blobokhand:317032017164238848>",
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
       "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>"
     },
