@@ -9,6 +9,7 @@ import (
     rethink "github.com/gorethink/gorethink"
     "sort"
     "encoding/json"
+    "bytes"
 )
 
 type Bias struct{}
@@ -150,6 +151,37 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                 biasChannels = m.GetBiasChannels()
                 _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.updated-config"))
                 helpers.Relax(err)
+                return
+            })
+        case "get-config":
+            helpers.RequireAdmin(msg, func() {
+                session.ChannelTyping(msg.ChannelID)
+
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+                if err != nil || targetChannel.ID == "" {
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    return
+                }
+
+                channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
+                if channelDb.ChannelID == "" {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                channelConfigJson, err := json.MarshalIndent(channelDb.Categories, "", "    ")
+                helpers.Relax(err)
+
+                _, err = session.ChannelFileSend(msg.ChannelID, targetChannel.Name + "-robyul-bias-config.json", bytes.NewReader(channelConfigJson))
+                helpers.Relax(err)
+
                 return
             })
         case "stats":
@@ -381,6 +413,23 @@ func (m *Bias) getChannelConfigByOrCreateEmpty(key string, id string) Assignable
         } else {
             return m.getChannelConfigByOrCreateEmpty("id", res.GeneratedKeys[0])
         }
+    } else if err != nil {
+        panic(err)
+    }
+
+    return entryBucket
+}
+
+func (m *Bias) getChannelConfigBy(key string, id string) AssignableRole_Channel {
+    var entryBucket AssignableRole_Channel
+    listCursor, err := rethink.Table("bias").Filter(
+        rethink.Row.Field(key).Eq(id),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.One(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return entryBucket
     } else if err != nil {
         panic(err)
     }
