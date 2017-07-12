@@ -109,7 +109,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                 helpers.Relax(err)
             })
         case "refresh":
-            helpers.RequireAdmin(msg, func() {
+            helpers.RequireBotAdmin(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 biasChannels = m.GetBiasChannels()
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
