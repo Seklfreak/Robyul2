@@ -13,17 +13,14 @@ import (
     "github.com/Seklfreak/Robyul2/ratelimits"
     "fmt"
     "strconv"
-    "github.com/fogleman/gg"
     "github.com/Seklfreak/Robyul2/logger"
-    "bytes"
-    "net/http"
-    "image"
-    "image/gif"
-    "image/jpeg"
-    "github.com/nfnt/resize"
     "github.com/Seklfreak/Robyul2/metrics"
     "sort"
     "gopkg.in/oleiade/lane.v1"
+    "os/exec"
+    "os"
+    "bytes"
+    "io/ioutil"
 )
 
 type Levels struct {
@@ -138,105 +135,47 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             totalExp += levelsServerUser.Exp
         }
 
-        avatarUrl := helpers.GetAvatarUrl(targetUser)
+        _ = levelThisServerUser
 
-        client := &http.Client{}
-        request, err := http.NewRequest("GET", avatarUrl, nil)
-        if err != nil {
-            panic(err)
+        cachePath := helpers.GetConfig().Path("cache_folder").Data().(string)
+        tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + msg.Author.Username + ".html"
+
+        htmlTemplate, err := ioutil.ReadFile("/Users/sekl/go/src/github.com/Seklfreak/Robyul2/_assets/profile.html")
+        helpers.Relax(err)
+        htmlTemplateString := string(htmlTemplate)
+
+        htmlTemplateString = strings.Replace(htmlTemplateString,"{USER_USERNAME}", targetMember.User.Username, -1)
+        htmlTemplateString = strings.Replace(htmlTemplateString,"{USER_AVATAR_URL}", helpers.GetAvatarUrl(targetUser), -1)
+
+        err = ioutil.WriteFile(tempTemplatePath, []byte(htmlTemplateString), 0644)
+        helpers.Relax(err)
+
+        env := os.Environ()
+        binary, err := exec.LookPath("webshot")
+        helpers.Relax(err)
+        cmdArgs := []string{
+            tempTemplatePath,
+            "--window-size=800/600",
+            "--default-white-background",
+            "--quality=95",
+            "--stream-type=jpg",
+            "--timeout=10000",
         }
-        request.Header.Set("User-Agent", helpers.DEFAULT_UA)
-        response, err := client.Do(request)
-        helpers.Relax(err)
-        defer response.Body.Close()
-
-        var avatarImage image.Image
-
-        if strings.Contains(avatarUrl, ".gif") {
-            avatarImage, err = gif.Decode(response.Body)
-            helpers.Relax(err)
-        } else {
-            avatarImage, err = jpeg.Decode(response.Body)
-            helpers.Relax(err)
-        }
-
-        usernameText := strings.ToUpper(targetUser.Username)
-        if targetMember.Nick != "" {
-            usernameText += fmt.Sprintf(" (%s)", targetMember.Nick)
-        }
-
-        dc := gg.NewContext(300, 300)
-        // load fonts
-        err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 20)
-        helpers.Relax(err)
-        // draw grey background
-        //dc.SetRGBA255(0, 0, 0, 32)
-        dc.SetRGB255(230, 230, 230)
-        dc.Clear()
-        // draw username box + username
-        dc.DrawRectangle(50, 89, 245, 22)
-        dc.SetRGB255(100, 100, 100)
-        dc.Fill()
-        dc.SetRGB255(255, 255, 255)
-        dc.DrawStringAnchored(usernameText, 100, 107, 0, 0)
-        // draw user title
-        dc.DrawRectangle(95, 111, 200, 22)
-        dc.SetRGBA255(100, 100, 100, 128)
-        dc.Fill()
-        dc.SetRGB255(255, 255, 255)
-        dc.DrawStringAnchored(strings.ToUpper("<USER TITLE>"), 100, 129, 0, 0)
-        // draw round user profile picture
-        dc.DrawCircle(50, 90, 44)
-        dc.SetRGB255(100, 100, 100)
-        dc.Fill()
-        avatarImage = resize.Resize(80, 80, avatarImage, resize.NearestNeighbor)
-        dc.DrawCircle(50, 90, 40)
-        dc.Clip()
-        dc.DrawImage(avatarImage, 10, 50)
-        dc.ResetClip()
-        // draw levels
-        dc.DrawRectangle(95, 135, 200, 22)
-        dc.SetRGBA255(100, 100, 100, 128)
-        dc.Fill()
-        dc.SetRGB255(255, 255, 255)
-        err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 8)
-        helpers.Relax(err)
-        dc.DrawStringAnchored(strings.ToUpper("Level"), 97, 143, 0, 0)
-        err = dc.LoadFontFace("_assets/Roboto/Roboto-Bold.ttf", 15)
-        helpers.Relax(err)
-        dc.DrawStringAnchored(strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), 106.5, 155, 0.5, 0)
-        dc.DrawRectangle(121, 137, 73, 18)
-        dc.SetRGBA255(100, 100, 100, 128)
-        dc.Fill()
-        dc.DrawRectangle(121, 137, float64(73)/float64(100)*float64(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), 18)
-        dc.SetRGBA255(65, 125, 100, 215)
-        dc.Fill()
-        dc.SetRGB255(255, 255, 255)
-        err = dc.LoadFontFace("_assets/2593-UnDotum.ttf", 8)
-        helpers.Relax(err)
-        dc.DrawStringAnchored(strings.ToUpper("Global"), 196.5, 143, 0, 0)
-        err = dc.LoadFontFace("_assets/Roboto/Roboto-Bold.ttf", 15)
-        helpers.Relax(err)
-        dc.DrawStringAnchored(strconv.Itoa(m.getLevelFromExp(totalExp)), 210.5, 155, 0.5, 0)
-        dc.DrawRectangle(226, 137, 67, 18)
-        dc.SetRGBA255(100, 100, 100, 128)
-        dc.Fill()
-        dc.DrawRectangle(226, 137, float64(67)/float64(100)*float64(m.getProgressToNextLevelFromExp(totalExp)), 18)
-        dc.SetRGBA255(65, 125, 100, 215)
-        dc.Fill()
-
-        var buffer bytes.Buffer
-        err = dc.EncodePNG(&buffer)
-        helpers.Relax(err)
-
-        _, err = session.ChannelFileSendWithMessage(
-            msg.ChannelID,
-            fmt.Sprintf("<@%s> Profile for %s", targetUser.ID, targetUser.Username),
-            fmt.Sprintf("%s.png", targetUser.ID), bytes.NewReader(buffer.Bytes()))
+        imgCmd := exec.Command(binary, cmdArgs...)
+        imgCmd.Env = env
+        imageBytes, err := imgCmd.Output()
         helpers.Relax(err)
 
         metrics.LevelImagesGenerated.Add(1)
 
+        _, err = session.ChannelFileSendWithMessage(
+            msg.ChannelID,
+            fmt.Sprintf("<@%s> Profile for %s", targetUser.ID, targetUser.Username),
+            fmt.Sprintf("%s-Robyul.jpg", targetUser.ID), bytes.NewReader(imageBytes))
+        helpers.Relax(err)
+
+        err = os.Remove(tempTemplatePath)
+        helpers.Relax(err)
         return
     case "level", "levels": // [p]level <user> or [p]level top
         session.ChannelTyping(msg.ChannelID)
