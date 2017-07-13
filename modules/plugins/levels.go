@@ -138,9 +138,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         _ = levelThisServerUser
 
         cachePath := helpers.GetConfig().Path("cache_folder").Data().(string)
+        assetsPath := helpers.GetConfig().Path("assets_folder").Data().(string)
         tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + msg.Author.Username + ".html"
 
-        htmlTemplate, err := ioutil.ReadFile("/Users/sekl/go/src/github.com/Seklfreak/Robyul2/_assets/profile.html")
+        htmlTemplate, err := ioutil.ReadFile(assetsPath + "profile.html")
         helpers.Relax(err)
         htmlTemplateString := string(htmlTemplate)
 
