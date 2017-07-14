@@ -833,6 +833,9 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     if avatarUrl != "" {
         avatarUrl = strings.Replace(avatarUrl, "gif", "jpg", -1)
     }
+    if avatarUrl == "" {
+        avatarUrl = "http://i.imgur.com/osAqNL6.png"
+    }
     userAndNick := member.User.Username
     if member.Nick != "" {
         userAndNick = fmt.Sprintf("%s (%s)", member.User.Username, member.Nick)
