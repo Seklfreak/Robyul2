@@ -651,7 +651,9 @@
       "new-profile-background-add-success": "I successfully added the new background `%s`.",
       "new-profile-background-add-error-duplicate": "There is already a background with that name! Please choose a new one.",
       "profile-background-set-error-not-found": "I wasn't able to find a background with that name. <:blobthinking:317028940885524490>",
-      "profile-background-set-success": "I updated your profile! <:blobokhand:317032017164238848>"
+      "profile-background-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
+      "profile-title-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
+      "profile-bio-set-success": "I updated your profile! <:blobokhand:317032017164238848>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

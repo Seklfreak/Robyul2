@@ -78,6 +78,8 @@ type DB_Profile_Userdata struct {
     ID      string  `gorethink:"id,omitempty"`
     UserID  string  `gorethink:"userid"`
     Background  string  `gorethink:"background"`
+    Title string `gorethink:"title"`
+    Bio string `gorethink:"bio"`
 }
 
 var (
@@ -139,6 +141,46 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
             switch args[0] {
+            case "title":
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+                titleText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+                if len(titleText) <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                userUserdata := m.GetUserUserdata(msg.Author)
+                userUserdata.Title = titleText
+                m.setUserUserdata(userUserdata)
+
+                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-title-set-success"))
+                helpers.Relax(err)
+                return
+            case "bio":
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+                bioText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+                if len(bioText) <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                userUserdata := m.GetUserUserdata(msg.Author)
+                userUserdata.Bio = bioText
+                m.setUserUserdata(userUserdata)
+
+                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
+                helpers.Relax(err)
+                return
             case "background":
                 if len(args) < 2 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
@@ -794,20 +836,28 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     if member.Nick != "" {
         userAndNick = fmt.Sprintf("%s (%s)", member.User.Username, member.Nick)
     }
+    title := userData.Title
+    if title == "" {
+        title = "Robyul's friend"
+    }
+    bio := userData.Bio
+    if bio == "" {
+        bio = "Robyul would like to know more about me!"
+    }
 
     tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AND_NICKNAME}", userAndNick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AVATAR_URL}", avatarUrl, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TITLE}", "Work In Progress", -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TITLE}", title, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", bio, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", "WIP", -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", "WIP", -1) // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1) // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1) // TODO: <-
 
     err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
     if err != nil {
