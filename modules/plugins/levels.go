@@ -874,7 +874,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         "--default-white-background",
         //"--quality=99",
         "--stream-type=png",
-        "--timeout=20000",
+        "--timeout=100000",
     }
     imgCmd := exec.Command(webshotBinary, cmdArgs...)
     imgCmd.Env = levelsEnv
