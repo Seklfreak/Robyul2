@@ -44,6 +44,8 @@ func SoftRelax(err error, cb Callback) {
 func Relax(err error) {
     if err != nil {
         if DEBUG_MODE == true {
+            fmt.Printf("%#v\n", err)
+            panic(err)
             if err, ok := err.(*discordgo.RESTError); ok && err != nil && err.Message != nil {
                 fmt.Println(strconv.Itoa(err.Message.Code)+":", err.Message.Message)
             } else {

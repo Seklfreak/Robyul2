@@ -647,7 +647,11 @@
       "ignore-user-added": "I will no longer calculate EXP for this user. Use `_levels reset user <user>` to reset their EXP.",
       "ignore-channel-removed": "I will start calculating EXP for this channel again.",
       "ignore-channel-added": "I will no longer calculate EXP for this channel.",
-      "user-resetted": "I resetted the EXP and Level for this user on this server. <:blobugh:317047327443517442>"
+      "user-resetted": "I resetted the EXP and Level for this user on this server. <:blobugh:317047327443517442>",
+      "new-profile-background-add-success": "I successfully added the new background `%s`.",
+      "new-profile-background-add-error-duplicate": "There is already a background with that name! Please choose a new one.",
+      "profile-background-set-error-not-found": "I wasn't able to find a background with that name. <:blobthinking:317028940885524490>",
+      "profile-background-set-success": "I updated your profile! <:blobokhand:317032017164238848>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

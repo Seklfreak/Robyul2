@@ -69,6 +69,17 @@ type DB_Levels_ServerUser struct {
     Exp     int64   `gorethink:"exp"`
 }
 
+type DB_Profile_Background struct {
+    Name    string  `gorethink:"id,omitempty"`
+    URL     string  `gorethink:"url"`
+}
+
+type DB_Profile_Userdata struct {
+    ID      string  `gorethink:"id,omitempty"`
+    UserID  string  `gorethink:"userid"`
+    Background  string  `gorethink:"background"`
+}
+
 var (
     cachePath string
     assetsPath string
@@ -129,10 +140,52 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         if len(args) >= 1 && args[0] != "" {
             switch args[0] {
             case "background":
-                _, err := session.ChannelMessageSend(msg.ChannelID, "WIP")
-                helpers.Relax(err)
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+                switch args[1] {
+                case "add":
+                    helpers.RequireBotAdmin(msg, func() {
+                        if len(args) < 4 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                            helpers.Relax(err)
+                            return
+                        }
+                        backgroundName := args[2]
+                        backgroundUrl := args[3]
 
-                return
+                        err := m.InsertNewProfileBackground(backgroundName, backgroundUrl)
+                        if err != nil {
+                            if strings.Contains(err.Error(), "Duplicate primary key") {
+                                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
+                                return
+                            } else {
+                                helpers.Relax(err)
+                            }
+                        }
+                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success", backgroundName))
+                        helpers.Relax(err)
+                        return
+                    })
+                    return
+                default:
+                    if m.ProfileBackgroundNameExists(args[1]) == false {
+                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-error-not-found"))
+                        helpers.Relax(err)
+
+                        return
+                    }
+
+                    userUserdata := m.GetUserUserdata(msg.Author)
+                    userUserdata.Background = args[1]
+                    m.setUserUserdata(userUserdata)
+
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-success"))
+                    helpers.Relax(err)
+                    return
+                }
             }
 
             targetUser, err = helpers.GetUserFromMention(args[0])
@@ -637,6 +690,80 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 }
 
+func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string) error {
+    newEntry := new(DB_Profile_Background)
+    newEntry.Name = backgroundName
+    newEntry.URL = backgroundUrl
+
+    insert := rethink.Table("profile_backgrounds").Insert(newEntry)
+    _, err := insert.RunWrite(helpers.GetDB())
+    return err
+}
+
+func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
+    var entryBucket DB_Profile_Background
+    listCursor, err := rethink.Table("profile_backgrounds").Filter(
+        rethink.Row.Field("id").Eq(backgroundName),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.One(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return false
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    return true
+}
+
+func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
+    var entryBucket DB_Profile_Background
+    listCursor, err := rethink.Table("profile_backgrounds").Filter(
+        rethink.Row.Field("id").Eq(backgroundName),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.One(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return "http://i.imgur.com/I9b74U9.jpg" // Default Robyul Background
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    return entryBucket.URL
+}
+
+func (l *Levels) GetUserUserdata(user *discordgo.User) DB_Profile_Userdata {
+    var entryBucket DB_Profile_Userdata
+    listCursor, err := rethink.Table("profile_userdata").Filter(
+        rethink.Row.Field("userid").Eq(user.ID),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.One(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        entryBucket.UserID = user.ID
+        insert := rethink.Table("profile_userdata").Insert(entryBucket)
+        _, err := insert.RunWrite(helpers.GetDB())
+        if err != nil {
+            helpers.Relax(err)
+        } else {
+            return l.GetUserUserdata(user)
+        }
+        return entryBucket
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    return entryBucket
+}
+
+func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
+    _, err := rethink.Table("profile_userdata").Update(entry).Run(helpers.GetDB())
+    helpers.Relax(err)
+}
+
 func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([]byte, error) {
     tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.Username + ".html"
 
@@ -657,6 +784,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         totalExp += levelsServerUser.Exp
     }
 
+    userData := m.GetUserUserdata(member.User)
+
     avatarUrl := helpers.GetAvatarUrl(member.User)
     if avatarUrl != "" {
         avatarUrl = strings.Replace(avatarUrl, "gif", "jpg", -1)
@@ -674,6 +803,11 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", "WIP", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1)
 
     err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
     if err != nil {
