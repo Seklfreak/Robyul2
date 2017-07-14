@@ -19,6 +19,7 @@ const (
 
 var botAdmins = []string{
     "116620585638821891", // Sekl
+    "134298438559858688", // Kakkela
 }
 var NukeMods = []string{
     "116620585638821891", // Sekl
