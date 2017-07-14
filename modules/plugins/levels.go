@@ -69,8 +69,24 @@ type DB_Levels_ServerUser struct {
     Exp     int64   `gorethink:"exp"`
 }
 
+var (
+    cachePath string
+    assetsPath string
+    htmlTemplateString string
+    levelsEnv []string = os.Environ()
+    webshotBinary string
+)
+
 func (m *Levels) Init(session *discordgo.Session) {
     m.BucketInit()
+
+    cachePath = helpers.GetConfig().Path("cache_folder").Data().(string)
+    assetsPath = helpers.GetConfig().Path("assets_folder").Data().(string)
+    htmlTemplate, err := ioutil.ReadFile(assetsPath + "profile.html")
+    helpers.Relax(err)
+    htmlTemplateString = string(htmlTemplate)
+    webshotBinary, err = exec.LookPath("webshot")
+    helpers.Relax(err)
 
     go m.processExpStackLoop()
     logger.PLUGIN.L("VLive", "Started processExpStackLoop")
@@ -100,9 +116,10 @@ func (m *Levels) processExpStackLoop() {
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
     case "profile": // [p]profile
-        //backgroundUrl := "http://g2.slmn.de/robyul/backgrounds/ioi-nayoung-01.jpg"
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.Channel(msg.ChannelID)
+        helpers.Relax(err)
+        guild, err := session.Guild(channel.GuildID)
         helpers.Relax(err)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
@@ -110,6 +127,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
+            switch args[0] {
+            case "background":
+                _, err := session.ChannelMessageSend(msg.ChannelID, "WIP")
+                helpers.Relax(err)
+
+                return
+            }
+
             targetUser, err = helpers.GetUserFromMention(args[0])
             if targetUser == nil || targetUser.ID == "" {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -118,65 +143,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             }
         }
 
-        var levelsServersUser []DB_Levels_ServerUser
-        listCursor, err := rethink.Table("levels_serverusers").Filter(
-            rethink.Row.Field("userid").Eq(targetUser.ID),
-        ).Run(helpers.GetDB())
+        jpgBytes, err := m.GetProfile(targetMember, guild)
         helpers.Relax(err)
-        defer listCursor.Close()
-        err = listCursor.All(&levelsServersUser)
-
-        var levelThisServerUser DB_Levels_ServerUser
-        var totalExp int64
-        for _, levelsServerUser := range levelsServersUser {
-            if levelsServerUser.GuildID == channel.GuildID {
-                levelThisServerUser = levelsServerUser
-            }
-            totalExp += levelsServerUser.Exp
-        }
-
-        _ = levelThisServerUser
-
-        cachePath := helpers.GetConfig().Path("cache_folder").Data().(string)
-        assetsPath := helpers.GetConfig().Path("assets_folder").Data().(string)
-        tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + msg.Author.Username + ".html"
-
-        htmlTemplate, err := ioutil.ReadFile(assetsPath + "profile.html")
-        helpers.Relax(err)
-        htmlTemplateString := string(htmlTemplate)
-
-        htmlTemplateString = strings.Replace(htmlTemplateString,"{USER_USERNAME}", targetMember.User.Username, -1)
-        htmlTemplateString = strings.Replace(htmlTemplateString,"{USER_AVATAR_URL}", helpers.GetAvatarUrl(targetUser), -1)
-
-        err = ioutil.WriteFile(tempTemplatePath, []byte(htmlTemplateString), 0644)
-        helpers.Relax(err)
-
-        env := os.Environ()
-        binary, err := exec.LookPath("webshot")
-        helpers.Relax(err)
-        cmdArgs := []string{
-            tempTemplatePath,
-            "--window-size=800/600",
-            "--default-white-background",
-            "--quality=95",
-            "--stream-type=jpg",
-            "--timeout=10000",
-        }
-        imgCmd := exec.Command(binary, cmdArgs...)
-        imgCmd.Env = env
-        imageBytes, err := imgCmd.Output()
-        helpers.Relax(err)
-
-        metrics.LevelImagesGenerated.Add(1)
 
         _, err = session.ChannelFileSendWithMessage(
             msg.ChannelID,
             fmt.Sprintf("<@%s> Profile for %s", targetUser.ID, targetUser.Username),
-            fmt.Sprintf("%s-Robyul.jpg", targetUser.ID), bytes.NewReader(imageBytes))
+            fmt.Sprintf("%s-Robyul.png", targetUser.ID), bytes.NewReader(jpgBytes))
         helpers.Relax(err)
 
-        err = os.Remove(tempTemplatePath)
-        helpers.Relax(err)
         return
     case "level", "levels": // [p]level <user> or [p]level top
         session.ChannelTyping(msg.ChannelID)
@@ -660,6 +635,74 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         return
     }
 
+}
+
+func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([]byte, error) {
+    tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.Username + ".html"
+
+    var levelsServersUser []DB_Levels_ServerUser
+    listCursor, err := rethink.Table("levels_serverusers").Filter(
+        rethink.Row.Field("userid").Eq(member.User.ID),
+    ).Run(helpers.GetDB())
+    helpers.Relax(err)
+    defer listCursor.Close()
+    err = listCursor.All(&levelsServersUser)
+
+    var levelThisServerUser DB_Levels_ServerUser
+    var totalExp int64
+    for _, levelsServerUser := range levelsServersUser {
+        if levelsServerUser.GuildID == guild.ID {
+            levelThisServerUser = levelsServerUser
+        }
+        totalExp += levelsServerUser.Exp
+    }
+
+    avatarUrl := helpers.GetAvatarUrl(member.User)
+    if avatarUrl != "" {
+        avatarUrl = strings.Replace(avatarUrl, "gif", "jpg", -1)
+    }
+    userAndNick := member.User.Username
+    if member.Nick != "" {
+        userAndNick = fmt.Sprintf("%s (%s)", member.User.Username, member.Nick)
+    }
+
+    tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AND_NICKNAME}", userAndNick, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AVATAR_URL}", avatarUrl, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TITLE}", "Work In Progress", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
+
+    err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
+    if err != nil {
+        return []byte{}, err
+    }
+
+    cmdArgs := []string{
+        tempTemplatePath,
+        "--window-size=400/300",
+        "--default-white-background",
+        //"--quality=99",
+        "--stream-type=png",
+        "--timeout=20000",
+    }
+    imgCmd := exec.Command(webshotBinary, cmdArgs...)
+    imgCmd.Env = levelsEnv
+    imageBytes, err := imgCmd.Output()
+    if err != nil {
+        return []byte{}, err
+    }
+
+    err = os.Remove(tempTemplatePath)
+    if err != nil {
+        return []byte{}, err
+    }
+
+    metrics.LevelImagesGenerated.Add(1)
+
+    return imageBytes, nil
 }
 
 func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
