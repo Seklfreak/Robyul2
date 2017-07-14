@@ -808,7 +808,7 @@ func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
 }
 
 func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([]byte, error) {
-    tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.Username + ".html"
+    tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
 
     var levelsServersUser []DB_Levels_ServerUser
     listCursor, err := rethink.Table("levels_serverusers").Filter(
@@ -875,6 +875,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         //"--quality=99",
         "--stream-type=png",
         "--timeout=100000",
+        "--p:disk-cache=true",
     }
     imgCmd := exec.Command(webshotBinary, cmdArgs...)
     imgCmd.Env = levelsEnv
