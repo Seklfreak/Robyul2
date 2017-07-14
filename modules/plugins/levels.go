@@ -136,8 +136,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
-        helpers.Relax(err)
-        targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
             switch args[0] {
@@ -237,6 +235,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 return
             }
         }
+
+        targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
+        helpers.Relax(err)
 
         jpgBytes, err := m.GetProfile(targetMember, guild)
         helpers.Relax(err)
