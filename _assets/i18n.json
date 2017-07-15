@@ -658,7 +658,8 @@
       "rep-error-self": "You can't rep yourself! <:blobeyes:317029938568101890>",
       "rep-error-bot": "You can't rep bots! <:robyulblush:327206930437373952>",
       "rep-error-session": "I love you too, but please rep a human instead! <:blobsnuggle:333989876695302144>",
-      "rep-success": "I gave %s a reputation point! <:blobhighfive:317043673047236609>"
+      "rep-success": "I gave %s a reputation point! <:blobhighfive:317043673047236609>",
+      "no-stats-available-yet": "No stats available yet, please try again later! <:googlenerd:317030369205682186>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

@@ -21,6 +21,7 @@ import (
     "os"
     "bytes"
     "io/ioutil"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 type Levels struct {
@@ -85,12 +86,18 @@ type DB_Profile_Userdata struct {
     LastRepped  time.Time  `gorethink:"last_repped"`
 }
 
+type Cache_Levels_top struct {
+    GuildID string
+    Levels PairList
+}
+
 var (
     cachePath string
     assetsPath string
     htmlTemplateString string
     levelsEnv []string = os.Environ()
     webshotBinary string
+    topCache []Cache_Levels_top
 )
 
 func (m *Levels) Init(session *discordgo.Session) {
@@ -105,7 +112,73 @@ func (m *Levels) Init(session *discordgo.Session) {
     helpers.Relax(err)
 
     go m.processExpStackLoop()
-    logger.PLUGIN.L("VLive", "Started processExpStackLoop")
+    logger.PLUGIN.L("levels", "Started processExpStackLoop")
+
+    go m.cacheTopLoop()
+    logger.PLUGIN.L("levels", "Started processCacheTopLoop")
+}
+
+func (m *Levels) cacheTopLoop() {
+    defer func() {
+        helpers.Recover()
+
+        logger.ERROR.L("levels", "The cacheTopLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        m.cacheTopLoop()
+    }()
+
+    for {
+        var newTopCache []Cache_Levels_top
+
+        var levelsUsers []DB_Levels_ServerUser
+        listCursor, err := rethink.Table("levels_serverusers").Run(helpers.GetDB())
+        helpers.Relax(err)
+        defer listCursor.Close()
+        err = listCursor.All(&levelsUsers)
+
+        if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
+            logger.ERROR.L("levels","empty result from levels db")
+            time.Sleep(60 * time.Second)
+            continue
+        } else if err != nil {
+            logger.ERROR.L("levels",fmt.Sprintf("db error: %s", err.Error()))
+            time.Sleep(60 * time.Second)
+            continue
+        }
+
+        for _, guild := range cache.GetSession().State.Guilds {
+            guildExpMap := make(map[string]int64, 0)
+            for _, levelsUser := range levelsUsers {
+                if levelsUser.GuildID == guild.ID {
+                    guildExpMap[levelsUser.UserID] = levelsUser.Exp
+                }
+            }
+            rankedGuildExpMap := m.rankMapByExp(guildExpMap)
+            newTopCache = append(newTopCache, Cache_Levels_top{
+                GuildID: guild.ID,
+                Levels: rankedGuildExpMap,
+            })
+        }
+
+        totalExpMap := make(map[string]int64, 0)
+        for _, levelsUser := range levelsUsers {
+            if _, ok := totalExpMap[levelsUser.UserID]; ok {
+                totalExpMap[levelsUser.UserID] += levelsUser.Exp
+            } else {
+                totalExpMap[levelsUser.UserID] = levelsUser.Exp
+            }
+        }
+
+        rankedTotalExpMap := m.rankMapByExp(totalExpMap)
+        newTopCache = append(newTopCache, Cache_Levels_top{
+            GuildID: "global",
+            Levels: rankedTotalExpMap,
+        })
+
+        topCache = newTopCache
+
+        time.Sleep(30 * time.Minute)
+    }
 }
 
 func (m *Levels) processExpStackLoop() {
@@ -319,6 +392,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         if len(args) >= 1 && args[0] != "" {
             switch args[0] {
             case "leaderboard", "top": // [p]level top
+                // TODO: use cached top list
                 var levelsServersUsers []DB_Levels_ServerUser
                 listCursor, err := rethink.Table("levels_serverusers").Filter(
                     rethink.Row.Field("guildid").Eq(channel.GuildID),
@@ -381,30 +455,18 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 helpers.Relax(err)
                 return
             case "global-leaderboard", "global-top", "globaltop":
-                var levelsUsers []DB_Levels_ServerUser
-                listCursor, err := rethink.Table("levels_serverusers").Run(helpers.GetDB())
-                helpers.Relax(err)
-                defer listCursor.Close()
-                err = listCursor.All(&levelsUsers)
-
-                if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
-                    helpers.Relax(err)
-                    return
-                } else if err != nil {
-                    helpers.Relax(err)
-                }
-
-                totalExpMap := make(map[string]int64, 0)
-                for _, levelsUser := range levelsUsers {
-                    if _, ok := totalExpMap[levelsUser.UserID]; ok {
-                        totalExpMap[levelsUser.UserID] += levelsUser.Exp
-                    } else {
-                        totalExpMap[levelsUser.UserID] = levelsUser.Exp
+                var rankedTotalExpMap PairList
+                for _, serverCache := range topCache {
+                    if serverCache.GuildID == "global" {
+                        rankedTotalExpMap = serverCache.Levels
                     }
                 }
 
-                rankedTotalExpMap := m.rankMapByExp(totalExpMap)
+                if len(rankedTotalExpMap) <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.no-stats-available-yet"))
+                    helpers.Relax(err)
+                    return
+                }
 
                 globalTopLevelEmbed := &discordgo.MessageEmbed{
                     Color: 0x0FADED,
@@ -885,6 +947,25 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         totalExp += levelsServerUser.Exp
     }
 
+    serverRank := "N/A"
+    globalRank := "N/A"
+    for _, serverCache := range topCache {
+        if serverCache.GuildID == "global" {
+            for i, pair := range serverCache.Levels {
+                if pair.Key == member.User.ID {
+                    globalRank = strconv.Itoa(i+1)
+                }
+            }
+        } else if serverCache.GuildID == guild.ID {
+            for i, pair := range serverCache.Levels {
+                if pair.Key == member.User.ID {
+                    serverRank = strconv.Itoa(i+1)
+                }
+            }
+        }
+    }
+
+
     userData := m.GetUserUserdata(member.User)
 
     avatarUrl := helpers.GetAvatarUrl(member.User)
@@ -915,8 +996,10 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TITLE}", title, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", bio, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_RANK}", serverRank, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_RANK}", globalRank, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
