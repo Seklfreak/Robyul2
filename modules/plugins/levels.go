@@ -59,6 +59,7 @@ func (m *Levels) Commands() []string {
         "level",
         "levels",
         "profile",
+        "rep",
     }
 }
 
@@ -75,11 +76,13 @@ type DB_Profile_Background struct {
 }
 
 type DB_Profile_Userdata struct {
-    ID      string  `gorethink:"id,omitempty"`
-    UserID  string  `gorethink:"userid"`
-    Background  string  `gorethink:"background"`
-    Title string `gorethink:"title"`
-    Bio string `gorethink:"bio"`
+    ID          string     `gorethink:"id,omitempty"`
+    UserID      string     `gorethink:"userid"`
+    Background  string     `gorethink:"background"`
+    Title       string     `gorethink:"title"`
+    Bio         string     `gorethink:"bio"`
+    Rep         int        `gorethink:"rep"`
+    LastRepped  time.Time  `gorethink:"last_repped"`
 }
 
 var (
@@ -128,6 +131,61 @@ func (m *Levels) processExpStackLoop() {
 
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
     switch command {
+    case "rep": // [p]rep <user id/mention>
+        session.ChannelTyping(msg.ChannelID)
+        args := strings.Fields(content)
+        if len(args) <= 0 {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+            helpers.Relax(err)
+            return
+        }
+
+        userData := m.GetUserUserdata(msg.Author)
+        if time.Since(userData.LastRepped).Hours() < 24 {
+            timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 24))
+            _, err := session.ChannelMessageSend(msg.ChannelID,
+                helpers.GetTextF("plugins.levels.rep-error-timelimit",
+                    int(math.Floor(timeUntil.Hours())),
+                    int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60) ))
+            helpers.Relax(err)
+            return
+        }
+
+        targetUser, err := helpers.GetUserFromMention(args[0])
+        if err != nil || targetUser == nil || targetUser.ID == "" {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+            helpers.Relax(err)
+            return
+        }
+
+        // Don't rep this bot account, other bots, or oneself
+        if targetUser.ID == session.State.User.ID {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-session"))
+            helpers.Relax(err)
+            return
+        }
+        if targetUser.ID == msg.Author.ID {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-self"))
+            helpers.Relax(err)
+            return
+        }
+        if targetUser.Bot == true {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-bot"))
+            helpers.Relax(err)
+            return
+        }
+
+        targetUserData := m.GetUserUserdata(targetUser)
+        targetUserData.Rep += 1
+        m.setUserUserdata(targetUserData)
+
+        userData.LastRepped = time.Now()
+        m.setUserUserdata(userData)
+
+        _, err = session.ChannelMessageSend(msg.ChannelID,
+            helpers.GetTextF("plugins.levels.rep-success", targetUser.Username))
+        helpers.Relax(err)
+        return
     case "profile": // [p]profile
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.Channel(msg.ChannelID)
@@ -859,7 +917,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", "WIP", -1) // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1) // TODO: <-

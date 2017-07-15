@@ -653,7 +653,12 @@
       "profile-background-set-error-not-found": "I wasn't able to find a background with that name. <:blobthinking:317028940885524490>",
       "profile-background-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
       "profile-title-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
-      "profile-bio-set-success": "I updated your profile! <:blobokhand:317032017164238848>"
+      "profile-bio-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
+      "rep-error-timelimit": "You have to wait %d hour(s) and %d minute(s) until you can rep someone again! <:blobshh:317044272161357824>",
+      "rep-error-self": "You can't rep yourself! <:blobeyes:317029938568101890>",
+      "rep-error-bot": "You can't rep bots! <:robyulblush:327206930437373952>",
+      "rep-error-session": "I love you too, but please rep a human instead! <:blobsnuggle:333989876695302144>",
+      "rep-success": "I gave %s a reputation point! <:blobhighfive:317043673047236609>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

@@ -7,6 +7,7 @@
         @import url('https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&subset=cyrillic,cyrillic-ext,greek,greek-ext,latin-ext,vietnamese');
         body {
             background-image: url('{USER_BACKGROUND_URL}');
+            background-image: url('http://i.imgur.com/I9b74U9.jpg');
             background-repeat: no-repeat;
             font-family: 'Roboto', 'Bitstream Vera', sans-serif;
             color: white;
@@ -40,14 +41,24 @@
             height: 30px;
             z-index: -1;
         }
+        #repcontainer {
+            background-color: rgba(150,150,150,0.5);
+            position: absolute;
+            left: 0px;
+            top: 43px;
+            width: 80px;
+            height: 25px;
+            z-index: -1;
+        }
         #userrep {
             position: absolute;
-            top: 50px;
-            left: 5px;
-            height: 30px;
-            width: 75px;
-            font-size: 12px;
+            top: 4px;
+            height: 20px;
+            width: 80px;
+            font-size: 15px;
             text-align: center;
+            font-weight: bold;
+            overflow: hidden;
         }
         #userbadges {
             position: absolute;
@@ -135,7 +146,7 @@
     </div>
     <div id="usertitle">{USER_TITLE}</div>
     <div id="userlvlinfo">Server Level: {USER_SERVER_LEVEL} Global Level: {USER_GLOBAL_LEVEL}</div>
-    <!-- <div id="userrep">{USER_REP}</div> -->
+    <div id="repcontainer"><div id="userrep">+{USER_REP} REP</div></div>
     <!-- <div id="userbadges">BADGES<!--<img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png">-->
     <!-- </div> -->
     <div id="userbio">{USER_BIO}</div>
