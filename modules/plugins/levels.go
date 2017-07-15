@@ -244,7 +244,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
         _, err = session.ChannelFileSendWithMessage(
             msg.ChannelID,
-            fmt.Sprintf("<@%s> Profile for %s", targetUser.ID, targetUser.Username),
+            fmt.Sprintf("<@%s> Profile for %s", msg.Author.ID, targetUser.Username),
             fmt.Sprintf("%s-Robyul.png", targetUser.ID), bytes.NewReader(jpgBytes))
         helpers.Relax(err)
 
@@ -832,6 +832,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     avatarUrl := helpers.GetAvatarUrl(member.User)
     if avatarUrl != "" {
         avatarUrl = strings.Replace(avatarUrl, "gif", "jpg", -1)
+        avatarUrl = strings.Replace(avatarUrl, "size=1024", "size=256", -1)
     }
     if avatarUrl == "" {
         avatarUrl = "http://i.imgur.com/osAqNL6.png"
