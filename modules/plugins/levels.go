@@ -896,6 +896,10 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
 }
 
 func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
+    if backgroundName == "" {
+        return "http://i.imgur.com/I9b74U9.jpg"
+    }
+
     var entryBucket DB_Profile_Background
     listCursor, err := rethink.Table("profile_backgrounds").Filter(
         rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
