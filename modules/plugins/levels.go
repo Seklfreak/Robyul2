@@ -327,14 +327,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         backgroundName := args[2]
                         backgroundUrl := args[3]
 
+                        if m.ProfileBackgroundNameExists(backgroundName) == true {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
+                            return
+                        }
+
                         err := m.InsertNewProfileBackground(backgroundName, backgroundUrl)
                         if err != nil {
-                            if strings.Contains(err.Error(), "Duplicate primary key") {
-                                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
-                                return
-                            } else {
-                                helpers.Relax(err)
-                            }
+                            helpers.Relax(err)
                         }
                         _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success", backgroundName))
                         helpers.Relax(err)
@@ -357,6 +357,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     helpers.Relax(err)
                     return
                 }
+            case "badge":
+                return
             }
 
             targetUser, err = helpers.GetUserFromMention(args[0])
@@ -855,7 +857,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string) error {
     newEntry := new(DB_Profile_Background)
-    newEntry.Name = backgroundName
+    newEntry.Name = strings.ToLower(backgroundName)
     newEntry.URL = backgroundUrl
 
     insert := rethink.Table("profile_backgrounds").Insert(newEntry)
@@ -866,13 +868,26 @@ func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl
 func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
     var entryBucket DB_Profile_Background
     listCursor, err := rethink.Table("profile_backgrounds").Filter(
-        rethink.Row.Field("id").Eq(backgroundName),
+        rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
     ).Run(helpers.GetDB())
     defer listCursor.Close()
     err = listCursor.One(&entryBucket)
 
     if err == rethink.ErrEmptyResult {
-        return false
+        var entryBucket DB_Profile_Background
+        listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
+            return profile.Field("id").Match(fmt.Sprintf("(?i)%s", backgroundName))
+        }).Run(helpers.GetDB())
+        defer listCursor.Close()
+        err = listCursor.One(&entryBucket)
+
+        if err == rethink.ErrEmptyResult {
+            return false
+        } else if err != nil {
+            helpers.Relax(err)
+        }
+
+        return true
     } else if err != nil {
         helpers.Relax(err)
     }
@@ -883,13 +898,26 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
 func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
     var entryBucket DB_Profile_Background
     listCursor, err := rethink.Table("profile_backgrounds").Filter(
-        rethink.Row.Field("id").Eq(backgroundName),
+        rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
     ).Run(helpers.GetDB())
     defer listCursor.Close()
     err = listCursor.One(&entryBucket)
 
     if err == rethink.ErrEmptyResult {
-        return "http://i.imgur.com/I9b74U9.jpg" // Default Robyul Background
+        var entryBucket DB_Profile_Background
+        listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
+            return profile.Field("id").Match(fmt.Sprintf("(?i)%s", backgroundName))
+        }).Run(helpers.GetDB())
+        defer listCursor.Close()
+        err = listCursor.One(&entryBucket)
+
+        if err == rethink.ErrEmptyResult {
+            return "http://i.imgur.com/I9b74U9.jpg" // Default Robyul Background
+        } else if err != nil {
+            helpers.Relax(err)
+        }
+
+        return entryBucket.URL
     } else if err != nil {
         helpers.Relax(err)
     }
