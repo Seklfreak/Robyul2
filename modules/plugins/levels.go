@@ -915,6 +915,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TITLE}", title, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", bio, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1) // TODO: <-

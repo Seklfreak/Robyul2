@@ -59,6 +59,37 @@
             font-weight: bold;
             overflow: hidden;
         }
+        .levelbox {
+            position: absolute;
+            top: 0;
+            width: 22px;
+        }
+        .levelbox .title {
+            font-size: 9px;
+            text-align: center;
+        }
+        .levelbox .level {
+            font-size: 12px;
+            top: 11px;
+            text-align: center;
+        }
+        .levelnextbox {
+            position: absolute;
+            top: 0;
+            width: 44px;
+        }
+        .levelnextbox .title {
+            font-size: 9px;
+            left: 0;
+        }
+        .levelnextbox .level {
+            font-size: 12px;
+            margin: auto;
+            position: absolute;
+            top: 3px;
+            bottom: 0;
+            left: 30px;
+        }
         #userbadges {
             position: absolute;
             top: 75px;
@@ -133,6 +164,27 @@
             height: 20px;
             font-size: 14px;
         }
+        #serverexpbar {
+            position: absolute;
+            background-color: rgba(150,150,150,.5);
+            width: 207px;
+            height: 20px;
+            left: 33px;
+            top: 0;
+        }
+        #serverexpbarprogress {
+            background-color: rgba(70, 212, 46, 0.5);
+            height: 20px;
+            left: 33px;
+            top: 0;
+        }
+        #serverexpbartext {
+            position: absolute;
+            width: 207px;
+            height: 20px;
+            text-align: center;
+            top: 3px;
+        }
     </style>
 </head>
 
@@ -144,7 +196,12 @@
         <div id="username">{USER_AND_NICKNAME}</div>
     </div>
     <div id="usertitle">{USER_TITLE}</div>
-    <div id="userlvlinfo">Server Level: {USER_SERVER_LEVEL} Global Level: {USER_GLOBAL_LEVEL}</div>
+    <div id="userlvlinfo">
+        <div class="levelbox" style="left: 3px; top: -2px;"><div class="title">Level</div><div class="level">{USER_SERVER_LEVEL}</div></div>
+        <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div><div id="serverexpbartext">{USER_SERVER_LEVEL_PERCENT} %</div></div>
+        <!-- <div class="levelbox" style="left: 25px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div> -->
+        <div class="levelnextbox" style="left: 250px;"><div class="title">Global Level</div><div class="level">{USER_GLOBAL_LEVEL}</div></div>
+    </div>
     <div id="repcontainer"><div id="userrep">+{USER_REP} REP</div></div>
     <!-- <div id="userbadges">BADGES<!--<img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png">-->
     <!-- </div> -->
