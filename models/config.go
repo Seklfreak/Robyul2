@@ -42,6 +42,8 @@ type Config struct {
 
     TroublemakerIsParticipating bool `rethink:"troublemaker_participation"`
     TroublemakerLogChannel      string `rethink:"troublemaker_channel"`
+
+    LevelsMaxBadges      int `rethink:"levels_maxbadges"`
 }
 
 // Default is a helper for generating default config values

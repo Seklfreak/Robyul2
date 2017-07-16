@@ -22,6 +22,11 @@ import (
     "bytes"
     "io/ioutil"
     "github.com/Seklfreak/Robyul2/cache"
+    "net/url"
+    "net/http"
+    "encoding/json"
+    "encoding/base64"
+    "github.com/bradfitz/slice"
 )
 
 type Levels struct {
@@ -77,13 +82,28 @@ type DB_Profile_Background struct {
 }
 
 type DB_Profile_Userdata struct {
-    ID          string     `gorethink:"id,omitempty"`
-    UserID      string     `gorethink:"userid"`
-    Background  string     `gorethink:"background"`
-    Title       string     `gorethink:"title"`
-    Bio         string     `gorethink:"bio"`
-    Rep         int        `gorethink:"rep"`
-    LastRepped  time.Time  `gorethink:"last_repped"`
+    ID             string     `gorethink:"id,omitempty"`
+    UserID         string     `gorethink:"userid"`
+    Background     string     `gorethink:"background"`
+    Title          string     `gorethink:"title"`
+    Bio            string     `gorethink:"bio"`
+    Rep            int        `gorethink:"rep"`
+    LastRepped     time.Time  `gorethink:"last_repped"`
+    ActiveBadgeIDs []string   `gorethink:"active_badgeids"`
+}
+
+type DB_Badge struct {
+    ID                 string     `gorethink:"id,omitempty"`
+    CreatedByUserID    string     `gorethink:"createdby_userid"`
+    Name               string     `gorethink:"name"`
+    Category           string     `gorethink:"category"`
+    BorderColor        string     `gorethink:"bordercolor"`
+    GuildID            string     `gorethink:"guildid"`
+    CreatedAt          time.Time  `gorethink:"createdat"`
+    URL                string     `gorethink:"url"`
+    LevelRequirement   int        `gorethink:"levelrequirement"`
+    AllowedUserIDs     []string   `gorethinK:"allowed_userids"`
+    DeniedUserIDs      []string   `gorethinK:"allowed_userids"`
 }
 
 type Cache_Levels_top struct {
@@ -98,6 +118,10 @@ var (
     levelsEnv []string = os.Environ()
     webshotBinary string
     topCache []Cache_Levels_top
+)
+
+const (
+    BadgeLimt int = 9
 )
 
 func (m *Levels) Init(session *discordgo.Session) {
@@ -357,7 +381,418 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     helpers.Relax(err)
                     return
                 }
-            case "badge":
+            case "badge", "badges":
+                if len(args) >= 2 {
+                    switch args[1] {
+                    case "create": // [p]profile badge create <category name> <badge name> <image url> <border color> <level req, -1=not available, 0=everyone> [global, botowner only]
+                        helpers.RequireAdmin(msg, func() {
+                            session.ChannelTyping(msg.ChannelID)
+                            if len(args) < 7 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            channel, err := session.State.Channel(msg.ChannelID)
+                            helpers.Relax(err)
+
+                            newBadge := new(DB_Badge)
+
+                            newBadge.CreatedByUserID = msg.Author.ID
+                            newBadge.CreatedAt = time.Now()
+                            newBadge.Category = strings.ToLower(args[2])
+                            newBadge.Name = strings.ToLower(args[3])
+                            newBadge.URL = args[4] // reupload to imgur
+                            newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
+                            newBadge.LevelRequirement, err = strconv.Atoi(args[6])
+                            if err != nil {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                helpers.Relax(err)
+                                return
+                            }
+                            newBadge.GuildID = channel.GuildID
+                            if len(args) >= 8 {
+                                if args[7] == "global" {
+                                    if helpers.IsBotAdmin(msg.Author.ID) {
+                                        newBadge.GuildID = "global"
+                                    } else {
+                                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                        helpers.Relax(err)
+                                        return
+                                    }
+                                }
+                            }
+                            newBadge.URL, err = m.uploadToImgur(helpers.NetGet(newBadge.URL))
+                            helpers.Relax(err)
+
+                            badgeFound := m.GetBadge(newBadge.Category, newBadge.Name, channel.GuildID)
+                            if badgeFound.ID != "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-duplicate"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            serverBadges := m.GetServerBadges(channel.GuildID)
+                            badgeLimit := helpers.GuildSettingsGetCached(channel.GuildID).LevelsMaxBadges
+                            if badgeLimit == 0 {
+                                badgeLimit = 20
+                            }
+                            if len(serverBadges) >= badgeLimit {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-too-many"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            m.InsertBadge(*newBadge)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-success"))
+                            helpers.Relax(err)
+                            return
+                        })
+                        return
+                    case "delete", "remove": // [p]profile badge delete <category name> <badge name>
+                        helpers.RequireAdmin(msg, func() {
+                            session.ChannelTyping(msg.ChannelID)
+                            if len(args) < 4 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                                helpers.Relax(err)
+                                return
+                            }
+                            channel, err := session.State.Channel(msg.ChannelID)
+                            helpers.Relax(err)
+
+                            badgeFound := m.GetBadge(args[2], args[3], channel.GuildID)
+                            if badgeFound.ID == "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-error-not-found"))
+                                helpers.Relax(err)
+                                return
+                            }
+                            if badgeFound.GuildID == "global" && !helpers.IsBotAdmin(msg.Author.ID) {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-error-not-allowed"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            m.DeleteBadge(badgeFound.ID)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-success"))
+                            helpers.Relax(err)
+                            return
+                        })
+                        return
+                    case "list": // [p]profile badge list [<category name>]
+                        session.ChannelTyping(msg.ChannelID)
+                        if len(args) >= 3 {
+                            categoryName := args[2]
+
+                            channel, err := session.State.Channel(msg.ChannelID)
+                            helpers.Relax(err)
+
+                            categoryBadges := m.GetCategoryBadges(categoryName, channel.GuildID)
+
+                            if len(categoryBadges) <= 0 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.list-category-badge-error-none"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            slice.Sort(categoryBadges, func(i, j int) bool {
+                                return categoryBadges[i].Name < categoryBadges[j].Name
+                            })
+
+                            resultText := fmt.Sprintf("__**Badges in %s**__\n", categoryName)
+                            for _, badge := range categoryBadges {
+                                globalText := ""
+                                if badge.GuildID == "global" {
+                                    globalText = "GLOBAL "
+                                }
+                                resultText += fmt.Sprintf("**%s%s**: URL: <%s>, Border Color: #%s, Requirement: %d, Allowed Users: %d, Denied Users %d\n",
+                                    globalText, badge.Name, badge.URL, badge.BorderColor, badge.LevelRequirement, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
+                                )
+                            }
+                            resultText += fmt.Sprintf("I found %d badges in this category.\n",
+                                len(categoryBadges))
+
+                            for _, page := range helpers.Pagify(resultText, "\n") {
+                                _, err = session.ChannelMessageSend(msg.ChannelID, page)
+                                helpers.Relax(err)
+                            }
+                            return
+                        }
+
+                        channel, err := session.State.Channel(msg.ChannelID)
+                        helpers.Relax(err)
+                        guild, err := session.State.Guild(channel.GuildID)
+                        helpers.Relax(err)
+
+                        serverBadges := m.GetServerBadges(channel.GuildID)
+
+                        if len(serverBadges) <= 0 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.list-badge-error-none"))
+                            helpers.Relax(err)
+                            return
+                        }
+
+                        categoriesCount := make(map[string]int, 0)
+                        for _, badge := range serverBadges {
+                            if _, ok := categoriesCount[badge.Category]; ok {
+                                categoriesCount[badge.Category] += 1
+                            } else {
+                                categoriesCount[badge.Category] = 1
+                            }
+                        }
+
+                        sortedKeys := make([]string, len(categoriesCount))
+                        i := 0
+                        for k := range categoriesCount {
+                            sortedKeys[i] = k
+                            i++
+                        }
+                        sort.Strings(sortedKeys)
+
+                        resultText := fmt.Sprintf("__**Badge Categories available on %s**__\n", guild.Name)
+                        for _, key := range sortedKeys {
+                            resultText += fmt.Sprintf("**%s** (%d badges)\n", key, categoriesCount[key])
+                        }
+                        resultText += fmt.Sprintf("I found %d badge categories on this server.\nUse `_profile badge list <category name>` to view all badges of a category.\n",
+                        len(categoriesCount))
+
+                        for _, page := range helpers.Pagify(resultText, "\n") {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, page)
+                            helpers.Relax(err)
+                        }
+                        return
+                    case "allow": // [p]profile badge allow <user id/mention> <category name> <badge name>
+                        helpers.RequireMod(msg, func() {
+                            session.ChannelTyping(msg.ChannelID)
+                            if len(args) < 5 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            targetUser, err := helpers.GetUserFromMention(args[2])
+                            if err != nil || targetUser.ID == "" {
+                                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+                                return
+                            }
+
+                            channel, err := session.State.Channel(msg.ChannelID)
+                            helpers.Relax(err)
+
+                            badgeToAllow := m.GetBadge(args[3], args[4], channel.GuildID)
+                            if badgeToAllow.ID == "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            if badgeToAllow.GuildID == "global" && !helpers.IsBotAdmin(msg.Author.ID) {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.edit-badge-error-not-allowed"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            isAlreadyAllowed := false
+                            for _, userAllowedID := range badgeToAllow.AllowedUserIDs {
+                                if userAllowedID == targetUser.ID {
+                                    isAlreadyAllowed = true
+                                }
+                            }
+
+                            if isAlreadyAllowed == false {
+                                badgeToAllow.AllowedUserIDs = append(badgeToAllow.AllowedUserIDs, targetUser.ID)
+                                m.UpdateBadge(badgeToAllow)
+
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-allowed",
+                                    targetUser.Username, badgeToAllow.Name, badgeToAllow.Category))
+                                helpers.Relax(err)
+                                return
+                            } else {
+                                allowedUserIDsWithout := make([]string, 0)
+                                for _, userAllowedID := range badgeToAllow.AllowedUserIDs {
+                                    if userAllowedID != targetUser.ID {
+                                        allowedUserIDsWithout = append(allowedUserIDsWithout, userAllowedID)
+                                    }
+                                }
+                                badgeToAllow.AllowedUserIDs = allowedUserIDsWithout
+                                m.UpdateBadge(badgeToAllow)
+
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-not-allowed",
+                                    targetUser.Username, badgeToAllow.Name, badgeToAllow.Category))
+                                helpers.Relax(err)
+                                return
+                            }
+                        })
+                        return
+                    case "deny": // [p]profile badge deny <user id/mention> <category name> <badge name>
+                        helpers.RequireMod(msg, func() {
+                            session.ChannelTyping(msg.ChannelID)
+                            if len(args) < 5 {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            targetUser, err := helpers.GetUserFromMention(args[2])
+                            if err != nil || targetUser.ID == "" {
+                                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+                                return
+                            }
+
+                            channel, err := session.State.Channel(msg.ChannelID)
+                            helpers.Relax(err)
+
+                            badgeToDeny := m.GetBadge(args[3], args[4], channel.GuildID)
+                            if badgeToDeny.ID == "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            if badgeToDeny.GuildID == "global" && !helpers.IsBotAdmin(msg.Author.ID) {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.edit-badge-error-not-allowed"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            isAlreadyDenied := false
+                            for _, userDeniedID := range badgeToDeny.DeniedUserIDs {
+                                if userDeniedID == targetUser.ID {
+                                    isAlreadyDenied = true
+                                }
+                            }
+
+                            if isAlreadyDenied == false {
+                                badgeToDeny.DeniedUserIDs = append(badgeToDeny.DeniedUserIDs, targetUser.ID)
+                                m.UpdateBadge(badgeToDeny)
+
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-denied",
+                                    targetUser.Username, badgeToDeny.Name, badgeToDeny.Category))
+                                helpers.Relax(err)
+                                return
+                            } else {
+                                deniedUserIDsWithout := make([]string, 0)
+                                for _, userDeniedID := range badgeToDeny.DeniedUserIDs {
+                                    if userDeniedID != targetUser.ID {
+                                        deniedUserIDsWithout = append(deniedUserIDsWithout, userDeniedID)
+                                    }
+                                }
+                                badgeToDeny.DeniedUserIDs = deniedUserIDsWithout
+                                m.UpdateBadge(badgeToDeny)
+
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-not-denied",
+                                    targetUser.Username, badgeToDeny.Name, badgeToDeny.Category))
+                                helpers.Relax(err)
+                                return
+                            }
+                        })
+                        return
+                    }
+                }
+                session.ChannelTyping(msg.ChannelID)
+
+                availableBadges := m.GetBadgesAvailable(msg.Author)
+
+                if len(availableBadges) <= 0 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                userData := m.GetUserUserdata(msg.Author)
+
+                inCategory := ""
+                stoppedLoop := false
+                closeHandler := session.AddHandler(func(session *discordgo.Session, loopMessage *discordgo.MessageCreate) {
+                    if stoppedLoop == false && loopMessage.Author.ID == msg.Author.ID && loopMessage.ChannelID == msg.ChannelID {
+                        loopArgs := strings.Fields(loopMessage.Content)
+                    BadgePickLoop:
+                        for {
+                            if len(loopArgs) > 0 {
+                                switch loopArgs[0] {
+                                case "stop":
+                                    m.setUserUserdata(userData)
+                                    _, err := session.ChannelMessageSend(msg.ChannelID,
+                                        fmt.Sprintf("<@%s> I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
+                                    helpers.Relax(err)
+                                    stoppedLoop = true
+                                    return
+                                case "reset":
+                                    userData.ActiveBadgeIDs = make([]string, 0)
+                                    loopArgs = []string{"categories"}
+                                    continue BadgePickLoop
+                                    return
+                                case "categories":
+                                    inCategory = ""
+                                    session.ChannelTyping(msg.ChannelID)
+                                    m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs)
+                                    return
+                                default:
+                                    if inCategory == "" {
+                                        for _, badge := range availableBadges {
+                                            if badge.Category == strings.ToLower(loopArgs[0]) {
+                                                inCategory = strings.ToLower(loopArgs[0])
+                                                m.BadgePickerPrintBadges(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs, inCategory)
+                                                return
+                                            }
+                                        }
+                                        _, err := session.ChannelMessageSend(msg.ChannelID,
+                                            fmt.Sprintf("<@%s> I wasn't able to find a category with that name.\n%s", msg.Author.ID, m.BadgePickerHelpText()))
+                                        helpers.Relax(err)
+                                        return
+                                    } else {
+                                        for _, badge := range availableBadges {
+                                            if badge.Category == inCategory && badge.Name == strings.ToLower(loopArgs[0]) {
+                                                for _, activeBadgeID := range userData.ActiveBadgeIDs {
+                                                    if activeBadgeID == badge.ID {
+                                                        _, err := session.ChannelMessageSend(msg.ChannelID,
+                                                            fmt.Sprintf("<@%s> You are already displaying this badge.\n%s", msg.Author.ID, m.BadgePickerHelpText()))
+                                                        helpers.Relax(err)
+                                                        return
+                                                    }
+                                                }
+                                                if len(userData.ActiveBadgeIDs) >= BadgeLimt {
+                                                    _, err := session.ChannelMessageSend(msg.ChannelID,
+                                                        fmt.Sprintf("<@%s> You are already got enough emotes.\n%s", msg.Author.ID, m.BadgePickerHelpText()))
+                                                    helpers.Relax(err)
+                                                    return
+                                                }
+
+                                                loopArgs = []string{"categories"}
+                                                userData.ActiveBadgeIDs = append(userData.ActiveBadgeIDs, badge.ID)
+                                                if len(userData.ActiveBadgeIDs) >= BadgeLimt {
+                                                    m.setUserUserdata(userData)
+                                                    _, err := session.ChannelMessageSend(msg.ChannelID,
+                                                        fmt.Sprintf("<@%s> I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
+                                                    helpers.Relax(err)
+                                                    stoppedLoop = true
+                                                    return
+                                                }
+                                                continue BadgePickLoop
+                                            }
+                                        }
+                                        _, err := session.ChannelMessageSend(msg.ChannelID,
+                                            fmt.Sprintf("<@%s> I wasn't able to find a badge with that name.\n%s", msg.Author.ID, m.BadgePickerHelpText()))
+                                        helpers.Relax(err)
+                                        return
+                                    }
+                                }
+                            }
+                            return
+                        }
+                    }
+                })
+                m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs)
+                time.Sleep(5 * time.Minute)
+                closeHandler()
+                if stoppedLoop == false {
+                    m.setUserUserdata(userData)
+
+                    _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
+                    msg.Author.ID))
+                    helpers.Relax(err)
+                }
                 return
             }
 
@@ -855,6 +1290,89 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 }
 
+func (l *Levels) BadgePickerPrintCategories(userID string, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string) {
+    categoriesCount := make(map[string]int, 0)
+    for _, badge := range availableBadges {
+        if _, ok := categoriesCount[badge.Category]; ok {
+            categoriesCount[badge.Category] += 1
+        } else {
+            categoriesCount[badge.Category] = 1
+        }
+    }
+
+    sortedKeys := make([]string, len(categoriesCount))
+    i := 0
+    for k := range categoriesCount {
+        sortedKeys[i] = k
+        i++
+    }
+    sort.Strings(sortedKeys)
+
+    resultText := l.BadgePickerActiveText(userID, activeBadgeIDs, availableBadges)
+    resultText += "Choose a category name:\n"
+    for _, key := range sortedKeys {
+        resultText += fmt.Sprintf("__%s__ (%d badges)\n", key, categoriesCount[key])
+    }
+    resultText += l.BadgePickerHelpText()
+
+    session := cache.GetSession()
+    for _, page := range helpers.Pagify(resultText, "\n") {
+        _, err := session.ChannelMessageSend(channeID, page)
+        helpers.Relax(err)
+    }
+}
+
+func (l *Levels) BadgePickerPrintBadges(userID string, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, categoryName string) {
+    categoryName = strings.ToLower(categoryName)
+
+    resultText := l.BadgePickerActiveText(userID, activeBadgeIDs, availableBadges)
+    resultText += "Choose a badge name:\n"
+    for _, badge := range availableBadges {
+        if badge.Category == categoryName {
+            isActive := false
+            for _, activeBadgeID := range activeBadgeIDs {
+                if activeBadgeID == badge.ID {
+                    isActive = true
+                }
+            }
+            activeText := ""
+            if isActive {
+                activeText = " _**in use**_"
+            }
+            resultText += fmt.Sprintf("__%s__%s\n", badge.Name, activeText)
+        }
+    }
+    resultText += l.BadgePickerHelpText()
+
+    session := cache.GetSession()
+    for _, page := range helpers.Pagify(resultText, "\n") {
+        _, err := session.ChannelMessageSend(channeID, page)
+        helpers.Relax(err)
+    }
+}
+
+func (l *Levels) BadgePickerActiveText(userID string, activeBadgeIDs []string, availableBadges []DB_Badge) string {
+    spaceLeft := BadgeLimt - len(activeBadgeIDs)
+    text := fmt.Sprintf("<@%s> You can pick %d more badge(s) to display on your profile.\nYou are currently displaying:", userID, spaceLeft)
+    if len(activeBadgeIDs) > 0 {
+        for _, badgeID := range activeBadgeIDs {
+            for _, badge := range availableBadges {
+                if badge.ID == badgeID {
+                    text += fmt.Sprintf(" `%s (%s)`", badge.Name, badge.Category)
+                }
+            }
+        }
+    } else {
+        text += " No badges"
+    }
+    text += ".\n\n"
+    return text
+}
+
+func (l *Levels) BadgePickerHelpText() string {
+    return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `stop` to exit and save\n"
+}
+
 func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string) error {
     newEntry := new(DB_Profile_Background)
     newEntry.Name = strings.ToLower(backgroundName)
@@ -954,6 +1472,267 @@ func (l *Levels) GetUserUserdata(user *discordgo.User) DB_Profile_Userdata {
     return entryBucket
 }
 
+func (l *Levels) GetServerBadges(guildID string) []DB_Badge {
+    var entryBucket []DB_Badge
+    var globalEntryBucket []DB_Badge
+    listCursor, err := rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("guildid").Eq(guildID),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.All(&entryBucket)
+
+    listCursor, err = rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("guildid").Eq("global"),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.All(&globalEntryBucket)
+
+    for _, globalEntry := range globalEntryBucket {
+        entryBucket = append(entryBucket, globalEntry)
+    }
+
+    if err != nil {
+        if err != rethink.ErrEmptyResult {
+            helpers.Relax(err)
+        }
+    }
+
+    return entryBucket
+}
+
+func (l *Levels) GetCategoryBadges(category string, guildID string) []DB_Badge {
+    var entryBucket []DB_Badge
+    result := make([]DB_Badge, 0)
+    listCursor, err := rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("category").Eq(category),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.All(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return result
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    for _, badge := range entryBucket {
+        if badge.GuildID == guildID || badge.GuildID == "global" {
+            result = append(result, badge)
+        }
+    }
+
+    return result
+}
+
+func (l *Levels) GetBadge(category string, name string, guildID string) DB_Badge {
+    var entryBucket []DB_Badge
+    var emptyBadge DB_Badge
+    listCursor, err := rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("category").Eq(strings.ToLower(category)),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.All(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return emptyBadge
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    for _, badge := range entryBucket {
+        if strings.ToLower(badge.Name) == strings.ToLower(name) && (badge.GuildID == guildID || badge.GuildID == "global") {
+            return badge
+        }
+    }
+
+    return emptyBadge
+}
+
+func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
+    guildsToCheck := make([]string, 0)
+    guildsToCheck = append(guildsToCheck, "global")
+
+    session := cache.GetSession()
+
+    for _, guild := range session.State.Guilds {
+        if _, err := session.State.Member(guild.ID, user.ID); err == nil {
+            guildsToCheck = append(guildsToCheck, guild.ID)
+        }
+    }
+
+
+    var allBadges []DB_Badge
+    for _, guildToCheck := range guildsToCheck {
+        var entryBucket []DB_Badge
+        listCursor, err := rethink.Table("profile_badge").Filter(
+            rethink.Row.Field("guildid").Eq(guildToCheck),
+        ).Run(helpers.GetDB())
+        defer listCursor.Close()
+        if err != nil {
+            continue
+        }
+        err = listCursor.All(&entryBucket)
+        if err != nil {
+            continue
+        }
+        for _, entryBadge := range entryBucket {
+            allBadges = append(allBadges, entryBadge)
+        }
+    }
+
+    var availableBadges []DB_Badge
+    for _, foundBadge := range allBadges {
+        isAllowed := false
+
+        // Level Check
+        if foundBadge.LevelRequirement < 0 { // Available for no one?
+            isAllowed = false
+        } else if foundBadge.LevelRequirement == 0 { // Available for everyone?
+            isAllowed = true
+        } else if foundBadge.LevelRequirement > 0 { // Meets min level=
+            if foundBadge.LevelRequirement <= l.GetLevelForUser(user.ID, foundBadge.GuildID) {
+                isAllowed = true
+            } else {
+                isAllowed = false
+            }
+        }
+
+        // User is in allowed user list?
+        for _, allowedUserID := range foundBadge.AllowedUserIDs {
+            if allowedUserID == user.ID {
+                isAllowed = true
+            }
+        }
+
+        // User is in denied user list?
+        for _, deniedUserID := range foundBadge.DeniedUserIDs {
+            if deniedUserID == user.ID {
+                isAllowed = false
+            }
+        }
+
+        if isAllowed == true {
+            availableBadges = append(availableBadges, foundBadge)
+        }
+    }
+
+    return availableBadges
+}
+
+func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User) []DB_Badge {
+    guildsToCheck := make([]string, 0)
+    guildsToCheck = append(guildsToCheck, "global")
+
+    session := cache.GetSession()
+
+    for _, guild := range session.State.Guilds {
+        if _, err := session.State.Member(guild.ID, user.ID); err == nil {
+            guildsToCheck = append(guildsToCheck, guild.ID)
+        }
+    }
+
+
+    var allBadges []DB_Badge
+    for _, guildToCheck := range guildsToCheck {
+        var entryBucket []DB_Badge
+        listCursor, err := rethink.Table("profile_badge").Filter(
+            rethink.Row.Field("guildid").Eq(guildToCheck),
+        ).Run(helpers.GetDB())
+        defer listCursor.Close()
+        if err != nil {
+            continue
+        }
+        err = listCursor.All(&entryBucket)
+        if err != nil {
+            continue
+        }
+        for _, entryBadge := range entryBucket {
+            allBadges = append(allBadges, entryBadge)
+        }
+    }
+
+    var availableBadges []DB_Badge
+    for _, foundBadge := range allBadges {
+        isAllowed := true
+
+        // User is in allowed user list?
+        for _, allowedUserID := range foundBadge.AllowedUserIDs {
+            if allowedUserID == user.ID {
+                isAllowed = true
+            }
+        }
+
+        // User is in denied user list?
+        for _, deniedUserID := range foundBadge.DeniedUserIDs {
+            if deniedUserID == user.ID {
+                isAllowed = false
+            }
+        }
+
+        if isAllowed == true {
+            availableBadges = append(availableBadges, foundBadge)
+        }
+    }
+
+    return availableBadges
+}
+
+func (l *Levels) GetLevelForUser(userID string, guildID string) int {
+    var levelsServersUser []DB_Levels_ServerUser
+    listCursor, err := rethink.Table("levels_serverusers").Filter(
+        rethink.Row.Field("userid").Eq(userID),
+    ).Run(helpers.GetDB())
+    helpers.Relax(err)
+    defer listCursor.Close()
+    err = listCursor.All(&levelsServersUser)
+
+    if err == rethink.ErrEmptyResult {
+        return 0
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    if guildID == "global" {
+        totalExp := int64(0)
+        for _, levelsServerUser := range levelsServersUser {
+            totalExp += levelsServerUser.Exp
+        }
+        return l.getLevelFromExp(totalExp)
+    } else {
+        for _, levelsServerUser := range levelsServersUser {
+            if levelsServerUser.GuildID == guildID {
+                return l.getLevelFromExp(levelsServerUser.Exp)
+            }
+        }
+    }
+
+    return 0
+}
+
+func (l *Levels) InsertBadge(entry DB_Badge) {
+    insert := rethink.Table("profile_badge").Insert(entry)
+    _, err := insert.RunWrite(helpers.GetDB())
+    if err != nil {
+        helpers.Relax(err)
+    }
+    return
+}
+
+func (l *Levels) UpdateBadge(entry DB_Badge) {
+    if entry.ID != "" {
+        _, err := rethink.Table("profile_badge").Update(entry).Run(helpers.GetDB())
+        helpers.Relax(err)
+    }
+}
+
+func (l *Levels) DeleteBadge(badgeID string) {
+    _, err := rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("id").Eq(badgeID),
+    ).Delete().RunWrite(helpers.GetDB())
+    helpers.Relax(err)
+    return
+}
+
 func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
     _, err := rethink.Table("profile_userdata").Update(entry).Run(helpers.GetDB())
     helpers.Relax(err)
@@ -1021,6 +1800,20 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         bio = "Robyul would like to know more about me!"
     }
 
+    badgesToDisplay := make([]DB_Badge, 0)
+    availableBadges := m.GetBadgesAvailableQuick(member.User)
+    for _, activeBadgeID := range userData.ActiveBadgeIDs {
+        for _, availableBadge := range availableBadges {
+            if activeBadgeID == availableBadge.ID {
+                badgesToDisplay = append(badgesToDisplay, availableBadge)
+            }
+        }
+    }
+    badgesHTML := ""
+    for _, badge := range badgesToDisplay {
+        badgesHTML += fmt.Sprintf("<img src=\"%s\">", badge.URL)
+    }
+    // TODO: Border
     tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AND_NICKNAME}", userAndNick, -1)
@@ -1033,7 +1826,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_RANK}", globalRank, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1) // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BADGES_HTML}", badgesHTML, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1) // TODO: <-
@@ -1320,4 +2114,24 @@ func (b *Levels) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.S
 }
 func (b *Levels) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
+}
+
+func (l *Levels) uploadToImgur(picData []byte) (string, error) {
+    parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(picData)}}
+
+    req, err := http.NewRequest("POST", imgurApiUploadBaseUrl, strings.NewReader(parameters.Encode()))
+    helpers.Relax(err)
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    req.Header.Set("Authorization", "Client-ID "+helpers.GetConfig().Path("imgur.client_id").Data().(string))
+    res, err := http.DefaultClient.Do(req)
+    helpers.Relax(err)
+
+    var imgurResponse ImgurResponse
+    json.NewDecoder(res.Body).Decode(&imgurResponse)
+    if imgurResponse.Success == false {
+        return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data.Error)))
+    } else {
+        logger.VERBOSE.L("levels", "uploaded a picture to imgur: "+imgurResponse.Data.Link)
+        return imgurResponse.Data.Link, nil
+    }
 }

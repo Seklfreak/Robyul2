@@ -90,26 +90,35 @@
             bottom: 0;
             left: 30px;
         }
-        #userbadges {
+        #userbadgetitle {
             position: absolute;
-            top: 75px;
+            top: 72px;
             left: 3px;
-            height: 115px;
             font-weight:bold;
             font-size: 14px;
             text-align: center;
+            width: 100px;
+        }
+        #userbadges {
+            position: absolute;
+            top: 88px;
+            left: 3px;
+            height: 120px;
+            font-weight:bold;
+            font-size: 14px;
+            text-align: left;
             text-overflow: clip;
             white-space: pre-wrap;
             overflow: hidden;
-            width: 78px;
+            width: 102px;
         }
         #userbadges img {
             border-radius: 20px;
             border: 2px solid white;
             background-color: grey;
             margin-left: 2px;
-            width: 20px;
-            height: 20px;
+            width: 28px;
+            height: 28px;
         }
         #username {
             position: absolute;
@@ -148,13 +157,14 @@
         #userbio {
             position: absolute;
             top: 80px;
-            left: 85px;
-            width: 305px;
+            left: 110px;
+            width: 272px;
             height: 85px;
             font-size: 12px;
             text-overflow: clip;
             white-space: pre-wrap;
             overflow: hidden;
+            text-align: justify;
         }
         #userbday {
             position: absolute;
@@ -199,14 +209,14 @@
     <div id="userlvlinfo">
         <div class="levelbox" style="left: 3px; top: -2px;"><div class="title">Level</div><div class="level">{USER_SERVER_LEVEL}</div></div>
         <div class="levelbox" style="left: 30px; top: -2px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div>
-        <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div><div id="serverexpbartext">{USER_SERVER_LEVEL_PERCENT} %</div></div>
+        <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div><div id="serverexpbartext">Server EXP Progress</div></div>
         <!-- <div class="levelbox" style="left: 25px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div> -->
         <div class="levelnextbox" style="left: 200px;"><div class="title">Global Level</div><div class="level">{USER_GLOBAL_LEVEL}</div></div>
         <div class="levelnextbox" style="left: 250px;"><div class="title">Global Rank</div><div class="level">{USER_GLOBAL_RANK}</div></div>
     </div>
     <div id="repcontainer"><div id="userrep">+{USER_REP} REP</div></div>
-    <!-- <div id="userbadges">BADGES<!--<img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png">-->
-    <!-- </div> -->
+    <div id="userbadgetitle">BADGES</div>
+    <div id="userbadges">{USER_BADGES_HTML}<!--<img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><!-- --></div>
     <div id="userbio">{USER_BIO}</div>
     <!-- <div id="userbday">{TIME} {USER_BDAY}</div> -->
 </div>
