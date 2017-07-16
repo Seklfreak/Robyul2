@@ -528,8 +528,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                         channel, err := session.State.Channel(msg.ChannelID)
                         helpers.Relax(err)
-                        guild, err := session.State.Guild(channel.GuildID)
-                        helpers.Relax(err)
 
                         serverBadges := m.GetServerBadges(channel.GuildID)
 
@@ -556,7 +554,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         }
                         sort.Strings(sortedKeys)
 
-                        resultText := fmt.Sprintf("__**Badge Categories available on %s**__\n", guild.Name)
+                        resultText := "__**Badge Categories**__\n"
                         for _, key := range sortedKeys {
                             resultText += fmt.Sprintf("**%s** (%d badges)\n", key, categoriesCount[key])
                         }
