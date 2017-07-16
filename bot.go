@@ -14,6 +14,7 @@ import (
     "time"
     "github.com/Seklfreak/Robyul2/emojis"
     "fmt"
+    "os/user"
 )
 
 // BotOnReady gets called after the gateway connected
@@ -300,11 +301,11 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
     modules.CallExtendedPluginOnReactionAdd(reaction)
 
-    if user, err := session.User(reaction.UserID); err == nil && user.Bot {
+    if reaction.UserID == session.State.User.ID {
         return
     }
 
-    channel, err := session.Channel(reaction.ChannelID)
+    channel, err := session.State.Channel(reaction.ChannelID)
     if err != nil {
         return
     }

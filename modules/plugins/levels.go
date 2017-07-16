@@ -873,7 +873,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         args := strings.Fields(content)
 
-        channel, err := session.Channel(msg.ChannelID)
+        channel, err := session.State.Channel(msg.ChannelID)
         helpers.Relax(err)
 
         if len(args) >= 1 && args[0] != "" {
