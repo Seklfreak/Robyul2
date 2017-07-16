@@ -463,7 +463,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                             badgeFound := m.GetBadge(args[2], args[3], channel.GuildID)
                             if badgeFound.ID == "" {
-                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-error-not-found"))
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
                                 helpers.Relax(err)
                                 return
                             }
@@ -711,7 +711,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         for {
                             if len(loopArgs) > 0 {
                                 switch loopArgs[0] {
-                                case "stop":
+                                case "stop", "exit":
                                     m.setUserUserdata(userData)
                                     _, err := session.ChannelMessageSend(msg.ChannelID,
                                         fmt.Sprintf("<@%s> I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
@@ -1370,7 +1370,7 @@ func (l *Levels) BadgePickerActiveText(userID string, activeBadgeIDs []string, a
 }
 
 func (l *Levels) BadgePickerHelpText() string {
-    return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `stop` to exit and save\n"
+    return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save\n"
 }
 
 func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string) error {
@@ -1811,7 +1811,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     }
     badgesHTML := ""
     for _, badge := range badgesToDisplay {
-        badgesHTML += fmt.Sprintf("<img src=\"%s\">", badge.URL)
+        badgesHTML += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
     }
     // TODO: Border
     tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
