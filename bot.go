@@ -14,7 +14,6 @@ import (
     "time"
     "github.com/Seklfreak/Robyul2/emojis"
     "fmt"
-    "os/user"
 )
 
 // BotOnReady gets called after the gateway connected
