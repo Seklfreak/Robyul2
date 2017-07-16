@@ -118,6 +118,7 @@ var (
     levelsEnv []string = os.Environ()
     webshotBinary string
     topCache []Cache_Levels_top
+    activeBadgePickerUserIDs []string
 )
 
 const (
@@ -284,6 +285,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         return
     case "profile": // [p]profile
+        for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+            if activeBadgePickerUserID == msg.Author.ID {
+                return
+            }
+        }
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.Channel(msg.ChannelID)
         helpers.Relax(err)
@@ -706,7 +712,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 stoppedLoop := false
                 closeHandler := session.AddHandler(func(session *discordgo.Session, loopMessage *discordgo.MessageCreate) {
                     if stoppedLoop == false && loopMessage.Author.ID == msg.Author.ID && loopMessage.ChannelID == msg.ChannelID {
-                        loopArgs := strings.Fields(loopMessage.Content)
+                        cleanedContent := strings.Replace(loopMessage.Content, "_profile ", "", 1)
+                        cleanedContent = strings.Replace(cleanedContent, "category ", "", 1)
+                        cleanedContent = strings.Replace(cleanedContent, "badge ", "", 1)
+                        loopArgs := strings.Fields(cleanedContent)
                     BadgePickLoop:
                         for {
                             if len(loopArgs) > 0 {
@@ -717,6 +726,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                         fmt.Sprintf("<@%s> I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
                                     helpers.Relax(err)
                                     stoppedLoop = true
+                                    newActiveBadgePickerUserIDs := make([]string, 0)
+                                    for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+                                        if activeBadgePickerUserID != msg.Author.ID {
+                                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, msg.Author.ID)
+                                        }
+                                    }
+                                    activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
                                     return
                                 case "reset":
                                     userData.ActiveBadgeIDs = make([]string, 0)
@@ -767,6 +783,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                         fmt.Sprintf("<@%s> I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
                                                     helpers.Relax(err)
                                                     stoppedLoop = true
+                                                    newActiveBadgePickerUserIDs := make([]string, 0)
+                                                    for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+                                                        if activeBadgePickerUserID != msg.Author.ID {
+                                                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, msg.Author.ID)
+                                                        }
+                                                    }
+                                                    activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
                                                     return
                                                 }
                                                 continue BadgePickLoop
@@ -783,11 +806,19 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         }
                     }
                 })
+                activeBadgePickerUserIDs = append(activeBadgePickerUserIDs, msg.Author.ID)
                 m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs)
                 time.Sleep(5 * time.Minute)
                 closeHandler()
                 if stoppedLoop == false {
                     m.setUserUserdata(userData)
+                    newActiveBadgePickerUserIDs := make([]string, 0)
+                    for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+                        if activeBadgePickerUserID != msg.Author.ID {
+                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, msg.Author.ID)
+                        }
+                    }
+                    activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
 
                     _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
                     msg.Author.ID))
@@ -1813,7 +1844,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     for _, badge := range badgesToDisplay {
         badgesHTML += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
     }
-    // TODO: Border
+
     tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AND_NICKNAME}", userAndNick, -1)
