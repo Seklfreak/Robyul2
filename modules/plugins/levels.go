@@ -805,7 +805,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                     newActiveBadgePickerUserIDs := make([]string, 0)
                                                     for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
                                                         if activeBadgePickerUserID != msg.Author.ID {
-                                                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, msg.Author.ID)
+                                                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, activeBadgePickerUserID)
                                                         }
                                                     }
                                                     activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
