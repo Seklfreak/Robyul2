@@ -756,14 +756,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 case "categories":
                                     inCategory = ""
                                     session.ChannelTyping(msg.ChannelID)
-                                    m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs)
+                                    m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
                                     return
                                 default:
                                     if inCategory == "" {
                                         for _, badge := range shownBadges {
                                             if badge.Category == strings.ToLower(loopArgs[0]) {
                                                 inCategory = strings.ToLower(loopArgs[0])
-                                                m.BadgePickerPrintBadges(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, inCategory)
+                                                m.BadgePickerPrintBadges(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, inCategory, availableBadges)
                                                 return
                                             }
                                         }
@@ -776,10 +776,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                             if badge.Category == inCategory && badge.Name == strings.ToLower(loopArgs[0]) {
                                                 for _, activeBadgeID := range userData.ActiveBadgeIDs {
                                                     if activeBadgeID == badge.ID {
-                                                        _, err := session.ChannelMessageSend(msg.ChannelID,
-                                                            fmt.Sprintf("<@%s> You are already displaying this badge.\n%s", msg.Author.ID, m.BadgePickerHelpText()))
-                                                        helpers.Relax(err)
-                                                        return
+                                                        newActiveBadges := make([]string, 0)
+                                                        for _, newActiveBadgeID := range userData.ActiveBadgeIDs {
+                                                            if newActiveBadgeID != badge.ID {
+                                                                newActiveBadges = append(newActiveBadges, newActiveBadgeID)
+                                                            }
+                                                        }
+                                                        loopArgs = []string{"categories"}
+                                                        userData.ActiveBadgeIDs = newActiveBadges
+                                                        continue BadgePickLoop
                                                     }
                                                 }
                                                 if len(userData.ActiveBadgeIDs) >= BadgeLimt {
@@ -821,7 +826,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     }
                 })
                 activeBadgePickerUserIDs = append(activeBadgePickerUserIDs, msg.Author.ID)
-                m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs)
+                m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
                 time.Sleep(5 * time.Minute)
                 closeHandler()
                 if stoppedLoop == false {
@@ -1335,7 +1340,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 }
 
-func (l *Levels) BadgePickerPrintCategories(userID string, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string) {
+func (l *Levels) BadgePickerPrintCategories(userID string, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, allBadges []DB_Badge) {
     categoriesCount := make(map[string]int, 0)
     for _, badge := range availableBadges {
         if _, ok := categoriesCount[badge.Category]; ok {
@@ -1353,7 +1358,7 @@ func (l *Levels) BadgePickerPrintCategories(userID string, channeID string, avai
     }
     sort.Strings(sortedKeys)
 
-    resultText := l.BadgePickerActiveText(userID, activeBadgeIDs, availableBadges)
+    resultText := l.BadgePickerActiveText(userID, activeBadgeIDs, allBadges)
     resultText += "Choose a category name:\n"
     for _, key := range sortedKeys {
         resultText += fmt.Sprintf("__%s__ (%d badges)\n", key, categoriesCount[key])
@@ -1367,10 +1372,10 @@ func (l *Levels) BadgePickerPrintCategories(userID string, channeID string, avai
     }
 }
 
-func (l *Levels) BadgePickerPrintBadges(userID string, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, categoryName string) {
+func (l *Levels) BadgePickerPrintBadges(userID string, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, categoryName string, allBadges []DB_Badge) {
     categoryName = strings.ToLower(categoryName)
 
-    resultText := l.BadgePickerActiveText(userID, activeBadgeIDs, availableBadges)
+    resultText := l.BadgePickerActiveText(userID, activeBadgeIDs, allBadges)
     resultText += "Choose a badge name:\n"
     for _, badge := range availableBadges {
         if badge.Category == categoryName {
