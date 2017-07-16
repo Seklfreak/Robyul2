@@ -724,7 +724,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         cleanedContent := strings.Replace(loopMessage.Content, "_profile ", "", 1)
                         cleanedContent = strings.Replace(cleanedContent, "category ", "", 1)
                         cleanedContent = strings.Replace(cleanedContent, "badge ", "", 1)
-                        loopArgs := strings.Fields(cleanedContent)
+                        loopArgs := strings.Fields(strings.ToLower(cleanedContent))
                     BadgePickLoop:
                         for {
                             if len(loopArgs) > 0 {
@@ -732,7 +732,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 case "stop", "exit":
                                     m.setUserUserdata(userData)
                                     _, err := session.ChannelMessageSend(msg.ChannelID,
-                                        fmt.Sprintf("<@%s> I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
+                                        fmt.Sprintf("<@%s> I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.ID))
                                     helpers.Relax(err)
                                     stoppedLoop = true
                                     newActiveBadgePickerUserIDs := make([]string, 0)
