@@ -696,7 +696,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
                 session.ChannelTyping(msg.ChannelID)
 
-                availableBadges := m.GetBadgesAvailableServer(msg.Author, channel.GuildID)
+                availableBadges := m.GetBadgesAvailable(msg.Author)
 
                 if len(availableBadges) <= 0 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
@@ -714,6 +714,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     }
                 }
                 userData.ActiveBadgeIDs = newActiveBadgeIDs
+
+                shownBadges := make([]DB_Badge, 0)
+                for _, badge := range availableBadges {
+                    if badge.GuildID == "global" || badge.GuildID == channel.GuildID {
+                        shownBadges = append(shownBadges, badge)
+                    }
+                }
 
                 inCategory := ""
                 stoppedLoop := false
@@ -749,14 +756,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 case "categories":
                                     inCategory = ""
                                     session.ChannelTyping(msg.ChannelID)
-                                    m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs)
+                                    m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs)
                                     return
                                 default:
                                     if inCategory == "" {
-                                        for _, badge := range availableBadges {
+                                        for _, badge := range shownBadges {
                                             if badge.Category == strings.ToLower(loopArgs[0]) {
                                                 inCategory = strings.ToLower(loopArgs[0])
-                                                m.BadgePickerPrintBadges(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs, inCategory)
+                                                m.BadgePickerPrintBadges(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, inCategory)
                                                 return
                                             }
                                         }
@@ -765,7 +772,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                         helpers.Relax(err)
                                         return
                                     } else {
-                                        for _, badge := range availableBadges {
+                                        for _, badge := range shownBadges {
                                             if badge.Category == inCategory && badge.Name == strings.ToLower(loopArgs[0]) {
                                                 for _, activeBadgeID := range userData.ActiveBadgeIDs {
                                                     if activeBadgeID == badge.ID {
@@ -814,7 +821,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     }
                 })
                 activeBadgePickerUserIDs = append(activeBadgePickerUserIDs, msg.Author.ID)
-                m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, availableBadges, userData.ActiveBadgeIDs)
+                m.BadgePickerPrintCategories(msg.Author.ID, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs)
                 time.Sleep(5 * time.Minute)
                 closeHandler()
                 if stoppedLoop == false {
