@@ -698,7 +698,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
                 session.ChannelTyping(msg.ChannelID)
 
-                availableBadges := m.GetBadgesAvailable(msg.Author)
+                availableBadges := m.GetBadgesAvailableServer(msg.Author, channel.GuildID)
 
                 if len(availableBadges) <= 0 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
@@ -707,6 +707,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
 
                 userData := m.GetUserUserdata(msg.Author)
+                newActiveBadgeIDs := make([]string, 0)
+                for _, activeBadgeID := range userData.ActiveBadgeIDs {
+                    for _, availableBadge := range availableBadges {
+                        if availableBadge.ID == activeBadgeID {
+                            newActiveBadgeIDs = append(newActiveBadgeIDs, activeBadgeID)
+                        }
+                    }
+                }
+                userData.ActiveBadgeIDs = newActiveBadgeIDs
 
                 inCategory := ""
                 stoppedLoop := false
@@ -1589,6 +1598,75 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
         if _, err := session.State.Member(guild.ID, user.ID); err == nil {
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
+    }
+
+
+    var allBadges []DB_Badge
+    for _, guildToCheck := range guildsToCheck {
+        var entryBucket []DB_Badge
+        listCursor, err := rethink.Table("profile_badge").Filter(
+            rethink.Row.Field("guildid").Eq(guildToCheck),
+        ).Run(helpers.GetDB())
+        defer listCursor.Close()
+        if err != nil {
+            continue
+        }
+        err = listCursor.All(&entryBucket)
+        if err != nil {
+            continue
+        }
+        for _, entryBadge := range entryBucket {
+            allBadges = append(allBadges, entryBadge)
+        }
+    }
+
+    var availableBadges []DB_Badge
+    for _, foundBadge := range allBadges {
+        isAllowed := false
+
+        // Level Check
+        if foundBadge.LevelRequirement < 0 { // Available for no one?
+            isAllowed = false
+        } else if foundBadge.LevelRequirement == 0 { // Available for everyone?
+            isAllowed = true
+        } else if foundBadge.LevelRequirement > 0 { // Meets min level=
+            if foundBadge.LevelRequirement <= l.GetLevelForUser(user.ID, foundBadge.GuildID) {
+                isAllowed = true
+            } else {
+                isAllowed = false
+            }
+        }
+
+        // User is in allowed user list?
+        for _, allowedUserID := range foundBadge.AllowedUserIDs {
+            if allowedUserID == user.ID {
+                isAllowed = true
+            }
+        }
+
+        // User is in denied user list?
+        for _, deniedUserID := range foundBadge.DeniedUserIDs {
+            if deniedUserID == user.ID {
+                isAllowed = false
+            }
+        }
+
+        if isAllowed == true {
+            availableBadges = append(availableBadges, foundBadge)
+        }
+    }
+
+    return availableBadges
+}
+
+func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string) []DB_Badge {
+    guildsToCheck := make([]string, 0)
+    guildsToCheck = append(guildsToCheck, "global")
+
+    session := cache.GetSession()
+
+    if _, err := session.State.Member(serverID, user.ID); err == nil {
+        guildsToCheck = append(guildsToCheck, serverID)
     }
 
 
