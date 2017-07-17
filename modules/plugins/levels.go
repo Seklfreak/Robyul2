@@ -724,6 +724,59 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             }
                         })
                         return
+                    case "move": // [p]profile badge move <category name> <badge name> <#>
+                        session.ChannelTyping(msg.ChannelID)
+                        if len(args) < 5 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                            helpers.Relax(err)
+                            return
+                        }
+                        categoryName := args[2]
+                        badgeName := args[3]
+                        newSpot, err := strconv.Atoi(args[4])
+                        if err != nil {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                            helpers.Relax(err)
+                            return
+                        }
+
+                        userData := m.GetUserUserdata(msg.Author)
+
+                        idToMove := ""
+                        for _, badgeID := range userData.ActiveBadgeIDs {
+                            badge := m.GetBadgeByID(badgeID)
+                            if badge.Category == categoryName && badge.Name == badgeName {
+                                idToMove = badge.ID
+                            }
+                        }
+
+                        if idToMove == "" {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+                            helpers.Relax(err)
+                            return
+                        }
+
+                        newBadgeList := make([]string, 0)
+                        badgeAdded := false
+                        for _, badgeID := range userData.ActiveBadgeIDs {
+                            if len(newBadgeList)+1 == newSpot {
+                                newBadgeList = append(newBadgeList, idToMove)
+                                badgeAdded = true
+                            }
+                            if badgeID != idToMove {
+                                newBadgeList = append(newBadgeList, badgeID)
+                            }
+                        }
+                        if badgeAdded == false && len(newBadgeList) < BadgeLimt {
+                            newBadgeList = append(newBadgeList, idToMove)
+                        }
+                        userData.ActiveBadgeIDs = newBadgeList
+                        m.setUserUserdata(userData)
+
+                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.move-badge-success"))
+                        helpers.Relax(err)
+
+                        return
                     }
                 }
                 session.ChannelTyping(msg.ChannelID)
@@ -1646,6 +1699,23 @@ func (l *Levels) GetBadge(category string, name string, guildID string) DB_Badge
     }
 
     return emptyBadge
+}
+
+func (l *Levels) GetBadgeByID(badgeID string) DB_Badge {
+    var badgeBucket DB_Badge
+    listCursor, err := rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("id").Eq(badgeID),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.One(&badgeBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return badgeBucket
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    return badgeBucket
 }
 
 func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
