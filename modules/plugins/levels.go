@@ -470,7 +470,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 return
                             }
 
-                            serverBadges := m.GetServerBadges(channel.GuildID)
+                            serverBadges := m.GetServerOnlyBadges(channel.GuildID)
                             badgeLimit := helpers.GuildSettingsGetCached(channel.GuildID).LevelsMaxBadges
                             if badgeLimit == 0 {
                                 badgeLimit = 20
@@ -1620,6 +1620,23 @@ func (l *Levels) GetUserUserdata(user *discordgo.User) DB_Profile_Userdata {
         return entryBucket
     } else if err != nil {
         helpers.Relax(err)
+    }
+
+    return entryBucket
+}
+
+func (l *Levels) GetServerOnlyBadges(guildID string) []DB_Badge {
+    var entryBucket []DB_Badge
+    listCursor, err := rethink.Table("profile_badge").Filter(
+        rethink.Row.Field("guildid").Eq(guildID),
+    ).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.All(&entryBucket)
+
+    if err != nil {
+        if err != rethink.ErrEmptyResult {
+            helpers.Relax(err)
+        }
     }
 
     return entryBucket
