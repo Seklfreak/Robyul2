@@ -342,7 +342,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 return
             case "background":
                 if len(args) < 2 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
                     helpers.Relax(err)
                     return
                 }
@@ -373,9 +373,23 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     return
                 default:
                     if m.ProfileBackgroundNameExists(args[1]) == false {
-                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-error-not-found"))
-                        helpers.Relax(err)
+                        searchResult := m.ProfileBackgroundSearch(args[1])
 
+                        if len(searchResult) <= 0 {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-error-not-found"))
+                            helpers.Relax(err)
+                        } else {
+                            backgroundNamesText := ""
+                            for _, entry := range searchResult {
+                                backgroundNamesText += "`" + entry.Name + "` "
+                            }
+                            backgroundNamesText = strings.TrimSpace(backgroundNamesText)
+                            resultText := helpers.GetText("plugins.levels.profile-background-set-error-not-found") + "\n"
+                            resultText += fmt.Sprintf("Maybe I can interest you in one of these backgrounds: %s", backgroundNamesText)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, resultText)
+                            helpers.Relax(err)
+                        }
                         return
                     }
 
@@ -1452,6 +1466,23 @@ func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl
     return err
 }
 
+func (l *Levels) ProfileBackgroundSearch(searchText string) []DB_Profile_Background {
+    var entryBucket []DB_Profile_Background
+    listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
+        return profile.Field("id").Match(fmt.Sprintf("(?i)%s", searchText))
+    }).Limit(5).Run(helpers.GetDB())
+    defer listCursor.Close()
+    err = listCursor.All(&entryBucket)
+
+    if err == rethink.ErrEmptyResult {
+        return entryBucket
+    } else if err != nil {
+        helpers.Relax(err)
+    }
+
+    return entryBucket
+}
+
 func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
     var entryBucket DB_Profile_Background
     listCursor, err := rethink.Table("profile_backgrounds").Filter(
@@ -1463,7 +1494,7 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
     if err == rethink.ErrEmptyResult {
         var entryBucket DB_Profile_Background
         listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-            return profile.Field("id").Match(fmt.Sprintf("(?i)%s", backgroundName))
+            return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", backgroundName))
         }).Run(helpers.GetDB())
         defer listCursor.Close()
         err = listCursor.One(&entryBucket)

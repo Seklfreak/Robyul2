@@ -673,7 +673,8 @@
       "badge-error-not-found": "I wasn't able to find the badge you are looking for. <:blobthinking:317028940885524490>",
       "deny-badge-success-denied": "I added %s to the denied users list for %s (%s). <:blobokhand:317032017164238848>",
       "deny-badge-success-not-denied": "I removed %s from the denied users list for %s (%s). <:blobokhand:317032017164238848>",
-      "badge-error-none": "There are no badges available for you. <:blobugh:317047327443517442>"
+      "badge-error-none": "There are no badges available for you. <:blobugh:317047327443517442>",
+      "new-profile-background-help": "You can view a list of all backgrounds here: <https://github.com/Seklfreak/Robyul2/wiki/Profile-Backgrounds>.\nSubmit new backgrounds here: <https://docs.google.com/forms/d/e/1FAIpQLSfxQtgNL3zIW0IjOOlIR7fng_8O7l2WhAY3O-ya9KrjwUdFYw/viewform>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
