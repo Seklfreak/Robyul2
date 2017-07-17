@@ -428,8 +428,26 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                     }
                                 }
                             }
-                            newBadge.URL, err = m.uploadToImgur(helpers.NetGet(newBadge.URL))
-                            helpers.Relax(err)
+                            picData, err := helpers.NetGetUAWithError(newBadge.URL, helpers.DEFAULT_UA)
+                            if err != nil {
+                                if _, ok := err.(*url.Error); ok {
+                                    _, err = session.ChannelMessageSend(msg.ChannelID, "Invalid url.")
+                                    helpers.Relax(err)
+                                } else {
+                                    helpers.Relax(err)
+                                }
+                                return
+                            }
+                            newBadge.URL, err = m.uploadToImgur(picData)
+                            if err != nil {
+                                if strings.Contains(err.Error(), "Invalid URL") {
+                                    _, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
+                                    helpers.Relax(err)
+                                } else {
+                                    helpers.Relax(err)
+                                }
+                                return
+                            }
 
                             badgeFound := m.GetBadge(newBadge.Category, newBadge.Name, channel.GuildID)
                             if badgeFound.ID != "" {
@@ -1420,7 +1438,7 @@ func (l *Levels) BadgePickerActiveText(userID string, activeBadgeIDs []string, a
 }
 
 func (l *Levels) BadgePickerHelpText() string {
-    return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save\n"
+    return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save. To remove a badge from your Profile pick the badge again.\n"
 }
 
 func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string) error {
@@ -2239,11 +2257,15 @@ func (l *Levels) uploadToImgur(picData []byte) (string, error) {
     parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(picData)}}
 
     req, err := http.NewRequest("POST", imgurApiUploadBaseUrl, strings.NewReader(parameters.Encode()))
-    helpers.Relax(err)
+    if err != nil {
+        return "", err
+    }
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
     req.Header.Set("Authorization", "Client-ID "+helpers.GetConfig().Path("imgur.client_id").Data().(string))
     res, err := http.DefaultClient.Do(req)
-    helpers.Relax(err)
+    if err != nil {
+        return "", err
+    }
 
     var imgurResponse ImgurResponse
     json.NewDecoder(res.Body).Decode(&imgurResponse)

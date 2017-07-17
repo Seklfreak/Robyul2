@@ -50,6 +50,47 @@ func NetGetUA(url string, useragent string) []byte {
     }
 }
 
+func NetGetUAWithError(url string, useragent string) ([]byte, error) {
+    // Allocate client
+    client := &http.Client{}
+
+    // Prepare request
+    request, err := http.NewRequest("GET", url, nil)
+    if err != nil {
+        return []byte{}, err
+    }
+
+    // Set custom UA
+    request.Header.Set("User-Agent", useragent)
+
+    // Do request
+    response, err := client.Do(request)
+    if err != nil {
+        return []byte{}, err
+    }
+
+
+    // Only continue if code was 200
+    if response.StatusCode != 200 {
+        if err != nil {
+            return []byte{}, errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode))
+        }
+    } else {
+        // Read body
+        defer response.Body.Close()
+
+        buf := bytes.NewBuffer(nil)
+        _, err := io.Copy(buf, response.Body)
+        if err != nil {
+            return []byte{}, err
+        }
+
+
+        return buf.Bytes(), nil
+    }
+    return []byte{}, errors.New("Internal Error")
+}
+
 func NetPost(url string, data string) []byte {
     return NetPostUA(url, data, DEFAULT_UA)
 }
