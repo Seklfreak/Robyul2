@@ -1,6 +1,6 @@
 # Robyul
 
-[<img src="https://img.shields.io/badge/Support-me!-orange.svg">](https://www.patreon.com/bePatron?u=160662)
+[<img src="https://img.shields.io/badge/Support-me!-orange.svg">](https://www.patreon.com/sekl)
 [<img src="https://discordapp.com/api/guilds/286619174371852298/widget.png?style=shield">](https://discord.gg/s5qZvUV)
 
 The Discord Bot for KPop Servers originating from the I.O.I Discord.
