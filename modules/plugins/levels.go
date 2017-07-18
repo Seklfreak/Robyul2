@@ -79,6 +79,7 @@ type DB_Levels_ServerUser struct {
 type DB_Profile_Background struct {
     Name    string  `gorethink:"id,omitempty"`
     URL     string  `gorethink:"url"`
+    CreatedAt          time.Time  `gorethink:"createdat"`
 }
 
 type DB_Profile_Userdata struct {
@@ -357,12 +358,34 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         backgroundName := args[2]
                         backgroundUrl := args[3]
 
+
+                        picData, err := helpers.NetGetUAWithError(backgroundUrl, helpers.DEFAULT_UA)
+                        if err != nil {
+                            if _, ok := err.(*url.Error); ok {
+                                _, err = session.ChannelMessageSend(msg.ChannelID, "Invalid url.")
+                                helpers.Relax(err)
+                            } else {
+                                helpers.Relax(err)
+                            }
+                            return
+                        }
+                        backgroundUrl, err = m.uploadToImgur(picData)
+                        if err != nil {
+                            if strings.Contains(err.Error(), "Invalid URL") {
+                                _, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
+                                helpers.Relax(err)
+                            } else {
+                                helpers.Relax(err)
+                            }
+                            return
+                        }
+
                         if m.ProfileBackgroundNameExists(backgroundName) == true {
                             _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
                             return
                         }
 
-                        err := m.InsertNewProfileBackground(backgroundName, backgroundUrl)
+                        err = m.InsertNewProfileBackground(backgroundName, backgroundUrl)
                         if err != nil {
                             helpers.Relax(err)
                         }
@@ -1513,6 +1536,7 @@ func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl
     newEntry := new(DB_Profile_Background)
     newEntry.Name = strings.ToLower(backgroundName)
     newEntry.URL = backgroundUrl
+    newEntry.CreatedAt = time.Now()
 
     insert := rethink.Table("profile_backgrounds").Insert(newEntry)
     _, err := insert.RunWrite(helpers.GetDB())
