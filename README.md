@@ -7,7 +7,7 @@ The Discord Bot for KPop Servers originating from the I.O.I Discord.
 
 Robyul provides various features with the needs of KPop Servers in mind, some examples:
 - Mod features (ban, kick, optional warning and ban system across servers)
-- Translation (using enhanced translation for korean)
+- Translation (using enhanced translation for korean powered by naver openAPI)
 - Social Media notification (VLive, Instagram (including Instagram live), Twitter, Facebook)
 - LastFM (including summary of the lastFM usage on a whole discord)
 - Advanced Bias Role assignment (Multiple Levels of Roles and more)
