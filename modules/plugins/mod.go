@@ -394,6 +394,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         }
                     }
                 }
+
                 if botCanBan == false {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
                     return
@@ -408,6 +409,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             userCanBan = true
                         }
                     }
+                }
+                if msg.Author.ID == guild.OwnerID {
+                    userCanBan = true
                 }
                 if userCanBan == false {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
@@ -471,6 +475,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             userCanKick = true
                         }
                     }
+                }
+                if msg.Author.ID == guild.OwnerID {
+                    userCanKick = true
                 }
                 if userCanKick == false {
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
