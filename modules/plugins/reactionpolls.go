@@ -158,7 +158,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
         helpers.Relax(err)
         return
     case "refresh": // [p]reactionpolls refresh
-        helpers.RequireAdmin(msg, func() {
+        helpers.RequireBotAdmin(msg, func() {
             session.ChannelTyping(msg.ChannelID)
             reactionPollsCache = rp.getAllReactionPolls()
             _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.refreshed-polls"))

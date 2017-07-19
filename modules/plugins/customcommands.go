@@ -206,7 +206,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
             })
             return
         case "refresh": // [p]commands refresh
-            helpers.RequireAdmin(msg, func() {
+            helpers.RequireBotAdmin(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
                 customCommandsCache = cc.getAllCustomCommands()
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.refreshed-commands"))
