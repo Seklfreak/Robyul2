@@ -73,8 +73,8 @@
       "refreshed": ":cyclone: Refreshed!"
     },
     "help": [
-      "<@%s> Check out <https://github.com/Seklfreak/Robyul2/wiki/Commands>",
-      "<@%s> It's at <https://github.com/Seklfreak/Robyul2/wiki/Commands> <:googlesmile:317031693951434752>"
+      "<@%s> Check out <https://robyul.chat/commands>",
+      "<@%s> It's at <https://robyul.chat/commands> <:googlesmile:317031693951434752>"
     ],
     "check-your-dms": "<@%s> Please check your DMs. <:blobeyes:317029938568101890>"
   },
@@ -674,7 +674,7 @@
       "deny-badge-success-denied": "I added %s to the denied users list for %s (%s). <:blobokhand:317032017164238848>",
       "deny-badge-success-not-denied": "I removed %s from the denied users list for %s (%s). <:blobokhand:317032017164238848>",
       "badge-error-none": "There are no badges available for you. <:blobugh:317047327443517442>",
-      "new-profile-background-help": "You can view a list of all backgrounds here: <https://github.com/Seklfreak/Robyul2/wiki/Profile-Backgrounds>.\nSubmit new backgrounds here: <https://docs.google.com/forms/d/e/1FAIpQLSfxQtgNL3zIW0IjOOlIR7fng_8O7l2WhAY3O-ya9KrjwUdFYw/viewform>",
+      "new-profile-background-help": "You can view a list of all backgrounds here: <https://robyul.chat/profile/backgrounds>.\nSubmit new backgrounds here: <https://docs.google.com/forms/d/e/1FAIpQLSfxQtgNL3zIW0IjOOlIR7fng_8O7l2WhAY3O-ya9KrjwUdFYw/viewform>",
       "move-badge-success": "I moved the badge on your profile. <:blobokhand:317032017164238848>"
     },
     "gallery": {

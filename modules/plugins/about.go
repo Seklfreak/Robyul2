@@ -16,7 +16,7 @@ func (a *About) Init(session *discordgo.Session) {
 }
 
 func (a *About) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    m := "This is Robyul 2, the successor of our old and still loved Robyul.\nYou can find the source of Robyul 2 here: <https://github.com/Seklfreak/Robyul2>.\nRobyul 2 is a fork of Karen:\n"
+    m := "This is Robyul 2, the successor of our old and still loved Robyul.\nYou can find more about Robyul 2 here: <https://robyul.chat>.\nRobyul 2 is a fork of Karen:\n"
 
     m += "Hi my name is Karen!\nI'm a :robot: that will make this Discord Server a better place c:\nHere is some information about me:\n```\n"
 
