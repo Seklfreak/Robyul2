@@ -27,6 +27,7 @@ import (
     "encoding/json"
     "encoding/base64"
     "github.com/bradfitz/slice"
+    "github.com/lucasb-eyer/go-colorful"
 )
 
 type Levels struct {
@@ -91,6 +92,10 @@ type DB_Profile_Userdata struct {
     Rep            int        `gorethink:"rep"`
     LastRepped     time.Time  `gorethink:"last_repped"`
     ActiveBadgeIDs []string   `gorethink:"active_badgeids"`
+    BackgroundColor string    `gorethink:"background_color"`
+    AccentColor string        `gorethink:"accent_color"`
+    TextColor string          `gorethink:"text_color"`
+    BackgroundOpacity string  `gorethink:"background_opacity"`
 }
 
 type DB_Badge struct {
@@ -952,6 +957,66 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     msg.Author.Username))
                     helpers.Relax(err)
                 }
+                return
+            case "color":
+                session.ChannelTyping(msg.ChannelID)
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                userUserdata := m.GetUserUserdata(msg.Author)
+
+                switch args[1] {
+                case "background", "box":
+                    if len(args) >= 3 {
+                        userUserdata.BackgroundColor = strings.Replace(args[2], "#", "", -1)
+                    } else {
+                        userUserdata.BackgroundColor = ""
+                    }
+                case "accent":
+                    if len(args) >= 3 {
+                        userUserdata.AccentColor = strings.Replace(args[2], "#", "", -1)
+                    } else {
+                        userUserdata.AccentColor = ""
+                    }
+                case "text":
+                    if len(args) >= 3 {
+                        userUserdata.TextColor = strings.Replace(args[2], "#", "", -1)
+                    } else {
+                        userUserdata.TextColor = ""
+                    }
+                default:
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    helpers.Relax(err)
+                    return
+                }
+                m.setUserUserdata(userUserdata)
+
+                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-color-set-success"))
+                helpers.Relax(err)
+                return
+            case "opacity":
+                session.ChannelTyping(msg.ChannelID)
+
+                userUserdata := m.GetUserUserdata(msg.Author)
+
+                if len(args) >= 2 {
+                    opacity, err := strconv.ParseFloat(args[1], 64)
+                    if err != nil {
+                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                        helpers.Relax(err)
+                        return
+                    }
+                    userUserdata.BackgroundOpacity = fmt.Sprintf("%.1f", opacity)
+                } else {
+                    userUserdata.BackgroundOpacity = "0.5"
+                }
+                m.setUserUserdata(userUserdata)
+
+                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
+                helpers.Relax(err)
                 return
             }
 
@@ -2106,6 +2171,17 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         badgesHTML += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
     }
 
+    backgroundColor, err := colorful.Hex("#"+m.GetBackgroundColor(userData))
+    if err != nil{
+        backgroundColor, err = colorful.Hex("#000000")
+        if err != nil {
+            helpers.Relax(err)
+        }
+    }
+    backgroundColorString := fmt.Sprintf("rgba(%d, %d, %d, %s)",
+        int(backgroundColor.R*255), int(backgroundColor.G*255), int(backgroundColor.B*255),
+        m.GetBackgroundOpacity(userData))
+
     tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AND_NICKNAME}", userAndNick, -1)
@@ -2120,6 +2196,9 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BADGES_HTML}", badgesHTML, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_COLOR}", backgroundColorString, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1) // TODO: <-
@@ -2153,6 +2232,38 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     metrics.LevelImagesGenerated.Add(1)
 
     return imageBytes, nil
+}
+
+func (m *Levels) GetBackgroundColor(userUserdata DB_Profile_Userdata) string {
+    if userUserdata.BackgroundColor != "" {
+        return userUserdata.BackgroundColor
+    } else {
+        return "000000"
+    }
+}
+
+func (m *Levels) GetAccentColor(userUserdata DB_Profile_Userdata) string {
+    if userUserdata.AccentColor != "" {
+        return userUserdata.AccentColor
+    } else {
+        return "46d42e"
+    }
+}
+
+func (m *Levels) GetTextColor(userUserdata DB_Profile_Userdata) string {
+    if userUserdata.TextColor != "" {
+        return userUserdata.TextColor
+    } else {
+        return "ffffff"
+    }
+}
+
+func (m *Levels) GetBackgroundOpacity(userUserdata DB_Profile_Userdata) string {
+    if userUserdata.BackgroundOpacity != "" {
+        return userUserdata.BackgroundOpacity
+    } else {
+        return "0.5"
+    }
 }
 
 func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
