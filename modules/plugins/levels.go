@@ -1791,6 +1791,8 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
         }
     }
 
+    levelCache := make(map[string]int, 0)
+
     var availableBadges []DB_Badge
     for _, foundBadge := range allBadges {
         isAllowed := false
@@ -1800,11 +1802,20 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
             isAllowed = false
         } else if foundBadge.LevelRequirement == 0 { // Available for everyone?
             isAllowed = true
-        } else if foundBadge.LevelRequirement > 0 { // Meets min level=
-            if foundBadge.LevelRequirement <= l.GetLevelForUser(user.ID, foundBadge.GuildID) {
-                isAllowed = true
+        } else if foundBadge.LevelRequirement > 0 { // Meets min level?
+            if _, ok := levelCache[foundBadge.GuildID]; ok {
+                if foundBadge.LevelRequirement <= levelCache[foundBadge.GuildID] {
+                    isAllowed = true
+                } else {
+                    isAllowed = false
+                }
             } else {
-                isAllowed = false
+                levelCache[foundBadge.GuildID] = l.GetLevelForUser(user.ID, foundBadge.GuildID)
+                if foundBadge.LevelRequirement <= levelCache[foundBadge.GuildID] {
+                    isAllowed = true
+                } else {
+                    isAllowed = false
+                }
             }
         }
 
