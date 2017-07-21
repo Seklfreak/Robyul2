@@ -14,6 +14,8 @@ import (
     "net/http"
     "strings"
     "google.golang.org/api/googleapi"
+    "net/url"
+    "encoding/base64"
 )
 
 type Translator struct {
@@ -23,7 +25,7 @@ type Translator struct {
 
 const (
     googleTranslateHexColor string = "#4285f4"
-    naverTranslateEndpoint  string = "http://labspace.naver.com/api/n2mt/translate"
+    naverTranslateEndpoint  string = "https://papago.naver.com/apis/n2mt/translate"
 )
 
 func (t *Translator) Commands() []string {
@@ -65,8 +67,6 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[1]))
         return
     }
-
-    fmt.Println(source)
 
     translations, err := t.client.Translate(
         t.ctx,
@@ -118,20 +118,24 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
         targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
 
         for _, partToTranslaste := range targetInputs {
-            jsonData := fmt.Sprintf("{\"source\": \"%s\", \"target\": \"%s\", \"text\": \"%s\"}",
-                strings.ToLower(source.String()),
-                strings.ToLower(target.String()),
-                strings.Replace(partToTranslaste, "\"", "'", -1),
-            )
+            data := url.Values{}
+            decoded, err := base64.StdEncoding.DecodeString("rlWxnJA0VwczLJkmZSwiZGljdERpc3BsYXkiOjUsInNvdXJjZSI6ImVuIiwidGFyZ2V0Ijoia28iLCJ0ZXh0IjoiQUFBQUFBQUFBQSJ9")
+            helpers.Relax(err)
+            jsonData := string(decoded)
+            jsonData = strings.Replace(jsonData, "\"dictDisplay\":5", "\"dictDisplay\":0", -1)
+            jsonData = strings.Replace(jsonData, "\"source\":\"en\"", fmt.Sprintf("\"source\":\"%s\"", source.String()), -1)
+            jsonData = strings.Replace(jsonData, "\"target\":\"ko\"", fmt.Sprintf("\"target\":\"%s\"", target.String()), -1)
+            jsonData = strings.Replace(jsonData, "\"text\":\"AAAAAAAAAA\"", fmt.Sprintf("\"text\":\"%s\"" , strings.Replace(partToTranslaste, "\"", "'", -1)), -1)
+            data.Set("data", base64.StdEncoding.EncodeToString([]byte(jsonData)))
+
             client := &http.Client{}
-            request, err := http.NewRequest("POST", naverTranslateEndpoint, bytes.NewBufferString(jsonData))
+            request, err := http.NewRequest("POST", naverTranslateEndpoint, bytes.NewBufferString(data.Encode()))
             if err != nil {
                 helpers.SendError(msg, err)
                 continue
             }
             request.Header.Set("User-Agent", helpers.DEFAULT_UA)
-            request.Header.Set("Content-Type", "application/json")
-            request.Header.Set("x-naver-client-id", "labspace")
+            request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
             response, err := client.Do(request)
             if err != nil {
                 helpers.SendError(msg, err)
@@ -145,7 +149,7 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
                     helpers.SendError(msg, err)
                     continue
                 }
-                translatedNaverResult += " " + resultParsed.Path("message.result.translatedText").Data().(string)
+                translatedNaverResult += " " + resultParsed.Path("translatedText").Data().(string)
             } else {
                 helpers.SendError(msg, errors.New(fmt.Sprintf("Unexpected status code from Naver API: %d", response.StatusCode)))
             }
