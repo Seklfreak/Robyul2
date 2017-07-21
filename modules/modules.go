@@ -80,7 +80,7 @@ var (
         //&triggers.CSS{},
         //&triggers.Donate{},
         //&triggers.Git{},
-        //&triggers.EightBall{},
+        &triggers.EightBall{},
         //&triggers.Hi{},
         //&triggers.HypeTrain{},
         //&triggers.Invite{},
