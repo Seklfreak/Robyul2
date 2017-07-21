@@ -111,7 +111,7 @@ func (m *GuildAnnouncements) OnMessage(content string, msg *discordgo.Message, s
 }
 
 func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-    guild, err := session.Guild(member.GuildID)
+    guild, err := session.State.Guild(member.GuildID)
     helpers.Relax(err)
     for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
         if guildAnnouncementSetting.GuildJoinEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
@@ -127,7 +127,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 
 }
 func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
-    guild, err := session.Guild(member.GuildID)
+    guild, err := session.State.Guild(member.GuildID)
     helpers.Relax(err)
     for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
         if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
