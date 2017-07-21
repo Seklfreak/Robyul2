@@ -96,6 +96,7 @@ type DB_Profile_Userdata struct {
     AccentColor string        `gorethink:"accent_color"`
     TextColor string          `gorethink:"text_color"`
     BackgroundOpacity string  `gorethink:"background_opacity"`
+    DetailOpacity string  `gorethink:"detail_opacity"`
 }
 
 type DB_Badge struct {
@@ -999,20 +1000,36 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 return
             case "opacity":
                 session.ChannelTyping(msg.ChannelID)
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
 
                 userUserdata := m.GetUserUserdata(msg.Author)
 
-                if len(args) >= 2 {
-                    opacity, err := strconv.ParseFloat(args[1], 64)
+                opacityText := "0.5"
+                if len(args) >= 3 {
+                    opacity, err := strconv.ParseFloat(args[2], 64)
                     if err != nil {
                         _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                         helpers.Relax(err)
                         return
                     }
-                    userUserdata.BackgroundOpacity = fmt.Sprintf("%.1f", opacity)
-                } else {
-                    userUserdata.BackgroundOpacity = "0.5"
+                    opacityText = fmt.Sprintf("%.1f", opacity)
                 }
+
+                switch args[1] {
+                case "background", "box":
+                    userUserdata.BackgroundOpacity = opacityText
+                case "details", "detail":
+                    userUserdata.DetailOpacity = opacityText
+                default:
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    helpers.Relax(err)
+                    return
+                }
+
                 m.setUserUserdata(userUserdata)
 
                 _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
@@ -2181,6 +2198,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     backgroundColorString := fmt.Sprintf("rgba(%d, %d, %d, %s)",
         int(backgroundColor.R*255), int(backgroundColor.G*255), int(backgroundColor.B*255),
         m.GetBackgroundOpacity(userData))
+    detailColorString := fmt.Sprintf("rgba(0, 0, 0, %s)",
+        m.GetDetailOpacity(userData))
 
     tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
@@ -2198,6 +2217,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BADGES_HTML}", badgesHTML, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_COLOR}", backgroundColorString, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_DETAIL_COLOR}", detailColorString, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
     tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1) // TODO: <-
@@ -2261,6 +2281,14 @@ func (m *Levels) GetTextColor(userUserdata DB_Profile_Userdata) string {
 func (m *Levels) GetBackgroundOpacity(userUserdata DB_Profile_Userdata) string {
     if userUserdata.BackgroundOpacity != "" {
         return userUserdata.BackgroundOpacity
+    } else {
+        return "0.5"
+    }
+}
+
+func (m *Levels) GetDetailOpacity(userUserdata DB_Profile_Userdata) string {
+    if userUserdata.DetailOpacity != "" {
+        return userUserdata.DetailOpacity
     } else {
         return "0.5"
     }
