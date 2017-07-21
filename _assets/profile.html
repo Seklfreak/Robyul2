@@ -20,8 +20,7 @@
             height: 195px;
             z-index: -2;
         }
-        #avatar {
-            /* USER AVATAR URL */
+        .avatar {
             background-image: url('{USER_AVATAR_URL}');
             position: absolute;
             top: -40px;
@@ -197,13 +196,20 @@
             text-align: center;
             top: 3px;
         }
+        .fake-bg {
+            background-image: url('{USER_BACKGROUND_URL}');
+            background-repeat: no-repeat;
+            background-size: 400px 300px;
+            background-position: -4px -64px;
+        }
     </style>
 </head>
 
 <body>
 
 <div id="container">
-    <div id="avatar"></div>
+    <div class="avatar fake-bg"></div>
+    <div class="avatar"></div>
     <div id="header">
         <div id="username">{USER_AND_NICKNAME}</div>
     </div>

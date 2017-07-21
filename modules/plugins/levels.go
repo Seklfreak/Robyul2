@@ -2072,7 +2072,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
 
     avatarUrl := helpers.GetAvatarUrl(member.User)
     if avatarUrl != "" {
-        avatarUrl = strings.Replace(avatarUrl, "gif", "jpg", -1)
+        avatarUrl = strings.Replace(avatarUrl, "gif", "png", -1)
+        avatarUrl = strings.Replace(avatarUrl, "jpg", "png", -1)
         avatarUrl = strings.Replace(avatarUrl, "size=1024", "size=256", -1)
     }
     if avatarUrl == "" {
