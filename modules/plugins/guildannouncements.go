@@ -10,6 +10,7 @@ import (
     "github.com/Seklfreak/Robyul2/cache"
     "strconv"
     "github.com/bradfitz/slice"
+    "github.com/getsentry/raven-go"
 )
 
 type GuildAnnouncements struct{}
@@ -112,6 +113,9 @@ func (m *GuildAnnouncements) OnMessage(content string, msg *discordgo.Message, s
 
 func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
     guild, err := session.State.Guild(member.GuildID)
+    if err != nil {
+        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+    }
     helpers.Relax(err)
     for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
         if guildAnnouncementSetting.GuildJoinEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
@@ -119,7 +123,10 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
             guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member)
             go func() {
                 _, err := session.ChannelMessageSend(guildJoinChannelID, guildJoinText)
-                helpers.Relax(err)
+                if err != nil {
+                    logger.ERROR.L("guildannouncements", fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
+                        guild.Name, guild.ID, err.Error()))
+                }
             }()
         }
     }
@@ -128,14 +135,19 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 }
 func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
     guild, err := session.State.Guild(member.GuildID)
-    helpers.Relax(err)
+    if err != nil {
+        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+    }
     for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
         if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
             guildLeaveChannelID := guildAnnouncementSetting.GuildLeaveChannelID
             guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member)
             go func() {
                 _, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
-                helpers.Relax(err)
+                if err != nil {
+                    logger.ERROR.L("guildannouncements", fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
+                        guild.Name, guild.ID, err.Error()))
+                }
             }()
         }
     }
