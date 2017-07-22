@@ -681,7 +681,10 @@
       "move-badge-success": "I moved the badge on your profile. <:blobokhand:317032017164238848>",
       "profile-color-set-success": "I updated your profile. <:blobokhand:317032017164238848>",
       "profile-opacity-set-success": "I updated your profile. <:blobokhand:317032017164238848>",
-      "badge-picker-session-duplicate": "Please `exit` all `_profile badge` sessions before you do this. <:blobshh:317044272161357824>"
+      "badge-picker-session-duplicate": "Please `exit` all `_profile badge` sessions before you do this. <:blobshh:317044272161357824>",
+      "profile-background-delete-error-not-found": "I wasn't able to find a background with that name. <:blobthinking:317028940885524490>",
+      "profile-background-delete-success": "I deleted that background. <:blobokhand:317032017164238848>",
+      "profile-background-delete-confirm": "Are you sure you want to delete following Background?\nName: %s\nURL: %s"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

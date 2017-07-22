@@ -355,7 +355,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         backgroundName := args[2]
                         backgroundUrl := args[3]
 
-
                         picData, err := helpers.NetGetUAWithError(backgroundUrl, helpers.DEFAULT_UA)
                         if err != nil {
                             if _, ok := err.(*url.Error); ok {
@@ -388,6 +387,34 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         }
                         _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success", backgroundName))
                         helpers.Relax(err)
+                        return
+                    })
+                    return
+                case "delete":
+                    helpers.RequireRobyulMod(msg, func() {
+                        if len(args) < 3 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                            helpers.Relax(err)
+                            return
+                        }
+                        backgroundName := strings.ToLower(args[2])
+
+                        if m.ProfileBackgroundNameExists(backgroundName) == false {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-error-not-found"))
+                            return
+                        }
+                        backgroundUrl := m.GetProfileBackgroundUrl(backgroundName)
+
+                        if helpers.ConfirmEmbed(
+                            msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
+                            backgroundName, backgroundUrl),
+                            "✅", "🚫") == true {
+                            err = m.DeleteProfileBackground(backgroundName)
+                            helpers.Relax(err)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-success"))
+                            helpers.Relax(err)
+                        }
                         return
                     })
                     return
@@ -1637,6 +1664,16 @@ func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl
     insert := rethink.Table("profile_backgrounds").Insert(newEntry)
     _, err := insert.RunWrite(helpers.GetDB())
     return err
+}
+
+func (l *Levels) DeleteProfileBackground(backgroundName string) error {
+    if backgroundName != "" {
+        _, err := rethink.Table("profile_backgrounds").Filter(
+            rethink.Row.Field("id").Eq(backgroundName),
+        ).Delete().RunWrite(helpers.GetDB())
+        return err
+    }
+    return nil
 }
 
 func (l *Levels) ProfileBackgroundSearch(searchText string) []DB_Profile_Background {
