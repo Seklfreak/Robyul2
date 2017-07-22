@@ -125,7 +125,7 @@ var (
     levelsEnv []string = os.Environ()
     webshotBinary string
     topCache []Cache_Levels_top
-    activeBadgePickerUserIDs []string
+    activeBadgePickerUserIDs map[string]string
 )
 
 const (
@@ -148,6 +148,8 @@ func (m *Levels) Init(session *discordgo.Session) {
 
     go m.cacheTopLoop()
     logger.PLUGIN.L("levels", "Started processCacheTopLoop")
+
+    activeBadgePickerUserIDs = make(map[string]string, 0)
 }
 
 func (m *Levels) cacheTopLoop() {
@@ -292,10 +294,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         return
     case "profile": // [p]profile
-        for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
-            if activeBadgePickerUserID == msg.Author.ID {
-                return
+        if _, ok := activeBadgePickerUserIDs[msg.Author.ID]; ok {
+            if activeBadgePickerUserIDs[msg.Author.ID] != msg.ChannelID {
+                _, err := session.ChannelMessageSend(
+                    msg.ChannelID, helpers.GetText("plugins.levels.badge-picker-session-duplicate"))
+                helpers.Relax(err)
             }
+            return
         }
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.Channel(msg.ChannelID)
@@ -856,10 +861,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                         fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.Username))
                                     helpers.Relax(err)
                                     stoppedLoop = true
-                                    newActiveBadgePickerUserIDs := make([]string, 0)
-                                    for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+                                    newActiveBadgePickerUserIDs := make(map[string]string, 0)
+                                    for activeBadgePickerUserID, activeBadgePickerChannelID := range activeBadgePickerUserIDs {
                                         if activeBadgePickerUserID != msg.Author.ID {
-                                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, activeBadgePickerUserID)
+                                            newActiveBadgePickerUserIDs[activeBadgePickerUserID] = activeBadgePickerChannelID
                                         }
                                     }
                                     activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
@@ -925,10 +930,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                             msg.Author.Username))
                                                     helpers.Relax(err)
                                                     stoppedLoop = true
-                                                    newActiveBadgePickerUserIDs := make([]string, 0)
-                                                    for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+                                                    newActiveBadgePickerUserIDs := make(map[string]string, 0)
+                                                    for activeBadgePickerUserID, activeBadgePickerChannelID := range activeBadgePickerUserIDs {
                                                         if activeBadgePickerUserID != msg.Author.ID {
-                                                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, activeBadgePickerUserID)
+                                                            newActiveBadgePickerUserIDs[activeBadgePickerUserID] = activeBadgePickerChannelID
                                                         }
                                                     }
                                                     activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
@@ -950,16 +955,16 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         }
                     }
                 })
-                activeBadgePickerUserIDs = append(activeBadgePickerUserIDs, msg.Author.ID)
+                activeBadgePickerUserIDs[msg.Author.ID] = msg.ChannelID
                 lastBotMessageID = m.BadgePickerPrintCategories(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
                 time.Sleep(5 * time.Minute)
                 closeHandler()
                 if stoppedLoop == false {
                     m.setUserUserdata(userData)
-                    newActiveBadgePickerUserIDs := make([]string, 0)
-                    for _, activeBadgePickerUserID := range activeBadgePickerUserIDs {
+                    newActiveBadgePickerUserIDs := make(map[string]string, 0)
+                    for activeBadgePickerUserID, activeBadgePickerChannelID := range activeBadgePickerUserIDs {
                         if activeBadgePickerUserID != msg.Author.ID {
-                            newActiveBadgePickerUserIDs = append(newActiveBadgePickerUserIDs, activeBadgePickerUserID)
+                            newActiveBadgePickerUserIDs[activeBadgePickerUserID] = activeBadgePickerChannelID
                         }
                     }
                     activeBadgePickerUserIDs = newActiveBadgePickerUserIDs

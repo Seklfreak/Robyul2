@@ -680,7 +680,8 @@
       "new-profile-background-help": "You can view a list of all backgrounds here: <https://robyul.chat/profile/backgrounds>.\nSubmit new backgrounds here: <https://docs.google.com/forms/d/e/1FAIpQLSfxQtgNL3zIW0IjOOlIR7fng_8O7l2WhAY3O-ya9KrjwUdFYw/viewform>",
       "move-badge-success": "I moved the badge on your profile. <:blobokhand:317032017164238848>",
       "profile-color-set-success": "I updated your profile. <:blobokhand:317032017164238848>",
-      "profile-opacity-set-success": "I updated your profile. <:blobokhand:317032017164238848>"
+      "profile-opacity-set-success": "I updated your profile. <:blobokhand:317032017164238848>",
+      "badge-picker-session-duplicate": "Please `exit` all `_profile badge` sessions before you do this. <:blobshh:317044272161357824>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
