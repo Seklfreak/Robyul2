@@ -838,6 +838,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                 inCategory := ""
                 stoppedLoop := false
+                lastBotMessageID := make([]string, 0)
                 closeHandler := session.AddHandler(func(session *discordgo.Session, loopMessage *discordgo.MessageCreate) {
                     if stoppedLoop == false && loopMessage.Author.ID == msg.Author.ID && loopMessage.ChannelID == msg.ChannelID {
                         cleanedContent := strings.Replace(loopMessage.Content, "_profile ", "", 1)
@@ -850,8 +851,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 switch loopArgs[0] {
                                 case "stop", "exit":
                                     m.setUserUserdata(userData)
+                                    m.DeleteMessages(msg.ChannelID, lastBotMessageID)
                                     _, err := session.ChannelMessageSend(msg.ChannelID,
-                                        fmt.Sprintf("@%s I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.Username))
+                                        fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.Username))
                                     helpers.Relax(err)
                                     stoppedLoop = true
                                     newActiveBadgePickerUserIDs := make([]string, 0)
@@ -869,21 +871,24 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                     return
                                 case "categories":
                                     inCategory = ""
-                                    session.ChannelTyping(msg.ChannelID)
-                                    m.BadgePickerPrintCategories(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
+                                    m.DeleteMessages(msg.ChannelID, lastBotMessageID)
+                                    lastBotMessageID = m.BadgePickerPrintCategories(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
                                     return
                                 default:
                                     if inCategory == "" {
                                         for _, badge := range shownBadges {
                                             if badge.Category == strings.ToLower(loopArgs[0]) {
+                                                m.DeleteMessages(msg.ChannelID, lastBotMessageID)
                                                 inCategory = strings.ToLower(loopArgs[0])
-                                                m.BadgePickerPrintBadges(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, inCategory, availableBadges)
+                                                lastBotMessageID = m.BadgePickerPrintBadges(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, inCategory, availableBadges)
                                                 return
                                             }
                                         }
-                                        _, err := session.ChannelMessageSend(msg.ChannelID,
-                                            fmt.Sprintf("@%s I wasn't able to find a category with that name.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
+                                        m.DeleteMessages(msg.ChannelID, lastBotMessageID)
+                                        message, err := session.ChannelMessageSend(msg.ChannelID,
+                                            fmt.Sprintf("**@%s** I wasn't able to find a category with that name.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
                                         helpers.Relax(err)
+                                        lastBotMessageID = []string{message.ID}
                                         return
                                     } else {
                                         for _, badge := range shownBadges {
@@ -902,9 +907,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                     }
                                                 }
                                                 if len(userData.ActiveBadgeIDs) >= BadgeLimt {
-                                                    _, err := session.ChannelMessageSend(msg.ChannelID,
-                                                        fmt.Sprintf("@%s You are already got enough emotes.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
+                                                    m.DeleteMessages(msg.ChannelID, lastBotMessageID)
+                                                    message, err := session.ChannelMessageSend(msg.ChannelID,
+                                                        fmt.Sprintf("**@%s** You are already got enough emotes.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
                                                     helpers.Relax(err)
+                                                    lastBotMessageID = []string{message.ID}
                                                     return
                                                 }
 
@@ -912,8 +919,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                 userData.ActiveBadgeIDs = append(userData.ActiveBadgeIDs, badge.ID)
                                                 if len(userData.ActiveBadgeIDs) >= BadgeLimt {
                                                     m.setUserUserdata(userData)
+                                                    m.DeleteMessages(msg.ChannelID, lastBotMessageID)
                                                     _, err := session.ChannelMessageSend(msg.ChannelID,
-                                                        fmt.Sprintf("@%s I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n",
+                                                        fmt.Sprintf("**@%s** I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n",
                                                             msg.Author.Username))
                                                     helpers.Relax(err)
                                                     stoppedLoop = true
@@ -929,9 +937,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                 continue BadgePickLoop
                                             }
                                         }
-                                        _, err := session.ChannelMessageSend(msg.ChannelID,
-                                            fmt.Sprintf("@%s I wasn't able to find a badge with that name.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
+                                        m.DeleteMessages(msg.ChannelID, lastBotMessageID)
+                                        message, err := session.ChannelMessageSend(msg.ChannelID,
+                                            fmt.Sprintf("**@%s** I wasn't able to find a badge with that name.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
                                         helpers.Relax(err)
+                                        lastBotMessageID = []string{message.ID}
                                         return
                                     }
                                 }
@@ -941,7 +951,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     }
                 })
                 activeBadgePickerUserIDs = append(activeBadgePickerUserIDs, msg.Author.ID)
-                m.BadgePickerPrintCategories(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
+                lastBotMessageID = m.BadgePickerPrintCategories(msg.Author, msg.ChannelID, shownBadges, userData.ActiveBadgeIDs, availableBadges)
                 time.Sleep(5 * time.Minute)
                 closeHandler()
                 if stoppedLoop == false {
@@ -954,7 +964,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     }
                     activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
 
-                    _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("@%s I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
+                    m.DeleteMessages(msg.ChannelID, lastBotMessageID)
+                    _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("**@%s** I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
                     msg.Author.Username))
                     helpers.Relax(err)
                 }
@@ -1531,7 +1542,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 }
 
-func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, allBadges []DB_Badge) {
+func (l *Levels) DeleteMessages(channelID string, messages []string) {
+    for _, message := range messages {
+        cache.GetSession().ChannelMessageDelete(channelID, message)
+    }
+}
+
+func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, allBadges []DB_Badge) []string {
     categoriesCount := make(map[string]int, 0)
     for _, badge := range availableBadges {
         if _, ok := categoriesCount[badge.Category]; ok {
@@ -1557,13 +1574,16 @@ func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID strin
     resultText += l.BadgePickerHelpText()
 
     session := cache.GetSession()
+    messageIDs := make([]string, 0)
     for _, page := range helpers.Pagify(resultText, "\n") {
-        _, err := session.ChannelMessageSend(channeID, page)
+        message, err := session.ChannelMessageSend(channeID, page)
         helpers.Relax(err)
+        messageIDs = append(messageIDs, message.ID)
     }
+    return messageIDs
 }
 
-func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, categoryName string, allBadges []DB_Badge) {
+func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, categoryName string, allBadges []DB_Badge) []string {
     categoryName = strings.ToLower(categoryName)
 
     resultText := l.BadgePickerActiveText(user.Username, activeBadgeIDs, allBadges)
@@ -1586,15 +1606,18 @@ func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, a
     resultText += l.BadgePickerHelpText()
 
     session := cache.GetSession()
+    messageIDs := make([]string, 0)
     for _, page := range helpers.Pagify(resultText, "\n") {
-        _, err := session.ChannelMessageSend(channeID, page)
+        message, err := session.ChannelMessageSend(channeID, page)
         helpers.Relax(err)
+        messageIDs = append(messageIDs, message.ID)
     }
+    return messageIDs
 }
 
 func (l *Levels) BadgePickerActiveText(username string, activeBadgeIDs []string, availableBadges []DB_Badge) string {
     spaceLeft := BadgeLimt - len(activeBadgeIDs)
-    text := fmt.Sprintf("@%s You can pick %d more badge(s) to display on your profile.\nYou are currently displaying:", username, spaceLeft)
+    text := fmt.Sprintf("**@%s** You can pick %d more badge(s) to display on your profile.\nYou are currently displaying:", username, spaceLeft)
     if len(activeBadgeIDs) > 0 {
         for _, badgeID := range activeBadgeIDs {
             for _, badge := range availableBadges {
