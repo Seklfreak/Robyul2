@@ -123,7 +123,7 @@ CheckGfycatStatusLoop:
             gfyName = result.Path("gfyname").Data().(string)
             break CheckGfycatStatusLoop
         default:
-            logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Status Error: %s", result.String()))
+            logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Status Error: %s (ID: %s)", result.String(), gfyName))
             _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
             helpers.Relax(err)
             return

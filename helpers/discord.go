@@ -25,6 +25,9 @@ var NukeMods = []string{
     "116620585638821891", // Sekl
     "134298438559858688", // Kakkela
 }
+var RobyulMod = []string {
+    "132633380628987904", // sunny
+}
 var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
 var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
 
@@ -41,6 +44,19 @@ func IsNukeMod(id string) bool {
 // IsBotAdmin checks if $id is in $botAdmins
 func IsBotAdmin(id string) bool {
     for _, s := range botAdmins {
+        if s == id {
+            return true
+        }
+    }
+
+    return false
+}
+
+func IsRobyulMod(id string) bool {
+    if IsBotAdmin(id) {
+        return true
+    }
+    for _, s := range RobyulMod {
         if s == id {
             return true
         }
@@ -136,6 +152,16 @@ func RequireMod(msg *discordgo.Message, cb Callback) {
 func RequireBotAdmin(msg *discordgo.Message, cb Callback) {
     if !IsBotAdmin(msg.Author.ID) {
         cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("botadmin.no_permission"))
+        return
+    }
+
+    cb()
+}
+
+// RequireSupportMod only calls $cb if the author is a support mod
+func RequireRobyulMod(msg *discordgo.Message, cb Callback) {
+    if !IsRobyulMod(msg.Author.ID) {
+        cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("robyulmod.no_permission"))
         return
     }
 

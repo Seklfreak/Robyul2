@@ -20,6 +20,9 @@
   "botadmin": {
     "no_permission": "Only the Bot Owner can do that."
   },
+  "robyulmod": {
+    "no_permission": "Only Robyul Mods can do that."
+  },
   "bot": {
     "ratelimit": {
       "hit": "<@%s> Woah there. Way too spicy.\nYou're executing commands too fast, so i put you into the chill zone for ~15 seconds.\nNo more commands for you until you get out <:blobnogood:317029275742109706>"

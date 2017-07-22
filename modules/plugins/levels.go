@@ -355,7 +355,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
                 switch args[1] {
                 case "add":
-                    helpers.RequireBotAdmin(msg, func() {
+                    helpers.RequireRobyulMod(msg, func() {
                         if len(args) < 4 {
                             _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
                             helpers.Relax(err)
