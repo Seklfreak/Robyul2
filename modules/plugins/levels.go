@@ -2373,15 +2373,29 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         outGif.Delay = append(outGif.Delay, avatarGif.Delay[0])
 
         resizeRect := image.Rect(0, 0, 128, 128)
-        resizeImage := image.NewRGBA(resizeRect)
+        cutImage := image.NewRGBA(resizeRect)
         resizedRect := image.Rect(4, 64, 4+80, 64+80)
 
         for i, avatarGifFrame := range avatarGif.Image {
-            bounds := avatarGifFrame.Bounds()
-            draw.DrawMask(resizeImage, bounds, avatarGifFrame, image.ZP, &circle{image.Pt(64, 64), 64}, image.ZP, draw.Over)
-            resizedImage := resize.Resize(80, 80, resizeImage, resize.NearestNeighbor)
-            pm = image.NewPaletted(resizedRect, avatarGifFrame.Palette)
-            draw.FloydSteinberg.Draw(pm, resizedRect, resizedImage, image.ZP)
+            resizedImage := resize.Resize(80, 80, avatarGifFrame, resize.NearestNeighbor)
+            draw.DrawMask(
+                cutImage, resizedImage.Bounds(), resizedImage, image.ZP,
+                &circle{image.Pt(40, 40), 40}, image.ZP, draw.Over)
+            avatarGifFrame.Palette = append(avatarGifFrame.Palette, image.Transparent)
+            paletteHasTransparency := false
+            newPalette := make([]color.Color, 0)
+            for i, color := range avatarGifFrame.Palette {
+                if color == image.Transparent {
+                    paletteHasTransparency = true
+                }
+                newPalette = append(newPalette, color)
+                if i == 254 && paletteHasTransparency == false {
+                    newPalette = append(newPalette, image.Transparent)
+                    break
+                }
+            }
+            pm = image.NewPaletted(resizedRect, newPalette)
+            draw.FloydSteinberg.Draw(pm, resizedRect, cutImage, image.ZP)
             outGif.Image = append(outGif.Image, pm)
             outGif.Delay = append(outGif.Delay, avatarGif.Delay[i])
         }
