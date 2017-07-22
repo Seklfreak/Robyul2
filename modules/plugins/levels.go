@@ -28,7 +28,6 @@ import (
     "encoding/base64"
     "github.com/bradfitz/slice"
     "github.com/lucasb-eyer/go-colorful"
-    "image/gif"
     "image"
     "image/png"
     "image/draw"
@@ -36,6 +35,7 @@ import (
     "image/color"
     "github.com/getsentry/raven-go"
     "github.com/andybons/gogif"
+    "image/gif"
 )
 
 type Levels struct {
@@ -75,6 +75,7 @@ func (m *Levels) Commands() []string {
         "levels",
         "profile",
         "rep",
+        "gif-profile",
     }
 }
 
@@ -301,7 +302,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             helpers.GetTextF("plugins.levels.rep-success", targetUser.Username))
         helpers.Relax(err)
         return
-    case "profile": // [p]profile
+    case "profile", "gif-profile": // [p]profile
         if _, ok := activeBadgePickerUserIDs[msg.Author.ID]; ok {
             if activeBadgePickerUserIDs[msg.Author.ID] != msg.ChannelID {
                 _, err := session.ChannelMessageSend(
@@ -1085,7 +1086,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
         helpers.Relax(err)
 
-        jpgBytes, ext, err := m.GetProfile(targetMember, guild)
+        gifP := false
+        if command == "gif-profile" {
+            gifP = true
+        }
+
+        jpgBytes, ext, err := m.GetProfile(targetMember, guild, gifP)
         helpers.Relax(err)
 
         _, err = session.ChannelFileSendWithMessage(
@@ -2167,7 +2173,7 @@ func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
     helpers.Relax(err)
 }
 
-func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([]byte, string, error) {
+func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gifP bool) ([]byte, string, error) {
     tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
 
     var levelsServersUser []DB_Levels_ServerUser
@@ -2310,7 +2316,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
 
     metrics.LevelImagesGenerated.Add(1)
 
-    if avatarUrlGif != "" {
+    if avatarUrlGif != "" && gifP == true {
         outGif := &gif.GIF{}
 
         decodedFirstFrame, err := png.Decode(bytes.NewReader(imageBytes))
