@@ -313,16 +313,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         if len(args) >= 1 && args[0] != "" {
             switch args[0] {
             case "title":
-                if len(args) < 2 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                    helpers.Relax(err)
-                    return
-                }
-                titleText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-                if len(titleText) <= 0 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                    helpers.Relax(err)
-                    return
+                titleText := " "
+                if len(args) >= 2 {
+                    titleText = strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
                 }
 
                 userUserdata := m.GetUserUserdata(msg.Author)
@@ -333,16 +326,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 helpers.Relax(err)
                 return
             case "bio":
-                if len(args) < 2 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                    helpers.Relax(err)
-                    return
-                }
-                bioText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-                if len(bioText) <= 0 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                    helpers.Relax(err)
-                    return
+                bioText := " "
+                if len(args) >= 2 {
+                    bioText = strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
                 }
 
                 userUserdata := m.GetUserUserdata(msg.Author)
