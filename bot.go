@@ -286,6 +286,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     // Separate arguments from the command
     content := strings.TrimSpace(strings.Replace(message.Content, prefix+cmd, "", -1))
 
+    // Log commands
+    Logger.VERBOSE.L("bot", fmt.Sprintf("%s (#%s): %s",
+        message.Author.Username, message.Author.ID, message.Content))
+
     // Check if a module matches said command
     modules.CallBotPlugin(cmd, content, message.Message)
 
