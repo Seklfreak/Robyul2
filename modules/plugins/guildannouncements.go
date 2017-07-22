@@ -145,7 +145,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
             go func() {
                 _, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
                 if err != nil {
-                    logger.ERROR.L("guildannouncements", fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
+                    logger.ERROR.L("guildannouncements", fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
                         guild.Name, guild.ID, err.Error()))
                 }
             }()
