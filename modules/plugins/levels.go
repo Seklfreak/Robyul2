@@ -28,6 +28,14 @@ import (
     "encoding/base64"
     "github.com/bradfitz/slice"
     "github.com/lucasb-eyer/go-colorful"
+    "image/gif"
+    "image"
+    "image/png"
+    "image/draw"
+    "github.com/nfnt/resize"
+    "image/color"
+    "github.com/getsentry/raven-go"
+    "github.com/andybons/gogif"
 )
 
 type Levels struct {
@@ -78,53 +86,53 @@ type DB_Levels_ServerUser struct {
 }
 
 type DB_Profile_Background struct {
-    Name    string  `gorethink:"id,omitempty"`
-    URL     string  `gorethink:"url"`
-    CreatedAt          time.Time  `gorethink:"createdat"`
+    Name      string  `gorethink:"id,omitempty"`
+    URL       string  `gorethink:"url"`
+    CreatedAt time.Time  `gorethink:"createdat"`
 }
 
 type DB_Profile_Userdata struct {
-    ID             string     `gorethink:"id,omitempty"`
-    UserID         string     `gorethink:"userid"`
-    Background     string     `gorethink:"background"`
-    Title          string     `gorethink:"title"`
-    Bio            string     `gorethink:"bio"`
-    Rep            int        `gorethink:"rep"`
-    LastRepped     time.Time  `gorethink:"last_repped"`
-    ActiveBadgeIDs []string   `gorethink:"active_badgeids"`
-    BackgroundColor string    `gorethink:"background_color"`
-    AccentColor string        `gorethink:"accent_color"`
-    TextColor string          `gorethink:"text_color"`
+    ID                string     `gorethink:"id,omitempty"`
+    UserID            string     `gorethink:"userid"`
+    Background        string     `gorethink:"background"`
+    Title             string     `gorethink:"title"`
+    Bio               string     `gorethink:"bio"`
+    Rep               int        `gorethink:"rep"`
+    LastRepped        time.Time  `gorethink:"last_repped"`
+    ActiveBadgeIDs    []string   `gorethink:"active_badgeids"`
+    BackgroundColor   string    `gorethink:"background_color"`
+    AccentColor       string        `gorethink:"accent_color"`
+    TextColor         string          `gorethink:"text_color"`
     BackgroundOpacity string  `gorethink:"background_opacity"`
-    DetailOpacity string  `gorethink:"detail_opacity"`
+    DetailOpacity     string  `gorethink:"detail_opacity"`
 }
 
 type DB_Badge struct {
-    ID                 string     `gorethink:"id,omitempty"`
-    CreatedByUserID    string     `gorethink:"createdby_userid"`
-    Name               string     `gorethink:"name"`
-    Category           string     `gorethink:"category"`
-    BorderColor        string     `gorethink:"bordercolor"`
-    GuildID            string     `gorethink:"guildid"`
-    CreatedAt          time.Time  `gorethink:"createdat"`
-    URL                string     `gorethink:"url"`
-    LevelRequirement   int        `gorethink:"levelrequirement"`
-    AllowedUserIDs     []string   `gorethinK:"allowed_userids"`
-    DeniedUserIDs      []string   `gorethinK:"allowed_userids"`
+    ID               string     `gorethink:"id,omitempty"`
+    CreatedByUserID  string     `gorethink:"createdby_userid"`
+    Name             string     `gorethink:"name"`
+    Category         string     `gorethink:"category"`
+    BorderColor      string     `gorethink:"bordercolor"`
+    GuildID          string     `gorethink:"guildid"`
+    CreatedAt        time.Time  `gorethink:"createdat"`
+    URL              string     `gorethink:"url"`
+    LevelRequirement int        `gorethink:"levelrequirement"`
+    AllowedUserIDs   []string   `gorethinK:"allowed_userids"`
+    DeniedUserIDs    []string   `gorethinK:"allowed_userids"`
 }
 
 type Cache_Levels_top struct {
     GuildID string
-    Levels PairList
+    Levels  PairList
 }
 
 var (
-    cachePath string
-    assetsPath string
-    htmlTemplateString string
-    levelsEnv []string = os.Environ()
-    webshotBinary string
-    topCache []Cache_Levels_top
+    cachePath                string
+    assetsPath               string
+    htmlTemplateString       string
+    levelsEnv                []string = os.Environ()
+    webshotBinary            string
+    topCache                 []Cache_Levels_top
     activeBadgePickerUserIDs map[string]string
 )
 
@@ -171,11 +179,11 @@ func (m *Levels) cacheTopLoop() {
         err = listCursor.All(&levelsUsers)
 
         if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
-            logger.ERROR.L("levels","empty result from levels db")
+            logger.ERROR.L("levels", "empty result from levels db")
             time.Sleep(60 * time.Second)
             continue
         } else if err != nil {
-            logger.ERROR.L("levels",fmt.Sprintf("db error: %s", err.Error()))
+            logger.ERROR.L("levels", fmt.Sprintf("db error: %s", err.Error()))
             time.Sleep(60 * time.Second)
             continue
         }
@@ -190,7 +198,7 @@ func (m *Levels) cacheTopLoop() {
             rankedGuildExpMap := m.rankMapByExp(guildExpMap)
             newTopCache = append(newTopCache, Cache_Levels_top{
                 GuildID: guild.ID,
-                Levels: rankedGuildExpMap,
+                Levels:  rankedGuildExpMap,
             })
         }
 
@@ -206,7 +214,7 @@ func (m *Levels) cacheTopLoop() {
         rankedTotalExpMap := m.rankMapByExp(totalExpMap)
         newTopCache = append(newTopCache, Cache_Levels_top{
             GuildID: "global",
-            Levels: rankedTotalExpMap,
+            Levels:  rankedTotalExpMap,
         })
 
         topCache = newTopCache
@@ -253,7 +261,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             _, err := session.ChannelMessageSend(msg.ChannelID,
                 helpers.GetTextF("plugins.levels.rep-error-timelimit",
                     int(math.Floor(timeUntil.Hours())),
-                    int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60) ))
+                    int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
             helpers.Relax(err)
             return
         }
@@ -407,7 +415,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                         if helpers.ConfirmEmbed(
                             msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
-                            backgroundName, backgroundUrl),
+                                backgroundName, backgroundUrl),
                             "✅", "🚫") == true {
                             err = m.DeleteProfileBackground(backgroundName)
                             helpers.Relax(err)
@@ -469,7 +477,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             newBadge.CreatedAt = time.Now()
                             newBadge.Category = strings.ToLower(args[2])
                             newBadge.Name = strings.ToLower(args[3])
-                            newBadge.URL = args[4] // reupload to imgur
+                            newBadge.URL = args[4]                                       // reupload to imgur
                             newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
                             newBadge.LevelRequirement, err = strconv.Atoi(args[6])
                             if err != nil {
@@ -638,7 +646,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             resultText += fmt.Sprintf("**%s** (%d badges)\n", key, categoriesCount[key])
                         }
                         resultText += fmt.Sprintf("I found %d badge categories on this server.\nUse `_profile badge list <category name>` to view all badges of a category.\n",
-                        len(categoriesCount))
+                            len(categoriesCount))
 
                         for _, page := range helpers.Pagify(resultText, "\n") {
                             _, err = session.ChannelMessageSend(msg.ChannelID, page)
@@ -984,7 +992,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                     m.DeleteMessages(msg.ChannelID, lastBotMessageID)
                     _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("**@%s** I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
-                    msg.Author.Username))
+                        msg.Author.Username))
                     helpers.Relax(err)
                 }
                 return
@@ -1077,13 +1085,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
         helpers.Relax(err)
 
-        jpgBytes, err := m.GetProfile(targetMember, guild)
+        jpgBytes, ext, err := m.GetProfile(targetMember, guild)
         helpers.Relax(err)
 
         _, err = session.ChannelFileSendWithMessage(
             msg.ChannelID,
             fmt.Sprintf("<@%s> Profile for %s", msg.Author.ID, targetUser.Username),
-            fmt.Sprintf("%s-Robyul.png", targetUser.ID), bytes.NewReader(jpgBytes))
+            fmt.Sprintf("%s-Robyul.%s", targetUser.ID, ext), bytes.NewReader(jpgBytes))
         helpers.Relax(err)
 
         return
@@ -1236,126 +1244,126 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
                 return
             case "ignore":
-                    if len(args) >= 2 {
-                        switch args[1] {
-                        case "list": // [p]levels ignore list
-                            helpers.RequireMod(msg, func() {
-                                settings := helpers.GuildSettingsGetCached(channel.GuildID)
+                if len(args) >= 2 {
+                    switch args[1] {
+                    case "list": // [p]levels ignore list
+                        helpers.RequireMod(msg, func() {
+                            settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
-                                ignoredMessage := "**Ignored Users:**"
-                                if len(settings.LevelsIgnoredUserIDs) > 0 {
-                                    for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
-                                        ignoredUser, err := session.State.Member(channel.GuildID, ignoredUserID)
-                                        if err != nil {
-                                            ignoredMessage += " N/A"
-                                        } else {
-                                            ignoredMessage += " " + ignoredUser.User.Username + "#" + ignoredUser.User.Discriminator
-                                        }
-                                        if i+1 < len(settings.LevelsIgnoredUserIDs) {
-                                            ignoredMessage += ","
-                                        }
-                                    }
-                                } else {
-                                    ignoredMessage += " None"
-                                }
-
-                                ignoredMessage += "\n**Ignored Channels:**"
-                                if len(settings.LevelsIgnoredChannelIDs) > 0 {
-                                    for i, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
-                                        ignoredMessage += " <#" + ignoredChannelID + ">"
-                                        if i+1 < len(settings.LevelsIgnoredChannelIDs) {
-                                            ignoredMessage += ","
-                                        }
-                                    }
-                                } else {
-                                    ignoredMessage += " None"
-                                }
-
-                                for _, page := range helpers.Pagify(ignoredMessage, " ") {
-                                    _, err = session.ChannelMessageSend(msg.ChannelID, page)
-                                    helpers.Relax(err)
-                                }
-                                return
-                            })
-                            return
-                        case "user": // [p]levels ignore user <user>
-                            if len(args) < 3 {
-                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                                helpers.Relax(err)
-                                return
-                            }
-
-                            helpers.RequireAdmin(msg, func() {
-                                targetUser, err = helpers.GetUserFromMention(args[2])
-                                if targetUser == nil || targetUser.ID == "" {
-                                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                                    helpers.Relax(err)
-                                    return
-                                }
-
-                                settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
+                            ignoredMessage := "**Ignored Users:**"
+                            if len(settings.LevelsIgnoredUserIDs) > 0 {
                                 for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
-                                    if ignoredUserID == targetUser.ID {
-                                        settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs[:i], settings.LevelsIgnoredUserIDs[i+1:]...)
-                                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
-                                        helpers.Relax(err)
-
-                                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-removed"))
-                                        helpers.Relax(err)
-                                        return
+                                    ignoredUser, err := session.State.Member(channel.GuildID, ignoredUserID)
+                                    if err != nil {
+                                        ignoredMessage += " N/A"
+                                    } else {
+                                        ignoredMessage += " " + ignoredUser.User.Username + "#" + ignoredUser.User.Discriminator
+                                    }
+                                    if i+1 < len(settings.LevelsIgnoredUserIDs) {
+                                        ignoredMessage += ","
                                     }
                                 }
-
-                                settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs, targetUser.ID)
-                                err = helpers.GuildSettingsSet(channel.GuildID, settings)
-                                helpers.Relax(err)
-
-                                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-added"))
-                                helpers.Relax(err)
-                                return
-                            })
-                            return
-                        case "channel": // [p]levels ignore channel <channel>
-                            if len(args) < 3 {
-                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                                helpers.Relax(err)
-                                return
+                            } else {
+                                ignoredMessage += " None"
                             }
 
-                            helpers.RequireAdmin(msg, func() {
-                                targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
-                                if targetChannel == nil || targetChannel.ID == "" {
-                                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                                    helpers.Relax(err)
-                                    return
-                                }
-
-                                settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
+                            ignoredMessage += "\n**Ignored Channels:**"
+                            if len(settings.LevelsIgnoredChannelIDs) > 0 {
                                 for i, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
-                                    if ignoredChannelID == targetChannel.ID {
-                                        settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs[:i], settings.LevelsIgnoredChannelIDs[i+1:]...)
-                                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
-                                        helpers.Relax(err)
-
-                                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-removed"))
-                                        helpers.Relax(err)
-                                        return
+                                    ignoredMessage += " <#" + ignoredChannelID + ">"
+                                    if i+1 < len(settings.LevelsIgnoredChannelIDs) {
+                                        ignoredMessage += ","
                                     }
                                 }
+                            } else {
+                                ignoredMessage += " None"
+                            }
 
-                                settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs, targetChannel.ID)
-                                err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                            for _, page := range helpers.Pagify(ignoredMessage, " ") {
+                                _, err = session.ChannelMessageSend(msg.ChannelID, page)
                                 helpers.Relax(err)
-
-                                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-added"))
-                                helpers.Relax(err)
-                                return
-                            })
+                            }
+                            return
+                        })
+                        return
+                    case "user": // [p]levels ignore user <user>
+                        if len(args) < 3 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                            helpers.Relax(err)
                             return
                         }
+
+                        helpers.RequireAdmin(msg, func() {
+                            targetUser, err = helpers.GetUserFromMention(args[2])
+                            if targetUser == nil || targetUser.ID == "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                            for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
+                                if ignoredUserID == targetUser.ID {
+                                    settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs[:i], settings.LevelsIgnoredUserIDs[i+1:]...)
+                                    err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                                    helpers.Relax(err)
+
+                                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-removed"))
+                                    helpers.Relax(err)
+                                    return
+                                }
+                            }
+
+                            settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs, targetUser.ID)
+                            err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                            helpers.Relax(err)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-added"))
+                            helpers.Relax(err)
+                            return
+                        })
+                        return
+                    case "channel": // [p]levels ignore channel <channel>
+                        if len(args) < 3 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                            helpers.Relax(err)
+                            return
+                        }
+
+                        helpers.RequireAdmin(msg, func() {
+                            targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
+                            if targetChannel == nil || targetChannel.ID == "" {
+                                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                                helpers.Relax(err)
+                                return
+                            }
+
+                            settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+                            for i, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
+                                if ignoredChannelID == targetChannel.ID {
+                                    settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs[:i], settings.LevelsIgnoredChannelIDs[i+1:]...)
+                                    err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                                    helpers.Relax(err)
+
+                                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-removed"))
+                                    helpers.Relax(err)
+                                    return
+                                }
+                            }
+
+                            settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs, targetChannel.ID)
+                            err = helpers.GuildSettingsSet(channel.GuildID, settings)
+                            helpers.Relax(err)
+
+                            _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-added"))
+                            helpers.Relax(err)
+                            return
+                        })
+                        return
                     }
+                }
                 return
             case "process-history": // [p]level process-history
                 helpers.RequireBotAdmin(msg, func() {
@@ -1904,7 +1912,6 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
         }
     }
 
-
     var allBadges []DB_Badge
     for _, guildToCheck := range guildsToCheck {
         var entryBucket []DB_Badge
@@ -1984,7 +1991,6 @@ func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string)
         guildsToCheck = append(guildsToCheck, serverID)
     }
 
-
     var allBadges []DB_Badge
     for _, guildToCheck := range guildsToCheck {
         var entryBucket []DB_Badge
@@ -2054,7 +2060,6 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User) []DB_Badge {
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }
-
 
     var allBadges []DB_Badge
     for _, guildToCheck := range guildsToCheck {
@@ -2162,7 +2167,7 @@ func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
     helpers.Relax(err)
 }
 
-func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([]byte, error) {
+func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([]byte, string, error) {
     tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
 
     var levelsServersUser []DB_Levels_ServerUser
@@ -2188,26 +2193,29 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         if serverCache.GuildID == "global" {
             for i, pair := range serverCache.Levels {
                 if pair.Key == member.User.ID {
-                    globalRank = strconv.Itoa(i+1)
+                    globalRank = strconv.Itoa(i + 1)
                 }
             }
         } else if serverCache.GuildID == guild.ID {
             for i, pair := range serverCache.Levels {
                 if pair.Key == member.User.ID {
-                    serverRank = strconv.Itoa(i+1)
+                    serverRank = strconv.Itoa(i + 1)
                 }
             }
         }
     }
 
-
     userData := m.GetUserUserdata(member.User)
 
     avatarUrl := helpers.GetAvatarUrl(member.User)
+    avatarUrlGif := ""
     if avatarUrl != "" {
+        avatarUrl = strings.Replace(avatarUrl, "size=1024", "size=128", -1)
+        if strings.Contains(avatarUrl, "gif") {
+            avatarUrlGif = avatarUrl
+        }
         avatarUrl = strings.Replace(avatarUrl, "gif", "png", -1)
         avatarUrl = strings.Replace(avatarUrl, "jpg", "png", -1)
-        avatarUrl = strings.Replace(avatarUrl, "size=1024", "size=256", -1)
     }
     if avatarUrl == "" {
         avatarUrl = "http://i.imgur.com/osAqNL6.png"
@@ -2239,8 +2247,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
         badgesHTML += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
     }
 
-    backgroundColor, err := colorful.Hex("#"+m.GetBackgroundColor(userData))
-    if err != nil{
+    backgroundColor, err := colorful.Hex("#" + m.GetBackgroundColor(userData))
+    if err != nil {
         backgroundColor, err = colorful.Hex("#000000")
         if err != nil {
             helpers.Relax(err)
@@ -2252,31 +2260,31 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     detailColorString := fmt.Sprintf("rgba(0, 0, 0, %s)",
         m.GetDetailOpacity(userData))
 
-    tempTemplateHtml := strings.Replace(htmlTemplateString,"{USER_USERNAME}", member.User.Username, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_NICKNAME}", member.Nick, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AND_NICKNAME}", userAndNick, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_AVATAR_URL}", avatarUrl, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TITLE}", title, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", bio, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_RANK}", serverRank, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_GLOBAL_RANK}", globalRank, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_REP}", strconv.Itoa(userData.Rep), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BADGES_HTML}", badgesHTML, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BACKGROUND_COLOR}", backgroundColorString, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_DETAIL_COLOR}", detailColorString, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{TIME}", "WIP", -1) // TODO: <-
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BDAY}", "WIP", -1) // TODO: <-
-    tempTemplateHtml = strings.Replace(tempTemplateHtml,"{USER_BIO}", "Work In Progress", -1) // TODO: <-
+    tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", member.User.Username, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", member.Nick, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", userAndNick, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_URL}", avatarUrl, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TITLE}", title, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", bio, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_RANK}", serverRank, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_RANK}", globalRank, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_REP}", strconv.Itoa(userData.Rep), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML}", badgesHTML, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_COLOR}", backgroundColorString, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", detailColorString, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{TIME}", "WIP", -1)                  // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BDAY}", "WIP", -1)             // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", "Work In Progress", -1) // TODO: <-
 
     err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
     if err != nil {
-        return []byte{}, err
+        return []byte{}, "", err
     }
 
     cmdArgs := []string{
@@ -2292,17 +2300,122 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild) ([
     imgCmd.Env = levelsEnv
     imageBytes, err := imgCmd.Output()
     if err != nil {
-        return []byte{}, err
+        return []byte{}, "", err
     }
 
     err = os.Remove(tempTemplatePath)
     if err != nil {
-        return []byte{}, err
+        return []byte{}, "", err
     }
 
     metrics.LevelImagesGenerated.Add(1)
 
-    return imageBytes, nil
+    if avatarUrlGif != "" {
+        outGif := &gif.GIF{}
+
+        decodedFirstFrame, err := png.Decode(bytes.NewReader(imageBytes))
+        if err != nil {
+            raven.SetUserContext(&raven.User{
+                Username: member.User.Username + "#" + member.User.Discriminator,
+            })
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            goto ReturnImageBytes
+        }
+        buf := bytes.Buffer{}
+        err = gif.Encode(&buf, decodedFirstFrame, nil)
+        if err != nil {
+            raven.SetUserContext(&raven.User{
+                Username: member.User.Username + "#" + member.User.Discriminator,
+            })
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            goto ReturnImageBytes
+        }
+        firstFrame, err := gif.Decode(&buf)
+        if err != nil {
+            raven.SetUserContext(&raven.User{
+                Username: member.User.Username + "#" + member.User.Discriminator,
+            })
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            goto ReturnImageBytes
+        }
+
+        avatarGifBytes, err := helpers.NetGetUAWithError(avatarUrlGif, helpers.DEFAULT_UA)
+        if err != nil {
+            raven.SetUserContext(&raven.User{
+                Username: member.User.Username + "#" + member.User.Discriminator,
+            })
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            goto ReturnImageBytes
+        }
+
+        avatarGif, err := gif.DecodeAll(bytes.NewReader(avatarGifBytes))
+        if err != nil {
+            raven.SetUserContext(&raven.User{
+                Username: member.User.Username + "#" + member.User.Discriminator,
+            })
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            goto ReturnImageBytes
+        }
+
+        fullRect := image.Rect(0, 0, 400, 300)
+        pm := image.NewPaletted(fullRect, nil)
+        q := gogif.MedianCutQuantizer{NumColor: 256}
+        q.Quantize(pm, fullRect, decodedFirstFrame, image.ZP)
+        draw.FloydSteinberg.Draw(pm, fullRect, firstFrame, image.ZP)
+
+        outGif.Image = append(outGif.Image, pm)
+        outGif.Delay = append(outGif.Delay, avatarGif.Delay[0])
+
+        resizeRect := image.Rect(0, 0, 128, 128)
+        resizeImage := image.NewRGBA(resizeRect)
+        resizedRect := image.Rect(4, 64, 4+80, 64+80)
+
+        for i, avatarGifFrame := range avatarGif.Image {
+            bounds := avatarGifFrame.Bounds()
+            draw.DrawMask(resizeImage, bounds, avatarGifFrame, image.ZP, &circle{image.Pt(64, 64), 64}, image.ZP, draw.Over)
+            resizedImage := resize.Resize(80, 80, resizeImage, resize.NearestNeighbor)
+            pm = image.NewPaletted(resizedRect, avatarGifFrame.Palette)
+            draw.FloydSteinberg.Draw(pm, resizedRect, resizedImage, image.ZP)
+            outGif.Image = append(outGif.Image, pm)
+            outGif.Delay = append(outGif.Delay, avatarGif.Delay[i])
+        }
+
+        outGif.LoopCount = -1
+
+        buf = bytes.Buffer{}
+        err = gif.EncodeAll(&buf, outGif)
+        if err != nil {
+            raven.SetUserContext(&raven.User{
+                Username: member.User.Username + "#" + member.User.Discriminator,
+            })
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            goto ReturnImageBytes
+        }
+        return buf.Bytes(), "gif", nil
+    }
+    ReturnImageBytes:
+    return imageBytes, "png", nil
+}
+
+type circle struct {
+    p image.Point
+    r int
+}
+
+func (c *circle) ColorModel() color.Model {
+    return color.AlphaModel
+}
+
+func (c *circle) Bounds() image.Rectangle {
+    return image.Rect(c.p.X-c.r, c.p.Y-c.r, c.p.X+c.r, c.p.Y+c.r)
+}
+
+func (c *circle) At(x, y int) color.Color {
+    xx, yy, rr := float64(x-c.p.X)+0.5, float64(y-c.p.Y)+0.5, float64(c.r)
+    if xx*xx+yy*yy < rr*rr {
+        return color.Alpha{255}
+    }
+    return color.Alpha{0}
 }
 
 func (m *Levels) GetBackgroundColor(userUserdata DB_Profile_Userdata) string {
@@ -2450,7 +2563,7 @@ func (m *Levels) getExpForLevel(level int) int64 {
 
 func (m *Levels) getProgressToNextLevelFromExp(exp int64) int {
     expLevelCurrently := exp - m.getExpForLevel(m.getLevelFromExp(exp))
-    expLevelNext := m.getExpForLevel(m.getLevelFromExp(exp) + 1) - m.getExpForLevel(m.getLevelFromExp(exp))
+    expLevelNext := m.getExpForLevel(m.getLevelFromExp(exp)+1) - m.getExpForLevel(m.getLevelFromExp(exp))
     return int(expLevelCurrently / (expLevelNext / 100))
 }
 
