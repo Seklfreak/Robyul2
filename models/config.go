@@ -29,6 +29,7 @@ type Config struct {
         UserNoCommonServers      bool
         UserNewlyCreatedAccount  bool
         UserReported             bool
+        UserMultipleJoins        bool
     }   `rethink:"inspect_triggers_enabled"`
     InspectsChannel string `rethink:"inspects_channel"`
 
