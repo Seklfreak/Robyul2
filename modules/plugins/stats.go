@@ -736,8 +736,15 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.State.Channel(msg.ChannelID)
         helpers.Relax(err)
+
         guild, err := session.Guild(channel.GuildID)
         helpers.Relax(err)
+
+        args := strings.Fields(content)
+        if len(args) >= 2 && helpers.IsBotAdmin(msg.Author.ID) {
+            guild, err = session.Guild(args[1])
+            helpers.Relax(err)
+        }
 
         memberlistEmbedMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.memberlist-gathering"))
         helpers.Relax(err)
@@ -770,7 +777,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         }
 
         currentPage := 1
-        args := strings.Fields(content)
         if len(args) > 0 {
             currentPage, err = strconv.Atoi(args[0])
             if err != nil {
