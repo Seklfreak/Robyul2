@@ -45,8 +45,56 @@ func (m *Mod) Commands() []string {
     }
 }
 
-func (m *Mod) Init(session *discordgo.Session) {
+type DB_Mod_JoinLog struct {
+    ID                        string `gorethink:"id,omitempty"`
+    GuildID                   string `gorethink:"guildid"`
+    UserID                    string `gorethink:"userid"`
+    JoinedAt                  time.Time `gorethink:"joinedat"`
+    InviteCodeUsed            string `gorethink:"invitecode"`
+    InviteCodeCreatedByUserID string `gorethink:"invitecode_createdbyuserid"`
+    InviteCodeCreatedAt       time.Time `gorethink:"invitecode_createdat"`
+}
 
+type CacheInviteInformation struct {
+    GuildID         string
+    CreatedByUserID string
+    Code            string
+    CreatedAt       time.Time
+    Uses            int
+}
+
+var (
+    invitesCache map[string][]CacheInviteInformation
+)
+
+func (m *Mod) Init(session *discordgo.Session) {
+    invitesCache = make(map[string][]CacheInviteInformation, 0)
+    for _, guild := range session.State.Guilds {
+        invites, err := session.GuildInvites(guild.ID)
+        if err != nil {
+            logger.ERROR.L("mod", fmt.Sprintf("error getting invites from guild %s (#%s): %s",
+                guild.Name, guild.ID, err.Error()))
+            continue
+        }
+
+        cacheInvites := make([]CacheInviteInformation, 0)
+        for _, invite := range invites {
+            createdAt, err := invite.CreatedAt.Parse()
+            if err != nil {
+                continue
+            }
+            cacheInvites = append(cacheInvites, CacheInviteInformation{
+                GuildID:         invite.Guild.ID,
+                CreatedByUserID: invite.Inviter.ID,
+                Code:            invite.Code,
+                CreatedAt:       createdAt,
+                Uses:            invite.Uses,
+            })
+        }
+
+        invitesCache[guild.ID] = cacheInvites
+    }
+    logger.VERBOSE.L("mod", fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
 }
 
 func (m *Mod) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -725,7 +773,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 } else {
                     resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers:\n", len(bannedOnServerList))
                     i := 0
-                    BannedOnLoop:
+                BannedOnLoop:
                     for _, bannedOnServer := range bannedOnServerList {
                         resultBansText += fmt.Sprintf("▪`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
                         i++
@@ -746,7 +794,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 } else {
                     commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList))
                     i := 0
-                    ServerListLoop:
+                ServerListLoop:
                     for _, isOnServer := range isOnServerList {
                         commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
                         i++
@@ -1181,8 +1229,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             for _, channel := range guild.Channels {
                 invite, err := session.ChannelInviteCreate(channel.ID, discordgo.Invite{
-                    MaxAge: 60*60,
-                    MaxUses: 0,
+                    MaxAge:    60 * 60,
+                    MaxUses:   0,
                     Temporary: false,
                 })
                 if err != nil {
@@ -1253,6 +1301,70 @@ func (m *Mod) getTroublemakerReports(user *discordgo.User) []DB_Troublemaker_Ent
 }
 
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+    go func() {
+        // Get invite link
+        var usedInvite CacheInviteInformation
+        invites, err := session.GuildInvites(member.GuildID)
+        if err != nil {
+            logger.ERROR.L("mod", fmt.Sprintf("error getting invites from guild #%s: %s",
+                member.GuildID, err.Error()))
+        } else {
+            newCacheInvites := make([]CacheInviteInformation, 0)
+            for _, invite := range invites {
+                createdAt, err := invite.CreatedAt.Parse()
+                if err != nil {
+                    continue
+                }
+                newCacheInvites = append(newCacheInvites, CacheInviteInformation{
+                    GuildID:         invite.Guild.ID,
+                    CreatedByUserID: invite.Inviter.ID,
+                    Code:            invite.Code,
+                    CreatedAt:       createdAt,
+                    Uses:            invite.Uses,
+                })
+            }
+            foundDiffsInInvites := make([]CacheInviteInformation, 0)
+            if _, ok := invitesCache[member.GuildID]; ok {
+                for _, newInvite := range newCacheInvites {
+                    seenInOldCache := false
+                    for _, oldInvite := range invitesCache[member.GuildID] {
+                        if oldInvite.Code == newInvite.Code {
+                            seenInOldCache = true
+                            if oldInvite.Uses != newInvite.Uses {
+                                foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+                            }
+                        }
+                    }
+                    if seenInOldCache == false && newInvite.Uses == 1 {
+                        foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+                    }
+                }
+            }
+            invitesCache[member.GuildID] = newCacheInvites
+            if len(foundDiffsInInvites) == 1 {
+                usedInvite = foundDiffsInInvites[0]
+            }
+        }
+
+        joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            return
+        }
+        // Save join in DB
+        newJoinLog := DB_Mod_JoinLog{
+            GuildID: member.GuildID,
+            UserID: member.User.ID,
+            JoinedAt: joinedAt,
+            InviteCodeUsed: usedInvite.Code,
+            InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
+            InviteCodeCreatedAt: usedInvite.CreatedAt,
+        }
+        err = m.InsertJoinLog(newJoinLog)
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
+    }()
     go func() {
         settings := helpers.GuildSettingsGetCached(member.GuildID)
 
@@ -1361,6 +1473,15 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
             }
         }
     }()
+}
+
+func (m *Mod) InsertJoinLog(entry DB_Mod_JoinLog) error {
+    if entry.UserID != "" {
+        insert := rethink.Table("mod_joinlog").Insert(entry)
+        _, err := insert.RunWrite(helpers.GetDB())
+        return err
+    }
+    return nil
 }
 
 func (m *Mod) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -1489,7 +1610,7 @@ func (m *Mod) removeDuplicates(elements []string) []string {
     encountered := map[string]bool{}
 
     // Create a map of all unique elements.
-    for v:= range elements {
+    for v := range elements {
         encountered[elements[v]] = true
     }
 
