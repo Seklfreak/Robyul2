@@ -41,6 +41,7 @@ func (m *Mod) Commands() []string {
         "edit",
         "upload",
         "get",
+        "create-invite",
     }
 }
 
@@ -254,6 +255,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
             }
         })
+        return
     case "mute": // [p]mute server <User>
         helpers.RequireMod(msg, func() {
             session.ChannelTyping(msg.ChannelID)
@@ -301,6 +303,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "unmute": // [p]unmute server <User>
         helpers.RequireMod(msg, func() {
             session.ChannelTyping(msg.ChannelID)
@@ -360,6 +363,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "ban": // [p]ban <User> [<Days>], checks for IsMod and Ban Permissions
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
@@ -438,6 +442,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "kick": // [p]kick <User>, checks for IsMod and Kick Permissions
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
@@ -493,6 +498,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "serverlist": // [p]serverlist
         helpers.RequireBotAdmin(msg, func() {
             resultText := ""
@@ -511,6 +517,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
             }
         })
+        return
     case "echo", "say": // [p]echo <channel> <message>
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
@@ -534,6 +541,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "edit": // [p]edit <channel> <message id> <message>
         helpers.RequireAdmin(msg, func() {
             args := strings.Fields(content)
@@ -565,6 +573,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "upload": // [p]upload <channel> + UPLOAD
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
@@ -587,6 +596,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "get": // [p]get <channel> <message id>
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
@@ -619,6 +629,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "inspect", "inspect-extended": // [p]inspect[-extended] <user>
         helpers.RequireMod(msg, func() {
             isExtendedInspect := false
@@ -807,6 +818,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
             }
         })
+        return
     case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
         helpers.RequireAdmin(msg, func() {
             channel, err := session.State.Channel(msg.ChannelID)
@@ -974,6 +986,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             _, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
             helpers.Relax(err)
         })
+        return
     case "search-user": // [p]search-user <name>
         helpers.RequireMod(msg, func() {
             searchText := strings.TrimSpace(content)
@@ -1037,6 +1050,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
         })
+        return
     case "audit-log":
         helpers.RequireBotAdmin(msg, func() {
             session.ChannelTyping(msg.ChannelID)
@@ -1080,12 +1094,22 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
             }
         })
+        return
     case "invites":
         helpers.RequireBotAdmin(msg, func() {
             session.ChannelTyping(msg.ChannelID)
+
             channel, err := session.State.Channel(msg.ChannelID)
             helpers.Relax(err)
-            invitesUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/invites", channel.GuildID)
+            guildID := channel.GuildID
+
+            args := strings.Fields(content)
+            if len(args) >= 1 {
+                guild, err := session.Guild(args[0])
+                helpers.Relax(err)
+                guildID = guild.ID
+            }
+            invitesUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/invites", guildID)
             resp, err := session.Request("GET", invitesUrl, nil)
             helpers.Relax(err)
             parsedResult, err := gabs.ParseJSON(resp)
@@ -1093,6 +1117,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             invites, err := parsedResult.Children()
             helpers.Relax(err)
+
+            if len(invites) <= 0 {
+                _, err := session.ChannelMessageSend(msg.ChannelID, "No invites found on this server. <:blobscream:317043778823389184>")
+                helpers.Relax(err)
+                return
+            }
 
             inviteMessage := ""
             for _, invite := range invites {
@@ -1114,6 +1144,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
             }
         })
+        return
     case "leave-server":
         helpers.RequireBotAdmin(msg, func() {
             session.ChannelTyping(msg.ChannelID)
@@ -1134,6 +1165,43 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
             }
         })
+        return
+    case "create-invite":
+        helpers.RequireBotAdmin(msg, func() {
+            session.ChannelTyping(msg.ChannelID)
+
+            args := strings.Fields(content)
+            if len(args) < 1 {
+                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                helpers.Relax(err)
+                return
+            }
+            guild, err := session.Guild(args[0])
+            helpers.Relax(err)
+
+            for _, channel := range guild.Channels {
+                invite, err := session.ChannelInviteCreate(channel.ID, discordgo.Invite{
+                    MaxAge: 60*60,
+                    MaxUses: 0,
+                    Temporary: false,
+                })
+                if err != nil {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Unable to create an invite in: `#%s (#%s)`",
+                        channel.Name, channel.ID))
+                    helpers.Relax(err)
+                } else {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Created invite: `https://discord.gg/%s` for: `#%s (#%s)`",
+                        invite.Code, channel.Name, channel.ID))
+                    helpers.Relax(err)
+                    return
+                }
+            }
+
+            _, err = session.ChannelMessageSend(msg.ChannelID, "No channels left to try. <:blobugh:317047327443517442>")
+            helpers.Relax(err)
+            return
+        })
+        return
     }
 }
 
