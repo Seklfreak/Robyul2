@@ -318,7 +318,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
             safeEntries.mux.Unlock()
         }
 
-        time.Sleep(10 * time.Minute)
+        time.Sleep(1 * time.Minute)
     }
 }
 
