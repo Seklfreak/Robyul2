@@ -83,9 +83,13 @@ func (m *Mod) Init(session *discordgo.Session) {
             if err != nil {
                 continue
             }
+            inviterID := ""
+            if invite.Inviter != nil {
+                inviterID = invite.Inviter.ID
+            }
             cacheInvites = append(cacheInvites, CacheInviteInformation{
                 GuildID:         invite.Guild.ID,
-                CreatedByUserID: invite.Inviter.ID,
+                CreatedByUserID: inviterID,
                 Code:            invite.Code,
                 CreatedAt:       createdAt,
                 Uses:            invite.Uses,
