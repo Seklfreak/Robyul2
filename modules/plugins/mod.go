@@ -1387,9 +1387,13 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                 if err != nil {
                     continue
                 }
+                invitedByID := ""
+                if invite.Inviter != nil {
+                    invitedByID = invite.Inviter.ID
+                }
                 newCacheInvites = append(newCacheInvites, CacheInviteInformation{
                     GuildID:         invite.Guild.ID,
-                    CreatedByUserID: invite.Inviter.ID,
+                    CreatedByUserID: invitedByID,
                     Code:            invite.Code,
                     CreatedAt:       createdAt,
                     Uses:            invite.Uses,
