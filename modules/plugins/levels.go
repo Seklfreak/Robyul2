@@ -106,6 +106,7 @@ type DB_Profile_Userdata struct {
     TextColor         string          `gorethink:"text_color"`
     BackgroundOpacity string  `gorethink:"background_opacity"`
     DetailOpacity     string  `gorethink:"detail_opacity"`
+    Timezone          string `gorethink:"timezone"`
 }
 
 type DB_Badge struct {
@@ -139,6 +140,7 @@ var (
 
 const (
     BadgeLimt int = 9
+    TimeAtUserFormat string = "Mon, 15:04"
 )
 
 func (m *Levels) Init(session *discordgo.Session) {
@@ -1071,6 +1073,28 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 m.setUserUserdata(userUserdata)
 
                 _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
+                helpers.Relax(err)
+                return
+            case "timezone":
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                loc, err := time.LoadLocation(args[1])
+                if err != nil {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                userUserdata := m.GetUserUserdata(msg.Author)
+                userUserdata.Timezone = loc.String()
+                m.setUserUserdata(userUserdata)
+
+                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
+                loc.String(), time.Now().In(loc).Format(TimeAtUserFormat)))
                 helpers.Relax(err)
                 return
             }
@@ -2266,6 +2290,14 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     detailColorString := fmt.Sprintf("rgba(0, 0, 0, %s)",
         m.GetDetailOpacity(userData))
 
+    userTimeText := ""
+    if userData.Timezone != "" {
+        userLocation, err := time.LoadLocation(userData.Timezone)
+        if err == nil {
+            userTimeText = "<i class=\"fa fa-clock-o\" aria-hidden=\"true\"></i> " + time.Now().In(userLocation).Format(TimeAtUserFormat)
+        }
+    }
+
     tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", member.Nick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", userAndNick, -1)
@@ -2284,9 +2316,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", detailColorString, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{TIME}", "WIP", -1)                  // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BDAY}", "WIP", -1)             // TODO: <-
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", "Work In Progress", -1) // TODO: <-
 
     err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
     if err != nil {
@@ -2413,7 +2444,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         }
         return buf.Bytes(), "gif", nil
     }
-    ReturnImageBytes:
+ReturnImageBytes:
     return imageBytes, "png", nil
 }
 
