@@ -107,6 +107,7 @@ type DB_Profile_Userdata struct {
     BackgroundOpacity string  `gorethink:"background_opacity"`
     DetailOpacity     string  `gorethink:"detail_opacity"`
     Timezone          string `gorethink:"timezone"`
+    Birthday          string `gorethink:"birthday"`
 }
 
 type DB_Badge struct {
@@ -141,6 +142,7 @@ var (
 const (
     BadgeLimt int = 9
     TimeAtUserFormat string = "Mon, 15:04"
+    TimeBirthdayFormat string = "01/02"
 )
 
 func (m *Levels) Init(session *discordgo.Session) {
@@ -1077,14 +1079,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 return
             case "timezone":
                 if len(args) < 2 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-list"))
                     helpers.Relax(err)
                     return
                 }
 
                 loc, err := time.LoadLocation(args[1])
                 if err != nil {
-                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error"))
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error")+"\n"+helpers.GetText("plugins.levels.profile-timezone-list"))
                     helpers.Relax(err)
                     return
                 }
@@ -1095,6 +1097,27 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                 _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
                 loc.String(), time.Now().In(loc).Format(TimeAtUserFormat)))
+                helpers.Relax(err)
+                return
+            case "birthday":
+                var err error
+
+                newBirthday := ""
+                if len(args) >= 2 {
+                    _, err = time.Parse(TimeBirthdayFormat, args[1])
+                    if err != nil {
+                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-error-format"))
+                        helpers.Relax(err)
+                        return
+                    }
+                    newBirthday = args[1]
+                }
+
+                userUserdata := m.GetUserUserdata(msg.Author)
+                userUserdata.Birthday = newBirthday
+                m.setUserUserdata(userUserdata)
+
+                _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-success"))
                 helpers.Relax(err)
                 return
             }
@@ -2298,6 +2321,32 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         }
     }
 
+    userBirthdayText := ""
+    isBirthday := false
+    if userData.Birthday != "" {
+        userLocation, err := time.LoadLocation("Etc/UTC")
+        if err == nil {
+            if userData.Timezone != "" {
+                userLocationUser, err := time.LoadLocation(userData.Timezone)
+                if err == nil {
+                    userLocation = userLocationUser
+                }
+            }
+            birthdayTime, err := time.ParseInLocation(TimeBirthdayFormat, userData.Birthday, userLocation)
+            birthdayTime = birthdayTime.AddDate(time.Now().Year(), 0, 0)
+            if err == nil {
+                if time.Now().In(userLocation).Sub(birthdayTime).Hours() <= 23 && time.Now().In(userLocation).Sub(birthdayTime).Hours() > 0 {
+                    isBirthday = true
+                }
+            }
+        }
+
+        userBirthdayText = "<i class=\"fa fa-birthday-cake\" aria-hidden=\"true\"></i> " + userData.Birthday
+        if isBirthday {
+            userBirthdayText = "<i class=\"fa fa-birthday-cake\" aria-hidden=\"true\"></i> Today!"
+        }
+    }
+
     tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", member.User.Username, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", member.Nick, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", userAndNick, -1)
@@ -2317,7 +2366,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", detailColorString, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BDAY}", "WIP", -1)             // TODO: <-
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIRTHDAY}", userBirthdayText, -1)
 
     err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
     if err != nil {
