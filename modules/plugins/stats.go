@@ -31,6 +31,7 @@ func (s *Stats) Commands() []string {
         "emojis",
         "memberlist",
         "members",
+        "invite",
     }
 }
 
@@ -188,7 +189,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 {Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
 
                 // Link
-                {Name: "Want more stats and awesome graphs?", Value: "Visit my [datadog dashboard](https://p.datadoghq.com/sb/bde759469-fe3b1d3515)", Inline: false},
+                {Name: "Want more stats and awesome graphs?", Value: "Visit my [datadog dashboard](https://robyul.chat/statistics)", Inline: false},
             },
         })
     case "serverinfo":
@@ -473,8 +474,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         _, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
         helpers.Relax(err)
-    case "voicestats": // [p]voicestats <user> or [p]voicestats top
-        // @TODO: sort by time connected
+    case "voicestats": // [p]voicestats <user> or [p]voicestats top // @TODO: sort by time connected
         session.ChannelTyping(msg.ChannelID)
         targetUser, err := session.User(msg.Author.ID)
         helpers.Relax(err)
@@ -841,6 +841,50 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             helpers.Relax(err)
         }
 
+        return
+    case "invite":
+        args := strings.Fields(content)
+
+        if len(args) < 1 {
+            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+            return
+        }
+
+        inviteCode := args[0]
+        inviteCode = strings.Replace(inviteCode, "https://", "", -1)
+        inviteCode = strings.Replace(inviteCode, "http://", "", -1)
+        inviteCode = strings.Replace(inviteCode, "discord.gg/", "", -1)
+        inviteCode = strings.Replace(inviteCode, "invite/", "", -1)
+
+        invite, err := session.Invite(inviteCode)
+        if err != nil {
+            session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+            return
+        }
+
+        maxAgeText := "never"
+        if invite.MaxAge > 0 {
+            maxAgeText = strconv.Itoa((invite.MaxAge / 60) / 60) +  " hours"
+        }
+        maxUsesText := "unlimited times"
+        if invite.MaxUses > 0 {
+            maxUsesText = fmt.Sprintf("%d times", invite.MaxUses)
+        }
+        revokedText := "not revoked"
+        if invite.Revoked {
+            revokedText = "is revoked"
+        }
+        createdAt, _ := invite.CreatedAt.Parse()
+
+        result := fmt.Sprintf("Invite for\nChannel `%s (#%s)`\non Server `%s (#%s)` with %d Channels and %d Members\nUsed %d times, Expires %s, Max Uses %s, %s\nCreated By `%s (#%s)` %s",
+            invite.Channel.Name, invite.Channel.ID,
+            invite.Guild.Name, invite.Guild.ID, len(invite.Guild.Channels), invite.Guild.MemberCount,
+            invite.Uses, maxAgeText, maxUsesText, revokedText,
+            invite.Inviter.Username, invite.Inviter.ID, humanize.Time(createdAt),
+        )
+
+        _, err = session.ChannelMessageSend(msg.ChannelID, result)
+        helpers.Relax(err)
         return
     }
 }
