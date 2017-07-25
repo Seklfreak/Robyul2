@@ -19,7 +19,6 @@ var (
         &plugins.Announcement{},
         //&plugins.Translator{},
         &plugins.Uptime{},
-        &plugins.Music{},
         &plugins.Translator{},
         &plugins.Ping{},
         &plugins.UrbanDict{},
