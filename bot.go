@@ -120,9 +120,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
         return
     }
 
-    // We only do things in guilds.
-    // Get a friend already and stop chatting with bots
-    if channel.IsPrivate {
+    if channel.Type == discordgo.ChannelTypeDM {
         // Track usage
         metrics.CleverbotRequests.Add(1)
 

@@ -401,7 +401,11 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                     Inline: false,
                 })
             }
-            _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, fmt.Sprintf("<%s>", vliveChannel.Url), channelEmbed)
+            _, err = session.ChannelMessageSendComplex(msg.ChannelID,
+                &discordgo.MessageSend{
+                    Content: fmt.Sprintf("<%s>", vliveChannel.Url),
+                    Embed: channelEmbed,
+                })
             if err != nil {
                 helpers.Relax(err)
             }
@@ -552,7 +556,10 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
     if entry.MentionRoleID != "" {
         mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", vod.Url), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+        Content: mentionText+fmt.Sprintf("<%s>", vod.Url),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
@@ -573,7 +580,10 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
         mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
     }
     postText := fmt.Sprintf("<%s>", vliveChannel.Url)
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+postText, channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+        Content: mentionText+postText,
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
@@ -593,7 +603,10 @@ func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliv
     if entry.MentionRoleID != "" {
         mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", vod.Url), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+        Content: mentionText+fmt.Sprintf("<%s>", vod.Url),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
@@ -613,7 +626,10 @@ func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice
     if entry.MentionRoleID != "" {
         mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", notice.Url), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+        Content: mentionText+fmt.Sprintf("<%s>", notice.Url),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err))
     }
@@ -632,7 +648,10 @@ func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, v
     if entry.MentionRoleID != "" {
         mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
     }
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(entry.ChannelID, mentionText+fmt.Sprintf("<%s>", celeb.Url), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+        Content: mentionText+fmt.Sprintf("<%s>", celeb.Url),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err))
     }

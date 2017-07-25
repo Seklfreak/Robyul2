@@ -71,6 +71,9 @@ func (m *YouTube) Action(command string, content string, msg *discordgo.Message,
         Color: helpers.GetDiscordColorFromHex(YouTubeColor),
     }
 
-    _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, fmt.Sprintf("<%s>", fmt.Sprintf(YouTubeVideoBaseUrl, video.Id)), videoEmbed)
+    _, err = session.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{
+        Content: fmt.Sprintf("<%s>", fmt.Sprintf(YouTubeVideoBaseUrl, video.Id)),
+        Embed: videoEmbed,
+    })
     helpers.Relax(err)
 }

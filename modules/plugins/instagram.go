@@ -466,8 +466,11 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                     Inline: true,
                 })
             }
-            _, err = session.ChannelMessageSendEmbedWithMessage(
-                msg.ChannelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)), accountEmbed)
+            _, err = session.ChannelMessageSendComplex(
+                msg.ChannelID, &discordgo.MessageSend{
+                    Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)),
+                    Embed: accountEmbed,
+                })
             helpers.Relax(err)
             return
         }
@@ -508,7 +511,10 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
         mediaUrl = channelEmbed.URL
     }
 
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", mediaUrl), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+            Content: fmt.Sprintf("<%s>", mediaUrl),
+            Embed: channelEmbed,
+        })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting broadcast: #%s to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err))
     }
@@ -561,7 +567,10 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
         mediaUrl = channelEmbed.URL
     }
 
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", mediaUrl), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+        Content: fmt.Sprintf("<%s>", mediaUrl),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err))
     }
@@ -625,7 +634,10 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
         }
     }
 
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+        Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
     }

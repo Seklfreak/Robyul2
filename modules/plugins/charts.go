@@ -339,7 +339,11 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
                 }
 
-                _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID) + ">", songEmbed)
+                _, err = session.ChannelMessageSendComplex(msg.ChannelID,
+                    &discordgo.MessageSend{
+                        Content: "<" + fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID) + ">",
+                        Embed: songEmbed,
+                    })
                 helpers.Relax(err)
                 return
             case "artist":
@@ -386,7 +390,10 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
                 }
 
-                _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID) + ">", artistEmbed)
+                _, err = session.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{
+                    Content: "<" + fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID) + ">",
+                    Embed: artistEmbed,
+                })
                 helpers.Relax(err)
                 return
             case "album":
@@ -431,7 +438,10 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                     Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
                 }
 
-                _, err = session.ChannelMessageSendEmbedWithMessage(msg.ChannelID, "<" + fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID) + ">", artistEmbed)
+                _, err = session.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{
+                    Content: "<" + fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID) + ">",
+                    Embed: artistEmbed,
+                })
                 helpers.Relax(err)
                 return
             }

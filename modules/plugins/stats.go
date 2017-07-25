@@ -216,9 +216,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         textChannels := 0
         voiceChannels := 0
         for _, channel := range guild.Channels {
-            if channel.Type == "voice" {
+            if channel.Type == discordgo.ChannelTypeGuildVoice {
                 voiceChannels += 1
-            } else if channel.Type == "text" {
+            } else if channel.Type == discordgo.ChannelTypeGuildText {
                 textChannels += 1
             }
         }

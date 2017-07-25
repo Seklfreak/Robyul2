@@ -1456,7 +1456,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         prefix := helpers.GetPrefixForServer(guildChannelCurrent.GuildID)
                         expForUsers := make(map[string]int64)
                         //defer wg.Done()
-                        if guildChannelCurrent.Type == "voice" {
+                        if guildChannelCurrent.Type == discordgo.ChannelTypeGuildVoice {
                             continue
                         }
 

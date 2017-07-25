@@ -272,8 +272,11 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                     Inline: true,
                 })
             }
-            _, err = session.ChannelMessageSendEmbedWithMessage(
-                msg.ChannelID, fmt.Sprintf("<%s>", fmt.Sprintf(FacebookFriendlyPage, facebookPage.Username)), accountEmbed)
+            _, err = session.ChannelMessageSendComplex(
+                msg.ChannelID, &discordgo.MessageSend{
+                    Content: fmt.Sprintf("<%s>", fmt.Sprintf(FacebookFriendlyPage, facebookPage.Username)),
+                    Embed: accountEmbed,
+                })
             helpers.Relax(err)
             return
         }
@@ -377,7 +380,10 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
         channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.PictureUrl}
     }
 
-    _, err := cache.GetSession().ChannelMessageSendEmbedWithMessage(channelID, fmt.Sprintf("<%s>", post.Url), channelEmbed)
+    _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+        Content: fmt.Sprintf("<%s>", post.Url),
+        Embed: channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%d to channel: #%s failed: %s", post.ID, channelID, err))
     }
