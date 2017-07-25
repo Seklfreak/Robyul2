@@ -26,7 +26,7 @@ var NukeMods = []string{
     "116620585638821891", // Sekl
     "134298438559858688", // Kakkela
 }
-var RobyulMod = []string {
+var RobyulMod = []string{
     "132633380628987904", // sunny
 }
 var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
@@ -173,7 +173,7 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
     // send embed asking the user to confirm
     confirmMessage, err := cache.GetSession().ChannelMessageSendComplex(channelID,
         &discordgo.MessageSend{
-            Content: "<@"+author.ID+">",
+            Content: "<@" + author.ID + ">",
             Embed: &discordgo.MessageEmbed{
                 Title:       GetText("bot.embeds.please-confirm-title"),
                 Description: confirmMessageText,
@@ -234,7 +234,7 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
         for _, channel := range guild.Channels {
             err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
             if err != nil {
-                logger.ERROR.L("discord", "Error disabling send messages on mute Role: " + err.Error())
+                logger.ERROR.L("discord", "Error disabling send messages on mute Role: "+err.Error())
             }
             // TODO: update discordgo
             //err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionAddReactions)
@@ -244,6 +244,26 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
         }
     }
     return muteRole, nil
+}
+
+func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, error) {
+    var err error
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
+
+    targetMember, err := cache.GetSession().State.Member(guildID, userID)
+    if err == nil {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     targetMember,
+            Expiration: time.Minute * 30,
+        })
+        if err != nil {
+            fmt.Println(err)
+        }
+    }
+    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    return targetMember, err
 }
 
 func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
@@ -258,17 +278,37 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetMember,
-                Expiration: time.Minute*30,
+                Expiration: time.Minute * 30,
             })
             if err != nil {
                 fmt.Println(err)
             }
         }
-        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        logger.VERBOSE.L("discord", "redis "+key+" MISS")
         return targetMember, err
     }
-    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetMember, err
+}
+
+func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
+    var err error
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
+
+    targetGuild, err := cache.GetSession().State.Guild(guildID)
+    if err == nil {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     targetGuild,
+            Expiration: time.Minute * 60,
+        })
+        if err != nil {
+            fmt.Println(err)
+        }
+    }
+    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    return targetGuild, err
 }
 
 func GetGuild(guildID string) (*discordgo.Guild, error) {
@@ -283,17 +323,37 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetGuild,
-                Expiration: time.Minute*60,
+                Expiration: time.Minute * 60,
             })
             if err != nil {
                 fmt.Println(err)
             }
         }
-        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        logger.VERBOSE.L("discord", "redis "+key+" MISS")
         return targetGuild, err
     }
-    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetGuild, err
+}
+
+func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
+    var err error
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
+
+    targetChannel, err := cache.GetSession().State.Channel(channelID)
+    if err == nil {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     targetChannel,
+            Expiration: time.Minute * 60,
+        })
+        if err != nil {
+            fmt.Println(err)
+        }
+    }
+    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    return targetChannel, err
 }
 
 func GetChannel(channelID string) (*discordgo.Channel, error) {
@@ -308,16 +368,16 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetChannel,
-                Expiration: time.Minute*60,
+                Expiration: time.Minute * 60,
             })
             if err != nil {
                 fmt.Println(err)
             }
         }
-        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        logger.VERBOSE.L("discord", "redis "+key+" MISS")
         return targetChannel, err
     }
-    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetChannel, err
 }
 
@@ -346,6 +406,26 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
     }
 }
 
+func GetFreshUser(userID string) (*discordgo.User, error) {
+    var err error
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
+
+    targetUser, err := cache.GetSession().User(userID)
+    if err == nil {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     targetUser,
+            Expiration: time.Minute * 30,
+        })
+        if err != nil {
+            fmt.Println(err)
+        }
+    }
+    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    return targetUser, err
+}
+
 func GetUser(userID string) (*discordgo.User, error) {
     var err error
     var targetUser discordgo.User
@@ -358,16 +438,16 @@ func GetUser(userID string) (*discordgo.User, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetUser,
-                Expiration: time.Minute*30,
+                Expiration: time.Minute * 5,
             })
             if err != nil {
                 fmt.Println(err)
             }
         }
-        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        logger.VERBOSE.L("discord", "redis "+key+" MISS")
         return targetUser, err
     }
-    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetUser, err
 }
 

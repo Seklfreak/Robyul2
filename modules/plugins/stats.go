@@ -196,7 +196,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(msg.ChannelID)
         currentChannel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
-        guild, err := helpers.GetGuild(currentChannel.GuildID)
+        guild, err := helpers.GetFreshGuild(currentChannel.GuildID)
         helpers.Relax(err)
         users := make(map[string]string)
         lastAfterMemberId := ""
@@ -287,7 +287,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
     case "userinfo":
         session.ChannelTyping(msg.ChannelID)
-        targetUser, err := helpers.GetUser(msg.Author.ID)
+        targetUser, err := helpers.GetFreshUser(msg.Author.ID)
         helpers.Relax(err)
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {

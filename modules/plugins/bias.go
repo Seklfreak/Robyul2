@@ -270,7 +270,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
                 helpers.Relax(err)
                 guild, err := helpers.GetGuild(channel.GuildID)
                 helpers.Relax(err)
-                member, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
+                member, err := helpers.GetFreshGuildMember(guild.ID, msg.Author.ID)
                 helpers.Relax(err)
                 guildRoles, err := session.GuildRoles(guild.ID)
                 if err != nil {
