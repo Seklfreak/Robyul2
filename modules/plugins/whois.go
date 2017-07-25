@@ -44,7 +44,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Get the member object for the @user
-    target, err := session.GuildMember(guild.ID, msg.Mentions[0].ID)
+    target, err := helpers.GetGuildMember(guild.ID, msg.Mentions[0].ID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return

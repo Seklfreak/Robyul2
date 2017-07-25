@@ -303,12 +303,12 @@ NextKeyword:
                 doesMatch = true
             }
             if doesMatch == true {
-                memberToNotify, err := session.State.Member(guild.ID, notificationSetting.UserID)
+                memberToNotify, err := helpers.GetGuildMember(guild.ID, notificationSetting.UserID)
                 if err != nil {
                     logger.ERROR.L("notifications", "error getting member to notify: "+err.Error())
                     continue NextKeyword
                 }
-                messageAuthor, err := session.State.Member(guild.ID, msg.Author.ID)
+                messageAuthor, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
                 if err != nil {
                     logger.ERROR.L("notifications", "error getting message author: "+err.Error())
                     continue NextKeyword
@@ -379,7 +379,7 @@ NextKeyword:
                 }
                 for _, overwrite := range channel.PermissionOverwrites {
                     if overwrite.Type == "member" {
-                        //memberToCheck, err := session.State.Member(channel.GuildID, overwrite.ID)
+                        //memberToCheck, err := helpers.GetGuildMember(channel.GuildID, overwrite.ID)
                         //if err == nil {
                         //    fmt.Printf("%s: %#v\n", memberToCheck.User.Username, overwrite)
                         //}

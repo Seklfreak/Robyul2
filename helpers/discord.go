@@ -246,6 +246,31 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
     return muteRole, nil
 }
 
+func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
+    var err error
+    var targetMember discordgo.Member
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
+
+    if err = cacheCodec.Get(key, &targetMember); err != nil {
+        targetMember, err := cache.GetSession().State.Member(guildID, userID)
+        if err == nil {
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     targetMember,
+                Expiration: time.Minute*60,
+            })
+            if err != nil {
+                fmt.Println(err)
+            }
+        }
+        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        return targetMember, err
+    }
+    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    return &targetMember, err
+}
+
 func GetGuild(guildID string) (*discordgo.Guild, error) {
     var err error
     var targetGuild discordgo.Guild
@@ -253,7 +278,7 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
 
     if err = cacheCodec.Get(key, &targetGuild); err != nil {
-        targetGuild, err := cache.GetSession().Guild(guildID)
+        targetGuild, err := cache.GetSession().State.Guild(guildID)
         if err == nil {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,

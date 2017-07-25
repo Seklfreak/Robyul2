@@ -443,7 +443,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := helpers.GetGuild(channel.GuildID)
-                guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
+                guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
                 helpers.Relax(err)
                 for _, role := range guild.Roles {
                     for _, userRole := range guildMemberBot.Roles {
@@ -459,7 +459,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 // User can ban?
                 userCanBan := false
-                guildMemberUser, err := session.GuildMember(guild.ID, msg.Author.ID)
+                guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
                 helpers.Relax(err)
                 for _, role := range guild.Roles {
                     for _, userRole := range guildMemberUser.Roles {
@@ -511,7 +511,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := helpers.GetGuild(channel.GuildID)
-                guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
+                guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
                 helpers.Relax(err)
                 for _, role := range guild.Roles {
                     for _, userRole := range guildMemberBot.Roles {
@@ -526,7 +526,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 // User can kick?
                 userCanKick := false
-                guildMemberUser, err := session.GuildMember(guild.ID, msg.Author.ID)
+                guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
                 helpers.Relax(err)
                 for _, role := range guild.Roles {
                     for _, userRole := range guildMemberUser.Roles {
@@ -1189,13 +1189,13 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             logEntries, err := parsedResult.Path("audit_log_entries").Children()
             for _, logEntry := range logEntries {
-                user, err = session.State.Member(channel.GuildID, strings.Replace(logEntry.Path("user_id").String(), "\"", "", -1))
+                user, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("user_id").String(), "\"", "", -1))
                 if err != nil {
                     user = new(discordgo.Member)
                     user.User = new(discordgo.User)
                     user.User.Username = "N/A"
                 }
-                target, err = session.State.Member(channel.GuildID, strings.Replace(logEntry.Path("target_id").String(), "\"", "", -1))
+                target, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("target_id").String(), "\"", "", -1))
                 if err != nil {
                     target = new(discordgo.Member)
                     target.User = new(discordgo.User)
@@ -1247,7 +1247,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             inviteMessage := ""
             for _, invite := range invites {
                 inviteCode := strings.Trim(invite.Path("code").String(), "\"")
-                inviteInviter, err := session.State.Member(channel.GuildID, strings.Trim(invite.Path("inviter.id").String(), "\""))
+                inviteInviter, err := helpers.GetGuildMember(channel.GuildID, strings.Trim(invite.Path("inviter.id").String(), "\""))
                 if err != nil {
                     inviteInviter = new(discordgo.Member)
                     inviteInviter.User = new(discordgo.User)

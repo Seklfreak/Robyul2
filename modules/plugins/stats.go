@@ -233,7 +233,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         owner, err := helpers.GetUser(guild.OwnerID)
         helpers.Relax(err)
-        member, err := session.GuildMember(guild.ID, guild.OwnerID)
+        member, err := helpers.GetGuildMember(guild.ID, guild.OwnerID)
         helpers.Relax(err)
         ownerText := fmt.Sprintf("%s#%s", owner.Username, owner.Discriminator)
         if member.Nick != "" {
@@ -307,7 +307,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
         currentGuild, err := helpers.GetGuild(currentChannel.GuildID)
         helpers.Relax(err)
-        targetMember, err := session.GuildMember(currentGuild.ID, targetUser.ID)
+        targetMember, err := helpers.GetGuildMember(currentGuild.ID, targetUser.ID)
         if err != nil {
             if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10007 {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))

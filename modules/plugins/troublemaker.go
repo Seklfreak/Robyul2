@@ -191,7 +191,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
                             guildToNotifySettings := helpers.GuildSettingsGetCached(guildToNotify.ID)
                             if guildToNotifySettings.TroublemakerIsParticipating == true && guildToNotifySettings.TroublemakerLogChannel != "" {
                                 targetUserIsOnServer := false
-                                _, err := session.GuildMember(guildToNotify.ID, targetUser.ID)
+                                _, err := helpers.GetGuildMember(guildToNotify.ID, targetUser.ID)
                                 if err == nil {
                                     targetUserIsOnServer = true
                                 }

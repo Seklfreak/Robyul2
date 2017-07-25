@@ -1131,7 +1131,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             }
         }
 
-        targetMember, err := session.GuildMember(channel.GuildID, targetUser.ID)
+        targetMember, err := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
         helpers.Relax(err)
 
         gifP := false
@@ -1203,7 +1203,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         break
                     }
 
-                    currentMember, err := session.GuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
+                    currentMember, err := helpers.GetGuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
                     if err != nil {
                         logger.ERROR.L("levels", fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
                         continue
@@ -1307,7 +1307,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             ignoredMessage := "**Ignored Users:**"
                             if len(settings.LevelsIgnoredUserIDs) > 0 {
                                 for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
-                                    ignoredUser, err := session.State.Member(channel.GuildID, ignoredUserID)
+                                    ignoredUser, err := helpers.GetGuildMember(channel.GuildID, ignoredUserID)
                                     if err != nil {
                                         ignoredMessage += " N/A"
                                     } else {
@@ -1567,7 +1567,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             return
         }
 
-        currentMember, err := session.GuildMember(channel.GuildID, levelThisServerUser.UserID)
+        currentMember, err := helpers.GetGuildMember(channel.GuildID, levelThisServerUser.UserID)
         fullUsername := currentMember.User.Username
         if currentMember.Nick != "" {
             fullUsername += " ~ " + currentMember.Nick
@@ -1961,7 +1961,7 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        if _, err := session.State.Member(guild.ID, user.ID); err == nil {
+        if _, err := helpers.GetGuildMember(guild.ID, user.ID); err == nil {
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }
@@ -2039,9 +2039,7 @@ func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string)
     guildsToCheck := make([]string, 0)
     guildsToCheck = append(guildsToCheck, "global")
 
-    session := cache.GetSession()
-
-    if _, err := session.State.Member(serverID, user.ID); err == nil {
+    if _, err := helpers.GetGuildMember(serverID, user.ID); err == nil {
         guildsToCheck = append(guildsToCheck, serverID)
     }
 
@@ -2110,7 +2108,7 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User) []DB_Badge {
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        if _, err := session.State.Member(guild.ID, user.ID); err == nil {
+        if _, err := helpers.GetGuildMember(guild.ID, user.ID); err == nil {
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }
