@@ -112,7 +112,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
                             reportedByUser.ID = troublemakerReport.ReportedByUserID
                             reportedByUser.Username = "N/A"
                         }
-                        reportedByGuild, err := session.Guild(troublemakerReport.ReportedByGuildID)
+                        reportedByGuild, err := helpers.GetGuild(troublemakerReport.ReportedByGuildID)
                         if err != nil {
                             reportedByGuild = new(discordgo.Guild)
                             reportedByGuild.ID = troublemakerReport.ReportedByGuildID

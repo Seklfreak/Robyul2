@@ -153,7 +153,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                     return
                 }
-                targetGuild, err = session.Guild(targetChannel.GuildID)
+                targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
                 helpers.Relax(err)
                 // get facebook account and tweets
                 facebookPage, err := m.lookupFacebookPage(args[1])

@@ -319,7 +319,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         session.ChannelTyping(msg.ChannelID)
         channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
-        guild, err := session.Guild(channel.GuildID)
+        guild, err := helpers.GetGuild(channel.GuildID)
         helpers.Relax(err)
         targetUser, err := helpers.GetUser(msg.Author.ID)
         helpers.Relax(err)
@@ -1426,7 +1426,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     session.ChannelTyping(msg.ChannelID)
                     channel, err := helpers.GetChannel(msg.ChannelID)
                     helpers.Relax(err)
-                    guild, err := session.Guild(channel.GuildID)
+                    guild, err := helpers.GetGuild(channel.GuildID)
                     helpers.Relax(err)
                     _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Check your DMs.", msg.Author.ID))
                     // pause new message processing for that guild

@@ -60,7 +60,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 }
                 channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
-                guild, err := session.Guild(channel.GuildID)
+                guild, err := helpers.GetGuild(channel.GuildID)
                 helpers.Relax(err)
                 sourceChannel, err := helpers.GetChannelFromMention(msg, args[1])
                 if err != nil || sourceChannel.ID == "" || sourceChannel.GuildID != channel.GuildID {
@@ -146,7 +146,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.delete-not-found"))
                     return
                 }
-                galleryGuild, _ := session.Guild(entryBucket.GuildID)
+                galleryGuild, _ := helpers.GetGuild(entryBucket.GuildID)
                 sourceChannel, _ := helpers.GetChannel(entryBucket.SourceChannelID)
                 if sourceChannel == nil {
                     sourceChannel = new(discordgo.Channel)

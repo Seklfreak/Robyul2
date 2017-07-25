@@ -442,7 +442,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 botCanBan := false
                 channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
-                guild, err := session.Guild(channel.GuildID)
+                guild, err := helpers.GetGuild(channel.GuildID)
                 guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
                 helpers.Relax(err)
                 for _, role := range guild.Roles {
@@ -510,7 +510,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 botCanKick := false
                 channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
-                guild, err := session.Guild(channel.GuildID)
+                guild, err := helpers.GetGuild(channel.GuildID)
                 guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
                 helpers.Relax(err)
                 for _, role := range guild.Roles {
@@ -1225,7 +1225,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
             args := strings.Fields(content)
             if len(args) >= 1 {
-                guild, err := session.Guild(args[0])
+                guild, err := helpers.GetGuild(args[0])
                 helpers.Relax(err)
                 guildID = guild.ID
             }
@@ -1274,7 +1274,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 return
             }
 
-            targetGuild, err := session.Guild(args[0])
+            targetGuild, err := helpers.GetGuild(args[0])
             helpers.Relax(err)
 
             if helpers.ConfirmEmbed(msg.ChannelID, msg.Author,
@@ -1296,7 +1296,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 helpers.Relax(err)
                 return
             }
-            guild, err := session.Guild(args[0])
+            guild, err := helpers.GetGuild(args[0])
             helpers.Relax(err)
 
             for _, channel := range guild.Channels {

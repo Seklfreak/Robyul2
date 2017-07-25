@@ -98,7 +98,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
         helpers.Relax(err)
         channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
-        guild, err := session.Guild(channel.GuildID)
+        guild, err := helpers.GetGuild(channel.GuildID)
         helpers.Relax(err)
         allowedEmotes := make([]string, 0)
         for _, allowedEmote := range args[3:] {

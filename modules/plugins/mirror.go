@@ -78,7 +78,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                 }
                 channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
-                guild, err := session.Guild(channel.GuildID)
+                guild, err := helpers.GetGuild(channel.GuildID)
                 helpers.Relax(err)
 
                 mirrorID := args[1]
@@ -144,7 +144,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                     for _, mirroredChannelEntry := range entry.ConnectedChannels {
                         mirroredChannel, err := helpers.GetChannel(mirroredChannelEntry.ChannelID)
                         helpers.Relax(err)
-                        mirroredChannelGuild, err := session.Guild(mirroredChannelEntry.GuildID)
+                        mirroredChannelGuild, err := helpers.GetGuild(mirroredChannelEntry.GuildID)
                         helpers.Relax(err)
                         resultMessage += fmt.Sprintf(":arrow_forward: `#%s` `(#%s)` on `%s` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
                             mirroredChannel.Name, mirroredChannel.ID,
@@ -234,7 +234,7 @@ TryNextMirror:
                 }
                 // post mirror links
                 if len(linksToRepost) > 0 {
-                    sourceGuild, err := session.Guild(sourceChannel.GuildID)
+                    sourceGuild, err := helpers.GetGuild(sourceChannel.GuildID)
                     helpers.Relax(err)
                     for _, linkToRepost := range linksToRepost {
                         for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {

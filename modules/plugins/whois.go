@@ -37,7 +37,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Guild info
-    guild, err := session.Guild(channel.GuildID)
+    guild, err := helpers.GetGuild(channel.GuildID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return

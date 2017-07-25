@@ -196,7 +196,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(msg.ChannelID)
         currentChannel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
-        guild, err := session.Guild(currentChannel.GuildID)
+        guild, err := helpers.GetGuild(currentChannel.GuildID)
         helpers.Relax(err)
         users := make(map[string]string)
         lastAfterMemberId := ""
@@ -305,7 +305,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         currentChannel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
-        currentGuild, err := session.Guild(currentChannel.GuildID)
+        currentGuild, err := helpers.GetGuild(currentChannel.GuildID)
         helpers.Relax(err)
         targetMember, err := session.GuildMember(currentGuild.ID, targetUser.ID)
         if err != nil {
@@ -662,7 +662,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         session.ChannelTyping(msg.ChannelID)
         channel, err := session.State.Channel(msg.ChannelID)
         helpers.Relax(err)
-        guild, err := session.Guild(channel.GuildID)
+        guild, err := helpers.GetGuild(channel.GuildID)
         helpers.Relax(err)
 
         if len(guild.Emojis) <= 0 {
@@ -737,12 +737,12 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         channel, err := session.State.Channel(msg.ChannelID)
         helpers.Relax(err)
 
-        guild, err := session.Guild(channel.GuildID)
+        guild, err := helpers.GetGuild(channel.GuildID)
         helpers.Relax(err)
 
         args := strings.Fields(content)
         if len(args) >= 2 && helpers.IsBotAdmin(msg.Author.ID) {
-            guild, err = session.Guild(args[1])
+            guild, err = helpers.GetGuild(args[1])
             helpers.Relax(err)
         }
 

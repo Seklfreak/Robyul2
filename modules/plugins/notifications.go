@@ -58,7 +58,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             }
             channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
-            guild, err := session.Guild(channel.GuildID)
+            guild, err := helpers.GetGuild(channel.GuildID)
             helpers.Relax(err)
 
             var entryBucket DB_NotificationSetting
@@ -97,7 +97,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
         case "delete", "del", "remove": // [p]notifications delete <keyword(s)>
             channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
-            guild, err := session.Guild(channel.GuildID)
+            guild, err := helpers.GetGuild(channel.GuildID)
             helpers.Relax(err)
             if len(args) < 2 {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
@@ -134,7 +134,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
         case "list": // [p]notifications list
             channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
-            guild, err := session.Guild(channel.GuildID)
+            guild, err := helpers.GetGuild(channel.GuildID)
             helpers.Relax(err)
             var entryBucket []DB_NotificationSetting
             listCursor, err := rethink.Table("notifications").Filter(

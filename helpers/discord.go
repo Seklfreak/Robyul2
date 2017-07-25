@@ -246,6 +246,31 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
     return muteRole, nil
 }
 
+func GetGuild(guildID string) (*discordgo.Guild, error) {
+    var err error
+    var targetGuild discordgo.Guild
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
+
+    if err = cacheCodec.Get(key, &targetGuild); err != nil {
+        targetGuild, err := cache.GetSession().Guild(guildID)
+        if err == nil {
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     targetGuild,
+                Expiration: time.Minute*60,
+            })
+            if err != nil {
+                fmt.Println(err)
+            }
+        }
+        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        return targetGuild, err
+    }
+    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    return &targetGuild, err
+}
+
 func GetChannel(channelID string) (*discordgo.Channel, error) {
     var err error
     var targetChannel discordgo.Channel

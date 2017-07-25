@@ -343,7 +343,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                     return
                 }
-                targetGuild, err = session.Guild(targetChannel.GuildID)
+                targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
                 helpers.Relax(err)
                 // get instagram account
                 instagramUsername := strings.Replace(args[1], "@", "", 1)

@@ -97,7 +97,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
             session.ChannelTyping(msg.ChannelID)
             channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
-            guild, err := session.Guild(channel.GuildID)
+            guild, err := helpers.GetGuild(channel.GuildID)
             helpers.Relax(err)
 
             var entryBucket []DB_CustomCommands_Command

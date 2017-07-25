@@ -170,7 +170,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                     return
                 }
-                targetGuild, err = session.Guild(targetChannel.GuildID)
+                targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
                 helpers.Relax(err)
                 // create new entry in db
                 entry := m.getEntryByOrCreateEmpty("id", "")

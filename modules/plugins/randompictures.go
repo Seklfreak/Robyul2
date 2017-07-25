@@ -226,7 +226,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                         if rpSource.GuildID == "" {
                             continue
                         }
-                        rpSourceGuild, err := session.Guild(rpSource.GuildID)
+                        rpSourceGuild, err := helpers.GetGuild(rpSource.GuildID)
                         helpers.Relax(err)
                         cacheText := "No cache yet"
                         if _, ok := filesCache[rpSource.ID]; ok {
