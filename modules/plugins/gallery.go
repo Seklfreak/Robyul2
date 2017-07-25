@@ -58,7 +58,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                     helpers.Relax(err)
                     return
                 }
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := session.Guild(channel.GuildID)
                 helpers.Relax(err)
@@ -104,7 +104,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
             })
         case "list": // [p]gallery list
             session.ChannelTyping(msg.ChannelID)
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             var entryBucket []DB_Gallery_Entry
             listCursor, err := rethink.Table("galleries").Filter(
@@ -147,13 +147,13 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                     return
                 }
                 galleryGuild, _ := session.Guild(entryBucket.GuildID)
-                sourceChannel, _ := session.Channel(entryBucket.SourceChannelID)
+                sourceChannel, _ := helpers.GetChannel(entryBucket.SourceChannelID)
                 if sourceChannel == nil {
                     sourceChannel = new(discordgo.Channel)
                     sourceChannel.Name = "N/A"
                     sourceChannel.ID = "N/A"
                 }
-                targetChannel, _ := session.Channel(entryBucket.TargetChannelID)
+                targetChannel, _ := helpers.GetChannel(entryBucket.TargetChannelID)
                 if targetChannel == nil {
                     targetChannel = new(discordgo.Channel)
                     targetChannel.Name = "N/A"
@@ -188,7 +188,7 @@ TryNextGallery:
             if msg.Author.Bot == true {
                 continue TryNextGallery
             }
-            sourceChannel, err := session.Channel(msg.ChannelID)
+            sourceChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             // ignore commands
             prefix := helpers.GetPrefixForServer(sourceChannel.GuildID)

@@ -95,7 +95,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
             return
         case "list": // [p]commands list // @TODO: optional sort by times triggered
             session.ChannelTyping(msg.ChannelID)
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             guild, err := session.Guild(channel.GuildID)
             helpers.Relax(err)
@@ -140,7 +140,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                     helpers.Relax(err)
                     return
                 }
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 var entryBucket DB_CustomCommands_Command
@@ -174,7 +174,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                     helpers.Relax(err)
                     return
                 }
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 var entryBucket DB_CustomCommands_Command
@@ -220,7 +220,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 helpers.Relax(err)
                 return
             }
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
 
             var entryBucket []DB_CustomCommands_Command
@@ -264,7 +264,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 return
             }
 
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
 
             var entryBucket DB_CustomCommands_Command
@@ -310,7 +310,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                     return
                 }
 
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 defer func() {

@@ -204,7 +204,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                 }
             })
         case "list": // [p]twitch list
-            currentChannel, err := session.Channel(msg.ChannelID)
+            currentChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             var entryBucket []DB_TwitchChannel
             listCursor, err := rethink.Table("twitch").Filter(

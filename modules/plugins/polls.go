@@ -117,7 +117,7 @@ func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo
     if len(fields) > 10 {
         fields = fields[:10]
     }
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -181,7 +181,7 @@ func (p *Poll) remove(content string, msg *discordgo.Message, session *discordgo
     }
 
     pollID := msgSplit[1]
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -204,7 +204,7 @@ func (p *Poll) addField(content string, msg *discordgo.Message, session *discord
     }
     pollID := msgSplit[0]
     title := strings.Join(msgSplit[3:], " ")
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -231,7 +231,7 @@ func (p *Poll) removeField(content string, msg *discordgo.Message, session *disc
         session.ChannelMessageSend(msg.ChannelID, "Wrong field ID!")
         return
     }
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -253,7 +253,7 @@ func (p *Poll) open(content string, msg *discordgo.Message, session *discordgo.S
         return
     }
     pollID := msgSplit[0]
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -274,7 +274,7 @@ func (p *Poll) close(content string, msg *discordgo.Message, session *discordgo.
         return
     }
     pollID := msgSplit[0]
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -290,7 +290,7 @@ func (p *Poll) close(content string, msg *discordgo.Message, session *discordgo.
 
 func (p *Poll) info(content string, msg *discordgo.Message, session *discordgo.Session) {
     msgSplit := strings.Fields(content)
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }
@@ -304,7 +304,7 @@ func (p *Poll) info(content string, msg *discordgo.Message, session *discordgo.S
 }
 
 func (p *Poll) list(content string, msg *discordgo.Message, session *discordgo.Session) {
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         return
     }

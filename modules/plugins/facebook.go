@@ -205,7 +205,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                 }
             })
         case "list": // [p]facebook list
-            currentChannel, err := session.Channel(msg.ChannelID)
+            currentChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             var entryBucket []DB_Facebook_Page
             listCursor, err := rethink.Table("facebook").Filter(

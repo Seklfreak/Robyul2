@@ -322,7 +322,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 switch args[0] {
                 case "server":
-                    channel, err := session.Channel(msg.ChannelID)
+                    channel, err := helpers.GetChannel(msg.ChannelID)
                     helpers.Relax(err)
                     muteRole, err := helpers.GetMuteRole(channel.GuildID)
                     if err != nil {
@@ -371,7 +371,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 switch args[0] {
                 case "server", "global":
-                    channel, err := session.Channel(msg.ChannelID)
+                    channel, err := helpers.GetChannel(msg.ChannelID)
                     helpers.Relax(err)
                     muteRole, err := helpers.GetMuteRole(channel.GuildID)
                     helpers.Relax(err)
@@ -440,7 +440,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 // Bot can ban?
                 botCanBan := false
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := session.Guild(channel.GuildID)
                 guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
@@ -508,7 +508,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 // Bot can kick?
                 botCanKick := false
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := session.Guild(channel.GuildID)
                 guildMemberBot, err := session.GuildMember(guild.ID, session.State.User.ID)
@@ -576,7 +576,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
             if len(args) >= 2 {
-                sourceChannel, err := session.Channel(msg.ChannelID)
+                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
@@ -600,7 +600,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         helpers.RequireAdmin(msg, func() {
             args := strings.Fields(content)
             if len(args) >= 3 {
-                sourceChannel, err := session.Channel(msg.ChannelID)
+                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
@@ -633,7 +633,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             args := strings.Fields(content)
             if len(args) >= 1 && len(msg.Attachments) > 0 {
                 fileToUpload := helpers.NetGet(msg.Attachments[0].URL)
-                sourceChannel, err := session.Channel(msg.ChannelID)
+                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
@@ -655,7 +655,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         helpers.RequireMod(msg, func() {
             args := strings.Fields(content)
             if len(args) >= 2 {
-                sourceChannel, err := session.Channel(msg.ChannelID)
+                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
                 if err != nil || targetChannel.ID == "" {
@@ -730,7 +730,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
             if len(args) >= 2 && args[1] == "text" {
                 textVersion = true
             }
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
 
             resultEmbed := &discordgo.MessageEmbed{

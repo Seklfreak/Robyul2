@@ -30,7 +30,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
     }
 
     // Get channel info
-    channel, err := session.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
         Logger.PLUGIN.L("whois", err.Error())
         return

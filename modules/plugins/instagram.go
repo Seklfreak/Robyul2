@@ -398,7 +398,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 }
             })
         case "list": // [p]instagram list
-            currentChannel, err := session.Channel(msg.ChannelID)
+            currentChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             var entryBucket []DB_Instagram_Entry
             listCursor, err := rethink.Table("instagram").Filter(

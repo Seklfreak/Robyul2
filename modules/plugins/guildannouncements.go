@@ -44,7 +44,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
             switch args[1] {
             case "guild_join":
                 helpers.RequireAdmin(msg, func() {
-                    sourceChannel, err := session.Channel(msg.ChannelID)
+                    sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                     helpers.Relax(err)
                     guildAnnouncementSetting := m.getEntryByOrCreateEmpty("guildid", sourceChannel.GuildID)
                     guildAnnouncementSetting.GuildID = sourceChannel.GuildID
@@ -73,7 +73,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
                 })
             case "guild_leave":
                 helpers.RequireAdmin(msg, func() {
-                    sourceChannel, err := session.Channel(msg.ChannelID)
+                    sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                     helpers.Relax(err)
 
                     guildAnnouncementSetting := m.getEntryByOrCreateEmpty("guildid", sourceChannel.GuildID)

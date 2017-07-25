@@ -130,7 +130,7 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
             channel := "?"
             guild := "?"
 
-            chanRef, err := session.Channel(reminder.ChannelID)
+            chanRef, err := helpers.GetChannel(reminder.ChannelID)
             if err == nil {
                 channel = chanRef.Name
             }

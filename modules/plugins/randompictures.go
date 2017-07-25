@@ -136,7 +136,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
     switch command {
     case "pic": // [p]pic [<name>]
         session.ChannelTyping(msg.ChannelID)
-        channel, err := session.Channel(msg.ChannelID)
+        channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
         postedPic := false
 

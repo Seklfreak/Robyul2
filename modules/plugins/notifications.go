@@ -56,7 +56,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
             }
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             guild, err := session.Guild(channel.GuildID)
             helpers.Relax(err)
@@ -95,7 +95,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
             go m.refreshNotificationSettingsCache()
         case "delete", "del", "remove": // [p]notifications delete <keyword(s)>
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             guild, err := session.Guild(channel.GuildID)
             helpers.Relax(err)
@@ -132,7 +132,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
             go m.refreshNotificationSettingsCache()
         case "list": // [p]notifications list
-            channel, err := session.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             guild, err := session.Guild(channel.GuildID)
             helpers.Relax(err)
@@ -181,7 +181,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
                 return
             }
-            commandIssueChannel, err := session.Channel(msg.ChannelID)
+            commandIssueChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             switch args[1] {
             case "list": // [p]notifications ignore-channel list

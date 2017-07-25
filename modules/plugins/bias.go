@@ -266,7 +266,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
     go func() {
         for _, biasChannel := range biasChannels {
             if msg.ChannelID == biasChannel.ChannelID {
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := session.Guild(channel.GuildID)
                 helpers.Relax(err)

@@ -222,7 +222,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                 }
             })
         case "list": // [p]twitter list
-            currentChannel, err := session.Channel(msg.ChannelID)
+            currentChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             var entryBucket []DB_Twitter_Entry
             listCursor, err := rethink.Table("twitter").Filter(

@@ -320,7 +320,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 }
             })
         case "list": // [p]vlive list
-            currentChannel, err := session.Channel(msg.ChannelID)
+            currentChannel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             var entryBucket []DB_VLive_Entry
             listCursor, err := rethink.Table("vlive").Filter(

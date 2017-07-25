@@ -194,7 +194,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         })
     case "serverinfo":
         session.ChannelTyping(msg.ChannelID)
-        currentChannel, err := session.Channel(msg.ChannelID)
+        currentChannel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
         guild, err := session.Guild(currentChannel.GuildID)
         helpers.Relax(err)
@@ -303,7 +303,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             }
         }
 
-        currentChannel, err := session.Channel(msg.ChannelID)
+        currentChannel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
         currentGuild, err := session.Guild(currentChannel.GuildID)
         helpers.Relax(err)
@@ -480,7 +480,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
         args := strings.Fields(content)
 
-        channel, err := session.Channel(msg.ChannelID)
+        channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
 
         if len(args) >= 1 && args[0] != "" {
@@ -549,7 +549,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 for voiceChannelID, voiceChannelDurations := range voiceChannelsDurationPerUser {
                     resultPairs := s.rankByDuration(voiceChannelDurations)
 
-                    voiceChannel, err := session.Channel(voiceChannelID)
+                    voiceChannel, err := helpers.GetChannel(voiceChannelID)
                     if err != nil {
                         continue
                     }
@@ -591,7 +591,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         for _, voiceStateWithTime := range voiceStatesWithTime {
             if voiceStateWithTime.VoiceState.GuildID == channel.GuildID && voiceStateWithTime.VoiceState.UserID == targetUser.ID {
                 //duration := time.Since(voiceStateWithTime.JoinTimeUtc)
-                currentVoiceChannel, err := session.Channel(voiceStateWithTime.VoiceState.ChannelID)
+                currentVoiceChannel, err := helpers.GetChannel(voiceStateWithTime.VoiceState.ChannelID)
                 if err == nil {
                     currentConnectionText = fmt.Sprintf("Connected to **<#%s>** since **%s**",
                         currentVoiceChannel.ID,
@@ -644,7 +644,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         for _, guildChannel := range guildChannels {
             for voiceChannelID, voiceChannelDuration := range voiceChannelsDuration {
                 if voiceChannelID == guildChannel.ID {
-                    voiceChannel, err := session.Channel(voiceChannelID)
+                    voiceChannel, err := helpers.GetChannel(voiceChannelID)
                     if err == nil {
                         voicestatsEmbed.Fields = append(voicestatsEmbed.Fields, &discordgo.MessageEmbedField{
                             Name:   fmt.Sprintf("Total duration connected to #%s", voiceChannel.Name),

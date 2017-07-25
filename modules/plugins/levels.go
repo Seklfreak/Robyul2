@@ -317,7 +317,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             return
         }
         session.ChannelTyping(msg.ChannelID)
-        channel, err := session.Channel(msg.ChannelID)
+        channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
         guild, err := session.Guild(channel.GuildID)
         helpers.Relax(err)
@@ -1424,7 +1424,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     dmChannel, err := session.UserChannelCreate(msg.Author.ID)
                     helpers.Relax(err)
                     session.ChannelTyping(msg.ChannelID)
-                    channel, err := session.Channel(msg.ChannelID)
+                    channel, err := helpers.GetChannel(msg.ChannelID)
                     helpers.Relax(err)
                     guild, err := session.Guild(channel.GuildID)
                     helpers.Relax(err)

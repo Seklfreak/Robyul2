@@ -51,7 +51,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
         switch args[0] {
         case "create": // [p]mirror create
             helpers.RequireBotAdmin(msg, func() {
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 newMirrorEntry := m.getEntryByOrCreateEmpty("id", "")
                 newMirrorEntry.ConnectedChannels = make([]Mirror_Channel, 0)
@@ -76,7 +76,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                     helpers.Relax(err)
                     return
                 }
-                channel, err := session.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 guild, err := session.Guild(channel.GuildID)
                 helpers.Relax(err)
@@ -142,7 +142,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                 for _, entry := range entryBucket {
                     resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (%d channels):\n", entry.ID, len(entry.ConnectedChannels))
                     for _, mirroredChannelEntry := range entry.ConnectedChannels {
-                        mirroredChannel, err := session.Channel(mirroredChannelEntry.ChannelID)
+                        mirroredChannel, err := helpers.GetChannel(mirroredChannelEntry.ChannelID)
                         helpers.Relax(err)
                         mirroredChannelGuild, err := session.Guild(mirroredChannelEntry.GuildID)
                         helpers.Relax(err)
@@ -205,7 +205,7 @@ TryNextMirror:
                 if msg.Author.Bot == true {
                     continue TryNextMirror
                 }
-                sourceChannel, err := session.Channel(msg.ChannelID)
+                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
                 // ignore commands
                 prefix := helpers.GetPrefixForServer(sourceChannel.GuildID)

@@ -246,19 +246,44 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
     return muteRole, nil
 }
 
+func GetChannel(channelID string) (*discordgo.Channel, error) {
+    var err error
+    var targetChannel discordgo.Channel
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
+
+    if err = cacheCodec.Get(key, &targetChannel); err != nil {
+        targetChannel, err := cache.GetSession().Channel(channelID)
+        if err == nil {
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     targetChannel,
+                Expiration: time.Minute*60,
+            })
+            if err != nil {
+                fmt.Println(err)
+            }
+        }
+        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        return targetChannel, err
+    }
+    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    return &targetChannel, err
+}
+
 func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
     var targetChannel *discordgo.Channel
     re := regexp.MustCompile("(<#)?(\\d+)(>)?")
     result := re.FindStringSubmatch(mention)
     if len(result) == 4 {
-        sourceChannel, err := cache.GetSession().State.Channel(msg.ChannelID)
+        sourceChannel, err := GetChannel(msg.ChannelID)
         if err != nil {
             return targetChannel, err
         }
         if sourceChannel == nil {
             return targetChannel, errors.New("Channel not found.")
         }
-        targetChannel, err := cache.GetSession().State.Channel(result[2])
+        targetChannel, err := GetChannel(result[2])
         if err != nil {
             return targetChannel, err
         }
@@ -283,7 +308,7 @@ func GetUser(userID string) (*discordgo.User, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetUser,
-                Expiration: time.Minute*15,
+                Expiration: time.Minute*30,
             })
             if err != nil {
                 fmt.Println(err)
