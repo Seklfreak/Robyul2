@@ -231,7 +231,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         createdAtTime := helpers.GetTimeFromSnowflake(guild.ID)
 
-        owner, err := session.User(guild.OwnerID)
+        owner, err := helpers.GetUser(guild.OwnerID)
         helpers.Relax(err)
         member, err := session.GuildMember(guild.ID, guild.OwnerID)
         helpers.Relax(err)
@@ -287,7 +287,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
     case "userinfo":
         session.ChannelTyping(msg.ChannelID)
-        targetUser, err := session.User(msg.Author.ID)
+        targetUser, err := helpers.GetUser(msg.Author.ID)
         helpers.Relax(err)
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
@@ -476,7 +476,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
     case "voicestats": // [p]voicestats <user> or [p]voicestats top // @TODO: sort by time connected
         session.ChannelTyping(msg.ChannelID)
-        targetUser, err := session.User(msg.Author.ID)
+        targetUser, err := helpers.GetUser(msg.Author.ID)
         helpers.Relax(err)
         args := strings.Fields(content)
 

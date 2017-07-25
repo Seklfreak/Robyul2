@@ -12,6 +12,8 @@ import (
     "os"
     "os/signal"
     "time"
+    "github.com/go-redis/redis"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 // Entrypoint
@@ -66,6 +68,15 @@ func main() {
 
     // Run migrations
     migrations.Run()
+
+    // Connecting to redis
+    Logger.BOOT.L("launcher", "Connecting to redis...")
+    redisClient := redis.NewClient(&redis.Options{
+        Addr:     config.Path("redis.address").Data().(string),
+        Password: "", // no password set
+        DB:       0,  // use default DB
+    })
+    cache.SetRedisClient(redisClient)
 
     // Connect and add event handlers
     Logger.BOOT.L("launcher", "Connecting to discord...")

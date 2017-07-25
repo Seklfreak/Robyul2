@@ -284,7 +284,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                 helpers.Relax(err)
             }
 
-            author, err := session.User(entryBucket.CreatedByUserID)
+            author, err := helpers.GetUser(entryBucket.CreatedByUserID)
             helpers.Relax(err)
 
             infoEmbed := &discordgo.MessageEmbed{

@@ -321,7 +321,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         guild, err := session.Guild(channel.GuildID)
         helpers.Relax(err)
-        targetUser, err := session.User(msg.Author.ID)
+        targetUser, err := helpers.GetUser(msg.Author.ID)
         helpers.Relax(err)
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
@@ -1151,7 +1151,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         return
     case "level", "levels": // [p]level <user> or [p]level top
         session.ChannelTyping(msg.ChannelID)
-        targetUser, err := session.User(msg.Author.ID)
+        targetUser, err := helpers.GetUser(msg.Author.ID)
         helpers.Relax(err)
         args := strings.Fields(content)
 
@@ -1247,7 +1247,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                 i := 0
                 for _, userRanked := range rankedTotalExpMap {
-                    currentUser, err := session.User(userRanked.Key)
+                    currentUser, err := helpers.GetUser(userRanked.Key)
                     if err != nil {
                         logger.ERROR.L("levels", fmt.Sprintf("error fetching user data for user #%s: %s", userRanked.Key, err.Error()))
                         continue

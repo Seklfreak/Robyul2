@@ -840,7 +840,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 joinsText = "✅ User never joined this server\n"
             } else if len(joins) == 1 {
                 if joins[0].InviteCodeUsed != "" {
-                    createdByUser, _ := session.User(joins[0].InviteCodeCreatedByUserID)
+                    createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
                     if createdByUser == nil {
                         createdByUser = new(discordgo.User)
                         createdByUser.ID = joins[0].InviteCodeCreatedByUserID
@@ -857,7 +857,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 lastJoin := joins[0]
 
                 if lastJoin.InviteCodeUsed != "" {
-                    createdByUser, _ := session.User(lastJoin.InviteCodeCreatedByUserID)
+                    createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
                     if createdByUser == nil {
                         createdByUser = new(discordgo.User)
                         createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
@@ -1518,7 +1518,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                     joinsText = "✅ User never joined this server\n"
                 } else if len(joins) == 1 {
                     if joins[0].InviteCodeUsed != "" {
-                        createdByUser, _ := session.User(joins[0].InviteCodeCreatedByUserID)
+                        createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
                         if createdByUser == nil {
                             createdByUser = new(discordgo.User)
                             createdByUser.ID = joins[0].InviteCodeCreatedByUserID
@@ -1535,7 +1535,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                     lastJoin := joins[0]
 
                     if lastJoin.InviteCodeUsed != "" {
-                        createdByUser, _ := session.User(lastJoin.InviteCodeCreatedByUserID)
+                        createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
                         if createdByUser == nil {
                             createdByUser = new(discordgo.User)
                             createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
@@ -1718,7 +1718,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                         joinsText = "✅ User never joined this server\n"
                     } else if len(joins) == 1 {
                         if joins[0].InviteCodeUsed != "" {
-                            createdByUser, _ := session.User(joins[0].InviteCodeCreatedByUserID)
+                            createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
                             if createdByUser == nil {
                                 createdByUser = new(discordgo.User)
                                 createdByUser.ID = joins[0].InviteCodeCreatedByUserID
@@ -1735,7 +1735,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                         lastJoin := joins[0]
 
                         if lastJoin.InviteCodeUsed != "" {
-                            createdByUser, _ := session.User(lastJoin.InviteCodeCreatedByUserID)
+                            createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
                             if createdByUser == nil {
                                 createdByUser = new(discordgo.User)
                                 createdByUser.ID = lastJoin.InviteCodeCreatedByUserID

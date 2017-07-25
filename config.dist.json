@@ -20,6 +20,9 @@
     "perms": "YOUR_REQUESTED_PERMISSION_INT",
     "token": "YOUR_DISCORD_TOKEN"
   },
+  "redis": {
+    "address": "YOUR_REDIS_ADDRESS"
+  },
   "bot": {
     "name": "YOUR_BOT_NAME",
     "avatar": "YOUR_BASE64_AVATAR"

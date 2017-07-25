@@ -1,5 +1,5 @@
-hash: da5c47c05eeb2cd932952824746eddb9f3fe72f2eaf54e7c69f33b5561c99cf7
-updated: 2017-07-25T19:12:53.530090995+02:00
+hash: 162601570f47f415245fd197d1c07c9cc66b39052e9794ac15c630fcb80b0421
+updated: 2017-07-25T19:44:32.03549485+02:00
 imports:
 - name: cloud.google.com/go
   version: a5913b3f7deecba45e98ff33cefbac4fd204ddd7
@@ -36,6 +36,10 @@ imports:
   version: 259d2a102b871d17f30e3cd9881a642961a1e486
 - name: github.com/getsentry/raven-go
   version: d175f85701dfbf44cb0510114c9943e665e60907
+- name: github.com/go-redis/cache
+  version: 63f853b559db40747c867aefa93826331f996d31
+- name: github.com/go-redis/redis
+  version: a005081ecd2d0d963a1a20efda049223205cf90a
 - name: github.com/golang/protobuf
   version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
   subpackages:

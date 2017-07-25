@@ -11,6 +11,7 @@ import (
     "strconv"
     "fmt"
     "github.com/Seklfreak/Robyul2/logger"
+    redisCache "github.com/go-redis/cache"
 )
 
 const (
@@ -270,15 +271,38 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
     }
 }
 
+func GetUser(userID string) (*discordgo.User, error) {
+    var err error
+    var targetUser discordgo.User
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
+
+    if err = cacheCodec.Get(key, &targetUser); err != nil {
+        targetUser, err := cache.GetSession().User(userID)
+        if err == nil {
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     targetUser,
+                Expiration: time.Minute*15,
+            })
+            if err != nil {
+                fmt.Println(err)
+            }
+        }
+        logger.VERBOSE.L("discord", "redis " + key + " MISS")
+        return targetUser, err
+    }
+    logger.VERBOSE.L("discord", "redis " + key + " HIT")
+    return &targetUser, err
+}
+
 func GetUserFromMention(mention string) (*discordgo.User, error) {
-    var targetUser *discordgo.User
     re := regexp.MustCompile("(<@)?(\\d+)(>)?")
     result := re.FindStringSubmatch(mention)
     if len(result) == 4 {
-        targetUser, err := cache.GetSession().User(result[2])
-        return targetUser, err
+        return GetUser(result[2])
     } else {
-        return targetUser, errors.New("User not found.")
+        return &discordgo.User{}, errors.New("User not found.")
     }
 }
 

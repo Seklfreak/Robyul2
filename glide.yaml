@@ -34,3 +34,7 @@ import:
   - translate
 - package: github.com/ugjka/cleverbot-go
   version: master
+- package: github.com/go-redis/redis
+  version: ^6.5.4
+- package: github.com/go-redis/cache
+  version: ^6.3.1

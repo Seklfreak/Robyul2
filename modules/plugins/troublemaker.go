@@ -106,7 +106,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
                     )
 
                     for _, troublemakerReport := range troublemakerReports {
-                        reportedByUser, err := session.User(troublemakerReport.ReportedByUserID)
+                        reportedByUser, err := helpers.GetUser(troublemakerReport.ReportedByUserID)
                         if err != nil {
                             reportedByUser = new(discordgo.User)
                             reportedByUser.ID = troublemakerReport.ReportedByUserID
