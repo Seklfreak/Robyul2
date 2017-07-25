@@ -306,7 +306,7 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
         return
     }
 
-    channel, err := session.State.Channel(reaction.ChannelID)
+    channel, err := helpers.GetChannel(reaction.ChannelID)
     if err != nil {
         return
     }

@@ -146,7 +146,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
             helpers.RequireAdmin(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
 
-                channel, err := session.State.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 settings := helpers.GuildSettingsGetCached(channel.GuildID)

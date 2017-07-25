@@ -112,7 +112,7 @@ func (m *GuildAnnouncements) OnMessage(content string, msg *discordgo.Message, s
 }
 
 func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-    guild, err := session.State.Guild(member.GuildID)
+    guild, err := helpers.GetGuild(member.GuildID)
     if err != nil {
         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
     }
@@ -134,7 +134,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 
 }
 func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
-    guild, err := session.State.Guild(member.GuildID)
+    guild, err := helpers.GetGuild(member.GuildID)
     if err != nil {
         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
     }

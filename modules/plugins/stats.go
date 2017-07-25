@@ -93,7 +93,7 @@ func (s *Stats) Init(session *discordgo.Session) {
                     }
                 }
                 if voiceStateWithTimeIndex >= 0 && voiceStateWithTimeIndex < len(voiceStatesWithTime) {
-                    channel, err := session.State.Channel(voiceStateBefore.ChannelID)
+                    channel, err := helpers.GetChannel(voiceStateBefore.ChannelID)
                     if err == nil {
                         newVoiceTime := s.getVoiceTimeEntryByOrCreateEmpty("id", "")
                         newVoiceTime.GuildID = channel.GuildID
@@ -660,7 +660,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
     case "emotes", "emojis": // [p]emotes
         session.ChannelTyping(msg.ChannelID)
-        channel, err := session.State.Channel(msg.ChannelID)
+        channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
         guild, err := helpers.GetGuild(channel.GuildID)
         helpers.Relax(err)
@@ -734,7 +734,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         return
     case "memberlist", "members": // [p]memberlist [<page #>]
         session.ChannelTyping(msg.ChannelID)
-        channel, err := session.State.Channel(msg.ChannelID)
+        channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
 
         guild, err := helpers.GetGuild(channel.GuildID)

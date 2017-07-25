@@ -474,7 +474,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 return
                             }
 
-                            channel, err := session.State.Channel(msg.ChannelID)
+                            channel, err := helpers.GetChannel(msg.ChannelID)
                             helpers.Relax(err)
 
                             newBadge := new(DB_Badge)
@@ -557,7 +557,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 helpers.Relax(err)
                                 return
                             }
-                            channel, err := session.State.Channel(msg.ChannelID)
+                            channel, err := helpers.GetChannel(msg.ChannelID)
                             helpers.Relax(err)
 
                             badgeFound := m.GetBadge(args[2], args[3], channel.GuildID)
@@ -584,7 +584,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         if len(args) >= 3 {
                             categoryName := args[2]
 
-                            channel, err := session.State.Channel(msg.ChannelID)
+                            channel, err := helpers.GetChannel(msg.ChannelID)
                             helpers.Relax(err)
 
                             categoryBadges := m.GetCategoryBadges(categoryName, channel.GuildID)
@@ -619,7 +619,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             return
                         }
 
-                        channel, err := session.State.Channel(msg.ChannelID)
+                        channel, err := helpers.GetChannel(msg.ChannelID)
                         helpers.Relax(err)
 
                         serverBadges := m.GetServerBadges(channel.GuildID)
@@ -674,7 +674,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 return
                             }
 
-                            channel, err := session.State.Channel(msg.ChannelID)
+                            channel, err := helpers.GetChannel(msg.ChannelID)
                             helpers.Relax(err)
 
                             badgeToAllow := m.GetBadge(args[3], args[4], channel.GuildID)
@@ -737,7 +737,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                 return
                             }
 
-                            channel, err := session.State.Channel(msg.ChannelID)
+                            channel, err := helpers.GetChannel(msg.ChannelID)
                             helpers.Relax(err)
 
                             badgeToDeny := m.GetBadge(args[3], args[4], channel.GuildID)
@@ -1155,7 +1155,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
         args := strings.Fields(content)
 
-        channel, err := session.State.Channel(msg.ChannelID)
+        channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
 
         if len(args) >= 1 && args[0] != "" {
@@ -2564,7 +2564,7 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
 }
 
 func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Session) {
-    channel, err := session.State.Channel(msg.ChannelID)
+    channel, err := helpers.GetChannel(msg.ChannelID)
     helpers.Relax(err)
     // ignore temporary ignored guilds
     for _, temporaryIgnoredGuild := range temporaryIgnoredGuilds {

@@ -915,7 +915,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         return
     case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
         helpers.RequireAdmin(msg, func() {
-            channel, err := session.State.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             settings := helpers.GuildSettingsGetCached(channel.GuildID)
             args := strings.Fields(content)
@@ -1118,7 +1118,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     session.ChannelMessageSend(msg.ChannelID, "Searching for users on this server. 💬")
                 }
 
-                currentChannel, err := session.State.Channel(msg.ChannelID)
+                currentChannel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 usersMatched := make([]*discordgo.User, 0)
@@ -1174,7 +1174,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
     case "audit-log":
         helpers.RequireBotAdmin(msg, func() {
             session.ChannelTyping(msg.ChannelID)
-            channel, err := session.State.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             auditLogUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/audit-logs?limit=10", channel.GuildID)
             resp, err := session.Request("GET", auditLogUrl, nil)
@@ -1219,7 +1219,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         helpers.RequireBotAdmin(msg, func() {
             session.ChannelTyping(msg.ChannelID)
 
-            channel, err := session.State.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
             guildID := channel.GuildID
 
@@ -1446,7 +1446,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                 helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
                 helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported ||
                 helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins {
-                guild, err := session.State.Guild(member.GuildID)
+                guild, err := helpers.GetGuild(member.GuildID)
                 if err != nil {
                     raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                     return
@@ -1641,7 +1641,7 @@ func (m *Mod) OnReactionRemove(reaction *discordgo.MessageReactionRemove, sessio
 }
 func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
     go func() {
-        bannedOnGuild, err := session.State.Guild(user.GuildID)
+        bannedOnGuild, err := helpers.GetGuild(user.GuildID)
         if err != nil {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             return
@@ -1656,7 +1656,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
                 _, err := cache.GetSession().GuildMember(targetGuild.ID, user.User.ID)
                 // check if user is on this guild
                 if err == nil {
-                    guild, err := session.State.Guild(targetGuild.ID)
+                    guild, err := helpers.GetGuild(targetGuild.ID)
                     if err != nil {
                         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                         continue

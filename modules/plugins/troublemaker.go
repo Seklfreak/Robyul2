@@ -43,7 +43,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
             helpers.RequireAdmin(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
 
-                channel, err := session.State.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 settings := helpers.GuildSettingsGetCached(channel.GuildID)
@@ -134,9 +134,9 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
             helpers.RequireMod(msg, func() {
                 session.ChannelTyping(msg.ChannelID)
 
-                channel, err := session.State.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
-                guild, err := session.State.Guild(channel.GuildID)
+                guild, err := helpers.GetGuild(channel.GuildID)
                 helpers.Relax(err)
 
                 if len(args) < 2 {

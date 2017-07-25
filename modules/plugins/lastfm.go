@@ -523,9 +523,9 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
                 return
             }
-            channel, err := session.State.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
-            guild, err := session.State.Guild(channel.GuildID)
+            guild, err := helpers.GetGuild(channel.GuildID)
             helpers.Relax(err)
 
             var combinedStats LastFMCombinedGuildStats

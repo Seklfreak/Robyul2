@@ -278,7 +278,7 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
     key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
 
     if err = cacheCodec.Get(key, &targetChannel); err != nil {
-        targetChannel, err := cache.GetSession().Channel(channelID)
+        targetChannel, err := cache.GetSession().State.Channel(channelID)
         if err == nil {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,

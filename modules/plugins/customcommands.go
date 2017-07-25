@@ -55,7 +55,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
                     helpers.Relax(err)
                     return
                 }
-                channel, err := session.State.Channel(msg.ChannelID)
+                channel, err := helpers.GetChannel(msg.ChannelID)
                 helpers.Relax(err)
 
                 if helpers.CommandExists(args[1]) {

@@ -187,9 +187,9 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
         case "stats":
             session.ChannelTyping(msg.ChannelID)
 
-            channel, err := session.State.Channel(msg.ChannelID)
+            channel, err := helpers.GetChannel(msg.ChannelID)
             helpers.Relax(err)
-            guild, err := session.State.Guild(channel.GuildID)
+            guild, err := helpers.GetGuild(channel.GuildID)
             helpers.Relax(err)
 
             members := make([]*discordgo.Member, 0)
