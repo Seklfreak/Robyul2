@@ -258,7 +258,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetMember,
-                Expiration: time.Minute*60,
+                Expiration: time.Minute*30,
             })
             if err != nil {
                 fmt.Println(err)
