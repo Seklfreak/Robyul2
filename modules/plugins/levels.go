@@ -36,6 +36,7 @@ import (
     "github.com/getsentry/raven-go"
     "github.com/andybons/gogif"
     "image/gif"
+    "html"
 )
 
 type Levels struct {
@@ -2347,12 +2348,12 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         }
     }
 
-    tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", member.User.Username, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", member.Nick, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", userAndNick, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_URL}", avatarUrl, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TITLE}", title, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", bio, -1)
+    tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", html.EscapeString(member.User.Username), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", html.EscapeString(member.Nick), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", html.EscapeString(userAndNick), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_URL}", html.EscapeString(avatarUrl), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TITLE}", html.EscapeString(title), -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", html.EscapeString(bio), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_RANK}", serverRank, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
@@ -2361,9 +2362,9 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_REP}", strconv.Itoa(userData.Rep), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML}", badgesHTML, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_COLOR}", backgroundColorString, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_COLOR}", html.EscapeString(backgroundColorString), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", detailColorString, -1)
+    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", html.EscapeString(detailColorString), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIRTHDAY}", userBirthdayText, -1)
