@@ -141,7 +141,7 @@ var (
 )
 
 const (
-    BadgeLimt int = 9
+    BadgeLimt int = 12
     TimeAtUserFormat string = "Mon, 15:04"
     TimeBirthdayFormat string = "01/02"
 )
@@ -262,8 +262,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         }
 
         userData := m.GetUserUserdata(msg.Author)
-        if time.Since(userData.LastRepped).Hours() < 24 {
-            timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 24))
+        if time.Since(userData.LastRepped).Hours() < 12 {
+            timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
             _, err := session.ChannelMessageSend(msg.ChannelID,
                 helpers.GetTextF("plugins.levels.rep-error-timelimit",
                     int(math.Floor(timeUntil.Hours())),
