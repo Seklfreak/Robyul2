@@ -208,9 +208,9 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                                 } else {
                                     session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
                                 }
+                                session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
                             }
                         }
-                        session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
                     }
                 })
                 time.Sleep(5 * time.Minute)
