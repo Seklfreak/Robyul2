@@ -64,5 +64,8 @@
   },
   "imgur": {
     "client_id": ""
+  },
+  "genius": {
+    "token": ""
   }
 }

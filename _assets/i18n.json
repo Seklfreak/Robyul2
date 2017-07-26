@@ -771,6 +771,12 @@
       "role-list-none": "There are no AutoRoles on this server. <:blobweary:317036265071575050>",
       "role-remove-error-not-found": "I wasn't able to find the role in the list of the AutoRoles on this server. <:blobthinking:317028940885524490>",
       "role-remove-success": "I won't assign this role to new members anymore. <:blobokhand:317032017164238848>"
+    },
+    "lyrics": {
+      "genius-api-error": "Something went wrong talking to genius.com. <:blobweary:317036265071575050>",
+      "genius-no-results": "I wasn't able to find anything with that name. <:blobweary:317036265071575050>",
+      "song-list-embed-title": "Result for `%s`",
+      "powered-by": "powered by genius.com"
     }
   }
 }
