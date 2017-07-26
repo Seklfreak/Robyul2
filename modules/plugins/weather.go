@@ -23,7 +23,7 @@ type DarkSkyForecast struct {
     Latitude  float64 `json:"latitude"`
     Longitude float64 `json:"longitude"`
     Timezone  string  `json:"timezone"`
-    Offset    int     `json:"offset"`
+    Offset    float64 `json:"offset"`
     Currently struct {
         Time                int     `json:"time"`
         Summary             string  `json:"summary"`
