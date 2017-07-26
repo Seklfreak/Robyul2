@@ -309,7 +309,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
         targetMember, err := helpers.GetGuildMember(currentGuild.ID, targetUser.ID)
         if err != nil {
-            if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10007 {
+            if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10007 {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
                 helpers.Relax(err)
                 return
