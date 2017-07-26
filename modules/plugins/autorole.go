@@ -38,9 +38,11 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                 serverRoles, err := session.GuildRoles(channel.GuildID)
                 helpers.Relax(err)
 
+                roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+
                 var targetRole *discordgo.Role
                 for _, role := range serverRoles {
-                    if role.Name == args[1] || role.ID == args[1] {
+                    if strings.ToLower(role.Name) == strings.ToLower(roleNameToMatch) || role.ID == roleNameToMatch {
                         targetRole = role
                     }
                 }
@@ -113,9 +115,11 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                 serverRoles, err := session.GuildRoles(channel.GuildID)
                 helpers.Relax(err)
 
+                roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+
                 var targetRole *discordgo.Role
                 for _, role := range serverRoles {
-                    if role.Name == args[1] || role.ID == args[1] {
+                    if strings.ToLower(role.Name) == strings.ToLower(roleNameToMatch) || role.ID == roleNameToMatch {
                         targetRole = role
                     }
                 }
