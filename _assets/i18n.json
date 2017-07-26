@@ -775,7 +775,7 @@
     "lyrics": {
       "genius-api-error": "Something went wrong talking to genius.com. <:blobweary:317036265071575050>",
       "genius-no-results": "I wasn't able to find anything with that name. <:blobweary:317036265071575050>",
-      "song-list-embed-title": "Result for `%s`",
+      "song-list-embed-title": "Results for `%s`",
       "powered-by": "powered by genius.com"
     }
   }
