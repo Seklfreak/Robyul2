@@ -67,12 +67,12 @@ func IsRobyulMod(id string) bool {
 }
 
 func IsAdmin(msg *discordgo.Message) bool {
-    channel, e := cache.GetSession().Channel(msg.ChannelID)
+    channel, e := GetChannel(msg.ChannelID)
     if e != nil {
         return false
     }
 
-    guild, e := cache.GetSession().Guild(channel.GuildID)
+    guild, e := GetFreshGuild(channel.GuildID)
     if e != nil {
         return false
     }
@@ -81,7 +81,7 @@ func IsAdmin(msg *discordgo.Message) bool {
         return true
     }
 
-    guildMember, e := cache.GetSession().GuildMember(guild.ID, msg.Author.ID)
+    guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
     // Check if role may manage server or a role is in admin role list
     for _, role := range guild.Roles {
         for _, userRole := range guildMember.Roles {
@@ -104,15 +104,15 @@ func IsMod(msg *discordgo.Message) bool {
     if IsAdmin(msg) == true {
         return true
     } else {
-        channel, e := cache.GetSession().Channel(msg.ChannelID)
+        channel, e := GetChannel(msg.ChannelID)
         if e != nil {
             return false
         }
-        guild, e := cache.GetSession().Guild(channel.GuildID)
+        guild, e := GetFreshGuild(channel.GuildID)
         if e != nil {
             return false
         }
-        guildMember, e := cache.GetSession().GuildMember(guild.ID, msg.Author.ID)
+        guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
         // check if a role is in mod role list
         for _, role := range guild.Roles {
             for _, userRole := range guildMember.Roles {
