@@ -45,6 +45,8 @@ type Config struct {
     TroublemakerLogChannel      string `rethink:"troublemaker_channel"`
 
     LevelsMaxBadges      int `rethink:"levels_maxbadges"`
+
+    AutoRoleIDs []string `rethink:"autorole_roleids"`
 }
 
 // Default is a helper for generating default config values

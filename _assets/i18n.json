@@ -762,6 +762,13 @@
       "report-embed-footer": "Report has been sent to %d servers. | If you think this report is unjustified please contact Sekl#7397 on discord.",
       "report-confirm": "Are you sure you want to report\n`%s#%s` (`#%s`, <@%s>)\nbecause of \"`%s`\"?\n_Please note that abuse of this feature will lead to the removal of Robyul from your server and possibly more actions._",
       "list-no-reports": "I wasn't able to find any reports for %s! <:blobsnuggle:333989876695302144>"
+    },
+    "autorole": {
+      "role-add-error-duplicate": "This role is already in the list of auto roles. <:blobthinking:317028940885524490>",
+      "role-add-success": "Everyone who joins will get the role `%s` assigned now. <:blobsalute:317043033004703744>\nPlease make sure Robyul is allowed to assign the role.",
+      "role-list-none": "There are no AutoRoles on this server. <:blobweary:317036265071575050>",
+      "role-remove-error-not-found": "I wasn't able to find the role in the list of the AutoRoles on this server. <:blobthinking:317028940885524490>",
+      "role-remove-success": "I won't assign this role to new members anymore. <:blobokhand:317032017164238848>"
     }
   }
 }
