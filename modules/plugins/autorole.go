@@ -163,15 +163,16 @@ func (a *AutoRoles) OnMessage(content string, msg *discordgo.Message, session *d
 }
 
 func (a *AutoRoles) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-    settings := helpers.GuildSettingsGetCached(member.GuildID)
-    for _, roleID := range settings.AutoRoleIDs {
-        err := session.GuildMemberRoleAdd(member.GuildID, member.User.ID, roleID)
-        if err != nil {
-            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-            continue
+    go func() {
+        settings := helpers.GuildSettingsGetCached(member.GuildID)
+        for _, roleID := range settings.AutoRoleIDs {
+            err := session.GuildMemberRoleAdd(member.GuildID, member.User.ID, roleID)
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                continue
+            }
         }
-    }
-
+    }()
 }
 
 func (a *AutoRoles) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
