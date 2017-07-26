@@ -29,8 +29,21 @@ var NukeMods = []string{
 var RobyulMod = []string{
     "132633380628987904", // sunny
 }
+var Blacklisted = []string{
+    "171883318386753536", // ForRyu
+}
 var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
 var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
+
+func IsBlacklisted(id string) bool {
+    for _, s := range Blacklisted {
+        if s == id {
+            return true
+        }
+    }
+
+    return false
+}
 
 func IsNukeMod(id string) bool {
     for _, s := range NukeMods {
