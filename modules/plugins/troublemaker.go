@@ -6,8 +6,6 @@ import (
     "github.com/Seklfreak/Robyul2/helpers"
     "github.com/Seklfreak/Robyul2/logger"
     "fmt"
-    "strconv"
-    "github.com/getsentry/raven-go"
     "time"
     rethink "github.com/gorethink/gorethink"
 )
@@ -225,14 +223,8 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 
                                 _, err = session.ChannelMessageSendEmbed(guildToNotifySettings.TroublemakerLogChannel, reportEmbed)
                                 if err != nil {
-                                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-                                        "ChannelID":       msg.ChannelID,
-                                        "Content":         msg.Content,
-                                        "Timestamp":       string(msg.Timestamp),
-                                        "TTS":             strconv.FormatBool(msg.Tts),
-                                        "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-                                        "IsBot":           strconv.FormatBool(msg.Author.Bot),
-                                    })
+                                    logger.ERROR.L("troublemaker", fmt.Sprintf("Failed to send troublemaker report to channel #%s on guild #%s: %s" +
+                                        guildToNotifySettings.TroublemakerLogChannel, guildToNotifySettings.Guild, err.Error()))
                                 }
                             }
                         }
