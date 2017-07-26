@@ -143,7 +143,12 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
     result := fmt.Sprintf("__Lyrics for: **%s**__\n%s\n_%s_",
         hit.Result.FullTitle, lyrics, helpers.GetText("plugins.lyrics.powered-by"))
 
-    for _, page := range helpers.Pagify(result, "\n") {
+    for i, page := range helpers.Pagify(result, "\n") {
+        if i >= 2 {
+            _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("More on <%s>", hit.Result.URL))
+            helpers.Relax(err)
+            break
+        }
         _, err := session.ChannelMessageSend(msg.ChannelID, page)
         helpers.Relax(err)
     }
