@@ -1568,7 +1568,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
                 _, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
                 if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    logger.ERROR.L("troublemaker", fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
+                        helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error()))
                     return
                 }
             }
