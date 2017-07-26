@@ -139,6 +139,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 
                 var channelConfig []AssignableRole_Category
                 channelConfigJson := helpers.NetGet(msg.Attachments[0].URL)
+                channelConfigJson = bytes.TrimPrefix(channelConfigJson, []byte("\xef\xbb\xbf")) // removes BOM
                 err = json.Unmarshal(channelConfigJson, &channelConfig)
                 if err != nil {
                     _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.set-config-error-invalid"))
