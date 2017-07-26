@@ -476,7 +476,8 @@
       "user-not-found": "User not found!",
       "get-mute-role-no-permissions": "I was unable to create the mute role.",
       "user-banned-failed-too-low": "I wasn't able to ban the user. Please make sure Robyul is above the user you want to ban.",
-      "edit-error-not-found": "I wasn't able to find that message!"
+      "edit-error-not-found": "I wasn't able to find that message!",
+      "user-kicked-failed-too-low": "I wasn't able to kick the user. Please make sure Robyul is above the user you want to kick."
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",

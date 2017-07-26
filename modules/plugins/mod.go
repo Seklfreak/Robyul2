@@ -542,9 +542,20 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
                     return
                 }
-                // Ban user
+                // Kick user
                 err = session.GuildMemberDelete(guild.ID, targetUser.ID)
-                helpers.Relax(err)
+                if err != nil {
+                    if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+                        if err.Message.Code == 0 {
+                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-failed-too-low"))
+                            return
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
                 logger.INFO.L("mod", fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
             } else {
