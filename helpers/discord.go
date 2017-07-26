@@ -183,9 +183,6 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
         cache.GetSession().ChannelMessageSend(channelID, GetTextF("bot.errors.general", err.Error()))
     }
 
-    // delete embed after everything is done
-    defer cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
-
     // add default reactions to embed
     cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID)
     cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID)
@@ -195,6 +192,7 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
         confirmes, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID, 100)
         for _, confirm := range confirmes {
             if confirm.ID == author.ID {
+                cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
                 // user has confirmed the call
                 return true
             }
@@ -202,6 +200,7 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
         aborts, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID, 100)
         for _, abort := range aborts {
             if abort.ID == author.ID {
+                cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
                 // User has aborted the call
                 return false
             }
@@ -212,7 +211,7 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 }
 
 func GetMuteRole(guildID string) (*discordgo.Role, error) {
-    guild, err := cache.GetSession().Guild(guildID)
+    guild, err := GetFreshGuild(guildID)
     Relax(err)
     var muteRole *discordgo.Role
     settings, err := GuildSettingsGet(guildID)
