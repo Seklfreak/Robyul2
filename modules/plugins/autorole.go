@@ -44,7 +44,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                         targetRole = role
                     }
                 }
-                if targetRole.ID == "" {
+                if targetRole == nil || targetRole.ID == "" {
                     _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
                     helpers.Relax(err)
                     return
