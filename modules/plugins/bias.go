@@ -140,7 +140,11 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
                 var channelConfig []AssignableRole_Category
                 channelConfigJson := helpers.NetGet(msg.Attachments[0].URL)
                 err = json.Unmarshal(channelConfigJson, &channelConfig)
-                helpers.Relax(err)
+                if err != nil {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.set-config-error-invalid"))
+                    helpers.Relax(err)
+                    return
+                }
 
                 channelDb := m.getChannelConfigByOrCreateEmpty("channelid", targetChannel.ID)
                 channelDb.ServerID = targetChannel.GuildID

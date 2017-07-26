@@ -583,7 +583,8 @@
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
       "updated-config": "I updated the config for the channel. <:blobokhand:317032017164238848>",
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
-      "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>"
+      "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>",
+      "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",
