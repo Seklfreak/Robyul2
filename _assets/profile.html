@@ -2,11 +2,11 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <!-- <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"> -->
     <link rel="stylesheet" href="https://use.fontawesome.com/f5cee3ee4c.css">
     <style type="text/css">
         @import url('https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&subset=cyrillic,cyrillic-ext,greek,greek-ext,latin-ext,vietnamese');
         body {
+            background: #fff;
             background-image: url('{USER_BACKGROUND_URL}');
             background-repeat: no-repeat;
             font-family: 'Roboto', 'Bitstream Vera', sans-serif;
@@ -221,13 +221,12 @@
         <div class="levelbox" style="left: 3px; top: -2px;"><div class="title">Level</div><div class="level">{USER_SERVER_LEVEL}</div></div>
         <div class="levelbox" style="left: 30px; top: -2px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div>
         <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div><div id="serverexpbartext">Server EXP Progress</div></div>
-        <!-- <div class="levelbox" style="left: 25px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div> -->
         <div class="levelnextbox" style="left: 200px;"><div class="title">Global Level</div><div class="level">{USER_GLOBAL_LEVEL}</div></div>
         <div class="levelnextbox" style="left: 250px;"><div class="title">Global Rank</div><div class="level">{USER_GLOBAL_RANK}</div></div>
     </div>
     <div id="repcontainer"><div id="userrep">+{USER_REP} REP</div></div>
     <div id="userbadgetitle">BADGES</div>
-    <div id="userbadges">{USER_BADGES_HTML}<!--<img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><img src="https://i.imgur.com/Rmf1r1N.png"><!-- --></div>
+    <div id="userbadges">{USER_BADGES_HTML}/div>
     <div id="userbio">{USER_BIO}</div>
     <div id="userstats">{USER_TIME} {USER_BIRTHDAY}</div>
 </div>

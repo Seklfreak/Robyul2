@@ -2377,7 +2377,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     cmdArgs := []string{
         tempTemplatePath,
         "--window-size=400/300",
-        "--default-white-background",
+        //"--default-white-background",
         //"--quality=99",
         "--stream-type=png",
         "--timeout=15000",
