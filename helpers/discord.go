@@ -12,6 +12,7 @@ import (
     "fmt"
     "github.com/Seklfreak/Robyul2/logger"
     redisCache "github.com/go-redis/cache"
+    "github.com/getsentry/raven-go"
 )
 
 const (
@@ -274,7 +275,7 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
             Expiration: time.Minute * 30,
         })
         if err != nil {
-            fmt.Println(err)
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
     logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
@@ -299,7 +300,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
                 Expiration: time.Minute * 30,
             })
             if err != nil {
-                fmt.Println(err)
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
         logger.VERBOSE.L("discord", "redis "+key+" MISS")
@@ -325,7 +326,7 @@ func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
             Expiration: time.Minute * 60,
         })
         if err != nil {
-            fmt.Println(err)
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
     logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
@@ -350,7 +351,7 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
                 Expiration: time.Minute * 60,
             })
             if err != nil {
-                fmt.Println(err)
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
         logger.VERBOSE.L("discord", "redis "+key+" MISS")
@@ -376,7 +377,7 @@ func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
             Expiration: time.Minute * 60,
         })
         if err != nil {
-            fmt.Println(err)
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
     logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
@@ -401,7 +402,7 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
                 Expiration: time.Minute * 60,
             })
             if err != nil {
-                fmt.Println(err)
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
         logger.VERBOSE.L("discord", "redis "+key+" MISS")
@@ -449,7 +450,7 @@ func GetFreshUser(userID string) (*discordgo.User, error) {
             Expiration: time.Minute * 30,
         })
         if err != nil {
-            fmt.Println(err)
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
     logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
@@ -471,7 +472,7 @@ func GetUser(userID string) (*discordgo.User, error) {
                 Expiration: time.Minute * 10,
             })
             if err != nil {
-                fmt.Println(err)
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
         logger.VERBOSE.L("discord", "redis "+key+" MISS")
