@@ -716,8 +716,7 @@
       "refresh-success": "Source successfully refreshed! <:blobokhand:317032017164238848>",
       "refresh-not-found-error": "I wasn't able to find this source. <:blobnomouth:317045295286583296>",
       "refresh-started": "Refreshing started, this may take a while! <:blobsleeping:317047101534109696>",
-      "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you.",
-      "upload-failed": "The upload failed. <:blobugh:317047327443517442>"
+      "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you."
     },
     "customcommands": {
       "add-keyword-already-exists": "There is already a custom command with this keyword. <:blobweary:317036265071575050>",

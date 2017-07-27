@@ -199,13 +199,9 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
                         if reaction.UserID == msg.Author.ID && reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
                             postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
                             if err != nil || postedPic == false {
-                                if strings.Contains(err.Error(), "Imgur") {
-                                    session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.upload-failed"))
-                                } else {
-                                    session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
-                                }
-                                session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+                                session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
                             }
+                            session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
                         }
                     }
                 })
