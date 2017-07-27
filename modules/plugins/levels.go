@@ -2372,6 +2372,8 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         return []byte{}, "", err
     }
 
+    start := time.Now()
+
     cmdArgs := []string{
         tempTemplatePath,
         "--window-size=400/300",
@@ -2387,6 +2389,9 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     if err != nil {
         return []byte{}, "", err
     }
+
+    elapsed := time.Since(start)
+    logger.VERBOSE.L("levels", fmt.Sprintf("took screenshot of profile in %s", elapsed.String()))
 
     err = os.Remove(tempTemplatePath)
     if err != nil {
