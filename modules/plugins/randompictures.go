@@ -21,6 +21,7 @@ import (
     "github.com/getsentry/raven-go"
     "github.com/vmihailenco/msgpack"
     "strconv"
+    "net/url"
 )
 
 type RandomPictures struct{}
@@ -514,7 +515,7 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
         }
     } else {
         linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
-        linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, file.Name)
+        linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(file.Name))
 
         _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, linkToPost)
         if err != nil {
