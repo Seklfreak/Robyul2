@@ -1963,7 +1963,6 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
     for _, guild := range session.State.Guilds {
         is, _ := helpers.GetFreshIsInGuild(guild.ID, user.ID)
         if is == true {
-            fmt.Println("is in guild", guild.Name)
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }

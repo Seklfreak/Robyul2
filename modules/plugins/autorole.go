@@ -158,6 +158,74 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                 return
             })
             return
+        case "apply":
+            session.ChannelTyping(msg.ChannelID)
+            helpers.RequireAdmin(msg, func() {
+                if len(args) < 2 {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                    helpers.Relax(err)
+                    return
+                }
+                channel, err := helpers.GetChannel(msg.ChannelID)
+                helpers.Relax(err)
+
+                serverRoles, err := session.GuildRoles(channel.GuildID)
+                helpers.Relax(err)
+
+                roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+
+                var targetRole *discordgo.Role
+                for _, role := range serverRoles {
+                    if strings.ToLower(role.Name) == strings.ToLower(roleNameToMatch) || role.ID == roleNameToMatch {
+                        targetRole = role
+                    }
+                }
+                if targetRole == nil || targetRole.ID == "" {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+                    helpers.Relax(err)
+                    return
+                }
+
+                users := make([]string, 0)
+                lastAfterMemberId := ""
+                for {
+                    members, err := session.GuildMembers(channel.GuildID, lastAfterMemberId, 1000)
+                    helpers.Relax(err)
+                    if len(members) <= 0 {
+                        break
+                    }
+
+                    lastAfterMemberId = members[len(members)-1].User.ID
+                    for _, u := range members {
+                        users = append(users, u.User.ID)
+                    }
+                }
+
+                if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.autorole.apply-confirm",
+                    targetRole.Name, targetRole.ID, len(users)),"✅", "🚫") {
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.autorole.apply-started"))
+                    helpers.Relax(err)
+
+                    addedSuccess := 0
+                    addedError := 0
+
+                    for _, userID := range users {
+                        err := session.GuildMemberRoleAdd(channel.GuildID, userID, targetRole.ID)
+                        if err != nil {
+                            addedError += 1
+                        } else {
+                            addedSuccess += 1
+                        }
+                    }
+
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.autorole.apply-done",
+                    msg.Author.ID, addedSuccess, addedError))
+                    helpers.Relax(err)
+                    return
+                }
+                return
+            })
+            return
         }
     }
 }

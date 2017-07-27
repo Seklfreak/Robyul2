@@ -769,7 +769,10 @@
       "role-add-success": "Everyone who joins will get the role `%s` assigned now. <:blobsalute:317043033004703744>\nPlease make sure Robyul is allowed to assign the role.",
       "role-list-none": "There are no AutoRoles on this server. <:blobweary:317036265071575050>",
       "role-remove-error-not-found": "I wasn't able to find the role in the list of the AutoRoles on this server. <:blobthinking:317028940885524490>",
-      "role-remove-success": "I won't assign this role to new members anymore. <:blobokhand:317032017164238848>"
+      "role-remove-success": "I won't assign this role to new members anymore. <:blobokhand:317032017164238848>",
+      "apply-confirm": "Are you sure you want to apply the role `%s (#%s)` to %d members?",
+      "apply-started": "I'm starting to apply the roles. Depending on the number of members this will take a while. I will inform you when it's done!",
+      "apply-done": "<@%s> I'm done applying roles. I was able to add the role to %d members. I wasn't able to apply the role to %d members."
     },
     "lyrics": {
       "genius-api-error": "Something went wrong talking to genius.com. <:blobweary:317036265071575050>",
