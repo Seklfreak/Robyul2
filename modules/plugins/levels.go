@@ -141,8 +141,8 @@ var (
 )
 
 const (
-    BadgeLimt int = 12
-    TimeAtUserFormat string = "Mon, 15:04"
+    BadgeLimt          int    = 12
+    TimeAtUserFormat   string = "Mon, 15:04"
     TimeBirthdayFormat string = "01/02"
 )
 
@@ -1097,7 +1097,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 m.setUserUserdata(userUserdata)
 
                 _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
-                loc.String(), time.Now().In(loc).Format(TimeAtUserFormat)))
+                    loc.String(), time.Now().In(loc).Format(TimeAtUserFormat)))
                 helpers.Relax(err)
                 return
             case "birthday":
@@ -1961,7 +1961,9 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        if _, err := helpers.GetGuildMember(guild.ID, user.ID); err == nil {
+        is, err := helpers.GetFreshIsInGuild(guild.ID, user.ID)
+        if err == nil && is == true {
+            fmt.Println("is in guild", guild.Name)
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }
@@ -2108,7 +2110,8 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User) []DB_Badge {
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        if _, err := helpers.GetGuildMember(guild.ID, user.ID); err == nil {
+        is, err := helpers.GetIsInGuild(guild.ID, user.ID)
+        if err == nil && is == true {
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }
@@ -2380,7 +2383,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         "--stream-type=png",
         "--timeout=15000",
         "--p:disk-cache=true",
-        "--p:disk-cache-path="+cachePath,
+        "--p:disk-cache-path=" + cachePath,
         "--p:proxy-type=none",
         "--p:ignore-ssl-errors=false",
         "--p:ssl-protocol=any",

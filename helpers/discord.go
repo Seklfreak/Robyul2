@@ -263,6 +263,7 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
     var err error
     cacheCodec := cache.GetRedisCacheCodec()
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
+    isInGuildKey := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     targetMember, err := cache.GetSession().State.Member(guildID, userID)
     if err != nil {
@@ -277,6 +278,24 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
         if err != nil {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
+
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        isInGuildKey,
+            Object:     true,
+            Expiration: time.Minute * 45,
+        })
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
+    } else {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        isInGuildKey,
+            Object:     false,
+            Expiration: time.Minute * 45,
+        })
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
     }
     logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
     return targetMember, err
@@ -287,6 +306,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
     var targetMember discordgo.Member
     cacheCodec := cache.GetRedisCacheCodec()
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
+    isInGuildKey := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     if err = cacheCodec.Get(key, &targetMember); err != nil {
         targetMember, err := cache.GetSession().State.Member(guildID, userID)
@@ -302,12 +322,78 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
             if err != nil {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
+
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        isInGuildKey,
+                Object:     false,
+                Expiration: time.Minute * 45,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
+        } else {
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        isInGuildKey,
+                Object:     true,
+                Expiration: time.Minute * 45,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
         }
         logger.VERBOSE.L("discord", "redis "+key+" MISS")
         return targetMember, err
     }
     logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetMember, err
+}
+
+func GetFreshIsInGuild(guildID string, userID string) (bool, error) {
+    var err error
+    isInGuild := false
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
+
+    member, err := GetFreshGuildMember(guildID, userID)
+    if err == nil && member != nil && member.GuildID != "" {
+        isInGuild = true
+    }
+    err = cacheCodec.Set(&redisCache.Item{
+        Key:        key,
+        Object:     isInGuild,
+        Expiration: time.Minute * 45,
+    })
+    if err != nil {
+        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+    }
+    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    return isInGuild, err
+}
+
+func GetIsInGuild(guildID string, userID string) (bool, error) {
+    var err error
+    isInGuild := false
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
+
+    if err = cacheCodec.Get(key, &isInGuild); err != nil {
+        member, err := GetGuildMember(guildID, userID)
+        if err == nil && member != nil && member.GuildID != "" {
+            isInGuild = true
+        }
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     isInGuild,
+            Expiration: time.Minute * 45,
+        })
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
+        logger.VERBOSE.L("discord", "redis "+key+" MISS")
+        return isInGuild, err
+    }
+    logger.VERBOSE.L("discord", "redis "+key+" HIT")
+    return isInGuild, err
 }
 
 func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
