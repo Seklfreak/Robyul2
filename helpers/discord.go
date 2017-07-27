@@ -266,7 +266,7 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
     isInGuildKey := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     targetMember, err := cache.GetSession().State.Member(guildID, userID)
-    if err != nil || targetMember == nil {
+    if targetMember == nil || targetMember.GuildID == "" {
         targetMember, err = cache.GetSession().GuildMember(guildID, userID)
     }
     if err == nil {
@@ -310,7 +310,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 
     if err = cacheCodec.Get(key, &targetMember); err != nil {
         targetMember, err := cache.GetSession().State.Member(guildID, userID)
-        if err != nil || targetMember == nil {
+        if targetMember == nil || targetMember.GuildID == "" {
             targetMember, err = cache.GetSession().GuildMember(guildID, userID)
         }
         if err == nil {
@@ -355,7 +355,7 @@ func GetFreshIsInGuild(guildID string, userID string) (bool, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     member, err := GetFreshGuildMember(guildID, userID)
-    if err == nil && member != nil && member.GuildID != "" {
+    if member != nil && member.GuildID != "" {
         isInGuild = true
     }
     err = cacheCodec.Set(&redisCache.Item{
@@ -377,8 +377,8 @@ func GetIsInGuild(guildID string, userID string) (bool, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     if err = cacheCodec.Get(key, &isInGuild); err != nil {
-        member, err := GetGuildMember(guildID, userID)
-        if err == nil && member != nil && member.GuildID != "" {
+        member, _ := GetGuildMember(guildID, userID)
+        if member != nil && member.GuildID != "" {
             isInGuild = true
         }
         err = cacheCodec.Set(&redisCache.Item{
@@ -402,7 +402,7 @@ func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
 
     targetGuild, err := cache.GetSession().State.Guild(guildID)
-    if err != nil || targetGuild == nil {
+    if targetGuild == nil || targetGuild.ID == "" {
         targetGuild, err = cache.GetSession().Guild(guildID)
     }
     if err == nil {
@@ -427,7 +427,7 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 
     if err = cacheCodec.Get(key, &targetGuild); err != nil {
         targetGuild, err := cache.GetSession().State.Guild(guildID)
-        if err != nil || targetGuild == nil {
+        if targetGuild == nil || targetGuild.ID == "" {
             targetGuild, err = cache.GetSession().Guild(guildID)
         }
         if err == nil {
@@ -453,7 +453,7 @@ func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
     key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
 
     targetChannel, err := cache.GetSession().State.Channel(channelID)
-    if err != nil || targetChannel == nil {
+    if targetChannel == nil || targetChannel.ID == "" {
         targetChannel, err = cache.GetSession().Channel(channelID)
     }
     if err == nil {
@@ -478,7 +478,7 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 
     if err = cacheCodec.Get(key, &targetChannel); err != nil {
         targetChannel, err := cache.GetSession().State.Channel(channelID)
-        if err != nil || targetChannel == nil {
+        if targetChannel == nil || targetChannel.ID == "" {
             targetChannel, err = cache.GetSession().Channel(channelID)
         }
         if err == nil {
