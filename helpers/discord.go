@@ -266,7 +266,7 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
     isInGuildKey := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     targetMember, err := cache.GetSession().State.Member(guildID, userID)
-    if err != nil {
+    if err != nil || targetMember == nil {
         targetMember, err = cache.GetSession().GuildMember(guildID, userID)
     }
     if err == nil {
@@ -310,7 +310,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 
     if err = cacheCodec.Get(key, &targetMember); err != nil {
         targetMember, err := cache.GetSession().State.Member(guildID, userID)
-        if err != nil {
+        if err != nil || targetMember == nil {
             targetMember, err = cache.GetSession().GuildMember(guildID, userID)
         }
         if err == nil {
@@ -402,7 +402,7 @@ func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
 
     targetGuild, err := cache.GetSession().State.Guild(guildID)
-    if err != nil {
+    if err != nil || targetGuild == nil {
         targetGuild, err = cache.GetSession().Guild(guildID)
     }
     if err == nil {
@@ -427,7 +427,7 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 
     if err = cacheCodec.Get(key, &targetGuild); err != nil {
         targetGuild, err := cache.GetSession().State.Guild(guildID)
-        if err != nil {
+        if err != nil || targetGuild == nil {
             targetGuild, err = cache.GetSession().Guild(guildID)
         }
         if err == nil {
@@ -453,7 +453,7 @@ func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
     key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
 
     targetChannel, err := cache.GetSession().State.Channel(channelID)
-    if err != nil {
+    if err != nil || targetChannel == nil {
         targetChannel, err = cache.GetSession().Channel(channelID)
     }
     if err == nil {
@@ -478,7 +478,7 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 
     if err = cacheCodec.Get(key, &targetChannel); err != nil {
         targetChannel, err := cache.GetSession().State.Channel(channelID)
-        if err != nil {
+        if err != nil || targetChannel == nil {
             targetChannel, err = cache.GetSession().Channel(channelID)
         }
         if err == nil {
