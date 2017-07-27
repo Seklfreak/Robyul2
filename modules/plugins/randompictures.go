@@ -18,11 +18,8 @@ import (
     rethink "github.com/gorethink/gorethink"
     "github.com/dustin/go-humanize"
     "github.com/Seklfreak/Robyul2/metrics"
-    "encoding/base64"
     "github.com/getsentry/raven-go"
     "github.com/vmihailenco/msgpack"
-    "crypto/hmac"
-    "crypto/sha256"
 )
 
 type RandomPictures struct{}
@@ -72,6 +69,8 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
         defer helpers.Recover()
 
         for {
+            time.Sleep(12 * time.Hour)
+
             var marshalled []byte
             redisClient := cache.GetRedisClient()
 
@@ -111,8 +110,6 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                 }
                 rp.updateImagesCachedMetric()
             }
-
-            time.Sleep(12 * time.Hour)
         }
     }()
     logger.PLUGIN.L("randompictures", "Started files cache loop (12h)")
@@ -515,13 +512,7 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
             return err
         }
     } else {
-        key := []byte(helpers.GetConfig().Path("imageproxy.signature_key").Data().(string))
-        h := hmac.New(sha256.New, key)
-        h.Write([]byte(file.WebContentLink))
-        sign := base64.URLEncoding.EncodeToString(h.Sum(nil))
-
-        proxyLink := fmt.Sprintf(helpers.GetConfig().Path("imageproxy.base_url").Data().(string), "s" + sign + "/" + file.WebContentLink)
-        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, proxyLink))
+        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, file.WebContentLink)
         if err != nil {
             return err
         }

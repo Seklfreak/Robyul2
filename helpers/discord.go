@@ -468,7 +468,7 @@ func GetUser(userID string) (*discordgo.User, error) {
             err = cacheCodec.Set(&redisCache.Item{
                 Key:        key,
                 Object:     targetUser,
-                Expiration: time.Minute * 5,
+                Expiration: time.Minute * 10,
             })
             if err != nil {
                 fmt.Println(err)
