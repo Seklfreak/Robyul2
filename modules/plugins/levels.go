@@ -2377,12 +2377,15 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     cmdArgs := []string{
         tempTemplatePath,
         "--window-size=400/300",
-        //"--default-white-background",
-        //"--quality=99",
         "--stream-type=png",
         "--timeout=15000",
         "--p:disk-cache=true",
         "--p:disk-cache-path="+cachePath,
+        "--p:proxy-type=none",
+        "--p:ignore-ssl-errors=false",
+        "--p:ssl-protocol=any",
+        "--p:web-security=false",
+        "--p:debug=true",
     }
     // fmt.Println(webshotBinary, strings.Join(cmdArgs, " "))
     imgCmd := exec.Command(webshotBinary, cmdArgs...)
