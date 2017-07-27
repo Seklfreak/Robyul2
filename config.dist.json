@@ -69,7 +69,6 @@
     "token": ""
   },
   "imageproxy": {
-    "base_url": "",
-    "signature_key": ""
+    "base_url": ""
   }
 }

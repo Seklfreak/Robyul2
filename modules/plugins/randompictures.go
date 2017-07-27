@@ -20,6 +20,7 @@ import (
     "github.com/Seklfreak/Robyul2/metrics"
     "github.com/getsentry/raven-go"
     "github.com/vmihailenco/msgpack"
+    "strconv"
 )
 
 type RandomPictures struct{}
@@ -145,7 +146,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                                 msgpack.Unmarshal(resultBytes, &gPicture)
                                 go func() {
                                     defer helpers.Recover()
-                                    err = rp.postItem(postToChannelID, "", gPicture)
+                                    err = rp.postItem(postToChannelID, "", gPicture, "", "")
                                     helpers.Relax(err)
                                 }()
                             }
@@ -393,7 +394,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
             if err == nil {
                 var gPicture *drive.File
                 msgpack.Unmarshal(resultBytes, &gPicture)
-                err := rp.postItem(msg.ChannelID, initialMessage.ID, gPicture)
+                err := rp.postItem(msg.ChannelID, initialMessage.ID, gPicture, matchEntry.ID, strconv.Itoa(chosenPicN))
                 if err == nil {
                     return true, nil
                 } else {
@@ -479,7 +480,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
     metrics.RandomPictureSourcesImagesCachedCount.Set(totalImages)
 }
 
-func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File) error {
+func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File, sourceID string, pictureID string) error {
     file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
     if err != nil {
         return err
@@ -512,7 +513,9 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
             return err
         }
     } else {
-        linkToPost := strings.Replace(file.WebContentLink, "&export=download", "", -1)
+        linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
+        linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, file.Name)
+
         _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, linkToPost)
         if err != nil {
             return err
