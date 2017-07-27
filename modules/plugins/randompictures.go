@@ -18,15 +18,11 @@ import (
     rethink "github.com/gorethink/gorethink"
     "github.com/dustin/go-humanize"
     "github.com/Seklfreak/Robyul2/metrics"
-    "io"
-    "net/url"
-    "net/http"
-    "encoding/json"
     "encoding/base64"
-    "bytes"
-    "github.com/pkg/errors"
     "github.com/getsentry/raven-go"
     "github.com/vmihailenco/msgpack"
+    "crypto/hmac"
+    "crypto/sha256"
 )
 
 type RandomPictures struct{}
@@ -46,7 +42,7 @@ var (
 const (
     driveSearchText       string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\")"
     driveFieldsText       string = "nextPageToken, files(id, size)"
-    driveFieldsSingleText string = "id, name, size, modifiedTime, imageMediaMetadata"
+    driveFieldsSingleText string = "id, name, size, modifiedTime, imageMediaMetadata, webContentLink"
     imgurApiUploadBaseUrl string = "https://api.imgur.com/3/image"
 )
 
@@ -496,60 +492,38 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
         return err
     }
 
-    result, err := driveService.Files.Get(file.Id).Download()
-    if err != nil {
-        return err
-    }
-    defer func() {
-        helpers.Recover()
-        result.Body.Close()
-    }()
-
     camerModelText := ""
     if file.ImageMediaMetadata.CameraModel != "" {
         camerModelText = fmt.Sprintf(" 📷 `%s`", file.ImageMediaMetadata.CameraModel)
     }
 
     if messageID == "" {
+        result, err := driveService.Files.Get(file.Id).Download()
+        if err != nil {
+            return err
+        }
+        defer func() {
+            helpers.Recover()
+            result.Body.Close()
+        }()
+
         _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText), file.Name, result.Body)
         if err != nil {
             return err
         }
     } else {
-        imgurLink, err := rp.uploadToImgur(result.Body)
-        if err != nil {
-            logger.ERROR.L("randompictures", fmt.Sprintf("uploading \"%s\" failed, error: %s", file.Name, err.Error()))
-            return err
-        }
+        key := []byte(helpers.GetConfig().Path("imageproxy.signature_key").Data().(string))
+        h := hmac.New(sha256.New, key)
+        h.Write([]byte(file.WebContentLink))
+        sign := base64.URLEncoding.EncodeToString(h.Sum(nil))
 
-        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, imgurLink))
+        proxyLink := fmt.Sprintf(helpers.GetConfig().Path("imageproxy.base_url").Data().(string), "s" + sign + "/" + file.WebContentLink)
+        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, proxyLink))
         if err != nil {
             return err
         }
     }
     return nil
-}
-
-func (rp *RandomPictures) uploadToImgur(body io.ReadCloser) (string, error) {
-    buf := new(bytes.Buffer)
-    buf.ReadFrom(body)
-    parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(buf.Bytes())}}
-
-    req, err := http.NewRequest("POST", imgurApiUploadBaseUrl, strings.NewReader(parameters.Encode()))
-    helpers.Relax(err)
-    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-    req.Header.Set("Authorization", "Client-ID "+helpers.GetConfig().Path("imgur.client_id").Data().(string))
-    res, err := http.DefaultClient.Do(req)
-    helpers.Relax(err)
-
-    var imgurResponse ImgurResponse
-    json.NewDecoder(res.Body).Decode(&imgurResponse)
-    if imgurResponse.Success == false {
-        return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data.Error)))
-    } else {
-        logger.VERBOSE.L("randompictures", "uploaded a picture to imgur: "+imgurResponse.Data.Link)
-        return imgurResponse.Data.Link, nil
-    }
 }
 
 type ImgurResponse struct {
