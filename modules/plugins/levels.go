@@ -2103,40 +2103,23 @@ func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string)
     return availableBadges
 }
 
-func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User) []DB_Badge {
+func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []string) []DB_Badge {
     guildsToCheck := make([]string, 0)
     guildsToCheck = append(guildsToCheck, "global")
 
-    session := cache.GetSession()
-
-    for _, guild := range session.State.Guilds {
-        is, _ := helpers.GetIsInGuild(guild.ID, user.ID)
-        if is == true {
-            guildsToCheck = append(guildsToCheck, guild.ID)
-        }
-    }
-
-    var allBadges []DB_Badge
-    for _, guildToCheck := range guildsToCheck {
-        var entryBucket []DB_Badge
-        listCursor, err := rethink.Table("profile_badge").Filter(
-            rethink.Row.Field("guildid").Eq(guildToCheck),
-        ).Run(helpers.GetDB())
-        defer listCursor.Close()
-        if err != nil {
-            continue
-        }
-        err = listCursor.All(&entryBucket)
-        if err != nil {
-            continue
-        }
-        for _, entryBadge := range entryBucket {
-            allBadges = append(allBadges, entryBadge)
+    activeBadges := make([]DB_Badge, 0)
+    for _, activeBadgeID := range activeBadgeIDs {
+        badge := l.GetBadgeByID(activeBadgeID)
+        if badge.ID != "" {
+            is, _ := helpers.GetIsInGuild(badge.GuildID, user.ID)
+            if is == true {
+                activeBadges = append(activeBadges, badge)
+            }
         }
     }
 
     var availableBadges []DB_Badge
-    for _, foundBadge := range allBadges {
+    for _, foundBadge := range activeBadges {
         isAllowed := true
 
         // User is in allowed user list?
@@ -2289,7 +2272,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     }
 
     badgesToDisplay := make([]DB_Badge, 0)
-    availableBadges := m.GetBadgesAvailableQuick(member.User)
+    availableBadges := m.GetBadgesAvailableQuick(member.User, userData.ActiveBadgeIDs)
     for _, activeBadgeID := range userData.ActiveBadgeIDs {
         for _, availableBadge := range availableBadges {
             if activeBadgeID == availableBadge.ID {
