@@ -137,7 +137,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
             safeEntries.mux.Unlock()
         }
 
-        time.Sleep(1 * time.Minute)
+        time.Sleep(10 * time.Minute)
     }
 }
 
