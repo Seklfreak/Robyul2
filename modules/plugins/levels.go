@@ -2380,9 +2380,11 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         "--default-white-background",
         //"--quality=99",
         "--stream-type=png",
-        "--timeout=100000",
+        "--timeout=15000",
         "--p:disk-cache=true",
+        "--p:disk-cache-path="+cachePath,
     }
+    // fmt.Println(webshotBinary, strings.Join(cmdArgs, " "))
     imgCmd := exec.Command(webshotBinary, cmdArgs...)
     imgCmd.Env = levelsEnv
     imageBytes, err := imgCmd.Output()
