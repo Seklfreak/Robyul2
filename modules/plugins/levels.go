@@ -1961,8 +1961,8 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        is, err := helpers.GetFreshIsInGuild(guild.ID, user.ID)
-        if err == nil && is == true {
+        is, _ := helpers.GetFreshIsInGuild(guild.ID, user.ID)
+        if is == true {
             fmt.Println("is in guild", guild.Name)
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
@@ -2110,8 +2110,8 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User) []DB_Badge {
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        is, err := helpers.GetIsInGuild(guild.ID, user.ID)
-        if err == nil && is == true {
+        is, _ := helpers.GetIsInGuild(guild.ID, user.ID)
+        if is == true {
             guildsToCheck = append(guildsToCheck, guild.ID)
         }
     }
