@@ -507,7 +507,14 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
             result.Body.Close()
         }()
 
-        _, err = cache.GetSession().ChannelFileSendWithMessage(channelID, fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText), file.Name, result.Body)
+        _, err = cache.GetSession().ChannelMessageSendComplex(channelID,
+            &discordgo.MessageSend{
+                Content: fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText),
+                Files: []*discordgo.File{{
+                    Name: file.Name,
+                    Reader: result.Body,
+                }},
+            })
         if err != nil {
             return err
         }
