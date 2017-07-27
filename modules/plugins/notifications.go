@@ -308,6 +308,10 @@ NextKeyword:
                     logger.ERROR.L("notifications", "error getting member to notify: "+err.Error())
                     continue NextKeyword
                 }
+                if memberToNotify == nil {
+                    logger.ERROR.L("notifications", "member to notify not found")
+                    continue NextKeyword
+                }
                 messageAuthor, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
                 if err != nil {
                     logger.ERROR.L("notifications", "error getting message author: "+err.Error())
