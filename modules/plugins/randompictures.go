@@ -512,7 +512,8 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
             return err
         }
     } else {
-        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, file.WebContentLink)
+        linkToPost := strings.Replace(file.WebContentLink, "&export=download", "", -1)
+        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, linkToPost)
         if err != nil {
             return err
         }
