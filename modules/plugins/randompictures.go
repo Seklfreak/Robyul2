@@ -517,7 +517,7 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
         linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
         linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(file.Name))
 
-        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, linkToPost)
+        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
         if err != nil {
             return err
         }
