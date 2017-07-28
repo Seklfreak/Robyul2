@@ -2103,16 +2103,18 @@ func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string)
 }
 
 func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []string) []DB_Badge {
-    guildsToCheck := make([]string, 0)
-    guildsToCheck = append(guildsToCheck, "global")
 
     activeBadges := make([]DB_Badge, 0)
     for _, activeBadgeID := range activeBadgeIDs {
         badge := l.GetBadgeByID(activeBadgeID)
         if badge.ID != "" {
-            is, _ := helpers.GetIsInGuild(badge.GuildID, user.ID)
-            if is == true {
+            if badge.GuildID == "global" {
                 activeBadges = append(activeBadges, badge)
+            } else {
+                is, _ := helpers.GetIsInGuild(badge.GuildID, user.ID)
+                if is == true {
+                    activeBadges = append(activeBadges, badge)
+                }
             }
         }
     }

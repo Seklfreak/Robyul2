@@ -71,8 +71,6 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
         defer helpers.Recover()
 
         for {
-            time.Sleep(12 * time.Hour)
-
             var marshalled []byte
             redisClient := cache.GetRedisClient()
 
@@ -98,20 +96,22 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                         continue
                     }
-                    err = redisClient.Set(key, marshalled, time.Hour*24).Err()
+                    err = redisClient.Set(key, marshalled, 7*24*time.Hour).Err()
                     if err != nil {
                         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                         continue
                     }
                 }
                 key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
-                err = redisClient.Set(key, i+1, time.Hour*24).Err()
+                err = redisClient.Set(key, i+1, 7*24*time.Hour).Err()
                 if err != nil {
                     raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                     continue
                 }
                 rp.updateImagesCachedMetric()
             }
+
+            time.Sleep(12 * time.Hour)
         }
     }()
     logger.PLUGIN.L("randompictures", "Started files cache loop (12h)")
