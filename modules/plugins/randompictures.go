@@ -22,6 +22,7 @@ import (
     "github.com/vmihailenco/msgpack"
     "strconv"
     "net/url"
+    "net/http"
 )
 
 type RandomPictures struct{}
@@ -527,6 +528,21 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
     } else {
         linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
         linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(file.Name))
+
+        // open link to prepare cache
+        client := &http.Client{
+            Timeout: 3*time.Second,
+        }
+        request, err := http.NewRequest("GET", linkToPost, nil)
+        if err == nil {
+            request.Header.Set("User-Agent", helpers.DEFAULT_UA)
+            _, err = client.Do(request)
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
+        } else {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
 
         _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
         if err != nil {
