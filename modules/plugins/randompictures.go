@@ -139,17 +139,28 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                     pictureCount, err := redisClient.Get(key).Int64()
                     if err == nil {
                         for _, postToChannelID := range sourceEntry.PostToChannelIDs {
+                        RetryNewPicture:
                             chosenPicN := rand.Intn(int(pictureCount)) + 1
                             key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%d", sourceEntry.ID, chosenPicN)
                             resultBytes, err := redisClient.Get(key).Bytes()
                             if err == nil {
                                 var gPicture *drive.File
                                 msgpack.Unmarshal(resultBytes, &gPicture)
-                                go func() {
-                                    defer helpers.Recover()
-                                    err = rp.postItem(postToChannelID, "", gPicture, "", "")
-                                    helpers.Relax(err)
-                                }()
+                                defer helpers.Recover()
+                                err = rp.postItem(postToChannelID, "", gPicture, "", "")
+                                if err != nil {
+                                    if errG := err.(*googleapi.Error); errG != nil {
+                                        if strings.Contains("The download quota for this file has been exceeded", errG.Error()) {
+                                            goto RetryNewPicture
+                                        } else {
+                                            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                                            continue
+                                        }
+                                    } else {
+                                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                                        continue
+                                    }
+                                }
                             }
                         }
                     }
@@ -389,7 +400,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
         key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", matchEntry.ID, "count")
         pictureCount, err := redisClient.Get(key).Int64()
         if err == nil {
-            chosenPicN := rand.Intn(int(pictureCount))+1
+            chosenPicN := rand.Intn(int(pictureCount)) + 1
             key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%d", matchEntry.ID, chosenPicN)
             resultBytes, err := redisClient.Get(key).Bytes()
             if err == nil {
@@ -506,7 +517,7 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
             &discordgo.MessageSend{
                 Content: fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText),
                 Files: []*discordgo.File{{
-                    Name: file.Name,
+                    Name:   file.Name,
                     Reader: result.Body,
                 }},
             })
