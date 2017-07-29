@@ -25,13 +25,15 @@
         .avatar {
             background-image: url('{USER_AVATAR_URL}');
             position: absolute;
-            top: -40px;
-            left: -5px;
-            border-radius: 80px;
-            border: 4px solid #373737;
+            top: -36px;
+            left: -1px;
             width: 80px;
             height: 80px;
             background-size: contain;
+            border-radius: 80px;
+        }
+        .avatar-only {
+            box-shadow: 0 0 1px 3px {USER_DETAIL_COLOR};
         }
         #header {
             background-color: {USER_DETAIL_COLOR};
@@ -123,8 +125,8 @@
         }
         #username {
             position: absolute;
-            left: 85px;
-            width: 305px;
+            left: 90px;
+            width: 300px;
             height: 30px;
             /*font-weight: bold;*/
             font-size: 20px;
@@ -203,7 +205,11 @@
             background-image: url('{USER_BACKGROUND_URL}');
             background-repeat: no-repeat;
             background-size: 400px 300px;
-            background-position: -4px -64px;
+            background-position: 0px -60px;
+            width: 88px;
+            height: 88px;
+            top: -40px;
+            left: -5px;
         }
     </style>
 </head>
@@ -212,7 +218,7 @@
 
 <div id="container">
     <div class="avatar fake-bg"></div>
-    <div class="avatar"></div>
+    <div class="avatar avatar-only"></div>
     <div id="header">
         <div id="username">{USER_AND_NICKNAME}</div>
     </div>
