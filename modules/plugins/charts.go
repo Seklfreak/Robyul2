@@ -451,10 +451,15 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
             switch args[0] {
             case "realtime":
                 session.ChannelTyping(msg.ChannelID)
-                time, songRanks, maintenance := m.GetIChartRealtimeStats()
+                time, songRanks, maintenance, overloaded := m.GetIChartRealtimeStats()
 
                 if maintenance == true {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
+                    helpers.Relax(err)
+                    return
+                }
+                if overloaded == true {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-overloaded"))
                     helpers.Relax(err)
                     return
                 }
@@ -492,10 +497,15 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
                 helpers.Relax(err)
             case "week", "weekly":
                 session.ChannelTyping(msg.ChannelID)
-                time, songRanks, maintenance := m.GetIChartWeekStats()
+                time, songRanks, maintenance, overloaded := m.GetIChartWeekStats()
 
                 if maintenance == true {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
+                    helpers.Relax(err)
+                    return
+                }
+                if overloaded == true {
+                    _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-overloaded"))
                     helpers.Relax(err)
                     return
                 }
@@ -667,14 +677,18 @@ func (m *Charts) DoMelonRequest(url string) []byte {
     return buf.Bytes()
 }
 
-func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore, bool) {
+func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore, bool, bool) {
     doc, err := goquery.NewDocument(ichartPageRealtimeCharts)
     helpers.Relax(err)
 
     var ranks []GenericSongScore
 
     if m.IChartInMaintenance(doc) == true {
-        return "", ranks, true
+        return "", ranks, true, false
+    }
+
+    if m.IChartOverloaded(doc) == true {
+        return "", ranks, false, true
     }
 
     time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
@@ -732,7 +746,7 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore, bool) {
         }
     }
 
-    return time, ranks, false
+    return time, ranks, false, false
 }
 
 func (m *Charts) IChartInMaintenance(doc *goquery.Document) bool {
@@ -745,6 +759,14 @@ func (m *Charts) IChartInMaintenance(doc *goquery.Document) bool {
     return isMaintenance
 }
 
+func (m *Charts) IChartOverloaded(doc *goquery.Document) bool {
+    isOverloaded := false
+    if strings.Contains(doc.Text(), "사이트 이용자가 많습니다") {
+        isOverloaded = true
+    }
+    return isOverloaded
+}
+
 func (m *Charts) IChartHrefExtractMVUrl(musicVideoUrl string) string {
     if strings.Contains(musicVideoUrl, "javascript:show_youtube") {
         parts := strings.Split(musicVideoUrl, "'")
@@ -755,14 +777,18 @@ func (m *Charts) IChartHrefExtractMVUrl(musicVideoUrl string) string {
     return ""
 }
 
-func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore, bool) {
+func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore, bool, bool) {
     doc, err := goquery.NewDocument(ichartPageWeeklyCharts)
     helpers.Relax(err)
 
     var ranks []GenericSongScore
 
     if m.IChartInMaintenance(doc) == true {
-        return "", ranks, true
+        return "", ranks, true, false
+    }
+
+    if m.IChartOverloaded(doc) == true {
+        return "", ranks, false, true
     }
 
     time := strings.TrimSpace(strings.Replace(doc.Find("#content > div.ichart_score_title > div.ichart_score_title_right.minitext3").Text(), "기준", "", -1))
@@ -820,7 +846,7 @@ func (m *Charts) GetIChartWeekStats() (string, []GenericSongScore, bool) {
         }
     }
 
-    return time, ranks, false
+    return time, ranks, false, false
 }
 
 func (m *Charts) GetGaonWeekStats() (string, []GenericAlbumScore) {

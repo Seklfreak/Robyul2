@@ -616,7 +616,8 @@
       "year-gaon-embed-title": "**%s** | Gaon Yearly Charts (domestic and overseas)",
       "ichart-maintenance": "iChart is currently in maintenance mode, please try again later! <:blobshh:317044272161357824>",
       "search-melon-embed-title": "Search result",
-      "search-no-result": "I wasn't able to find anything. <:blobconfounded:317044878091747349>"
+      "search-no-result": "I wasn't able to find anything. <:blobconfounded:317044878091747349>",
+      "ichart-overloaded": "iChart is currently receiving too many requests, please try again later! <:blobshh:317044272161357824>"
     },
     "notifications": {
       "keyword-added-success": "<@%s> I will notify you about this keyword! 📝",
