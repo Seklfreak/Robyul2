@@ -36,7 +36,19 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                 helpers.Relax(err)
 
                 serverRoles, err := session.GuildRoles(channel.GuildID)
-                helpers.Relax(err)
+                if err != nil {
+                    if errD := err.(*discordgo.RESTError); errD != nil {
+                        if errD.Message.Code == 50013 {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
+                            helpers.Relax(err)
+                            return
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
 
                 roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 
@@ -113,7 +125,19 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                 helpers.Relax(err)
 
                 serverRoles, err := session.GuildRoles(channel.GuildID)
-                helpers.Relax(err)
+                if err != nil {
+                    if errD := err.(*discordgo.RESTError); errD != nil {
+                        if errD.Message.Code == 50013 {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
+                            helpers.Relax(err)
+                            return
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
 
                 roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 
@@ -170,7 +194,19 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
                 helpers.Relax(err)
 
                 serverRoles, err := session.GuildRoles(channel.GuildID)
-                helpers.Relax(err)
+                if err != nil {
+                    if errD := err.(*discordgo.RESTError); errD != nil {
+                        if errD.Message.Code == 50013 {
+                            _, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
+                            helpers.Relax(err)
+                            return
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    } else {
+                        helpers.Relax(err)
+                    }
+                }
 
                 roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 
