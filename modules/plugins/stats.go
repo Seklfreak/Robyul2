@@ -566,6 +566,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
                     i := 0
                     for _, voiceUserDuration := range resultPairs {
+                        user, err := helpers.GetUser(voiceUserDuration.Key)
+                        if err != nil {
+                            continue
+                        }
+                        if user.Bot == true {
+                            continue
+                        }
+
                         channelToplistText += fmt.Sprintf("#%d: <@%s>: %s\n",
                             i+1,
                             voiceUserDuration.Key,
