@@ -412,11 +412,15 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
             }
         }
         slice.Sort(allMembers[:], func(i, j int) bool {
-            iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
-            helpers.Relax(err)
-            jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
-            helpers.Relax(err)
-            return iMemberTime.Before(jMemberTime)
+            if allMembers[i].JoinedAt != "" && allMembers[j].JoinedAt != "" {
+                iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
+                helpers.Relax(err)
+                jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
+                helpers.Relax(err)
+                return iMemberTime.Before(jMemberTime)
+            } else {
+                return false
+            }
         })
         userNumber := -1
         for i, sortedMember := range allMembers[:] {
