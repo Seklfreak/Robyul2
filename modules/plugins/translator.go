@@ -48,6 +48,7 @@ func (t *Translator) Init(session *discordgo.Session) {
 }
 
 func (t *Translator) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+    session.ChannelTyping(msg.ChannelID)
     // Assumed format: <lang_in> <lang_out> <text>
     parts := strings.Fields(content)
 
@@ -81,7 +82,7 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
     if err != nil {
         if err, ok := err.(*googleapi.Error); ok {
             if err.Code == 400 {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[1]))
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.translator.unknown_lang"))
                 return
             }
         }

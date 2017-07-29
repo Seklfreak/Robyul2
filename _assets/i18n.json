@@ -439,7 +439,7 @@
       "unknown_command": "I don't know that command <:blobneutral:317029459720929281>\nYou can either `join` or `leave` but not `%s`"
     },
     "translator": {
-      "unknown_lang": "The language-code `%s` is invalid.\nCheck <https://cloud.google.com/translate/docs/languages> for a list of supported codes.",
+      "unknown_lang": "The language-codes are invalid.\nCheck <https://cloud.google.com/translate/docs/languages> for a list of supported codes.",
       "error": "I don't know <:blobsad:317033054931648517>",
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
