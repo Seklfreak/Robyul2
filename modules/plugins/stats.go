@@ -64,6 +64,14 @@ func (s *Stats) Init(session *discordgo.Session) {
             // get for all vc users
             for _, guild := range session.State.Guilds {
                 for _, voiceState := range guild.VoiceStates {
+                    user, err := helpers.GetUser(voiceState.UserID)
+                    if err != nil {
+                        continue
+                    }
+                    if user.Bot == true {
+                        continue
+                    }
+
                     voiceStatesCurrently = append(voiceStatesCurrently, voiceState)
                     alreadyInVoiceStatesWithTime := false
                     for _, voiceStateWithTime := range voiceStatesWithTime {
