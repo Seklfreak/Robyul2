@@ -15,7 +15,7 @@ type Notifications struct{}
 var (
     notificationSettingsCache []DB_NotificationSetting
     ignoredChannelsCache      []DB_IgnoredChannel
-    ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*"}
+    ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n"}
 )
 
 type DB_IgnoredChannel struct {
