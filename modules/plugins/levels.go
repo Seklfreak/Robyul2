@@ -2217,16 +2217,19 @@ func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
     helpers.Relax(err)
 }
 
-func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gifP bool) ([]byte, string, error) {
-    tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
-
+func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
     var levelsServersUser []DB_Levels_ServerUser
     listCursor, err := rethink.Table("levels_serverusers").Filter(
         rethink.Row.Field("userid").Eq(member.User.ID),
     ).Run(helpers.GetDB())
-    helpers.Relax(err)
+    if err != nil {
+        return "", err
+    }
     defer listCursor.Close()
     err = listCursor.All(&levelsServersUser)
+    if err != nil {
+        return "", err
+    }
 
     var levelThisServerUser DB_Levels_ServerUser
     var totalExp int64
@@ -2267,6 +2270,9 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
         avatarUrl = strings.Replace(avatarUrl, "gif", "png", -1)
         avatarUrl = strings.Replace(avatarUrl, "jpg", "png", -1)
     }
+    if web == true && avatarUrlGif != "" {
+        avatarUrl = avatarUrlGif
+    }
     if avatarUrl == "" {
         avatarUrl = "http://i.imgur.com/osAqNL6.png"
     }
@@ -2301,7 +2307,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     if err != nil {
         backgroundColor, err = colorful.Hex("#000000")
         if err != nil {
-            helpers.Relax(err)
+            return "", err
         }
     }
     backgroundColorString := fmt.Sprintf("rgba(%d, %d, %d, %s)",
@@ -2362,9 +2368,22 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", html.EscapeString(detailColorString), -1)
     tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
-    tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIRTHDAY}", userBirthdayText, -1)
 
+    if web == false { // privacy
+        tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
+        tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIRTHDAY}", userBirthdayText, -1)
+    } else {
+        tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", "", -1)
+        tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIRTHDAY}", "", -1)
+    }
+
+    return tempTemplateHtml, nil
+}
+
+func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gifP bool) ([]byte, string, error) {
+    tempTemplateHtml, err := m.GetProfileHTML(member, guild, false)
+
+    tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
     err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
     if err != nil {
         return []byte{}, "", err
@@ -2402,6 +2421,17 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     }
 
     metrics.LevelImagesGenerated.Add(1)
+
+    avatarUrl := helpers.GetAvatarUrl(member.User)
+    avatarUrlGif := ""
+    if avatarUrl != "" {
+        avatarUrl = strings.Replace(avatarUrl, "size=1024", "size=128", -1)
+        if strings.Contains(avatarUrl, "gif") {
+            avatarUrlGif = avatarUrl
+        }
+        avatarUrl = strings.Replace(avatarUrl, "gif", "png", -1)
+        avatarUrl = strings.Replace(avatarUrl, "jpg", "png", -1)
+    }
 
     if avatarUrlGif != "" && gifP == true {
         outGif := &gif.GIF{}

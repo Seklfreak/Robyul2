@@ -10,6 +10,7 @@ import (
     "net/http"
     "github.com/pkg/errors"
     "github.com/bwmarrin/discordgo"
+    "github.com/Seklfreak/Robyul2/generator"
 )
 
 type Rest_Guild struct {
@@ -69,6 +70,15 @@ func NewRestServices() []*restful.WebService {
     service.Route(service.GET("/{guild-id}/{user-id}/is").To(IsMember))
     services = append(services, service)
 
+    service = new(restful.WebService)
+    service.
+    Path("/profile").
+        Consumes(restful.MIME_JSON).
+        Produces("text/html")
+
+    service.Route(service.GET("/{user-id}/{guild-id}").To(GetProfile))
+    services = append(services, service)
+
     return services
 }
 
@@ -114,7 +124,6 @@ func FindUser(request *restful.Request, response *restful.Response) {
     }
 }
 
-
 func FindMember(request *restful.Request, response *restful.Response) {
     guildID := request.PathParameter("guild-id")
     userID := request.PathParameter("user-id")
@@ -140,7 +149,6 @@ func FindMember(request *restful.Request, response *restful.Response) {
     }
 }
 
-
 func IsMember(request *restful.Request, response *restful.Response) {
     guildID := request.PathParameter("guild-id")
     userID := request.PathParameter("user-id")
@@ -154,5 +162,49 @@ func IsMember(request *restful.Request, response *restful.Response) {
         response.WriteEntity(&Rest_Is_Member{
             IsMember: false,
         })
+    }
+}
+
+func GetProfile(request *restful.Request, response *restful.Response) {
+    userID := request.PathParameter("user-id")
+    guildID := request.PathParameter("guild-id")
+
+    if guildID == "global" {
+        user, err := helpers.GetUser(userID)
+        if err != nil || user == nil || user.ID == "" {
+            response.WriteError(http.StatusNotFound, errors.New("Profile not found."))
+            return
+        }
+
+        fakeGuild := new(discordgo.Guild)
+        fakeGuild.ID = "global"
+        fakeMember := new(discordgo.Member)
+        fakeMember.GuildID = "global"
+        fakeMember.User = user
+
+        profileHtml, err := generator.GetProfileGenerator().GetProfileHTML(fakeMember, fakeGuild, true)
+        if err != nil {
+            response.WriteError(http.StatusInternalServerError, err)
+            return
+        }
+        response.Write([]byte(profileHtml))
+    } else {
+        guild, err := helpers.GetGuild(guildID)
+        if err != nil || guild == nil || guild.ID == "" {
+            response.WriteError(http.StatusNotFound, errors.New("Profile not found."))
+            return
+        }
+        member, err := helpers.GetGuildMember(guildID, userID)
+        if err != nil || member == nil || member.User == nil || member.User.ID == "" {
+            response.WriteError(http.StatusNotFound, errors.New("Profile not found."))
+            return
+        }
+
+        profileHtml, err := generator.GetProfileGenerator().GetProfileHTML(member, guild, true)
+        if err != nil {
+            response.WriteError(http.StatusInternalServerError, err)
+            return
+        }
+        response.Write([]byte(profileHtml))
     }
 }

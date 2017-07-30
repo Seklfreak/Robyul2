@@ -11,6 +11,8 @@ import (
     "strconv"
     "strings"
     "os"
+    "github.com/Seklfreak/Robyul2/modules/plugins"
+    "github.com/Seklfreak/Robyul2/generator"
 )
 
 // Init warms the caches and initializes the plugins
@@ -61,6 +63,10 @@ func Init(session *discordgo.Session) {
             listeners,
         ))
         listeners = ""
+
+        if helpers.Typeof(*ref) == "*Levels" {
+            generator.SetProfileGenerator((*ref).(*plugins.Levels))
+        }
 
         (*ref).Init(session)
     }
