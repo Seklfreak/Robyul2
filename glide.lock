@@ -1,5 +1,5 @@
 hash: 176eec4bcc75c1f1880c6e836c54de7c5d27c59755c43ba42e8db0a35bbbe94a
-updated: 2017-07-29T23:37:18.396749403+02:00
+updated: 2017-07-30T14:52:32.582709492+02:00
 imports:
 - name: cloud.google.com/go
   version: a5913b3f7deecba45e98ff33cefbac4fd204ddd7
@@ -19,7 +19,7 @@ imports:
 - name: github.com/bradfitz/slice
   version: d9036e2120b5ddfa53f3ebccd618c4af275f47da
 - name: github.com/bwmarrin/discordgo
-  version: 7bb0965a6ff435b2587c2a4c50e3a0fedbf9325b
+  version: b4faca0f4611b683a59ef6ae334a6165174923c0
 - name: github.com/cenkalti/backoff
   version: 3db60c813733fce657c114634171689bbf1f8dee
 - name: github.com/certifi/gocertifi
@@ -36,6 +36,8 @@ imports:
   version: 259d2a102b871d17f30e3cd9881a642961a1e486
 - name: github.com/emicklei/go-restful
   version: 777bb3f19bcafe2575ffb2a3e46af92509ae9594
+  subpackages:
+  - log
 - name: github.com/getsentry/raven-go
   version: d175f85701dfbf44cb0510114c9943e665e60907
 - name: github.com/go-redis/cache
@@ -119,7 +121,7 @@ imports:
   subpackages:
   - extimage
 - name: github.com/vmihailenco/msgpack
-  version: d91c9f43689d8565046de42f51a19bb80ebb8360
+  version: 78a252b9bcb4c8b6f41c906d22c7d86fb9dfa68a
   subpackages:
   - codes
 - name: go4.org

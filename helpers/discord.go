@@ -339,7 +339,7 @@ func GetIsInGuild(guildID string, userID string) (bool, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     if err = cacheCodec.Get(key, &isInGuild); err != nil {
-        member, _ := GetFreshGuildMember(guildID, userID)
+        member, _ := GetGuildMember(guildID, userID)
         if member != nil && member.GuildID != "" {
             isInGuild = true
         }
