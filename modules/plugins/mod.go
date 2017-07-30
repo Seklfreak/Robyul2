@@ -71,36 +71,38 @@ var (
 
 func (m *Mod) Init(session *discordgo.Session) {
     invitesCache = make(map[string][]CacheInviteInformation, 0)
-    for _, guild := range session.State.Guilds {
-        invites, err := session.GuildInvites(guild.ID)
-        if err != nil {
-            logger.ERROR.L("mod", fmt.Sprintf("error getting invites from guild %s (#%s): %s",
-                guild.Name, guild.ID, err.Error()))
-            continue
-        }
-
-        cacheInvites := make([]CacheInviteInformation, 0)
-        for _, invite := range invites {
-            createdAt, err := invite.CreatedAt.Parse()
+    go func() {
+        for _, guild := range session.State.Guilds {
+            invites, err := session.GuildInvites(guild.ID)
             if err != nil {
+                logger.ERROR.L("mod", fmt.Sprintf("error getting invites from guild %s (#%s): %s",
+                    guild.Name, guild.ID, err.Error()))
                 continue
             }
-            inviterID := ""
-            if invite.Inviter != nil {
-                inviterID = invite.Inviter.ID
-            }
-            cacheInvites = append(cacheInvites, CacheInviteInformation{
-                GuildID:         invite.Guild.ID,
-                CreatedByUserID: inviterID,
-                Code:            invite.Code,
-                CreatedAt:       createdAt,
-                Uses:            invite.Uses,
-            })
-        }
 
-        invitesCache[guild.ID] = cacheInvites
-    }
-    logger.VERBOSE.L("mod", fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
+            cacheInvites := make([]CacheInviteInformation, 0)
+            for _, invite := range invites {
+                createdAt, err := invite.CreatedAt.Parse()
+                if err != nil {
+                    continue
+                }
+                inviterID := ""
+                if invite.Inviter != nil {
+                    inviterID = invite.Inviter.ID
+                }
+                cacheInvites = append(cacheInvites, CacheInviteInformation{
+                    GuildID:         invite.Guild.ID,
+                    CreatedByUserID: inviterID,
+                    Code:            invite.Code,
+                    CreatedAt:       createdAt,
+                    Uses:            invite.Uses,
+                })
+            }
+
+            invitesCache[guild.ID] = cacheInvites
+        }
+        logger.VERBOSE.L("mod", fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
+    }()
 }
 
 func (m *Mod) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
