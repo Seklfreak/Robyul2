@@ -1964,7 +1964,6 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string)
         is, _ := helpers.GetIsInGuild(guild.ID, user.ID)
         if is == true {
             guildsToCheck = append(guildsToCheck, guild.ID)
-            fmt.Println(guild.Name)
         }
     }
 
@@ -1978,8 +1977,6 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string)
         guildsToCheck = append(guildsToCheck, sourceServerID)
         helpers.GetFreshIsInGuild(sourceServerID, user.ID) // bust cache
     }
-
-    fmt.Println(guildsToCheck)
 
     var allBadges []DB_Badge
     for _, guildToCheck := range guildsToCheck {
