@@ -842,7 +842,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
                 session.ChannelTyping(msg.ChannelID)
 
-                availableBadges := m.GetBadgesAvailable(msg.Author)
+                availableBadges := m.GetBadgesAvailable(msg.Author, channel.GuildID)
 
                 if len(availableBadges) <= 0 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
@@ -1954,18 +1954,32 @@ func (l *Levels) GetBadgeByID(badgeID string) DB_Badge {
     return badgeBucket
 }
 
-func (l *Levels) GetBadgesAvailable(user *discordgo.User) []DB_Badge {
+func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string) []DB_Badge {
     guildsToCheck := make([]string, 0)
     guildsToCheck = append(guildsToCheck, "global")
 
     session := cache.GetSession()
 
     for _, guild := range session.State.Guilds {
-        is, _ := helpers.GetFreshIsInGuild(guild.ID, user.ID)
+        is, _ := helpers.GetIsInGuild(guild.ID, user.ID)
         if is == true {
             guildsToCheck = append(guildsToCheck, guild.ID)
+            fmt.Println(guild.Name)
         }
     }
+
+    sourceServerAlreadyIn := false
+    for _, guild := range guildsToCheck {
+        if guild == sourceServerID {
+            sourceServerAlreadyIn = true
+        }
+    }
+    if sourceServerAlreadyIn == false {
+        guildsToCheck = append(guildsToCheck, sourceServerID)
+        helpers.GetFreshIsInGuild(sourceServerID, user.ID) // bust cache
+    }
+
+    fmt.Println(guildsToCheck)
 
     var allBadges []DB_Badge
     for _, guildToCheck := range guildsToCheck {

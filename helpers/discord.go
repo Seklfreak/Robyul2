@@ -65,9 +65,10 @@ func MembersCacheLoop() {
                 lastAfterMemberId = members[len(members)-1].User.ID
                 for _, member := range members {
                     key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guild.ID, member.User.ID)
+                    member.GuildID = guild.ID
                     err = cacheCodec.Set(&redisCache.Item{
                         Key:        key,
-                        Object:     member,
+                        Object:     &member,
                         Expiration: time.Minute * 30,
                     })
                     if err != nil {
@@ -332,13 +333,12 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
 
 func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
     var err error
-    var targetMemberS discordgo.Member
     cacheCodec := cache.GetRedisCacheCodec()
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
 
     // try state
     targetMember, err := cache.GetSession().State.Member(guildID, userID)
-    if err != nil && targetMember.User != nil && targetMember.User.ID != "" {
+    if err != nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
         err = cacheCodec.Set(&redisCache.Item{
             Key:        key,
             Object:     targetMember,
@@ -349,18 +349,68 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
         }
         return targetMember, err
     } else {
+        var targetMemberS discordgo.Member
         // try api cache
         if err = cacheCodec.Get(key, &targetMemberS); err != nil {
             // try state cache
             key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guildID, userID)
-            if err = cacheCodec.Get(key, &targetMember); err != nil {
-                return &targetMemberS, errors.New("Member not found")
+            if err = cacheCodec.Get(key, &targetMemberS); err != nil {
+                // try api
+                targetMember, err := cache.GetSession().GuildMember(guildID, userID)
+                if err != nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
+                    err = cacheCodec.Set(&redisCache.Item{
+                        Key:        key,
+                        Object:     targetMember,
+                        Expiration: time.Minute * 30,
+                    })
+                    if err != nil {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    }
+                }
+                return targetMember, err
             } else {
+                logger.VERBOSE.L("discord", "redis "+key+" HIT")
                 return &targetMemberS, nil
             }
         } else {
             logger.VERBOSE.L("discord", "redis "+key+" HIT")
-            return &targetMemberS, err
+            return &targetMemberS, nil
+        }
+    }
+}
+
+func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member, error) {
+    var err error
+    cacheCodec := cache.GetRedisCacheCodec()
+    key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
+
+    // try state
+    targetMember, err := cache.GetSession().State.Member(guildID, userID)
+    if err != nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     targetMember,
+            Expiration: time.Minute * 30,
+        })
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
+        return targetMember, err
+    } else {
+        var targetMemberS discordgo.Member
+        // try api cache
+        if err = cacheCodec.Get(key, &targetMemberS); err != nil {
+            // try state cache
+            key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guildID, userID)
+            if err = cacheCodec.Get(key, &targetMemberS); err != nil {
+                return &targetMemberS, errors.New("Member not found")
+            } else {
+                logger.VERBOSE.L("discord", "redis "+key+" HIT")
+                return &targetMemberS, nil
+            }
+        } else {
+            logger.VERBOSE.L("discord", "redis "+key+" HIT")
+            return &targetMemberS, nil
         }
     }
 }
@@ -394,7 +444,7 @@ func GetIsInGuild(guildID string, userID string) (bool, error) {
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
 
     if err = cacheCodec.Get(key, &isInGuild); err != nil {
-        member, _ := GetGuildMember(guildID, userID)
+        member, _ := GetGuildMemberWithoutApi(guildID, userID)
         if member != nil && member.GuildID != "" {
             isInGuild = true
         }
@@ -407,8 +457,9 @@ func GetIsInGuild(guildID string, userID string) (bool, error) {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
         logger.VERBOSE.L("discord", "redis "+key+" MISS")
+    } else {
+        logger.VERBOSE.L("discord", "redis "+key+" HIT")
     }
-    logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return isInGuild, err
 }
 
