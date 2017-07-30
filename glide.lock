@@ -1,5 +1,5 @@
-hash: d8d4ba8e81993c5628dccae3fedd02ff4f180891a0ef88e44b99ee1ceae0c98e
-updated: 2017-07-25T20:38:31.402509441+02:00
+hash: 176eec4bcc75c1f1880c6e836c54de7c5d27c59755c43ba42e8db0a35bbbe94a
+updated: 2017-07-29T23:37:18.396749403+02:00
 imports:
 - name: cloud.google.com/go
   version: a5913b3f7deecba45e98ff33cefbac4fd204ddd7
@@ -34,6 +34,8 @@ imports:
   version: 80ec33c6152a53edb5545864ca37567b506c4ca5
 - name: github.com/dustin/go-humanize
   version: 259d2a102b871d17f30e3cd9881a642961a1e486
+- name: github.com/emicklei/go-restful
+  version: 777bb3f19bcafe2575ffb2a3e46af92509ae9594
 - name: github.com/getsentry/raven-go
   version: d175f85701dfbf44cb0510114c9943e665e60907
 - name: github.com/go-redis/cache

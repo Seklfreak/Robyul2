@@ -14,6 +14,9 @@ import (
     "time"
     "github.com/go-redis/redis"
     "github.com/Seklfreak/Robyul2/cache"
+    "github.com/emicklei/go-restful"
+    "net/http"
+    "log"
 )
 
 // Entrypoint
@@ -108,6 +111,13 @@ func main() {
         raven.CaptureErrorAndWait(err, nil)
         panic(err)
     }
+
+    // Open REST API
+    for _, service := range NewRestServices() {
+        restful.Add(service)
+    }
+    log.Fatal(http.ListenAndServe("localhost:2021", nil))
+    Logger.BOOT.L("launcher", "REST API listening on localhost:2021")
 
     // Make a channel that waits for a os signal
     channel := make(chan os.Signal, 1)
