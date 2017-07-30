@@ -37,6 +37,9 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
     // Run async game-changer
     go changeGameInterval(session)
 
+    // Run members cacher
+    go helpers.MembersCacheLoop()
+
     // Run auto-leaver for non-beta guilds
     //go autoLeaver(session)
 

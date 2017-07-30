@@ -36,6 +36,54 @@ var Blacklisted = []string{
 var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
 var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
 
+func MembersCacheLoop() {
+    defer func() {
+        Recover()
+
+        logger.ERROR.L("VLive", "The MembersCacheLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        MembersCacheLoop()
+    }()
+
+    for {
+        logger.VERBOSE.L("discord", "started members caching for redis")
+        cacheCodec := cache.GetRedisCacheCodec()
+        lastAfterMemberId := ""
+        key := ""
+        i := 0
+        for _, guild := range cache.GetSession().State.Guilds {
+            lastAfterMemberId = ""
+            for {
+                members, err := cache.GetSession().GuildMembers(guild.ID, lastAfterMemberId, 1000)
+                if err != nil {
+                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    continue
+                }
+                if len(members) <= 0 {
+                    break
+                }
+                lastAfterMemberId = members[len(members)-1].User.ID
+                for _, member := range members {
+                    key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guild.ID, member.User.ID)
+                    err = cacheCodec.Set(&redisCache.Item{
+                        Key:        key,
+                        Object:     member,
+                        Expiration: time.Minute * 30,
+                    })
+                    if err != nil {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    } else {
+                        i += 1
+                    }
+                }
+            }
+        }
+        logger.VERBOSE.L("discord", fmt.Sprintf("cached %d members in redis", i))
+
+        time.Sleep(15*time.Minute)
+    }
+}
+
 func IsBlacklisted(id string) bool {
     for _, s := range Blacklisted {
         if s == id {
@@ -284,30 +332,37 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
 
 func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
     var err error
-    var targetMember discordgo.Member
+    var targetMemberS discordgo.Member
     cacheCodec := cache.GetRedisCacheCodec()
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
 
-    if err = cacheCodec.Get(key, &targetMember); err != nil {
-        targetMember, err := cache.GetSession().State.Member(guildID, userID)
-        if targetMember == nil || targetMember.GuildID == "" {
-            targetMember, err = cache.GetSession().GuildMember(guildID, userID)
+    // try state
+    targetMember, err := cache.GetSession().State.Member(guildID, userID)
+    if err != nil && targetMember.User != nil && targetMember.User.ID != "" {
+        err = cacheCodec.Set(&redisCache.Item{
+            Key:        key,
+            Object:     targetMember,
+            Expiration: time.Minute * 30,
+        })
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
-        if err == nil {
-            err = cacheCodec.Set(&redisCache.Item{
-                Key:        key,
-                Object:     targetMember,
-                Expiration: time.Minute * 30,
-            })
-            if err != nil {
-                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-            }
-        }
-        logger.VERBOSE.L("discord", "redis "+key+" MISS")
         return targetMember, err
+    } else {
+        // try api cache
+        if err = cacheCodec.Get(key, &targetMemberS); err != nil {
+            // try state cache
+            key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guildID, userID)
+            if err = cacheCodec.Get(key, &targetMember); err != nil {
+                return &targetMemberS, errors.New("Member not found")
+            } else {
+                return &targetMemberS, nil
+            }
+        } else {
+            logger.VERBOSE.L("discord", "redis "+key+" HIT")
+            return &targetMemberS, err
+        }
     }
-    logger.VERBOSE.L("discord", "redis "+key+" HIT")
-    return &targetMember, err
 }
 
 func GetFreshIsInGuild(guildID string, userID string) (bool, error) {
