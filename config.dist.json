@@ -70,5 +70,8 @@
   },
   "imageproxy": {
     "base_url": ""
+  },
+  "website": {
+    "ranking_base_url": "https://robyul.chat/ranking"
   }
 }

@@ -692,7 +692,8 @@
       "profile-timezone-list": "You can view a list of all valid timezone names here: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List> (Column: TZ).",
       "profile-timezone-set-success": "I set your timezone to %s, it is currently `%s` in that timezone. <:blobokhand:317032017164238848>",
       "profile-birthday-set-error-format": "Please specify your birthday in the following format: `MM/DD`. <:blobthumbsup:317043177028714497>",
-      "profile-birthday-set-success": "I saved your birthday. <:blobparty:339073870097154048>"
+      "profile-birthday-set-success": "I saved your birthday. <:blobparty:339073870097154048>",
+      "ranking-text": "You can check out the leaderboard here: <%s>! <:blobhighfive:317043673047236609>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

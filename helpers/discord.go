@@ -51,7 +51,8 @@ func MembersCacheLoop() {
         cacheCodec := cache.GetRedisCacheCodec()
         lastAfterMemberId := ""
         key := ""
-        i := 0
+        userI := 0
+        membersI := 0
         userToCache := make(map[string]*discordgo.User)
         for _, guild := range cache.GetSession().State.Guilds {
             lastAfterMemberId = ""
@@ -73,7 +74,11 @@ func MembersCacheLoop() {
                         Object:     &member,
                         Expiration: time.Minute * 45,
                     })
-                    // TODO: save them at the end, don't save every user x times
+                    if err != nil {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    } else {
+                        membersI += 1
+                    }
 
                     userToCache[member.User.ID] = member.User
                 }
@@ -90,11 +95,11 @@ func MembersCacheLoop() {
             if err != nil {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             } else {
-                i += 1
+                userI += 1
             }
         }
 
-        logger.VERBOSE.L("discord", fmt.Sprintf("cached %d members in redis", i))
+        logger.VERBOSE.L("discord", fmt.Sprintf("cached %d members and %d users in redis", membersI, userI))
 
         time.Sleep(10 * time.Minute)
     }

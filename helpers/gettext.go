@@ -32,7 +32,7 @@ func GetText(id string) string {
     }
 
     // If this is an array return a random item
-    if strings.Contains(item.String(), "[") {
+    if strings.Contains(item.String(), "[") && !strings.Contains(item.String(), "]") {
         arr := item.Data().([]interface{})
         return arr[rand.Intn(len(arr))].(string)
     }

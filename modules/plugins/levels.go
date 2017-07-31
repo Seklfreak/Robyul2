@@ -78,6 +78,10 @@ func (m *Levels) Commands() []string {
         "profile",
         "rep",
         "gif-profile",
+        "leaderboard",
+        "leaderboards",
+        "ranking",
+        "rankings",
     }
 }
 
@@ -1246,8 +1250,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 topLevelEmbed := &discordgo.MessageEmbed{
                     Color: 0x0FADED,
                     Title: helpers.GetText("plugins.levels.top-server-embed-title"),
-                    //Description: "",
-                    //Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
+                    Description: "View the leaderboard for this server [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID + ").",
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
+                        len(session.State.Guilds),
+                    )},
                     Fields: []*discordgo.MessageEmbedField{},
                 }
 
@@ -1305,8 +1311,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 globalTopLevelEmbed := &discordgo.MessageEmbed{
                     Color: 0x0FADED,
                     Title: helpers.GetText("plugins.levels.global-top-server-embed-title"),
-                    //Description: "",
-                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
+                    Description: "View the global leaderboard [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string)+ ").",
+                    Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
+                        len(session.State.Guilds),
+                    )},
                     Fields: []*discordgo.MessageEmbedField{},
                 }
 
@@ -1644,8 +1652,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         userLevelEmbed := &discordgo.MessageEmbed{
             Color: 0x0FADED,
             Title: helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
-            //Description: "",
-            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer", len(session.State.Guilds))},
+            Description: "View the leaderboard for this server [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID + ").",
+            Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
+                len(session.State.Guilds),
+            )},
             Fields: []*discordgo.MessageEmbedField{
                 {
                     Name:   "Level",
@@ -1681,6 +1691,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         }
 
         _, err = session.ChannelMessageSendEmbed(msg.ChannelID, userLevelEmbed)
+        helpers.Relax(err)
+        return
+    case "leaderboard", "leaderboards", "ranking", "rankings":
+        channel, err := helpers.GetChannel(msg.ChannelID)
+        helpers.Relax(err)
+
+        link := helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID
+
+        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.ranking-text", link))
         helpers.Relax(err)
         return
     }
