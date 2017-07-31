@@ -69,7 +69,7 @@ func MembersCacheLoop() {
                     err = cacheCodec.Set(&redisCache.Item{
                         Key:        key,
                         Object:     &member,
-                        Expiration: time.Minute * 30,
+                        Expiration: time.Minute * 45,
                     })
                     if err != nil {
                         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
