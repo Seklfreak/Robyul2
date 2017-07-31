@@ -71,11 +71,12 @@ func MembersCacheLoop() {
                         Object:     &member,
                         Expiration: time.Minute * 45,
                     })
-                    key = fmt.Sprintf("robyul2-discord:state:user:%s", member.User.ID)
+                    // TODO: save them at the end, don't save every user x times
+                    key = fmt.Sprintf("robyul2-discord:api:user:%s", member.User.ID)
                     err = cacheCodec.Set(&redisCache.Item{
                         Key:        key,
                         Object:     &member.User,
-                        Expiration: time.Minute * 45,
+                        Expiration: time.Minute * 10,
                     })
                     if err != nil {
                         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -87,7 +88,7 @@ func MembersCacheLoop() {
         }
         logger.VERBOSE.L("discord", fmt.Sprintf("cached %d members in redis", i))
 
-        time.Sleep(15*time.Minute)
+        time.Sleep(10 * time.Minute)
     }
 }
 
@@ -623,24 +624,19 @@ func GetUser(userID string) (*discordgo.User, error) {
     key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
 
     if err = cacheCodec.Get(key, &targetUser); err != nil {
-        key = fmt.Sprintf("robyul2-discord:state:user:%s", userID)
-        if err = cacheCodec.Get(key, &targetUser); err != nil {
-            targetUser, err := cache.GetSession().User(userID)
-            if err == nil {
-                err = cacheCodec.Set(&redisCache.Item{
-                    Key:        key,
-                    Object:     targetUser,
-                    Expiration: time.Minute * 10,
-                })
-                if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                }
+        targetUser, err := cache.GetSession().User(userID)
+        if err == nil {
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     targetUser,
+                Expiration: time.Minute * 10,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
-            logger.VERBOSE.L("discord", "redis "+key+" MISS")
-            return targetUser, err
         }
-        logger.VERBOSE.L("discord", "redis "+key+" HIT")
-        return &targetUser, err
+        logger.VERBOSE.L("discord", "redis "+key+" MISS")
+        return targetUser, err
     }
     logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetUser, err

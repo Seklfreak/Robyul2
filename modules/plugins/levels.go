@@ -294,7 +294,7 @@ func (m *Levels) cacheTopLoop() {
         }
         logger.VERBOSE.L("levels", "cached rankings in redis")
 
-        time.Sleep(30 * time.Minute)
+        time.Sleep(10 * time.Minute)
     }
 }
 
