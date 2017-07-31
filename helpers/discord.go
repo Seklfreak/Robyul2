@@ -46,11 +46,13 @@ func MembersCacheLoop() {
     }()
 
     for {
+        var err error
         logger.VERBOSE.L("discord", "started members caching for redis")
         cacheCodec := cache.GetRedisCacheCodec()
         lastAfterMemberId := ""
         key := ""
         i := 0
+        userToCache := make(map[string]*discordgo.User)
         for _, guild := range cache.GetSession().State.Guilds {
             lastAfterMemberId = ""
             for {
@@ -72,20 +74,26 @@ func MembersCacheLoop() {
                         Expiration: time.Minute * 45,
                     })
                     // TODO: save them at the end, don't save every user x times
-                    key = fmt.Sprintf("robyul2-discord:api:user:%s", member.User.ID)
-                    err = cacheCodec.Set(&redisCache.Item{
-                        Key:        key,
-                        Object:     &member.User,
-                        Expiration: time.Minute * 10,
-                    })
-                    if err != nil {
-                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                    } else {
-                        i += 1
-                    }
+
+                    userToCache[member.User.ID] = member.User
                 }
             }
         }
+
+        for _, user := range userToCache {
+            key = fmt.Sprintf("robyul2-discord:api:user:%s", user.ID)
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     &user,
+                Expiration: time.Minute * 10,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            } else {
+                i += 1
+            }
+        }
+
         logger.VERBOSE.L("discord", fmt.Sprintf("cached %d members in redis", i))
 
         time.Sleep(10 * time.Minute)

@@ -262,6 +262,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
     result := new(Rest_Ranking)
     result.Ranks = make([]Rest_Ranking_Rank_Item, 0)
 
+    // TODO: i stuff
     i := 1
     var keyByRank string
     var rankingItem plugins.Levels_Cache_Ranking_Item
@@ -274,20 +275,23 @@ func GetRankings(request *restful.Request, response *restful.Response) {
         if err = cacheCodec.Get(keyByRank, &rankingItem); err != nil {
             break
         }
-        userItem = Rest_User{
-            ID:            rankingItem.User.ID,
-            Username:      rankingItem.User.Username,
-            AvatarHash:    rankingItem.User.Avatar,
-            Discriminator: rankingItem.User.Discriminator,
-            Bot:           rankingItem.User.Bot,
-        }
+        user, _ := helpers.GetUser(rankingItem.UserID)
+        if user != nil && user.ID != "" {
+            userItem = Rest_User{
+                ID:            user.ID,
+                Username:      user.Username,
+                AvatarHash:    user.Avatar,
+                Discriminator: user.Discriminator,
+                Bot:           user.Bot,
+            }
 
-        result.Ranks = append(result.Ranks, Rest_Ranking_Rank_Item{
-            User:    userItem,
-            EXP:     rankingItem.EXP,
-            Level:   rankingItem.Level,
-            Ranking: i,
-        })
+            result.Ranks = append(result.Ranks, Rest_Ranking_Rank_Item{
+                User:    userItem,
+                EXP:     rankingItem.EXP,
+                Level:   rankingItem.Level,
+                Ranking: i,
+            })
+        }
         i += 1
         if i > 100 {
             break

@@ -132,7 +132,7 @@ type Cache_Levels_top struct {
 }
 
 type Levels_Cache_Ranking_Item struct {
-    User    *discordgo.User
+    UserID  string
     EXP     int64
     Level   int
     Ranking int
@@ -236,40 +236,36 @@ func (m *Levels) cacheTopLoop() {
         var keyByRank string
         var keyByUser string
         var rankData Levels_Cache_Ranking_Item
-        var rankUser *discordgo.User
         cacheCodec := cache.GetRedisCacheCodec()
         for _, guildCache := range newTopCache {
             i := 0
             for _, level := range guildCache.Levels {
                 if level.Value > 0 {
-                    rankUser, _ = helpers.GetUser(level.Key)
-                    if rankUser != nil && rankUser.ID != "" {
-                        i += 1
-                        keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:%d", guildCache.GuildID, i)
-                        keyByUser = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildCache.GuildID, level.Key)
-                        rankData = Levels_Cache_Ranking_Item{
-                            User:    rankUser,
-                            EXP:     level.Value,
-                            Level:   m.getLevelFromExp(level.Value),
-                            Ranking: i,
-                        }
+                    i += 1
+                    keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:%d", guildCache.GuildID, i)
+                    keyByUser = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildCache.GuildID, level.Key)
+                    rankData = Levels_Cache_Ranking_Item{
+                        UserID:  level.Key,
+                        EXP:     level.Value,
+                        Level:   m.getLevelFromExp(level.Value),
+                        Ranking: i,
+                    }
 
-                        err = cacheCodec.Set(&redisCache.Item{
-                            Key:        keyByRank,
-                            Object:     &rankData,
-                            Expiration: 90 * time.Minute,
-                        })
-                        if err != nil {
-                            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                        }
-                        err = cacheCodec.Set(&redisCache.Item{
-                            Key:        keyByUser,
-                            Object:     &rankData,
-                            Expiration: 90 * time.Minute,
-                        })
-                        if err != nil {
-                            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                        }
+                    err = cacheCodec.Set(&redisCache.Item{
+                        Key:        keyByRank,
+                        Object:     &rankData,
+                        Expiration: 90 * time.Minute,
+                    })
+                    if err != nil {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    }
+                    err = cacheCodec.Set(&redisCache.Item{
+                        Key:        keyByUser,
+                        Object:     &rankData,
+                        Expiration: 90 * time.Minute,
+                    })
+                    if err != nil {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                     }
                 }
             }
