@@ -37,6 +37,7 @@ import (
     "github.com/andybons/gogif"
     "image/gif"
     "html"
+    redisCache "github.com/go-redis/cache"
 )
 
 type Levels struct {
@@ -128,6 +129,13 @@ type DB_Badge struct {
 type Cache_Levels_top struct {
     GuildID string
     Levels  PairList
+}
+
+type Levels_Cache_Ranking_Item struct {
+    User    *discordgo.User
+    EXP     int64
+    Level   int
+    Ranking int
 }
 
 var (
@@ -224,6 +232,67 @@ func (m *Levels) cacheTopLoop() {
         })
 
         topCache = newTopCache
+
+        var keyByRank string
+        var keyByUser string
+        var rankData Levels_Cache_Ranking_Item
+        var rankUser *discordgo.User
+        cacheCodec := cache.GetRedisCacheCodec()
+        for _, guildCache := range newTopCache {
+            i := 0
+            for _, level := range guildCache.Levels {
+                if level.Value > 0 {
+                    rankUser, _ = helpers.GetUser(level.Key)
+                    if rankUser != nil && rankUser.ID != "" {
+                        i += 1
+                        keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:%d", guildCache.GuildID, i)
+                        keyByUser = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildCache.GuildID, level.Key)
+                        rankData = Levels_Cache_Ranking_Item{
+                            User:    rankUser,
+                            EXP:     level.Value,
+                            Level:   m.getLevelFromExp(level.Value),
+                            Ranking: i,
+                        }
+
+                        err = cacheCodec.Set(&redisCache.Item{
+                            Key:        keyByRank,
+                            Object:     &rankData,
+                            Expiration: 90 * time.Minute,
+                        })
+                        if err != nil {
+                            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                        }
+                        err = cacheCodec.Set(&redisCache.Item{
+                            Key:        keyByUser,
+                            Object:     &rankData,
+                            Expiration: 90 * time.Minute,
+                        })
+                        if err != nil {
+                            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                        }
+                    }
+                }
+            }
+            keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:count", guildCache.GuildID)
+            keyByUser = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:count", guildCache.GuildID)
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        keyByRank,
+                Object:     i,
+                Expiration: 90 * time.Minute,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        keyByUser,
+                Object:     i,
+                Expiration: 90 * time.Minute,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
+        }
+        logger.VERBOSE.L("levels", "cached rankings in redis")
 
         time.Sleep(30 * time.Minute)
     }

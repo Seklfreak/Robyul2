@@ -11,33 +11,45 @@ import (
     "github.com/pkg/errors"
     "github.com/bwmarrin/discordgo"
     "github.com/Seklfreak/Robyul2/generator"
+    "github.com/Seklfreak/Robyul2/modules/plugins"
 )
 
 type Rest_Guild struct {
-    ID string
-    Name string
-    Icon string
-    OwnerID string
+    ID       string
+    Name     string
+    Icon     string
+    OwnerID  string
     JoinedAt time.Time
 }
 
 type Rest_User struct {
-    ID string
-    Username string
-    AvatarHash string
+    ID            string
+    Username      string
+    AvatarHash    string
     Discriminator string
-    Bot bool
+    Bot           bool
 }
 
 type Rest_Member struct {
-    GuildID string
+    GuildID  string
     JoinedAt time.Time
-    Nick string
-    Roles []string
+    Nick     string
+    Roles    []string
 }
 
 type Rest_Is_Member struct {
     IsMember bool
+}
+
+type Rest_Ranking struct {
+    Ranks []Rest_Ranking_Rank_Item
+}
+
+type Rest_Ranking_Rank_Item struct {
+    User    Rest_User
+    EXP     int64
+    Level   int
+    Ranking int
 }
 
 func NewRestServices() []*restful.WebService {
@@ -79,6 +91,23 @@ func NewRestServices() []*restful.WebService {
     service.Route(service.GET("/{user-id}/{guild-id}").To(GetProfile))
     services = append(services, service)
 
+    service = new(restful.WebService)
+    service.
+    Path("/rankings").
+        Consumes(restful.MIME_JSON).
+        Produces(restful.MIME_JSON)
+
+    service.Route(service.GET("/{guild-id}").To(GetRankings))
+    services = append(services, service)
+
+    service = new(restful.WebService)
+    service.
+    Path("/guild").
+        Consumes(restful.MIME_JSON).
+        Produces(restful.MIME_JSON)
+
+    service.Route(service.GET("/{guild-id}").To(FindGuild))
+    services = append(services, service)
     return services
 }
 
@@ -94,10 +123,10 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
         }
 
         returnGuilds = append(returnGuilds, Rest_Guild{
-            ID: guild.ID,
-            Name: guild.Name,
-            Icon: guild.Icon,
-            OwnerID: guild.OwnerID,
+            ID:       guild.ID,
+            Name:     guild.Name,
+            Icon:     guild.Icon,
+            OwnerID:  guild.OwnerID,
             JoinedAt: joinedAt,
         })
     }
@@ -111,11 +140,11 @@ func FindUser(request *restful.Request, response *restful.Response) {
     user, _ := helpers.GetUser(userID)
     if user != nil && user.ID != "" {
         returnUser := &Rest_User{
-            ID: user.ID,
-            Username: user.Username,
-            AvatarHash: user.Avatar,
+            ID:            user.ID,
+            Username:      user.Username,
+            AvatarHash:    user.Avatar,
             Discriminator: user.Discriminator,
-            Bot: user.Bot,
+            Bot:           user.Bot,
         }
 
         response.WriteEntity(returnUser)
@@ -137,10 +166,10 @@ func FindMember(request *restful.Request, response *restful.Response) {
         }
 
         returnUser := &Rest_Member{
-            GuildID: member.GuildID,
+            GuildID:  member.GuildID,
             JoinedAt: joinedAt,
-            Nick: member.Nick,
-            Roles: member.Roles,
+            Nick:     member.Nick,
+            Roles:    member.Roles,
         }
 
         response.WriteEntity(returnUser)
@@ -208,3 +237,88 @@ func GetProfile(request *restful.Request, response *restful.Response) {
         response.Write([]byte(profileHtml))
     }
 }
+
+func GetRankings(request *restful.Request, response *restful.Response) {
+    guildID := request.PathParameter("guild-id")
+
+    if guildID != "global" {
+        guild, err := helpers.GetGuild(guildID)
+        if err != nil || guild == nil || guild.ID == "" {
+            response.WriteError(http.StatusNotFound, errors.New("Guild not found"))
+            return
+        }
+    }
+
+    var err error
+    var rankingsCount int
+    rankingsCountKey := fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:count", guildID)
+    cacheCodec := cache.GetRedisCacheCodec()
+
+    if err = cacheCodec.Get(rankingsCountKey, &rankingsCount); err != nil {
+        response.WriteError(http.StatusInternalServerError, err)
+        return
+    }
+
+    result := new(Rest_Ranking)
+    result.Ranks = make([]Rest_Ranking_Rank_Item, 0)
+
+    i := 1
+    var keyByRank string
+    var rankingItem plugins.Levels_Cache_Ranking_Item
+    var userItem Rest_User
+    for {
+        if i > rankingsCount {
+            break
+        }
+        keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:%d", guildID, i)
+        if err = cacheCodec.Get(keyByRank, &rankingItem); err != nil {
+            break
+        }
+        userItem = Rest_User{
+            ID:            rankingItem.User.ID,
+            Username:      rankingItem.User.Username,
+            AvatarHash:    rankingItem.User.Avatar,
+            Discriminator: rankingItem.User.Discriminator,
+            Bot:           rankingItem.User.Bot,
+        }
+
+        result.Ranks = append(result.Ranks, Rest_Ranking_Rank_Item{
+            User:    userItem,
+            EXP:     rankingItem.EXP,
+            Level:   rankingItem.Level,
+            Ranking: i,
+        })
+        i += 1
+        if i > 100 {
+            break
+        }
+    }
+
+    response.WriteEntity(result)
+}
+
+func FindGuild(request *restful.Request, response *restful.Response) {
+    guildID := request.PathParameter("guild-id")
+
+    guild, _ := helpers.GetGuild(guildID)
+    if guild != nil && guild.ID != "" {
+        joinedAt, err := guild.JoinedAt.Parse()
+        if err != nil {
+            joinedAt = time.Now()
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
+
+        returnGuild := &Rest_Guild{
+            ID:       guild.ID,
+            Name:     guild.Name,
+            Icon:     guild.Icon,
+            OwnerID:  guild.OwnerID,
+            JoinedAt: joinedAt,
+        }
+
+        response.WriteEntity(returnGuild)
+    } else {
+        response.WriteError(http.StatusNotFound, errors.New("Guild not found."))
+    }
+}
+
