@@ -71,6 +71,12 @@ func MembersCacheLoop() {
                         Object:     &member,
                         Expiration: time.Minute * 45,
                     })
+                    key = fmt.Sprintf("robyul2-discord:state:user:%s", member.User.ID)
+                    err = cacheCodec.Set(&redisCache.Item{
+                        Key:        key,
+                        Object:     &member.User,
+                        Expiration: time.Minute * 45,
+                    })
                     if err != nil {
                         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                     } else {
@@ -617,19 +623,24 @@ func GetUser(userID string) (*discordgo.User, error) {
     key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
 
     if err = cacheCodec.Get(key, &targetUser); err != nil {
-        targetUser, err := cache.GetSession().User(userID)
-        if err == nil {
-            err = cacheCodec.Set(&redisCache.Item{
-                Key:        key,
-                Object:     targetUser,
-                Expiration: time.Minute * 10,
-            })
-            if err != nil {
-                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        key = fmt.Sprintf("robyul2-discord:state:user:%s", userID)
+        if err = cacheCodec.Get(key, &targetUser); err != nil {
+            targetUser, err := cache.GetSession().User(userID)
+            if err == nil {
+                err = cacheCodec.Set(&redisCache.Item{
+                    Key:        key,
+                    Object:     targetUser,
+                    Expiration: time.Minute * 10,
+                })
+                if err != nil {
+                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                }
             }
+            logger.VERBOSE.L("discord", "redis "+key+" MISS")
+            return targetUser, err
         }
-        logger.VERBOSE.L("discord", "redis "+key+" MISS")
-        return targetUser, err
+        logger.VERBOSE.L("discord", "redis "+key+" HIT")
+        return &targetUser, err
     }
     logger.VERBOSE.L("discord", "redis "+key+" HIT")
     return &targetUser, err
