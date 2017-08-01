@@ -38,6 +38,7 @@ import (
     "image/gif"
     "html"
     redisCache "github.com/go-redis/cache"
+    "github.com/Seklfreak/Robyul2/models"
 )
 
 type Levels struct {
@@ -176,6 +177,67 @@ func (m *Levels) Init(session *discordgo.Session) {
     logger.PLUGIN.L("levels", "Started processCacheTopLoop")
 
     activeBadgePickerUserIDs = make(map[string]string, 0)
+
+    go m.setServerFeaturesLoop()
+}
+
+func (l *Levels) setServerFeaturesLoop() {
+    defer func() {
+        helpers.Recover()
+
+        logger.ERROR.L("levels", "The setServerFeaturesLooü died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        l.setServerFeaturesLoop()
+    }()
+
+    var badgesBucket []DB_Badge
+    var badgesOnServer []DB_Badge
+    var listCursor *rethink.Cursor
+    var err error
+    var feature models.Rest_Feature_Levels_Badges
+    var key string
+    cacheCodec := cache.GetRedisCacheCodec()
+    for {
+        listCursor, err = rethink.Table("profile_badge").Run(helpers.GetDB())
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            time.Sleep(60 * time.Second)
+            continue
+        }
+        defer listCursor.Close()
+        err = listCursor.All(&badgesBucket)
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            time.Sleep(60 * time.Second)
+            continue
+        }
+
+        for _, guild := range cache.GetSession().State.Guilds {
+            badgesOnServer = make([]DB_Badge, 0)
+            for _, badge := range badgesBucket {
+                if badge.GuildID == guild.ID {
+                    badgesOnServer = append(badgesOnServer, badge)
+                }
+            }
+
+            key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+            feature = models.Rest_Feature_Levels_Badges{
+                Count: len(badgesOnServer),
+            }
+
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     feature,
+                Expiration: time.Minute * 60,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
+
+        }
+
+        time.Sleep(30 * time.Minute)
+    }
 }
 
 func (m *Levels) cacheTopLoop() {

@@ -17,6 +17,7 @@ import (
     "github.com/emicklei/go-restful"
     "net/http"
     "log"
+    "github.com/Seklfreak/Robyul2/rest"
 )
 
 // Entrypoint
@@ -113,7 +114,7 @@ func main() {
     }
 
     // Open REST API
-    for _, service := range NewRestServices() {
+    for _, service := range rest.NewRestServices() {
         restful.Add(service)
     }
     log.Fatal(http.ListenAndServe("localhost:2021", nil))

@@ -1,4 +1,4 @@
-package main
+package rest
 
 import (
     "github.com/emicklei/go-restful"
@@ -12,45 +12,8 @@ import (
     "github.com/bwmarrin/discordgo"
     "github.com/Seklfreak/Robyul2/generator"
     "github.com/Seklfreak/Robyul2/modules/plugins"
+    "github.com/Seklfreak/Robyul2/models"
 )
-
-type Rest_Guild struct {
-    ID       string
-    Name     string
-    Icon     string
-    OwnerID  string
-    JoinedAt time.Time
-}
-
-type Rest_User struct {
-    ID            string
-    Username      string
-    AvatarHash    string
-    Discriminator string
-    Bot           bool
-}
-
-type Rest_Member struct {
-    GuildID  string
-    JoinedAt time.Time
-    Nick     string
-    Roles    []string
-}
-
-type Rest_Is_Member struct {
-    IsMember bool
-}
-
-type Rest_Ranking struct {
-    Ranks []Rest_Ranking_Rank_Item
-}
-
-type Rest_Ranking_Rank_Item struct {
-    User    Rest_User
-    EXP     int64
-    Level   int
-    Ranking int
-}
 
 func NewRestServices() []*restful.WebService {
     services := make([]*restful.WebService, 0)
@@ -113,21 +76,42 @@ func NewRestServices() []*restful.WebService {
 
 func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
     allGuilds := cache.GetSession().State.Guilds
+    cacheCodec := cache.GetRedisCacheCodec()
+    var key string
+    var featureLevels_Badges models.Rest_Feature_Levels_Badges
+    var featureRandomPictures models.Rest_Feature_RandomPictures
 
-    returnGuilds := make([]Rest_Guild, 0)
+    returnGuilds := make([]models.Rest_Guild, 0)
     for _, guild := range allGuilds {
         joinedAt, err := guild.JoinedAt.Parse()
         if err != nil {
             joinedAt = time.Now()
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
+        key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+        if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
+            featureLevels_Badges = models.Rest_Feature_Levels_Badges{
+                Count: 0,
+            }
+        }
 
-        returnGuilds = append(returnGuilds, Rest_Guild{
+        key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+        if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
+            featureRandomPictures = models.Rest_Feature_RandomPictures{
+                Count: 0,
+            }
+        }
+
+        returnGuilds = append(returnGuilds, models.Rest_Guild{
             ID:       guild.ID,
             Name:     guild.Name,
             Icon:     guild.Icon,
             OwnerID:  guild.OwnerID,
             JoinedAt: joinedAt,
+            Features: models.Rest_Guild_Features{
+                Levels_Badges:  featureLevels_Badges,
+                RandomPictures: featureRandomPictures,
+            },
         })
     }
 
@@ -139,7 +123,7 @@ func FindUser(request *restful.Request, response *restful.Response) {
 
     user, _ := helpers.GetUser(userID)
     if user != nil && user.ID != "" {
-        returnUser := &Rest_User{
+        returnUser := &models.Rest_User{
             ID:            user.ID,
             Username:      user.Username,
             AvatarHash:    user.Avatar,
@@ -165,7 +149,7 @@ func FindMember(request *restful.Request, response *restful.Response) {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
 
-        returnUser := &Rest_Member{
+        returnUser := &models.Rest_Member{
             GuildID:  member.GuildID,
             JoinedAt: joinedAt,
             Nick:     member.Nick,
@@ -184,11 +168,11 @@ func IsMember(request *restful.Request, response *restful.Response) {
 
     isInGuild, _ := helpers.GetIsInGuild(guildID, userID)
     if isInGuild == true {
-        response.WriteEntity(&Rest_Is_Member{
+        response.WriteEntity(&models.Rest_Is_Member{
             IsMember: true,
         })
     } else {
-        response.WriteEntity(&Rest_Is_Member{
+        response.WriteEntity(&models.Rest_Is_Member{
             IsMember: false,
         })
     }
@@ -259,14 +243,14 @@ func GetRankings(request *restful.Request, response *restful.Response) {
         return
     }
 
-    result := new(Rest_Ranking)
-    result.Ranks = make([]Rest_Ranking_Rank_Item, 0)
+    result := new(models.Rest_Ranking)
+    result.Ranks = make([]models.Rest_Ranking_Rank_Item, 0)
 
     // TODO: i stuff
     i := 1
     var keyByRank string
     var rankingItem plugins.Levels_Cache_Ranking_Item
-    var userItem Rest_User
+    var userItem models.Rest_User
     for {
         if i > rankingsCount {
             break
@@ -277,7 +261,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
         }
         user, _ := helpers.GetUser(rankingItem.UserID)
         if user != nil && user.ID != "" {
-            userItem = Rest_User{
+            userItem = models.Rest_User{
                 ID:            user.ID,
                 Username:      user.Username,
                 AvatarHash:    user.Avatar,
@@ -285,7 +269,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
                 Bot:           user.Bot,
             }
 
-            result.Ranks = append(result.Ranks, Rest_Ranking_Rank_Item{
+            result.Ranks = append(result.Ranks, models.Rest_Ranking_Rank_Item{
                 User:    userItem,
                 EXP:     rankingItem.EXP,
                 Level:   rankingItem.Level,
@@ -312,7 +296,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
 
-        returnGuild := &Rest_Guild{
+        returnGuild := &models.Rest_Guild{
             ID:       guild.ID,
             Name:     guild.Name,
             Icon:     guild.Icon,
@@ -325,4 +309,3 @@ func FindGuild(request *restful.Request, response *restful.Response) {
         response.WriteError(http.StatusNotFound, errors.New("Guild not found."))
     }
 }
-

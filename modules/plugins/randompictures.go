@@ -23,6 +23,8 @@ import (
     "strconv"
     "net/url"
     "net/http"
+    "github.com/Seklfreak/Robyul2/models"
+    redisCache "github.com/go-redis/cache"
 )
 
 type RandomPictures struct{}
@@ -170,6 +172,67 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
         }
     }()
     logger.PLUGIN.L("randompictures", "Started post loop (1h)")
+
+    go rp.setServerFeaturesLoop()
+}
+
+func (rp *RandomPictures) setServerFeaturesLoop() {
+    defer func() {
+        helpers.Recover()
+
+        logger.ERROR.L("randompictures", "The setServerFeaturesLoop died. Please investigate! Will be restarted in 60 seconds")
+        time.Sleep(60 * time.Second)
+        rp.setServerFeaturesLoop()
+    }()
+
+    var sourcesBucket []DB_RandomPictures_Source
+    var sourcesOnServer []DB_RandomPictures_Source
+    var listCursor *rethink.Cursor
+    var err error
+    var feature models.Rest_Feature_RandomPictures
+    var key string
+    cacheCodec := cache.GetRedisCacheCodec()
+    for {
+        listCursor, err = rethink.Table("randompictures_sources").Run(helpers.GetDB())
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            time.Sleep(60 * time.Second)
+            continue
+        }
+        defer listCursor.Close()
+        err = listCursor.All(&sourcesBucket)
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            time.Sleep(60 * time.Second)
+            continue
+        }
+
+        for _, guild := range cache.GetSession().State.Guilds {
+            sourcesOnServer = make([]DB_RandomPictures_Source, 0)
+            for _, source := range sourcesBucket {
+                if source.GuildID == guild.ID {
+                    sourcesOnServer = append(sourcesOnServer, source)
+                }
+            }
+
+            key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+            feature = models.Rest_Feature_RandomPictures{
+                Count: len(sourcesOnServer),
+            }
+
+            err = cacheCodec.Set(&redisCache.Item{
+                Key:        key,
+                Object:     feature,
+                Expiration: time.Minute * 60,
+            })
+            if err != nil {
+                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            }
+
+        }
+
+        time.Sleep(30 * time.Minute)
+    }
 }
 
 func (rp *RandomPictures) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
