@@ -9,6 +9,7 @@ import (
     "strings"
     "regexp"
     "github.com/Seklfreak/Robyul2/metrics"
+    "github.com/getsentry/raven-go"
 )
 
 type Gallery struct{}
@@ -224,7 +225,9 @@ TryNextGallery:
                             Username:  msg.Author.Username,
                             AvatarURL: helpers.GetAvatarUrl(msg.Author),
                         })
-                    helpers.Relax(err)
+                    if err != nil {
+                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                    }
                     metrics.GalleryPostsSent.Add(1)
                 }
             }

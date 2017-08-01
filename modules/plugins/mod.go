@@ -1437,8 +1437,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
         joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
         if err != nil {
-            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-            return
+            joinedAt = time.Now()
         }
         // Save join in DB
         newJoinLog := DB_Mod_JoinLog{

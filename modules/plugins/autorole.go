@@ -276,7 +276,13 @@ func (a *AutoRoles) OnGuildMemberAdd(member *discordgo.Member, session *discordg
         for _, roleID := range settings.AutoRoleIDs {
             err := session.GuildMemberRoleAdd(member.GuildID, member.User.ID, roleID)
             if err != nil {
-                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                if errD, ok := err.(discordgo.RESTError); ok == true {
+                    if errD.Message.Code != 50013 {
+                        raven.CaptureError(fmt.Errorf("%#v", errD), map[string]string{})
+                    }
+                } else {
+                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+                }
                 continue
             }
         }
