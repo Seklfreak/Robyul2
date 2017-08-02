@@ -1946,7 +1946,7 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
     if err == rethink.ErrEmptyResult {
         var entryBucket DB_Profile_Background
         listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-            return profile.Field("id").Match(fmt.Sprintf("(?i)%s", backgroundName))
+            return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", backgroundName))
         }).Run(helpers.GetDB())
         defer listCursor.Close()
         err = listCursor.One(&entryBucket)
