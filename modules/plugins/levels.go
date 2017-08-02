@@ -97,6 +97,7 @@ type DB_Profile_Background struct {
     Name      string  `gorethink:"id,omitempty"`
     URL       string  `gorethink:"url"`
     CreatedAt time.Time  `gorethink:"createdat"`
+    Tags      []string `gorethink:"tags"`
 }
 
 type DB_Profile_Userdata struct {
@@ -492,13 +493,35 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 switch args[1] {
                 case "add":
                     helpers.RequireRobyulMod(msg, func() {
-                        if len(args) < 4 {
+                        if len(args) < 5 {
                             _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
                             helpers.Relax(err)
                             return
                         }
                         backgroundName := args[2]
                         backgroundUrl := args[3]
+
+                        tagsText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:4], " "), "", 1))
+                        tags := make([]string, 0)
+
+                        for _, tag := range strings.Split(tagsText, ",") {
+                            tag = strings.ToLower(strings.TrimSpace(tag))
+                            alreadyInList := false
+                            for _, oldTag := range tags {
+                                if oldTag == tag {
+                                    alreadyInList = true
+                                }
+                            }
+                            if alreadyInList == false {
+                                tags = append(tags, tag)
+                            }
+                        }
+
+                        if len(tags) <= 0 {
+                            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+                            helpers.Relax(err)
+                            return
+                        }
 
                         picData, err := helpers.NetGetUAWithError(backgroundUrl, helpers.DEFAULT_UA)
                         if err != nil {
@@ -526,11 +549,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             return
                         }
 
-                        err = m.InsertNewProfileBackground(backgroundName, backgroundUrl)
+                        err = m.InsertNewProfileBackground(backgroundName, backgroundUrl, tags)
                         if err != nil {
                             helpers.Relax(err)
                         }
-                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success", backgroundName))
+                        _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success",
+                            backgroundName, strings.Join(tags, ", ")))
                         helpers.Relax(err)
                         return
                     })
@@ -1310,8 +1334,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
 
                 topLevelEmbed := &discordgo.MessageEmbed{
-                    Color: 0x0FADED,
-                    Title: helpers.GetText("plugins.levels.top-server-embed-title"),
+                    Color:       0x0FADED,
+                    Title:       helpers.GetText("plugins.levels.top-server-embed-title"),
                     Description: "View the leaderboard for this server [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID + ").",
                     Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
                         len(session.State.Guilds),
@@ -1371,9 +1395,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 }
 
                 globalTopLevelEmbed := &discordgo.MessageEmbed{
-                    Color: 0x0FADED,
-                    Title: helpers.GetText("plugins.levels.global-top-server-embed-title"),
-                    Description: "View the global leaderboard [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string)+ ").",
+                    Color:       0x0FADED,
+                    Title:       helpers.GetText("plugins.levels.global-top-server-embed-title"),
+                    Description: "View the global leaderboard [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + ").",
                     Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
                         len(session.State.Guilds),
                     )},
@@ -1712,8 +1736,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
         helpers.Relax(err)
 
         userLevelEmbed := &discordgo.MessageEmbed{
-            Color: 0x0FADED,
-            Title: helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
+            Color:       0x0FADED,
+            Title:       helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
             Description: "View the leaderboard for this server [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID + ").",
             Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
                 len(session.State.Guilds),
@@ -1863,11 +1887,12 @@ func (l *Levels) BadgePickerHelpText() string {
     return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save. To remove a badge from your Profile pick the badge again.\n"
 }
 
-func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string) error {
+func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string, tags []string) error {
     newEntry := new(DB_Profile_Background)
     newEntry.Name = strings.ToLower(backgroundName)
     newEntry.URL = backgroundUrl
     newEntry.CreatedAt = time.Now()
+    newEntry.Tags = tags
 
     insert := rethink.Table("profile_backgrounds").Insert(newEntry)
     _, err := insert.RunWrite(helpers.GetDB())
