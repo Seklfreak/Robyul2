@@ -359,7 +359,7 @@ func changeGameInterval(session *discordgo.Session) {
             }
         }
 
-        err := session.UpdateStatus(0, fmt.Sprintf("with %d people on %d servers", len(users), len(guilds)))
+        err := session.UpdateStatus(0, fmt.Sprintf("%d users on %d servers | robyul.chat | _help", len(users), len(guilds)))
         if err != nil {
             raven.CaptureError(err, map[string]string{})
         }
