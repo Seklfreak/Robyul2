@@ -37,6 +37,7 @@ type Rest_Is_Member struct {
 
 type Rest_Ranking struct {
     Ranks []Rest_Ranking_Rank_Item
+    Count int
 }
 
 type Rest_Ranking_Rank_Item struct {

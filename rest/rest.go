@@ -246,6 +246,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 
     result := new(models.Rest_Ranking)
     result.Ranks = make([]models.Rest_Ranking_Rank_Item, 0)
+    result.Count = rankingsCount
 
     // TODO: i stuff
     i := 1
