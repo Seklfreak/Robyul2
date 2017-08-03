@@ -1157,7 +1157,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                     helpers.Relax(err)
                 }
                 return
-            case "color", "colourb":
+            case "color", "colour":
                 session.ChannelTyping(msg.ChannelID)
                 if len(args) < 2 {
                     _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))

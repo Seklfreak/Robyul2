@@ -303,7 +303,7 @@ NextKeyword:
                 doesMatch = true
             }
             if doesMatch == true {
-                memberToNotify, err := helpers.GetGuildMember(guild.ID, notificationSetting.UserID)
+                memberToNotify, err := helpers.GetFreshGuildMember(guild.ID, notificationSetting.UserID)
                 if err != nil {
                     logger.ERROR.L("notifications", "error getting member to notify: "+err.Error())
                     continue NextKeyword
