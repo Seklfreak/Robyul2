@@ -320,25 +320,35 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
         return
     }
 
-    member, _ := helpers.GetGuildMember(guildID, userID)
-    if member == nil || member.User == nil || member.User.ID == "" {
+    user, _ := helpers.GetUser(userID)
+    if user == nil || user.ID == "" {
         response.WriteError(http.StatusNotFound, errors.New("User not found."))
         return
     }
 
+    isMember := false
+    if guildID == "global" {
+        isMember = true
+    } else {
+        isMember, err = helpers.GetIsInGuild(guildID, user.ID)
+        if err != nil {
+            isMember = false
+        }
+    }
+
     userItem := models.Rest_User{
-        ID:            member.User.ID,
-        Username:      member.User.Username,
-        AvatarHash:    member.User.Avatar,
-        Discriminator: member.User.Discriminator,
-        Bot:           member.User.Bot,
+        ID:            user.ID,
+        Username:      user.Username,
+        AvatarHash:    user.Avatar,
+        Discriminator: user.Discriminator,
+        Bot:           user.Bot,
     }
     result := models.Rest_Ranking_Rank_Item{
         User:     userItem,
         EXP:      rankingItem.EXP,
         Level:    rankingItem.Level,
         Ranking:  rankingItem.Ranking,
-        IsMember: true,
+        IsMember: isMember,
     }
 
     response.WriteEntity(result)
