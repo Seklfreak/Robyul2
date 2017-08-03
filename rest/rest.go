@@ -61,6 +61,7 @@ func NewRestServices() []*restful.WebService {
         Produces(restful.MIME_JSON)
 
     service.Route(service.GET("/{guild-id}").To(GetRankings))
+    service.Route(service.GET("/user/{user-id}/{guild-id}").To(GetUserRanking))
     services = append(services, service)
 
     service = new(restful.WebService)
@@ -292,6 +293,52 @@ func GetRankings(request *restful.Request, response *restful.Response) {
         if i > 100 {
             break
         }
+    }
+
+    response.WriteEntity(result)
+}
+
+func GetUserRanking(request *restful.Request, response *restful.Response) {
+    userID := request.PathParameter("user-id")
+    guildID := request.PathParameter("guild-id")
+
+    if guildID != "global" {
+        guild, err := helpers.GetGuild(guildID)
+        if err != nil || guild == nil || guild.ID == "" {
+            response.WriteError(http.StatusNotFound, errors.New("Guild not found"))
+            return
+        }
+    }
+
+    var err error
+    var rankingItem plugins.Levels_Cache_Ranking_Item
+    rankingsKey := fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildID, userID)
+    cacheCodec := cache.GetRedisCacheCodec()
+
+    if err = cacheCodec.Get(rankingsKey, &rankingItem); err != nil {
+        response.WriteError(http.StatusNotFound, errors.New("Member not found."))
+        return
+    }
+
+    member, _ := helpers.GetGuildMember(guildID, userID)
+    if member == nil || member.User == nil || member.User.ID == "" {
+        response.WriteError(http.StatusNotFound, errors.New("User not found."))
+        return
+    }
+
+    userItem := models.Rest_User{
+        ID:            member.User.ID,
+        Username:      member.User.Username,
+        AvatarHash:    member.User.Avatar,
+        Discriminator: member.User.Discriminator,
+        Bot:           member.User.Bot,
+    }
+    result := models.Rest_Ranking_Rank_Item{
+        User:     userItem,
+        EXP:      rankingItem.EXP,
+        Level:    rankingItem.Level,
+        Ranking:  rankingItem.Ranking,
+        IsMember: true,
     }
 
     response.WriteEntity(result)
