@@ -251,6 +251,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
     var keyByRank string
     var rankingItem plugins.Levels_Cache_Ranking_Item
     var userItem models.Rest_User
+    var isMember bool
     for {
         if i > rankingsCount {
             break
@@ -269,11 +270,22 @@ func GetRankings(request *restful.Request, response *restful.Response) {
                 Bot:           user.Bot,
             }
 
+            isMember = false
+            if guildID == "global" {
+                isMember = true
+            } else {
+                isMember, err = helpers.GetIsInGuild(guildID, user.ID)
+                if err != nil {
+                    isMember = false
+                }
+            }
+
             result.Ranks = append(result.Ranks, models.Rest_Ranking_Rank_Item{
-                User:    userItem,
-                EXP:     rankingItem.EXP,
-                Level:   rankingItem.Level,
-                Ranking: i,
+                User:     userItem,
+                EXP:      rankingItem.EXP,
+                Level:    rankingItem.Level,
+                Ranking:  i,
+                IsMember: isMember,
             })
         }
         i += 1
