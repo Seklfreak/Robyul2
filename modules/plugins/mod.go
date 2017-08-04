@@ -381,11 +381,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     roleRemoved := true
                     if err != nil {
                         roleRemoved = false
-                        if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code != 0 {
-                            if err.Message.Code != 10007 && err.Message.Code != 10013 {
+                        if errD, ok := err.(*discordgo.RESTError); ok {
+                            if errD.Message.Code != 10007 && errD.Message.Code != 10013 && errD.Message.Code != 0 {
                                 helpers.Relax(err)
                             }
-                        } else if err.Response.StatusCode != 400 {
+                        } else {
                             helpers.Relax(err)
                         }
                     }
