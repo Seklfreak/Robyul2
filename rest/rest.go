@@ -81,14 +81,11 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
     var key string
     var featureLevels_Badges models.Rest_Feature_Levels_Badges
     var featureRandomPictures models.Rest_Feature_RandomPictures
+    var err error
 
     returnGuilds := make([]models.Rest_Guild, 0)
     for _, guild := range allGuilds {
-        joinedAt, err := guild.JoinedAt.Parse()
-        if err != nil {
-            joinedAt = time.Now()
-            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-        }
+        joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
         key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
         if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
             featureLevels_Badges = models.Rest_Feature_Levels_Badges{
