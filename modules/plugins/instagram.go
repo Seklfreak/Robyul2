@@ -24,6 +24,7 @@ import (
     "time"
     "sync"
     "github.com/Seklfreak/Robyul2/emojis"
+    "regexp"
 )
 
 type Instagram struct{}
@@ -196,20 +197,22 @@ type Instagram_Safe_Entries struct {
 }
 
 var (
-    usedUuid   string
-    sessionId  string
-    rankToken  string
-    httpClient *http.Client
+    usedUuid             string
+    sessionId            string
+    rankToken            string
+    httpClient           *http.Client
+    instagramPicUrlRegex *regexp.Regexp
 )
 
 const (
-    hexColor              string = "#fcaf45"
-    apiBaseUrl            string = "https://i.instagram.com/api/v1/%s"
-    apiUserAgent          string = "Instagram 10.8.0 Android (18/4.3; 320dpi; 720x1280; Xiaomi; HM 1SW; armani; qcom; en_US)"
-    instagramSignKey      string = "68a04945eb02970e2e8d15266fc256f7295da123e123f44b88f09d594a5902df"
-    deviceId              string = "android-3deeb2d04b2ab0ee" // TODO: generate a random device id
-    instagramFriendlyUser string = "https://www.instagram.com/%s/"
-    instagramFriendlyPost string = "https://www.instagram.com/p/%s/"
+    hexColor                 string = "#fcaf45"
+    apiBaseUrl               string = "https://i.instagram.com/api/v1/%s"
+    apiUserAgent             string = "Instagram 10.8.0 Android (18/4.3; 320dpi; 720x1280; Xiaomi; HM 1SW; armani; qcom; en_US)"
+    instagramSignKey         string = "68a04945eb02970e2e8d15266fc256f7295da123e123f44b88f09d594a5902df"
+    deviceId                 string = "android-3deeb2d04b2ab0ee" // TODO: generate a random device id
+    instagramFriendlyUser    string = "https://www.instagram.com/%s/"
+    instagramFriendlyPost    string = "https://www.instagram.com/p/%s/"
+    instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?([a-z0-9]+\/.+\.jpg)`
 )
 
 func (m *Instagram) Commands() []string {
@@ -220,6 +223,10 @@ func (m *Instagram) Commands() []string {
 
 func (m *Instagram) Init(session *discordgo.Session) {
     m.login()
+    var err error
+
+    instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
+    helpers.Relax(err)
 
     go m.checkInstagramFeedsLoop()
     logger.PLUGIN.L("instagram", "Started Instagram loop (10m)")
@@ -469,7 +476,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
             _, err = session.ChannelMessageSendComplex(
                 msg.ChannelID, &discordgo.MessageSend{
                     Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)),
-                    Embed: accountEmbed,
+                    Embed:   accountEmbed,
                 })
             helpers.Relax(err)
             return
@@ -512,9 +519,9 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
     }
 
     _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
-            Content: fmt.Sprintf("<%s>", mediaUrl),
-            Embed: channelEmbed,
-        })
+        Content: fmt.Sprintf("<%s>", mediaUrl),
+        Embed:   channelEmbed,
+    })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting broadcast: #%s to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err))
     }
@@ -553,12 +560,12 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
 
     if len(reelMedia.ImageVersions2.Candidates) > 0 {
         channelEmbed.Image = &discordgo.MessageEmbedImage{URL: reelMedia.ImageVersions2.Candidates[0].URL}
-        mediaUrl = reelMedia.ImageVersions2.Candidates[0].URL
+        mediaUrl = getFullResUrl(reelMedia.ImageVersions2.Candidates[0].URL)
     }
     if len(reelMedia.VideoVersions) > 0 {
         channelEmbed.Video = &discordgo.MessageEmbedVideo{
             URL: reelMedia.VideoVersions[0].URL, Height: reelMedia.VideoVersions[0].Height, Width: reelMedia.VideoVersions[0].Width}
-        mediaUrl = reelMedia.VideoVersions[0].URL
+        mediaUrl = getFullResUrl(reelMedia.VideoVersions[0].URL)
     }
 
     if mediaUrl != "" {
@@ -569,7 +576,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
 
     _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
         Content: fmt.Sprintf("<%s>", mediaUrl),
-        Embed: channelEmbed,
+        Embed:   channelEmbed,
     })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err))
@@ -612,35 +619,43 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
     }
 
     if len(post.ImageVersions2.Candidates) > 0 {
-        channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.ImageVersions2.Candidates[0].URL}
+        channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.ImageVersions2.Candidates[0].URL)}
     }
     if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions2.Candidates) > 0 {
-        channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.CarouselMedia[0].ImageVersions2.Candidates[0].URL}
+        channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.CarouselMedia[0].ImageVersions2.Candidates[0].URL)}
     }
 
     mediaUrls := make([]string, 0)
     if len(post.CarouselMedia) <= 0 {
-        mediaUrls = append(mediaUrls, post.ImageVersions2.Candidates[0].URL)
+        mediaUrls = append(mediaUrls, getFullResUrl(post.ImageVersions2.Candidates[0].URL))
     } else {
         for _, carouselMedia := range post.CarouselMedia {
-            mediaUrls = append(mediaUrls, carouselMedia.ImageVersions2.Candidates[0].URL)
+            mediaUrls = append(mediaUrls, getFullResUrl(carouselMedia.ImageVersions2.Candidates[0].URL))
         }
     }
 
     if len(mediaUrls) > 0 {
         channelEmbed.Description += "\n\n`Links:` "
         for i, mediaUrl := range mediaUrls {
-            channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)
+            channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl))
         }
     }
 
     _, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
         Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)),
-        Embed: channelEmbed,
+        Embed:   channelEmbed,
     })
     if err != nil {
         logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
     }
+}
+
+func getFullResUrl(url string) string {
+    result := instagramPicUrlRegex.FindStringSubmatch(url)
+    if result != nil && len(result) >= 6 {
+        return result[1] + result[5]
+    }
+    return url
 }
 
 func (m *Instagram) signDataValue(data string) string {
