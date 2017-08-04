@@ -1726,7 +1726,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
             return
         }
 
-        currentMember, err := helpers.GetGuildMember(channel.GuildID, levelThisServerUser.UserID)
+        currentMember, _ := helpers.GetGuildMember(channel.GuildID, levelThisServerUser.UserID)
+        if currentMember == nil || currentMember.User == nil || currentMember.User.ID == "" {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+            helpers.Relax(err)
+            return
+        }
+
         fullUsername := currentMember.User.Username
         if currentMember.Nick != "" {
             fullUsername += " ~ " + currentMember.Nick
