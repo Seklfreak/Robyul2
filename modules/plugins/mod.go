@@ -170,7 +170,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
                             logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
                             if err != nil {
-                                if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
+                                if errD, ok := err.(*discordgo.RESTError); ok {
                                     if errD.Message.Code == 50034 {
                                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
                                         return
