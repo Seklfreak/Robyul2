@@ -83,5 +83,5 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
     }
 
     _, err := session.ChannelMessageSendEmbed(msg.ChannelID, definitionEmbed)
-    helpers.Relax(err)
+    helpers.RelaxEmbed(err, msg.ChannelID)
 }

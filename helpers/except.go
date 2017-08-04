@@ -56,6 +56,20 @@ func Relax(err error) {
     }
 }
 
+// RelaxEmbed does nothing if $err is nil, prints a notice if there are no permissions to embed, else sends it to Relax()
+func RelaxEmbed(err error, channelID string) {
+    if err != nil {
+        if errD, ok := err.(*discordgo.RESTError); ok {
+            if errD.Message.Code == 50013 {
+                _, err = cache.GetSession().ChannelMessageSend(channelID, GetText("bot.errors.no-embed"))
+                Relax(err)
+                return
+            }
+        }
+        Relax(err)
+    }
+}
+
 // RelaxAssertEqual panics if a is not b
 func RelaxAssertEqual(a interface{}, b interface{}, err error) {
     if !reflect.DeepEqual(a, b) {

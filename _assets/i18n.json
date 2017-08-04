@@ -57,7 +57,8 @@
       "please-confirm-title": "Robyul: please confirm"
     },
     "errors": {
-      "general": "Unexpected error: `%s`"
+      "general": "Unexpected error: `%s`",
+      "no-embed": "Please give me the `Embed Links` permission. <:googlenerd:317030369205682186>"
     },
     "prefix": {
       "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Karen set prefix ?`",
