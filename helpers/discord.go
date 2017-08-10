@@ -33,6 +33,10 @@ var RobyulMod = []string{
 var Blacklisted = []string{
     "171883318386753536", // ForRyu
 }
+var ExtendedInspectRoleIDs = []string{
+    "345209385821274113", // inspect extended (sekl's dev cord)
+    "345209098100277248", // inspect (Moderator Chat)
+}
 var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
 var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
 
@@ -146,6 +150,47 @@ func IsRobyulMod(id string) bool {
         }
     }
 
+    return false
+}
+
+func CanInspectExtended(msg *discordgo.Message) bool {
+    if IsBotAdmin(msg.Author.ID) {
+        return true
+    }
+
+    if IsRobyulMod(msg.Author.ID) {
+        return true
+    }
+
+    if IsNukeMod(msg.Author.ID) {
+        return true
+    }
+
+    channel, e := GetChannel(msg.ChannelID)
+    if e != nil {
+        return false
+    }
+
+    guild, e := GetFreshGuild(channel.GuildID)
+    if e != nil {
+        return false
+    }
+
+    guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+    if e != nil {
+        return false
+    }
+    for _, role := range guild.Roles {
+        for _, userRole := range guildMember.Roles {
+            if userRole == role.ID {
+                for _, inspectRoleID := range ExtendedInspectRoleIDs {
+                    if role.ID == inspectRoleID {
+                        return true
+                    }
+                }
+            }
+        }
+    }
     return false
 }
 

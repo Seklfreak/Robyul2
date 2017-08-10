@@ -732,20 +732,23 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
         })
         return
     case "inspect", "inspect-extended": // [p]inspect[-extended] <user>
-        helpers.RequireMod(msg, func() {
+        isMod := helpers.IsMod(msg)
+        isAllowedToInspectExtended := helpers.CanInspectExtended(msg)
+
+        if isMod == false && isAllowedToInspectExtended == false {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("mod.no_permission"))
+            helpers.Relax(err)
+            return
+        }
+
             isExtendedInspect := false
             if command == "inspect-extended" {
-                if helpers.IsBotAdmin(msg.Author.ID) {
-                    isExtendedInspect = true
-                }
-                if helpers.IsNukeMod(msg.Author.ID) {
-                    isExtendedInspect = true
-                }
-                if isExtendedInspect == false {
+                if isAllowedToInspectExtended == false {
                     _, err := session.ChannelMessageSend(msg.ChannelID, "You aren't allowed to do this!")
                     helpers.Relax(err)
                     return
                 }
+                isExtendedInspect = true
             }
             session.ChannelTyping(msg.ChannelID)
             args := strings.Fields(content)
@@ -958,7 +961,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                     }
                 }
             }
-        })
         return
     case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
         helpers.RequireAdmin(msg, func() {
