@@ -1108,7 +1108,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                                                     m.setUserUserdata(userData)
                                                     m.DeleteMessages(msg.ChannelID, lastBotMessageID)
                                                     _, err := session.ChannelMessageSend(msg.ChannelID,
-                                                        fmt.Sprintf("**@%s** I saved your emotes. Check out your new shiny profile with `_profile` :sparkles: \n",
+                                                        fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n",
                                                             msg.Author.Username))
                                                     helpers.Relax(err)
                                                     stoppedLoop = true
