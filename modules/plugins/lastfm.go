@@ -375,7 +375,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                     }
                 }
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, lastTrackEmbed)
-                helpers.Relax(err)
+                helpers.RelaxEmbed(err, msg.ChannelID)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
                 return
@@ -421,7 +421,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                         Inline: false})
                 }
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topAlbumsEmbed)
-                helpers.Relax(err)
+                helpers.RelaxEmbed(err, msg.ChannelID)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
                 return
@@ -467,7 +467,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                         Inline: false})
                 }
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topArtistsEmbed)
-                helpers.Relax(err)
+                helpers.RelaxEmbed(err, msg.ChannelID)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
                 return
@@ -513,7 +513,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                         Inline: false})
                 }
                 _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topTracksEmbed)
-                helpers.Relax(err)
+                helpers.RelaxEmbed(err, msg.ChannelID)
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
                 return
@@ -590,7 +590,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                 }
             }
             _, err = session.ChannelMessageSendEmbed(msg.ChannelID, topTracksEmbed)
-            helpers.Relax(err)
+            helpers.RelaxEmbed(err, msg.ChannelID)
             break
         default:
             if subCom != "" {
@@ -655,7 +655,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
                 }
             }
             _, err = session.ChannelMessageSendEmbed(msg.ChannelID, accountEmbed)
-            helpers.Relax(err)
+            helpers.RelaxEmbed(err, msg.ChannelID)
         }
     } else {
         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))

@@ -277,7 +277,19 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                 if len(args) >= 4 {
                     mentionRoleName := args[3]
                     serverRoles, err := session.GuildRoles(targetGuild.ID)
-                    helpers.Relax(err)
+                    if err != nil {
+                        if errD, ok := err.(discordgo.RESTError); ok {
+                            if errD.Message.Code == 50013 {
+                                _, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission.")
+                                helpers.Relax(err)
+                                return
+                            } else {
+                                helpers.Relax(err)
+                            }
+                        } else {
+                            helpers.Relax(err)
+                        }
+                    }
                     for _, serverRole := range serverRoles {
                         if serverRole.Mentionable == true && (serverRole.Name == mentionRoleName || serverRole.ID == mentionRoleName) {
                             mentionRole = serverRole

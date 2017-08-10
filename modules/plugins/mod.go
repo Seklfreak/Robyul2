@@ -335,8 +335,23 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                             helpers.Relax(err)
                         }
                     }
-                    err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
-                    helpers.Relax(err)
+                    isInGuild, _ := helpers.GetFreshIsInGuild(channel.GuildID, targetUser.ID)
+                    if isInGuild == true {
+                        err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
+                        if err != nil {
+                            if errD, ok := err.(discordgo.RESTError); ok {
+                                if errD.Message.Code == 10007 {
+                                    _, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to assign the mute role to the given user.")
+                                    helpers.Relax(err)
+                                    return
+                                } else {
+                                    helpers.Relax(err)
+                                }
+                            } else {
+                                helpers.Relax(err)
+                            }
+                        }
+                    }
 
                     settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
@@ -352,7 +367,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         helpers.Relax(err)
                     }
 
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
+                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
+                    helpers.Relax(err)
+                    return
                 }
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
