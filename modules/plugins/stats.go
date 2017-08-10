@@ -295,7 +295,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
     case "userinfo":
         session.ChannelTyping(msg.ChannelID)
-        targetUser, err := helpers.GetFreshUser(msg.Author.ID)
+        targetUser, err := helpers.GetUser(msg.Author.ID)
         helpers.Relax(err)
         args := strings.Fields(content)
         if len(args) >= 1 && args[0] != "" {
@@ -315,7 +315,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
         helpers.Relax(err)
         currentGuild, err := helpers.GetGuild(currentChannel.GuildID)
         helpers.Relax(err)
-        targetMember, err := helpers.GetGuildMember(currentGuild.ID, targetUser.ID)
+        targetMember, err := helpers.GetFreshGuildMember(currentGuild.ID, targetUser.ID)
         if err != nil {
             if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10007 {
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
@@ -358,9 +358,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 }
             }
         }
-        title := fmt.Sprintf("%s#%s", targetUser.Username, targetUser.Discriminator)
+        title := fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator)
         if nick != "" {
-            title = fmt.Sprintf("%s#%s ~ %s", targetUser.Username, targetUser.Discriminator, nick)
+            title = fmt.Sprintf("%s#%s ~ %s", targetMember.User.Username, targetMember.User.Discriminator, nick)
         }
         rolesText := "None"
         guildRoles, err := session.GuildRoles(currentGuild.ID)
@@ -396,7 +396,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
         joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
         joinedServerTime, err := discordgo.Timestamp(targetMember.JoinedAt).Parse()
-        helpers.Relax(err)
+        if err != nil {
+
+        }
 
         lastAfterMemberId := ""
         var allMembers []*discordgo.Member
@@ -469,16 +471,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
                 {Name: "Voice Stats",
                     Value: fmt.Sprintf("use `%svoicestats @%s` to view the voice stats for this user",
                         helpers.GetPrefixForServer(currentGuild.ID),
-                        fmt.Sprintf("%s#%s", targetUser.Username, targetUser.Discriminator)), Inline: false},
+                        fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator)), Inline: false},
             },
         }
         if description != "" {
             userinfoEmbed.Description = description
         }
 
-        if helpers.GetAvatarUrl(targetUser) != "" {
-            userinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)}
-            userinfoEmbed.URL = helpers.GetAvatarUrl(targetUser)
+        if helpers.GetAvatarUrl(targetMember.User) != "" {
+            userinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetMember.User)}
+            userinfoEmbed.URL = helpers.GetAvatarUrl(targetMember.User)
         }
         if gameUrl != "" {
             userinfoEmbed.URL = gameUrl
