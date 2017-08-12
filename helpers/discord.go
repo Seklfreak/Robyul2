@@ -104,7 +104,7 @@ func MembersCacheLoop() {
             }
         }
 
-        log.WithField("module", "discord").Info("discord", fmt.Sprintf("cached %d members and %d users in redis", membersI, userI))
+        log.WithField("module", "discord").Info(fmt.Sprintf("cached %d members and %d users in redis", membersI, userI))
 
         time.Sleep(10 * time.Minute)
     }
