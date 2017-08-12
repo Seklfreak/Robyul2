@@ -11,7 +11,6 @@ import (
     "github.com/Jeffail/gabs"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "github.com/dustin/go-humanize"
     rethink "github.com/gorethink/gorethink"
@@ -229,16 +228,17 @@ func (m *Instagram) Init(session *discordgo.Session) {
     helpers.Relax(err)
 
     go m.checkInstagramFeedsLoop()
-    logger.PLUGIN.L("instagram", "Started Instagram loop (10m)")
+    cache.GetLogger().WithField("module", "instagram").Info("Started Instagram loop (10m)")
 }
 
 func (m *Instagram) checkInstagramFeedsLoop() {
     var safeEntries Instagram_Safe_Entries
+    log := cache.GetLogger()
 
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("instagram", "The checkInstagramFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "instagram").Error("The checkInstagramFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.checkInstagramFeedsLoop()
     }()
@@ -254,11 +254,11 @@ func (m *Instagram) checkInstagramFeedsLoop() {
         for _, entry := range safeEntries.entries {
             safeEntries.mux.Lock()
             changes := false
-            logger.VERBOSE.L("instagram", fmt.Sprintf("checking Instagram Account @%s", entry.Username))
+            log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", entry.Username))
 
             instagramUser, err := m.lookupInstagramUser(entry.Username)
             if err != nil || instagramUser.Username == "" {
-                logger.ERROR.L("instagram", fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
+                log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
                 safeEntries.mux.Unlock()
                 continue
             }
@@ -281,7 +281,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
                     }
                 }
                 if postAlreadyPosted == false {
-                    logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Post: #%s", post.ID))
+                    log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
                     entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
                     changes = true
                     go m.postPostToChannel(entry.ChannelID, post, instagramUser)
@@ -297,7 +297,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
                     }
                 }
                 if reelMediaAlreadyPosted == false {
-                    logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
+                    log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
                     entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: reelMedia.DeviceTimestamp})
                     changes = true
                     go m.postReelMediaToChannel(entry.ChannelID, reelMedia, instagramUser)
@@ -307,7 +307,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 
             if entry.IsLive == false {
                 if instagramUser.Broadcast.ID != 0 {
-                    logger.VERBOSE.L("instagram", fmt.Sprintf("Posting Live: #%s", instagramUser.Broadcast.ID))
+                    log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live: #%s", instagramUser.Broadcast.ID))
                     go m.postLiveToChannel(entry.ChannelID, instagramUser)
                     entry.IsLive = true
                     changes = true
@@ -382,7 +382,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                 m.setEntry(entry)
 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID))
-                logger.INFO.L("instagram", fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+                cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
         case "delete", "del", "remove": // [p]instagram delete <id>
             helpers.RequireMod(msg, func() {
@@ -394,7 +394,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
                         m.deleteEntryById(entryBucket.ID)
 
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-delete-success", entryBucket.Username))
-                        logger.INFO.L("instagram", fmt.Sprintf("Deleted Instagram Account @%s", entryBucket.Username))
+                        cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Deleted Instagram Account @%s", entryBucket.Username))
                     } else {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.instagram.account-delete-not-found-error"))
                         return
@@ -523,7 +523,7 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
         Embed:   channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting broadcast: #%s to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err))
+        cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting broadcast: #%s to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err))
     }
 }
 
@@ -579,7 +579,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
         Embed:   channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err))
+        cache.GetLogger().WithField("module", "instagram").Error("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err)
     }
 }
 
@@ -646,7 +646,7 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
         Embed:   channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
+        cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
     }
 }
 
@@ -746,7 +746,7 @@ func (m *Instagram) login() {
     if ok == false {
         helpers.Relax(errors.New("Unable to get username from instagram login reply"))
     }
-    logger.VERBOSE.L("instagram", fmt.Sprintf("logged in as @%s", usernameLoggedIn))
+    cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("logged in as @%s", usernameLoggedIn))
     rankToken = fmt.Sprintf("%s_%s", usernameId, usedUuid)
 }
 
@@ -774,7 +774,7 @@ func (m *Instagram) lookupInstagramUser(username string) (Instagram_User, error)
     }
     retry, errorMessage := m.checkInstagramResult(jsonResult)
     if retry == true {
-        logger.VERBOSE.L("instagram", fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
+        cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
         time.Sleep(20 * time.Second)
         return m.lookupInstagramUser(username)
     } else if errorMessage != "" {
@@ -803,7 +803,7 @@ func (m *Instagram) lookupInstagramUser(username string) (Instagram_User, error)
     }
     retry, errorMessage = m.checkInstagramResult(jsonResult)
     if retry == true {
-        logger.VERBOSE.L("instagram", fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
+        cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
         time.Sleep(20 * time.Second)
         return m.lookupInstagramUser(username)
     } else if errorMessage != "" {
@@ -843,7 +843,7 @@ func (m *Instagram) lookupInstagramUser(username string) (Instagram_User, error)
     }
     retry, errorMessage = m.checkInstagramResult(jsonResult)
     if retry == true {
-        logger.VERBOSE.L("instagram", fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
+        cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
         time.Sleep(20 * time.Second)
         return m.lookupInstagramUser(username)
     } else if errorMessage != "" {

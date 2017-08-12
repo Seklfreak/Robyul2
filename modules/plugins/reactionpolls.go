@@ -12,7 +12,6 @@ import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/getsentry/raven-go"
     "github.com/dustin/go-humanize"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/metrics"
 )
 
@@ -51,7 +50,7 @@ func (rp *ReactionPolls) Init(session *discordgo.Session) {
         for _, reactionPoll := range reactionPollsCache {
             _, err := session.ChannelMessage(reactionPoll.ChannelID, reactionPoll.MessageID)
             if err != nil {
-                logger.INFO.L("reactionpolls", fmt.Sprintf("Removed Reaction Poll #%s from the database since the message is not available anymore", reactionPoll.ID))
+                cache.GetLogger().WithField("module", "reactionpolls").Warn(fmt.Sprintf("Removed Reaction Poll #%s from the database since the message is not available anymore", reactionPoll.ID))
                 rp.deleteReactionPollByID(reactionPoll.ID)
             }
         }
@@ -224,7 +223,7 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
                 if err != nil {
                     if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
                         if err.Message.Code == 50013 {
-                            logger.WARNING.L("reactionpolls", fmt.Sprintf("can not remove reaction from message #%s, missing permissions", reaction.MessageID))
+                            cache.GetLogger().WithField("module", "reactionpolls").Error(fmt.Sprintf("can not remove reaction from message #%s, missing permissions", reaction.MessageID))
                         } else {
                             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
                         }
@@ -237,7 +236,7 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
             // count total votes
             message, err := session.State.Message(reaction.ChannelID, reaction.MessageID)
             if err != nil {
-                logger.VERBOSE.L("reactionpolls", fmt.Sprintf("adding message #%s to world state", reaction.MessageID))
+                cache.GetLogger().WithField("module", "reactionpolls").Info(fmt.Sprintf("adding message #%s to world state", reaction.MessageID))
                 message, err = session.ChannelMessage(reaction.ChannelID, reaction.MessageID)
                 helpers.Relax(err)
                 err = session.State.MessageAdd(message)

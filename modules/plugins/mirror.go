@@ -3,12 +3,12 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "fmt"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/helpers"
     rethink "github.com/gorethink/gorethink"
     "strings"
     "regexp"
     "github.com/Seklfreak/Robyul2/metrics"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 type Mirror struct{}
@@ -57,7 +57,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                 newMirrorEntry.ConnectedChannels = make([]Mirror_Channel, 0)
                 m.setEntry(newMirrorEntry)
 
-                logger.INFO.L("galleries", fmt.Sprintf("Created new Gallery by %s (#%s)", msg.Author.Username, msg.Author.ID))
+                cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Created new Mirror by %s (#%s)", msg.Author.Username, msg.Author.ID))
                 _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mirror.create-success",
                     helpers.GetPrefixForServer(channel.GuildID), newMirrorEntry.ID))
                 helpers.Relax(err)
@@ -115,7 +115,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 
                 m.setEntry(mirrorEntry)
 
-                logger.INFO.L("galleries", fmt.Sprintf("Added Channel %s (#%s) on Server %s (#%s) to Mirror %s by %s (#%s)",
+                cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Added Channel %s (#%s) on Server %s (#%s) to Mirror %s by %s (#%s)",
                     targetChannel.Name, targetChannel.ID, guild.Name, guild.ID, mirrorEntry.ID, msg.Author.Username, msg.Author.ID))
                 _, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-success"))
                 helpers.Relax(err)
@@ -177,7 +177,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
                 }
                 m.deleteEntryById(entryBucket.ID)
 
-                logger.INFO.L("galleries", fmt.Sprintf("Deleted Mirror %s by %s (#%s)",
+                cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Deleted Mirror %s by %s (#%s)",
                     entryBucket.ID, msg.Author.Username, msg.Author.ID))
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.delete-success"))
                 helpers.Relax(err)

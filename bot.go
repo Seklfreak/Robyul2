@@ -3,7 +3,6 @@ package main
 import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
-    Logger "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/metrics"
     "github.com/Seklfreak/Robyul2/modules"
     "github.com/Seklfreak/Robyul2/ratelimits"
@@ -18,8 +17,10 @@ import (
 
 // BotOnReady gets called after the gateway connected
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
-    Logger.INFO.L("bot", "Connected to discord!")
-    Logger.VERBOSE.L("bot", "Invite link: "+ fmt.Sprintf(
+    log := cache.GetLogger()
+
+    log.WithField("module", "bot").Info("Connected to discord!")
+    log.WithField("module", "bot").Info("Invite link: "+ fmt.Sprintf(
         "https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=%s",
         helpers.GetConfig().Path("discord.id").Data().(string),
         helpers.GetConfig().Path("discord.perms").Data().(string),
@@ -292,7 +293,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
     content := strings.TrimSpace(strings.Replace(message.Content, prefix+cmd, "", -1))
 
     // Log commands
-    Logger.VERBOSE.L("bot", fmt.Sprintf("%s (#%s): %s",
+    cache.GetLogger().WithField("module", "bot").Debug(fmt.Sprintf("%s (#%s): %s",
         message.Author.Username, message.Author.ID, message.Content))
 
     // Check if a module matches said command

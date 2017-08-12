@@ -11,7 +11,6 @@ import (
     "strconv"
     "strings"
     "time"
-    "github.com/Seklfreak/Robyul2/logger"
     "sync"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/bradfitz/slice"
@@ -87,11 +86,12 @@ func (m *LastFm) Init(session *discordgo.Session) {
 
 func (m *LastFm) generateDiscordStats() {
     var safeEntries LastFMAccount_Safe_Entries
+    log := cache.GetLogger()
 
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("lastfm", "The generateDiscordStats died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "lastfm").Error("The generateDiscordStats died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.generateDiscordStats()
     }()
@@ -119,7 +119,7 @@ func (m *LastFm) generateDiscordStats() {
                 })
                 metrics.LastFmRequests.Add(1)
                 if err != nil {
-                    logger.ERROR.L("lastfm", fmt.Sprintf("getting %s stats for last.fm user %s failed: %s", period, safeAccount.LastFmUsername, err.Error()))
+                    log.WithField("module", "lastfm").Error(fmt.Sprintf("getting %s stats for last.fm user %s failed: %s", period, safeAccount.LastFmUsername, err.Error()))
                     continue
                 }
 

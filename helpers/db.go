@@ -2,7 +2,6 @@ package helpers
 
 import (
     "github.com/Seklfreak/Robyul2/cache"
-    Logger "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/models"
     "github.com/getsentry/raven-go"
     rethink "github.com/gorethink/gorethink"
@@ -19,7 +18,8 @@ var (
 
 // ConnectDB connects to rethink and stores the session
 func ConnectDB(url string, db string) {
-    Logger.INFO.L("db", "Connecting to "+url)
+    log := cache.GetLogger()
+    log.WithField("module", "db").Info("Connecting to "+url)
 
     rethink.SetTags("rethink", "json")
 
@@ -29,7 +29,7 @@ func ConnectDB(url string, db string) {
     })
 
     if err != nil {
-        Logger.ERROR.L("db", err.Error())
+        log.WithField("module", "db").Error(err.Error())
         panic(err)
     }
 
@@ -39,7 +39,7 @@ func ConnectDB(url string, db string) {
     guildSettingsCache = make(map[string]models.Config)
     cacheMutex.Unlock()
 
-    Logger.INFO.L("db", "Connected!")
+    log.WithField("module", "db").Info("Connected!")
 }
 
 // GetDB is a simple getter for the rethink session.

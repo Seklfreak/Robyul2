@@ -7,7 +7,6 @@ import (
     "github.com/PuerkitoBio/goquery"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "github.com/dustin/go-humanize"
     rethink "github.com/gorethink/gorethink"
@@ -117,7 +116,7 @@ func (r *VLive) Commands() []string {
 
 func (r *VLive) Init(session *discordgo.Session) {
     go r.checkVliveFeedsLoop()
-    logger.PLUGIN.L("VLive", "Started vlive loop (0s)")
+    cache.GetLogger().WithField("module", "vlive").Info("Started vlive loop (0s)")
 }
 func (r *VLive) checkVliveFeedsLoop() {
     var safeEntries VLive_Safe_Entries
@@ -126,7 +125,7 @@ func (r *VLive) checkVliveFeedsLoop() {
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("VLive", "The checkVliveFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        cache.GetLogger().WithField("module", "vlive").Error("The checkVliveFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         r.checkVliveFeedsLoop()
     }()
@@ -157,10 +156,10 @@ func (r *VLive) checkVliveFeedsLoop() {
         for channelCode, entries := range bundledSafeEntries.entries {
             bundledSafeEntries.mux.Lock()
 
-            logger.VERBOSE.L("vlive", fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
+            cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
             updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(channelCode)
             if err != nil {
-                logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))
+                cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))
                 safeEntries.mux.Unlock()
                 continue
             }
@@ -175,7 +174,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                         }
                     }
                     if videoAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting VOD: #%d", vod.Seq))
+                        cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting VOD: #%d", vod.Seq))
                         entry.PostedVOD = append(entry.PostedVOD, vod)
                         changes = true
                         go r.postVodToChannel(entry, vod, updatedVliveChannel)
@@ -189,7 +188,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                         }
                     }
                     if videoAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
+                        cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
                         entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
                         changes = true
                         go r.postUpcomingToChannel(entry, upcoming, updatedVliveChannel)
@@ -203,7 +202,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                         }
                     }
                     if videoAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Live: #%d", live.Seq))
+                        cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Live: #%d", live.Seq))
                         entry.PostedLive = append(entry.PostedLive, live)
                         changes = true
                         go r.postLiveToChannel(entry, live, updatedVliveChannel)
@@ -217,7 +216,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                         }
                     }
                     if noticeAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Notice: #%d", notice.Number))
+                        cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Notice: #%d", notice.Number))
                         entry.PostedNotices = append(entry.PostedNotices, notice)
                         changes = true
                         go r.postNoticeToChannel(entry, notice, updatedVliveChannel)
@@ -231,7 +230,7 @@ func (r *VLive) checkVliveFeedsLoop() {
                         }
                     }
                     if celebAlreadyPosted == false {
-                        logger.VERBOSE.L("vlive", fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
+                        cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
                         entry.PostedCelebs = append(entry.PostedCelebs, celeb)
                         changes = true
                         go r.postCelebToChannel(entry, celeb, updatedVliveChannel)
@@ -332,7 +331,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                     successMessage += helpers.GetTextF("plugins.vlive.channel-added-success-additional-role", mentionRole.Name)
                 }
                 session.ChannelMessageSend(msg.ChannelID, successMessage)
-                logger.INFO.L("vlive", fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s) Mention @%s (#%s)",
+                cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s) Mention @%s (#%s)",
                     entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID,
                     mentionRole.Name, mentionRole.ID))
             })
@@ -346,7 +345,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
                         r.deleteEntryById(entryBucket.ID)
 
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
-                        logger.INFO.L("vlive", fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))
+                        cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))
                     } else {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.vlive.channel-delete-not-found-error"))
                         return
@@ -487,7 +486,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
         err := recover()
 
         if err != nil {
-            logger.ERROR.L("vlive", fmt.Sprintf("updating vlive channel %s failed: %s", channelId, err))
+            cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("updating vlive channel %s failed: %s", channelId, err))
         }
     }()
 
@@ -599,7 +598,7 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
         Embed: channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
+        cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
 }
 
@@ -623,7 +622,7 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
         Embed: channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
+        cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
 }
 
@@ -646,7 +645,7 @@ func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliv
         Embed: channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
+        cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
     }
 }
 
@@ -669,7 +668,7 @@ func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice
         Embed: channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err))
+        cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err))
     }
 }
 
@@ -691,7 +690,7 @@ func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, v
         Embed: channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err))
+        cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err))
     }
 }
 

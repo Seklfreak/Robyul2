@@ -12,7 +12,6 @@ import (
     "io"
     "github.com/dustin/go-humanize"
     rethink "github.com/gorethink/gorethink"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/cache"
     "strconv"
 )
@@ -101,13 +100,13 @@ func (m *Twitch) Commands() []string {
 
 func (m *Twitch) Init(session *discordgo.Session) {
     go m.checkTwitchFeedsLoop()
-    logger.PLUGIN.L("twitch", "Started twitch loop (60s)")
+    cache.GetLogger().WithField("module", "twitch").Info("Started twitch loop (60s)")
 }
 func (m *Twitch) checkTwitchFeedsLoop() {
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("twitch", "The checkTwitchFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        cache.GetLogger().WithField("module", "twitch").Info("The checkTwitchFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.checkTwitchFeedsLoop()
     }()
@@ -123,7 +122,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
         // TODO: Check multiple entries at once
         for _, entry := range entryBucket {
             changes := false
-            logger.VERBOSE.L("twitch", fmt.Sprintf("checking Twitch Channel %s", entry.TwitchChannelName))
+            cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", entry.TwitchChannelName))
             twitchStatus := m.getTwitchStatus(entry.TwitchChannelName)
             if entry.IsLive == false {
                 if twitchStatus.Stream.ID != 0 {
@@ -180,7 +179,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                 m.setEntry(entry)
 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
-                logger.INFO.L("twitch", fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+                cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
         case "delete", "del": // [p]twitch delete <id>
             helpers.RequireMod(msg, func() {
@@ -192,7 +191,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
                         m.deleteEntryById(entryBucket.ID)
 
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-delete-success", entryBucket.TwitchChannelName))
-                        logger.INFO.L("twitch", fmt.Sprintf("Deleted Twitch Channel %s", entryBucket.TwitchChannelName))
+                        cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Deleted Twitch Channel %s", entryBucket.TwitchChannelName))
                     } else {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.twitch.channel-delete-not-found-error"))
                         return

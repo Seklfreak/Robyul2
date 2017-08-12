@@ -3,7 +3,6 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "fmt"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/helpers"
     rethink "github.com/gorethink/gorethink"
     "strings"
@@ -124,13 +123,13 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
             go func() {
                 _, err := session.ChannelMessageSend(guildJoinChannelID, guildJoinText)
                 if err != nil {
-                    logger.ERROR.L("guildannouncements", fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
+                    cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
                         guild.Name, guild.ID, err.Error()))
                 }
             }()
         }
     }
-    logger.INFO.L("guildannouncements", fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
+    cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
 
 }
 func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
@@ -145,13 +144,13 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
             go func() {
                 _, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
                 if err != nil {
-                    logger.ERROR.L("guildannouncements", fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
+                    cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
                         guild.Name, guild.ID, err.Error()))
                 }
             }()
         }
     }
-    logger.INFO.L("guildannouncements", fmt.Sprintf("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
+    cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
 }
 
 func (m *GuildAnnouncements) GetAnnouncementSettings() []Announcement_Setting {

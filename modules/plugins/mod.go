@@ -3,7 +3,6 @@ package plugins
 import (
     "fmt"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "regexp"
     "strconv"
@@ -72,10 +71,12 @@ var (
 func (m *Mod) Init(session *discordgo.Session) {
     invitesCache = make(map[string][]CacheInviteInformation, 0)
     go func() {
+        log := cache.GetLogger()
+
         for _, guild := range session.State.Guilds {
             invites, err := session.GuildInvites(guild.ID)
             if err != nil {
-                logger.ERROR.L("mod", fmt.Sprintf("error getting invites from guild %s (#%s): %s",
+                log.WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild %s (#%s): %s",
                     guild.Name, guild.ID, err.Error()))
                 continue
             }
@@ -101,7 +102,7 @@ func (m *Mod) Init(session *discordgo.Session) {
 
             invitesCache[guild.ID] = cacheInvites
         }
-        logger.VERBOSE.L("mod", fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
+        log.WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
     }()
 }
 
@@ -168,7 +169,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
                         if len(messagesToDeleteIds) <= 10 {
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
-                            logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
+                            cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
                             if err != nil {
                                 if errD, ok := err.(*discordgo.RESTError); ok {
                                     if errD.Message.Code == 50034 {
@@ -190,7 +191,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                                 for i := 0; i < len(messagesToDeleteIds); i += 100 {
                                     batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
                                     err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
-                                    logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
+                                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
                                     if err != nil {
                                         if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
                                             if errD.Message.Code == 50034 {
@@ -262,7 +263,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
                         if len(messagesToDeleteIds) <= 10 {
                             err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
-                            logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
+                            cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
                             if err != nil {
                                 if errD, ok := err.(*discordgo.RESTError); ok {
                                     if errD.Message.Code == 50034 {
@@ -284,7 +285,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                                 for i := 0; i < len(messagesToDeleteIds); i += 100 {
                                     batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
                                     err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
-                                    logger.PLUGIN.L("mod", fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
+                                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
                                     if err != nil {
                                         if errD, ok := err.(*discordgo.RESTError); ok {
                                             if errD.Message.Code == 50034 {
@@ -508,7 +509,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         helpers.Relax(err)
                     }
                 }
-                logger.INFO.L("mod", fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+                cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
@@ -575,7 +576,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                         helpers.Relax(err)
                     }
                 }
-                logger.INFO.L("mod", fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+                cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
             } else {
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
@@ -1388,7 +1389,7 @@ func (m *Mod) inspectUserBans(user *discordgo.User, callbackProgress func(progre
             for _, guildBan := range guildBans {
                 if guildBan.User.ID == user.ID {
                     bannedOnServerList = append(bannedOnServerList, botGuild)
-                    logger.INFO.L("mod", fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
+                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
                         user.Username, user.ID, botGuild.Name, botGuild.ID))
                 }
             }
@@ -1427,7 +1428,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
         var usedInvite CacheInviteInformation
         invites, err := session.GuildInvites(member.GuildID)
         if err != nil {
-            logger.ERROR.L("mod", fmt.Sprintf("error getting invites from guild #%s: %s",
+            cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild #%s: %s",
                 member.GuildID, err.Error()))
         } else {
             newCacheInvites := make([]CacheInviteInformation, 0)
@@ -1504,7 +1505,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
                 troublemakerReports := m.getTroublemakerReports(member.User)
                 joins, _ := m.GetJoins(member.User.ID, member.GuildID)
 
-                logger.INFO.L("mod", fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d, Joins: %d",
+                cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d, Joins: %d",
                     member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList), len(troublemakerReports), len(joins)))
 
                 isOnServerList := m.inspectCommonServers(member.User)
@@ -1616,7 +1617,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
                 _, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
                 if err != nil {
-                    logger.ERROR.L("troublemaker", fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
+                    cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
                         helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error()))
                     return
                 }
@@ -1713,7 +1714,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
                     bannedOnServerList, checkFailedServerList := m.inspectUserBans(user.User, func(_ int) {})
 
-                    logger.INFO.L("mod", fmt.Sprintf("Inspected user %s (%s) because he got banned on Guild %s (#%s) for Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
+                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he got banned on Guild %s (#%s) for Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
                         user.User.Username, user.User.ID, bannedOnGuild.Name, bannedOnGuild.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
 
                     resultEmbed := &discordgo.MessageEmbed{

@@ -4,12 +4,12 @@ import (
     "fmt"
     "github.com/Seklfreak/Robyul2/emojis"
     "github.com/Seklfreak/Robyul2/helpers"
-    Logger "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/metrics"
     "github.com/Seklfreak/Robyul2/models"
     "github.com/bwmarrin/discordgo"
     "strconv"
     "strings"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 // Poll command usage:
@@ -143,7 +143,7 @@ func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo
     // Pin the msg
     err = session.ChannelMessagePin(msg.ChannelID, m.ID)
     if err != nil {
-        Logger.PLUGIN.L("polls.go", err.Error())
+        cache.GetLogger().WithField("module", "polls").Error(err.Error())
     }
     // Set the poll ID to the new msg ID
     embed.Footer = &discordgo.MessageEmbedFooter{
@@ -154,7 +154,7 @@ func (p *Poll) create(content string, msg *discordgo.Message, session *discordgo
         emoji := emojis.From(strconv.Itoa(field.ID))
         err = session.MessageReactionAdd(m.ChannelID, m.ID, emoji)
         if err != nil {
-            Logger.PLUGIN.L("polls.go", err.Error())
+            cache.GetLogger().WithField("module", "polls").Error(err.Error())
         }
     }
 

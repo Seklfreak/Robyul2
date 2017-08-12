@@ -7,7 +7,6 @@ import (
     "io/ioutil"
     "google.golang.org/api/drive/v3"
     "golang.org/x/net/context"
-    "github.com/Seklfreak/Robyul2/logger"
     "google.golang.org/api/googleapi"
     "fmt"
     "time"
@@ -71,6 +70,8 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
     rand.Seed(time.Now().Unix())
 
     go func() {
+        log := cache.GetLogger()
+
         defer helpers.Recover()
 
         for {
@@ -87,7 +88,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                 continue
             }
 
-            logger.INFO.L("randompictures", "gathering google drive picture cache")
+            log.WithField("module", "randompictures").Info("gathering google drive picture cache")
             for _, sourceEntry := range rpSources {
                 var key string
                 var i int
@@ -117,7 +118,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
             time.Sleep(12 * time.Hour)
         }
     }()
-    logger.PLUGIN.L("randompictures", "Started files cache loop (12h)")
+    cache.GetLogger().WithField("module", "randompictures").Info("Started files cache loop (12h)")
 
     go func() {
         defer helpers.Recover()
@@ -171,7 +172,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
             }
         }
     }()
-    logger.PLUGIN.L("randompictures", "Started post loop (1h)")
+    cache.GetLogger().WithField("module", "randompictures").Info("Started post loop (1h)")
 
     go rp.setServerFeaturesLoop()
 }
@@ -180,7 +181,7 @@ func (rp *RandomPictures) setServerFeaturesLoop() {
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("randompictures", "The setServerFeaturesLoop died. Please investigate! Will be restarted in 60 seconds")
+        cache.GetLogger().WithField("module", "randompictures").Error("The setServerFeaturesLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         rp.setServerFeaturesLoop()
     }()
@@ -488,10 +489,10 @@ func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*
 Loop:
     for {
         for _, driveFolderID := range sourceEntry.DriveFolderIDs {
-            logger.VERBOSE.L("randompictures", fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
+            cache.GetLogger().WithField("module", "randompictures").Debug(fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
             result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
             if err != nil {
-                logger.ERROR.L("randompictures", fmt.Sprintf("google drive error: %s, retrying in 10 seconds", err.Error()))
+                cache.GetLogger().WithField("module", "randompictures").Error(fmt.Sprintf("google drive error: %s, retrying in 10 seconds", err.Error()))
                 time.Sleep(10 * time.Second)
                 continue Loop
             }

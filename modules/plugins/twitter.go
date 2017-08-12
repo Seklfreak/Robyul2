@@ -4,7 +4,6 @@ import (
     "fmt"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "github.com/dghubble/go-twitter/twitter"
     "github.com/dghubble/oauth1"
@@ -63,7 +62,7 @@ func (m *Twitter) Init(session *discordgo.Session) {
     twitterClient = twitter.NewClient(httpClient)
 
     go m.checkTwitterFeedsLoop()
-    logger.PLUGIN.L("twitter", "Started Twitter loop (10m)")
+    cache.GetLogger().WithField("module", "twitter").Info("Started Twitter loop (10m)")
 }
 func (m *Twitter) checkTwitterFeedsLoop() {
     var safeEntries Twitter_Safe_Entries
@@ -71,7 +70,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("twitter", "The checkTwitterFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        cache.GetLogger().WithField("module", "twitter").Error("The checkTwitterFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.checkTwitterFeedsLoop()
     }()
@@ -87,13 +86,13 @@ func (m *Twitter) checkTwitterFeedsLoop() {
         for _, entry := range safeEntries.entries {
             safeEntries.mux.Lock()
             changes := false
-            logger.VERBOSE.L("twitter", fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
+            cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
 
             twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
                 ScreenName: entry.AccountScreenName,
             })
             if err != nil {
-                logger.ERROR.L("twitter", fmt.Sprintf("updating twitter account @%s failed: %s", entry.AccountScreenName, err.Error()))
+                cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("updating twitter account @%s failed: %s", entry.AccountScreenName, err.Error()))
                 safeEntries.mux.Unlock()
                 continue
             }
@@ -105,7 +104,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
                 IncludeRetweets: twitter.Bool(true),
             })
             if err != nil {
-                logger.ERROR.L("twitter", fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
+                cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
                 safeEntries.mux.Unlock()
                 continue
             }
@@ -124,7 +123,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
                     }
                 }
                 if tweetAlreadyPosted == false {
-                    logger.VERBOSE.L("twitter", fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
+                    cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
                     entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
                     changes = true
                     go m.postTweetToChannel(entry.ChannelID, tweet, twitterUser)
@@ -199,7 +198,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                 m.setEntry(entry)
 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
-                logger.INFO.L("twitter", fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+                cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
         case "delete", "del", "remove": // [p]twitter delete <id>
             helpers.RequireMod(msg, func() {
@@ -211,7 +210,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                         m.deleteEntryById(entryBucket.ID)
 
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
-                        logger.INFO.L("twitter", fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
+                        cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
                     } else {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
                         return
@@ -381,7 +380,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
             Embed: channelEmbed,
         })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.ID, channelID, err))
+        cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.ID, channelID, err))
     }
 }
 

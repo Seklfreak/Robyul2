@@ -13,7 +13,6 @@ import (
     "github.com/Seklfreak/Robyul2/ratelimits"
     "fmt"
     "strconv"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/metrics"
     "sort"
     "gopkg.in/oleiade/lane.v1"
@@ -163,6 +162,8 @@ const (
 func (m *Levels) Init(session *discordgo.Session) {
     m.BucketInit()
 
+    log := cache.GetLogger()
+
     cachePath = helpers.GetConfig().Path("cache_folder").Data().(string)
     assetsPath = helpers.GetConfig().Path("assets_folder").Data().(string)
     htmlTemplate, err := ioutil.ReadFile(assetsPath + "profile.html")
@@ -172,10 +173,10 @@ func (m *Levels) Init(session *discordgo.Session) {
     helpers.Relax(err)
 
     go m.processExpStackLoop()
-    logger.PLUGIN.L("levels", "Started processExpStackLoop")
+    log.WithField("module", "levels").Info("Started processExpStackLoop")
 
     go m.cacheTopLoop()
-    logger.PLUGIN.L("levels", "Started processCacheTopLoop")
+    log.WithField("module", "levels").Info("Started processCacheTopLoop")
 
     activeBadgePickerUserIDs = make(map[string]string, 0)
 
@@ -183,10 +184,12 @@ func (m *Levels) Init(session *discordgo.Session) {
 }
 
 func (l *Levels) setServerFeaturesLoop() {
+    log := cache.GetLogger()
+
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("levels", "The setServerFeaturesLooü died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "levels").Error("The setServerFeaturesLooü died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         l.setServerFeaturesLoop()
     }()
@@ -242,10 +245,12 @@ func (l *Levels) setServerFeaturesLoop() {
 }
 
 func (m *Levels) cacheTopLoop() {
+    log := cache.GetLogger()
+
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("levels", "The cacheTopLoop died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "levels").Error("The cacheTopLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.cacheTopLoop()
     }()
@@ -260,11 +265,11 @@ func (m *Levels) cacheTopLoop() {
         err = listCursor.All(&levelsUsers)
 
         if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
-            logger.ERROR.L("levels", "empty result from levels db")
+            log.WithField("module", "levels").Error("empty result from levels db")
             time.Sleep(60 * time.Second)
             continue
         } else if err != nil {
-            logger.ERROR.L("levels", fmt.Sprintf("db error: %s", err.Error()))
+            log.WithField("module", "levels").Error(fmt.Sprintf("db error: %s", err.Error()))
             time.Sleep(60 * time.Second)
             continue
         }
@@ -355,17 +360,19 @@ func (m *Levels) cacheTopLoop() {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
-        logger.VERBOSE.L("levels", "cached rankings in redis")
+        log.WithField("module", "levels").Info("cached rankings in redis")
 
         time.Sleep(10 * time.Minute)
     }
 }
 
 func (m *Levels) processExpStackLoop() {
+    log := cache.GetLogger()
+
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("levels", "The processExpStackLoop died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "levels").Info("The processExpStackLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.processExpStackLoop()
     }()
@@ -1362,7 +1369,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
                     currentMember, err := helpers.GetGuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
                     if err != nil {
-                        logger.ERROR.L("levels", fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
+                        cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
                         continue
                     }
                     fullUsername := currentMember.User.Username
@@ -1408,7 +1415,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                 for _, userRanked := range rankedTotalExpMap {
                     currentUser, err := helpers.GetUser(userRanked.Key)
                     if err != nil {
-                        logger.ERROR.L("levels", fmt.Sprintf("error fetching user data for user #%s: %s", userRanked.Key, err.Error()))
+                        cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("error fetching user data for user #%s: %s", userRanked.Key, err.Error()))
                         continue
                     }
                     fullUsername := currentUser.Username
@@ -1619,7 +1626,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             continue
                         }
 
-                        logger.VERBOSE.L("levels", fmt.Sprintf("Started processing of Channel #%s (#%s) on Guild %s (#%s)",
+                        cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("Started processing of Channel #%s (#%s) on Guild %s (#%s)",
                             guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
                         // (asynchronous)
                         _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Started processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
@@ -1628,10 +1635,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                         for {
                             messages, err := session.ChannelMessages(guildChannelCurrent.ID, 100, lastBefore, "", "")
                             if err != nil {
-                                logger.ERROR.L("levels", err.Error())
+                                cache.GetLogger().WithField("module", "levels").Error(err.Error())
                                 break
                             }
-                            logger.VERBOSE.L("levels", fmt.Sprintf("Processing %d messages for Channel #%s (#%s) from before \"%s\" on Guild %s (#%s)",
+                            cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("Processing %d messages for Channel #%s (#%s) from before \"%s\" on Guild %s (#%s)",
                                 len(messages), guildChannelCurrent.Name, guildChannelCurrent.ID, lastBefore, guild.Name, guild.ID))
                             if len(messages) <= 0 {
                                 break
@@ -1663,7 +1670,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
                             m.setLevelsServerUser(levelsServerUser)
                         }
 
-                        logger.VERBOSE.L("levels", fmt.Sprintf("Completed processing of Channel #%s (#%s) on Guild %s (#%s)",
+                        cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("Completed processing of Channel #%s (#%s) on Guild %s (#%s)",
                             guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
                         _, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Completed processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
                         helpers.Relax(err)
@@ -2590,7 +2597,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
     }
 
     elapsed := time.Since(start)
-    logger.VERBOSE.L("levels", fmt.Sprintf("took screenshot of profile in %s", elapsed.String()))
+    cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("took screenshot of profile in %s", elapsed.String()))
 
     err = os.Remove(tempTemplatePath)
     if err != nil {
@@ -3044,7 +3051,7 @@ func (l *Levels) uploadToImgur(picData []byte) (string, error) {
     if imgurResponse.Success == false {
         return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data.Error)))
     } else {
-        logger.VERBOSE.L("levels", "uploaded a picture to imgur: "+imgurResponse.Data.Link)
+        cache.GetLogger().WithField("module", "levels").Info("uploaded a picture to imgur: "+imgurResponse.Data.Link)
         return imgurResponse.Data.Link, nil
     }
 }

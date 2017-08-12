@@ -3,12 +3,12 @@ package metrics
 import (
     "expvar"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     rethink "github.com/gorethink/gorethink"
     "net/http"
     "runtime"
     "time"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 var (
@@ -96,7 +96,7 @@ var (
 
 // Init starts a http server on 127.0.0.1:1337
 func Init() {
-    logger.INFO.L("metrics", "Listening on TCP/1337")
+    cache.GetLogger().WithField("module", "metrics").Info("Listening on TCP/1337")
     Uptime.Set(time.Now().Unix())
     go http.ListenAndServe(helpers.GetConfig().Path("metrics_ip").Data().(string)+":1337", nil)
 }

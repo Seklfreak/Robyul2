@@ -10,7 +10,6 @@ import (
     "strings"
     "strconv"
     "fmt"
-    "github.com/Seklfreak/Robyul2/logger"
     redisCache "github.com/go-redis/cache"
     "github.com/getsentry/raven-go"
 )
@@ -41,17 +40,19 @@ var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin
 var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
 
 func MembersCacheLoop() {
+    log := cache.GetLogger()
+
     defer func() {
         Recover()
 
-        logger.ERROR.L("VLive", "The MembersCacheLoop died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "discord").Error("The MembersCacheLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         MembersCacheLoop()
     }()
 
     for {
         var err error
-        logger.VERBOSE.L("discord", "started members caching for redis")
+        log.WithField("module", "discord").Debug("discord", "started members caching for redis")
         cacheCodec := cache.GetRedisCacheCodec()
         lastAfterMemberId := ""
         key := ""
@@ -103,7 +104,7 @@ func MembersCacheLoop() {
             }
         }
 
-        logger.VERBOSE.L("discord", fmt.Sprintf("cached %d members and %d users in redis", membersI, userI))
+        log.WithField("module", "discord").Info("discord", fmt.Sprintf("cached %d members and %d users in redis", membersI, userI))
 
         time.Sleep(10 * time.Minute)
     }
@@ -361,7 +362,7 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
         for _, channel := range guild.Channels {
             err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
             if err != nil {
-                logger.ERROR.L("discord", "Error disabling send messages on mute Role: "+err.Error())
+                cache.GetLogger().WithField("module", "discord").Error("Error disabling send messages on mute Role: "+err.Error())
             }
             // TODO: update discordgo
             //err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionAddReactions)
@@ -392,7 +393,7 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
-    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" FORCED-MISS")
     return targetMember, err
 }
 
@@ -434,11 +435,11 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
                 }
                 return targetMember, err
             } else {
-                logger.VERBOSE.L("discord", "redis "+key+" HIT")
+                cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
                 return &targetMemberS, nil
             }
         } else {
-            logger.VERBOSE.L("discord", "redis "+key+" HIT")
+            cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
             return &targetMemberS, nil
         }
     }
@@ -470,11 +471,11 @@ func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member,
             if err = cacheCodec.Get(key, &targetMemberS); err != nil {
                 return &targetMemberS, errors.New("Member not found")
             } else {
-                logger.VERBOSE.L("discord", "redis "+key+" HIT")
+                cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
                 return &targetMemberS, nil
             }
         } else {
-            logger.VERBOSE.L("discord", "redis "+key+" HIT")
+            cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
             return &targetMemberS, nil
         }
     }
@@ -498,7 +499,7 @@ func GetFreshIsInGuild(guildID string, userID string) (bool, error) {
     if err != nil {
         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
     }
-    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" FORCED-MISS")
     return isInGuild, err
 }
 
@@ -521,9 +522,9 @@ func GetIsInGuild(guildID string, userID string) (bool, error) {
         if err != nil {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
-        logger.VERBOSE.L("discord", "redis "+key+" MISS")
+        cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" MISS")
     } else {
-        logger.VERBOSE.L("discord", "redis "+key+" HIT")
+        cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
     }
     return isInGuild, err
 }
@@ -547,7 +548,7 @@ func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
-    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" FORCED-MISS")
     return targetGuild, err
 }
 
@@ -572,10 +573,10 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
-        logger.VERBOSE.L("discord", "redis "+key+" MISS")
+        cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" MISS")
         return targetGuild, err
     }
-    logger.VERBOSE.L("discord", "redis "+key+" HIT")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
     return &targetGuild, err
 }
 
@@ -598,7 +599,7 @@ func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
-    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" FORCED-MISS")
     return targetChannel, err
 }
 
@@ -623,10 +624,10 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
-        logger.VERBOSE.L("discord", "redis "+key+" MISS")
+        cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" MISS")
         return targetChannel, err
     }
-    logger.VERBOSE.L("discord", "redis "+key+" HIT")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
     return &targetChannel, err
 }
 
@@ -671,7 +672,7 @@ func GetFreshUser(userID string) (*discordgo.User, error) {
             raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
         }
     }
-    logger.VERBOSE.L("discord", "redis "+key+" FORCED-MISS")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" FORCED-MISS")
     return targetUser, err
 }
 
@@ -693,10 +694,10 @@ func GetUser(userID string) (*discordgo.User, error) {
                 raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
             }
         }
-        logger.VERBOSE.L("discord", "redis "+key+" MISS")
+        cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" MISS")
         return targetUser, err
     }
-    logger.VERBOSE.L("discord", "redis "+key+" HIT")
+    cache.GetLogger().WithField("module", "discord").Debug("redis "+key+" HIT")
     return &targetUser, err
 }
 

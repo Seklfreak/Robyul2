@@ -2,9 +2,9 @@ package migrations
 
 import (
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "reflect"
     "runtime"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 var migrations = []helpers.Callback{
@@ -39,15 +39,16 @@ var migrations = []helpers.Callback{
 
 // Run executes all registered migrations
 func Run() {
-    logger.BOOT.L("migrator", "Running migrations...")
+    log := cache.GetLogger()
+    log.WithField("module", "migrator").Info("Running migrations...")
     for _, migration := range migrations {
         migrationName := runtime.FuncForPC(
             reflect.ValueOf(migration).Pointer(),
         ).Name()
 
-        logger.BOOT.L("migrator", "Running "+migrationName)
+        log.WithField("module", "migrator").Info("Running "+migrationName)
         migration()
     }
 
-    logger.BOOT.L("migrator", "Migrations finished!")
+    log.WithField("module", "migrator").Info("Migrations finished!")
 }

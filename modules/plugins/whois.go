@@ -2,10 +2,10 @@ package plugins
 
 import (
     "strings"
-    Logger "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "github.com/Seklfreak/Robyul2/helpers"
     "time"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 // WhoIs command
@@ -32,21 +32,21 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
     // Get channel info
     channel, err := helpers.GetChannel(msg.ChannelID)
     if err != nil {
-        Logger.PLUGIN.L("whois", err.Error())
+        cache.GetLogger().WithField("module", "whois").Error(err.Error())
         return
     }
 
     // Guild info
     guild, err := helpers.GetGuild(channel.GuildID)
     if err != nil {
-        Logger.PLUGIN.L("whois", err.Error())
+        cache.GetLogger().WithField("module", "whois").Error(err.Error())
         return
     }
 
     // Get the member object for the @user
     target, err := helpers.GetGuildMember(guild.ID, msg.Mentions[0].ID)
     if err != nil {
-        Logger.PLUGIN.L("whois", err.Error())
+        cache.GetLogger().WithField("module", "whois").Error(err.Error())
         return
     }
 

@@ -6,8 +6,8 @@ import (
     rethink "github.com/gorethink/gorethink"
     "github.com/Seklfreak/Robyul2/helpers"
     "fmt"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/metrics"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 type Notifications struct{}
@@ -91,7 +91,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 
             _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-added-success", msg.Author.ID))
             helpers.Relax(err)
-            logger.INFO.L("notifications", fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", entry.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+            cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", entry.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
             session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
             go m.refreshNotificationSettingsCache()
         case "delete", "del", "remove": // [p]notifications delete <keyword(s)>
@@ -128,7 +128,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
             m.deleteNotificationSettingByID(entryBucket.ID)
 
             session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
-            logger.INFO.L("notifications", fmt.Sprintf("Deleted Notificaton Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+            cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notificaton Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
             session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
             go m.refreshNotificationSettingsCache()
         case "list": // [p]notifications list
@@ -305,16 +305,16 @@ NextKeyword:
             if doesMatch == true {
                 memberToNotify, err := helpers.GetFreshGuildMember(guild.ID, notificationSetting.UserID)
                 if err != nil {
-                    logger.ERROR.L("notifications", "error getting member to notify: "+err.Error())
+                    cache.GetLogger().WithField("module", "notifications").Error("error getting member to notify: "+err.Error())
                     continue NextKeyword
                 }
                 if memberToNotify == nil {
-                    logger.ERROR.L("notifications", "member to notify not found")
+                    cache.GetLogger().WithField("module", "notifications").Error("member to notify not found")
                     continue NextKeyword
                 }
                 messageAuthor, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
                 if err != nil {
-                    logger.ERROR.L("notifications", "error getting message author: "+err.Error())
+                    cache.GetLogger().WithField("module", "notifications").Error("error getting message author: "+err.Error())
                     continue NextKeyword
                 }
                 hasReadPermissions := false
@@ -335,7 +335,7 @@ NextKeyword:
                     if overwrite.Type == "role" {
                         roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
                         if err != nil {
-                            logger.ERROR.L("notifications", "error getting role: "+err.Error())
+                            cache.GetLogger().WithField("module", "notifications").Error("error getting role: "+err.Error())
                             continue NextPermOverwrite
                         }
                         //fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
@@ -440,7 +440,7 @@ NextKeyword:
     for _, pendingNotification := range pendingNotifications {
         dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
         if err != nil {
-            logger.ERROR.L("notifications", "error creating DM channel: "+err.Error())
+            cache.GetLogger().WithField("module", "notifications").Error("error creating DM channel: "+err.Error())
             continue
         }
         keywordsTriggeredText := ""
@@ -462,7 +462,7 @@ NextKeyword:
         ), "\n") {
             _, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
             if err != nil {
-                logger.ERROR.L("notifications", "error sending DM: "+err.Error())
+                cache.GetLogger().WithField("module", "notifications").Error("error sending DM: "+err.Error())
                 continue
             }
         }
@@ -596,7 +596,7 @@ func (m *Notifications) refreshNotificationSettingsCache() {
     err = cursor.All(&ignoredChannelsCache)
     helpers.Relax(err)
 
-    logger.INFO.L("notifications", fmt.Sprintf("Refreshed Notification Settings Cache: Got %d keywords and %d ignored channels",
+    cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Refreshed Notification Settings Cache: Got %d keywords and %d ignored channels",
         len(notificationSettingsCache), len(ignoredChannelsCache)))
 }
 

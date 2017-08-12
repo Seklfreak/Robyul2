@@ -1,9 +1,9 @@
 package main
 
 import (
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "time"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 var BETA_GUILDS = [...]string{
@@ -24,7 +24,7 @@ func autoLeaver(session *discordgo.Session) {
             }
 
             if !match {
-                logger.WARNING.L("beta", "Leaving guild "+guild.ID+" ("+guild.Name+") because it didn't apply for the beta")
+                cache.GetLogger().WithField("module", "beta").Info("beta", "Leaving guild "+guild.ID+" ("+guild.Name+") because it didn't apply for the beta")
                 session.GuildLeave(guild.ID)
             }
         }

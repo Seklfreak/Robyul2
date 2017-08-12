@@ -12,11 +12,11 @@ import (
     "time"
     "strings"
     "github.com/bradfitz/slice"
-    "github.com/Seklfreak/Robyul2/logger"
     rethink "github.com/gorethink/gorethink"
     "sort"
     "math"
     "github.com/Seklfreak/Robyul2/emojis"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 type Stats struct{}
@@ -111,7 +111,7 @@ func (s *Stats) Init(session *discordgo.Session) {
                         newVoiceTime.JoinTimeUtc = voiceStatesWithTime[voiceStateWithTimeIndex].JoinTimeUtc
                         s.setVoiceTimeEntry(newVoiceTime)
                         voiceStatesWithTime = append(voiceStatesWithTime[:voiceStateWithTimeIndex], voiceStatesWithTime[voiceStateWithTimeIndex+1:]...)
-                        logger.PLUGIN.L("stats", fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
+                        cache.GetLogger().WithField("module", "stats").Info(fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
                             newVoiceTime.UserID, newVoiceTime.ChannelID, newVoiceTime.GuildID))
                     } else {
                         if err.Error() != "channel not found" {
@@ -126,7 +126,7 @@ func (s *Stats) Init(session *discordgo.Session) {
         }
     }()
 
-    logger.PLUGIN.L("stats", "Started voice stats loop (30s)")
+    cache.GetLogger().WithField("module", "stats").Info("Started voice stats loop (30s)")
 }
 
 func (s *Stats) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

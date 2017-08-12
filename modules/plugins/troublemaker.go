@@ -4,10 +4,10 @@ import (
     "github.com/bwmarrin/discordgo"
     "strings"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "fmt"
     "time"
     rethink "github.com/gorethink/gorethink"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 type Troublemaker struct{}
@@ -162,7 +162,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
                     troublemakerLogEntry.ReportedByUserID = msg.Author.ID
                     t.setEntry(troublemakerLogEntry)
 
-                    logger.INFO.L("troublemaker", fmt.Sprintf("will notify about troublemaker %s (#%s) by %s (#%s) on %s (#%s) reason %s",
+                    cache.GetLogger().WithField("module", "troublemaker").Info(fmt.Sprintf("will notify about troublemaker %s (#%s) by %s (#%s) on %s (#%s) reason %s",
                         targetUser.Username, targetUser.ID,
                         msg.Author.Username, msg.Author.ID,
                         guild.Name, guild.ID,
@@ -223,7 +223,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 
                                 _, err = session.ChannelMessageSendEmbed(guildToNotifySettings.TroublemakerLogChannel, reportEmbed)
                                 if err != nil {
-                                    logger.ERROR.L("troublemaker", fmt.Sprintf("Failed to send troublemaker report to channel #%s on guild #%s: %s" +
+                                    cache.GetLogger().WithField("module", "troublemaker").Error(fmt.Sprintf("Failed to send troublemaker report to channel #%s on guild #%s: %s" +
                                         guildToNotifySettings.TroublemakerLogChannel, guildToNotifySettings.Guild, err.Error()))
                                 }
                             }

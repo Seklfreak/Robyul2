@@ -3,7 +3,6 @@ package plugins
 import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/olebedev/when"
     "github.com/olebedev/when/rules/en"
     "github.com/olebedev/when/rules/common"
@@ -86,7 +85,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
         }
     }()
 
-    logger.PLUGIN.L("reminders", "Started reminder loop (10s)")
+    cache.GetLogger().WithField("module", "reminders").Info("Started reminder loop (10s)")
 }
 
 func (r *Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

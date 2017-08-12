@@ -2,7 +2,6 @@ package main
 
 import (
     "github.com/Seklfreak/Robyul2/helpers"
-    Logger "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/metrics"
     "github.com/Seklfreak/Robyul2/migrations"
     "github.com/Seklfreak/Robyul2/version"
@@ -16,13 +15,19 @@ import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/emicklei/go-restful"
     "net/http"
-    "log"
     "github.com/Seklfreak/Robyul2/rest"
+    "github.com/Sirupsen/logrus"
 )
 
 // Entrypoint
 func main() {
-    Logger.BOOT.L("launcher", "Booting Karen...")
+    log := logrus.New()
+    log.Out = os.Stdout
+    log.Level = logrus.InfoLevel
+    log.Formatter = &logrus.TextFormatter{ForceColors: true}
+    cache.SetLogger(log)
+
+    log.WithField("module", "launcher").Info("Booting Robyul...")
 
     // Read config
     helpers.LoadConfig("config.json")
@@ -43,14 +48,14 @@ func main() {
     // Check if the bot is being debugged
     if config.Path("debug").Data().(bool) {
         helpers.DEBUG_MODE = true
-        Logger.DEBUG_MODE = true
+        log.Level = logrus.DebugLevel
     }
 
     // Print UA
-    Logger.BOOT.L("launcher", "USERAGENT: '"+helpers.DEFAULT_UA+"'")
+    log.WithField("module", "launcher").Info("USERAGENT: '"+helpers.DEFAULT_UA+"'")
 
     // Call home
-    Logger.BOOT.L("launcher", "[SENTRY] Calling home...")
+    log.WithField("module", "launcher").Info("[SENTRY] Calling home...")
     err := raven.SetDSN(config.Path("sentry").Data().(string))
     if err != nil {
         panic(err)
@@ -58,10 +63,10 @@ func main() {
     if version.BOT_VERSION != "UNSET" {
         raven.SetRelease(version.BOT_VERSION)
     }
-    Logger.BOOT.L("launcher", "[SENTRY] Someone picked up the phone \\^-^/")
+    log.WithField("module", "launcher").Info("[SENTRY] Someone picked up the phone \\^-^/")
 
     // Connect to DB
-    Logger.BOOT.L("launcher", "Opening database connection...")
+    log.WithField("module", "launcher").Info("Opening database connection...")
     helpers.ConnectDB(
         config.Path("rethink.url").Data().(string),
         config.Path("rethink.db").Data().(string),
@@ -74,7 +79,7 @@ func main() {
     migrations.Run()
 
     // Connecting to redis
-    Logger.BOOT.L("launcher", "Connecting to redis...")
+    log.WithField("module", "launcher").Info("Connecting to redis...")
     redisClient := redis.NewClient(&redis.Options{
         Addr:     config.Path("redis.address").Data().(string),
         Password: "", // no password set
@@ -83,7 +88,7 @@ func main() {
     cache.SetRedisClient(redisClient)
 
     // Connect and add event handlers
-    Logger.BOOT.L("launcher", "Connecting to discord...")
+    log.WithField("module", "launcher").Info("Connecting to discord...")
     discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
     if err != nil {
         panic(err)
@@ -118,7 +123,7 @@ func main() {
         restful.Add(service)
     }
     log.Fatal(http.ListenAndServe("localhost:2021", nil))
-    Logger.BOOT.L("launcher", "REST API listening on localhost:2021")
+    log.WithField("module", "launcher").Info("REST API listening on localhost:2021")
 
     // Make a channel that waits for a os signal
     channel := make(chan os.Signal, 1)
@@ -127,7 +132,7 @@ func main() {
     // Wait until the os wants us to shutdown
     <-channel
 
-    Logger.ERROR.L("launcher", "The OS is killing me :c")
-    Logger.ERROR.L("launcher", "Disconnecting...")
+    log.WithField("module", "launcher").Info("The OS is killing me :c")
+    log.WithField("module", "launcher").Info("Disconnecting...")
     discord.Close()
 }

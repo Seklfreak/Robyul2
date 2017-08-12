@@ -9,8 +9,8 @@ import (
     "strings"
     "bytes"
     "io"
-    "github.com/Seklfreak/Robyul2/logger"
     "time"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 const (
@@ -100,7 +100,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
         }
         if errorMessage == "" {
             _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease check the link or try again later.")
-            logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Error: %s", jsonResult.String()))
+            cache.GetLogger().WithField("module", "gfycat").Error(fmt.Sprintf("Gfycat Error: %s", jsonResult.String()))
         } else {
             _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+fmt.Sprintf("Error: `%s`.", errorMessage))
         }
@@ -123,7 +123,7 @@ CheckGfycatStatusLoop:
             gfyName = result.Path("gfyname").Data().(string)
             break CheckGfycatStatusLoop
         default:
-            logger.ERROR.L("gfycat", fmt.Sprintf("Gfycat Status Error: %s (ID: %s)", result.String(), gfyName))
+            cache.GetLogger().WithField("module", "gfycat").Error(fmt.Sprintf("Gfycat Status Error: %s (ID: %s)", result.String(), gfyName))
             _, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
             helpers.Relax(err)
             return

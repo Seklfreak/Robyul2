@@ -3,13 +3,13 @@ package plugins
 import (
     "github.com/bwmarrin/discordgo"
     "fmt"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/Seklfreak/Robyul2/helpers"
     rethink "github.com/gorethink/gorethink"
     "strings"
     "regexp"
     "github.com/Seklfreak/Robyul2/metrics"
     "github.com/getsentry/raven-go"
+    "github.com/Seklfreak/Robyul2/cache"
 )
 
 type Gallery struct{}
@@ -95,7 +95,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 newGalleryEntry.GuildID = channel.GuildID
                 g.setEntry(newGalleryEntry)
 
-                logger.INFO.L("galleries", fmt.Sprintf("Added Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
+                cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Added Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
                     guild.Name, guild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
                 _, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.gallery.add-success"))
                 helpers.Relax(err)
@@ -162,7 +162,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
                 }
                 g.deleteEntryById(entryBucket.ID)
 
-                logger.INFO.L("galleries", fmt.Sprintf("Deleted Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
+                cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Deleted Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
                     galleryGuild.Name, galleryGuild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
                 _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.delete-success"))
                 helpers.Relax(err)

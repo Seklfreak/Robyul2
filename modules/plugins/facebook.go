@@ -4,7 +4,6 @@ import (
     "fmt"
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/Seklfreak/Robyul2/logger"
     "github.com/bwmarrin/discordgo"
     "github.com/dustin/go-humanize"
     rethink "github.com/gorethink/gorethink"
@@ -68,15 +67,16 @@ func (m *Facebook) Commands() []string {
 
 func (m *Facebook) Init(session *discordgo.Session) {
     go m.checkFacebookFeedsLoop()
-    logger.PLUGIN.L("facebook", "Started Facebook loop (10m)")
+    cache.GetLogger().WithField("module", "facebook").Info("Started Facebook loop (10m)")
 }
 func (m *Facebook) checkFacebookFeedsLoop() {
     var safeEntries Facebook_Safe_Entries
+    log := cache.GetLogger()
 
     defer func() {
         helpers.Recover()
 
-        logger.ERROR.L("facebook", "The checkFacebookFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+        log.WithField("module", "facebook").Error("The checkFacebookFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
         time.Sleep(60 * time.Second)
         m.checkFacebookFeedsLoop()
     }()
@@ -92,11 +92,11 @@ func (m *Facebook) checkFacebookFeedsLoop() {
         for _, entry := range safeEntries.entries {
             safeEntries.mux.Lock()
             changes := false
-            logger.VERBOSE.L("facebook", fmt.Sprintf("checking Facebook Page %s", entry.Username))
+            log.WithField("module", "facebook").Debug(fmt.Sprintf("checking Facebook Page %s", entry.Username))
 
             facebookPage, err := m.lookupFacebookPage(entry.Username)
             if err != nil {
-                logger.ERROR.L("facebook", fmt.Sprintf("updating facebook account %s failed: %s", entry.Username, err.Error()))
+                log.WithField("module", "facebook").Error(fmt.Sprintf("updating facebook account %s failed: %s", entry.Username, err.Error()))
                 safeEntries.mux.Unlock()
                 continue
             }
@@ -115,7 +115,7 @@ func (m *Facebook) checkFacebookFeedsLoop() {
                     }
                 }
                 if postAlreadyPosted == false {
-                    logger.VERBOSE.L("facebook", fmt.Sprintf("Posting Post: #%s", post.ID))
+                    log.WithField("module", "facebook").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
                     entry.PostedPosts = append(entry.PostedPosts, DB_Facebook_Post{ID: post.ID, CreatedAt: post.CreatedAt})
                     changes = true
                     go m.postPostToChannel(entry.ChannelID, post, facebookPage)
@@ -182,7 +182,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                 m.setEntry(entry)
 
                 session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", entry.Username, entry.ChannelID))
-                logger.INFO.L("facebook", fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+                cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
             })
         case "delete", "del", "remove": // [p]facebook delete <id>
             helpers.RequireAdmin(msg, func() {
@@ -194,7 +194,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
                         m.deleteEntryById(entryBucket.ID)
 
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-delete-success", entryBucket.Username))
-                        logger.INFO.L("facebook", fmt.Sprintf("Deleted Facebook Page `%s`", entryBucket.Username))
+                        cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Deleted Facebook Page `%s`", entryBucket.Username))
                     } else {
                         session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.facebook.account-delete-not-found-error"))
                         return
@@ -385,7 +385,7 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
         Embed: channelEmbed,
     })
     if err != nil {
-        logger.ERROR.L("vlive", fmt.Sprintf("posting post: #%d to channel: #%s failed: %s", post.ID, channelID, err))
+        cache.GetLogger().WithField("module", "facebook").Error(fmt.Sprintf("posting post: #%d to channel: #%s failed: %s", post.ID, channelID, err))
     }
 }
 

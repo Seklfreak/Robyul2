@@ -7,7 +7,6 @@ import (
     "github.com/Seklfreak/Robyul2/cache"
     "github.com/Seklfreak/Robyul2/metrics"
     "fmt"
-    "github.com/Seklfreak/Robyul2/logger"
     "strconv"
     "strings"
     "os"
@@ -37,7 +36,7 @@ func Init(session *discordgo.Session) {
             listeners += cmd + " "
         }
 
-        logger.INFO.L("modules", fmt.Sprintf(
+        cache.GetLogger().WithField("module", "modules").Info(fmt.Sprintf(
             logTemplate,
             helpers.Typeof(*ref),
             listeners,
@@ -57,7 +56,7 @@ func Init(session *discordgo.Session) {
             listeners += cmd + " "
         }
 
-        logger.INFO.L("modules", fmt.Sprintf(
+        cache.GetLogger().WithField("module", "modules").Info(fmt.Sprintf(
             logTemplate,
             helpers.Typeof(*ref),
             listeners,
@@ -80,7 +79,7 @@ func Init(session *discordgo.Session) {
             listeners += trigger + " "
         }
 
-        logger.INFO.L("modules", fmt.Sprintf(
+        cache.GetLogger().WithField("module", "modules").Info(fmt.Sprintf(
             logTemplate,
             helpers.Typeof(*ref),
             listeners,
@@ -104,7 +103,7 @@ func Init(session *discordgo.Session) {
     }
     cache.SetTriggerPluginList(triggerCommands)
 
-    logger.INFO.L(
+    cache.GetLogger().WithField("module", "modules").Info(
         "modules",
         "Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
     )
@@ -218,7 +217,7 @@ func checkDuplicateCommands() {
             t := helpers.Typeof(plug)
 
             if occupant, ok := cmds[cmd]; ok {
-                logger.ERROR.L("modules", "Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
+                cache.GetLogger().WithField("module", "modules").Info("Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
                 os.Exit(1)
             }
 
@@ -231,7 +230,7 @@ func checkDuplicateCommands() {
             t := helpers.Typeof(trig)
 
             if occupant, ok := cmds[cmd]; ok {
-                logger.ERROR.L("modules", "Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
+                cache.GetLogger().WithField("module", "modules").Info("Failed to load "+t+" because '"+cmd+"' was already registered by "+occupant)
                 os.Exit(1)
             }
 
