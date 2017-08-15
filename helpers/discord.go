@@ -380,7 +380,7 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
     key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
 
     targetMember, _ := cache.GetSession().State.Member(guildID, userID)
-    if targetMember == nil || targetMember.GuildID == "" {
+    if targetMember == nil || targetMember.GuildID == "" || targetMember.JoinedAt == "" {
         targetMember, err = cache.GetSession().GuildMember(guildID, userID)
     }
     if err == nil {
