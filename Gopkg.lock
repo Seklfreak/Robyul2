@@ -176,12 +176,6 @@
   revision = "0598bd43cf51d0375c5bcd3a42e807cc19b3b7d9"
 
 [[projects]]
-  name = "github.com/newrelic/go-agent"
-  packages = [".","internal","internal/jsonx","internal/logger","internal/sysinfo","internal/utilization"]
-  revision = "29ec3cd1bb2f21d21d36da37dae52695cb2c3a17"
-  version = "v1.9.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/nfnt/resize"
   packages = ["."]
@@ -316,6 +310,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bb167ab304632bbb13394546e6bf0f801d8b54a360796069274fc34552b874ae"
+  inputs-digest = "e8b847af43522567addf7dfaf809771c36f708dd8477e8ea7eb55d43bcf96bdd"
   solver-name = "gps-cdcl"
   solver-version = 1
