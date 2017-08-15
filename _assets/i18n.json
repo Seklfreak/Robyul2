@@ -445,7 +445,7 @@
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
       "embed-footer": "via translate.google.com",
-      "embed-footer-plus-naver": "via translate.google.com and labspace.naver.com/nmt/",
+      "embed-footer-plus-naver": "Powered by translate.google.com and papago.naver.com",
       "embed-title-alternative-naver": "Alternative translation"
     },
     "reminders": {
@@ -781,7 +781,7 @@
       "genius-api-error": "Something went wrong talking to genius.com. <:blobweary:317036265071575050>",
       "genius-no-results": "I wasn't able to find anything with that name. <:blobweary:317036265071575050>",
       "song-list-embed-title": "Results for `%s`",
-      "powered-by": "powered by genius.com"
+      "powered-by": "Powered by genius.com"
     }
   }
 }
