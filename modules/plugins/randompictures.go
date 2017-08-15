@@ -591,7 +591,10 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
         }
     } else {
         linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
-        linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(file.Name))
+
+        splitFilename := strings.Split(file.Name, ".")
+
+        linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-") + "." + splitFilename[len(splitFilename)-1]))
 
         // open link to prepare cache
         client := &http.Client{
