@@ -23,7 +23,7 @@ import (
 func main() {
     log := logrus.New()
     log.Out = os.Stdout
-    log.Level = logrus.InfoLevel
+    log.Level = logrus.DebugLevel
     log.Formatter = &logrus.TextFormatter{ForceColors: true}
     cache.SetLogger(log)
 
@@ -48,7 +48,6 @@ func main() {
     // Check if the bot is being debugged
     if config.Path("debug").Data().(bool) {
         helpers.DEBUG_MODE = true
-        log.Level = logrus.DebugLevel
     }
 
     // Print UA
