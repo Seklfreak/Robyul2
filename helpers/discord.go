@@ -417,7 +417,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
     } else {
         var targetMemberS discordgo.Member
         // try api cache
-        if err = cacheCodec.Get(key, &targetMemberS); err != nil {
+        if err = cacheCodec.Get(key, &targetMemberS); err != nil || targetMemberS.GuildID == "" {
             // try state cache
             key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guildID, userID)
             if err = cacheCodec.Get(key, &targetMemberS); err != nil {
@@ -465,7 +465,7 @@ func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member,
     } else {
         var targetMemberS discordgo.Member
         // try api cache
-        if err = cacheCodec.Get(key, &targetMemberS); err != nil {
+        if err = cacheCodec.Get(key, &targetMemberS); err != nil || targetMemberS.GuildID == "" {
             // try state cache
             key = fmt.Sprintf("robyul2-discord:state:guild:%s:member:%s", guildID, userID)
             if err = cacheCodec.Get(key, &targetMemberS); err != nil {
