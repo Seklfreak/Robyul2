@@ -453,6 +453,11 @@ NextKeyword:
             }
         }
 
+        if pendingNotification.Author == nil {
+            cache.GetLogger().WithField("module", "notifications").Error("notification source member is nil")
+            continue
+        }
+
         for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```%s```",
             pendingNotification.Author.User.Username,
             keywordsTriggeredText,
