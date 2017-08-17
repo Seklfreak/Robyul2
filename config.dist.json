@@ -73,5 +73,9 @@
   },
   "website": {
     "ranking_base_url": "https://robyul.chat/ranking"
+  },
+  "streamable": {
+    "username": "",
+    "password": ""
   }
 }
