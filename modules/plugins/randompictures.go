@@ -151,7 +151,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                                 var gPicture *drive.File
                                 msgpack.Unmarshal(resultBytes, &gPicture)
                                 defer helpers.Recover()
-                                err = rp.postItem(postToChannelID, "", gPicture, sourceEntry.ID, strconv.Itoa(chosenPicN))
+                                err = rp.postItem(sourceEntry.GuildID, postToChannelID, "", gPicture, sourceEntry.ID, strconv.Itoa(chosenPicN))
                                 if err != nil {
                                     if errG := err.(*googleapi.Error); errG != nil {
                                         if strings.Contains("The download quota for this file has been exceeded", errG.Error()) {
@@ -471,7 +471,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
             if err == nil {
                 var gPicture *drive.File
                 msgpack.Unmarshal(resultBytes, &gPicture)
-                err := rp.postItem(msg.ChannelID, initialMessage.ID, gPicture, matchEntry.ID, strconv.Itoa(chosenPicN))
+                err := rp.postItem(channel.GuildID, msg.ChannelID, initialMessage.ID, gPicture, matchEntry.ID, strconv.Itoa(chosenPicN))
                 if err == nil {
                     return true, nil
                 } else {
@@ -557,7 +557,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
     metrics.RandomPictureSourcesImagesCachedCount.Set(totalImages)
 }
 
-func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File, sourceID string, pictureID string) error {
+func (rp *RandomPictures) postItem(guildID string, channelID string, messageID string, file *drive.File, sourceID string, pictureID string) error {
     // fmt.Println("channelID:", channelID, "messageID:", messageID, "file:", file.Name, "sourceID:", sourceID, "pictureID:", pictureID)
     file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
     if err != nil {
@@ -573,11 +573,12 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
 
     splitFilename := strings.Split(file.Name, ".")
 
-    linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-") + "." + splitFilename[len(splitFilename)-1]))
+    linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
+    linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
     // open link to prepare cache
     client := &http.Client{
-        Timeout: 3*time.Second,
+        Timeout: 3 * time.Second,
     }
     request, err := http.NewRequest("GET", linkToPost, nil)
     if err == nil {
@@ -590,18 +591,59 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
         raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
     }
 
+    err = rp.appendLinkToServerHistory(linkToPost, sourceID, pictureID, file.Name, guildID)
+    if err != nil {
+        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+    }
+
     if messageID == "" {
-        _, err = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
+        _, err = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf(":label: `%s`%s\n%s\nCheck out a gallery of recent pictures here: <%s>", file.Name, camerModelText, linkToPost, linkToHistory))
         if err != nil {
             return err
         }
     } else {
-        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
+        _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s\nCheck out a gallery of recent pictures here: <%s>", file.Name, camerModelText, linkToPost, linkToHistory))
         if err != nil {
             return err
         }
     }
     return nil
+}
+
+func (rp *RandomPictures) appendLinkToServerHistory(link string, sourceID string, pictureID string, fileName string, guildID string) error {
+    redis := cache.GetRedisClient()
+    key := fmt.Sprintf("robyul2-discord:randompictures:history:%s", guildID)
+
+    item := new(RandomPictures_HistoryItem)
+    item.Link = link
+    item.SourceID = sourceID
+    item.PictureID = pictureID
+    item.Filename = fileName
+    item.GuildID = guildID
+    item.Time = time.Now()
+
+    itemBytes, err := msgpack.Marshal(&item)
+    if err != nil {
+        return err
+    }
+
+    _, err = redis.LPush(key, itemBytes).Result()
+    if err != nil {
+        return err
+    }
+
+    _, err = redis.LTrim(key, 0, 99).Result()
+
+    return err
+}
+
+type RandomPictures_HistoryItem struct {
+    Link      string
+    SourceID  string
+    PictureID string
+    Filename  string
+    GuildID   string
+    Time      time.Time
 }
 
 type ImgurResponse struct {

@@ -72,7 +72,8 @@
     "base_url": ""
   },
   "website": {
-    "ranking_base_url": "https://robyul.chat/ranking"
+    "ranking_base_url": "https://robyul.chat/ranking",
+    "randompictures_base_url": "https://robyul.chat/d/randompictures/"
   },
   "streamable": {
     "username": "",

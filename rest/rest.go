@@ -13,6 +13,8 @@ import (
     "github.com/Seklfreak/Robyul2/generator"
     "github.com/Seklfreak/Robyul2/modules/plugins"
     "github.com/Seklfreak/Robyul2/models"
+    "strconv"
+    "github.com/vmihailenco/msgpack"
 )
 
 func NewRestServices() []*restful.WebService {
@@ -71,6 +73,15 @@ func NewRestServices() []*restful.WebService {
         Produces(restful.MIME_JSON)
 
     service.Route(service.GET("/{guild-id}").To(FindGuild))
+    services = append(services, service)
+
+    service = new(restful.WebService)
+    service.
+    Path("/randompictures").
+        Consumes(restful.MIME_JSON).
+        Produces(restful.MIME_JSON)
+
+    service.Route(service.GET("/history/{guild-id}/{start}/{end}").To(GetRandomPicturesGuildHistory))
     services = append(services, service)
     return services
 }
@@ -375,4 +386,50 @@ func FindGuild(request *restful.Request, response *restful.Response) {
     } else {
         response.WriteError(http.StatusNotFound, errors.New("Guild not found."))
     }
+}
+
+func GetRandomPicturesGuildHistory(request *restful.Request, response *restful.Response) {
+    guildID := request.PathParameter("guild-id")
+    startString := request.PathParameter("start")
+    start, err := strconv.Atoi(startString)
+    if err != nil {
+        response.WriteError(http.StatusBadRequest, errors.New("Invalid arguments."))
+        return
+    }
+    endString := request.PathParameter("end")
+    end, err := strconv.Atoi(endString)
+    if err != nil {
+        response.WriteError(http.StatusBadRequest, errors.New("Invalid arguments."))
+        return
+    }
+
+    redis := cache.GetRedisClient()
+    key := fmt.Sprintf("robyul2-discord:randompictures:history:%s", guildID)
+
+    result, err := redis.LRange(key, int64(start-1), int64(end-1)).Result()
+    if err != nil {
+        response.WriteError(http.StatusInternalServerError, err)
+        return
+    }
+
+    resultItems := make([]models.Rest_RandomPictures_HistoryItem, 0)
+    var item plugins.RandomPictures_HistoryItem
+    for _, itemString := range result {
+        item = plugins.RandomPictures_HistoryItem{}
+        err := msgpack.Unmarshal([]byte(itemString), &item)
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+            continue
+        }
+        resultItems = append(resultItems, models.Rest_RandomPictures_HistoryItem{
+            Link:      item.Link,
+            SourceID:  item.SourceID,
+            PictureID: item.PictureID,
+            Filename:  item.Filename,
+            GuildID:   item.GuildID,
+            Time:      item.Time,
+        })
+    }
+
+    response.WriteEntity(resultItems)
 }

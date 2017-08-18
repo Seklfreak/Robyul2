@@ -56,6 +56,15 @@ type Rest_Feature_RandomPictures struct {
     Count int
 }
 
+type Rest_RandomPictures_HistoryItem struct {
+    Link      string
+    SourceID  string
+    PictureID string
+    Filename  string
+    GuildID   string
+    Time      time.Time
+}
+
 const (
     Redis_Key_Feature_Levels_Badges  = "robyul2-discord:feature:levels-badges:server:%s"
     Redis_Key_Feature_RandomPictures = "robyul2-discord:feature:randompictures:server:%s"
