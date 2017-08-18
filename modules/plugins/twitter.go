@@ -456,6 +456,8 @@ func (m *Twitter) handleError(err error) string {
         return helpers.GetTextF("plugins.twitter.account-has-been-suspended")
     case 88:
         return helpers.GetTextF("plugins.twitter.rate-limit-exceed")
+    case 130:
+        return helpers.GetTextF("plugins.twitter.over-capacity")
     default:
         helpers.Relax(err)
     }
