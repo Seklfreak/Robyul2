@@ -8,7 +8,7 @@ import (
     "github.com/dghubble/go-twitter/twitter"
     "github.com/dghubble/oauth1"
     "github.com/dustin/go-humanize"
-	"github.com/pkg/errors"
+    "github.com/pkg/errors"
     rethink "github.com/gorethink/gorethink"
     "strings"
     "time"
@@ -458,6 +458,8 @@ func (m *Twitter) handleError(err error) string {
         return helpers.GetTextF("plugins.twitter.rate-limit-exceed")
     case 130:
         return helpers.GetTextF("plugins.twitter.over-capacity")
+    case 131:
+        return helpers.GetTextF("plugins.twitter.internal-error")
     default:
         helpers.Relax(err)
     }
