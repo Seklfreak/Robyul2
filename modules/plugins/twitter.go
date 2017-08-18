@@ -464,7 +464,7 @@ func (m *Twitter) handleError(err error) string {
         helpers.Relax(err)
     }
 
-    // Unrecheable
-    err = errors.Wrap(err, "reached to unrecheable code")
+    // Unreachable
+    err = errors.Wrap(err, "reached to unreachable code")
     panic(err)
 }
