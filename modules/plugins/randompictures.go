@@ -151,7 +151,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
                                 var gPicture *drive.File
                                 msgpack.Unmarshal(resultBytes, &gPicture)
                                 defer helpers.Recover()
-                                err = rp.postItem(postToChannelID, "", gPicture, "", "")
+                                err = rp.postItem(postToChannelID, "", gPicture, sourceEntry.ID, strconv.Itoa(chosenPicN))
                                 if err != nil {
                                     if errG := err.(*googleapi.Error); errG != nil {
                                         if strings.Contains("The download quota for this file has been exceeded", errG.Error()) {
@@ -558,6 +558,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 }
 
 func (rp *RandomPictures) postItem(channelID string, messageID string, file *drive.File, sourceID string, pictureID string) error {
+    // fmt.Println("channelID:", channelID, "messageID:", messageID, "file:", file.Name, "sourceID:", sourceID, "pictureID:", pictureID)
     file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
     if err != nil {
         return err
@@ -568,49 +569,33 @@ func (rp *RandomPictures) postItem(channelID string, messageID string, file *dri
         camerModelText = fmt.Sprintf(" 📷 `%s`", file.ImageMediaMetadata.CameraModel)
     }
 
-    if messageID == "" {
-        result, err := driveService.Files.Get(file.Id).Download()
-        if err != nil {
-            return err
-        }
-        defer func() {
-            helpers.Recover()
-            result.Body.Close()
-        }()
+    linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
 
-        _, err = cache.GetSession().ChannelMessageSendComplex(channelID,
-            &discordgo.MessageSend{
-                Content: fmt.Sprintf(":label: `%s`%s", file.Name, camerModelText),
-                Files: []*discordgo.File{{
-                    Name:   file.Name,
-                    Reader: result.Body,
-                }},
-            })
+    splitFilename := strings.Split(file.Name, ".")
+
+    linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-") + "." + splitFilename[len(splitFilename)-1]))
+
+    // open link to prepare cache
+    client := &http.Client{
+        Timeout: 3*time.Second,
+    }
+    request, err := http.NewRequest("GET", linkToPost, nil)
+    if err == nil {
+        request.Header.Set("User-Agent", helpers.DEFAULT_UA)
+        _, err = client.Do(request)
+        if err != nil {
+            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+        }
+    } else {
+        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+    }
+
+    if messageID == "" {
+        _, err = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
         if err != nil {
             return err
         }
     } else {
-        linkToPost := helpers.GetConfig().Path("imageproxy.base_url").Data().(string)
-
-        splitFilename := strings.Split(file.Name, ".")
-
-        linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-") + "." + splitFilename[len(splitFilename)-1]))
-
-        // open link to prepare cache
-        client := &http.Client{
-            Timeout: 3*time.Second,
-        }
-        request, err := http.NewRequest("GET", linkToPost, nil)
-        if err == nil {
-            request.Header.Set("User-Agent", helpers.DEFAULT_UA)
-            _, err = client.Do(request)
-            if err != nil {
-                raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-            }
-        } else {
-            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-        }
-
         _, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
         if err != nil {
             return err
