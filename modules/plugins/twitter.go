@@ -8,6 +8,7 @@ import (
     "github.com/dghubble/go-twitter/twitter"
     "github.com/dghubble/oauth1"
     "github.com/dustin/go-humanize"
+    "github.com/pkg/errors"
     rethink "github.com/gorethink/gorethink"
     "strings"
     "time"
@@ -168,11 +169,10 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
                 twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
                     ScreenName: twitterUsername,
                 })
-                if err != nil && err.Error() == "twitter: 50 User not found." {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-not-found"))
+                if err != nil {
+                    errText := m.handleError(err)
+                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF(errText))
                     return
-                } else {
-                    helpers.Relax(err)
                 }
 
                 twitterUserTweets, _, err := twitterClient.Timelines.UserTimeline(&twitter.UserTimelineParams{
@@ -253,11 +253,10 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
             twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
                 ScreenName: twitterUsername,
             })
-            if err != nil && err.Error() == "twitter: 50 User not found." {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-not-found"))
+            if err != nil {
+                errText := m.handleError(err)
+                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF(errText))
                 return
-            } else {
-                helpers.Relax(err)
             }
 
             createdAtTime, err := time.Parse(rfc2822, twitterUser.CreatedAt)
@@ -436,4 +435,36 @@ func (m *Twitter) deleteEntryById(id string) {
         rethink.Row.Field("id").Eq(id),
     ).Delete().RunWrite(helpers.GetDB())
     helpers.Relax(err)
+}
+
+func (m *Twitter) handleError(err error) string {
+    // Extract 'error code' from dghubble/go-twitter's err message.
+    // Has a dependency with dghubble/go-twitter package.
+    var errCode int
+    var errMsg string
+    _, scanErr := fmt.Sscanf(err.Error(), "twitter: %d %s", &errCode, &errMsg)
+    if scanErr != nil {
+        err = errors.Wrap(err, "parse twitter error message failed")
+        helpers.Relax(err)
+    }
+
+    // Handle twitter API error by code
+    switch errCode {
+    case 50:
+        return helpers.GetTextF("plugins.twitter.account-not-found")
+    case 63:
+        return helpers.GetTextF("plugins.twitter.account-has-been-suspended")
+    case 88:
+        return helpers.GetTextF("plugins.twitter.rate-limit-exceed")
+    case 130:
+        return helpers.GetTextF("plugins.twitter.over-capacity")
+    case 131:
+        return helpers.GetTextF("plugins.twitter.internal-error")
+    default:
+        helpers.Relax(err)
+    }
+
+    // Unreachable
+    err = errors.Wrap(err, "reached to unreachable code")
+    panic(err)
 }
