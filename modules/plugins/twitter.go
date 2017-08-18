@@ -26,7 +26,7 @@ type DB_Twitter_Entry struct {
 
 type DB_Twitter_Tweet struct {
     ID        string `gorethink:"id,omitempty"`
-    CreatedAt string `gorethink:"createdat`
+    CreatedAt string `gorethink:"createdat"`
 }
 
 type Twitter_Safe_Entries struct {
