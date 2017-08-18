@@ -94,7 +94,11 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
             return
         }
         pollMaxVotes, err := strconv.Atoi(args[2])
-        helpers.Relax(err)
+        if err != nil {
+            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+            helpers.Relax(err)
+            return
+        }
         channel, err := helpers.GetChannel(msg.ChannelID)
         helpers.Relax(err)
         guild, err := helpers.GetGuild(channel.GuildID)
