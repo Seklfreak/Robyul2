@@ -503,6 +503,7 @@
       "embed-footer": "Twitter",
       "account-not-found": "User not found!",
       "account-has-been-suspended": "User account has been suspended!",
+      "rate-limit-exceed": "Twitter API rate limit exceed, Try again later!",
       "account-added-success": "Added Twitter Account `@%s` to the Channel <#%s>!",
       "account-delete-not-found-error": "Unable to find Twitter Account in the Database!",
       "account-delete-success": "Deleted Twitter Account `@%s` from the Database!",

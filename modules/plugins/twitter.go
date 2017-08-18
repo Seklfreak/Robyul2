@@ -454,6 +454,8 @@ func (m *Twitter) handleError(err error) string {
         return helpers.GetTextF("plugins.twitter.account-not-found")
     case 63:
         return helpers.GetTextF("plugins.twitter.account-has-been-suspended")
+    case 88:
+        return helpers.GetTextF("plugins.twitter.rate-limit-exceed")
     default:
         helpers.Relax(err)
     }
