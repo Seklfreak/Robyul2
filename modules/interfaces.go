@@ -5,74 +5,74 @@ import "github.com/bwmarrin/discordgo"
 type BaseModule interface{}
 
 type Plugin interface {
-    BaseModule
+	BaseModule
 
-    Commands() []string
+	Commands() []string
 
-    Init(session *discordgo.Session)
+	Init(session *discordgo.Session)
 
-    Action(
-        command string,
-        content string,
-        msg *discordgo.Message,
-        session *discordgo.Session,
-    )
+	Action(
+		command string,
+		content string,
+		msg *discordgo.Message,
+		session *discordgo.Session,
+	)
 }
 
 type TriggerPlugin interface {
-    BaseModule
+	BaseModule
 
-    Triggers() []string
-    Response(trigger string, content string) string
+	Triggers() []string
+	Response(trigger string, content string) string
 }
 
 type ExtendedPlugin interface {
-    BaseModule
+	BaseModule
 
-    Commands() []string
+	Commands() []string
 
-    Init(session *discordgo.Session)
+	Init(session *discordgo.Session)
 
-    Action(
-        command string,
-        content string,
-        msg *discordgo.Message,
-        session *discordgo.Session,
-    )
+	Action(
+		command string,
+		content string,
+		msg *discordgo.Message,
+		session *discordgo.Session,
+	)
 
-    OnMessage(
-        content string,
-        msg *discordgo.Message,
-        session *discordgo.Session,
-    )
+	OnMessage(
+		content string,
+		msg *discordgo.Message,
+		session *discordgo.Session,
+	)
 
-    OnGuildMemberAdd(
-        member *discordgo.Member,
-        session *discordgo.Session,
-    )
+	OnGuildMemberAdd(
+		member *discordgo.Member,
+		session *discordgo.Session,
+	)
 
-    OnGuildMemberRemove(
-        member *discordgo.Member,
-        session *discordgo.Session,
-    )
+	OnGuildMemberRemove(
+		member *discordgo.Member,
+		session *discordgo.Session,
+	)
 
-    OnReactionAdd(
-        reaction *discordgo.MessageReactionAdd,
-        session *discordgo.Session,
-    )
+	OnReactionAdd(
+		reaction *discordgo.MessageReactionAdd,
+		session *discordgo.Session,
+	)
 
-    OnReactionRemove(
-        reaction *discordgo.MessageReactionRemove,
-        session *discordgo.Session,
-    )
+	OnReactionRemove(
+		reaction *discordgo.MessageReactionRemove,
+		session *discordgo.Session,
+	)
 
-    OnGuildBanAdd(
-        user *discordgo.GuildBanAdd,
-        session *discordgo.Session,
-    )
+	OnGuildBanAdd(
+		user *discordgo.GuildBanAdd,
+		session *discordgo.Session,
+	)
 
-    OnGuildBanRemove(
-        user *discordgo.GuildBanRemove,
-        session *discordgo.Session,
-    )
+	OnGuildBanRemove(
+		user *discordgo.GuildBanRemove,
+		session *discordgo.Session,
+	)
 }

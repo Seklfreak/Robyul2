@@ -1,1689 +1,1689 @@
 package plugins
 
 import (
-    "fmt"
-    "github.com/Seklfreak/Robyul2/helpers"
-    "github.com/bwmarrin/discordgo"
-    "regexp"
-    "strconv"
-    "strings"
-    "github.com/Seklfreak/Robyul2/cache"
-    "github.com/getsentry/raven-go"
-    "time"
-    "github.com/Seklfreak/Robyul2/emojis"
-    "github.com/renstrom/fuzzysearch/fuzzy"
-    "github.com/Jeffail/gabs"
-    "github.com/bradfitz/slice"
-    "bytes"
-    rethink "github.com/gorethink/gorethink"
-    "github.com/dustin/go-humanize"
-    "sort"
+	"bytes"
+	"fmt"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Jeffail/gabs"
+	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/emojis"
+	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/bradfitz/slice"
+	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
+	"github.com/getsentry/raven-go"
+	rethink "github.com/gorethink/gorethink"
+	"github.com/renstrom/fuzzysearch/fuzzy"
 )
 
 type Mod struct{}
 
 func (m *Mod) Commands() []string {
-    return []string{
-        "cleanup",
-        "mute",
-        "unmute",
-        "ban",
-        "kick",
-        "serverlist",
-        "echo",
-        "inspect",
-        "inspect-extended",
-        "auto-inspects-channel",
-        "search-user",
-        "audit-log",
-        "invites",
-        "leave-server",
-        "say",
-        "edit",
-        "upload",
-        "get",
-        "create-invite",
-    }
+	return []string{
+		"cleanup",
+		"mute",
+		"unmute",
+		"ban",
+		"kick",
+		"serverlist",
+		"echo",
+		"inspect",
+		"inspect-extended",
+		"auto-inspects-channel",
+		"search-user",
+		"audit-log",
+		"invites",
+		"leave-server",
+		"say",
+		"edit",
+		"upload",
+		"get",
+		"create-invite",
+	}
 }
 
 type DB_Mod_JoinLog struct {
-    ID                        string `gorethink:"id,omitempty"`
-    GuildID                   string `gorethink:"guildid"`
-    UserID                    string `gorethink:"userid"`
-    JoinedAt                  time.Time `gorethink:"joinedat"`
-    InviteCodeUsed            string `gorethink:"invitecode"`
-    InviteCodeCreatedByUserID string `gorethink:"invitecode_createdbyuserid"`
-    InviteCodeCreatedAt       time.Time `gorethink:"invitecode_createdat"`
+	ID                        string    `gorethink:"id,omitempty"`
+	GuildID                   string    `gorethink:"guildid"`
+	UserID                    string    `gorethink:"userid"`
+	JoinedAt                  time.Time `gorethink:"joinedat"`
+	InviteCodeUsed            string    `gorethink:"invitecode"`
+	InviteCodeCreatedByUserID string    `gorethink:"invitecode_createdbyuserid"`
+	InviteCodeCreatedAt       time.Time `gorethink:"invitecode_createdat"`
 }
 
 type CacheInviteInformation struct {
-    GuildID         string
-    CreatedByUserID string
-    Code            string
-    CreatedAt       time.Time
-    Uses            int
+	GuildID         string
+	CreatedByUserID string
+	Code            string
+	CreatedAt       time.Time
+	Uses            int
 }
 
 var (
-    invitesCache map[string][]CacheInviteInformation
+	invitesCache map[string][]CacheInviteInformation
 )
 
 func (m *Mod) Init(session *discordgo.Session) {
-    invitesCache = make(map[string][]CacheInviteInformation, 0)
-    go func() {
-        log := cache.GetLogger()
+	invitesCache = make(map[string][]CacheInviteInformation, 0)
+	go func() {
+		log := cache.GetLogger()
 
-        for _, guild := range session.State.Guilds {
-            invites, err := session.GuildInvites(guild.ID)
-            if err != nil {
-                log.WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild %s (#%s): %s",
-                    guild.Name, guild.ID, err.Error()))
-                continue
-            }
+		for _, guild := range session.State.Guilds {
+			invites, err := session.GuildInvites(guild.ID)
+			if err != nil {
+				log.WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild %s (#%s): %s",
+					guild.Name, guild.ID, err.Error()))
+				continue
+			}
 
-            cacheInvites := make([]CacheInviteInformation, 0)
-            for _, invite := range invites {
-                createdAt, err := invite.CreatedAt.Parse()
-                if err != nil {
-                    continue
-                }
-                inviterID := ""
-                if invite.Inviter != nil {
-                    inviterID = invite.Inviter.ID
-                }
-                cacheInvites = append(cacheInvites, CacheInviteInformation{
-                    GuildID:         invite.Guild.ID,
-                    CreatedByUserID: inviterID,
-                    Code:            invite.Code,
-                    CreatedAt:       createdAt,
-                    Uses:            invite.Uses,
-                })
-            }
+			cacheInvites := make([]CacheInviteInformation, 0)
+			for _, invite := range invites {
+				createdAt, err := invite.CreatedAt.Parse()
+				if err != nil {
+					continue
+				}
+				inviterID := ""
+				if invite.Inviter != nil {
+					inviterID = invite.Inviter.ID
+				}
+				cacheInvites = append(cacheInvites, CacheInviteInformation{
+					GuildID:         invite.Guild.ID,
+					CreatedByUserID: inviterID,
+					Code:            invite.Code,
+					CreatedAt:       createdAt,
+					Uses:            invite.Uses,
+				})
+			}
 
-            invitesCache[guild.ID] = cacheInvites
-        }
-        log.WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
-    }()
+			invitesCache[guild.ID] = cacheInvites
+		}
+		log.WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
+	}()
 }
 
 func (m *Mod) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-    regexNumberOnly := regexp.MustCompile(`^\d+$`)
-
-    switch command {
-    case "cleanup":
-        helpers.RequireMod(msg, func() {
-            args := strings.Fields(content)
-            if len(args) > 0 {
-                switch args[0] {
-                case "after": // [p]cleanup after <after message id> [<until message id>]
-                    if len(args) < 2 {
-                        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                        return
-                    } else {
-                        afterMessageId := args[1]
-                        untilMessageId := ""
-                        if regexNumberOnly.MatchString(afterMessageId) == false {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                            return
-                        }
-                        if len(args) >= 3 {
-                            untilMessageId = args[2]
-                            if regexNumberOnly.MatchString(untilMessageId) == false {
-                                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                                return
-                            }
-                        }
-
-                        messagesToDeleteIds := []string{}
-
-                        nextAfterID := afterMessageId
-                    AllMessagesLoop:
-                        for {
-                            messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, 100, "", nextAfterID, "")
-                            slice.Sort(messagesToDelete, func(i, j int) bool {
-                                return messagesToDelete[i].Timestamp < messagesToDelete[j].Timestamp
-                            })
-                            for _, messageToDelete := range messagesToDelete {
-                                messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
-                                nextAfterID = messageToDelete.ID
-                                if messageToDelete.ID == untilMessageId {
-                                    break AllMessagesLoop
-                                }
-                            }
-                            if len(messagesToDelete) <= 0 {
-                                break AllMessagesLoop
-                            }
-                        }
-
-                        msgAlreadyIn := false
-                        for _, messageID := range messagesToDeleteIds {
-                            if messageID == msg.ID {
-                                msgAlreadyIn = true
-                            }
-                        }
-                        if msgAlreadyIn == false {
-                            messagesToDeleteIds = append(messagesToDeleteIds, msg.ID)
-                        }
-
-                        messagesToDeleteIds = m.removeDuplicates(messagesToDeleteIds)
-
-                        if len(messagesToDeleteIds) <= 10 {
-                            err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
-                            cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
-                            if err != nil {
-                                if errD, ok := err.(*discordgo.RESTError); ok {
-                                    if errD.Message.Code == 50034 {
-                                        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                        return
-                                    } else if errD.Message.Code == 50013 {
-                                        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                        return
-                                    } else {
-                                        helpers.Relax(errD)
-                                    }
-                                } else {
-                                    helpers.Relax(err)
-                                }
-                                return
-                            }
-                        } else {
-                            if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)), "✅", "🚫") == true {
-                                for i := 0; i < len(messagesToDeleteIds); i += 100 {
-                                    batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
-                                    err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
-                                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
-                                    if err != nil {
-                                        if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
-                                            if errD.Message.Code == 50034 {
-                                                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                                return
-                                            } else if errD.Message.Code == 50013 {
-                                                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                                return
-                                            } else {
-                                                helpers.Relax(errD)
-                                            }
-                                        } else {
-                                            helpers.Relax(err)
-                                        }
-                                        return
-                                    }
-                                }
-                            } else {
-                                session.ChannelMessageDelete(msg.ChannelID, msg.ID)
-                            }
-                            return
-                        }
-                    }
-                case "messages": // [p]cleanup messages <n>
-                    if len(args) < 2 {
-                        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                        return
-                    } else {
-                        if regexNumberOnly.MatchString(args[1]) == false {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                            return
-                        }
-                        numOfMessagesToDelete, err := strconv.Atoi(args[1])
-                        if err != nil {
-                            session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(helpers.GetTextF("bot.errors.general"), err.Error()))
-                            return
-                        }
-                        if numOfMessagesToDelete < 1 {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                            return
-                        }
-
-                        messagesToDeleteIds := []string{}
-
-                        messagesLeft := numOfMessagesToDelete + 1
-                        lastBeforeID := ""
-                        for {
-                            messagesToGet := messagesLeft
-                            if messagesLeft > 100 {
-                                messagesToGet = 100
-                            }
-                            messagesLeft -= messagesToGet
-
-                            messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, messagesToGet, lastBeforeID, "", "")
-                            slice.Sort(messagesToDelete, func(i, j int) bool {
-                                return messagesToDelete[i].Timestamp < messagesToDelete[j].Timestamp
-                            })
-                            for _, messageToDelete := range messagesToDelete {
-                                messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
-                                lastBeforeID = messageToDelete.ID
-                            }
-
-                            if messagesLeft <= 0 {
-                                break
-                            }
-                        }
-
-                        messagesToDeleteIds = m.removeDuplicates(messagesToDeleteIds)
-
-                        if len(messagesToDeleteIds) <= 10 {
-                            err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
-                            cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
-                            if err != nil {
-                                if errD, ok := err.(*discordgo.RESTError); ok {
-                                    if errD.Message.Code == 50034 {
-                                        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                        return
-                                    } else if errD.Message.Code == 50013 {
-                                        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                        return
-                                    } else {
-                                        helpers.Relax(errD)
-                                    }
-                                } else {
-                                    helpers.Relax(err)
-                                }
-                                return
-                            }
-                        } else {
-                            if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)-1), "✅", "🚫") == true {
-                                for i := 0; i < len(messagesToDeleteIds); i += 100 {
-                                    batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
-                                    err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
-                                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
-                                    if err != nil {
-                                        if errD, ok := err.(*discordgo.RESTError); ok {
-                                            if errD.Message.Code == 50034 {
-                                                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                                return
-                                            } else if errD.Message.Code == 50013 {
-                                                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
-                                                return
-                                            } else {
-                                                helpers.Relax(errD)
-                                            }
-                                        } else {
-                                            helpers.Relax(err)
-                                        }
-                                        return
-                                    }
-                                }
-                            } else {
-                                session.ChannelMessageDelete(msg.ChannelID, msg.ID)
-                            }
-                            return
-                        }
-                    }
-                }
-            }
-        })
-        return
-    case "mute": // [p]mute server <User>
-        helpers.RequireMod(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-            args := strings.Fields(content)
-            if len(args) >= 2 {
-                targetUser, err := helpers.GetUserFromMention(args[1])
-                if err != nil {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                    return
-                }
-                switch args[0] {
-                case "server":
-                    channel, err := helpers.GetChannel(msg.ChannelID)
-                    helpers.Relax(err)
-                    muteRole, err := helpers.GetMuteRole(channel.GuildID)
-                    if err != nil {
-                        if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.get-mute-role-no-permissions"))
-                            return
-                        } else {
-                            helpers.Relax(err)
-                        }
-                    }
-                    isInGuild, _ := helpers.GetFreshIsInGuild(channel.GuildID, targetUser.ID)
-                    if isInGuild == true {
-                        err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
-                        if err != nil {
-                            if errD, ok := err.(discordgo.RESTError); ok {
-                                if errD.Message.Code == 10007 {
-                                    _, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to assign the mute role to the given user.")
-                                    helpers.Relax(err)
-                                    return
-                                } else {
-                                    helpers.Relax(err)
-                                }
-                            } else {
-                                helpers.Relax(err)
-                            }
-                        }
-                    }
-
-                    settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
-                    alreadyMutedInSettings := false
-                    for _, mutedMember := range settings.MutedMembers {
-                        if mutedMember == targetUser.ID {
-                            alreadyMutedInSettings = true
-                        }
-                    }
-                    if alreadyMutedInSettings == false {
-                        settings.MutedMembers = append(settings.MutedMembers, targetUser.ID)
-                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
-                        helpers.Relax(err)
-                    }
-
-                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
-                    helpers.Relax(err)
-                    return
-                }
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "unmute": // [p]unmute server <User>
-        helpers.RequireMod(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-            args := strings.Fields(content)
-            if len(args) >= 2 {
-                targetUser, _ := helpers.GetUserFromMention(args[1])
-                if targetUser == nil {
-                    targetUser = new(discordgo.User)
-                    targetUser.ID = args[1]
-                    targetUser.Username = "N/A"
-                }
-                switch args[0] {
-                case "server", "global":
-                    channel, err := helpers.GetChannel(msg.ChannelID)
-                    helpers.Relax(err)
-                    muteRole, err := helpers.GetMuteRole(channel.GuildID)
-                    helpers.Relax(err)
-                    err = session.GuildMemberRoleRemove(channel.GuildID, targetUser.ID, muteRole.ID)
-                    roleRemoved := true
-                    if err != nil {
-                        roleRemoved = false
-                        if errD, ok := err.(*discordgo.RESTError); ok {
-                            if errD.Message.Code != 10007 && errD.Message.Code != 10013 && errD.Message.Code != 0 {
-                                helpers.Relax(err)
-                            }
-                        } else {
-                            helpers.Relax(err)
-                        }
-                    }
-
-                    settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
-                    removedFromDb := false
-                    newMutedMembers := make([]string, 0)
-                    for _, mutedMember := range settings.MutedMembers {
-                        if mutedMember != targetUser.ID {
-                            newMutedMembers = append(newMutedMembers, mutedMember)
-                        } else {
-                            removedFromDb = true
-                        }
-                    }
-
-                    if removedFromDb {
-                        settings.MutedMembers = newMutedMembers
-                        err = helpers.GuildSettingsSet(channel.GuildID, settings)
-                        helpers.Relax(err)
-                    }
-
-                    if !removedFromDb && !roleRemoved {
-                        session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-unmuted-error"))
-                    } else {
-                        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
-                    }
-                }
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "ban": // [p]ban <User> [<Days>], checks for IsMod and Ban Permissions
-        helpers.RequireMod(msg, func() {
-            args := strings.Fields(content)
-            if len(args) >= 1 {
-                // Days Argument
-                days := 0
-                var err error
-                if len(args) >= 2 && regexNumberOnly.MatchString(args[1]) {
-                    days, err = strconv.Atoi(args[1])
-                    if err != nil {
-                        session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                        return
-                    }
-                }
-
-                targetUser, err := helpers.GetUserFromMention(args[0])
-                if err != nil {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                    return
-                }
-                // Bot can ban?
-                botCanBan := false
-                channel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-                guild, err := helpers.GetGuild(channel.GuildID)
-                guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
-                helpers.Relax(err)
-                for _, role := range guild.Roles {
-                    for _, userRole := range guildMemberBot.Roles {
-                        if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-                            botCanBan = true
-                        }
-                    }
-                }
-
-                if botCanBan == false {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
-                    return
-                }
-                // User can ban?
-                userCanBan := false
-                guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
-                helpers.Relax(err)
-                for _, role := range guild.Roles {
-                    for _, userRole := range guildMemberUser.Roles {
-                        if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-                            userCanBan = true
-                        }
-                    }
-                }
-                if msg.Author.ID == guild.OwnerID {
-                    userCanBan = true
-                }
-                if userCanBan == false {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
-                    return
-                }
-                // Ban user
-                err = session.GuildBanCreate(guild.ID, targetUser.ID, days)
-                if err != nil {
-                    if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-                        if err.Message.Code == 0 {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-failed-too-low"))
-                            return
-                        } else {
-                            helpers.Relax(err)
-                        }
-                    } else {
-                        helpers.Relax(err)
-                    }
-                }
-                cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "kick": // [p]kick <User>, checks for IsMod and Kick Permissions
-        helpers.RequireMod(msg, func() {
-            args := strings.Fields(content)
-            if len(args) >= 1 {
-                targetUser, err := helpers.GetUserFromMention(args[0])
-                if err != nil {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-                    return
-                }
-                // Bot can kick?
-                botCanKick := false
-                channel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-                guild, err := helpers.GetGuild(channel.GuildID)
-                guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
-                helpers.Relax(err)
-                for _, role := range guild.Roles {
-                    for _, userRole := range guildMemberBot.Roles {
-                        if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-                            botCanKick = true
-                        }
-                    }
-                }
-                if botCanKick == false {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
-                    return
-                }
-                // User can kick?
-                userCanKick := false
-                guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
-                helpers.Relax(err)
-                for _, role := range guild.Roles {
-                    for _, userRole := range guildMemberUser.Roles {
-                        if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-                            userCanKick = true
-                        }
-                    }
-                }
-                if msg.Author.ID == guild.OwnerID {
-                    userCanKick = true
-                }
-                if userCanKick == false {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
-                    return
-                }
-                // Kick user
-                err = session.GuildMemberDelete(guild.ID, targetUser.ID)
-                if err != nil {
-                    if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-                        if err.Message.Code == 0 {
-                            session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-failed-too-low"))
-                            return
-                        } else {
-                            helpers.Relax(err)
-                        }
-                    } else {
-                        helpers.Relax(err)
-                    }
-                }
-                cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "serverlist": // [p]serverlist
-        helpers.RequireBotAdmin(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-            resultText := ""
-            totalMembers := 0
-            totalChannels := 0
-            guildMembers := 0
-            for _, guild := range session.State.Guilds {
-                guildMembers = guild.MemberCount
-                if guildMembers == 0 {
-                    lastAfterMemberId := ""
-                    for {
-                        members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-                        helpers.Relax(err)
-                        if len(members) <= 0 {
-                            break
-                        }
-
-                        lastAfterMemberId = members[len(members)-1].User.ID
-                        guildMembers += len(members)
-                    }
-                }
-
-                resultText += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
-                    guild.Name, guild.ID, len(guild.Channels), guildMembers, guild.Region)
-                totalChannels += len(guild.Channels)
-                totalMembers += guildMembers
-            }
-            resultText += fmt.Sprintf("Total Stats: Servers `%d`, Channels: `%d`, Members: `%d`", len(session.State.Guilds), totalChannels, totalMembers)
-
-            for _, resultPage := range helpers.Pagify(resultText, "\n") {
-                _, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
-                helpers.Relax(err)
-            }
-        })
-        return
-    case "echo", "say": // [p]echo <channel> <message>
-        helpers.RequireMod(msg, func() {
-            args := strings.Fields(content)
-            if len(args) >= 2 {
-                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
-                if err != nil || targetChannel.ID == "" {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                    return
-                }
-                if sourceChannel.GuildID != targetChannel.GuildID {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
-                    return
-                }
-
-                newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-                session.ChannelMessageSend(targetChannel.ID, newText)
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "edit": // [p]edit <channel> <message id> <message>
-        helpers.RequireAdmin(msg, func() {
-            args := strings.Fields(content)
-            if len(args) >= 3 {
-                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
-                if err != nil || targetChannel.ID == "" {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                    return
-                }
-                if sourceChannel.GuildID != targetChannel.GuildID {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
-                    return
-                }
-                targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
-                if err != nil {
-                    if errD, ok := err.(*discordgo.RESTError); ok {
-                        if errD.Message.Code == 10008 || strings.Contains(err.Error(), "is not snowflake") {
-                            _, err = session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
-                            helpers.Relax(err)
-                            return
-                        } else {
-                            helpers.Relax(err)
-                        }
-                    } else {
-                        helpers.Relax(err)
-                    }
-                }
-                newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-                session.ChannelMessageEdit(targetChannel.ID, targetMessage.ID, newText)
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "upload": // [p]upload <channel> + UPLOAD
-        helpers.RequireMod(msg, func() {
-            args := strings.Fields(content)
-            if len(args) >= 1 && len(msg.Attachments) > 0 {
-                fileToUpload := helpers.NetGet(msg.Attachments[0].URL)
-                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
-                if err != nil || targetChannel.ID == "" {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                    return
-                }
-                if sourceChannel.GuildID != targetChannel.GuildID {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
-                    return
-                }
-                session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "get": // [p]get <channel> <message id>
-        helpers.RequireMod(msg, func() {
-            args := strings.Fields(content)
-            if len(args) >= 2 {
-                sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
-                if err != nil || targetChannel.ID == "" {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                    return
-                }
-                if sourceChannel.GuildID != targetChannel.GuildID {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
-                    return
-                }
-                targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
-                if err != nil {
-                    if err, ok := err.(*discordgo.RESTError); ok {
-                        if err.Message.Code == 10008 || err.Message.Code == 50001 {
-                            session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
-                            return
-                        } else {
-                            helpers.Relax(err)
-                        }
-                    } else {
-                        helpers.Relax(err)
-                    }
-                }
-                newMessage := fmt.Sprintf("```%s```", targetMessage.Content)
-                _, err = session.ChannelMessageSend(msg.ChannelID, newMessage)
-                helpers.Relax(err)
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "inspect", "inspect-extended": // [p]inspect[-extended] <user>
-        isMod := helpers.IsMod(msg)
-        isAllowedToInspectExtended := helpers.CanInspectExtended(msg)
-
-        if isMod == false && isAllowedToInspectExtended == false {
-            _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("mod.no_permission"))
-            helpers.Relax(err)
-            return
-        }
-
-            isExtendedInspect := false
-            if command == "inspect-extended" {
-                if isAllowedToInspectExtended == false {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, "You aren't allowed to do this!")
-                    helpers.Relax(err)
-                    return
-                }
-                isExtendedInspect = true
-            }
-            session.ChannelTyping(msg.ChannelID)
-            args := strings.Fields(content)
-            var targetUser *discordgo.User
-            var err error
-            if len(args) >= 1 && args[0] != "" {
-                targetUser, err = helpers.GetUserFromMention(args[0])
-                if err != nil {
-                    if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
-                        _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
-                        helpers.Relax(err)
-                        return
-                    } else {
-                        helpers.Relax(err)
-                    }
-                }
-                helpers.Relax(err)
-                if targetUser.ID == "" {
-                    _, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                    helpers.Relax(err)
-                    return
-                }
-            } else {
-                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-                helpers.Relax(err)
-                return
-            }
-            textVersion := false
-            if len(args) >= 2 && args[1] == "text" {
-                textVersion = true
-            }
-            channel, err := helpers.GetChannel(msg.ChannelID)
-            helpers.Relax(err)
-
-            resultEmbed := &discordgo.MessageEmbed{
-                Title:       helpers.GetTextF("plugins.mod.inspect-embed-title", targetUser.Username, targetUser.Discriminator),
-                Description: helpers.GetTextF("plugins.mod.inspect-in-progress", 0, len(session.State.Guilds)),
-                URL:         helpers.GetAvatarUrl(targetUser),
-                Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)},
-                Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", targetUser.ID, len(session.State.Guilds))},
-                Color:       0x0FADED,
-            }
-            resultMessage := new(discordgo.Message)
-            if textVersion == false {
-                resultMessage, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
-                helpers.Relax(err)
-            } else {
-                resultMessage, err = session.ChannelMessageSend(msg.ChannelID,
-                    helpers.GetTextF("plugins.mod.inspect-in-progress", 0, len(session.State.Guilds)))
-                helpers.Relax(err)
-            }
-
-            bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, func(progressN int) {
-                progressText := helpers.GetTextF("plugins.mod.inspect-in-progress", progressN, len(session.State.Guilds))
-                if textVersion == false {
-                    resultEmbed.Description = progressText
-                    session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
-                } else {
-                    session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, progressText)
-                }
-            })
-
-            resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
-            resultText := helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
-            resultText += fmt.Sprintf("Username: `%s#%s,` ID: `#%s`",
-                targetUser.Username, targetUser.Discriminator, targetUser.ID)
-            if helpers.GetAvatarUrl(targetUser) != "" {
-                resultText += fmt.Sprintf(", DP: <%s>", helpers.GetAvatarUrl(targetUser))
-            }
-            resultText += "\n"
-
-            resultBansText := ""
-            if len(bannedOnServerList) <= 0 {
-                resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
-            } else {
-                if isExtendedInspect == false {
-                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.\n", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
-                } else {
-                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers:\n", len(bannedOnServerList))
-                    i := 0
-                BannedOnLoop:
-                    for _, bannedOnServer := range bannedOnServerList {
-                        resultBansText += fmt.Sprintf("▪`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
-                        i++
-                        if i >= 4 && textVersion == false {
-                            resultBansText += fmt.Sprintf("▪ and %d other server(s)\n", len(bannedOnServerList)-(i+1))
-                            break BannedOnLoop
-                        }
-                    }
-                    resultBansText += fmt.Sprintf("◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
-                }
-            }
-
-            isOnServerList := m.inspectCommonServers(targetUser)
-            commonGuildsText := ""
-            if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
-                if isExtendedInspect == false {
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.\n", len(isOnServerList))
-                } else {
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList))
-                    i := 0
-                ServerListLoop:
-                    for _, isOnServer := range isOnServerList {
-                        commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
-                        i++
-                        if i >= 4 && textVersion == false {
-                            commonGuildsText += fmt.Sprintf("▪ and %d other server(s)\n", len(isOnServerList)-(i))
-                            break ServerListLoop
-                        }
-                    }
-                }
-            } else {
-                commonGuildsText += "❓ User is on **none** other servers with Robyul.\n"
-            }
-
-            joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
-            oneDayAgo := time.Now().AddDate(0, 0, -1)
-            oneWeekAgo := time.Now().AddDate(0, 0, -7)
-            joinedTimeText := ""
-            if !joinedTime.After(oneWeekAgo) {
-                joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.\n", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
-            } else if !joinedTime.After(oneDayAgo) {
-                joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
-            } else {
-                joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
-            }
-
-            troublemakerReports := m.getTroublemakerReports(targetUser)
-            troublemakerReportsText := ""
-            if len(troublemakerReports) <= 0 {
-                troublemakerReportsText = "✅ User never got reported\n"
-            } else {
-                troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.\n", len(troublemakerReports), targetUser.ID)
-            }
-
-            joins, _ := m.GetJoins(targetUser.ID, channel.GuildID)
-            joinsText := ""
-            if len(joins) == 0 {
-                joinsText = "✅ User never joined this server\n"
-            } else if len(joins) == 1 {
-                if joins[0].InviteCodeUsed != "" {
-                    createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
-                    if createdByUser == nil {
-                        createdByUser = new(discordgo.User)
-                        createdByUser.ID = joins[0].InviteCodeCreatedByUserID
-                        createdByUser.Username = "N/A"
-                    }
-
-                    joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
-                        joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
-                } else {
-                    joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
-                }
-            } else if len(joins) > 1 {
-                sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
-                lastJoin := joins[0]
-
-                if lastJoin.InviteCodeUsed != "" {
-                    createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
-                    if createdByUser == nil {
-                        createdByUser = new(discordgo.User)
-                        createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
-                        createdByUser.Username = "N/A"
-                    }
-
-                    joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
-                        len(joins),
-                        lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
-                } else {
-                    joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
-                }
-            }
-
-            resultEmbed.Fields = []*discordgo.MessageEmbedField{
-                {Name: "Bans", Value: resultBansText, Inline: false},
-                {Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
-                {Name: "Join History", Value: joinsText, Inline: false},
-                {Name: "Common Servers", Value: commonGuildsText, Inline: false},
-                {Name: "Account Age", Value: joinedTimeText, Inline: false},
-            }
-            resultText += resultBansText
-            resultText += troublemakerReportsText
-            resultText += joinsText
-            resultText += commonGuildsText
-            resultText += joinedTimeText
-
-            for _, failedServer := range checkFailedServerList {
-                if failedServer.ID == channel.GuildID {
-                    noAccessToBansText := "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers.\n"
-                    resultEmbed.Description += noAccessToBansText
-                    resultText += noAccessToBansText
-                    break
-                }
-            }
-
-            if textVersion == false {
-                _, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
-                helpers.Relax(err)
-            } else {
-                pages := helpers.Pagify(resultText, "\n")
-                if len(pages) <= 1 {
-                    _, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, resultText)
-                    helpers.Relax(err)
-                } else {
-                    session.ChannelMessageDelete(msg.ChannelID, resultMessage.ID)
-                    session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, "Inspect completed.")
-                    for _, page := range pages {
-                        _, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, page)
-                        helpers.Relax(err)
-                    }
-                }
-            }
-        return
-    case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
-        helpers.RequireAdmin(msg, func() {
-            channel, err := helpers.GetChannel(msg.ChannelID)
-            helpers.Relax(err)
-            settings := helpers.GuildSettingsGetCached(channel.GuildID)
-            args := strings.Fields(content)
-            successMessage := ""
-            // Add Text
-            if len(args) >= 1 {
-                targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
-                if err != nil || targetChannel.ID == "" {
-                    session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                    return
-                }
-
-                chooseEmbed := &discordgo.MessageEmbed{
-                    Title:       fmt.Sprintf("@%s Enable Auto Inspect Triggers", msg.Author.Username),
-                    Description: "**Please wait a second...** :construction_site:",
-                    Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Robyul is currently on %d servers.", len(session.State.Guilds))},
-                    Color:       0x0FADED,
-                }
-                chooseMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, chooseEmbed)
-
-                allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), emojis.From("4"), emojis.From("5"), "💾"}
-                for _, allowedEmote := range allowedEmotes {
-                    err = session.MessageReactionAdd(msg.ChannelID, chooseMessage.ID, allowedEmote)
-                    helpers.Relax(err)
-                }
-
-                needEmbedUpdate := true
-                emotesLocked := false
-
-                // @TODO: use reaction event, see stats.go
-            HandleChooseReactions:
-                for {
-                    saveAndExits, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, "💾", 100)
-                    for _, saveAndExit := range saveAndExits {
-                        if saveAndExit.ID == msg.Author.ID {
-                            // user wants to exit
-                            session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, "💾", msg.Author.ID)
-                            break HandleChooseReactions
-                        }
-                    }
-                    numberOnes, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("1"), 100)
-                    for _, numberOne := range numberOnes {
-                        if numberOne.ID == msg.Author.ID {
-                            if settings.InspectTriggersEnabled.UserBannedOnOtherServers && emotesLocked == false {
-                                settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
-                            } else {
-                                settings.InspectTriggersEnabled.UserBannedOnOtherServers = true
-                            }
-                            needEmbedUpdate = true
-                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("1"), msg.Author.ID)
-                            if err != nil {
-                                emotesLocked = true
-                            }
-                        }
-                    }
-                    numberTwos, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("2"), 100)
-                    for _, numberTwo := range numberTwos {
-                        if numberTwo.ID == msg.Author.ID {
-                            if settings.InspectTriggersEnabled.UserNoCommonServers && emotesLocked == false {
-                                settings.InspectTriggersEnabled.UserNoCommonServers = false
-                            } else {
-                                settings.InspectTriggersEnabled.UserNoCommonServers = true
-                            }
-                            needEmbedUpdate = true
-                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("2"), msg.Author.ID)
-                            if err != nil {
-                                emotesLocked = true
-                            }
-                        }
-                    }
-                    NumberThrees, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("3"), 100)
-                    for _, NumberThree := range NumberThrees {
-                        if NumberThree.ID == msg.Author.ID {
-                            if settings.InspectTriggersEnabled.UserNewlyCreatedAccount && emotesLocked == false {
-                                settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
-                            } else {
-                                settings.InspectTriggersEnabled.UserNewlyCreatedAccount = true
-                            }
-                            needEmbedUpdate = true
-                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("3"), msg.Author.ID)
-                            if err != nil {
-                                emotesLocked = true
-                            }
-                        }
-                    }
-                    NumberFours, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("4"), 100)
-                    for _, NumberFour := range NumberFours {
-                        if NumberFour.ID == msg.Author.ID {
-                            if settings.InspectTriggersEnabled.UserReported && emotesLocked == false {
-                                settings.InspectTriggersEnabled.UserReported = false
-                            } else {
-                                settings.InspectTriggersEnabled.UserReported = true
-                            }
-                            needEmbedUpdate = true
-                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("4"), msg.Author.ID)
-                            if err != nil {
-                                emotesLocked = true
-                            }
-                        }
-                    }
-                    NumberFives, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("5"), 100)
-                    for _, NumberFive := range NumberFives {
-                        if NumberFive.ID == msg.Author.ID {
-                            if settings.InspectTriggersEnabled.UserMultipleJoins && emotesLocked == false {
-                                settings.InspectTriggersEnabled.UserMultipleJoins = false
-                            } else {
-                                settings.InspectTriggersEnabled.UserMultipleJoins = true
-                            }
-                            needEmbedUpdate = true
-                            err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("5"), msg.Author.ID)
-                            if err != nil {
-                                emotesLocked = true
-                            }
-                        }
-                    }
-
-                    if needEmbedUpdate == true {
-                        chooseEmbed.Description = fmt.Sprintf(
-                            "Choose which warnings should trigger an automatic inspect post in <#%s>.\n"+
-                                "**Available Triggers**\n",
-                            targetChannel.ID)
-                        enabledEmote := "🔲"
-                        if settings.InspectTriggersEnabled.UserBannedOnOtherServers {
-                            enabledEmote = "✔"
-                        }
-                        chooseEmbed.Description += fmt.Sprintf("%s %s User is banned on a different server with Robyul on. Gets checked everytime an user joins or gets banned on a different server with Robyul on.\n",
-                            emojis.From("1"), enabledEmote)
-
-                        enabledEmote = "🔲"
-                        if settings.InspectTriggersEnabled.UserNoCommonServers {
-                            enabledEmote = "✔"
-                        }
-                        chooseEmbed.Description += fmt.Sprintf("%s %s User has none other common servers with Robyul. Gets checked everytime an user joins.\n",
-                            emojis.From("2"), enabledEmote)
-
-                        enabledEmote = "🔲"
-                        if settings.InspectTriggersEnabled.UserNewlyCreatedAccount {
-                            enabledEmote = "✔"
-                        }
-                        chooseEmbed.Description += fmt.Sprintf("%s %s Account is less than one week old. Gets checked everytime an user joins.\n",
-                            emojis.From("3"), enabledEmote)
-
-                        enabledEmote = "🔲"
-                        if settings.InspectTriggersEnabled.UserReported {
-                            enabledEmote = "✔"
-                        }
-                        chooseEmbed.Description += fmt.Sprintf("%s %s Account got reported as a troublemaker. Gets checked everytime an user joins.\n",
-                            emojis.From("4"), enabledEmote)
-
-                        enabledEmote = "🔲"
-                        if settings.InspectTriggersEnabled.UserMultipleJoins {
-                            enabledEmote = "✔"
-                        }
-                        chooseEmbed.Description += fmt.Sprintf("%s %s Account joined this server more than once. Gets checked everytime an user joins.\n",
-                            emojis.From("5"), enabledEmote)
-
-                        if emotesLocked == true {
-                            chooseEmbed.Description += fmt.Sprintf("⚠ Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
-                                helpers.GetPrefixForServer(channel.GuildID),
-                            )
-                        }
-                        chooseEmbed.Description += "Use 💾 to save and exit."
-                        chooseMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
-                        helpers.Relax(err)
-                        needEmbedUpdate = false
-                    }
-
-                    time.Sleep(1 * time.Second)
-                }
-
-                for _, allowedEmote := range allowedEmotes {
-                    session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, allowedEmote, session.State.User.ID)
-                }
-                settings.InspectsChannel = targetChannel.ID
-
-                chooseEmbed.Description = strings.Replace(chooseEmbed.Description, "Use 💾 to save and exit.", "Saved.", -1)
-                session.ChannelMessageEditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
-
-                successMessage = helpers.GetText("plugins.mod.inspects-channel-set")
-            } else {
-                settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
-                settings.InspectTriggersEnabled.UserNoCommonServers = false
-                settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
-                successMessage = helpers.GetText("plugins.mod.inspects-channel-disabled")
-            }
-            err = helpers.GuildSettingsSet(channel.GuildID, settings)
-            helpers.Relax(err)
-            _, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
-            helpers.Relax(err)
-        })
-        return
-    case "search-user": // [p]search-user <name>
-        helpers.RequireMod(msg, func() {
-            searchText := strings.TrimSpace(content)
-            if len(searchText) > 3 {
-                globalCheck := helpers.IsBotAdmin(msg.Author.ID)
-                if globalCheck == true {
-                    session.ChannelMessageSend(msg.ChannelID, "Searching for users on all servers with Robyul. 💬")
-                } else {
-                    session.ChannelMessageSend(msg.ChannelID, "Searching for users on this server. 💬")
-                }
-
-                currentChannel, err := helpers.GetChannel(msg.ChannelID)
-                helpers.Relax(err)
-
-                usersMatched := make([]*discordgo.User, 0)
-                for _, serverGuild := range session.State.Guilds {
-                    if globalCheck == true || serverGuild.ID == currentChannel.GuildID {
-                        lastAfterMemberId := ""
-                        for {
-                            members, err := session.GuildMembers(serverGuild.ID, lastAfterMemberId, 1000)
-                            if len(members) <= 0 {
-                                break
-                            }
-                            lastAfterMemberId = members[len(members)-1].User.ID
-                            helpers.Relax(err)
-                            for _, serverMember := range members {
-                                fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
-                                if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
-                                    userIsAlreadyInList := false
-                                    for _, userAlreadyInList := range usersMatched {
-                                        if userAlreadyInList.ID == serverMember.User.ID {
-                                            userIsAlreadyInList = true
-                                        }
-                                    }
-                                    if userIsAlreadyInList == false {
-                                        usersMatched = append(usersMatched, serverMember.User)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if len(usersMatched) <= 0 {
-                    _, err := session.ChannelMessageSend(msg.ChannelID, "Found no user who matches your search text. 🕵")
-                    helpers.Relax(err)
-                    return
-                } else {
-                    resultText := fmt.Sprintf("Found %d users which matches your search text:\n", len(usersMatched))
-                    for _, userMatched := range usersMatched {
-                        resultText += fmt.Sprintf("`%s#%s` (User ID: `%s`)\n", userMatched.Username, userMatched.Discriminator, userMatched.ID)
-                    }
-                    for _, page := range helpers.Pagify(resultText, "\n") {
-                        _, err := session.ChannelMessageSend(msg.ChannelID, page)
-                        helpers.Relax(err)
-                    }
-                    return
-                }
-            } else {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-                return
-            }
-        })
-        return
-    case "audit-log":
-        helpers.RequireBotAdmin(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-            channel, err := helpers.GetChannel(msg.ChannelID)
-            helpers.Relax(err)
-            auditLogUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/audit-logs?limit=10", channel.GuildID)
-            resp, err := session.Request("GET", auditLogUrl, nil)
-            helpers.Relax(err)
-            parsedResult, err := gabs.ParseJSON(resp)
-            helpers.Relax(err)
-
-            logMessage := ""
-
-            var user *discordgo.Member
-            var target *discordgo.Member
-
-            logEntries, err := parsedResult.Path("audit_log_entries").Children()
-            for _, logEntry := range logEntries {
-                user, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("user_id").String(), "\"", "", -1))
-                if err != nil {
-                    user = new(discordgo.Member)
-                    user.User = new(discordgo.User)
-                    user.User.Username = "N/A"
-                }
-                target, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("target_id").String(), "\"", "", -1))
-                if err != nil {
-                    target = new(discordgo.Member)
-                    target.User = new(discordgo.User)
-                    target.User.Username = "N/A"
-                }
-                logMessage += "**Action** `" + logEntry.Path("action_type").String() + "` from `" + user.User.Username + "` for `" + target.User.Username + "`:\n"
-                logEntryChanges, err := logEntry.Path("changes").Children()
-                helpers.Relax(err)
-                for _, logEntryChange := range logEntryChanges {
-                    logMessage += logEntryChange.Path("key").String() + ": " + logEntryChange.Path("new_value").String() + "\n"
-                }
-            }
-
-            for _, page := range helpers.Pagify(logMessage, "\n") {
-                _, err := session.ChannelMessageSend(msg.ChannelID, page)
-                helpers.Relax(err)
-            }
-        })
-        return
-    case "invites":
-        helpers.RequireBotAdmin(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-
-            channel, err := helpers.GetChannel(msg.ChannelID)
-            helpers.Relax(err)
-            guildID := channel.GuildID
-
-            args := strings.Fields(content)
-            if len(args) >= 1 {
-                guild, err := helpers.GetGuild(args[0])
-                helpers.Relax(err)
-                guildID = guild.ID
-            }
-            invitesUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/invites", guildID)
-            resp, err := session.Request("GET", invitesUrl, nil)
-            helpers.Relax(err)
-            parsedResult, err := gabs.ParseJSON(resp)
-            helpers.Relax(err)
-
-            invites, err := parsedResult.Children()
-            helpers.Relax(err)
-
-            if len(invites) <= 0 {
-                _, err := session.ChannelMessageSend(msg.ChannelID, "No invites found on this server. <:blobscream:317043778823389184>")
-                helpers.Relax(err)
-                return
-            }
-
-            inviteMessage := ""
-            for _, invite := range invites {
-                inviteCode := strings.Trim(invite.Path("code").String(), "\"")
-                inviteInviter, err := helpers.GetGuildMember(channel.GuildID, strings.Trim(invite.Path("inviter.id").String(), "\""))
-                if err != nil {
-                    inviteInviter = new(discordgo.Member)
-                    inviteInviter.User = new(discordgo.User)
-                    inviteInviter.User.Username = "N/A"
-                }
-                inviteUses := invite.Path("uses").String()
-                inviteChannelID := strings.Trim(invite.Path("channel.id").String(), "\"")
-                inviteMessage += fmt.Sprintf("`%s` by `%s` to <#%s>: **%s** uses\n",
-                    inviteCode, inviteInviter.User.Username, inviteChannelID, inviteUses)
-            }
-
-            for _, page := range helpers.Pagify(inviteMessage, "\n") {
-                _, err := session.ChannelMessageSend(msg.ChannelID, page)
-                helpers.Relax(err)
-            }
-        })
-        return
-    case "leave-server":
-        helpers.RequireBotAdmin(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-            args := strings.Fields(content)
-            if len(args) < 1 {
-                session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                return
-            }
-
-            targetGuild, err := helpers.GetGuild(args[0])
-            helpers.Relax(err)
-
-            if helpers.ConfirmEmbed(msg.ChannelID, msg.Author,
-                fmt.Sprintf("Are you sure you want me to leave the server `%s` (`#%s`)?",
-                    targetGuild.Name, targetGuild.ID), "✅", "🚫") {
-                session.ChannelMessageSend(msg.ChannelID, "Goodbye <:blobwave:317048219098021888>")
-                err = session.GuildLeave(targetGuild.ID)
-                helpers.Relax(err)
-            }
-        })
-        return
-    case "create-invite":
-        helpers.RequireBotAdmin(msg, func() {
-            session.ChannelTyping(msg.ChannelID)
-
-            args := strings.Fields(content)
-            if len(args) < 1 {
-                _, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-                helpers.Relax(err)
-                return
-            }
-            guild, err := helpers.GetGuild(args[0])
-            helpers.Relax(err)
-
-            for _, channel := range guild.Channels {
-                invite, err := session.ChannelInviteCreate(channel.ID, discordgo.Invite{
-                    MaxAge:    60 * 60,
-                    MaxUses:   0,
-                    Temporary: false,
-                })
-                if err != nil {
-                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Unable to create an invite in: `#%s (#%s)`",
-                        channel.Name, channel.ID))
-                    helpers.Relax(err)
-                } else {
-                    _, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Created invite: `https://discord.gg/%s` for: `#%s (#%s)`",
-                        invite.Code, channel.Name, channel.ID))
-                    helpers.Relax(err)
-                    return
-                }
-            }
-
-            _, err = session.ChannelMessageSend(msg.ChannelID, "No channels left to try. <:blobugh:317047327443517442>")
-            helpers.Relax(err)
-            return
-        })
-        return
-    }
+	regexNumberOnly := regexp.MustCompile(`^\d+$`)
+
+	switch command {
+	case "cleanup":
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) > 0 {
+				switch args[0] {
+				case "after": // [p]cleanup after <after message id> [<until message id>]
+					if len(args) < 2 {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+						return
+					} else {
+						afterMessageId := args[1]
+						untilMessageId := ""
+						if regexNumberOnly.MatchString(afterMessageId) == false {
+							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+							return
+						}
+						if len(args) >= 3 {
+							untilMessageId = args[2]
+							if regexNumberOnly.MatchString(untilMessageId) == false {
+								session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+								return
+							}
+						}
+
+						messagesToDeleteIds := []string{}
+
+						nextAfterID := afterMessageId
+					AllMessagesLoop:
+						for {
+							messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, 100, "", nextAfterID, "")
+							slice.Sort(messagesToDelete, func(i, j int) bool {
+								return messagesToDelete[i].Timestamp < messagesToDelete[j].Timestamp
+							})
+							for _, messageToDelete := range messagesToDelete {
+								messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
+								nextAfterID = messageToDelete.ID
+								if messageToDelete.ID == untilMessageId {
+									break AllMessagesLoop
+								}
+							}
+							if len(messagesToDelete) <= 0 {
+								break AllMessagesLoop
+							}
+						}
+
+						msgAlreadyIn := false
+						for _, messageID := range messagesToDeleteIds {
+							if messageID == msg.ID {
+								msgAlreadyIn = true
+							}
+						}
+						if msgAlreadyIn == false {
+							messagesToDeleteIds = append(messagesToDeleteIds, msg.ID)
+						}
+
+						messagesToDeleteIds = m.removeDuplicates(messagesToDeleteIds)
+
+						if len(messagesToDeleteIds) <= 10 {
+							err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
+							cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
+							if err != nil {
+								if errD, ok := err.(*discordgo.RESTError); ok {
+									if errD.Message.Code == 50034 {
+										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										return
+									} else if errD.Message.Code == 50013 {
+										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										return
+									} else {
+										helpers.Relax(errD)
+									}
+								} else {
+									helpers.Relax(err)
+								}
+								return
+							}
+						} else {
+							if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)), "✅", "🚫") == true {
+								for i := 0; i < len(messagesToDeleteIds); i += 100 {
+									batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
+									err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
+									cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
+									if err != nil {
+										if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
+											if errD.Message.Code == 50034 {
+												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												return
+											} else if errD.Message.Code == 50013 {
+												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												return
+											} else {
+												helpers.Relax(errD)
+											}
+										} else {
+											helpers.Relax(err)
+										}
+										return
+									}
+								}
+							} else {
+								session.ChannelMessageDelete(msg.ChannelID, msg.ID)
+							}
+							return
+						}
+					}
+				case "messages": // [p]cleanup messages <n>
+					if len(args) < 2 {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+						return
+					} else {
+						if regexNumberOnly.MatchString(args[1]) == false {
+							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+							return
+						}
+						numOfMessagesToDelete, err := strconv.Atoi(args[1])
+						if err != nil {
+							session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(helpers.GetTextF("bot.errors.general"), err.Error()))
+							return
+						}
+						if numOfMessagesToDelete < 1 {
+							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+							return
+						}
+
+						messagesToDeleteIds := []string{}
+
+						messagesLeft := numOfMessagesToDelete + 1
+						lastBeforeID := ""
+						for {
+							messagesToGet := messagesLeft
+							if messagesLeft > 100 {
+								messagesToGet = 100
+							}
+							messagesLeft -= messagesToGet
+
+							messagesToDelete, _ := session.ChannelMessages(msg.ChannelID, messagesToGet, lastBeforeID, "", "")
+							slice.Sort(messagesToDelete, func(i, j int) bool {
+								return messagesToDelete[i].Timestamp < messagesToDelete[j].Timestamp
+							})
+							for _, messageToDelete := range messagesToDelete {
+								messagesToDeleteIds = append(messagesToDeleteIds, messageToDelete.ID)
+								lastBeforeID = messageToDelete.ID
+							}
+
+							if messagesLeft <= 0 {
+								break
+							}
+						}
+
+						messagesToDeleteIds = m.removeDuplicates(messagesToDeleteIds)
+
+						if len(messagesToDeleteIds) <= 10 {
+							err := session.ChannelMessagesBulkDelete(msg.ChannelID, messagesToDeleteIds)
+							cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
+							if err != nil {
+								if errD, ok := err.(*discordgo.RESTError); ok {
+									if errD.Message.Code == 50034 {
+										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										return
+									} else if errD.Message.Code == 50013 {
+										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										return
+									} else {
+										helpers.Relax(errD)
+									}
+								} else {
+									helpers.Relax(err)
+								}
+								return
+							}
+						} else {
+							if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)-1), "✅", "🚫") == true {
+								for i := 0; i < len(messagesToDeleteIds); i += 100 {
+									batch := messagesToDeleteIds[i:m.Min(i+100, len(messagesToDeleteIds))]
+									err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
+									cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
+									if err != nil {
+										if errD, ok := err.(*discordgo.RESTError); ok {
+											if errD.Message.Code == 50034 {
+												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												return
+											} else if errD.Message.Code == 50013 {
+												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												return
+											} else {
+												helpers.Relax(errD)
+											}
+										} else {
+											helpers.Relax(err)
+										}
+										return
+									}
+								}
+							} else {
+								session.ChannelMessageDelete(msg.ChannelID, msg.ID)
+							}
+							return
+						}
+					}
+				}
+			}
+		})
+		return
+	case "mute": // [p]mute server <User>
+		helpers.RequireMod(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			args := strings.Fields(content)
+			if len(args) >= 2 {
+				targetUser, err := helpers.GetUserFromMention(args[1])
+				if err != nil {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+				switch args[0] {
+				case "server":
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+					muteRole, err := helpers.GetMuteRole(channel.GuildID)
+					if err != nil {
+						if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.get-mute-role-no-permissions"))
+							return
+						} else {
+							helpers.Relax(err)
+						}
+					}
+					isInGuild, _ := helpers.GetFreshIsInGuild(channel.GuildID, targetUser.ID)
+					if isInGuild == true {
+						err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
+						if err != nil {
+							if errD, ok := err.(discordgo.RESTError); ok {
+								if errD.Message.Code == 10007 {
+									_, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to assign the mute role to the given user.")
+									helpers.Relax(err)
+									return
+								} else {
+									helpers.Relax(err)
+								}
+							} else {
+								helpers.Relax(err)
+							}
+						}
+					}
+
+					settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+					alreadyMutedInSettings := false
+					for _, mutedMember := range settings.MutedMembers {
+						if mutedMember == targetUser.ID {
+							alreadyMutedInSettings = true
+						}
+					}
+					if alreadyMutedInSettings == false {
+						settings.MutedMembers = append(settings.MutedMembers, targetUser.ID)
+						err = helpers.GuildSettingsSet(channel.GuildID, settings)
+						helpers.Relax(err)
+					}
+
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
+					helpers.Relax(err)
+					return
+				}
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "unmute": // [p]unmute server <User>
+		helpers.RequireMod(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			args := strings.Fields(content)
+			if len(args) >= 2 {
+				targetUser, _ := helpers.GetUserFromMention(args[1])
+				if targetUser == nil {
+					targetUser = new(discordgo.User)
+					targetUser.ID = args[1]
+					targetUser.Username = "N/A"
+				}
+				switch args[0] {
+				case "server", "global":
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+					muteRole, err := helpers.GetMuteRole(channel.GuildID)
+					helpers.Relax(err)
+					err = session.GuildMemberRoleRemove(channel.GuildID, targetUser.ID, muteRole.ID)
+					roleRemoved := true
+					if err != nil {
+						roleRemoved = false
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code != 10007 && errD.Message.Code != 10013 && errD.Message.Code != 0 {
+								helpers.Relax(err)
+							}
+						} else {
+							helpers.Relax(err)
+						}
+					}
+
+					settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+					removedFromDb := false
+					newMutedMembers := make([]string, 0)
+					for _, mutedMember := range settings.MutedMembers {
+						if mutedMember != targetUser.ID {
+							newMutedMembers = append(newMutedMembers, mutedMember)
+						} else {
+							removedFromDb = true
+						}
+					}
+
+					if removedFromDb {
+						settings.MutedMembers = newMutedMembers
+						err = helpers.GuildSettingsSet(channel.GuildID, settings)
+						helpers.Relax(err)
+					}
+
+					if !removedFromDb && !roleRemoved {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-unmuted-error"))
+					} else {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
+					}
+				}
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "ban": // [p]ban <User> [<Days>], checks for IsMod and Ban Permissions
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 1 {
+				// Days Argument
+				days := 0
+				var err error
+				if len(args) >= 2 && regexNumberOnly.MatchString(args[1]) {
+					days, err = strconv.Atoi(args[1])
+					if err != nil {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+				}
+
+				targetUser, err := helpers.GetUserFromMention(args[0])
+				if err != nil {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+				// Bot can ban?
+				botCanBan := false
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				guild, err := helpers.GetGuild(channel.GuildID)
+				guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
+				helpers.Relax(err)
+				for _, role := range guild.Roles {
+					for _, userRole := range guildMemberBot.Roles {
+						if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+							botCanBan = true
+						}
+					}
+				}
+
+				if botCanBan == false {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+					return
+				}
+				// User can ban?
+				userCanBan := false
+				guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
+				helpers.Relax(err)
+				for _, role := range guild.Roles {
+					for _, userRole := range guildMemberUser.Roles {
+						if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+							userCanBan = true
+						}
+					}
+				}
+				if msg.Author.ID == guild.OwnerID {
+					userCanBan = true
+				}
+				if userCanBan == false {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+					return
+				}
+				// Ban user
+				err = session.GuildBanCreate(guild.ID, targetUser.ID, days)
+				if err != nil {
+					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+						if err.Message.Code == 0 {
+							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-failed-too-low"))
+							return
+						} else {
+							helpers.Relax(err)
+						}
+					} else {
+						helpers.Relax(err)
+					}
+				}
+				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "kick": // [p]kick <User>, checks for IsMod and Kick Permissions
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 1 {
+				targetUser, err := helpers.GetUserFromMention(args[0])
+				if err != nil {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+				// Bot can kick?
+				botCanKick := false
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				guild, err := helpers.GetGuild(channel.GuildID)
+				guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
+				helpers.Relax(err)
+				for _, role := range guild.Roles {
+					for _, userRole := range guildMemberBot.Roles {
+						if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+							botCanKick = true
+						}
+					}
+				}
+				if botCanKick == false {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+					return
+				}
+				// User can kick?
+				userCanKick := false
+				guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
+				helpers.Relax(err)
+				for _, role := range guild.Roles {
+					for _, userRole := range guildMemberUser.Roles {
+						if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
+							userCanKick = true
+						}
+					}
+				}
+				if msg.Author.ID == guild.OwnerID {
+					userCanKick = true
+				}
+				if userCanKick == false {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+					return
+				}
+				// Kick user
+				err = session.GuildMemberDelete(guild.ID, targetUser.ID)
+				if err != nil {
+					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+						if err.Message.Code == 0 {
+							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-failed-too-low"))
+							return
+						} else {
+							helpers.Relax(err)
+						}
+					} else {
+						helpers.Relax(err)
+					}
+				}
+				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "serverlist": // [p]serverlist
+		helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			resultText := ""
+			totalMembers := 0
+			totalChannels := 0
+			guildMembers := 0
+			for _, guild := range session.State.Guilds {
+				guildMembers = guild.MemberCount
+				if guildMembers == 0 {
+					lastAfterMemberId := ""
+					for {
+						members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
+						helpers.Relax(err)
+						if len(members) <= 0 {
+							break
+						}
+
+						lastAfterMemberId = members[len(members)-1].User.ID
+						guildMembers += len(members)
+					}
+				}
+
+				resultText += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
+					guild.Name, guild.ID, len(guild.Channels), guildMembers, guild.Region)
+				totalChannels += len(guild.Channels)
+				totalMembers += guildMembers
+			}
+			resultText += fmt.Sprintf("Total Stats: Servers `%d`, Channels: `%d`, Members: `%d`", len(session.State.Guilds), totalChannels, totalMembers)
+
+			for _, resultPage := range helpers.Pagify(resultText, "\n") {
+				_, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+				helpers.Relax(err)
+			}
+		})
+		return
+	case "echo", "say": // [p]echo <channel> <message>
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 2 {
+				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+				if sourceChannel.GuildID != targetChannel.GuildID {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					return
+				}
+
+				newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+				session.ChannelMessageSend(targetChannel.ID, newText)
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "edit": // [p]edit <channel> <message id> <message>
+		helpers.RequireAdmin(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 3 {
+				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+				if sourceChannel.GuildID != targetChannel.GuildID {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					return
+				}
+				targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+				if err != nil {
+					if errD, ok := err.(*discordgo.RESTError); ok {
+						if errD.Message.Code == 10008 || strings.Contains(err.Error(), "is not snowflake") {
+							_, err = session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+							helpers.Relax(err)
+							return
+						} else {
+							helpers.Relax(err)
+						}
+					} else {
+						helpers.Relax(err)
+					}
+				}
+				newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+				session.ChannelMessageEdit(targetChannel.ID, targetMessage.ID, newText)
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "upload": // [p]upload <channel> + UPLOAD
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 1 && len(msg.Attachments) > 0 {
+				fileToUpload := helpers.NetGet(msg.Attachments[0].URL)
+				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+				if sourceChannel.GuildID != targetChannel.GuildID {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					return
+				}
+				session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "get": // [p]get <channel> <message id>
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 2 {
+				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+				if sourceChannel.GuildID != targetChannel.GuildID {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					return
+				}
+				targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+				if err != nil {
+					if err, ok := err.(*discordgo.RESTError); ok {
+						if err.Message.Code == 10008 || err.Message.Code == 50001 {
+							session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+							return
+						} else {
+							helpers.Relax(err)
+						}
+					} else {
+						helpers.Relax(err)
+					}
+				}
+				newMessage := fmt.Sprintf("```%s```", targetMessage.Content)
+				_, err = session.ChannelMessageSend(msg.ChannelID, newMessage)
+				helpers.Relax(err)
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "inspect", "inspect-extended": // [p]inspect[-extended] <user>
+		isMod := helpers.IsMod(msg)
+		isAllowedToInspectExtended := helpers.CanInspectExtended(msg)
+
+		if isMod == false && isAllowedToInspectExtended == false {
+			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("mod.no_permission"))
+			helpers.Relax(err)
+			return
+		}
+
+		isExtendedInspect := false
+		if command == "inspect-extended" {
+			if isAllowedToInspectExtended == false {
+				_, err := session.ChannelMessageSend(msg.ChannelID, "You aren't allowed to do this!")
+				helpers.Relax(err)
+				return
+			}
+			isExtendedInspect = true
+		}
+		session.ChannelTyping(msg.ChannelID)
+		args := strings.Fields(content)
+		var targetUser *discordgo.User
+		var err error
+		if len(args) >= 1 && args[0] != "" {
+			targetUser, err = helpers.GetUserFromMention(args[0])
+			if err != nil {
+				if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
+					helpers.Relax(err)
+					return
+				} else {
+					helpers.Relax(err)
+				}
+			}
+			helpers.Relax(err)
+			if targetUser.ID == "" {
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				helpers.Relax(err)
+				return
+			}
+		} else {
+			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			helpers.Relax(err)
+			return
+		}
+		textVersion := false
+		if len(args) >= 2 && args[1] == "text" {
+			textVersion = true
+		}
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+
+		resultEmbed := &discordgo.MessageEmbed{
+			Title:       helpers.GetTextF("plugins.mod.inspect-embed-title", targetUser.Username, targetUser.Discriminator),
+			Description: helpers.GetTextF("plugins.mod.inspect-in-progress", 0, len(session.State.Guilds)),
+			URL:         helpers.GetAvatarUrl(targetUser),
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)},
+			Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", targetUser.ID, len(session.State.Guilds))},
+			Color:       0x0FADED,
+		}
+		resultMessage := new(discordgo.Message)
+		if textVersion == false {
+			resultMessage, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+			helpers.Relax(err)
+		} else {
+			resultMessage, err = session.ChannelMessageSend(msg.ChannelID,
+				helpers.GetTextF("plugins.mod.inspect-in-progress", 0, len(session.State.Guilds)))
+			helpers.Relax(err)
+		}
+
+		bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, func(progressN int) {
+			progressText := helpers.GetTextF("plugins.mod.inspect-in-progress", progressN, len(session.State.Guilds))
+			if textVersion == false {
+				resultEmbed.Description = progressText
+				session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+			} else {
+				session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, progressText)
+			}
+		})
+
+		resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
+		resultText := helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
+		resultText += fmt.Sprintf("Username: `%s#%s,` ID: `#%s`",
+			targetUser.Username, targetUser.Discriminator, targetUser.ID)
+		if helpers.GetAvatarUrl(targetUser) != "" {
+			resultText += fmt.Sprintf(", DP: <%s>", helpers.GetAvatarUrl(targetUser))
+		}
+		resultText += "\n"
+
+		resultBansText := ""
+		if len(bannedOnServerList) <= 0 {
+			resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
+		} else {
+			if isExtendedInspect == false {
+				resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.\n", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+			} else {
+				resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers:\n", len(bannedOnServerList))
+				i := 0
+			BannedOnLoop:
+				for _, bannedOnServer := range bannedOnServerList {
+					resultBansText += fmt.Sprintf("▪`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
+					i++
+					if i >= 4 && textVersion == false {
+						resultBansText += fmt.Sprintf("▪ and %d other server(s)\n", len(bannedOnServerList)-(i+1))
+						break BannedOnLoop
+					}
+				}
+				resultBansText += fmt.Sprintf("◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
+			}
+		}
+
+		isOnServerList := m.inspectCommonServers(targetUser)
+		commonGuildsText := ""
+		if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
+			if isExtendedInspect == false {
+				commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.\n", len(isOnServerList))
+			} else {
+				commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList))
+				i := 0
+			ServerListLoop:
+				for _, isOnServer := range isOnServerList {
+					commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
+					i++
+					if i >= 4 && textVersion == false {
+						commonGuildsText += fmt.Sprintf("▪ and %d other server(s)\n", len(isOnServerList)-(i))
+						break ServerListLoop
+					}
+				}
+			}
+		} else {
+			commonGuildsText += "❓ User is on **none** other servers with Robyul.\n"
+		}
+
+		joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
+		oneDayAgo := time.Now().AddDate(0, 0, -1)
+		oneWeekAgo := time.Now().AddDate(0, 0, -7)
+		joinedTimeText := ""
+		if !joinedTime.After(oneWeekAgo) {
+			joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.\n", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+		} else if !joinedTime.After(oneDayAgo) {
+			joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
+		} else {
+			joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
+		}
+
+		troublemakerReports := m.getTroublemakerReports(targetUser)
+		troublemakerReportsText := ""
+		if len(troublemakerReports) <= 0 {
+			troublemakerReportsText = "✅ User never got reported\n"
+		} else {
+			troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.\n", len(troublemakerReports), targetUser.ID)
+		}
+
+		joins, _ := m.GetJoins(targetUser.ID, channel.GuildID)
+		joinsText := ""
+		if len(joins) == 0 {
+			joinsText = "✅ User never joined this server\n"
+		} else if len(joins) == 1 {
+			if joins[0].InviteCodeUsed != "" {
+				createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
+				if createdByUser == nil {
+					createdByUser = new(discordgo.User)
+					createdByUser.ID = joins[0].InviteCodeCreatedByUserID
+					createdByUser.Username = "N/A"
+				}
+
+				joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
+					joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+			} else {
+				joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+			}
+		} else if len(joins) > 1 {
+			sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
+			lastJoin := joins[0]
+
+			if lastJoin.InviteCodeUsed != "" {
+				createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
+				if createdByUser == nil {
+					createdByUser = new(discordgo.User)
+					createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
+					createdByUser.Username = "N/A"
+				}
+
+				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
+					len(joins),
+					lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+			} else {
+				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+			}
+		}
+
+		resultEmbed.Fields = []*discordgo.MessageEmbedField{
+			{Name: "Bans", Value: resultBansText, Inline: false},
+			{Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
+			{Name: "Join History", Value: joinsText, Inline: false},
+			{Name: "Common Servers", Value: commonGuildsText, Inline: false},
+			{Name: "Account Age", Value: joinedTimeText, Inline: false},
+		}
+		resultText += resultBansText
+		resultText += troublemakerReportsText
+		resultText += joinsText
+		resultText += commonGuildsText
+		resultText += joinedTimeText
+
+		for _, failedServer := range checkFailedServerList {
+			if failedServer.ID == channel.GuildID {
+				noAccessToBansText := "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers.\n"
+				resultEmbed.Description += noAccessToBansText
+				resultText += noAccessToBansText
+				break
+			}
+		}
+
+		if textVersion == false {
+			_, err = session.ChannelMessageEditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
+			helpers.Relax(err)
+		} else {
+			pages := helpers.Pagify(resultText, "\n")
+			if len(pages) <= 1 {
+				_, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, resultText)
+				helpers.Relax(err)
+			} else {
+				session.ChannelMessageDelete(msg.ChannelID, resultMessage.ID)
+				session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, "Inspect completed.")
+				for _, page := range pages {
+					_, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, page)
+					helpers.Relax(err)
+				}
+			}
+		}
+		return
+	case "auto-inspects-channel": // [p]auto-inspects-channel [<channel id>]
+		helpers.RequireAdmin(msg, func() {
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			settings := helpers.GuildSettingsGetCached(channel.GuildID)
+			args := strings.Fields(content)
+			successMessage := ""
+			// Add Text
+			if len(args) >= 1 {
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+
+				chooseEmbed := &discordgo.MessageEmbed{
+					Title:       fmt.Sprintf("@%s Enable Auto Inspect Triggers", msg.Author.Username),
+					Description: "**Please wait a second...** :construction_site:",
+					Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Robyul is currently on %d servers.", len(session.State.Guilds))},
+					Color:       0x0FADED,
+				}
+				chooseMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, chooseEmbed)
+
+				allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), emojis.From("4"), emojis.From("5"), "💾"}
+				for _, allowedEmote := range allowedEmotes {
+					err = session.MessageReactionAdd(msg.ChannelID, chooseMessage.ID, allowedEmote)
+					helpers.Relax(err)
+				}
+
+				needEmbedUpdate := true
+				emotesLocked := false
+
+				// @TODO: use reaction event, see stats.go
+			HandleChooseReactions:
+				for {
+					saveAndExits, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, "💾", 100)
+					for _, saveAndExit := range saveAndExits {
+						if saveAndExit.ID == msg.Author.ID {
+							// user wants to exit
+							session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, "💾", msg.Author.ID)
+							break HandleChooseReactions
+						}
+					}
+					numberOnes, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("1"), 100)
+					for _, numberOne := range numberOnes {
+						if numberOne.ID == msg.Author.ID {
+							if settings.InspectTriggersEnabled.UserBannedOnOtherServers && emotesLocked == false {
+								settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
+							} else {
+								settings.InspectTriggersEnabled.UserBannedOnOtherServers = true
+							}
+							needEmbedUpdate = true
+							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("1"), msg.Author.ID)
+							if err != nil {
+								emotesLocked = true
+							}
+						}
+					}
+					numberTwos, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("2"), 100)
+					for _, numberTwo := range numberTwos {
+						if numberTwo.ID == msg.Author.ID {
+							if settings.InspectTriggersEnabled.UserNoCommonServers && emotesLocked == false {
+								settings.InspectTriggersEnabled.UserNoCommonServers = false
+							} else {
+								settings.InspectTriggersEnabled.UserNoCommonServers = true
+							}
+							needEmbedUpdate = true
+							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("2"), msg.Author.ID)
+							if err != nil {
+								emotesLocked = true
+							}
+						}
+					}
+					NumberThrees, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("3"), 100)
+					for _, NumberThree := range NumberThrees {
+						if NumberThree.ID == msg.Author.ID {
+							if settings.InspectTriggersEnabled.UserNewlyCreatedAccount && emotesLocked == false {
+								settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
+							} else {
+								settings.InspectTriggersEnabled.UserNewlyCreatedAccount = true
+							}
+							needEmbedUpdate = true
+							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("3"), msg.Author.ID)
+							if err != nil {
+								emotesLocked = true
+							}
+						}
+					}
+					NumberFours, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("4"), 100)
+					for _, NumberFour := range NumberFours {
+						if NumberFour.ID == msg.Author.ID {
+							if settings.InspectTriggersEnabled.UserReported && emotesLocked == false {
+								settings.InspectTriggersEnabled.UserReported = false
+							} else {
+								settings.InspectTriggersEnabled.UserReported = true
+							}
+							needEmbedUpdate = true
+							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("4"), msg.Author.ID)
+							if err != nil {
+								emotesLocked = true
+							}
+						}
+					}
+					NumberFives, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("5"), 100)
+					for _, NumberFive := range NumberFives {
+						if NumberFive.ID == msg.Author.ID {
+							if settings.InspectTriggersEnabled.UserMultipleJoins && emotesLocked == false {
+								settings.InspectTriggersEnabled.UserMultipleJoins = false
+							} else {
+								settings.InspectTriggersEnabled.UserMultipleJoins = true
+							}
+							needEmbedUpdate = true
+							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("5"), msg.Author.ID)
+							if err != nil {
+								emotesLocked = true
+							}
+						}
+					}
+
+					if needEmbedUpdate == true {
+						chooseEmbed.Description = fmt.Sprintf(
+							"Choose which warnings should trigger an automatic inspect post in <#%s>.\n"+
+								"**Available Triggers**\n",
+							targetChannel.ID)
+						enabledEmote := "🔲"
+						if settings.InspectTriggersEnabled.UserBannedOnOtherServers {
+							enabledEmote = "✔"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s User is banned on a different server with Robyul on. Gets checked everytime an user joins or gets banned on a different server with Robyul on.\n",
+							emojis.From("1"), enabledEmote)
+
+						enabledEmote = "🔲"
+						if settings.InspectTriggersEnabled.UserNoCommonServers {
+							enabledEmote = "✔"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s User has none other common servers with Robyul. Gets checked everytime an user joins.\n",
+							emojis.From("2"), enabledEmote)
+
+						enabledEmote = "🔲"
+						if settings.InspectTriggersEnabled.UserNewlyCreatedAccount {
+							enabledEmote = "✔"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s Account is less than one week old. Gets checked everytime an user joins.\n",
+							emojis.From("3"), enabledEmote)
+
+						enabledEmote = "🔲"
+						if settings.InspectTriggersEnabled.UserReported {
+							enabledEmote = "✔"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s Account got reported as a troublemaker. Gets checked everytime an user joins.\n",
+							emojis.From("4"), enabledEmote)
+
+						enabledEmote = "🔲"
+						if settings.InspectTriggersEnabled.UserMultipleJoins {
+							enabledEmote = "✔"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s Account joined this server more than once. Gets checked everytime an user joins.\n",
+							emojis.From("5"), enabledEmote)
+
+						if emotesLocked == true {
+							chooseEmbed.Description += fmt.Sprintf("⚠ Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
+								helpers.GetPrefixForServer(channel.GuildID),
+							)
+						}
+						chooseEmbed.Description += "Use 💾 to save and exit."
+						chooseMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
+						helpers.Relax(err)
+						needEmbedUpdate = false
+					}
+
+					time.Sleep(1 * time.Second)
+				}
+
+				for _, allowedEmote := range allowedEmotes {
+					session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, allowedEmote, session.State.User.ID)
+				}
+				settings.InspectsChannel = targetChannel.ID
+
+				chooseEmbed.Description = strings.Replace(chooseEmbed.Description, "Use 💾 to save and exit.", "Saved.", -1)
+				session.ChannelMessageEditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
+
+				successMessage = helpers.GetText("plugins.mod.inspects-channel-set")
+			} else {
+				settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
+				settings.InspectTriggersEnabled.UserNoCommonServers = false
+				settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
+				successMessage = helpers.GetText("plugins.mod.inspects-channel-disabled")
+			}
+			err = helpers.GuildSettingsSet(channel.GuildID, settings)
+			helpers.Relax(err)
+			_, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
+			helpers.Relax(err)
+		})
+		return
+	case "search-user": // [p]search-user <name>
+		helpers.RequireMod(msg, func() {
+			searchText := strings.TrimSpace(content)
+			if len(searchText) > 3 {
+				globalCheck := helpers.IsBotAdmin(msg.Author.ID)
+				if globalCheck == true {
+					session.ChannelMessageSend(msg.ChannelID, "Searching for users on all servers with Robyul. 💬")
+				} else {
+					session.ChannelMessageSend(msg.ChannelID, "Searching for users on this server. 💬")
+				}
+
+				currentChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+
+				usersMatched := make([]*discordgo.User, 0)
+				for _, serverGuild := range session.State.Guilds {
+					if globalCheck == true || serverGuild.ID == currentChannel.GuildID {
+						lastAfterMemberId := ""
+						for {
+							members, err := session.GuildMembers(serverGuild.ID, lastAfterMemberId, 1000)
+							if len(members) <= 0 {
+								break
+							}
+							lastAfterMemberId = members[len(members)-1].User.ID
+							helpers.Relax(err)
+							for _, serverMember := range members {
+								fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
+								if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
+									userIsAlreadyInList := false
+									for _, userAlreadyInList := range usersMatched {
+										if userAlreadyInList.ID == serverMember.User.ID {
+											userIsAlreadyInList = true
+										}
+									}
+									if userIsAlreadyInList == false {
+										usersMatched = append(usersMatched, serverMember.User)
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if len(usersMatched) <= 0 {
+					_, err := session.ChannelMessageSend(msg.ChannelID, "Found no user who matches your search text. 🕵")
+					helpers.Relax(err)
+					return
+				} else {
+					resultText := fmt.Sprintf("Found %d users which matches your search text:\n", len(usersMatched))
+					for _, userMatched := range usersMatched {
+						resultText += fmt.Sprintf("`%s#%s` (User ID: `%s`)\n", userMatched.Username, userMatched.Discriminator, userMatched.ID)
+					}
+					for _, page := range helpers.Pagify(resultText, "\n") {
+						_, err := session.ChannelMessageSend(msg.ChannelID, page)
+						helpers.Relax(err)
+					}
+					return
+				}
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "audit-log":
+		helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			auditLogUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/audit-logs?limit=10", channel.GuildID)
+			resp, err := session.Request("GET", auditLogUrl, nil)
+			helpers.Relax(err)
+			parsedResult, err := gabs.ParseJSON(resp)
+			helpers.Relax(err)
+
+			logMessage := ""
+
+			var user *discordgo.Member
+			var target *discordgo.Member
+
+			logEntries, err := parsedResult.Path("audit_log_entries").Children()
+			for _, logEntry := range logEntries {
+				user, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("user_id").String(), "\"", "", -1))
+				if err != nil {
+					user = new(discordgo.Member)
+					user.User = new(discordgo.User)
+					user.User.Username = "N/A"
+				}
+				target, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("target_id").String(), "\"", "", -1))
+				if err != nil {
+					target = new(discordgo.Member)
+					target.User = new(discordgo.User)
+					target.User.Username = "N/A"
+				}
+				logMessage += "**Action** `" + logEntry.Path("action_type").String() + "` from `" + user.User.Username + "` for `" + target.User.Username + "`:\n"
+				logEntryChanges, err := logEntry.Path("changes").Children()
+				helpers.Relax(err)
+				for _, logEntryChange := range logEntryChanges {
+					logMessage += logEntryChange.Path("key").String() + ": " + logEntryChange.Path("new_value").String() + "\n"
+				}
+			}
+
+			for _, page := range helpers.Pagify(logMessage, "\n") {
+				_, err := session.ChannelMessageSend(msg.ChannelID, page)
+				helpers.Relax(err)
+			}
+		})
+		return
+	case "invites":
+		helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			guildID := channel.GuildID
+
+			args := strings.Fields(content)
+			if len(args) >= 1 {
+				guild, err := helpers.GetGuild(args[0])
+				helpers.Relax(err)
+				guildID = guild.ID
+			}
+			invitesUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/invites", guildID)
+			resp, err := session.Request("GET", invitesUrl, nil)
+			helpers.Relax(err)
+			parsedResult, err := gabs.ParseJSON(resp)
+			helpers.Relax(err)
+
+			invites, err := parsedResult.Children()
+			helpers.Relax(err)
+
+			if len(invites) <= 0 {
+				_, err := session.ChannelMessageSend(msg.ChannelID, "No invites found on this server. <:blobscream:317043778823389184>")
+				helpers.Relax(err)
+				return
+			}
+
+			inviteMessage := ""
+			for _, invite := range invites {
+				inviteCode := strings.Trim(invite.Path("code").String(), "\"")
+				inviteInviter, err := helpers.GetGuildMember(channel.GuildID, strings.Trim(invite.Path("inviter.id").String(), "\""))
+				if err != nil {
+					inviteInviter = new(discordgo.Member)
+					inviteInviter.User = new(discordgo.User)
+					inviteInviter.User.Username = "N/A"
+				}
+				inviteUses := invite.Path("uses").String()
+				inviteChannelID := strings.Trim(invite.Path("channel.id").String(), "\"")
+				inviteMessage += fmt.Sprintf("`%s` by `%s` to <#%s>: **%s** uses\n",
+					inviteCode, inviteInviter.User.Username, inviteChannelID, inviteUses)
+			}
+
+			for _, page := range helpers.Pagify(inviteMessage, "\n") {
+				_, err := session.ChannelMessageSend(msg.ChannelID, page)
+				helpers.Relax(err)
+			}
+		})
+		return
+	case "leave-server":
+		helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			args := strings.Fields(content)
+			if len(args) < 1 {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
+
+			targetGuild, err := helpers.GetGuild(args[0])
+			helpers.Relax(err)
+
+			if helpers.ConfirmEmbed(msg.ChannelID, msg.Author,
+				fmt.Sprintf("Are you sure you want me to leave the server `%s` (`#%s`)?",
+					targetGuild.Name, targetGuild.ID), "✅", "🚫") {
+				session.ChannelMessageSend(msg.ChannelID, "Goodbye <:blobwave:317048219098021888>")
+				err = session.GuildLeave(targetGuild.ID)
+				helpers.Relax(err)
+			}
+		})
+		return
+	case "create-invite":
+		helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+
+			args := strings.Fields(content)
+			if len(args) < 1 {
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				helpers.Relax(err)
+				return
+			}
+			guild, err := helpers.GetGuild(args[0])
+			helpers.Relax(err)
+
+			for _, channel := range guild.Channels {
+				invite, err := session.ChannelInviteCreate(channel.ID, discordgo.Invite{
+					MaxAge:    60 * 60,
+					MaxUses:   0,
+					Temporary: false,
+				})
+				if err != nil {
+					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Unable to create an invite in: `#%s (#%s)`",
+						channel.Name, channel.ID))
+					helpers.Relax(err)
+				} else {
+					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Created invite: `https://discord.gg/%s` for: `#%s (#%s)`",
+						invite.Code, channel.Name, channel.ID))
+					helpers.Relax(err)
+					return
+				}
+			}
+
+			_, err = session.ChannelMessageSend(msg.ChannelID, "No channels left to try. <:blobugh:317047327443517442>")
+			helpers.Relax(err)
+			return
+		})
+		return
+	}
 }
 
 func (m *Mod) inspectUserBans(user *discordgo.User, callbackProgress func(progressN int)) ([]*discordgo.Guild, []*discordgo.Guild) {
-    bannedOnServerList := make([]*discordgo.Guild, 0)
-    checkFailedServerList := make([]*discordgo.Guild, 0)
+	bannedOnServerList := make([]*discordgo.Guild, 0)
+	checkFailedServerList := make([]*discordgo.Guild, 0)
 
-    i := 1
-    for _, botGuild := range cache.GetSession().State.Guilds {
-        callbackProgress(i)
-        guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
-        if err != nil {
-            checkFailedServerList = append(checkFailedServerList, botGuild)
-        } else {
-            for _, guildBan := range guildBans {
-                if guildBan.User.ID == user.ID {
-                    bannedOnServerList = append(bannedOnServerList, botGuild)
-                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
-                        user.Username, user.ID, botGuild.Name, botGuild.ID))
-                }
-            }
-        }
-        i++
-    }
-    return bannedOnServerList, checkFailedServerList
+	i := 1
+	for _, botGuild := range cache.GetSession().State.Guilds {
+		callbackProgress(i)
+		guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
+		if err != nil {
+			checkFailedServerList = append(checkFailedServerList, botGuild)
+		} else {
+			for _, guildBan := range guildBans {
+				if guildBan.User.ID == user.ID {
+					bannedOnServerList = append(bannedOnServerList, botGuild)
+					cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
+						user.Username, user.ID, botGuild.Name, botGuild.ID))
+				}
+			}
+		}
+		i++
+	}
+	return bannedOnServerList, checkFailedServerList
 }
 
 func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
-    isOnServerList := make([]*discordgo.Guild, 0)
-    for _, botGuild := range cache.GetSession().State.Guilds {
-        _, err := cache.GetSession().GuildMember(botGuild.ID, user.ID)
-        if err == nil {
-            isOnServerList = append(isOnServerList, botGuild)
-        }
-    }
-    return isOnServerList
+	isOnServerList := make([]*discordgo.Guild, 0)
+	for _, botGuild := range cache.GetSession().State.Guilds {
+		_, err := cache.GetSession().GuildMember(botGuild.ID, user.ID)
+		if err == nil {
+			isOnServerList = append(isOnServerList, botGuild)
+		}
+	}
+	return isOnServerList
 }
 
 func (m *Mod) getTroublemakerReports(user *discordgo.User) []DB_Troublemaker_Entry {
-    var entryBucket []DB_Troublemaker_Entry
-    listCursor, err := rethink.Table("troublemakerlog").Filter(
-        rethink.Row.Field("userid").Eq(user.ID),
-    ).Run(helpers.GetDB())
-    helpers.Relax(err)
-    defer listCursor.Close()
-    listCursor.All(&entryBucket)
+	var entryBucket []DB_Troublemaker_Entry
+	listCursor, err := rethink.Table("troublemakerlog").Filter(
+		rethink.Row.Field("userid").Eq(user.ID),
+	).Run(helpers.GetDB())
+	helpers.Relax(err)
+	defer listCursor.Close()
+	listCursor.All(&entryBucket)
 
-    return entryBucket
+	return entryBucket
 }
 
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-    go func() {
-        // Get invite link
-        var usedInvite CacheInviteInformation
-        invites, err := session.GuildInvites(member.GuildID)
-        if err != nil {
-            cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild #%s: %s",
-                member.GuildID, err.Error()))
-        } else {
-            newCacheInvites := make([]CacheInviteInformation, 0)
-            for _, invite := range invites {
-                createdAt, err := invite.CreatedAt.Parse()
-                if err != nil {
-                    continue
-                }
-                invitedByID := ""
-                if invite.Inviter != nil {
-                    invitedByID = invite.Inviter.ID
-                }
-                newCacheInvites = append(newCacheInvites, CacheInviteInformation{
-                    GuildID:         invite.Guild.ID,
-                    CreatedByUserID: invitedByID,
-                    Code:            invite.Code,
-                    CreatedAt:       createdAt,
-                    Uses:            invite.Uses,
-                })
-            }
-            foundDiffsInInvites := make([]CacheInviteInformation, 0)
-            if _, ok := invitesCache[member.GuildID]; ok {
-                for _, newInvite := range newCacheInvites {
-                    seenInOldCache := false
-                    for _, oldInvite := range invitesCache[member.GuildID] {
-                        if oldInvite.Code == newInvite.Code {
-                            seenInOldCache = true
-                            if oldInvite.Uses != newInvite.Uses {
-                                foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
-                            }
-                        }
-                    }
-                    if seenInOldCache == false && newInvite.Uses == 1 {
-                        foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
-                    }
-                }
-            }
-            invitesCache[member.GuildID] = newCacheInvites
-            if len(foundDiffsInInvites) == 1 {
-                usedInvite = foundDiffsInInvites[0]
-            }
-        }
+	go func() {
+		// Get invite link
+		var usedInvite CacheInviteInformation
+		invites, err := session.GuildInvites(member.GuildID)
+		if err != nil {
+			cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild #%s: %s",
+				member.GuildID, err.Error()))
+		} else {
+			newCacheInvites := make([]CacheInviteInformation, 0)
+			for _, invite := range invites {
+				createdAt, err := invite.CreatedAt.Parse()
+				if err != nil {
+					continue
+				}
+				invitedByID := ""
+				if invite.Inviter != nil {
+					invitedByID = invite.Inviter.ID
+				}
+				newCacheInvites = append(newCacheInvites, CacheInviteInformation{
+					GuildID:         invite.Guild.ID,
+					CreatedByUserID: invitedByID,
+					Code:            invite.Code,
+					CreatedAt:       createdAt,
+					Uses:            invite.Uses,
+				})
+			}
+			foundDiffsInInvites := make([]CacheInviteInformation, 0)
+			if _, ok := invitesCache[member.GuildID]; ok {
+				for _, newInvite := range newCacheInvites {
+					seenInOldCache := false
+					for _, oldInvite := range invitesCache[member.GuildID] {
+						if oldInvite.Code == newInvite.Code {
+							seenInOldCache = true
+							if oldInvite.Uses != newInvite.Uses {
+								foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+							}
+						}
+					}
+					if seenInOldCache == false && newInvite.Uses == 1 {
+						foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+					}
+				}
+			}
+			invitesCache[member.GuildID] = newCacheInvites
+			if len(foundDiffsInInvites) == 1 {
+				usedInvite = foundDiffsInInvites[0]
+			}
+		}
 
-        joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
-        if err != nil {
-            joinedAt = time.Now()
-        }
-        // Save join in DB
-        newJoinLog := DB_Mod_JoinLog{
-            GuildID:                   member.GuildID,
-            UserID:                    member.User.ID,
-            JoinedAt:                  joinedAt,
-            InviteCodeUsed:            usedInvite.Code,
-            InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
-            InviteCodeCreatedAt:       usedInvite.CreatedAt,
-        }
-        err = m.InsertJoinLog(newJoinLog)
-        if err != nil {
-            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-        }
-        go func() {
-            if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
-                helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
-                helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
-                helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported ||
-                helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins {
-                guild, err := helpers.GetGuild(member.GuildID)
-                if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                    return
-                }
+		joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
+		if err != nil {
+			joinedAt = time.Now()
+		}
+		// Save join in DB
+		newJoinLog := DB_Mod_JoinLog{
+			GuildID:                   member.GuildID,
+			UserID:                    member.User.ID,
+			JoinedAt:                  joinedAt,
+			InviteCodeUsed:            usedInvite.Code,
+			InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
+			InviteCodeCreatedAt:       usedInvite.CreatedAt,
+		}
+		err = m.InsertJoinLog(newJoinLog)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		}
+		go func() {
+			if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
+				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
+				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
+				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported ||
+				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins {
+				guild, err := helpers.GetGuild(member.GuildID)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					return
+				}
 
-                bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, func(_ int) {})
-                troublemakerReports := m.getTroublemakerReports(member.User)
-                joins, _ := m.GetJoins(member.User.ID, member.GuildID)
+				bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, func(_ int) {})
+				troublemakerReports := m.getTroublemakerReports(member.User)
+				joins, _ := m.GetJoins(member.User.ID, member.GuildID)
 
-                cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d, Joins: %d",
-                    member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList), len(troublemakerReports), len(joins)))
+				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d, Joins: %d",
+					member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList), len(troublemakerReports), len(joins)))
 
-                isOnServerList := m.inspectCommonServers(member.User)
+				isOnServerList := m.inspectCommonServers(member.User)
 
-                joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
-                oneDayAgo := time.Now().AddDate(0, 0, -1)
-                oneWeekAgo := time.Now().AddDate(0, 0, -7)
+				joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
+				oneDayAgo := time.Now().AddDate(0, 0, -1)
+				oneWeekAgo := time.Now().AddDate(0, 0, -7)
 
-                if !(
-                    (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
-                        (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
-                        (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
-                        (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported && len(troublemakerReports) > 0) ||
-                        (helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins && len(joins) > 1) ) {
-                    return
-                }
+				if !((helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
+					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
+					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
+					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported && len(troublemakerReports) > 0) ||
+					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins && len(joins) > 1)) {
+					return
+				}
 
-                resultEmbed := &discordgo.MessageEmbed{
-                    Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
-                    Description: helpers.GetTextF("plugins.mod.inspect-description-done", member.User.ID) +
-                        "\n_inspected because User joined this Server._",
-                    URL:       helpers.GetAvatarUrl(member.User),
-                    Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
-                    Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
-                    Color:     0x0FADED,
-                }
+				resultEmbed := &discordgo.MessageEmbed{
+					Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
+					Description: helpers.GetTextF("plugins.mod.inspect-description-done", member.User.ID) +
+						"\n_inspected because User joined this Server._",
+					URL:       helpers.GetAvatarUrl(member.User),
+					Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
+					Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
+					Color:     0x0FADED,
+				}
 
-                resultBansText := ""
-                if len(bannedOnServerList) <= 0 {
-                    resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
-                } else {
-                    resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
-                }
+				resultBansText := ""
+				if len(bannedOnServerList) <= 0 {
+					resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+				} else {
+					resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+				}
 
-                commonGuildsText := ""
-                if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-                    commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
-                } else {
-                    commonGuildsText += "❓ User is on **none** other servers with Robyul."
-                }
-                joinedTimeText := ""
-                if !joinedTime.After(oneWeekAgo) {
-                    joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
-                } else if !joinedTime.After(oneDayAgo) {
-                    joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
-                } else {
-                    joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
-                }
+				commonGuildsText := ""
+				if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+					commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
+				} else {
+					commonGuildsText += "❓ User is on **none** other servers with Robyul."
+				}
+				joinedTimeText := ""
+				if !joinedTime.After(oneWeekAgo) {
+					joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+				} else if !joinedTime.After(oneDayAgo) {
+					joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+				} else {
+					joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+				}
 
-                troublemakerReportsText := ""
-                if len(troublemakerReports) <= 0 {
-                    troublemakerReportsText = "✅ User never got reported"
-                } else {
-                    troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
-                }
+				troublemakerReportsText := ""
+				if len(troublemakerReports) <= 0 {
+					troublemakerReportsText = "✅ User never got reported"
+				} else {
+					troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
+				}
 
-                joinsText := ""
-                if len(joins) == 0 {
-                    joinsText = "✅ User never joined this server\n"
-                } else if len(joins) == 1 {
-                    if joins[0].InviteCodeUsed != "" {
-                        createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
-                        if createdByUser == nil {
-                            createdByUser = new(discordgo.User)
-                            createdByUser.ID = joins[0].InviteCodeCreatedByUserID
-                            createdByUser.Username = "N/A"
-                        }
+				joinsText := ""
+				if len(joins) == 0 {
+					joinsText = "✅ User never joined this server\n"
+				} else if len(joins) == 1 {
+					if joins[0].InviteCodeUsed != "" {
+						createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
+						if createdByUser == nil {
+							createdByUser = new(discordgo.User)
+							createdByUser.ID = joins[0].InviteCodeCreatedByUserID
+							createdByUser.Username = "N/A"
+						}
 
-                        joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
-                            joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
-                    } else {
-                        joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
-                    }
-                } else if len(joins) > 1 {
-                    sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
-                    lastJoin := joins[0]
+						joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
+							joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+					} else {
+						joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+					}
+				} else if len(joins) > 1 {
+					sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
+					lastJoin := joins[0]
 
-                    if lastJoin.InviteCodeUsed != "" {
-                        createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
-                        if createdByUser == nil {
-                            createdByUser = new(discordgo.User)
-                            createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
-                            createdByUser.Username = "N/A"
-                        }
+					if lastJoin.InviteCodeUsed != "" {
+						createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
+						if createdByUser == nil {
+							createdByUser = new(discordgo.User)
+							createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
+							createdByUser.Username = "N/A"
+						}
 
-                        joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
-                            len(joins),
-                            lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
-                    } else {
+						joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
+							len(joins),
+							lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+					} else {
 
-                        joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
-                    }
-                }
+						joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+					}
+				}
 
-                resultEmbed.Fields = []*discordgo.MessageEmbedField{
-                    {Name: "Bans", Value: resultBansText, Inline: false},
-                    {Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
-                    {Name: "Join History", Value: joinsText, Inline: false},
-                    {Name: "Common Servers", Value: commonGuildsText, Inline: false},
-                    {Name: "Account Age", Value: joinedTimeText, Inline: false},
-                }
+				resultEmbed.Fields = []*discordgo.MessageEmbedField{
+					{Name: "Bans", Value: resultBansText, Inline: false},
+					{Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
+					{Name: "Join History", Value: joinsText, Inline: false},
+					{Name: "Common Servers", Value: commonGuildsText, Inline: false},
+					{Name: "Account Age", Value: joinedTimeText, Inline: false},
+				}
 
-                for _, failedServer := range checkFailedServerList {
-                    if failedServer.ID == member.GuildID {
-                        resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
-                        break
-                    }
-                }
+				for _, failedServer := range checkFailedServerList {
+					if failedServer.ID == member.GuildID {
+						resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+						break
+					}
+				}
 
-                _, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
-                if err != nil {
-                    cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
-                        helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error()))
-                    return
-                }
-            }
-        }()
-    }()
-    go func() {
-        settings := helpers.GuildSettingsGetCached(member.GuildID)
+				_, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
+				if err != nil {
+					cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
+						helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error()))
+					return
+				}
+			}
+		}()
+	}()
+	go func() {
+		settings := helpers.GuildSettingsGetCached(member.GuildID)
 
-        for _, mutedMember := range settings.MutedMembers {
-            if mutedMember == member.User.ID {
-                muteRole, err := helpers.GetMuteRole(member.GuildID)
-                if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                    return
-                }
-                err = session.GuildMemberRoleAdd(member.GuildID, member.User.ID, muteRole.ID)
-                if err != nil {
-                    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                    return
-                }
-            }
-        }
-    }()
+		for _, mutedMember := range settings.MutedMembers {
+			if mutedMember == member.User.ID {
+				muteRole, err := helpers.GetMuteRole(member.GuildID)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					return
+				}
+				err = session.GuildMemberRoleAdd(member.GuildID, member.User.ID, muteRole.ID)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					return
+				}
+			}
+		}
+	}()
 }
 
 func (m *Mod) InsertJoinLog(entry DB_Mod_JoinLog) error {
-    if entry.UserID != "" {
-        insert := rethink.Table("mod_joinlog").Insert(entry)
-        _, err := insert.RunWrite(helpers.GetDB())
-        return err
-    }
-    return nil
+	if entry.UserID != "" {
+		insert := rethink.Table("mod_joinlog").Insert(entry)
+		_, err := insert.RunWrite(helpers.GetDB())
+		return err
+	}
+	return nil
 }
 
 func (m *Mod) GetJoins(userID string, guildID string) ([]DB_Mod_JoinLog, error) {
-    var entryBucket []DB_Mod_JoinLog
-    listCursor, err := rethink.Table("mod_joinlog").Filter(
-        rethink.Row.Field("userid").Eq(userID),
-    ).Run(helpers.GetDB())
-    defer listCursor.Close()
-    if err != nil {
-        return entryBucket, err
-    }
-    err = listCursor.All(&entryBucket)
-    result := make([]DB_Mod_JoinLog, 0)
-    if err != nil {
-        return result, err
-    }
+	var entryBucket []DB_Mod_JoinLog
+	listCursor, err := rethink.Table("mod_joinlog").Filter(
+		rethink.Row.Field("userid").Eq(userID),
+	).Run(helpers.GetDB())
+	defer listCursor.Close()
+	if err != nil {
+		return entryBucket, err
+	}
+	err = listCursor.All(&entryBucket)
+	result := make([]DB_Mod_JoinLog, 0)
+	if err != nil {
+		return result, err
+	}
 
-    for _, logEntry := range entryBucket {
-        if logEntry.GuildID == guildID {
-            result = append(result, logEntry)
-        }
-    }
+	for _, logEntry := range entryBucket {
+		if logEntry.GuildID == guildID {
+			result = append(result, logEntry)
+		}
+	}
 
-    return result, nil
+	return result, nil
 }
 
 func (m *Mod) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -1699,141 +1699,141 @@ func (m *Mod) OnReactionRemove(reaction *discordgo.MessageReactionRemove, sessio
 
 }
 func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-    go func() {
-        bannedOnGuild, err := helpers.GetGuild(user.GuildID)
-        if err != nil {
-            raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-            return
-        }
-        // don't post if bot can't access the ban list of the server the user got banned on
-        _, err = session.GuildBans(user.GuildID)
-        if err != nil {
-            return
-        }
-        for _, targetGuild := range cache.GetSession().State.Guilds {
-            if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
-                _, err := cache.GetSession().GuildMember(targetGuild.ID, user.User.ID)
-                // check if user is on this guild
-                if err == nil {
-                    guild, err := helpers.GetGuild(targetGuild.ID)
-                    if err != nil {
-                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                        continue
-                    }
+	go func() {
+		bannedOnGuild, err := helpers.GetGuild(user.GuildID)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			return
+		}
+		// don't post if bot can't access the ban list of the server the user got banned on
+		_, err = session.GuildBans(user.GuildID)
+		if err != nil {
+			return
+		}
+		for _, targetGuild := range cache.GetSession().State.Guilds {
+			if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
+				_, err := cache.GetSession().GuildMember(targetGuild.ID, user.User.ID)
+				// check if user is on this guild
+				if err == nil {
+					guild, err := helpers.GetGuild(targetGuild.ID)
+					if err != nil {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						continue
+					}
 
-                    bannedOnServerList, checkFailedServerList := m.inspectUserBans(user.User, func(_ int) {})
+					bannedOnServerList, checkFailedServerList := m.inspectUserBans(user.User, func(_ int) {})
 
-                    cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he got banned on Guild %s (#%s) for Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
-                        user.User.Username, user.User.ID, bannedOnGuild.Name, bannedOnGuild.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
+					cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he got banned on Guild %s (#%s) for Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
+						user.User.Username, user.User.ID, bannedOnGuild.Name, bannedOnGuild.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
 
-                    resultEmbed := &discordgo.MessageEmbed{
-                        Title: helpers.GetTextF("plugins.mod.inspect-embed-title", user.User.Username, user.User.Discriminator),
-                        Description: helpers.GetTextF("plugins.mod.inspect-description-done", user.User.ID) +
-                            "\n_inspected because User got banned on a different Server._",
-                        URL:       helpers.GetAvatarUrl(user.User),
-                        Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(user.User)},
-                        Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", user.User.ID, len(session.State.Guilds))},
-                        Color:     0x0FADED,
-                    }
+					resultEmbed := &discordgo.MessageEmbed{
+						Title: helpers.GetTextF("plugins.mod.inspect-embed-title", user.User.Username, user.User.Discriminator),
+						Description: helpers.GetTextF("plugins.mod.inspect-description-done", user.User.ID) +
+							"\n_inspected because User got banned on a different Server._",
+						URL:       helpers.GetAvatarUrl(user.User),
+						Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(user.User)},
+						Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", user.User.ID, len(session.State.Guilds))},
+						Color:     0x0FADED,
+					}
 
-                    resultBansText := ""
-                    if len(bannedOnServerList) <= 0 {
-                        resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
-                    } else {
-                        resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
-                    }
+					resultBansText := ""
+					if len(bannedOnServerList) <= 0 {
+						resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+					} else {
+						resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+					}
 
-                    isOnServerList := m.inspectCommonServers(user.User)
-                    commonGuildsText := ""
-                    if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-                        commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
-                    } else {
-                        commonGuildsText += "❓ User is on **none** other servers with Robyul."
-                    }
+					isOnServerList := m.inspectCommonServers(user.User)
+					commonGuildsText := ""
+					if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+						commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
+					} else {
+						commonGuildsText += "❓ User is on **none** other servers with Robyul."
+					}
 
-                    joinedTime := helpers.GetTimeFromSnowflake(user.User.ID)
-                    oneDayAgo := time.Now().AddDate(0, 0, -1)
-                    oneWeekAgo := time.Now().AddDate(0, 0, -7)
-                    joinedTimeText := ""
-                    if !joinedTime.After(oneWeekAgo) {
-                        joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
-                    } else if !joinedTime.After(oneDayAgo) {
-                        joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
-                    } else {
-                        joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
-                    }
+					joinedTime := helpers.GetTimeFromSnowflake(user.User.ID)
+					oneDayAgo := time.Now().AddDate(0, 0, -1)
+					oneWeekAgo := time.Now().AddDate(0, 0, -7)
+					joinedTimeText := ""
+					if !joinedTime.After(oneWeekAgo) {
+						joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+					} else if !joinedTime.After(oneDayAgo) {
+						joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+					} else {
+						joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+					}
 
-                    troublemakerReports := m.getTroublemakerReports(user.User)
-                    troublemakerReportsText := ""
-                    if len(troublemakerReports) <= 0 {
-                        troublemakerReportsText = "✅ User never got reported"
-                    } else {
-                        troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
-                    }
+					troublemakerReports := m.getTroublemakerReports(user.User)
+					troublemakerReportsText := ""
+					if len(troublemakerReports) <= 0 {
+						troublemakerReportsText = "✅ User never got reported"
+					} else {
+						troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
+					}
 
-                    joins, _ := m.GetJoins(user.User.ID, targetGuild.ID)
-                    joinsText := ""
-                    if len(joins) == 0 {
-                        joinsText = "✅ User never joined this server\n"
-                    } else if len(joins) == 1 {
-                        if joins[0].InviteCodeUsed != "" {
-                            createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
-                            if createdByUser == nil {
-                                createdByUser = new(discordgo.User)
-                                createdByUser.ID = joins[0].InviteCodeCreatedByUserID
-                                createdByUser.Username = "N/A"
-                            }
+					joins, _ := m.GetJoins(user.User.ID, targetGuild.ID)
+					joinsText := ""
+					if len(joins) == 0 {
+						joinsText = "✅ User never joined this server\n"
+					} else if len(joins) == 1 {
+						if joins[0].InviteCodeUsed != "" {
+							createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
+							if createdByUser == nil {
+								createdByUser = new(discordgo.User)
+								createdByUser.ID = joins[0].InviteCodeCreatedByUserID
+								createdByUser.Username = "N/A"
+							}
 
-                            joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
-                                joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
-                        } else {
-                            joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
-                        }
-                    } else if len(joins) > 1 {
-                        sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
-                        lastJoin := joins[0]
+							joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
+								joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+						} else {
+							joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+						}
+					} else if len(joins) > 1 {
+						sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
+						lastJoin := joins[0]
 
-                        if lastJoin.InviteCodeUsed != "" {
-                            createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
-                            if createdByUser == nil {
-                                createdByUser = new(discordgo.User)
-                                createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
-                                createdByUser.Username = "N/A"
-                            }
+						if lastJoin.InviteCodeUsed != "" {
+							createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
+							if createdByUser == nil {
+								createdByUser = new(discordgo.User)
+								createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
+								createdByUser.Username = "N/A"
+							}
 
-                            joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
-                                len(joins),
-                                lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
-                        } else {
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
+								len(joins),
+								lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+						} else {
 
-                            joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
-                        }
-                    }
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+						}
+					}
 
-                    resultEmbed.Fields = []*discordgo.MessageEmbedField{
-                        {Name: "Bans", Value: resultBansText, Inline: false},
-                        {Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
-                        {Name: "Join History", Value: joinsText, Inline: false},
-                        {Name: "Common Servers", Value: commonGuildsText, Inline: false},
-                        {Name: "Account Age", Value: joinedTimeText, Inline: false},
-                    }
+					resultEmbed.Fields = []*discordgo.MessageEmbedField{
+						{Name: "Bans", Value: resultBansText, Inline: false},
+						{Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
+						{Name: "Join History", Value: joinsText, Inline: false},
+						{Name: "Common Servers", Value: commonGuildsText, Inline: false},
+						{Name: "Account Age", Value: joinedTimeText, Inline: false},
+					}
 
-                    for _, failedServer := range checkFailedServerList {
-                        if failedServer.ID == targetGuild.ID {
-                            resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
-                            break
-                        }
-                    }
+					for _, failedServer := range checkFailedServerList {
+						if failedServer.ID == targetGuild.ID {
+							resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+							break
+						}
+					}
 
-                    _, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, resultEmbed)
-                    if err != nil {
-                        raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-                        continue
-                    }
-                }
-            }
-        }
-    }()
+					_, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, resultEmbed)
+					if err != nil {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						continue
+					}
+				}
+			}
+		}
+	}()
 }
 
 func (m *Mod) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
@@ -1841,25 +1841,25 @@ func (m *Mod) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordg
 }
 
 func (m *Mod) Min(a, b int) int {
-    if a <= b {
-        return a
-    }
-    return b
+	if a <= b {
+		return a
+	}
+	return b
 }
 
 // https://www.dotnetperls.com/duplicates-go
 func (m *Mod) removeDuplicates(elements []string) []string {
-    encountered := map[string]bool{}
+	encountered := map[string]bool{}
 
-    // Create a map of all unique elements.
-    for v := range elements {
-        encountered[elements[v]] = true
-    }
+	// Create a map of all unique elements.
+	for v := range elements {
+		encountered[elements[v]] = true
+	}
 
-    // Place all keys from the map into a slice.
-    result := []string{}
-    for key := range encountered {
-        result = append(result, key)
-    }
-    return result
+	// Place all keys from the map into a slice.
+	result := []string{}
+	for key := range encountered {
+		result = append(result, key)
+	}
+	return result
 }

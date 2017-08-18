@@ -4,11 +4,11 @@ import "net/url"
 
 // UrlEncode encodes str with url#parse()
 func UrlEncode(str string) (string, error) {
-    u, err := url.Parse(str)
+	u, err := url.Parse(str)
 
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
-    return u.String(), nil
+	return u.String(), nil
 }

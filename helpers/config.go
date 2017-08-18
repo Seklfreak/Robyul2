@@ -7,16 +7,16 @@ var config *gabs.Container
 
 // LoadConfig loads the config from $path into $config
 func LoadConfig(path string) {
-    json, err := gabs.ParseJSONFile(path)
+	json, err := gabs.ParseJSONFile(path)
 
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 
-    config = json
+	config = json
 }
 
 // GetConfig is a config getter
 func GetConfig() *gabs.Container {
-    return config
+	return config
 }
