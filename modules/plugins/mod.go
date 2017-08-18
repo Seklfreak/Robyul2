@@ -661,9 +661,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
                 }
                 targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
                 if err != nil {
-                    if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10008 {
-                        session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
-                        return
+                    if errD, ok := err.(*discordgo.RESTError); ok {
+                        if errD.Message.Code == 10008 || strings.Contains(err.Error(), "is not snowflake") {
+                            _, err = session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+                            helpers.Relax(err)
+                            return
+                        } else {
+                            helpers.Relax(err)
+                        }
                     } else {
                         helpers.Relax(err)
                     }
