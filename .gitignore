@@ -6,6 +6,7 @@ config.json
 **/*/token
 config.json
 karen
+.vscode
 
 # Created by https://www.gitignore.io/api/go,windows,osx,linux
 
