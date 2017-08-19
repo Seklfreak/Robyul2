@@ -3,16 +3,16 @@ go:
   - master
   - tip
 install:
-    - curl https://glide.sh/get | sh
-    - glide install
+    - go get github.com/tools/godep
+    - dep ensure
     - go get -v github.com/golang/lint/golint
     - go get github.com/mitchellh/gox
 script:
     - diff <(gofmt -d .) <(echo -n)
-    - go vet -x ./...
-    - golint ./...
+    #- go vet -x ./...
+    #- golint ./...
     - go test -v -race ./...
-    - gox -output="robyul2-{{.OS}}-{{.Arch}}" -osarch="windows/amd64"
+    #- gox -output="robyul2-{{.OS}}-{{.Arch}}" -osarch="windows/amd64"
 deploy:
   provider: releases
   api_key:
