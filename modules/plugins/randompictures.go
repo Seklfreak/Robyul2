@@ -42,8 +42,8 @@ var (
 )
 
 const (
-	driveSearchText       string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\")"
-	driveFieldsText       string = "nextPageToken, files(id, size)"
+	driveSearchText       string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
+	driveFieldsText       string = "nextPageToken, files(id, size, mimeType)"
 	driveFieldsSingleText string = "id, name, size, modifiedTime, imageMediaMetadata, webContentLink"
 	imgurApiUploadBaseUrl string = "https://api.imgur.com/3/image"
 )
@@ -489,32 +489,52 @@ func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*
 
 Loop:
 	for {
-		for _, driveFolderID := range sourceEntry.DriveFolderIDs {
-			cache.GetLogger().WithField("module", "randompictures").Debug(fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
-			result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
-			if err != nil {
-				cache.GetLogger().WithField("module", "randompictures").Error(fmt.Sprintf("google drive error: %s, retrying in 10 seconds", err.Error()))
-				time.Sleep(10 * time.Second)
-				continue Loop
-			}
-			helpers.Relax(err)
-			for _, file := range result.Files {
-				if rp.isValidDriveFile(file) {
-					allFiles = append(allFiles, file)
+		foldersChecked := make([]string, 0)
+		foldersToCheck := sourceEntry.DriveFolderIDs
+		for {
+		CheckFoldersLoop:
+			for _, driveFolderID := range foldersToCheck {
+				for _, checkedFolder := range foldersChecked {
+					if checkedFolder == driveFolderID {
+						continue CheckFoldersLoop
+					}
 				}
-			}
-
-			for {
-				if result.NextPageToken == "" {
-					break
+				cache.GetLogger().WithField("module", "randompictures").Debug(fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
+				result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
+				if err != nil {
+					cache.GetLogger().WithField("module", "randompictures").Error(fmt.Sprintf("google drive error: %s, retrying in 10 seconds", err.Error()))
+					time.Sleep(10 * time.Second)
+					continue Loop
 				}
-				result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
 				helpers.Relax(err)
 				for _, file := range result.Files {
 					if rp.isValidDriveFile(file) {
 						allFiles = append(allFiles, file)
 					}
+					if file.MimeType == "application/vnd.google-apps.folder" {
+						foldersToCheck = append(foldersToCheck, file.Id)
+					}
 				}
+
+				for {
+					if result.NextPageToken == "" {
+						break
+					}
+					result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
+					helpers.Relax(err)
+					for _, file := range result.Files {
+						if rp.isValidDriveFile(file) {
+							allFiles = append(allFiles, file)
+						}
+						if file.MimeType == "application/vnd.google-apps.folder" {
+							foldersToCheck = append(foldersToCheck, file.Id)
+						}
+					}
+				}
+				foldersChecked = append(foldersChecked, driveFolderID)
+			}
+			if len(foldersChecked) == len(foldersToCheck) {
+				break
 			}
 		}
 		break
@@ -523,6 +543,9 @@ Loop:
 }
 
 func (rp *RandomPictures) isValidDriveFile(file *drive.File) bool {
+	if file.MimeType == "application/vnd.google-apps.folder" {
+		return false
+	}
 	if file.Size > 8000000 { // bigger than 8 MB? (discords file size limit)
 		return false
 	}
