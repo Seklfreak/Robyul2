@@ -4,7 +4,7 @@ go:
   - tip
 install:
     - go get github.com/tools/godep
-    - dep ensure
+    - godep ensure
     - go get -v github.com/golang/lint/golint
     - go get github.com/mitchellh/gox
 script:
