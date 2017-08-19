@@ -1,5 +1,6 @@
 # Robyul
 
+[![Build Status](https://travis-ci.org/Seklfreak/Robyul2.svg?branch=master)](https://travis-ci.org/Seklfreak/Robyul2)
 [<img src="https://img.shields.io/badge/Support-me!-orange.svg">](https://www.patreon.com/sekl)
 [<img src="https://discordapp.com/api/guilds/286619174371852298/widget.png?style=shield">](https://discord.gg/s5qZvUV)
 
