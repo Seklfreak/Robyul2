@@ -3,8 +3,8 @@ go:
   - master
   - tip
 install:
-    - go get github.com/tools/godep
-    - godep ensure
+    - go get -u github.com/golang/dep/cmd/dep
+    - dep ensure
     - go get -v github.com/golang/lint/golint
     - go get github.com/mitchellh/gox
 script:
