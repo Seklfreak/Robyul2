@@ -123,12 +123,13 @@ func (r *VLive) checkVliveFeedsLoop() {
 	var safeEntries VLive_Safe_Entries
 	var bundledSafeEntries VLive_Safe_Bundled_Entries
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		cache.GetLogger().WithField("module", "vlive").Error("The checkVliveFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		r.checkVliveFeedsLoop()
+		go func() {
+			cache.GetLogger().WithField("module", "vlive").Error("The checkVliveFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			r.checkVliveFeedsLoop()
+		}()
 	}()
 
 	for {

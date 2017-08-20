@@ -89,12 +89,13 @@ func (m *LastFm) generateDiscordStats() {
 	var safeEntries LastFMAccount_Safe_Entries
 	log := cache.GetLogger()
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		log.WithField("module", "lastfm").Error("The generateDiscordStats died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.generateDiscordStats()
+		go func() {
+			log.WithField("module", "lastfm").Error("The generateDiscordStats died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.generateDiscordStats()
+		}()
 	}()
 
 	for {
