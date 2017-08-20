@@ -74,12 +74,13 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 	var safeEntries Facebook_Safe_Entries
 	log := cache.GetLogger()
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		log.WithField("module", "facebook").Error("The checkFacebookFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.checkFacebookFeedsLoop()
+		go func() {
+			log.WithField("module", "facebook").Error("The checkFacebookFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.checkFacebookFeedsLoop()
+		}()
 	}()
 
 	for {

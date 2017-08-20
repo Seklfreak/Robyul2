@@ -43,12 +43,13 @@ var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderato
 func MembersCacheLoop() {
 	log := cache.GetLogger()
 
+	defer Recover()
 	defer func() {
-		Recover()
-
-		log.WithField("module", "discord").Error("The MembersCacheLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		MembersCacheLoop()
+		go func() {
+			log.WithField("module", "discord").Error("The MembersCacheLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			MembersCacheLoop()
+		}()
 	}()
 
 	for {

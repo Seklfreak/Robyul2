@@ -104,12 +104,13 @@ func (m *Twitch) Init(session *discordgo.Session) {
 	cache.GetLogger().WithField("module", "twitch").Info("Started twitch loop (60s)")
 }
 func (m *Twitch) checkTwitchFeedsLoop() {
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		cache.GetLogger().WithField("module", "twitch").Info("The checkTwitchFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.checkTwitchFeedsLoop()
+		go func() {
+			cache.GetLogger().WithField("module", "twitch").Info("The checkTwitchFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.checkTwitchFeedsLoop()
+		}()
 	}()
 
 	for {

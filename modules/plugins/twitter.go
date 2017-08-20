@@ -69,12 +69,13 @@ func (m *Twitter) Init(session *discordgo.Session) {
 func (m *Twitter) checkTwitterFeedsLoop() {
 	var safeEntries Twitter_Safe_Entries
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		cache.GetLogger().WithField("module", "twitter").Error("The checkTwitterFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.checkTwitterFeedsLoop()
+		go func() {
+			cache.GetLogger().WithField("module", "twitter").Error("The checkTwitterFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.checkTwitterFeedsLoop()
+		}()
 	}()
 
 	for {

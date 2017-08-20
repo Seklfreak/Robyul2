@@ -187,12 +187,13 @@ func (m *Levels) Init(session *discordgo.Session) {
 func (l *Levels) setServerFeaturesLoop() {
 	log := cache.GetLogger()
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		log.WithField("module", "levels").Error("The setServerFeaturesLooü died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		l.setServerFeaturesLoop()
+		go func() {
+			log.WithField("module", "levels").Error("The setServerFeaturesLooü died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			l.setServerFeaturesLoop()
+		}()
 	}()
 
 	var badgesBucket []DB_Badge
