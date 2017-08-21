@@ -39,26 +39,69 @@ func (yt *YouTube) Commands() []string {
 
 func (yt *YouTube) Init(session *discordgo.Session) {
 	yt.configFileName = youtubeConfigFileName
+
 	err := yt.createConfig()
 	helpers.Relax(err)
 
 	yt.client = yt.config.Client(context.Background())
+
 	yt.service, err = youtube.New(yt.client)
 	helpers.Relax(err)
 }
 
 func (yt *YouTube) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	defer helpers.Recover()
+
+	var err error
+	var reply *discordgo.MessageSend
+
 	session.ChannelTyping(msg.ChannelID)
-	videoID := strings.TrimSpace(content)
 
-	response, err := yt.service.Videos.List("id, snippet, statistics").Id(videoID).MaxResults(1).Do()
-	helpers.Relax(err)
-
-	if len(response.Items) <= 0 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.youtube.video-not-found"))
+	args := strings.Fields(content)
+	if len(args) < 1 {
+		_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		helpers.Relax(err)
 		return
 	}
+
+	// switch to subcommand.
+	switch args[0] {
+	default:
+		// _youtube {args[0]: videoID}
+		reply, err = yt.getVideo(args[0:])
+	}
+
+	// sends error messages to client.
+	if err != nil {
+		_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText(err.Error()))
+		helpers.Relax(err)
+		return
+	}
+
+	// sends result to client.
+	_, err = session.ChannelMessageSendComplex(msg.ChannelID, reply)
+	helpers.Relax(err)
+}
+
+func (yt *YouTube) getVideo(args []string) (*discordgo.MessageSend, error) {
+	if yt.service == nil {
+		return nil, fmt.Errorf("plugins.youtube.service-not-available")
+	}
+
+	// _youtube {args[0]: videoID}
+	if len(args) < 1 {
+		return nil, fmt.Errorf("bot.arguments.invalid")
+	}
+	videoID := args[0]
+
+	response, err := yt.service.Videos.List("id, snippet, statistics").Id(videoID).MaxResults(1).Do()
+	if err != nil {
+		return nil, err
+	}
+	if len(response.Items) <= 0 {
+		return nil, fmt.Errorf("plugins.youtube.video-not-found")
+	}
+
 	video := response.Items[0]
 
 	videoEmbed := &discordgo.MessageEmbed{
@@ -76,15 +119,15 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
 
-	_, err = session.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{
+	return &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", fmt.Sprintf(YouTubeVideoBaseUrl, video.Id)),
 		Embed:   videoEmbed,
-	})
-	helpers.Relax(err)
+	}, nil
 }
 
 func (yt *YouTube) createConfig() error {
 	config := yt.getConfig()
+
 	authJSON, err := ioutil.ReadFile(config)
 	if err != nil {
 		return err
