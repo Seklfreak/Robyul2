@@ -1253,25 +1253,35 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				helpers.Relax(err)
 				return
 			case "timezone":
-				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-list"))
-					helpers.Relax(err)
-					return
-				}
-
-				loc, err := time.LoadLocation(args[1])
-				if err != nil {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error")+"\n"+helpers.GetText("plugins.levels.profile-timezone-list"))
-					helpers.Relax(err)
-					return
-				}
-
 				userUserdata := m.GetUserUserdata(msg.Author)
-				userUserdata.Timezone = loc.String()
+
+				newTimezoneString := ""
+				timeInTimezone := ""
+				if len(args) < 2 {
+					if userUserdata.Timezone == "" {
+						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-list"))
+						helpers.Relax(err)
+						return
+					}
+				} else {
+					loc, err := time.LoadLocation(args[1])
+					if err != nil {
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error")+"\n"+helpers.GetText("plugins.levels.profile-timezone-list"))
+						helpers.Relax(err)
+						return
+					}
+					newTimezoneString = loc.String()
+					timeInTimezone = time.Now().In(loc).Format(TimeAtUserFormat)
+				}
+				userUserdata.Timezone = newTimezoneString
 				m.setUserUserdata(userUserdata)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
-					loc.String(), time.Now().In(loc).Format(TimeAtUserFormat)))
+				if timeInTimezone != "" {
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
+						newTimezoneString, timeInTimezone))
+				} else {
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-reset-success"))
+				}
 				helpers.Relax(err)
 				return
 			case "birthday":
