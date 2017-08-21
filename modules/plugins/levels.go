@@ -396,13 +396,23 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 	case "rep": // [p]rep <user id/mention>
 		session.ChannelTyping(msg.ChannelID)
 		args := strings.Fields(content)
+		userData := m.GetUserUserdata(msg.Author)
+
 		if len(args) <= 0 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-			helpers.Relax(err)
+			if time.Since(userData.LastRepped).Hours() < 12 {
+				timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
+				_, err := session.ChannelMessageSend(msg.ChannelID,
+					helpers.GetTextF("plugins.levels.rep-next-rep",
+						int(math.Floor(timeUntil.Hours())),
+						int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
+				helpers.Relax(err)
+			} else {
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-target"))
+				helpers.Relax(err)
+			}
 			return
 		}
 
-		userData := m.GetUserUserdata(msg.Author)
 		if time.Since(userData.LastRepped).Hours() < 12 {
 			timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
 			_, err := session.ChannelMessageSend(msg.ChannelID,

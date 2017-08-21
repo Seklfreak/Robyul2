@@ -698,7 +698,9 @@
       "profile-timezone-set-success": "I set your timezone to %s, it is currently `%s` in that timezone. <:blobokhand:317032017164238848>",
       "profile-birthday-set-error-format": "Please specify your birthday in the following format: `MM/DD`. <:blobthumbsup:317043177028714497>",
       "profile-birthday-set-success": "I saved your birthday. <:blobparty:339073870097154048>",
-      "ranking-text": "You can check out the leaderboard here: <%s>! <:blobhighfive:317043673047236609>"
+      "ranking-text": "You can check out the leaderboard here: <%s>! <:blobhighfive:317043673047236609>",
+      "rep-next-rep": "You can rep again in %d hour(s) and %d minute(s)! <:blobshh:317044272161357824>",
+      "rep-target": "Please tell me who to rep! <:blobthinking:317028940885524490>"
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
