@@ -621,7 +621,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 	}
 
 	if messageID == "" {
-		_, err = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf(":label: `%s`%s\n%s\nCheck out a gallery of recent pictures here: <%s>", file.Name, camerModelText, linkToPost, linkToHistory))
+		_, err = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
 		if err != nil {
 			return err
 		}
