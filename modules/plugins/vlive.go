@@ -445,7 +445,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					Content: fmt.Sprintf("<%s>", vliveChannel.Url),
 					Embed:   channelEmbed,
 				})
-			helpers.RelaxEmbed(err, msg.ChannelID)
+			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			return
 		}
 	} else {

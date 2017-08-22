@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 
+	"math/rand"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
@@ -58,16 +60,41 @@ func Relax(err error) {
 }
 
 // RelaxEmbed does nothing if $err is nil, prints a notice if there are no permissions to embed, else sends it to Relax()
-func RelaxEmbed(err error, channelID string) {
+func RelaxEmbed(err error, channelID string, commandMessageID string) {
 	if err != nil {
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code == 50013 {
-				_, err = cache.GetSession().ChannelMessageSend(channelID, GetText("bot.errors.no-embed"))
-				Relax(err)
+				if channelID != "" {
+					_, err = cache.GetSession().ChannelMessageSend(channelID, GetText("bot.errors.no-embed"))
+					RelaxMessage(err, channelID, commandMessageID)
+				}
 				return
 			}
 		}
 		Relax(err)
+	}
+}
+
+// RelaxEmbed does nothing if $err is nil or if there are no permissions to send a message, else sends it to Relax()
+func RelaxMessage(err error, channelID string, commandMessageID string) {
+	if err != nil {
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Code == 50013 {
+				if channelID != "" && commandMessageID != "" {
+					reactions := []string{
+						":blobstop:317034621953114112",
+						":blobweary:317036265071575050",
+						":googlespeaknoevil:317036753074651139",
+						":notlikeblob:349342777978519562",
+					}
+					cache.GetSession().MessageReactionAdd(channelID, commandMessageID, reactions[rand.Intn(len(reactions))])
+				}
+			} else {
+				Relax(err)
+			}
+		} else {
+			Relax(err)
+		}
 	}
 }
 
