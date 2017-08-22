@@ -127,14 +127,14 @@ func SendError(msg *discordgo.Message, err interface{}) {
 			if msg != nil {
 				cache.GetSession().ChannelMessageSend(
 					msg.ChannelID,
-					"Error <:blobfrowningbig:317028438693117962>\n`Sekl#7397` has been notified.\n```\n"+fmt.Sprintf("%#v", errR.Message.Message)+"\n```",
+					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v", errR.Message.Message)+"\n```",
 				)
 			}
 		} else {
 			if msg != nil {
 				cache.GetSession().ChannelMessageSend(
 					msg.ChannelID,
-					"Error <:blobfrowningbig:317028438693117962>\n`Sekl#7397` has been notified.\n```\n"+fmt.Sprintf("%#v", err)+"\n```",
+					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v", err)+"\n```",
 				)
 			}
 		}
