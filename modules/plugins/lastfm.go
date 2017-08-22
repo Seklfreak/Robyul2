@@ -610,8 +610,11 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				}
 			}
 			metrics.LastFmRequests.Add(1)
-			scrobblesCount, err := strconv.Atoi(lastfmUser.PlayCount)
-			helpers.Relax(err)
+			scrobblesCount := 0
+			if lastfmUser.PlayCount != "" {
+				scrobblesCount, err = strconv.Atoi(lastfmUser.PlayCount)
+				helpers.Relax(err)
+			}
 			embedTitle := helpers.GetTextF("plugins.lastfm.profile-embed-title", lastfmUser.Name)
 			if lastfmUser.RealName != "" {
 				embedTitle = helpers.GetTextF("plugins.lastfm.profile-embed-title-realname", lastfmUser.RealName, lastfmUser.Name)
