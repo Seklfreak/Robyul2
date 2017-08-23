@@ -129,7 +129,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			m.deleteNotificationSettingByID(entryBucket.ID)
 
 			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
-			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notificaton Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notification Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
 			go m.refreshNotificationSettingsCache()
 		case "list": // [p]notifications list

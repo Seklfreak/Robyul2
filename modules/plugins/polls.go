@@ -188,7 +188,7 @@ func (p *Poll) remove(content string, msg *discordgo.Message, session *discordgo
 	}
 	if helpers.RemovePoll(channel.GuildID, pollID, msg) {
 		// Success
-		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Succesfully removed poll with ID `%s`", pollID))
+		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfully removed poll with ID `%s`", pollID))
 		session.ChannelMessageDelete(msg.ChannelID, pollID)
 	} else {
 		// Failure
@@ -239,7 +239,7 @@ func (p *Poll) removeField(content string, msg *discordgo.Message, session *disc
 	if helpers.RemovePollField(channel.GuildID, pollID, fieldID, msg) {
 		// Success
 		if helpers.UpdatePollMsg(channel.GuildID, pollID) {
-			session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfuly removed field with ID `%v`", fieldID))
+			session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfully removed field with ID `%v`", fieldID))
 		}
 	} else {
 		// Failure
@@ -261,7 +261,7 @@ func (p *Poll) open(content string, msg *discordgo.Message, session *discordgo.S
 	if helpers.OpenPoll(channel.GuildID, pollID, msg) {
 		helpers.UpdatePollMsg(channel.GuildID, pollID)
 		// Success
-		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfuly opened `%v`", pollID))
+		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfully opened `%v`", pollID))
 	} else {
 		// Failure
 		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Could not open `%v`", pollID))
@@ -282,7 +282,7 @@ func (p *Poll) close(content string, msg *discordgo.Message, session *discordgo.
 	if helpers.ClosePoll(channel.GuildID, pollID, msg) {
 		helpers.UpdatePollMsg(channel.GuildID, pollID)
 		// Success
-		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfuly closed `%v`", pollID))
+		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Successfully closed `%v`", pollID))
 	} else {
 		// Failure
 		session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Could not close `%v`", pollID))

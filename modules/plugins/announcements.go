@@ -10,7 +10,7 @@ import (
 // Announcement such as updates, downtimes...
 type Announcement struct{}
 
-// Commands that are availble to trigger an announcement
+// Commands that are available to trigger an announcement
 func (a *Announcement) Commands() []string {
 	return []string{
 		"announce",
