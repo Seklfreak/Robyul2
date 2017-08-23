@@ -1,11 +1,11 @@
 package plugins
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
-
-	"fmt"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -105,21 +105,46 @@ func (yt *YouTube) search(args []string) *discordgo.MessageSend {
 	}
 	item := response.Items[0]
 
+	var id string
 	data := &discordgo.MessageSend{}
+
 	switch item.Id.Kind {
 	case "youtube#video":
-		id := item.Id.VideoId
+		id = item.Id.VideoId
 		data.Content = fmt.Sprintf(YouTubeVideoBaseUrl, id)
 		data.Embed = yt.getVideoInfo(id)
 	case "youtube#channel":
-		id := item.Id.ChannelId
+		id = item.Id.ChannelId
 		data.Content = fmt.Sprintf(YouTubeChannelBaseUrl, id)
 		data.Embed = yt.getChannelInfo(id)
 	default:
 		data.Content = "unknown item kind: " + item.Kind
 	}
 
+	for _, arg := range args {
+		if yt.checkUrlSame(arg, id) {
+			data.Content = ""
+		}
+	}
+
 	return data
+}
+
+func (yt *YouTube) checkUrlSame(arg, id string) bool {
+	videoLongUrl := regexp.MustCompile(`^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=` + id + `+$`)
+	videoShortUrl := regexp.MustCompile(`^(https?\:\/\/)?(youtu\.be)\/` + id + `+$`)
+	channelUrl := regexp.MustCompile(`^(https?\:\/\/)?(www\.)?(youtube\.com)\/channel\/` + id)
+
+	if videoLongUrl.MatchString(arg) {
+		return true
+	}
+	if videoShortUrl.MatchString(arg) {
+		return true
+	}
+	if channelUrl.MatchString(arg) {
+		return true
+	}
+	return false
 }
 
 func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
