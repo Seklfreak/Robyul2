@@ -248,6 +248,9 @@ func (g *Gallery) getEntryBy(key string, id string) DB_Gallery_Entry {
 	listCursor, err := rethink.Table("galleries").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -265,6 +268,9 @@ func (g *Gallery) getEntryByOrCreateEmpty(key string, id string) DB_Gallery_Entr
 	listCursor, err := rethink.Table("galleries").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

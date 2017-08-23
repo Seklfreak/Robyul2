@@ -631,6 +631,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		).Filter(
 			rethink.Row.Field("userid").Eq(targetUser.ID),
 		).Run(helpers.GetDB())
+		helpers.Relax(err)
 		defer listCursor.Close()
 		err = listCursor.All(&entryBucket)
 
@@ -976,6 +977,9 @@ func (r *Stats) getVoiceTimeEntryByOrCreateEmpty(key string, id string) DB_Voice
 	listCursor, err := rethink.Table("stats_voicetimes").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

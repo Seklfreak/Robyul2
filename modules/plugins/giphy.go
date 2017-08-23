@@ -50,7 +50,7 @@ func (g *Giphy) Action(command string, content string, msg *discordgo.Message, s
 	}
 
 	// Chose a random one
-	m := ""
+	var m string
 	if len(gifs) > 0 {
 		m = gifs[rand.Intn(len(gifs))].Path("bitly_url").Data().(string)
 	} else {

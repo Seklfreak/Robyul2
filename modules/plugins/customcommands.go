@@ -390,6 +390,9 @@ func (cc *CustomCommands) getEntryBy(key string, id string) DB_CustomCommands_Co
 	listCursor, err := rethink.Table("customcommands").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -407,6 +410,9 @@ func (cc *CustomCommands) getEntryByOrCreateEmpty(key string, id string) DB_Cust
 	listCursor, err := rethink.Table("customcommands").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

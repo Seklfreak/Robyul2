@@ -302,6 +302,9 @@ func (m *Twitch) getEntryBy(key string, id string) DB_TwitchChannel {
 	listCursor, err := rethink.Table("twitch").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -319,6 +322,9 @@ func (m *Twitch) getEntryByOrCreateEmpty(key string, id string) DB_TwitchChannel
 	listCursor, err := rethink.Table("twitch").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

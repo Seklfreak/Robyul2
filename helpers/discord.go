@@ -56,8 +56,7 @@ func MembersCacheLoop() {
 		var err error
 		log.WithField("module", "discord").Debug("discord", "started members caching for redis")
 		cacheCodec := cache.GetRedisCacheCodec()
-		lastAfterMemberId := ""
-		key := ""
+		var lastAfterMemberId, key string
 		userI := 0
 		membersI := 0
 		userToCache := make(map[string]*discordgo.User)
@@ -213,6 +212,9 @@ func IsAdmin(msg *discordgo.Message) bool {
 	}
 
 	guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+	if e != nil {
+		return false
+	}
 	// Check if role may manage server or a role is in admin role list
 	for _, role := range guild.Roles {
 		for _, userRole := range guildMember.Roles {
@@ -244,6 +246,9 @@ func IsMod(msg *discordgo.Message) bool {
 			return false
 		}
 		guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+		if e != nil {
+			return false
+		}
 		// check if a role is in mod role list
 		for _, role := range guild.Roles {
 			for _, userRole := range guildMember.Roles {

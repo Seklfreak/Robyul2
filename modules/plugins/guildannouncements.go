@@ -48,7 +48,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 					helpers.Relax(err)
 					guildAnnouncementSetting := m.getEntryByOrCreateEmpty("guildid", sourceChannel.GuildID)
 					guildAnnouncementSetting.GuildID = sourceChannel.GuildID
-					successMessage := ""
+					var successMessage string
 					// Add Text
 					if len(args) >= 4 {
 						targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
@@ -78,7 +78,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 
 					guildAnnouncementSetting := m.getEntryByOrCreateEmpty("guildid", sourceChannel.GuildID)
 					guildAnnouncementSetting.GuildID = sourceChannel.GuildID
-					successMessage := ""
+					var successMessage string
 					// Add Text
 					if len(args) >= 4 {
 						targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
@@ -212,6 +212,9 @@ func (m *GuildAnnouncements) getEntryByOrCreateEmpty(key string, id string) Anno
 	listCursor, err := rethink.Table("guild_announcements").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

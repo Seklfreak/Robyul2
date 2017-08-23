@@ -699,6 +699,9 @@ func (r *VLive) getEntryBy(key string, id string) DB_VLive_Entry {
 	listCursor, err := rethink.Table("vlive").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -716,6 +719,9 @@ func (r *VLive) getEntryByOrCreateEmpty(key string, id string) DB_VLive_Entry {
 	listCursor, err := rethink.Table("vlive").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

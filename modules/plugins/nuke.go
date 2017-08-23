@@ -193,6 +193,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 				helpers.Relax(err)
 				defer listCursor.Close()
 				err = listCursor.All(&entryBucket)
+				helpers.Relax(err)
 
 				logMessage := "**Nuke Log:**\n"
 				for _, logEntry := range entryBucket {
@@ -215,6 +216,9 @@ func (n *Nuke) getEntryByOrCreateEmpty(key string, id string) DBNukeLogEntry {
 	listCursor, err := rethink.Table("nukelog").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

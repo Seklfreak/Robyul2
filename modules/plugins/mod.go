@@ -464,6 +464,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 				guild, err := helpers.GetGuild(channel.GuildID)
+				helpers.Relax(err)
 				guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
 				helpers.Relax(err)
 				for _, role := range guild.Roles {
@@ -532,6 +533,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 				guild, err := helpers.GetGuild(channel.GuildID)
+				helpers.Relax(err)
 				guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
 				helpers.Relax(err)
 				for _, role := range guild.Roles {
@@ -591,7 +593,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			resultText := ""
 			totalMembers := 0
 			totalChannels := 0
-			guildMembers := 0
+			var guildMembers int
 			for _, guild := range session.State.Guilds {
 				guildMembers = guild.MemberCount
 				if guildMembers == 0 {
@@ -888,7 +890,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		}
 
 		troublemakerReports := m.getTroublemakerReports(targetUser)
-		troublemakerReportsText := ""
+		var troublemakerReportsText string
 		if len(troublemakerReports) <= 0 {
 			troublemakerReportsText = "✅ User never got reported\n"
 		} else {
@@ -979,7 +981,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			helpers.Relax(err)
 			settings := helpers.GuildSettingsGetCached(channel.GuildID)
 			args := strings.Fields(content)
-			successMessage := ""
+			var successMessage string
 			// Add Text
 			if len(args) >= 1 {
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
@@ -995,6 +997,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					Color:       0x0FADED,
 				}
 				chooseMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, chooseEmbed)
+				helpers.Relax(err)
 
 				allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), emojis.From("4"), emojis.From("5"), "💾"}
 				for _, allowedEmote := range allowedEmotes {
@@ -1248,6 +1251,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			var target *discordgo.Member
 
 			logEntries, err := parsedResult.Path("audit_log_entries").Children()
+			helpers.Relax(err)
 			for _, logEntry := range logEntries {
 				user, err = helpers.GetGuildMember(channel.GuildID, strings.Replace(logEntry.Path("user_id").String(), "\"", "", -1))
 				if err != nil {
@@ -1564,7 +1568,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
 				}
 
-				troublemakerReportsText := ""
+				var troublemakerReportsText string
 				if len(troublemakerReports) <= 0 {
 					troublemakerReportsText = "✅ User never got reported"
 				} else {
@@ -1764,7 +1768,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 					}
 
 					troublemakerReports := m.getTroublemakerReports(user.User)
-					troublemakerReportsText := ""
+					var troublemakerReportsText string
 					if len(troublemakerReports) <= 0 {
 						troublemakerReportsText = "✅ User never got reported"
 					} else {

@@ -322,6 +322,9 @@ func (rp *ReactionPolls) getReactionPollBy(key string, id string) DB_ReactionPol
 	listCursor, err := rethink.Table("reactionpolls").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -339,6 +342,9 @@ func (rp *ReactionPolls) getReactionPollByOrCreateEmpty(key string, id string) D
 	listCursor, err := rethink.Table("reactionpolls").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

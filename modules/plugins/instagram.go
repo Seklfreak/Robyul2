@@ -710,6 +710,7 @@ func (m *Instagram) login() {
     "login_attempt_count": "0"}`, uuid.NewV4().String(), csrfToken, helpers.GetConfig().Path("instagram.username").Data().(string), usedUuid, deviceId, helpers.GetConfig().Path("instagram.password").Data().(string))))
 	helpers.Relax(err)
 	request, err = http.NewRequest("POST", loginEndpoint, strings.NewReader(m.signDataValue(jsonParsed.String())))
+	helpers.Relax(err)
 	m.applyHeaders(request)
 	response, err = httpClient.Do(request)
 	helpers.Relax(err)
@@ -889,6 +890,9 @@ func (m *Instagram) getEntryBy(key string, id string) DB_Instagram_Entry {
 	listCursor, err := rethink.Table("instagram").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -906,6 +910,9 @@ func (m *Instagram) getEntryByOrCreateEmpty(key string, id string) DB_Instagram_
 	listCursor, err := rethink.Table("instagram").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -928,12 +935,16 @@ func (m *Instagram) getEntryByOrCreateEmpty(key string, id string) DB_Instagram_
 
 func (m *Instagram) setEntry(entry DB_Instagram_Entry) {
 	_, err := rethink.Table("instagram").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (m *Instagram) deleteEntryById(id string) {
 	_, err := rethink.Table("instagram").Filter(
 		rethink.Row.Field("id").Eq(id),
 	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
+	if err != nil {
+		panic(err)
+	}
 }

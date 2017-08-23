@@ -338,6 +338,9 @@ func (m *Facebook) lookupFacebookPage(siteName string) (Facebook_Page, error) {
 		"limit":        10,
 		"access_token": helpers.GetConfig().Path("facebook.access_token").Data().(string),
 	})
+	if err != nil {
+		return facebookPage, err
+	}
 	var facebookPostsResult []fb.Result
 	err = facebookPostsResultData.DecodeField("data", &facebookPostsResult)
 	if err != nil {
@@ -396,6 +399,9 @@ func (m *Facebook) getEntryBy(key string, id string) DB_Facebook_Page {
 	listCursor, err := rethink.Table("facebook").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -413,6 +419,9 @@ func (m *Facebook) getEntryByOrCreateEmpty(key string, id string) DB_Facebook_Pa
 	listCursor, err := rethink.Table("facebook").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

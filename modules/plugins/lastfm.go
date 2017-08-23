@@ -541,7 +541,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 
-			topTracks := make([]LastFMSongInfo, 0)
+			var topTracks []LastFMSongInfo
 			timeString := "all time"
 			topTracks = combinedStats.Overall
 			if len(args) >= 2 {
@@ -673,6 +673,9 @@ func (m *LastFm) getLastFmUsername(uid string) string {
 	listCursor, err := rethink.Table("lastfm").Filter(
 		rethink.Row.Field("userid").Eq(uid),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&lastfmAccountBucket)
 
@@ -691,6 +694,9 @@ func (m *LastFm) getLastFmAccountOrCreate(uid string) DB_LastFmAccount {
 	listCursor, err := rethink.Table("lastfm").Filter(
 		rethink.Row.Field("userid").Eq(uid),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&lastfmAccountBucket)
 

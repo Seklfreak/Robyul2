@@ -89,6 +89,7 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 
 	var searchResult GeniusSearchResult
 	err = l.GeniusRequest(fmt.Sprintf("/search?q=%s", encodedQuery), &searchResult)
+	helpers.Relax(err)
 
 	if searchResult.Meta.Status != 200 {
 		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-api-error"))

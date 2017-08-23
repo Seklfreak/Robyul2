@@ -390,6 +390,9 @@ func (m *Twitter) getEntryBy(key string, id string) DB_Twitter_Entry {
 	listCursor, err := rethink.Table("twitter").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -407,6 +410,9 @@ func (m *Twitter) getEntryByOrCreateEmpty(key string, id string) DB_Twitter_Entr
 	listCursor, err := rethink.Table("twitter").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

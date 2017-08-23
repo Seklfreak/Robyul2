@@ -1384,6 +1384,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.Relax(err)
 						defer listCursor.Close()
 						err = listCursor.All(&levelsServersUsers)
+						helpers.Relax(err)
 					}
 					if len(levelsServersUsers) <= i-offset {
 						break
@@ -1575,6 +1576,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						helpers.RequireAdmin(msg, func() {
 							targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
+							helpers.Relax(err)
 							if targetChannel == nil || targetChannel.ID == "" {
 								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.Relax(err)
@@ -1617,6 +1619,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					guild, err := helpers.GetGuild(channel.GuildID)
 					helpers.Relax(err)
 					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Check your DMs.", msg.Author.ID))
+					helpers.Relax(err)
 					// pause new message processing for that guild
 					temporaryIgnoredGuilds = append(temporaryIgnoredGuilds, channel.GuildID)
 					_, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Temporary disabled EXP Processing for `%s` while processing the Message History.", guild.Name))
@@ -1629,6 +1632,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.Relax(err)
 					defer listCursor.Close()
 					err = listCursor.All(&levelsServersUsers)
+					helpers.Relax(err)
 					for _, levelsServerUser := range levelsServersUsers {
 						levelsServerUser.Exp = 0
 						m.setLevelsServerUser(levelsServerUser)
@@ -1949,6 +1953,9 @@ func (l *Levels) ProfileBackgroundSearch(searchText string) []DB_Profile_Backgro
 	listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
 		return profile.Field("id").Match(fmt.Sprintf("(?i)%s", searchText))
 	}).Limit(5).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.All(&entryBucket)
 
@@ -1966,6 +1973,9 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
 	listCursor, err := rethink.Table("profile_backgrounds").Filter(
 		rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -1974,6 +1984,9 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
 		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
 			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", backgroundName))
 		}).Run(helpers.GetDB())
+		if err != nil {
+			panic(err)
+		}
 		defer listCursor.Close()
 		err = listCursor.One(&entryBucket)
 
@@ -2000,6 +2013,9 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 	listCursor, err := rethink.Table("profile_backgrounds").Filter(
 		rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -2008,6 +2024,9 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
 			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", backgroundName))
 		}).Run(helpers.GetDB())
+		if err != nil {
+			panic(err)
+		}
 		defer listCursor.Close()
 		err = listCursor.One(&entryBucket)
 
@@ -2030,6 +2049,9 @@ func (l *Levels) GetUserUserdata(user *discordgo.User) DB_Profile_Userdata {
 	listCursor, err := rethink.Table("profile_userdata").Filter(
 		rethink.Row.Field("userid").Eq(user.ID),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -2055,6 +2077,9 @@ func (l *Levels) GetServerOnlyBadges(guildID string) []DB_Badge {
 	listCursor, err := rethink.Table("profile_badge").Filter(
 		rethink.Row.Field("guildid").Eq(guildID),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.All(&entryBucket)
 
@@ -2073,12 +2098,21 @@ func (l *Levels) GetServerBadges(guildID string) []DB_Badge {
 	listCursor, err := rethink.Table("profile_badge").Filter(
 		rethink.Row.Field("guildid").Eq(guildID),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.All(&entryBucket)
+	if err != nil {
+		panic(err)
+	}
 
 	listCursor, err = rethink.Table("profile_badge").Filter(
 		rethink.Row.Field("guildid").Eq("global"),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.All(&globalEntryBucket)
 
@@ -2101,6 +2135,9 @@ func (l *Levels) GetCategoryBadges(category string, guildID string) []DB_Badge {
 	listCursor, err := rethink.Table("profile_badge").Filter(
 		rethink.Row.Field("category").Eq(category),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.All(&entryBucket)
 
@@ -2125,6 +2162,9 @@ func (l *Levels) GetBadge(category string, name string, guildID string) DB_Badge
 	listCursor, err := rethink.Table("profile_badge").Filter(
 		rethink.Row.Field("category").Eq(strings.ToLower(category)),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.All(&entryBucket)
 
@@ -2148,13 +2188,16 @@ func (l *Levels) GetBadgeByID(badgeID string) DB_Badge {
 	listCursor, err := rethink.Table("profile_badge").Filter(
 		rethink.Row.Field("id").Eq(badgeID),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&badgeBucket)
 
 	if err == rethink.ErrEmptyResult {
 		return badgeBucket
 	} else if err != nil {
-		helpers.Relax(err)
+		panic(err)
 	}
 
 	return badgeBucket
@@ -2588,6 +2631,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 
 func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gifP bool) ([]byte, string, error) {
 	tempTemplateHtml, err := m.GetProfileHTML(member, guild, false)
+	if err != nil {
+		return []byte{}, "", err
+	}
 
 	tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
 	err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
@@ -2628,15 +2674,12 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
 
 	metrics.LevelImagesGenerated.Add(1)
 
-	avatarUrl := helpers.GetAvatarUrl(member.User)
-	avatarUrlGif := ""
-	if avatarUrl != "" {
-		avatarUrl = strings.Replace(avatarUrl, "size=1024", "size=128", -1)
-		if strings.Contains(avatarUrl, "gif") {
-			avatarUrlGif = avatarUrl
+	avatarUrlGif := helpers.GetAvatarUrl(member.User)
+	if avatarUrlGif != "" {
+		avatarUrlGif = strings.Replace(avatarUrlGif, "size=1024", "size=128", -1)
+		if !strings.Contains(avatarUrlGif, "gif") {
+			avatarUrlGif = ""
 		}
-		avatarUrl = strings.Replace(avatarUrl, "gif", "png", -1)
-		avatarUrl = strings.Replace(avatarUrl, "jpg", "png", -1)
 	}
 
 	if avatarUrlGif != "" && gifP == true {

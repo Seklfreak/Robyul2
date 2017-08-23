@@ -166,6 +166,9 @@ func getReminders(uid string) DB_Reminders {
 	listCursor, err := rethink.Table("reminders").Filter(
 		rethink.Row.Field("userid").Eq(uid),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&reminderBucket)
 

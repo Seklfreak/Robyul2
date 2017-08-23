@@ -408,6 +408,9 @@ func (m *Bias) getChannelConfigByOrCreateEmpty(key string, id string) Assignable
 	listCursor, err := rethink.Table("bias").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -433,6 +436,9 @@ func (m *Bias) getChannelConfigBy(key string, id string) AssignableRole_Channel 
 	listCursor, err := rethink.Table("bias").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 

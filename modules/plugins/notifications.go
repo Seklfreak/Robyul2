@@ -73,6 +73,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			).Filter(
 				rethink.Row.Field("keyword").Eq(strings.Join(args[1:], " ")),
 			).Run(helpers.GetDB())
+			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.One(&entryBucket)
 
@@ -117,6 +118,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			).Filter(
 				rethink.Row.Field("keyword").Eq(strings.Join(args[1:], " ")),
 			).Run(helpers.GetDB())
+			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.One(&entryBucket)
 
@@ -489,6 +491,9 @@ func (m *Notifications) getIgnoredChannelBy(key string, id string) DB_IgnoredCha
 	listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -506,6 +511,9 @@ func (m *Notifications) getIgnoredChannelByOrCreateEmpty(key string, id string) 
 	listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -535,7 +543,9 @@ func (m *Notifications) deleteIgnoredChannel(id string) {
 	_, err := rethink.Table("notifications_ignored_channels").Filter(
 		rethink.Row.Field("id").Eq(id),
 	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (m *Notifications) getNotificationSettingBy(key string, id string) DB_NotificationSetting {
@@ -543,6 +553,9 @@ func (m *Notifications) getNotificationSettingBy(key string, id string) DB_Notif
 	listCursor, err := rethink.Table("notifications").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -560,6 +573,9 @@ func (m *Notifications) getNotificationSettingByOrCreateEmpty(key string, id str
 	listCursor, err := rethink.Table("notifications").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
@@ -626,6 +642,9 @@ func (m *Notifications) increaseNotificationEntryById(id string) {
 	listCursor, err := rethink.Table("notifications").Filter(
 		rethink.Row.Field("id").Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	helpers.Relax(err)
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)

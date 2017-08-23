@@ -44,8 +44,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	args := strings.Fields(content)
 	sourceUrl := content
 	cutArgJson := ""
-	duration := ""
-	start := ""
+	var duration, start string
 	if len(args) >= 3 || (len(args) >= 2 && len(msg.Attachments) > 0) {
 		duration = args[len(args)-1]
 		start = args[len(args)-2]

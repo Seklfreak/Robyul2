@@ -261,6 +261,9 @@ func (t *Troublemaker) getEntryByOrCreateEmpty(key string, id string) DB_Trouble
 	listCursor, err := rethink.Table("troublemakerlog").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
+	if err != nil {
+		panic(err)
+	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
