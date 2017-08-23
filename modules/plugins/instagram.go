@@ -236,12 +236,13 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 	var safeEntries Instagram_Safe_Entries
 	log := cache.GetLogger()
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		log.WithField("module", "instagram").Error("The checkInstagramFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.checkInstagramFeedsLoop()
+		go func() {
+			log.WithField("module", "instagram").Error("The checkInstagramFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.checkInstagramFeedsLoop()
+		}()
 	}()
 
 	for {
