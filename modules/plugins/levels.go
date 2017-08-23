@@ -249,12 +249,13 @@ func (l *Levels) setServerFeaturesLoop() {
 func (m *Levels) cacheTopLoop() {
 	log := cache.GetLogger()
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		log.WithField("module", "levels").Error("The cacheTopLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.cacheTopLoop()
+		go func() {
+			log.WithField("module", "levels").Error("The cacheTopLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.cacheTopLoop()
+		}()
 	}()
 
 	for {
@@ -371,12 +372,13 @@ func (m *Levels) cacheTopLoop() {
 func (m *Levels) processExpStackLoop() {
 	log := cache.GetLogger()
 
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-
-		log.WithField("module", "levels").Info("The processExpStackLoop died. Please investigate! Will be restarted in 60 seconds")
-		time.Sleep(60 * time.Second)
-		m.processExpStackLoop()
+		go func() {
+			log.WithField("module", "levels").Info("The processExpStackLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			m.processExpStackLoop()
+		}()
 	}()
 
 	for {
