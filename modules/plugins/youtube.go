@@ -9,6 +9,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
+	humanize "github.com/dustin/go-humanize"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
@@ -68,8 +69,14 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 		result = yt.search(args[0:])
 	}
 
-	_, err := session.ChannelMessageSendComplex(msg.ChannelID, result)
-	helpers.Relax(err)
+	if result.Content != "" {
+		_, err := session.ChannelMessageSend(msg.ChannelID, result.Content)
+		helpers.Relax(err)
+	}
+	if result.Embed != nil {
+		_, err := session.ChannelMessageSendEmbed(msg.ChannelID, result.Embed)
+		helpers.Relax(err)
+	}
 }
 
 func (yt *YouTube) search(args []string) *discordgo.MessageSend {
@@ -86,7 +93,6 @@ func (yt *YouTube) search(args []string) *discordgo.MessageSend {
 	call := yt.service.Search.List("id,snippet").
 		Q(query).
 		Type("channel,video").
-		SafeSearch("strict").
 		MaxResults(1)
 
 	response, err := call.Do()
@@ -99,19 +105,76 @@ func (yt *YouTube) search(args []string) *discordgo.MessageSend {
 	}
 	item := response.Items[0]
 
-	var id, url string
+	data := &discordgo.MessageSend{}
 	switch item.Id.Kind {
 	case "youtube#video":
-		id = item.Id.VideoId
-		url = fmt.Sprintf(YouTubeVideoBaseUrl, id)
+		id := item.Id.VideoId
+		data.Content = fmt.Sprintf(YouTubeVideoBaseUrl, id)
+		data.Embed = yt.getVideoInfo(id)
 	case "youtube#channel":
-		id = item.Id.ChannelId
-		url = fmt.Sprintf(YouTubeChannelBaseUrl, id)
+		id := item.Id.ChannelId
+		data.Content = fmt.Sprintf(YouTubeChannelBaseUrl, id)
+		data.Embed = yt.getChannelInfo(id)
 	default:
-		return &discordgo.MessageSend{Content: "unknown item kind: " + item.Kind}
+		data.Content = "unknown item kind: " + item.Kind
 	}
 
-	return &discordgo.MessageSend{Content: url}
+	return data
+}
+
+func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
+	call := yt.service.Videos.List("statistics, snippet").
+		Id(videoId).
+		MaxResults(1)
+
+	response, err := call.Do()
+	if err != nil {
+		return nil
+	}
+
+	if len(response.Items) <= 0 {
+		return nil
+	}
+	video := response.Items[0]
+
+	return &discordgo.MessageEmbed{
+		Footer: &discordgo.MessageEmbedFooter{Text: "Video information of " + video.Snippet.Title},
+		Fields: []*discordgo.MessageEmbedField{
+			{Name: "Views", Value: humanize.Comma(int64(video.Statistics.ViewCount)), Inline: true},
+			{Name: "Likes", Value: humanize.Comma(int64(video.Statistics.LikeCount)), Inline: true},
+			{Name: "Comments", Value: humanize.Comma(int64(video.Statistics.CommentCount)), Inline: true},
+			{Name: "Published at", Value: video.Snippet.PublishedAt, Inline: true},
+		},
+		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
+	}
+}
+
+func (yt *YouTube) getChannelInfo(channelId string) *discordgo.MessageEmbed {
+	call := yt.service.Channels.List("statistics, snippet").
+		Id(channelId).
+		MaxResults(1)
+
+	response, err := call.Do()
+	if err != nil {
+		return nil
+	}
+
+	if len(response.Items) <= 0 {
+		return nil
+	}
+	channel := response.Items[0]
+
+	return &discordgo.MessageEmbed{
+		Footer: &discordgo.MessageEmbedFooter{Text: "Channel information of " + channel.Snippet.Title},
+		Fields: []*discordgo.MessageEmbedField{
+			{Name: "Views", Value: humanize.Comma(int64(channel.Statistics.ViewCount)), Inline: true},
+			{Name: "Subscribers", Value: humanize.Comma(int64(channel.Statistics.SubscriberCount)), Inline: true},
+			{Name: "Videos", Value: humanize.Comma(int64(channel.Statistics.VideoCount)), Inline: true},
+			{Name: "Comments", Value: humanize.Comma(int64(channel.Statistics.CommentCount)), Inline: true},
+			{Name: "Published at", Value: channel.Snippet.PublishedAt, Inline: true},
+		},
+		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
+	}
 }
 
 func (yt *YouTube) createConfig() error {
