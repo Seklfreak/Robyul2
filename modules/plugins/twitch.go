@@ -288,12 +288,12 @@ func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 	request.Header.Set("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
 
 	response, err := client.Do(request)
-	if errU, ok := err.(*url.Error); ok {
-		raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
-	} else {
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-	}
 	if err != nil {
+		if errU, ok := err.(*url.Error); ok {
+			raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+		} else {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		}
 		panic(err)
 	}
 
