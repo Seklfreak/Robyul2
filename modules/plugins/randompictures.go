@@ -609,7 +609,11 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 		request.Header.Set("User-Agent", helpers.DEFAULT_UA)
 		_, err = client.Do(request)
 		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			if errU, ok := err.(*url.Error); ok {
+				raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			}
 		}
 	} else {
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
