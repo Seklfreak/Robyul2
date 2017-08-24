@@ -571,7 +571,7 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 	cacheCodec := cache.GetRedisCacheCodec()
 	key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
 
-	if err = cacheCodec.Get(key, &targetGuild); err != nil {
+	if err = cacheCodec.Get(key, &targetGuild); err != nil || targetGuild.JoinedAt == "" {
 		targetGuild, err := cache.GetSession().State.Guild(guildID)
 		if targetGuild == nil || targetGuild.ID == "" {
 			targetGuild, err = cache.GetSession().Guild(guildID)
