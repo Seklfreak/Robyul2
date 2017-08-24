@@ -10,10 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"net/url"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
 )
 
@@ -285,13 +288,22 @@ func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 	request.Header.Set("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
 
 	response, err := client.Do(request)
-	helpers.Relax(err)
+	if errU, ok := err.(*url.Error); ok {
+		raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+	} else {
+		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+	}
+	if err != nil {
+		panic(err)
+	}
 
 	defer response.Body.Close()
 
 	buf := bytes.NewBuffer(nil)
 	_, err = io.Copy(buf, response.Body)
-	helpers.Relax(err)
+	if err != nil {
+		panic(err)
+	}
 
 	json.Unmarshal(buf.Bytes(), &twitchStatus)
 	return twitchStatus
