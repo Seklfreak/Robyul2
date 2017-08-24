@@ -610,7 +610,11 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 		_, err = client.Do(request)
 		if err != nil {
 			if errU, ok := err.(*url.Error); ok {
-				raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+				if !strings.Contains(errU.Err.Error(), "Client.Timeout exceeded while awaiting headers") {
+					raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+				} else {
+					cache.GetLogger().WithField("module", "randompictures").Warn(fmt.Sprintf("warming up cache for %s failed: time out", linkToPost))
+				}
 			} else {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
