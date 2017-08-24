@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"net/url"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
@@ -65,7 +67,11 @@ func MembersCacheLoop() {
 			for {
 				members, err := cache.GetSession().GuildMembers(guild.ID, lastAfterMemberId, 1000)
 				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					if errU, ok := err.(*url.Error); ok {
+						raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+					} else {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					}
 					continue
 				}
 				if len(members) <= 0 {
