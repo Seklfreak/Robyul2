@@ -205,7 +205,9 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
 			if isAllowed == false {
 				err := session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.APIName(), reaction.UserID)
 				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != 50013 {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					}
 				}
 				return
 			}
