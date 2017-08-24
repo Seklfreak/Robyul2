@@ -129,16 +129,18 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 			changes := false
 			cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", entry.TwitchChannelName))
 			twitchStatus := m.getTwitchStatus(entry.TwitchChannelName)
-			if entry.IsLive == false {
-				if twitchStatus.Stream.ID != 0 {
-					go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
-					entry.IsLive = true
-					changes = true
-				}
-			} else {
-				if twitchStatus.Stream.ID == 0 {
-					entry.IsLive = false
-					changes = true
+			if twitchStatus.Links.Channel != "" {
+				if entry.IsLive == false {
+					if twitchStatus.Stream.ID != 0 {
+						go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
+						entry.IsLive = true
+						changes = true
+					}
+				} else {
+					if twitchStatus.Stream.ID == 0 {
+						entry.IsLive = false
+						changes = true
+					}
 				}
 			}
 
@@ -290,7 +292,8 @@ func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 	response, err := client.Do(request)
 	if err != nil {
 		if errU, ok := err.(*url.Error); ok {
-			raven.CaptureError(fmt.Errorf("%#v", errU.Err), map[string]string{})
+			cache.GetLogger().WithField("module", "twitch").Error(fmt.Sprintf("twitch status request failed: %#v", errU.Err))
+			return twitchStatus
 		} else {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
