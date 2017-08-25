@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -65,28 +64,26 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 	var result *discordgo.MessageSend
 	switch args[0] {
 	default:
-		// _youtube {args[0]: videoID}
+		// _youtube {args[0:]: search key words}
 		result = yt.search(args[0:])
 	}
 
-	if result.Content != "" {
-		_, err := session.ChannelMessageSend(msg.ChannelID, result.Content)
-		helpers.Relax(err)
-	}
-	if result.Embed != nil {
-		_, err := session.ChannelMessageSendEmbed(msg.ChannelID, result.Embed)
-		helpers.Relax(err)
-	}
+	_, err := session.ChannelMessageSendComplex(msg.ChannelID, result)
+	helpers.Relax(err)
 }
 
-func (yt *YouTube) search(args []string) *discordgo.MessageSend {
+func (yt *YouTube) search(args []string) (data *discordgo.MessageSend) {
+	data = &discordgo.MessageSend{}
+
 	if yt.service == nil {
-		return &discordgo.MessageSend{Content: "plugins.youtube.service-not-available"}
+		data.Content = helpers.GetText("plugins.youtube.service-not-availbale")
+		return
 	}
 
-	// _youtube {args[0]: videoID}
+	// _youtube {args[0:]: search key words}
 	if len(args) < 1 {
-		return &discordgo.MessageSend{Content: "bot.argument.invalid"}
+		data.Content = helpers.GetText("bot.argument.invalid")
+		return
 	}
 	query := strings.Join(args, " ")
 
@@ -97,54 +94,26 @@ func (yt *YouTube) search(args []string) *discordgo.MessageSend {
 
 	response, err := call.Do()
 	if err != nil {
-		return &discordgo.MessageSend{Content: err.Error()}
+		data.Content = helpers.GetText(err.Error())
+		return
 	}
 
 	if len(response.Items) <= 0 {
-		return &discordgo.MessageSend{Content: "plugins.youtube.video-not-found"}
+		data.Content = helpers.GetText("plugins.youtube.video-not-found")
+		return
 	}
 	item := response.Items[0]
 
-	var id string
-	data := &discordgo.MessageSend{}
-
 	switch item.Id.Kind {
 	case "youtube#video":
-		id = item.Id.VideoId
-		data.Content = fmt.Sprintf(YouTubeVideoBaseUrl, id)
-		data.Embed = yt.getVideoInfo(id)
+		data.Embed = yt.getVideoInfo(item.Id.VideoId)
 	case "youtube#channel":
-		id = item.Id.ChannelId
-		data.Content = fmt.Sprintf(YouTubeChannelBaseUrl, id)
-		data.Embed = yt.getChannelInfo(id)
+		data.Embed = yt.getChannelInfo(item.Id.ChannelId)
 	default:
-		data.Content = "unknown item kind: " + item.Kind
-	}
-
-	for _, arg := range args {
-		if yt.checkUrlSame(arg, id) {
-			data.Content = ""
-		}
+		data.Content = helpers.GetText("plugins.youtube.unknown-item-kind")
 	}
 
 	return data
-}
-
-func (yt *YouTube) checkUrlSame(arg, id string) bool {
-	videoLongUrl := regexp.MustCompile(`^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=` + id + `+$`)
-	videoShortUrl := regexp.MustCompile(`^(https?\:\/\/)?(youtu\.be)\/` + id + `+$`)
-	channelUrl := regexp.MustCompile(`^(https?\:\/\/)?(www\.)?(youtube\.com)\/channel\/` + id)
-
-	if videoLongUrl.MatchString(arg) {
-		return true
-	}
-	if videoShortUrl.MatchString(arg) {
-		return true
-	}
-	if channelUrl.MatchString(arg) {
-		return true
-	}
-	return false
 }
 
 func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
@@ -163,7 +132,14 @@ func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
 	video := response.Items[0]
 
 	return &discordgo.MessageEmbed{
-		Footer: &discordgo.MessageEmbedFooter{Text: "Video information of " + video.Snippet.Title},
+		Footer: &discordgo.MessageEmbedFooter{Text: "YouTube"},
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: video.Snippet.ChannelTitle,
+			URL:  fmt.Sprintf(YouTubeChannelBaseUrl, video.Snippet.ChannelId),
+		},
+		Title: video.Snippet.Title,
+		URL:   fmt.Sprintf(YouTubeVideoBaseUrl, video.Id),
+		Image: &discordgo.MessageEmbedImage{URL: video.Snippet.Thumbnails.High.Url},
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Views", Value: humanize.Comma(int64(video.Statistics.ViewCount)), Inline: true},
 			{Name: "Likes", Value: humanize.Comma(int64(video.Statistics.LikeCount)), Inline: true},
@@ -190,7 +166,12 @@ func (yt *YouTube) getChannelInfo(channelId string) *discordgo.MessageEmbed {
 	channel := response.Items[0]
 
 	return &discordgo.MessageEmbed{
-		Footer: &discordgo.MessageEmbedFooter{Text: "Channel information of " + channel.Snippet.Title},
+		Footer:      &discordgo.MessageEmbedFooter{Text: "YouTube"},
+		Title:       channel.Snippet.Title,
+		URL:         fmt.Sprintf(YouTubeChannelBaseUrl, channel.Id),
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: channel.Snippet.Thumbnails.High.Url},
+		Author:      &discordgo.MessageEmbedAuthor{URL: fmt.Sprintf(YouTubeChannelBaseUrl, channel.Id)},
+		Description: channel.Snippet.Description,
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Views", Value: humanize.Comma(int64(channel.Statistics.ViewCount)), Inline: true},
 			{Name: "Subscribers", Value: humanize.Comma(int64(channel.Statistics.SubscriberCount)), Inline: true},
