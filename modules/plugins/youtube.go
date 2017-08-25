@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -20,6 +21,7 @@ type YouTube struct {
 	client         *http.Client
 	configFileName string
 	config         *jwt.Config
+	regexpSet      []*regexp.Regexp
 }
 
 const (
@@ -28,6 +30,12 @@ const (
 	YouTubeColor          string = "cd201f"
 
 	youtubeConfigFileName string = "google.client_credentials_json_location"
+
+	// for yt.regexpSet
+	videoLongUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9]*)`
+	videoShortUrl  string = `^(https?\:\/\/)?(youtu\.be)\/(.[A-Za-z0-9]*)`
+	channelIdUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
+	channelUserUrl string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 )
 
 func (yt *YouTube) Commands() []string {
@@ -39,6 +47,8 @@ func (yt *YouTube) Commands() []string {
 
 func (yt *YouTube) Init(session *discordgo.Session) {
 	yt.configFileName = youtubeConfigFileName
+
+	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
 
 	err := yt.createConfig()
 	helpers.Relax(err)
@@ -72,7 +82,7 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 	helpers.Relax(err)
 }
 
-func (yt *YouTube) search(args []string) (data *discordgo.MessageSend) {
+func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
 	data = &discordgo.MessageSend{}
 
 	if yt.service == nil {
@@ -80,12 +90,17 @@ func (yt *YouTube) search(args []string) (data *discordgo.MessageSend) {
 		return
 	}
 
+	// extract ID from valid youtube url
+	for i, w := range keywords {
+		keywords[i], _ = yt.getIdFromUrl(w)
+	}
+
 	// _youtube {args[0:]: search key words}
-	if len(args) < 1 {
+	if len(keywords) < 1 {
 		data.Content = helpers.GetText("bot.argument.invalid")
 		return
 	}
-	query := strings.Join(args, " ")
+	query := strings.Join(keywords, " ")
 
 	call := yt.service.Search.List("id,snippet").
 		Q(query).
@@ -114,6 +129,19 @@ func (yt *YouTube) search(args []string) (data *discordgo.MessageSend) {
 	}
 
 	return data
+}
+
+func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
+	// TODO: it failed to retrieve exact information from user name.
+	// example) https://www.youtube.com/user/bruno
+	for i := range yt.regexpSet {
+		if yt.regexpSet[i].MatchString(url) {
+			match := yt.regexpSet[i].FindStringSubmatch(url)
+			return match[len(match)-1], true
+		}
+	}
+
+	return url, false
 }
 
 func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
@@ -180,6 +208,16 @@ func (yt *YouTube) getChannelInfo(channelId string) *discordgo.MessageEmbed {
 			{Name: "Published at", Value: channel.Snippet.PublishedAt, Inline: true},
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
+	}
+}
+
+func (yt *YouTube) compileRegexpSet(regexps ...string) {
+	for i := range yt.regexpSet {
+		yt.regexpSet[i] = nil
+	}
+
+	for i := range regexps {
+		yt.regexpSet = append(yt.regexpSet, regexp.MustCompile(regexps[i]))
 	}
 }
 
