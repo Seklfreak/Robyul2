@@ -118,10 +118,16 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 	err = gif.EncodeAll(&buf, outGif)
 	helpers.Relax(err)
 
-	_, err = session.ChannelFileSendWithMessage(
-		msg.ChannelID,
-		fmt.Sprintf("<@%s> said:", msg.Author.ID),
-		"spoiler.gif", bytes.NewReader(buf.Bytes()))
+	_, err = session.ChannelMessageSendComplex(
+		msg.ChannelID, &discordgo.MessageSend{
+			Content: fmt.Sprintf("<@%s> said:", msg.Author.ID),
+			Files: []*discordgo.File{
+				{
+					Name:   "spoiler.gif",
+					Reader: bytes.NewReader(buf.Bytes()),
+				},
+			},
+		})
 	helpers.Relax(err)
 }
 

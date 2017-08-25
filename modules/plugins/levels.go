@@ -1334,10 +1334,16 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		}
 		helpers.Relax(err)
 
-		_, err = session.ChannelFileSendWithMessage(
-			msg.ChannelID,
-			fmt.Sprintf("<@%s> Profile for %s", msg.Author.ID, targetUser.Username),
-			fmt.Sprintf("%s-Robyul.%s", targetUser.ID, ext), bytes.NewReader(jpgBytes))
+		_, err = session.ChannelMessageSendComplex(
+			msg.ChannelID, &discordgo.MessageSend{
+				Content: fmt.Sprintf("<@%s> Profile for %s", msg.Author.ID, targetUser.Username),
+				Files: []*discordgo.File{
+					{
+						Name:   fmt.Sprintf("%s-Robyul.%s", targetUser.ID, ext),
+						Reader: bytes.NewReader(jpgBytes),
+					},
+				},
+			})
 		helpers.Relax(err)
 
 		return
