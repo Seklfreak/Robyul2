@@ -7,6 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	"sync"
+
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
@@ -22,6 +25,9 @@ type YouTube struct {
 	configFileName string
 	config         *jwt.Config
 	regexpSet      []*regexp.Regexp
+
+	// make sure initalize routine only works when no left yt.Action() jobs
+	sync.RWMutex
 }
 
 const (
@@ -46,6 +52,13 @@ func (yt *YouTube) Commands() []string {
 }
 
 func (yt *YouTube) Init(session *discordgo.Session) {
+	yt.Lock()
+	defer yt.Unlock()
+
+	defer helpers.Recover()
+
+	yt.service = nil
+
 	yt.configFileName = youtubeConfigFileName
 
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
@@ -60,6 +73,9 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 }
 
 func (yt *YouTube) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	yt.RLock()
+	defer yt.RUnlock()
+
 	defer helpers.Recover()
 
 	session.ChannelTyping(msg.ChannelID)
@@ -73,8 +89,11 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 
 	var result *discordgo.MessageSend
 	switch args[0] {
+	case "restart":
+		// _youtube {arg[0]: restart}
+		result = yt.restart(msg.Author.ID)
 	default:
-		// _youtube {args[0:]: search key words}
+		// _youtube {args[0:]: search key words...}
 		result = yt.search(args[0:])
 	}
 
@@ -82,11 +101,21 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 	helpers.Relax(err)
 }
 
+func (yt *YouTube) restart(id string) (data *discordgo.MessageSend) {
+	if helpers.IsBotAdmin(id) == false {
+		return &discordgo.MessageSend{Content: helpers.GetText("botadmin.no_permission")}
+	}
+	go yt.Init(nil)
+
+	return &discordgo.MessageSend{Content: helpers.GetText("plugins.youtube.service-restart")}
+}
+
 func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
 	data = &discordgo.MessageSend{}
 
 	if yt.service == nil {
-		data.Content = helpers.GetText("plugins.youtube.service-not-availbale")
+		data.Content = helpers.GetText("plugins.youtube.service-not-available")
+		cache.GetLogger().WithField("module", "youtube").Error("youtube service not available")
 		return
 	}
 
@@ -110,6 +139,7 @@ func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
 	response, err := call.Do()
 	if err != nil {
 		data.Content = helpers.GetText(err.Error())
+		cache.GetLogger().WithField("module", "youtube").Error(err)
 		return
 	}
 
@@ -121,11 +151,12 @@ func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
 
 	switch item.Id.Kind {
 	case "youtube#video":
-		data.Embed = yt.getVideoInfo(item.Id.VideoId)
+		data = yt.getVideoInfo(item.Id.VideoId)
 	case "youtube#channel":
-		data.Embed = yt.getChannelInfo(item.Id.ChannelId)
+		data = yt.getChannelInfo(item.Id.ChannelId)
 	default:
-		data.Content = helpers.GetText("plugins.youtube.unknown-item-kind")
+		data.Content = helpers.GetText("plugins.youtube.video-not-found")
+		cache.GetLogger().WithField("module", "youtube").Error("unknown item kind")
 	}
 
 	return data
@@ -144,22 +175,27 @@ func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 	return url, false
 }
 
-func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
+func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
+	data = &discordgo.MessageSend{}
+
 	call := yt.service.Videos.List("statistics, snippet").
 		Id(videoId).
 		MaxResults(1)
 
 	response, err := call.Do()
 	if err != nil {
-		return nil
+		data.Content = helpers.GetText(err.Error())
+		cache.GetLogger().WithField("module", "youtube").Error(err)
+		return
 	}
 
 	if len(response.Items) <= 0 {
-		return nil
+		data.Content = helpers.GetText("plugins.youtube.video-not-found")
+		return
 	}
 	video := response.Items[0]
 
-	return &discordgo.MessageEmbed{
+	data.Embed = &discordgo.MessageEmbed{
 		Footer: &discordgo.MessageEmbedFooter{Text: "YouTube"},
 		Author: &discordgo.MessageEmbedAuthor{
 			Name: video.Snippet.ChannelTitle,
@@ -176,24 +212,31 @@ func (yt *YouTube) getVideoInfo(videoId string) *discordgo.MessageEmbed {
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
+
+	return
 }
 
-func (yt *YouTube) getChannelInfo(channelId string) *discordgo.MessageEmbed {
+func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
+	data = &discordgo.MessageSend{}
+
 	call := yt.service.Channels.List("statistics, snippet").
 		Id(channelId).
 		MaxResults(1)
 
 	response, err := call.Do()
 	if err != nil {
-		return nil
+		data.Content = helpers.GetText(err.Error())
+		cache.GetLogger().WithField("module", "youtube").Error(err)
+		return
 	}
 
 	if len(response.Items) <= 0 {
-		return nil
+		data.Content = helpers.GetText("plugins.youtube.video-not-found")
+		return
 	}
 	channel := response.Items[0]
 
-	return &discordgo.MessageEmbed{
+	data.Embed = &discordgo.MessageEmbed{
 		Footer:      &discordgo.MessageEmbedFooter{Text: "YouTube"},
 		Title:       channel.Snippet.Title,
 		URL:         fmt.Sprintf(YouTubeChannelBaseUrl, channel.Id),
@@ -209,12 +252,15 @@ func (yt *YouTube) getChannelInfo(channelId string) *discordgo.MessageEmbed {
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
+
+	return
 }
 
 func (yt *YouTube) compileRegexpSet(regexps ...string) {
 	for i := range yt.regexpSet {
 		yt.regexpSet[i] = nil
 	}
+	yt.regexpSet = yt.regexpSet[:0]
 
 	for i := range regexps {
 		yt.regexpSet = append(yt.regexpSet, regexp.MustCompile(regexps[i]))
