@@ -36,8 +36,8 @@ const (
 	youtubeConfigFileName string = "google.client_credentials_json_location"
 
 	// for yt.regexpSet
-	videoLongUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9]*)`
-	videoShortUrl  string = `^(https?\:\/\/)?(youtu\.be)\/(.[A-Za-z0-9]*)`
+	videoLongUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9_]*)`
+	videoShortUrl  string = `^(https?\:\/\/)?(youtu\.be)\/(.[A-Za-z0-9_]*)`
 	channelIdUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
 	channelUserUrl string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 )
@@ -85,16 +85,23 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 
 	var result *discordgo.MessageSend
 	switch args[0] {
+	case "video", "channel":
+		// _youtube {args[0]: type} {args[1:]: keywords}
+		if len(args) < 2 {
+			result = &discordgo.MessageSend{Content: helpers.GetText("bot.arguments.invalid")}
+			break
+		}
+		result = yt.search(args[1:], args[0])
 	case "service":
 		// _youtube {args[0]: service} {args[1]: command}
 		if len(args) < 2 {
 			result = &discordgo.MessageSend{Content: helpers.GetText("bot.arguments.invalid")}
-		} else {
-			result = yt.system(args[1], msg.Author.ID)
+			break
 		}
+		result = yt.system(args[1], msg.Author.ID)
 	default:
 		// _youtube {args[0:]: search key words...}
-		result = yt.search(args[0:])
+		result = yt.search(args[0:], "video, channel")
 	}
 
 	_, err := session.ChannelMessageSendComplex(msg.ChannelID, result)
@@ -109,9 +116,7 @@ func (yt *YouTube) system(command, authorId string) (data *discordgo.MessageSend
 	switch command {
 	case "stop":
 		go yt.stop()
-	case "start":
-		fallthrough
-	case "restart":
+	case "start", "restart":
 		go yt.Init(nil)
 	default:
 		return &discordgo.MessageSend{Content: helpers.GetText("bot.arguments.invalid")}
@@ -127,7 +132,7 @@ func (yt *YouTube) stop() {
 	yt.service = nil
 }
 
-func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
+func (yt *YouTube) search(keywords []string, searchType string) (data *discordgo.MessageSend) {
 	data = &discordgo.MessageSend{}
 
 	if yt.service == nil {
@@ -150,7 +155,7 @@ func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
 
 	call := yt.service.Search.List("id,snippet").
 		Q(query).
-		Type("channel,video").
+		Type(searchType).
 		MaxResults(1)
 
 	response, err := call.Do()

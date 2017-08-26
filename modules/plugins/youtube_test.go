@@ -13,8 +13,8 @@ func TestYoutubeRegexp(t *testing.T) {
 
 	testYoutube.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
 
-	id, ok := testYoutube.getIdFromUrl("https://www.youtube.com/watch?v=zrNxJJ7fxCk")
-	if ok == false || id != "zrNxJJ7fxCk" {
+	id, ok := testYoutube.getIdFromUrl("https://www.youtube.com/watch?v=BMQdZRLi_WM&list=PLywiNEAPE4I9mIv_edkzGeyJkeJmB9b8J")
+	if ok == false || id != "BMQdZRLi_WM" {
 		t.Fatalf("youtube.getIdFromUrl() failed to extract id from valid url")
 	}
 
