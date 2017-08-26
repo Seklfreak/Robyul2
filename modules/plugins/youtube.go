@@ -9,6 +9,8 @@ import (
 
 	"sync"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -208,7 +210,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 			{Name: "Views", Value: humanize.Comma(int64(video.Statistics.ViewCount)), Inline: true},
 			{Name: "Likes", Value: humanize.Comma(int64(video.Statistics.LikeCount)), Inline: true},
 			{Name: "Comments", Value: humanize.Comma(int64(video.Statistics.CommentCount)), Inline: true},
-			{Name: "Published at", Value: video.Snippet.PublishedAt, Inline: true},
+			{Name: "Published at", Value: yt.humanizeTime(video.Snippet.PublishedAt), Inline: true},
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
@@ -248,12 +250,23 @@ func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend
 			{Name: "Subscribers", Value: humanize.Comma(int64(channel.Statistics.SubscriberCount)), Inline: true},
 			{Name: "Videos", Value: humanize.Comma(int64(channel.Statistics.VideoCount)), Inline: true},
 			{Name: "Comments", Value: humanize.Comma(int64(channel.Statistics.CommentCount)), Inline: true},
-			{Name: "Published at", Value: channel.Snippet.PublishedAt, Inline: true},
+			{Name: "Published at", Value: yt.humanizeTime(channel.Snippet.PublishedAt), Inline: true},
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
 
 	return
+}
+
+func (yt *YouTube) humanizeTime(t string) string {
+	parsedTime, err := time.Parse(time.RFC3339, t)
+	if err != nil {
+		cache.GetLogger().WithField("module", "youtube").Error(err)
+		return t
+	}
+
+	year, month, day := parsedTime.Date()
+	return fmt.Sprintf("%d-%d-%d", year, month, day)
 }
 
 func (yt *YouTube) compileRegexpSet(regexps ...string) {
