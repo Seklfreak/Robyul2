@@ -745,7 +745,10 @@
     },
     "youtube": {
       "video-not-found": "I could't find that video.",
-      "service-not-available": "Youtube service is not available now, please contact to manager."
+      "service-not-available": "Youtube service is not available now, please contact to manager.",
+      "service-stop": "Stop youtube service.",
+      "service-start": "Start youtube service.",
+      "service-restart": "Restart youtube service."
     },
     "nuke": {
       "participation-disabled": "This server is no longer participating in the nuke feature. <:blobugh:317047327443517442>",

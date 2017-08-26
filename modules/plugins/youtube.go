@@ -3,7 +3,6 @@ package plugins
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -22,11 +21,8 @@ import (
 )
 
 type YouTube struct {
-	service        *youtube.Service
-	client         *http.Client
-	configFileName string
-	config         *jwt.Config
-	regexpSet      []*regexp.Regexp
+	service   *youtube.Service
+	regexpSet []*regexp.Regexp
 
 	// make sure initalize routine only works when no left yt.Action() jobs
 	sync.RWMutex
@@ -61,16 +57,14 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 
 	yt.service = nil
 
-	yt.configFileName = youtubeConfigFileName
-
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
 
-	err := yt.createConfig()
+	config, err := yt.createConfig()
 	helpers.Relax(err)
 
-	yt.client = yt.config.Client(context.Background())
+	client := config.Client(context.Background())
 
-	yt.service, err = youtube.New(yt.client)
+	yt.service, err = youtube.New(client)
 	helpers.Relax(err)
 }
 
@@ -91,9 +85,13 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 
 	var result *discordgo.MessageSend
 	switch args[0] {
-	case "restart":
-		// _youtube {arg[0]: restart}
-		result = yt.restart(msg.Author.ID)
+	case "service":
+		// _youtube {args[0]: service} {args[1]: command}
+		if len(args) < 2 {
+			result = &discordgo.MessageSend{Content: helpers.GetText("bot.arguments.invalid")}
+		} else {
+			result = yt.system(args[1], msg.Author.ID)
+		}
 	default:
 		// _youtube {args[0:]: search key words...}
 		result = yt.search(args[0:])
@@ -103,13 +101,30 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 	helpers.Relax(err)
 }
 
-func (yt *YouTube) restart(id string) (data *discordgo.MessageSend) {
-	if helpers.IsBotAdmin(id) == false {
+func (yt *YouTube) system(command, authorId string) (data *discordgo.MessageSend) {
+	if helpers.IsBotAdmin(authorId) == false {
 		return &discordgo.MessageSend{Content: helpers.GetText("botadmin.no_permission")}
 	}
-	go yt.Init(nil)
 
-	return &discordgo.MessageSend{Content: helpers.GetText("plugins.youtube.service-restart")}
+	switch command {
+	case "stop":
+		go yt.stop()
+	case "start":
+		fallthrough
+	case "restart":
+		go yt.Init(nil)
+	default:
+		return &discordgo.MessageSend{Content: helpers.GetText("bot.arguments.invalid")}
+	}
+
+	return &discordgo.MessageSend{Content: helpers.GetText("plugins.youtube.service-" + command)}
+}
+
+func (yt *YouTube) stop() {
+	yt.Lock()
+	defer yt.Unlock()
+
+	yt.service = nil
 }
 
 func (yt *YouTube) search(keywords []string) (data *discordgo.MessageSend) {
@@ -280,18 +295,13 @@ func (yt *YouTube) compileRegexpSet(regexps ...string) {
 	}
 }
 
-func (yt *YouTube) createConfig() error {
-	config := yt.getConfig()
+func (yt *YouTube) createConfig() (*jwt.Config, error) {
+	config := helpers.GetConfig().Path(youtubeConfigFileName).Data().(string)
 
 	authJSON, err := ioutil.ReadFile(config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	yt.config, err = google.JWTConfigFromJSON(authJSON, youtube.YoutubeReadonlyScope)
-	return err
-}
-
-func (yt *YouTube) getConfig() string {
-	return helpers.GetConfig().Path(yt.configFileName).Data().(string)
+	return google.JWTConfigFromJSON(authJSON, youtube.YoutubeReadonlyScope)
 }
