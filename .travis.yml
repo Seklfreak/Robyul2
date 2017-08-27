@@ -8,10 +8,12 @@ go:
 install:
     - go get -u github.com/golang/dep/cmd/dep
     - dep ensure
-    - go get -v github.com/golang/lint/golint
-    - go get github.com/mitchellh/gox
+    - go get -u github.com/jteeuwen/go-bindata/...
+    #- go get -v github.com/golang/lint/golint
+    #- go get github.com/mitchellh/gox
 script:
     - bash format_go.sh
+    - go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
     - go test -v -race $(go list ./... | grep -v /vendor/)
     #- go vet -x ./...
     #- golint ./...
