@@ -1,6 +1,7 @@
 package plugins
 
 import "testing"
+import "github.com/bwmarrin/discordgo"
 
 func TestYoutubeRegexp(t *testing.T) {
 	testYoutube := YouTube{}
@@ -36,5 +37,20 @@ func TestYoutubeRegexp(t *testing.T) {
 	id, ok = testYoutube.getIdFromUrl("https://www.youtube.com/user/abcdefg")
 	if ok == false || id != "abcdefg" {
 		t.Fatalf("youtube.getIdFromUrl() failed to extract id from valid url")
+	}
+}
+
+func TestVerifyEmbedFields(t *testing.T) {
+	testYoutube := YouTube{}
+
+	fields := []*discordgo.MessageEmbedField{
+		{Name: "", Value: "value"},
+		{Name: "name", Value: ""},
+		{Name: "name", Value: "0"},
+	}
+
+	fields = testYoutube.verifyEmbedFields(fields)
+	if len(fields) != 0 {
+		t.Fatalf("youtube.verifyEmbedFields() failed to trim invalid field")
 	}
 }

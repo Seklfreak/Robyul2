@@ -5,9 +5,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
-
 	"sync"
-
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -113,23 +111,13 @@ func (yt *YouTube) system(command, authorId string) (data *discordgo.MessageSend
 		return &discordgo.MessageSend{Content: helpers.GetText("botadmin.no_permission")}
 	}
 
-	switch command {
-	case "stop":
-		go yt.stop()
-	case "start", "restart":
-		go yt.Init(nil)
-	default:
+	if command != "restart" {
 		return &discordgo.MessageSend{Content: helpers.GetText("bot.arguments.invalid")}
 	}
 
-	return &discordgo.MessageSend{Content: helpers.GetText("plugins.youtube.service-" + command)}
-}
+	go yt.Init(nil)
 
-func (yt *YouTube) stop() {
-	yt.Lock()
-	defer yt.Unlock()
-
-	yt.service = nil
+	return &discordgo.MessageSend{Content: helpers.GetText("plugins.youtube.service-restart")}
 }
 
 func (yt *YouTube) search(keywords []string, searchType string) (data *discordgo.MessageSend) {
@@ -234,6 +222,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
+	data.Embed.Fields = yt.verifyEmbedFields(data.Embed.Fields)
 
 	return
 }
@@ -263,19 +252,31 @@ func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend
 		Title:       channel.Snippet.Title,
 		URL:         fmt.Sprintf(YouTubeChannelBaseUrl, channel.Id),
 		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: channel.Snippet.Thumbnails.High.Url},
-		Author:      &discordgo.MessageEmbedAuthor{URL: fmt.Sprintf(YouTubeChannelBaseUrl, channel.Id)},
 		Description: channel.Snippet.Description,
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Views", Value: humanize.Comma(int64(channel.Statistics.ViewCount)), Inline: true},
-			{Name: "Subscribers", Value: humanize.Comma(int64(channel.Statistics.SubscriberCount)), Inline: true},
 			{Name: "Videos", Value: humanize.Comma(int64(channel.Statistics.VideoCount)), Inline: true},
+			{Name: "Subscribers", Value: humanize.Comma(int64(channel.Statistics.SubscriberCount)), Inline: true},
 			{Name: "Comments", Value: humanize.Comma(int64(channel.Statistics.CommentCount)), Inline: true},
 			{Name: "Published at", Value: yt.humanizeTime(channel.Snippet.PublishedAt), Inline: true},
 		},
 		Color: helpers.GetDiscordColorFromHex(YouTubeColor),
 	}
+	data.Embed.Fields = yt.verifyEmbedFields(data.Embed.Fields)
 
 	return
+}
+
+// Youtube channel/video can hide their subscribers or comments and just return 0 to API calls.
+// verifyEmbedFields trim hided statistic information field and invalid field with empty string.
+func (yt *YouTube) verifyEmbedFields(fields []*discordgo.MessageEmbedField) []*discordgo.MessageEmbedField {
+	for i := len(fields) - 1; i >= 0; i-- {
+		if fields[i].Value == "0" || fields[i].Value == "" || fields[i].Name == "" {
+			fields = append(fields[:i], fields[i+1:]...)
+		}
+	}
+
+	return fields
 }
 
 func (yt *YouTube) humanizeTime(t string) string {

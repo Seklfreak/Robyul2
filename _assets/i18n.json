@@ -745,9 +745,7 @@
     },
     "youtube": {
       "video-not-found": "I could't find that video.",
-      "service-not-available": "Youtube service is not available now, please contact to manager.",
-      "service-stop": "Stop youtube service.",
-      "service-start": "Start youtube service.",
+      "service-not-available": "Youtube service is not available right now, please contact the bot owner...",
       "service-restart": "Restart youtube service."
     },
     "nuke": {
