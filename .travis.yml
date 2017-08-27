@@ -12,9 +12,9 @@ install:
     - go get github.com/mitchellh/gox
 script:
     - bash format_go.sh
+    - go test -v -race $(go list ./... | grep -v /vendor/)
     #- go vet -x ./...
     #- golint ./...
-    #- go test -v -race ./...
     #- gox -output="robyul2-{{.OS}}-{{.Arch}}" -osarch="windows/amd64"
 deploy:
   provider: releases
