@@ -745,6 +745,7 @@
     },
     "youtube": {
       "video-not-found": "I could't find that video.",
+      "channel-not-found": "I could't find that channel.",
       "service-not-available": "Youtube service is not available right now, please contact the bot owner...",
       "service-restart": "Restart youtube service."
     },
