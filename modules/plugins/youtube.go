@@ -73,18 +73,17 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 
 	var result *discordgo.MessageSend
 	args := strings.Fields(content)
-	for action := yt.actionStart; action != nil; {
+
+	action := yt.actionStart
+	for action != nil {
 		action = action(args, msg, &result)
 	}
-
-	_, err := session.ChannelMessageSendComplex(msg.ChannelID, result)
-	helpers.Relax(err)
 }
 
 func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 1 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
 	switch args[0] {
@@ -92,17 +91,24 @@ func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **disco
 		return yt.actionVideo
 	case "channel":
 		return yt.actionChannel
-	case "system":
+	case "service":
 		return yt.actionSystem
 	default:
 		return yt.actionSearch
 	}
 }
 
+func (yt *YouTube) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	helpers.Relax(err)
+
+	return nil
+}
+
 func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 2 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
 	switch args[1] {
@@ -114,39 +120,60 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 		return yt.actionListVideo
 	}
 
-	*out = yt.search(args[1:], "video")
-	return nil
+	// _yt video <search by keywords...>
+
+	item, err := yt.searchSingle(args[1:], "video")
+	if err != nil {
+		yt.logger().Error(err)
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	if item == nil {
+		*out = yt.newMsg("plugins.youtube.video-not-found")
+		return yt.actionFinish
+	}
+
+	*out = yt.getVideoInfo(item.Id.VideoId)
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 4 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
+	// _yt video add <video id/link> <discord channel>
+
 	*out = yt.newMsg("bot.arguments.invalid")
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 4 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
+	// _yt video delete <video id/link> <discord channel>
+
 	*out = yt.newMsg("bot.arguments.invalid")
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+
+	// _yt video list
+
 	*out = yt.newMsg("bot.arguments.invalid")
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 2 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
 	switch args[1] {
@@ -158,116 +185,147 @@ func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **dis
 		return yt.actionListChannel
 	}
 
-	*out = yt.search(args[1:], "channel")
-	return nil
+	// _yt channel <search by keywords...>
+
+	item, err := yt.searchSingle(args[1:], "channel")
+	if err != nil {
+		yt.logger().Error(err)
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	if item == nil {
+		*out = yt.newMsg("plugins.youtube.channel-not-found")
+		return yt.actionFinish
+	}
+
+	*out = yt.getChannelInfo(item.Id.ChannelId)
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 4 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
+	// _yt video add <video id/link> <discord channel>
+
 	*out = yt.newMsg("bot.arguments.invalid")
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 4 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
 
+	// _yt video delete <video id/link> <discord channel>
+
 	*out = yt.newMsg("bot.arguments.invalid")
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+
+	// _yt video list
+
 	*out = yt.newMsg("bot.arguments.invalid")
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionSystem(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 2 {
 		*out = yt.newMsg("bot.arguments.too-few")
-		return nil
+		return yt.actionFinish
 	}
+
+	// _yt system restart
 
 	if args[1] != "restart" {
 		*out = yt.newMsg("bot.arguments.invalid")
-		return nil
+		return yt.actionFinish
 	}
 
 	if err := yt.restart(in.Author.ID); err != nil {
 		*out = yt.newMsg(err.Error())
-		return nil
+		return yt.actionFinish
 	}
 	*out = yt.newMsg("plugins.youtube.service-restart")
 
-	return nil
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	*out = yt.search(args[0:], "video, channel")
-	return nil
-}
 
-func (yt *YouTube) restart(authorId string) error {
-	if helpers.IsBotAdmin(authorId) == false {
-		return errors.New("botadmin.no_permission")
+	// _yt <video or channel search by keywords...>
+
+	item, err := yt.searchSingle(args[0:], "channel, video")
+	if err != nil {
+		yt.logger().Error(err)
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
 	}
 
-	go yt.Init(nil)
+	if item == nil {
+		*out = yt.newMsg("plugins.youtube.video-not-found")
+		return yt.actionFinish
+	}
 
-	return nil
+	switch item.Id.Kind {
+	case "youtube#video":
+		*out = yt.getVideoInfo(item.Id.VideoId)
+	case "youtube#channel":
+		*out = yt.getChannelInfo(item.Id.ChannelId)
+	}
+
+	return yt.actionFinish
 }
 
-func (yt *YouTube) search(keywords []string, searchType string) (data *discordgo.MessageSend) {
+// searchSingle retuns single search result with given type @searchType.
+// returns (nil, nil) when there is no matching results.
+func (yt *YouTube) searchSingle(keywords []string, searchType string) (*youtube.SearchResult, error) {
 	if yt.service == nil {
-		yt.logger().Error("youtube service not available")
-		return yt.newMsg("plugins.youtube.service-not-available")
+		return nil, errors.New("plugins.youtube.service-not-available")
 	}
 
+	call := yt.service.Search.List("id, snippet").
+		Type(searchType).
+		MaxResults(1)
+
+	items, err := yt.search(keywords, call)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(items) <= 0 {
+		return nil, nil
+	}
+
+	return items[0], nil
+}
+
+// search returns search results with given keywords and searchListCall.
+func (yt *YouTube) search(keywords []string, call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
 	// extract ID from valid youtube url
 	for i, w := range keywords {
 		keywords[i], _ = yt.getIdFromUrl(w)
 	}
 
-	// _youtube {args[0:]: search key words}
-	if len(keywords) < 1 {
-		return yt.newMsg("bot.arguments.invalid")
-	}
 	query := strings.Join(keywords, " ")
 
-	call := yt.service.Search.List("id,snippet").
-		Q(query).
-		Type(searchType).
-		MaxResults(1)
+	call = call.Q(query)
 
 	response, err := call.Do()
 	if err != nil {
-		yt.logger().Error(err)
-		return yt.newMsg(err.Error())
+		return nil, err
 	}
 
-	if len(response.Items) <= 0 {
-		return yt.newMsg("plugins.youtube.video-not-found")
-	}
-	item := response.Items[0]
-
-	switch item.Id.Kind {
-	case "youtube#video":
-		data = yt.getVideoInfo(item.Id.VideoId)
-	case "youtube#channel":
-		data = yt.getChannelInfo(item.Id.ChannelId)
-	default:
-		yt.logger().Error("unknown item kind")
-		data = yt.newMsg("plugins.youtube.video-not-found")
-	}
-
-	return data
+	return response.Items, nil
 }
 
+// getIdFromUrl extracts channel id, channel name, video id from given url.
 func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 	// TODO: it failed to retrieve exact information from user name.
 	// example) https://www.youtube.com/user/bruno
@@ -281,6 +339,7 @@ func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 	return url, false
 }
 
+// getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 	call := yt.service.Videos.List("statistics, snippet").
 		Id(videoId).
@@ -322,6 +381,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 	return
 }
 
+// getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
 	call := yt.service.Channels.List("statistics, snippet").
 		Id(channelId).
@@ -371,6 +431,17 @@ func (yt *YouTube) verifyEmbedFields(fields []*discordgo.MessageEmbedField) []*d
 	}
 
 	return fields
+}
+
+// restart youtube service.
+func (yt *YouTube) restart(authorId string) error {
+	if helpers.IsBotAdmin(authorId) == false {
+		return errors.New("botadmin.no_permission")
+	}
+
+	go yt.Init(nil)
+
+	return nil
 }
 
 func (yt *YouTube) humanizeTime(t string) string {
