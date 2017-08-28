@@ -443,6 +443,15 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 		slice.Sort(guildRoles, func(i, j int) bool {
 			return guildRoles[i].Position > guildRoles[j].Position
 		})
+		for _, sourceEntry := range rpSources {
+			if sourceEntry.GuildID == channel.GuildID {
+				for _, alias := range sourceEntry.Aliases {
+					if strings.ToLower(alias) == "@everyone" {
+						matchEntry = sourceEntry
+					}
+				}
+			}
+		}
 	CheckRoles:
 		for _, guildRole := range guildRoles {
 			for _, userRole := range targetMember.Roles {
