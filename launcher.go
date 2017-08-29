@@ -100,7 +100,7 @@ func main() {
 	discord.StateEnabled = true
 	discord.Unlock()
 
-	discord.AddHandler(BotOnReady)
+	discord.AddHandlerOnce(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
 	discord.AddHandler(BotOnGuildMemberAdd)
 	discord.AddHandler(BotOnGuildMemberRemove)
@@ -108,7 +108,7 @@ func main() {
 	discord.AddHandler(BotOnReactionRemove)
 	discord.AddHandler(BotOnGuildBanAdd)
 	discord.AddHandler(BotOnGuildBanRemove)
-	discord.AddHandler(metrics.OnReady)
+	discord.AddHandlerOnce(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
 
 	// Connect to discord
