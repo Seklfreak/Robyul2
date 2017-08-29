@@ -25,7 +25,7 @@ func main() {
 	log := logrus.New()
 	log.Out = os.Stdout
 	log.Level = logrus.DebugLevel
-	log.Formatter = &logrus.TextFormatter{ForceColors: true}
+	log.Formatter = &logrus.TextFormatter{ForceColors: true, FullTimestamp: true, TimestampFormat: time.RFC3339}
 	cache.SetLogger(log)
 
 	log.WithField("module", "launcher").Info("Booting Robyul...")
