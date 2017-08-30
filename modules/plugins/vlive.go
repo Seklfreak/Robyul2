@@ -279,7 +279,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					mentionRoleName := args[3]
 					serverRoles, err := session.GuildRoles(targetGuild.ID)
 					if err != nil {
-						if errD, ok := err.(discordgo.RESTError); ok {
+						if errD, ok := err.(*discordgo.RESTError); ok {
 							if errD.Message.Code == 50013 {
 								_, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission.")
 								helpers.Relax(err)
