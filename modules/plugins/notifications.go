@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
+	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
 )
 
@@ -252,9 +255,29 @@ type PendingNotification struct {
 
 func (m *Notifications) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 	channel, err := helpers.GetChannel(msg.ChannelID)
-	helpers.Relax(err)
+	if err != nil {
+		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+			"ChannelID":       msg.ChannelID,
+			"Content":         msg.Content,
+			"Timestamp":       string(msg.Timestamp),
+			"TTS":             strconv.FormatBool(msg.Tts),
+			"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+			"IsBot":           strconv.FormatBool(msg.Author.Bot),
+		})
+		return
+	}
 	guild, err := helpers.GetGuild(channel.GuildID)
-	helpers.Relax(err)
+	if err != nil {
+		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+			"ChannelID":       msg.ChannelID,
+			"Content":         msg.Content,
+			"Timestamp":       string(msg.Timestamp),
+			"TTS":             strconv.FormatBool(msg.Tts),
+			"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+			"IsBot":           strconv.FormatBool(msg.Author.Bot),
+		})
+		return
+	}
 
 	// ignore commands
 	prefix := helpers.GetPrefixForServer(guild.ID)
