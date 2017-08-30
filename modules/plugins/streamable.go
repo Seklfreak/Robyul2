@@ -77,7 +77,17 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 CheckStreamableStatusLoop:
 	for {
 		statusStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("videos/%s", streamableShortcode))
-		result := helpers.GetJSON(statusStreamableEndpoint)
+		result, err := gabs.ParseJSON(helpers.NetGet(statusStreamableEndpoint))
+		if err != nil {
+			if strings.Contains(err.Error(), "Expected status 200; Got 429") {
+				_, err = session.ChannelMessageSend(msg.ChannelID,
+					fmt.Sprintf("<@%s> Too many requests, please try again later. <:blobscream:317043778823389184>",
+						msg.Author.ID))
+				helpers.Relax(err)
+			} else {
+				helpers.Relax(err)
+			}
+		}
 
 		switch result.Path("status").Data().(float64) {
 		case 0:
@@ -96,7 +106,6 @@ CheckStreamableStatusLoop:
 				fmt.Sprintf("<@%s> Something went wrong while creating your streamable. <:blobscream:317043778823389184>",
 					msg.Author.ID))
 			helpers.Relax(err)
-			return
 			return
 		}
 	}
