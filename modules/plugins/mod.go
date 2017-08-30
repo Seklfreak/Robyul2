@@ -1632,6 +1632,13 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				if err != nil {
 					cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
 						helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error()))
+					if errD, ok := err.(*discordgo.RESTError); ok {
+						if errD.Message.Code != 50001 {
+							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						}
+					} else {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					}
 					return
 				}
 			}
@@ -1831,7 +1838,15 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 					_, err = session.ChannelMessageSendEmbed(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, resultEmbed)
 					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("Failed to send guild ban inspect to channel #%s on guild #%s: %s",
+							helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, targetGuild.ID, err.Error()))
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code != 50001 {
+								raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+							}
+						} else {
+							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						}
 						continue
 					}
 				}
