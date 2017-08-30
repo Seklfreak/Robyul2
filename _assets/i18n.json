@@ -470,7 +470,7 @@
       "echo-error-wrong-server": "You can only post stuff to the server you are on! <:blobnogood:317029275742109706>",
       "inspect-embed-title": "Results for user `%s#%s` 🔎",
       "inspect-embed-footer": "User ID: %s | Robyul is on %d servers",
-      "inspect-in-progress": "User is being inspected.\nChecking server %d of %d servers.",
+      "inspect-in-progress": "User is being inspected.\nPlease wait a second.",
       "inspect-description-done": "Inspecting of <@%s> completed.\n",
       "inspects-channel-disabled": "Successfully disabled automatic inspect messages.",
       "inspects-channel-set": "Successfully set channel for automatic inspect messages.",
