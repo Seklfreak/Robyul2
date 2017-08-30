@@ -323,6 +323,11 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 		})
 	if err != nil {
 		cache.GetSession().ChannelMessageSend(channelID, GetTextF("bot.errors.general", err.Error()))
+		return false
+	}
+	if len(confirmMessage.Embeds) <= 0 {
+		cache.GetSession().ChannelMessageSend(channelID, GetText("bot.errors.no-embed"))
+		return false
 	}
 
 	// add default reactions to embed
