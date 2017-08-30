@@ -270,6 +270,8 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 
 func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 	go func() {
+		defer helpers.Recover()
+
 		for _, biasChannel := range biasChannels {
 			if msg.ChannelID == biasChannel.ChannelID {
 				channel, err := helpers.GetChannel(msg.ChannelID)

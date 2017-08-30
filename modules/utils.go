@@ -153,7 +153,7 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
 }
 
 func CallExtendedPlugin(content string, msg *discordgo.Message) {
-	defer helpers.RecoverDiscord(msg)
+	defer helpers.Recover()
 
 	for _, extendedPlugin := range PluginExtendedList {
 		extendedPlugin.OnMessage(strings.TrimSpace(content), msg, cache.GetSession())
