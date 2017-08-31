@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -17,6 +18,7 @@ import (
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
 )
 
@@ -433,33 +435,34 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		// Bots cannot use the search endpoint...
-		//totalMessagesText := "failed to acquire"
-		//searchUrl := fmt.Sprintf(discordgo.EndpointAPI+"guilds/%s/messages/search?author_id=%s", currentChannel.GuildID, targetUser.ID)
-		//resp, err := session.Request("GET", searchUrl, nil)
-		//if err == nil {
-		//    searchResult, err := gabs.ParseJSON(resp)
-		//    if err == nil {
-		//        totalMessagesText = humanize.Comma(searchResult.Path("total_results").Data().(int64)) + " Messages"
-		//    }
-		//}
-		//if err != nil {
-		//    fmt.Println(err)
-		//    raven.SetUserContext(&raven.User{
-		//        ID:       msg.ID,
-		//        Username: msg.Author.Username + "#" + msg.Author.Discriminator,
-		//    })
-		//    raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-		//        "ChannelID":       msg.ChannelID,
-		//        "Content":         msg.Content,
-		//        "Timestamp":       string(msg.Timestamp),
-		//        "TTS":             strconv.FormatBool(msg.Tts),
-		//        "MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-		//        "IsBot":           strconv.FormatBool(msg.Author.Bot),
-		//    })
-		//    err = nil
-		//}
-		//{Name: "Total Messages", Value: totalMessagesText, Inline: false},
+		totalMessagesText := "N/A"
+		searchResponse, err := helpers.GuildFriendRequest(
+			currentChannel.GuildID,
+			"GET",
+			fmt.Sprintf("guilds/%s/messages/search?author_id=%s", currentChannel.GuildID, targetUser.ID),
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "No friend on this server!") {
+				totalMessagesText = ""
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
+			}
+		} else {
+			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			if err == nil {
+				fmt.Println(searchResult.String())
+				if searchResult.Exists("total_results") {
+					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
+				}
+			}
+		}
 
 		userinfoEmbed := &discordgo.MessageEmbed{
 			Color:  0x0FADED,
@@ -485,6 +488,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 		if gameUrl != "" {
 			userinfoEmbed.URL = gameUrl
+		}
+		if totalMessagesText != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
