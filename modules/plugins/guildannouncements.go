@@ -121,13 +121,15 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 		if guildAnnouncementSetting.GuildJoinEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
 			guildJoinChannelID := guildAnnouncementSetting.GuildJoinChannelID
 			guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member)
-			go func() {
-				_, err := session.ChannelMessageSend(guildJoinChannelID, guildJoinText)
-				if err != nil {
-					cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
-						guild.Name, guild.ID, err.Error()))
-				}
-			}()
+			if guildJoinText != "" {
+				go func() {
+					_, err := session.ChannelMessageSend(guildJoinChannelID, guildJoinText)
+					if err != nil {
+						cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
+							guild.Name, guild.ID, err.Error()))
+					}
+				}()
+			}
 		}
 	}
 	cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
@@ -142,13 +144,15 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 		if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
 			guildLeaveChannelID := guildAnnouncementSetting.GuildLeaveChannelID
 			guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member)
-			go func() {
-				_, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
-				if err != nil {
-					cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
-						guild.Name, guild.ID, err.Error()))
-				}
-			}()
+			if guildLeaveText != "" {
+				go func() {
+					_, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
+					if err != nil {
+						cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
+							guild.Name, guild.ID, err.Error()))
+					}
+				}()
+			}
 		}
 	}
 	cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
@@ -167,7 +171,15 @@ func (m *GuildAnnouncements) GetAnnouncementSettings() []Announcement_Setting {
 
 func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Member) string {
 	guild, err := cache.GetSession().Guild(member.GuildID)
-	helpers.Relax(err)
+	if errD, ok := err.(*discordgo.RESTError); ok {
+		if errD.Message.Code != 50001 { // It's probably Robyul leaving a server :sob:
+			return ""
+		} else {
+			helpers.Relax(err)
+		}
+	} else {
+		helpers.Relax(err)
+	}
 	lastAfterMemberId := ""
 	var allMembers []*discordgo.Member
 	for {
