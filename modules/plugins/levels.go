@@ -1318,7 +1318,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		}
 
 		targetMember, err := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
-		helpers.Relax(err)
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Code == 10007 {
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
+			} else {
+				helpers.Relax(err)
+			}
+		} else {
+			helpers.Relax(err)
+		}
 
 		gifP := false
 		if command == "gif-profile" {
