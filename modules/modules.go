@@ -59,6 +59,7 @@ var (
 		&plugins.Streamable{},
 		&plugins.Troublemaker{},
 		&plugins.Lyrics{},
+		&plugins.Friend{},
 	}
 
 	// PluginList is the list of active plugins

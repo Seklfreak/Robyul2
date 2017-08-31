@@ -88,7 +88,7 @@ func main() {
 	cache.SetRedisClient(redisClient)
 
 	// Connect and add event handlers
-	log.WithField("module", "launcher").Info("Connecting to discord...")
+	log.WithField("module", "launcher").Info("Connecting bot to discord...")
 	discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
 	if err != nil {
 		panic(err)
@@ -116,6 +116,38 @@ func main() {
 	if err != nil {
 		raven.CaptureErrorAndWait(err, nil)
 		panic(err)
+	}
+
+	// Connect helper
+	friendsConfigs, err := config.Path("friends").Children()
+	if err != nil {
+		panic(err)
+	}
+	for _, friendConfig := range friendsConfigs {
+		if friendConfig.Path("token").Data().(string) != "" {
+			log.WithField("module", "launcher").Info("Connecting helper to discord...")
+			discordFriend, err := discordgo.New(
+				friendConfig.Path("token").Data().(string),
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			discordFriend.Lock()
+			discordFriend.Debug = false
+			discordFriend.LogLevel = discordgo.LogInformational
+			discordFriend.StateEnabled = true
+			discordFriend.Unlock()
+
+			discordFriend.AddHandlerOnce(FriendOnReady)
+
+			// Connect to discord
+			err = discordFriend.Open()
+			if err != nil {
+				raven.CaptureErrorAndWait(err, nil)
+				panic(err)
+			}
+		}
 	}
 
 	// Open REST API

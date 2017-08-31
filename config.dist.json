@@ -20,6 +20,11 @@
     "perms": "YOUR_REQUESTED_PERMISSION_INT",
     "token": "YOUR_DISCORD_TOKEN"
   },
+  "friends": [
+    {
+      "token": ""
+    }
+  ],
   "redis": {
     "address": "YOUR_REDIS_ADDRESS"
   },

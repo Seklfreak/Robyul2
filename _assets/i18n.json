@@ -793,6 +793,13 @@
       "genius-no-results": "I wasn't able to find anything with that name. <:blobweary:317036265071575050>",
       "song-list-embed-title": "Results for `%s`",
       "powered-by": "Powered by genius.com"
+    },
+    "friends": {
+      "invite-error-already-on-server": "There is already a Robyul Friend on this Server! <:blobsnuggle:333989876695302144>",
+      "invite-success": "My friend **%s** joined this server! Please enjoy additional Robyul features. <:blobsalute:317043033004703744>",
+      "invite-error-no-friend-available": "No friend with free slots available! <:blobweary:317036265071575050>",
+      "invite-error-invite-creation-failed": "I wasn't able to create a Discord Invite for my friend. <:blobweary:317036265071575050>",
+      "invite-error-accept-invite-invalid-statuscode": "Something went wrong trying to invite my friend. <:blobscream:317043778823389184>"
     }
   }
 }
