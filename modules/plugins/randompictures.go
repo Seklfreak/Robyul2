@@ -307,6 +307,9 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				helpers.RequireBotAdmin(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
 					var rpSources []DB_RandomPictures_Source
 					cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 					helpers.Relax(err)
@@ -324,7 +327,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					totalSources := 0
 					totalCachedImages := int64(0)
 					for _, rpSource := range rpSources {
-						if rpSource.GuildID == "" {
+						if rpSource.GuildID != channel.GuildID {
 							continue
 						}
 						rpSourceGuild, err := helpers.GetGuild(rpSource.GuildID)
@@ -341,6 +344,12 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							rpSource.ID, rpSourceGuild.Name, rpSourceGuild.ID, len(rpSource.Aliases), len(rpSource.DriveFolderIDs), len(rpSource.PostToChannelIDs), cacheText)
 						totalSources += 1
 					}
+
+					if totalSources <= 0 {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
+						return
+					}
+
 					listText += fmt.Sprintf("Found **%d** Sources in total and **%s** Cached Images.", totalSources, humanize.Comma(int64(totalCachedImages)))
 
 					for _, page := range helpers.Pagify(listText, "\n") {
