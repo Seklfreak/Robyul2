@@ -457,7 +457,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		} else {
 			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
 			if err == nil {
-				fmt.Println(searchResult.String())
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
 				}
