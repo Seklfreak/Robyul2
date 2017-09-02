@@ -117,7 +117,7 @@ func (s *Stats) Init(session *discordgo.Session) {
 						cache.GetLogger().WithField("module", "stats").Info(fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
 							newVoiceTime.UserID, newVoiceTime.ChannelID, newVoiceTime.GuildID))
 					} else {
-						if err.Error() != "channel not found" {
+						if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != 10003 {
 							helpers.Relax(err)
 						}
 					}
@@ -304,11 +304,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if len(args) >= 1 && args[0] != "" {
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if err != nil {
-				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10013 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
-					helpers.Relax(err)
-					return
-				} else if strings.Contains(err.Error(), "User not found.") {
+				if errD, ok := err.(*discordgo.RESTError); (ok && errD.Message.Code == 10013) || strings.Contains(err.Error(), "User not found.") {
 					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
 					helpers.Relax(err)
 					return
