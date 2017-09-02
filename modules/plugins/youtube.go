@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -8,13 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"errors"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
+	rethink "github.com/gorethink/gorethink"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/youtube/v3"
@@ -34,7 +34,7 @@ type DB_Youtube_Entry struct {
 	ID        string `gorethink:"id,omitempty"`
 	ServerID  string `gorethink:"serverid"`
 	ChannelID string `gorethink:"channelid"`
-	Timestamp string `gorethink:"timestamp"`
+	Timestamp uint64 `gorethink:"timestamp"`
 
 	// Content specific data fields.
 	// Content can be about channel or video.
@@ -62,6 +62,7 @@ const (
 	YouTubeColor          string = "cd201f"
 
 	youtubeConfigFileName string = "google.client_credentials_json_location"
+	youtubeDbTableName    string = "youtube"
 
 	// for yt.regexpSet
 	videoLongUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9_]*)`
@@ -172,19 +173,47 @@ func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **di
 
 	// _yt video add <video id/link> <discord channel>
 
-	*out = yt.newMsg("bot.arguments.invalid")
+	testContent := DB_Youtube_Content_Video{
+		ID:                 "test",
+		ViewCountsPrevious: 0,
+		ViewCountsInterval: 0,
+		ViewCountsFinal:    0,
+	}
+
+	testEntry := DB_Youtube_Entry{
+		ServerID:  "test",
+		ChannelID: "test",
+		Timestamp: 201709021604,
+
+		ContentType: "video",
+		Content:     testContent,
+	}
+
+	id, err := yt.createEntry(testEntry)
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	*out = yt.newMsg("Add test video, ID: " + id)
 	return yt.actionFinish
 }
 
 func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	if len(args) < 4 {
+	if len(args) < 3 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
 	}
 
 	// _yt video delete <video id/link> <discord channel>
 
-	*out = yt.newMsg("bot.arguments.invalid")
+	err := yt.deleteEntry(args[2])
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	*out = yt.newMsg("Delete video, ID: " + args[2])
 	return yt.actionFinish
 }
 
@@ -192,7 +221,23 @@ func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **d
 
 	// _yt video list
 
-	*out = yt.newMsg("bot.arguments.invalid")
+	entries, err := yt.readEntries("content_type", "video")
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	if len(entries) < 1 {
+		*out = yt.newMsg("No entries")
+		return yt.actionFinish
+	}
+
+	msg := ""
+	for _, e := range entries {
+		msg += e.ID + " "
+	}
+
+	*out = yt.newMsg(msg)
 	return yt.actionFinish
 }
 
@@ -235,29 +280,71 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		return yt.actionFinish
 	}
 
-	// _yt video add <video id/link> <discord channel>
+	// _yt channel add <video id/link> <discord channel>
 
-	*out = yt.newMsg("bot.arguments.invalid")
+	testContent := DB_Youtube_Content_Channel{
+		ID:        "test",
+		Timestamp: "teststamp",
+	}
+
+	testEntry := DB_Youtube_Entry{
+		ServerID:  "test",
+		ChannelID: "test",
+		Timestamp: 201709021604,
+
+		ContentType: "channel",
+		Content:     testContent,
+	}
+
+	id, err := yt.createEntry(testEntry)
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	*out = yt.newMsg("Add test channel, ID: " + id)
 	return yt.actionFinish
 }
 
 func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	if len(args) < 4 {
+	if len(args) < 3 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
 	}
 
-	// _yt video delete <video id/link> <discord channel>
+	// _yt channel delete <video id/link> <discord channel>
 
-	*out = yt.newMsg("bot.arguments.invalid")
+	err := yt.deleteEntry(args[2])
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	*out = yt.newMsg("Delete channel, ID: " + args[2])
 	return yt.actionFinish
 }
 
 func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 
-	// _yt video list
+	// _yt channel list
 
-	*out = yt.newMsg("bot.arguments.invalid")
+	entries, err := yt.readEntries("content_type", "channel")
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	if len(entries) < 1 {
+		*out = yt.newMsg("No entries")
+		return yt.actionFinish
+	}
+
+	msg := ""
+	for _, e := range entries {
+		msg += e.ID + " "
+	}
+
+	*out = yt.newMsg(msg)
 	return yt.actionFinish
 }
 
@@ -513,4 +600,44 @@ func (yt *YouTube) newMsg(content string) *discordgo.MessageSend {
 
 func (yt *YouTube) logger() *logrus.Entry {
 	return cache.GetLogger().WithField("module", "youtube")
+}
+
+// RethinkDB CRUD wrapper functions.
+
+func (yt *YouTube) createEntry(entry DB_Youtube_Entry) (id string, err error) {
+	query := rethink.Table(youtubeDbTableName).Insert(entry)
+
+	res, err := query.RunWrite(helpers.GetDB())
+	if err != nil {
+		return "", err
+	}
+
+	return res.GeneratedKeys[0], nil
+}
+
+func (yt *YouTube) readEntries(field, equal string) (entry []DB_Youtube_Entry, err error) {
+	query := rethink.Table(youtubeDbTableName).Filter(rethink.Row.Field(field).Eq(equal))
+
+	cursor, err := query.Run(helpers.GetDB())
+	if err != nil {
+		return entry, err
+	}
+	defer cursor.Close()
+
+	err = cursor.All(&entry)
+	return
+}
+
+func (yt *YouTube) updateEntry(entry DB_Youtube_Entry) (err error) {
+	query := rethink.Table(youtubeDbTableName).Update(entry)
+
+	_, err = query.Run(helpers.GetDB())
+	return
+}
+
+func (yt *YouTube) deleteEntry(id string) (err error) {
+	query := rethink.Table(youtubeDbTableName).Filter(rethink.Row.Field("id").Eq(id)).Delete()
+
+	_, err = query.RunWrite(helpers.GetDB())
+	return
 }
