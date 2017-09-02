@@ -1354,7 +1354,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					},
 				},
 			})
-		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 20009 {
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-error-sending"))
+				return
+			}
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		}
 
 		return
 	case "level", "levels": // [p]level <user> or [p]level top
