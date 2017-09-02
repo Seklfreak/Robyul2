@@ -304,13 +304,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if len(args) >= 1 && args[0] != "" {
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if err != nil {
-				if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10013 {
 					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
 					helpers.Relax(err)
 					return
-				} else {
+				} else if strings.Contains(err.Error(), "User not found.") {
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
 					helpers.Relax(err)
+					return
 				}
+				helpers.Relax(err)
 			}
 		}
 
