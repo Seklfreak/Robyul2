@@ -36,6 +36,7 @@ var migrations = []helpers.Callback{
 	m24_create_table_profile_userdata,
 	m25_create_table_profile_badge,
 	m26_create_table_mod_joinlog,
+	m27_create_table_youtube,
 }
 
 // Run executes all registered migrations
