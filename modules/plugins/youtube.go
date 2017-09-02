@@ -28,6 +28,32 @@ type YouTube struct {
 	sync.RWMutex
 }
 
+type DB_Youtube_Entry struct {
+	// Common fields.
+	// Timestamp is updated when operation succeed with this entry.
+	ID        string `gorethink:"id,omitempty"`
+	ServerID  string `gorethink:"serverid"`
+	ChannelID string `gorethink:"channelid"`
+	Timestamp string `gorethink:"timestamp"`
+
+	// Content specific data fields.
+	// Content can be about channel or video.
+	ContentType string      `gorethink:"content_type"`
+	Content     interface{} `gorethink:"content"`
+}
+
+type DB_Youtube_Content_Channel struct {
+	ID        string `gorethink:"content_id"`
+	Timestamp string `gorethink:"content_timestamp"`
+}
+
+type DB_Youtube_Content_Video struct {
+	ID                 string `gorethink:"content_id"`
+	ViewCountsPrevious uint64 `gorethink:"content_view_counts_previous"`
+	ViewCountsInterval uint64 `gorethink:"content_view_counts_interval"`
+	ViewCountsFinal    uint64 `gorethink:"content_view_counts_final"`
+}
+
 type youtubeAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next youtubeAction)
 
 const (
