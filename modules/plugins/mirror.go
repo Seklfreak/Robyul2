@@ -148,7 +148,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` `(#%s)` on `N/A` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
 								mirroredChannelEntry.ChannelID,
 								mirroredChannelEntry.GuildID,
-								mirroredChannel.ID,
+								mirroredChannelEntry.ChannelID,
 								mirroredChannelEntry.ChannelWebhookID,
 							)
 							continue
@@ -248,6 +248,7 @@ TryNextMirror:
 					for _, linkToRepost := range linksToRepost {
 						for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
 							if channelToMirrorToEntry.ChannelID != msg.ChannelID {
+								// TODO: check if target guild has robyul
 								err := session.WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
 									false, &discordgo.WebhookParams{
 										Content: fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
