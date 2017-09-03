@@ -45,6 +45,7 @@ func (m *Mod) Commands() []string {
 		"upload",
 		"get",
 		"create-invite",
+		"prefix",
 	}
 }
 
@@ -1425,6 +1426,41 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			helpers.Relax(err)
 			return
 		})
+		return
+	case "prefix":
+		session.ChannelTyping(msg.ChannelID)
+		args := strings.Fields(content)
+
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+
+		if len(args) > 0 {
+			helpers.RequireAdmin(msg, func() {
+				newPrefix := args[0]
+
+				settings := helpers.GuildSettingsGetCached(channel.GuildID)
+				settings.Prefix = newPrefix
+				err = helpers.GuildSettingsSet(channel.GuildID, settings)
+				helpers.Relax(err)
+
+				_, err = session.ChannelMessageSend(msg.ChannelID,
+					helpers.GetTextF(
+						"plugins.mod.prefix-set-success",
+						helpers.GetPrefixForServer(channel.GuildID),
+					))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
+			})
+			return
+		}
+
+		_, err = session.ChannelMessageSend(msg.ChannelID,
+			helpers.GetTextF(
+				"plugins.mod.prefix-info",
+				helpers.GetPrefixForServer(channel.GuildID),
+				helpers.GetPrefixForServer(channel.GuildID),
+			))
+		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
 }
