@@ -298,99 +298,168 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 				var messagesToDelete []*discordgo.Message
 				messagesToDelete = append(messagesToDelete, msg)
 				isRequest := true
-				requestIsAddRole := true
-				if strings.HasPrefix(content, "-") {
-					requestIsAddRole = false
-				} else if strings.HasPrefix(content, helpers.GetPrefixForServer(channel.GuildID)) {
+				if strings.HasPrefix(content, helpers.GetPrefixForServer(channel.GuildID)) {
 					isRequest = false
 				}
 				if isRequest {
-					requestedRoleName := m.CleanUpRoleName(content)
-					denyReason := ""
-					type Role_Information struct {
-						Role        AssignableRole_Role
-						DiscordRole *discordgo.Role
+					session.ChannelTyping(msg.ChannelID)
+					// split up multiple requests
+					requests := make([]string, 0)
+					var lastStart int
+					nextLookup := content
+					var lastSign string
+					for {
+						nextRequestIndex := strings.IndexFunc(nextLookup, func(r rune) bool {
+							return r == '+' || r == '-'
+						})
+						if lastSign == "" && nextRequestIndex == -1 {
+							requests = append(requests, content)
+							break
+						} else {
+							if nextRequestIndex >= 0 {
+								newRequest := nextLookup[0:nextRequestIndex]
+								if strings.TrimSpace(newRequest) != "" {
+									requests = append(requests, lastSign+strings.TrimSpace(newRequest))
+								}
+							} else if strings.TrimSpace(nextLookup) != "" {
+								requests = append(requests, lastSign+strings.TrimSpace(nextLookup))
+							}
+							lastStart = nextRequestIndex
+							if len(nextLookup) > 0 && lastStart >= 0 {
+								if len(nextLookup) >= lastStart+1 {
+									lastSign = string(nextLookup[lastStart])
+									nextLookup = nextLookup[lastStart+1:]
+								}
+							} else {
+								break
+							}
+						}
 					}
-					var roleToAddOrDelete Role_Information
-				FindRoleLoop:
-					for _, category := range biasChannel.Categories {
-					TryRoleLoop:
-						for _, role := range category.Roles {
-							for _, label := range role.Aliases {
-								if strings.ToLower(label) == requestedRoleName {
-									discordRole := m.GetDiscordRole(role, guild)
-									if discordRole != nil && discordRole.ID != "" {
-										memberHasRole := m.MemberHasRole(member, discordRole)
-										if requestIsAddRole == true && memberHasRole == true {
-											denyReason = helpers.GetText("plugins.bias.add-role-already")
-											continue TryRoleLoop
-										}
-										if requestIsAddRole == false && memberHasRole == false {
-											denyReason = helpers.GetText("plugins.bias.remove-role-not-found")
-											continue TryRoleLoop
-										}
-										categoryRolesAssigned := m.CategoryRolesAssigned(member, guildRoles, category)
-										if requestIsAddRole == true && (category.Limit >= 0 && len(categoryRolesAssigned) >= category.Limit) {
-											denyReason = helpers.GetText("plugins.bias.role-limit-reached")
-											continue TryRoleLoop
-										}
-										if requestIsAddRole == true && category.Pool != "" {
-											for _, poolCategories := range biasChannel.Categories {
-												if poolCategories.Pool == category.Pool {
-													for _, poolRole := range poolCategories.Roles {
-														if poolRole.Print == role.Print {
-															poolDiscordRole := m.GetDiscordRole(poolRole, guild)
-															if poolDiscordRole != nil && poolDiscordRole.ID != "" && m.MemberHasRole(member, poolDiscordRole) {
-																denyReason = helpers.GetText("plugins.bias.add-role-already")
-																continue TryRoleLoop
+					// find out which changes we should do and apply changes
+					rolesAdded := make([]string, 0)
+					rolesRemoved := make([]string, 0)
+					rolesErrors := make([]string, 0)
+
+					var requestIsAddRole bool
+					var errorText string
+					for _, request := range requests {
+						//fmt.Println("request:", request)
+						requestIsAddRole = true
+						if strings.HasPrefix(request, "-") {
+							requestIsAddRole = false
+						}
+						errorText = ""
+
+						requestedRoleName := m.CleanUpRoleName(request)
+					FindRoleLoop:
+						for _, category := range biasChannel.Categories {
+						TryRoleLoop:
+							for _, role := range category.Roles {
+								for _, label := range role.Aliases {
+									if strings.ToLower(label) == requestedRoleName {
+										discordRole := m.GetDiscordRole(role, guild)
+										if discordRole != nil && discordRole.ID != "" {
+											memberHasRole := m.MemberHasRole(member, discordRole)
+											//fmt.Println("member has role", discordRole.Name, "?", memberHasRole)
+											if requestIsAddRole == true && memberHasRole == true {
+												errorText = helpers.GetText("plugins.bias.add-role-already")
+												continue TryRoleLoop
+											}
+											if requestIsAddRole == false && memberHasRole == false {
+												errorText = helpers.GetText("plugins.bias.remove-role-not-found")
+												continue TryRoleLoop
+											}
+											categoryRolesAssigned := m.CategoryRolesAssigned(member, guildRoles, category)
+											if requestIsAddRole == true && (category.Limit >= 0 && len(categoryRolesAssigned) >= category.Limit) {
+												errorText = helpers.GetText("plugins.bias.role-limit-reached")
+												continue TryRoleLoop
+											}
+											if requestIsAddRole == true && category.Pool != "" {
+												for _, poolCategories := range biasChannel.Categories {
+													if poolCategories.Pool == category.Pool {
+														for _, poolRole := range poolCategories.Roles {
+															if poolRole.Print == role.Print {
+																poolDiscordRole := m.GetDiscordRole(poolRole, guild)
+																if poolDiscordRole != nil && poolDiscordRole.ID != "" && m.MemberHasRole(member, poolDiscordRole) {
+																	errorText = helpers.GetText("plugins.bias.add-role-already")
+																	continue TryRoleLoop
+																}
 															}
 														}
 													}
 												}
 											}
+
+											errorText = ""
+											if requestIsAddRole {
+												if role.Name != "" && discordRole != nil {
+													err = session.GuildMemberRoleAdd(guild.ID, msg.Author.ID, discordRole.ID)
+													if err != nil {
+														//fmt.Println("failed to add role", discordRole.Name)
+														errorText = helpers.GetText("plugins.bias.generic-error")
+													} else {
+														//fmt.Println("added role", discordRole.Name)
+														rolesAdded = append(rolesAdded, role.Print)
+													}
+												}
+											} else {
+												if role.Name != "" && discordRole != nil {
+													err = session.GuildMemberRoleRemove(guild.ID, msg.Author.ID, discordRole.ID)
+													if err != nil {
+														//fmt.Println("failed to remove role", discordRole.Name)
+														errorText = helpers.GetText("plugins.bias.generic-error")
+													} else {
+														//fmt.Println("removed role", discordRole.Name)
+														rolesRemoved = append(rolesRemoved, role.Print)
+													}
+												}
+											}
+
+											member, err = helpers.GetFreshGuildMember(channel.GuildID, msg.Author.ID)
+											helpers.Relax(err)
+
+											break FindRoleLoop
 										}
 
-										roleToAddOrDelete = Role_Information{Role: role, DiscordRole: discordRole}
-
-										break FindRoleLoop
 									}
-
 								}
 							}
 						}
-					}
-					if roleToAddOrDelete.Role.Name != "" && roleToAddOrDelete.DiscordRole != nil {
-						if requestIsAddRole == true {
-							err := session.GuildMemberRoleAdd(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
-							if err != nil {
-								newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
-								helpers.Relax(err)
-								messagesToDelete = append(messagesToDelete, newMessage)
-							} else {
-								newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-added")))
-								helpers.Relax(err)
-								messagesToDelete = append(messagesToDelete, newMessage)
-							}
-						} else {
-							err := session.GuildMemberRoleRemove(guild.ID, msg.Author.ID, roleToAddOrDelete.DiscordRole.ID)
-							if err != nil {
-								newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
-								helpers.Relax(err)
-								messagesToDelete = append(messagesToDelete, newMessage)
-							} else {
-								newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-removed")))
-								helpers.Relax(err)
-								messagesToDelete = append(messagesToDelete, newMessage)
-							}
+
+						if errorText != "" {
+							rolesErrors = append(rolesErrors, errorText)
 						}
-					} else if denyReason != "" {
-						newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, denyReason))
-						helpers.Relax(err)
+					}
+					// Print message
+					//fmt.Printf("added: %+v\n", rolesAdded)
+					//fmt.Printf("removed: %+v\n", rolesRemoved)
+					//fmt.Printf("errors: %+v\n", rolesErrors)
+					if len(rolesAdded) <= 0 && len(rolesRemoved) <= 0 && len(rolesErrors) <= 0 {
+						newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-not-found")))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						messagesToDelete = append(messagesToDelete, newMessage)
 					} else {
-						newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-not-found")))
-						helpers.Relax(err)
-						messagesToDelete = append(messagesToDelete, newMessage)
+						if len(rolesAdded) == 1 && len(rolesRemoved) == 0 && len(rolesErrors) == 0 {
+							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-added")))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							messagesToDelete = append(messagesToDelete, newMessage)
+						} else if len(rolesAdded) == 0 && len(rolesRemoved) == 1 && len(rolesErrors) == 0 {
+							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-removed")))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							messagesToDelete = append(messagesToDelete, newMessage)
+						} else if len(rolesAdded) == 0 && len(rolesRemoved) == 0 && len(rolesErrors) == 1 {
+							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, rolesErrors[0]))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							messagesToDelete = append(messagesToDelete, newMessage)
+						} else {
+							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID,
+								helpers.GetTextF(
+									"plugins.bias.roles-batch",
+									len(rolesAdded), len(rolesRemoved), len(rolesErrors),
+								)))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							messagesToDelete = append(messagesToDelete, newMessage)
+						}
 					}
 				}
 				// Delete messages after ten seconds

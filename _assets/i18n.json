@@ -585,13 +585,14 @@
         "I removed the Role from you! <:blobsplosion:317044658213748746>"
       ],
       "role-limit-reached": "You already got enough Roles! <:blobnogood:317029275742109706>",
-      "bias-help-message": "Use **`name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`%s`** or **`-%s`**",
+      "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**. You can **combine multiple changes** by putting multiple **+** and **-** in one message.",
       "no-bias-config": "No Bias Config set for this Channel.",
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
       "updated-config": "I updated the config for the channel. <:blobokhand:317032017164238848>",
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
       "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>",
-      "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>"
+      "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>",
+      "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",
