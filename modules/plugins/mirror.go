@@ -144,7 +144,15 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (%d channels):\n", entry.ID, len(entry.ConnectedChannels))
 					for _, mirroredChannelEntry := range entry.ConnectedChannels {
 						mirroredChannel, err := helpers.GetChannel(mirroredChannelEntry.ChannelID)
-						helpers.Relax(err)
+						if err != nil {
+							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` `(#%s)` on `N/A` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
+								mirroredChannelEntry.ChannelID,
+								mirroredChannelEntry.GuildID,
+								mirroredChannel.ID,
+								mirroredChannelEntry.ChannelWebhookID,
+							)
+							continue
+						}
 						mirroredChannelGuild, err := helpers.GetGuild(mirroredChannelEntry.GuildID)
 						helpers.Relax(err)
 						resultMessage += fmt.Sprintf(":arrow_forward: `#%s` `(#%s)` on `%s` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
