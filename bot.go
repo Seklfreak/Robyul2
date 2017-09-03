@@ -334,9 +334,14 @@ func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.Message
 }
 
 func sendHelp(message *discordgo.MessageCreate) {
+	channel, err := helpers.GetChannel(message.ChannelID)
+	if err != nil {
+		channel.GuildID = ""
+	}
+
 	cache.GetSession().ChannelMessageSend(
 		message.ChannelID,
-		helpers.GetTextF("bot.help", message.Author.ID),
+		helpers.GetTextF("bot.help", message.Author.ID, channel.GuildID),
 	)
 }
 

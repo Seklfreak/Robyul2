@@ -77,8 +77,8 @@
       "refreshed": ":cyclone: Refreshed!"
     },
     "help": [
-      "<@%s> Check out <https://robyul.chat/commands>",
-      "<@%s> It's at <https://robyul.chat/commands> <:googlesmile:317031693951434752>"
+      "<@%s> Check out <https://robyul.chat/commands/%s>",
+      "<@%s> It's at <https://robyul.chat/commands/%s> <:googlesmile:317031693951434752>"
     ],
     "check-your-dms": "<@%s> Please check your DMs. <:blobeyes:317029938568101890>"
   },
