@@ -248,17 +248,24 @@ TryNextMirror:
 					for _, linkToRepost := range linksToRepost {
 						for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
 							if channelToMirrorToEntry.ChannelID != msg.ChannelID {
-								// TODO: check if target guild has robyul
-								err := session.WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
-									false, &discordgo.WebhookParams{
-										Content: fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
-											linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
-										),
-										Username:  msg.Author.Username,
-										AvatarURL: helpers.GetAvatarUrl(msg.Author),
-									})
-								helpers.Relax(err)
-								metrics.MirrorsPostsSent.Add(1)
+								robyulIsOnTargetGuild := false
+								for _, guild := range cache.GetSession().State.Guilds {
+									if guild.ID == channelToMirrorToEntry.GuildID {
+										robyulIsOnTargetGuild = true
+									}
+								}
+								if robyulIsOnTargetGuild {
+									err := session.WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
+										false, &discordgo.WebhookParams{
+											Content: fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
+												linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
+											),
+											Username:  msg.Author.Username,
+											AvatarURL: helpers.GetAvatarUrl(msg.Author),
+										})
+									helpers.Relax(err)
+									metrics.MirrorsPostsSent.Add(1)
+								}
 							}
 						}
 					}
