@@ -297,16 +297,14 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 				helpers.Relax(err)
 				var messagesToDelete []*discordgo.Message
 				messagesToDelete = append(messagesToDelete, msg)
-				var requestIsAddRole bool
-				isRequest := false
-				if strings.HasPrefix(content, "+") {
-					requestIsAddRole = true
-					isRequest = true
-				} else if strings.HasPrefix(content, "-") {
+				isRequest := true
+				requestIsAddRole := true
+				if strings.HasPrefix(content, "-") {
 					requestIsAddRole = false
-					isRequest = true
+				} else if strings.HasPrefix(content, helpers.GetPrefixForServer(channel.GuildID)) {
+					isRequest = false
 				}
-				if isRequest == true {
+				if isRequest {
 					requestedRoleName := m.CleanUpRoleName(content)
 					denyReason := ""
 					type Role_Information struct {

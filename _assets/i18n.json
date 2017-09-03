@@ -585,7 +585,7 @@
         "I removed the Role from you! <:blobsplosion:317044658213748746>"
       ],
       "role-limit-reached": "You already got enough Roles! <:blobnogood:317029275742109706>",
-      "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**",
+      "bias-help-message": "Use **`name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`%s`** or **`-%s`**",
       "no-bias-config": "No Bias Config set for this Channel.",
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
       "updated-config": "I updated the config for the channel. <:blobokhand:317032017164238848>",
