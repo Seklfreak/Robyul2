@@ -24,17 +24,18 @@ type AssignableRole_Channel struct {
 
 type AssignableRole_Category struct {
 	Label   string
+	Message string
 	Pool    string
 	Hidden  bool
 	Limit   int
 	Roles   []AssignableRole_Role
-	Message string
 }
 
 type AssignableRole_Role struct {
-	Name    string
-	Print   string
-	Aliases []string
+	Name      string
+	Print     string
+	Aliases   []string
+	Reactions []string
 }
 
 func (m *Bias) Commands() []string {
@@ -589,6 +590,107 @@ func (m *Bias) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.
 
 }
 func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+	// Native emojis or custom emoji names (without :)
+	go func() {
+		defer helpers.Recover()
+
+		channel, err := helpers.GetChannel(reaction.ChannelID)
+		helpers.Relax(err)
+		guild, err := helpers.GetFreshGuild(channel.GuildID)
+		helpers.Relax(err)
+		member, err := helpers.GetFreshGuildMember(guild.ID, reaction.UserID)
+		helpers.Relax(err)
+		if member.User.Bot {
+			return
+		}
+		guildRoles, err := session.GuildRoles(guild.ID)
+		if err != nil {
+			if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+				newMessage, err := session.ChannelMessageSend(reaction.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+				helpers.Relax(err)
+				// Delete messages after ten seconds
+				time.Sleep(10 * time.Second)
+				session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+				return
+			}
+			helpers.Relax(err)
+		}
+
+		var errorText string
+		roleAdded := false
+
+		for _, biasChannel := range biasChannels {
+			if reaction.ChannelID == biasChannel.ChannelID {
+			FindRoleLoop:
+				for _, category := range biasChannel.Categories {
+				TryRoleLoop:
+					for _, role := range category.Roles {
+						for _, reactionAlias := range role.Reactions {
+							if strings.ToLower(reactionAlias) == strings.ToLower(reaction.Emoji.Name) {
+								discordRole := m.GetDiscordRole(role, guild)
+								if discordRole != nil && discordRole.ID != "" {
+									memberHasRole := m.MemberHasRole(member, discordRole)
+									//fmt.Println("member has role", discordRole.Name, "?", memberHasRole)
+									if memberHasRole == true {
+										errorText = helpers.GetText("plugins.bias.add-role-already")
+										continue TryRoleLoop
+									}
+									categoryRolesAssigned := m.CategoryRolesAssigned(member, guildRoles, category)
+									if category.Limit >= 0 && len(categoryRolesAssigned) >= category.Limit {
+										errorText = helpers.GetText("plugins.bias.role-limit-reached")
+										continue TryRoleLoop
+									}
+									if category.Pool != "" {
+										for _, poolCategories := range biasChannel.Categories {
+											if poolCategories.Pool == category.Pool {
+												for _, poolRole := range poolCategories.Roles {
+													if poolRole.Print == role.Print {
+														poolDiscordRole := m.GetDiscordRole(poolRole, guild)
+														if poolDiscordRole != nil && poolDiscordRole.ID != "" && m.MemberHasRole(member, poolDiscordRole) {
+															errorText = helpers.GetText("plugins.bias.add-role-already")
+															continue TryRoleLoop
+														}
+													}
+												}
+											}
+										}
+									}
+									errorText = ""
+									if role.Name != "" && discordRole != nil {
+										err = session.GuildMemberRoleAdd(guild.ID, reaction.UserID, discordRole.ID)
+										if err != nil {
+											//fmt.Println("failed to add role", discordRole.Name)
+											errorText = helpers.GetText("plugins.bias.generic-error")
+										} else {
+											//fmt.Println("added role", discordRole.Name)
+											roleAdded = true
+										}
+									}
+
+									break FindRoleLoop
+								}
+							}
+						}
+					}
+				}
+
+				var newMessage *discordgo.Message
+
+				if roleAdded {
+					newMessage, err = session.ChannelMessageSend(reaction.ChannelID, fmt.Sprintf("<@%s> %s", reaction.UserID, helpers.GetText("plugins.bias.role-added")))
+					helpers.RelaxMessage(err, reaction.ChannelID, "")
+				} else if errorText != "" {
+					newMessage, err = session.ChannelMessageSend(reaction.ChannelID, fmt.Sprintf("<@%s> %s", reaction.UserID, errorText))
+					helpers.RelaxMessage(err, reaction.ChannelID, "")
+				}
+
+				if newMessage != nil && newMessage.ID != "" {
+					time.Sleep(10 * time.Second)
+					session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+				}
+			}
+		}
+	}()
 
 }
 func (m *Bias) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
