@@ -227,6 +227,12 @@ TryNextGallery:
 							AvatarURL: helpers.GetAvatarUrl(msg.Author),
 						})
 					if err != nil {
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code == 10015 {
+								cache.GetLogger().WithField("module", "gallery").Error(fmt.Sprintf("Webhook for gallery #%d not found", gallery.ID))
+								continue
+							}
+						}
 						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 					}
 					metrics.GalleryPostsSent.Add(1)
