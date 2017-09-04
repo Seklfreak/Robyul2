@@ -554,7 +554,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		args := strings.Fields(content)
 		var channel *discordgo.Channel
 		if len(args) > 0 {
-			channel, err = helpers.GetFreshChannel(args[0])
+			channel, err = helpers.GetGlobalChannelFromMention(args[0])
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == 50001 {
@@ -563,9 +563,12 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						return
 					}
 				}
-				helpers.Relax(err)
 			}
-			if !helpers.IsRobyulMod(msg.Author.ID) && channel.GuildID != sourceChannel.GuildID {
+			channel, err = helpers.GetFreshChannel(channel.ID)
+			helpers.Relax(err)
+			fmt.Println(channel.GuildID)
+			fmt.Println(sourceChannel.GuildID)
+			if channel.GuildID != sourceChannel.GuildID && !helpers.IsRobyulMod(msg.Author.ID) {
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return

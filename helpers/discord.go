@@ -674,6 +674,21 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
 	}
 }
 
+func GetGlobalChannelFromMention(mention string) (*discordgo.Channel, error) {
+	var targetChannel *discordgo.Channel
+	re := regexp.MustCompile("(<#)?(\\d+)(>)?")
+	result := re.FindStringSubmatch(mention)
+	if len(result) == 4 {
+		targetChannel, err := GetChannel(result[2])
+		if err != nil {
+			return targetChannel, err
+		}
+		return targetChannel, err
+	} else {
+		return targetChannel, errors.New("Channel not found.")
+	}
+}
+
 func GetFreshUser(userID string) (*discordgo.User, error) {
 	var err error
 	cacheCodec := cache.GetRedisCacheCodec()
