@@ -594,33 +594,34 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 	go func() {
 		defer helpers.Recover()
 
-		channel, err := helpers.GetChannel(reaction.ChannelID)
-		helpers.Relax(err)
-		guild, err := helpers.GetFreshGuild(channel.GuildID)
-		helpers.Relax(err)
-		member, err := helpers.GetFreshGuildMember(guild.ID, reaction.UserID)
-		helpers.Relax(err)
-		if member.User.Bot {
-			return
-		}
-		guildRoles, err := session.GuildRoles(guild.ID)
-		if err != nil {
-			if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-				newMessage, err := session.ChannelMessageSend(reaction.ChannelID, helpers.GetText("plugins.bias.generic-error"))
-				helpers.Relax(err)
-				// Delete messages after ten seconds
-				time.Sleep(10 * time.Second)
-				session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
-				return
-			}
-			helpers.Relax(err)
-		}
-
-		var errorText string
-		roleAdded := false
-
 		for _, biasChannel := range biasChannels {
 			if reaction.ChannelID == biasChannel.ChannelID {
+				channel, err := helpers.GetChannel(reaction.ChannelID)
+				helpers.Relax(err)
+				guild, err := helpers.GetFreshGuild(channel.GuildID)
+				helpers.Relax(err)
+				member, err := helpers.GetFreshGuildMember(guild.ID, reaction.UserID)
+				helpers.Relax(err)
+				if member.User.Bot {
+					return
+				}
+				guildRoles, err := session.GuildRoles(guild.ID)
+				if err != nil {
+					if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+						newMessage, err := session.ChannelMessageSend(reaction.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+						helpers.Relax(err)
+						// Delete messages after ten seconds
+						time.Sleep(10 * time.Second)
+						session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+						return
+					}
+					helpers.Relax(err)
+				}
+
+				var errorText string
+				roleAdded := false
+
+				//fmt.Println("got reaction:", reaction.Emoji.Name)
 			FindRoleLoop:
 				for _, category := range biasChannel.Categories {
 				TryRoleLoop:
