@@ -187,7 +187,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				helpers.Relax(err)
 
 				_, err = session.ChannelFileSend(msg.ChannelID, targetChannel.Name+"-robyul-bias-config.json", bytes.NewReader(channelConfigJson))
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
 				return
 			})
