@@ -205,10 +205,29 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		})
 	case "serverinfo":
 		session.ChannelTyping(msg.ChannelID)
-		currentChannel, err := helpers.GetChannel(msg.ChannelID)
-		helpers.Relax(err)
-		guild, err := helpers.GetFreshGuild(currentChannel.GuildID)
-		helpers.Relax(err)
+
+		args := strings.Fields(content)
+		var err error
+		var guild *discordgo.Guild
+		if len(args) > 0 && helpers.IsRobyulMod(msg.Author.ID) {
+			guild, err = helpers.GetFreshGuild(args[0])
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == 50001 {
+						_, err = session.ChannelMessageSend(msg.ChannelID, "Unable to get information for this Server.")
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+				}
+				helpers.Relax(err)
+			}
+		} else {
+			currentChannel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			guild, err = helpers.GetFreshGuild(currentChannel.GuildID)
+			helpers.Relax(err)
+		}
+
 		users := make(map[string]string)
 		lastAfterMemberId := ""
 		for {
