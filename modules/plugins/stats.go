@@ -292,6 +292,34 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		totalMessagesText := "N/A"
+		searchResponse, err := helpers.GuildFriendRequest(
+			guild.ID,
+			"GET",
+			fmt.Sprintf("guilds/%s/messages/search", guild.ID),
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "No friend on this server!") {
+				totalMessagesText = ""
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
+			}
+		} else {
+			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			if err == nil {
+				if searchResult.Exists("total_results") {
+					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
+				}
+			}
+		}
+
 		serverinfoEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
 			Title:       guild.Name,
@@ -311,6 +339,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if guild.Icon != "" {
 			serverinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)}
 			serverinfoEmbed.URL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)
+		}
+
+		if totalMessagesText != "" {
+			serverinfoEmbed.Fields = append(serverinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, serverinfoEmbed)
