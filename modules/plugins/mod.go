@@ -46,6 +46,7 @@ func (m *Mod) Commands() []string {
 		"get",
 		"create-invite",
 		"prefix",
+		"react",
 	}
 }
 
@@ -787,6 +788,41 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				newMessage := fmt.Sprintf("```%s```", targetMessage.Content)
 				_, err = session.ChannelMessageSend(msg.ChannelID, newMessage)
 				helpers.Relax(err)
+			} else {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+		})
+		return
+	case "react": // [p]react <channel> <message id> <emoji>
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) >= 3 {
+				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+				if sourceChannel.GuildID != targetChannel.GuildID {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					return
+				}
+				targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+				if err != nil {
+					if errD, ok := err.(*discordgo.RESTError); ok {
+						if errD.Message.Code == 10008 || strings.Contains(err.Error(), "is not snowflake") {
+							_, err = session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+							helpers.Relax(err)
+							return
+						}
+						helpers.Relax(err)
+					} else {
+						helpers.Relax(err)
+					}
+				}
+				session.MessageReactionAdd(targetChannel.ID, targetMessage.ID, strings.Replace(strings.Replace(args[2], ">", "", -1), "<", "", -1))
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
