@@ -184,7 +184,14 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 	for _, botGuild := range cache.GetSession().State.Guilds {
 		if botGuild.ID == guild.ID {
 			for _, member := range guild.Members {
-				allMembers = append(allMembers, member)
+				if member.JoinedAt == "" {
+					member, err := helpers.GetGuildMember(member.GuildID, member.User.ID)
+					if err == nil {
+						allMembers = append(allMembers, member)
+					}
+				} else {
+					allMembers = append(allMembers, member)
+				}
 			}
 		}
 	}
