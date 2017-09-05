@@ -46,8 +46,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 		for _, guild := range session.State.Guilds {
 			err := session.RequestGuildMembers(guild.ID, "", 0)
 			if err != nil {
-				log.WithField("module", "bot").Error(fmt.Sprintf("Failed to request Members for Guild %s #%s: %s",
-					guild.Name, guild.ID, err.Error()))
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
 		}
 	}()
@@ -100,6 +99,7 @@ func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMe
 			members.GuildID, len(members.Members)))
 	var err error
 	for _, member := range members.Members {
+		member.GuildID = members.GuildID
 		err = session.State.MemberAdd(member)
 		if err != nil {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
