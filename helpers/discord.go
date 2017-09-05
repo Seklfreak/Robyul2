@@ -322,6 +322,8 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
 
 	targetMember, _ := cache.GetSession().State.Member(guildID, userID)
 	if targetMember == nil || targetMember.GuildID == "" || targetMember.JoinedAt == "" {
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshGuildMember").Debug(
+			fmt.Sprintf("api request: GuildMember: %s, %s", guildID, userID))
 		targetMember, err = cache.GetSession().GuildMember(guildID, userID)
 	}
 	if err == nil {
@@ -334,7 +336,6 @@ func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, erro
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " FORCED-MISS")
 	return targetMember, err
 }
 
@@ -360,6 +361,8 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 		// try api cache
 		if err = cacheCodec.Get(key, &targetMemberS); err != nil || targetMemberS.GuildID == "" {
 			// try api
+			cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuildMember").Debug(
+				fmt.Sprintf("api request: GuildMember: %s, %s", guildID, userID))
 			targetMember, err := cache.GetSession().GuildMember(guildID, userID)
 			if err != nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
 				err = cacheCodec.Set(&redisCache.Item{
@@ -373,7 +376,6 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 			}
 			return targetMember, err
 		} else {
-			cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " HIT")
 			return &targetMemberS, nil
 		}
 	}
@@ -402,7 +404,6 @@ func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member,
 		if err = cacheCodec.Get(key, &targetMemberS); err != nil || targetMemberS.GuildID == "" {
 			return &targetMemberS, errors.New("Member not found")
 		} else {
-			cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " HIT")
 			return &targetMemberS, nil
 		}
 	}
@@ -424,6 +425,8 @@ func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
 
 	targetGuild, err := cache.GetSession().State.Guild(guildID)
 	if targetGuild == nil || targetGuild.ID == "" {
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshGuild").Debug(
+			fmt.Sprintf("api request: Guild: %s", guildID))
 		targetGuild, err = cache.GetSession().Guild(guildID)
 	}
 	if err == nil {
@@ -436,7 +439,6 @@ func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " FORCED-MISS")
 	return targetGuild, err
 }
 
@@ -449,6 +451,8 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 	if err = cacheCodec.Get(key, &targetGuild); err != nil || targetGuild.JoinedAt == "" {
 		targetGuild, err := cache.GetSession().State.Guild(guildID)
 		if targetGuild == nil || targetGuild.ID == "" {
+			cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
+				fmt.Sprintf("api request: Guild: %s", guildID))
 			targetGuild, err = cache.GetSession().Guild(guildID)
 		}
 		if err == nil {
@@ -461,10 +465,8 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
 		}
-		cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " MISS")
 		return targetGuild, err
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " HIT")
 	return &targetGuild, err
 }
 
@@ -475,6 +477,8 @@ func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
 
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshChannel").Debug(
+			fmt.Sprintf("api request: Channel: %s", channelID))
 		targetChannel, err = cache.GetSession().Channel(channelID)
 	}
 	if err == nil {
@@ -487,7 +491,6 @@ func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " FORCED-MISS")
 	return targetChannel, err
 }
 
@@ -500,6 +503,8 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 	if err = cacheCodec.Get(key, &targetChannel); err != nil {
 		targetChannel, err := cache.GetSession().State.Channel(channelID)
 		if targetChannel == nil || targetChannel.ID == "" {
+			cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
+				fmt.Sprintf("api request: Channel: %s", channelID))
 			targetChannel, err = cache.GetSession().Channel(channelID)
 		}
 		if err == nil {
@@ -512,10 +517,8 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
 		}
-		cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " MISS")
 		return targetChannel, err
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " HIT")
 	return &targetChannel, err
 }
 
@@ -564,6 +567,8 @@ func GetFreshUser(userID string) (*discordgo.User, error) {
 	cacheCodec := cache.GetRedisCacheCodec()
 	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
 
+	cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshUser").Debug(
+		fmt.Sprintf("api request: User: %s", userID))
 	targetUser, err := cache.GetSession().User(userID)
 	if err == nil {
 		err = cacheCodec.Set(&redisCache.Item{
@@ -575,7 +580,6 @@ func GetFreshUser(userID string) (*discordgo.User, error) {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " FORCED-MISS")
 	return targetUser, err
 }
 
@@ -586,6 +590,8 @@ func GetUser(userID string) (*discordgo.User, error) {
 	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
 
 	if err = cacheCodec.Get(key, &targetUser); err != nil {
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetUser").Debug(
+			fmt.Sprintf("api request: User: %s", userID))
 		targetUser, err := cache.GetSession().User(userID)
 		if err == nil {
 			err = cacheCodec.Set(&redisCache.Item{
@@ -597,10 +603,8 @@ func GetUser(userID string) (*discordgo.User, error) {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
 		}
-		cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " MISS")
 		return targetUser, err
 	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " HIT")
 	return &targetUser, err
 }
 
