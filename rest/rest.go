@@ -287,6 +287,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 			if guildID == "global" {
 				isMember = true
 			} else {
+				isMember = true
 				if !helpers.GetIsInGuild(guildID, user.ID) {
 					isMember = false
 				}
@@ -341,6 +342,7 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 	if guildID == "global" {
 		isMember = true
 	} else {
+		isMember = true
 		if !helpers.GetIsInGuild(guildID, user.ID) {
 			isMember = false
 		}
