@@ -174,7 +174,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 }
 
 func (rp *ReactionPolls) getEmbedForPoll(poll DB_ReactionPoll, totalVotes int) *discordgo.MessageEmbed {
-	pollAuthor, err := cache.GetSession().User(poll.CreatedByUserID)
+	pollAuthor, err := helpers.GetUser(poll.CreatedByUserID)
 	helpers.Relax(err)
 	pollEmbed := &discordgo.MessageEmbed{
 		Color:       0x0FADED,
