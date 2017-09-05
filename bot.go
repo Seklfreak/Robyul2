@@ -92,6 +92,12 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	//go autoLeaver(session)
 }
 
+func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {
+	for _, member := range members.Members {
+		session.State.MemberAdd(member)
+	}
+}
+
 func BotOnGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
 	modules.CallExtendedPluginOnGuildMemberAdd(
 		member.Member,

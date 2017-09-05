@@ -110,6 +110,7 @@ func main() {
 	discord.AddHandler(BotOnGuildBanRemove)
 	discord.AddHandlerOnce(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
+	discord.AddHandler(BotOnMemberListChunk)
 
 	// Connect to discord
 	err = discord.Open()
