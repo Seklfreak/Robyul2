@@ -276,9 +276,11 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 		}
 		var user *discordgo.User
 		if guildID != "global" {
-			member, _ := helpers.GetGuildMember(guildID, rankingItem.UserID)
+			member, _ := helpers.GetGuildMemberWithoutApi(guildID, rankingItem.UserID)
 			if member != nil && member.User != nil && member.User.ID != "" {
 				user = member.User
+			} else {
+				user, _ = helpers.GetUser(rankingItem.UserID)
 			}
 		} else {
 			user, _ = helpers.GetUser(rankingItem.UserID)
