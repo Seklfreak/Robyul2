@@ -39,8 +39,16 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	// Run async game-changer
 	go changeGameInterval(session)
 
-	// Run members cacher
-	go helpers.MembersCacheLoop()
+	// request guild members from the gateway
+	go func() {
+		for _, guild := range session.State.Guilds {
+			err := session.RequestGuildMembers(guild.ID, "", 0)
+			if err != nil {
+				log.WithField("module", "bot").Error(fmt.Sprintf("Failed to request Members for Guild %s #%s: %s",
+					guild.Name, guild.ID, err.Error()))
+			}
+		}
+	}()
 
 	// Run auto-leaver for non-beta guilds
 	//go autoLeaver(session)
@@ -294,6 +302,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	content := strings.TrimSpace(strings.Replace(message.Content, prefix+cmd, "", -1))
 
 	// Log commands
+	// TODO: add guild id to log
 	cache.GetLogger().WithField("module", "bot").Debug(fmt.Sprintf("%s (#%s): %s",
 		message.Author.Username, message.Author.ID, message.Content))
 
