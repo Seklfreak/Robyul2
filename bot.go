@@ -41,6 +41,8 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 
 	// request guild members from the gateway
 	go func() {
+		time.Sleep(30 * time.Second)
+
 		for _, guild := range session.State.Guilds {
 			err := session.RequestGuildMembers(guild.ID, "", 0)
 			if err != nil {
