@@ -410,8 +410,8 @@ func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member,
 }
 
 func GetIsInGuild(guildID string, userID string) bool {
-	member, err := GetGuildMember(guildID, userID)
-	if err == nil && member != nil && member.User != nil {
+	member, err := GetGuildMemberWithoutApi(guildID, userID)
+	if err == nil && member != nil && member.User != nil && member.User.ID != "" {
 		return true
 	} else {
 		return false
