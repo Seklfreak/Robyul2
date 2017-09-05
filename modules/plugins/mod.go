@@ -108,53 +108,42 @@ func (m *Mod) Init(session *discordgo.Session) {
 		}
 		log.WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
 	}()
-	go m.cacheBansLoop()
-	cache.GetLogger().WithField("module", "mod").Info("Started cacheBansLoop (10mins)")
+	go m.cacheBans()
+	cache.GetLogger().WithField("module", "mod").Info("Started cacheBans")
 }
 
-func (m *Mod) cacheBansLoop() {
+func (m *Mod) cacheBans() {
 	defer helpers.Recover()
-	defer func() {
-		go func() {
-			cache.GetLogger().WithField("module", "mod").Error("The cacheBansLoop died. Please investigate! Will be restarted in 60 seconds")
-			time.Sleep(60 * time.Second)
-			m.cacheBansLoop()
-		}()
-	}()
 
 	var key string
 	var guildBansCached int
 	cacheCodec := cache.GetRedisCacheCodec()
-	for {
-		cache.GetLogger().WithField("module", "mod").Debug("started bans caching for redis")
-		guildBansCached = 0
-		for _, botGuild := range cache.GetSession().State.Guilds {
-			key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
-			guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
-			if err != nil {
-				if errD, ok := err.(*discordgo.RESTError); ok {
-					if errD.Message.Code != 50013 {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					}
-				} else {
+	cache.GetLogger().WithField("module", "mod").Debug("started bans caching for redis")
+	guildBansCached = 0
+	for _, botGuild := range cache.GetSession().State.Guilds {
+		key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
+		guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok {
+				if errD.Message.Code != 50013 {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 				}
 			} else {
-				err = cacheCodec.Set(&redisCache.Item{
-					Key:        key,
-					Object:     &guildBans,
-					Expiration: time.Minute * 60,
-				})
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				} else {
-					guildBansCached += 1
-				}
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			}
+		} else {
+			err = cacheCodec.Set(&redisCache.Item{
+				Key:    key,
+				Object: &guildBans,
+			})
+			if err != nil {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			} else {
+				guildBansCached += 1
 			}
 		}
-		cache.GetLogger().WithField("module", "mod").Debug(fmt.Sprintf("cached bans for %d guilds in redis", guildBansCached))
-		time.Sleep(10 * time.Minute)
 	}
+	cache.GetLogger().WithField("module", "mod").Debug(fmt.Sprintf("cached bans for %d guilds in redis", guildBansCached))
 }
 
 func (m *Mod) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -1500,6 +1489,66 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		return
 	}
 }
+func (m *Mod) removeBanFromCache(user *discordgo.GuildBanRemove) bool {
+	for _, botGuild := range cache.GetSession().State.Guilds {
+		if botGuild.ID == user.GuildID {
+			cacheCodec := cache.GetRedisCacheCodec()
+			var err error
+			var guildBans []*discordgo.GuildBan
+			key := fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
+			if err = cacheCodec.Get(key, &guildBans); err == nil {
+				newGuildBans := make([]*discordgo.GuildBan, 0)
+				for _, guildBan := range guildBans {
+					if guildBan.User.ID != user.User.ID {
+						newGuildBans = append(newGuildBans, guildBan)
+					}
+				}
+				err = cacheCodec.Set(&redisCache.Item{
+					Key:    key,
+					Object: &newGuildBans,
+				})
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (m *Mod) addBanToCache(user *discordgo.GuildBanAdd) bool {
+	for _, botGuild := range cache.GetSession().State.Guilds {
+		if botGuild.ID == user.GuildID {
+			cacheCodec := cache.GetRedisCacheCodec()
+			var err error
+			var guildBans []*discordgo.GuildBan
+			key := fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
+			if err = cacheCodec.Get(key, &guildBans); err == nil {
+				guildBans = append(guildBans, &discordgo.GuildBan{Reason: "", User: user.User})
+				err = cacheCodec.Set(&redisCache.Item{
+					Key:    key,
+					Object: &guildBans,
+				})
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+				return true
+			} else {
+				guildBans = []*discordgo.GuildBan{{Reason: "", User: user.User}}
+				err = cacheCodec.Set(&redisCache.Item{
+					Key:    key,
+					Object: &guildBans,
+				})
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
 
 func (m *Mod) inspectUserBans(user *discordgo.User, sourceGuildID string) ([]*discordgo.Guild, []*discordgo.Guild) {
 	bannedOnServerList := make([]*discordgo.Guild, 0)
@@ -1510,48 +1559,17 @@ func (m *Mod) inspectUserBans(user *discordgo.User, sourceGuildID string) ([]*di
 	var guildBans []*discordgo.GuildBan
 	var err error
 	for _, botGuild := range cache.GetSession().State.Guilds {
-		if botGuild.ID == sourceGuildID {
-			guildBans, err = cache.GetSession().GuildBans(botGuild.ID)
-			key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
-			if err == nil {
-				for _, guildBan := range guildBans {
-					if guildBan.User.ID == user.ID {
-						bannedOnServerList = append(bannedOnServerList, botGuild)
-						cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
-							user.Username, user.ID, botGuild.Name, botGuild.ID))
-					}
+		key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
+		if err = cacheCodec.Get(key, &guildBans); err == nil {
+			for _, guildBan := range guildBans {
+				if guildBan.User.ID == user.ID {
+					bannedOnServerList = append(bannedOnServerList, botGuild)
+					cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
+						user.Username, user.ID, botGuild.Name, botGuild.ID))
 				}
-				err = cacheCodec.Set(&redisCache.Item{
-					Key:        key,
-					Object:     &guildBans,
-					Expiration: time.Minute * 60,
-				})
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-			} else {
-				if errD, ok := err.(*discordgo.RESTError); ok {
-					if errD.Message.Code != 50013 {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					}
-				} else {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-				checkFailedServerList = append(checkFailedServerList, botGuild)
 			}
 		} else {
-			key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
-			if err = cacheCodec.Get(key, &guildBans); err == nil {
-				for _, guildBan := range guildBans {
-					if guildBan.User.ID == user.ID {
-						bannedOnServerList = append(bannedOnServerList, botGuild)
-						cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
-							user.Username, user.ID, botGuild.Name, botGuild.ID))
-					}
-				}
-			} else {
-				checkFailedServerList = append(checkFailedServerList, botGuild)
-			}
+			checkFailedServerList = append(checkFailedServerList, botGuild)
 		}
 	}
 	return bannedOnServerList, checkFailedServerList
@@ -1861,8 +1879,8 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 			return
 		}
 		// don't post if bot can't access the ban list of the server the user got banned on
-		_, err = session.GuildBans(user.GuildID)
-		if err != nil {
+		updated := m.addBanToCache(user)
+		if !updated {
 			return
 		}
 		for _, targetGuild := range cache.GetSession().State.Guilds {
@@ -2000,7 +2018,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 }
 
 func (m *Mod) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
-
+	m.removeBanFromCache(user)
 }
 
 func (m *Mod) Min(a, b int) int {
