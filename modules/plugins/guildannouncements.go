@@ -186,7 +186,7 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 			for _, member := range guild.Members {
 				if member.JoinedAt == "" {
 					member, err := helpers.GetGuildMember(member.GuildID, member.User.ID)
-					if err == nil {
+					if err == nil && member.JoinedAt != "" {
 						allMembers = append(allMembers, member)
 					}
 				} else {
