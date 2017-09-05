@@ -146,7 +146,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Get the channel
 	// Ignore the event if we cannot resolve the channel
-	channel, err := cache.Channel(message.ChannelID)
+	channel, err := helpers.GetChannel(message.ChannelID)
 	if err != nil {
 		go raven.CaptureError(err, map[string]string{})
 		return
