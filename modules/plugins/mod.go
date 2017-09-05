@@ -1577,8 +1577,7 @@ func (m *Mod) inspectUserBans(user *discordgo.User, sourceGuildID string) ([]*di
 func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
 	isOnServerList := make([]*discordgo.Guild, 0)
 	for _, botGuild := range cache.GetSession().State.Guilds {
-		_, err := cache.GetSession().GuildMember(botGuild.ID, user.ID)
-		if err == nil {
+		if helpers.GetIsInGuild(botGuild.ID, user.ID) {
 			isOnServerList = append(isOnServerList, botGuild)
 		}
 	}
@@ -1884,9 +1883,8 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 		}
 		for _, targetGuild := range cache.GetSession().State.Guilds {
 			if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
-				_, err := cache.GetSession().GuildMember(targetGuild.ID, user.User.ID)
 				// check if user is on this guild
-				if err == nil {
+				if helpers.GetIsInGuild(targetGuild.ID, user.User.ID) {
 					guild, err := helpers.GetGuild(targetGuild.ID)
 					if err != nil {
 						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
