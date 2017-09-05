@@ -93,8 +93,15 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 }
 
 func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {
+	cache.GetLogger().WithField("module", "bot").Debug(
+		fmt.Sprintf("received guild member chunk for guild: %s (%d members)",
+			members.GuildID, len(members.Members)))
+	var err error
 	for _, member := range members.Members {
-		session.State.MemberAdd(member)
+		err = session.State.MemberAdd(member)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		}
 	}
 }
 
