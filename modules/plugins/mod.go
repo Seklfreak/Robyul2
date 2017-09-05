@@ -133,8 +133,9 @@ func (m *Mod) cacheBans() {
 			}
 		} else {
 			err = cacheCodec.Set(&redisCache.Item{
-				Key:    key,
-				Object: &guildBans,
+				Key:        key,
+				Object:     &guildBans,
+				Expiration: time.Hour * 24 * 30 * 365, // TODO
 			})
 			if err != nil {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -1492,8 +1493,9 @@ func (m *Mod) removeBanFromCache(user *discordgo.GuildBanRemove) bool {
 					}
 				}
 				err = cacheCodec.Set(&redisCache.Item{
-					Key:    key,
-					Object: &newGuildBans,
+					Key:        key,
+					Object:     &newGuildBans,
+					Expiration: time.Hour * 24 * 30 * 365,
 				})
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -1515,8 +1517,9 @@ func (m *Mod) addBanToCache(user *discordgo.GuildBanAdd) bool {
 			if err = cacheCodec.Get(key, &guildBans); err == nil {
 				guildBans = append(guildBans, &discordgo.GuildBan{Reason: "", User: user.User})
 				err = cacheCodec.Set(&redisCache.Item{
-					Key:    key,
-					Object: &guildBans,
+					Key:        key,
+					Object:     &guildBans,
+					Expiration: time.Hour * 24 * 30 * 365,
 				})
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -1525,8 +1528,9 @@ func (m *Mod) addBanToCache(user *discordgo.GuildBanAdd) bool {
 			} else {
 				guildBans = []*discordgo.GuildBan{{Reason: "", User: user.User}}
 				err = cacheCodec.Set(&redisCache.Item{
-					Key:    key,
-					Object: &guildBans,
+					Key:        key,
+					Object:     &guildBans,
+					Expiration: time.Hour * 24 * 30 * 365,
 				})
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
