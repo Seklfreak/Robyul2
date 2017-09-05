@@ -408,52 +408,13 @@ func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member,
 	}
 }
 
-func GetFreshIsInGuild(guildID string, userID string) (bool, error) {
-	var err error
-	isInGuild := false
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
-
-	member, _ := GetFreshGuildMember(guildID, userID)
-	if member != nil && member.GuildID != "" {
-		isInGuild = true
-	}
-	err = cacheCodec.Set(&redisCache.Item{
-		Key:        key,
-		Object:     isInGuild,
-		Expiration: time.Minute * 5,
-	})
-	if err != nil {
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-	}
-	cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " FORCED-MISS")
-	return isInGuild, err
-}
-
-func GetIsInGuild(guildID string, userID string) (bool, error) {
-	var err error
-	var isInGuild bool
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s:is-member:%s", guildID, userID)
-
-	if err = cacheCodec.Get(key, &isInGuild); err != nil {
-		member, _ := GetGuildMemberWithoutApi(guildID, userID)
-		if member != nil && member.GuildID != "" {
-			isInGuild = true
-		}
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     isInGuild,
-			Expiration: time.Minute * 5,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
-		cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " MISS")
+func GetIsInGuild(guildID string, userID string) bool {
+	member, err := GetGuildMember(guildID, userID)
+	if err == nil && member != nil && member.User != nil {
+		return true
 	} else {
-		cache.GetLogger().WithField("module", "discord").Debug("redis " + key + " HIT")
+		return false
 	}
-	return isInGuild, err
 }
 
 func GetFreshGuild(guildID string) (*discordgo.Guild, error) {

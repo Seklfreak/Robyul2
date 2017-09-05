@@ -180,8 +180,7 @@ func IsMember(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	userID := request.PathParameter("user-id")
 
-	isInGuild, _ := helpers.GetIsInGuild(guildID, userID)
-	if isInGuild == true {
+	if helpers.GetIsInGuild(guildID, userID) {
 		response.WriteEntity(&models.Rest_Is_Member{
 			IsMember: true,
 		})
@@ -288,8 +287,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 			if guildID == "global" {
 				isMember = true
 			} else {
-				isMember, err = helpers.GetIsInGuild(guildID, user.ID)
-				if err != nil {
+				if !helpers.GetIsInGuild(guildID, user.ID) {
 					isMember = false
 				}
 			}
@@ -343,8 +341,7 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 	if guildID == "global" {
 		isMember = true
 	} else {
-		isMember, err = helpers.GetIsInGuild(guildID, user.ID)
-		if err != nil {
+		if !helpers.GetIsInGuild(guildID, user.ID) {
 			isMember = false
 		}
 	}

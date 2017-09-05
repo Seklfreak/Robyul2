@@ -376,8 +376,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							helpers.Relax(err)
 						}
 					}
-					isInGuild, _ := helpers.GetFreshIsInGuild(channel.GuildID, targetUser.ID)
-					if isInGuild == true {
+					if helpers.GetIsInGuild(channel.GuildID, targetUser.ID) {
 						err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
 						if err != nil {
 							if errD, ok := err.(discordgo.RESTError); ok {
