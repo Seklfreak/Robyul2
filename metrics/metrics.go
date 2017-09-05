@@ -123,6 +123,7 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 		guilds := session.State.Guilds
 
 		for _, guild := range guilds {
+			channels += len(guild.Channels)
 			for _, u := range guild.Members {
 				users[u.User.ID] = u.User.Username
 			}
