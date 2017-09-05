@@ -631,27 +631,16 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			resultText := ""
 			totalMembers := 0
 			totalChannels := 0
-			var guildMembers int
 			for _, guild := range session.State.Guilds {
-				guildMembers = guild.MemberCount
-				if guildMembers == 0 {
-					lastAfterMemberId := ""
-					for {
-						members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-						helpers.Relax(err)
-						if len(members) <= 0 {
-							break
-						}
-
-						lastAfterMemberId = members[len(members)-1].User.ID
-						guildMembers += len(members)
-					}
+				users := make(map[string]string)
+				for _, u := range guild.Members {
+					users[u.User.ID] = u.User.Username
 				}
 
 				resultText += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
-					guild.Name, guild.ID, len(guild.Channels), guildMembers, guild.Region)
+					guild.Name, guild.ID, len(guild.Channels), len(users), guild.Region)
 				totalChannels += len(guild.Channels)
-				totalMembers += guildMembers
+				totalMembers += len(users)
 			}
 			resultText += fmt.Sprintf("Total Stats: Servers `%d`, Channels: `%d`, Members: `%d`", len(session.State.Guilds), totalChannels, totalMembers)
 
@@ -1252,26 +1241,26 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				usersMatched := make([]*discordgo.User, 0)
 				for _, serverGuild := range session.State.Guilds {
 					if globalCheck == true || serverGuild.ID == currentChannel.GuildID {
-						lastAfterMemberId := ""
-						for {
-							members, err := session.GuildMembers(serverGuild.ID, lastAfterMemberId, 1000)
-							if len(members) <= 0 {
-								break
+						members := make([]*discordgo.Member, 0)
+						for _, botGuild := range session.State.Guilds {
+							if botGuild.ID == serverGuild.ID {
+								for _, member := range botGuild.Members {
+									members = append(members, member)
+								}
 							}
-							lastAfterMemberId = members[len(members)-1].User.ID
-							helpers.Relax(err)
-							for _, serverMember := range members {
-								fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
-								if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
-									userIsAlreadyInList := false
-									for _, userAlreadyInList := range usersMatched {
-										if userAlreadyInList.ID == serverMember.User.ID {
-											userIsAlreadyInList = true
-										}
+						}
+
+						for _, serverMember := range members {
+							fullUserNameToSearch := serverMember.User.Username + "#" + serverMember.User.Discriminator + " ~ " + serverMember.Nick + " ~ " + serverMember.User.ID
+							if fuzzy.MatchFold(searchText, fullUserNameToSearch) {
+								userIsAlreadyInList := false
+								for _, userAlreadyInList := range usersMatched {
+									if userAlreadyInList.ID == serverMember.User.ID {
+										userIsAlreadyInList = true
 									}
-									if userIsAlreadyInList == false {
-										usersMatched = append(usersMatched, serverMember.User)
-									}
+								}
+								if userIsAlreadyInList == false {
+									usersMatched = append(usersMatched, serverMember.User)
 								}
 							}
 						}

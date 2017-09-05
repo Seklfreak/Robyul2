@@ -354,24 +354,15 @@ func sendHelp(message *discordgo.MessageCreate) {
 	)
 }
 
-// Changes the game interval every 10 seconds after called
+// Changes the game interval every ten minutes after called
 func changeGameInterval(session *discordgo.Session) {
 	for {
 		users := make(map[string]string)
 		guilds := session.State.Guilds
 
 		for _, guild := range guilds {
-			lastAfterMemberId := ""
-			for {
-				members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-				if len(members) <= 0 {
-					break
-				}
-				lastAfterMemberId = members[len(members)-1].User.ID
-				helpers.Relax(err)
-				for _, u := range members {
-					users[u.User.ID] = u.User.Username
-				}
+			for _, u := range guild.Members {
+				users[u.User.ID] = u.User.Username
 			}
 		}
 

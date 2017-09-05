@@ -200,16 +200,11 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 			helpers.Relax(err)
 
 			members := make([]*discordgo.Member, 0)
-			lastAfterMemberId := ""
-			for {
-				additionalMembers, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-				if len(additionalMembers) <= 0 {
-					break
-				}
-				lastAfterMemberId = additionalMembers[len(additionalMembers)-1].User.ID
-				helpers.Relax(err)
-				for _, member := range additionalMembers {
-					members = append(members, member)
+			for _, botGuild := range session.State.Guilds {
+				if botGuild.ID == guild.ID {
+					for _, member := range guild.Members {
+						members = append(members, member)
+					}
 				}
 			}
 
