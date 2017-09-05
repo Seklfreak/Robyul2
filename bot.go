@@ -331,6 +331,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	modules.CallTriggerPlugin(cmd, content, message.Message)
 }
 
+func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
+	modules.CallExtendedPluginOnMessageDelete(message)
+}
+
 // BotOnReactionAdd gets called after a reaction is added
 // This will be called after *every* reaction added on *every* server so it
 // should die as soon as possible or spawn costly work inside of coroutines.

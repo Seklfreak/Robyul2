@@ -102,6 +102,7 @@ func main() {
 
 	discord.AddHandlerOnce(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
+	discord.AddHandler(BotOnMessageDelete)
 	discord.AddHandler(BotOnGuildMemberAdd)
 	discord.AddHandler(BotOnGuildMemberRemove)
 	discord.AddHandler(BotOnReactionAdd)

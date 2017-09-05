@@ -398,3 +398,6 @@ func (rp *ReactionPolls) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *dis
 func (rp *ReactionPolls) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (rp *ReactionPolls) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}

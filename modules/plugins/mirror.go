@@ -363,3 +363,6 @@ func (m *Mirror) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.S
 func (m *Mirror) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (m *Mirror) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}

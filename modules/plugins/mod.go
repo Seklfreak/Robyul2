@@ -2010,6 +2010,9 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 func (m *Mod) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 	m.removeBanFromCache(user)
 }
+func (m *Mod) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}
 
 func (m *Mod) Min(a, b int) int {
 	if a <= b {

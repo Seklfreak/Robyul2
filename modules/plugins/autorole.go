@@ -303,3 +303,6 @@ func (a *AutoRoles) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordg
 func (a *AutoRoles) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (a *AutoRoles) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}

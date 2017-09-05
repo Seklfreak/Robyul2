@@ -702,3 +702,6 @@ func (m *Notifications) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *disc
 func (m *Notifications) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (m *Notifications) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}

@@ -330,3 +330,6 @@ func (g *Gallery) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.
 func (g *Gallery) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (g *Gallery) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}

@@ -804,6 +804,13 @@
       "invite-error-no-friend-available": "No friend with free slots available! <:blobweary:317036265071575050>",
       "invite-error-invite-creation-failed": "I wasn't able to create a Discord Invite for my friend. <:blobweary:317036265071575050>",
       "invite-error-accept-invite-invalid-statuscode": "Something went wrong trying to invite my friend. <:blobscream:317043778823389184>"
+    },
+    "starboard": {
+      "status-none": "There is no starboard set on this server. <:blobweary:317036265071575050>",
+      "status-set": "The starboard on this server is set to <#%s>. :star:\nPlease make sure I can write messages, manage messages and embed links in that channel.",
+      "set-success": "I successfully set the starboard channel to <#%s>. :star:",
+      "reset-success": "I disabled the starboard for this server. <:blobshh:317044272161357824>",
+      "top-no-entries": "Nothing starred on this server. <:blobweary:317036265071575050>"
     }
   }
 }

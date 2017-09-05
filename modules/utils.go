@@ -161,6 +161,14 @@ func CallExtendedPlugin(content string, msg *discordgo.Message) {
 	//go safePluginExtendedCall(strings.TrimSpace(content), msg, plug)
 }
 
+func CallExtendedPluginOnMessageDelete(message *discordgo.MessageDelete) {
+	defer helpers.Recover()
+
+	for _, extendedPlugin := range PluginExtendedList {
+		extendedPlugin.OnMessageDelete(message, cache.GetSession())
+	}
+}
+
 func CallExtendedPluginOnGuildMemberAdd(member *discordgo.Member) {
 	defer helpers.Recover()
 

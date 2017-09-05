@@ -699,6 +699,10 @@ func (m *Bias) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discord
 
 }
 
+func (m *Bias) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}
+
 type BiasRoleStat struct {
 	RoleName string
 	Members  int

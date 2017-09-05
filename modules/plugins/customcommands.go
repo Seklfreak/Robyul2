@@ -471,3 +471,6 @@ func (cc *CustomCommands) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *di
 func (cc *CustomCommands) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (cc *CustomCommands) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}

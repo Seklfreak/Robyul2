@@ -3123,6 +3123,9 @@ func (b *Levels) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.S
 func (b *Levels) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
+func (b *Levels) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}
 
 func (l *Levels) uploadToImgur(picData []byte) (string, error) {
 	parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(picData)}}

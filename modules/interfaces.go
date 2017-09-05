@@ -46,6 +46,11 @@ type ExtendedPlugin interface {
 		session *discordgo.Session,
 	)
 
+	OnMessageDelete(
+		msg *discordgo.MessageDelete,
+		session *discordgo.Session,
+	)
+
 	OnGuildMemberAdd(
 		member *discordgo.Member,
 		session *discordgo.Session,

@@ -74,6 +74,7 @@ var (
 		&plugins.ReactionPolls{},
 		&plugins.Mod{},
 		&plugins.AutoRoles{},
+		&plugins.Starboard{},
 	}
 
 	// TriggerPluginList is the list of plugins that activate on normal chat
