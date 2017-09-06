@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"mvdan.cc/xurls"
+
 	"time"
 
 	"fmt"
@@ -423,6 +425,18 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 	}
 	if len(starEntry.MessageAttachmentURLs) > 0 {
 		starboardPostEmbed.Image = &discordgo.MessageEmbedImage{URL: starEntry.MessageAttachmentURLs[0]}
+	} else {
+		imageFileExtensions := []string{"jpg", "jpeg", "png", "gif"}
+	TryContentUrls:
+		for _, foundUrl := range xurls.Strict.FindAllString(starEntry.MessageContent, -1) {
+			for _, fileExtension := range imageFileExtensions {
+				if strings.HasSuffix(foundUrl, "."+fileExtension) {
+					starboardPostEmbed.Image = &discordgo.MessageEmbedImage{URL: foundUrl}
+					break TryContentUrls
+				}
+			}
+
+		}
 	}
 	if authorDP != "" {
 		starboardPostEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: authorDP}
