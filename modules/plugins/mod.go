@@ -1022,9 +1022,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				helpers.Relax(err)
 			} else {
 				session.ChannelMessageDelete(msg.ChannelID, resultMessage.ID)
-				session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, "Inspect completed.")
 				for _, page := range pages {
-					_, err = session.ChannelMessageEdit(msg.ChannelID, resultMessage.ID, page)
+					_, err = session.ChannelMessageSend(msg.ChannelID, page)
 					helpers.Relax(err)
 				}
 			}
