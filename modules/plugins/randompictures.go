@@ -10,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"crypto/md5"
+	"encoding/hex"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -97,7 +100,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 				var entry *drive.File
 				for i, entry = range rp.getFileCache(sourceEntry) {
 					key1 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", sourceEntry.ID, i+1)
-					key2 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-id:%s:entry:%s", sourceEntry.ID, entry.Id)
+					key2 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-hash:%s", rp.GetFileHash(sourceEntry.ID, entry.Id))
 					marshalled, err = msgpack.Marshal(entry)
 					if err != nil {
 						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -622,7 +625,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 
 	splitFilename := strings.Split(file.Name, ".")
 
-	linkToPost = fmt.Sprintf(linkToPost, sourceID, file.Id, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
+	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
 	linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
 	// open link to prepare cache
@@ -665,6 +668,12 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 		}
 	}
 	return nil
+}
+
+func (rp *RandomPictures) GetFileHash(sourceID string, fileID string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(sourceID + "-" + fileID))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func (rp *RandomPictures) appendLinkToServerHistory(link string, sourceID string, pictureID string, fileName string, guildID string) error {
