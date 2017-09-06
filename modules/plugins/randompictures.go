@@ -91,23 +91,30 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 
 			log.WithField("module", "randompictures").Info("gathering google drive picture cache")
 			for _, sourceEntry := range rpSources {
-				var key string
+				var key1 string
+				var key2 string
 				var i int
 				var entry *drive.File
 				for i, entry = range rp.getFileCache(sourceEntry) {
-					key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%d", sourceEntry.ID, i+1)
+					key1 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", sourceEntry.ID, i+1)
+					key2 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-id:%s:entry:%s", sourceEntry.ID, entry.Id)
 					marshalled, err = msgpack.Marshal(entry)
 					if err != nil {
 						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 						continue
 					}
-					err = redisClient.Set(key, marshalled, 7*24*time.Hour).Err()
+					err = redisClient.Set(key1, marshalled, 7*24*time.Hour).Err()
+					if err != nil {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						continue
+					}
+					err = redisClient.Set(key2, marshalled, 7*24*time.Hour).Err()
 					if err != nil {
 						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 						continue
 					}
 				}
-				key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
+				key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
 				err = redisClient.Set(key, i+1, 7*24*time.Hour).Err()
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -615,7 +622,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 
 	splitFilename := strings.Split(file.Name, ".")
 
-	linkToPost = fmt.Sprintf(linkToPost, sourceID, pictureID, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
+	linkToPost = fmt.Sprintf(linkToPost, sourceID, file.Id, url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
 	linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
 	// open link to prepare cache
