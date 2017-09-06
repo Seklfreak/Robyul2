@@ -266,8 +266,16 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 		})
 		return
 	}
+	if channel.GuildID == "" {
+		return
+	}
 	guild, err := helpers.GetGuild(channel.GuildID)
 	if err != nil {
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Code == 0 {
+				return
+			}
+		}
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
 			"ChannelID":       msg.ChannelID,
 			"Content":         msg.Content,
