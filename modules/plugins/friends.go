@@ -58,8 +58,8 @@ func (f *Friend) actionStart(args []string, in *discordgo.Message, out **discord
 }
 
 func (f *Friend) actionInvite(args []string, in *discordgo.Message, out **discordgo.MessageSend) friendAction {
-	if helpers.IsAdmin(in) == false {
-		*out = f.newMsg(helpers.GetText("mod.no_permission"))
+	if helpers.IsRobyulMod(in.Author.ID) == false {
+		*out = f.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return f.actionFinish
 	}
 
