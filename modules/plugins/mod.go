@@ -478,7 +478,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		})
 		return
-	case "ban": // [p]ban <User> [<Days>], checks for IsMod and Ban Permissions
+	case "ban": // [p]ban <User> [<Days>] [<Reason>], checks for IsMod and Ban Permissions
 		helpers.RequireMod(msg, func() {
 			args := strings.Fields(content)
 			if len(args) >= 1 {
@@ -536,8 +536,17 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
 					return
 				}
+				// Get Reason
+				reasonText := fmt.Sprintf("Issued by: %s#%s (#%s) | Delete Days: %d | Reason: ",
+					msg.Author.Username, msg.Author.Discriminator, msg.Author.ID, days)
+				if len(args) > 1 {
+					reasonText += strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+				}
+				if strings.HasSuffix(reasonText, "Reason: ") {
+					reasonText += "None given"
+				}
 				// Ban user
-				err = session.GuildBanCreate(guild.ID, targetUser.ID, days)
+				err = session.GuildBanCreateWithReason(guild.ID, targetUser.ID, reasonText, days)
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 						if err.Message.Code == 0 {
@@ -558,7 +567,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		})
 		return
-	case "kick": // [p]kick <User>, checks for IsMod and Kick Permissions
+	case "kick": // [p]kick <User> [<Reason>], checks for IsMod and Kick Permissions
 		helpers.RequireMod(msg, func() {
 			args := strings.Fields(content)
 			if len(args) >= 1 {
@@ -604,8 +613,15 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
 					return
 				}
+				// Get Reason
+				reasonText := fmt.Sprintf("Issued by: %s#%s (#%s) | Reason: ",
+					msg.Author.Username, msg.Author.Discriminator, msg.Author.ID)
+				reasonText += strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+				if strings.HasSuffix(reasonText, "Reason: ") {
+					reasonText += "None given"
+				}
 				// Kick user
-				err = session.GuildMemberDelete(guild.ID, targetUser.ID)
+				err = session.GuildMemberDeleteWithReason(guild.ID, targetUser.ID, reasonText)
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 						if err.Message.Code == 0 {
