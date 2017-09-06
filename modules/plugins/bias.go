@@ -604,7 +604,14 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
 						newMessage, err := session.ChannelMessageSend(reaction.ChannelID, helpers.GetText("plugins.bias.generic-error"))
-						helpers.Relax(err)
+						if err != nil {
+							if errD, ok := err.(*discordgo.RESTError); ok {
+								if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+									return
+								}
+							}
+							helpers.Relax(err)
+						}
 						// Delete messages after ten seconds
 						time.Sleep(10 * time.Second)
 						session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
