@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/modules"
 	"github.com/Seklfreak/Robyul2/ratelimits"
+	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 )
@@ -364,8 +365,11 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	content := strings.TrimSpace(strings.Replace(message.Content, prefix+cmd, "", -1))
 
 	// Log commands
-	// TODO: add guild id to log
-	cache.GetLogger().WithField("module", "bot").Debug(fmt.Sprintf("%s (#%s): %s",
+	cache.GetLogger().WithFields(logrus.Fields{
+		"module":    "bot",
+		"channelID": message.ChannelID,
+		"userID":    message.Author.ID,
+	}).Debug(fmt.Sprintf("%s (#%s): %s",
 		message.Author.Username, message.Author.ID, message.Content))
 
 	// Check if a module matches said command
