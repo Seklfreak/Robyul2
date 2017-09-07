@@ -139,7 +139,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 		defer helpers.Recover()
 
 		for {
-			//time.Sleep(time.Duration(rand.Intn(30)+60) * time.Minute)
+			time.Sleep(time.Duration(rand.Intn(30)+60) * time.Minute)
 
 			redisClient := cache.GetRedisClient()
 
@@ -193,7 +193,6 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 					}
 				}
 			}
-			time.Sleep(time.Duration(rand.Intn(30)+60) * time.Minute)
 		}
 	}()
 	cache.GetLogger().WithField("module", "randompictures").Info("Started post loop (1h)")
