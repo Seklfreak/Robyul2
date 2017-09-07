@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"time"
 
+	elastic "gopkg.in/olivere/elastic.v5"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -157,8 +159,26 @@ func main() {
 	for _, service := range rest.NewRestServices() {
 		restful.Add(service)
 	}
-	log.Fatal(http.ListenAndServe("localhost:2021", nil))
+	go func() {
+		log.Fatal(http.ListenAndServe("localhost:2021", nil))
+	}()
 	log.WithField("module", "launcher").Info("REST API listening on localhost:2021")
+
+	// Connect to elastic search
+	if config.Path("elasticsearch.url").Data().(string) != "" {
+		log.WithField("module", "launcher").Info("Connecting bot to elastic search...")
+		client, err := elastic.NewClient(
+			elastic.SetURL(config.Path("elasticsearch.url").Data().(string)),
+		)
+		if err != nil {
+			panic(err)
+		}
+		cache.SetElastic(client)
+		discord.AddHandler(helpers.ElasticOnMessageCreate)
+		discord.AddHandler(helpers.ElasticOnGuildMemberAdd)
+		discord.AddHandler(helpers.ElasticOnGuildMemberRemove)
+		discord.AddHandler(helpers.ElasticOnReactionAdd)
+	}
 
 	// Make a channel that waits for a os signal
 	channel := make(chan os.Signal, 1)
