@@ -114,6 +114,9 @@ func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.Pr
 
 	member, err := helpers.GetGuildMemberWithoutApi(presence.GuildID, presence.User.ID)
 	if err != nil {
+		if strings.Contains(err.Error(), "Member not found") {
+			return
+		}
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		return
 	}
