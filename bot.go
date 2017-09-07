@@ -107,6 +107,47 @@ func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMe
 	}
 }
 
+func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.PresenceUpdate) {
+	if presence.GuildID == "" {
+		return
+	}
+
+	member, err := helpers.GetGuildMemberWithoutApi(presence.GuildID, presence.User.ID)
+	if err != nil {
+		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		return
+	}
+
+	change := false
+	if presence.User.Avatar != "" {
+		member.User.Avatar = presence.User.Avatar
+		change = true
+	}
+	if presence.User.Discriminator != "" {
+		member.User.Discriminator = presence.User.Discriminator
+		change = true
+	}
+	if presence.User.Email != "" {
+		member.User.Email = presence.User.Email
+		change = true
+	}
+	if presence.User.Token != "" {
+		member.User.Token = presence.User.Token
+		change = true
+	}
+	if presence.User.Username != "" {
+		member.User.Username = presence.User.Username
+		change = true
+	}
+
+	if change == true {
+		err = session.State.MemberAdd(member)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		}
+	}
+}
+
 func BotOnGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
 	modules.CallExtendedPluginOnGuildMemberAdd(
 		member.Member,

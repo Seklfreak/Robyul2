@@ -112,6 +112,7 @@ func main() {
 	discord.AddHandlerOnce(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
 	discord.AddHandler(BotOnMemberListChunk)
+	discord.AddHandler(BotGuildOnPresenceUpdate)
 
 	// Connect to discord
 	err = discord.Open()
