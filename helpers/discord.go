@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
@@ -717,4 +719,16 @@ func CommandExists(name string) bool {
 		}
 	}
 	return false
+}
+
+func WebhookExecuteWithResult(webhookID, token string, data *discordgo.WebhookParams) (message *discordgo.Message, err error) {
+	uri := discordgo.EndpointWebhookToken(webhookID, token) + "?wait=true"
+
+	result, err := cache.GetSession().RequestWithBucketID("POST", uri, data, discordgo.EndpointWebhookToken("", ""))
+	if err != nil {
+		return message, err
+	}
+
+	err = json.Unmarshal(result, &message)
+	return message, err
 }
