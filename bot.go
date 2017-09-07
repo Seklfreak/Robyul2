@@ -112,9 +112,9 @@ func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.Pr
 		return
 	}
 
-	member, err := helpers.GetGuildMemberWithoutApi(presence.GuildID, presence.User.ID)
+	member, err := cache.GetSession().State.Member(presence.GuildID, presence.User.ID)
 	if err != nil {
-		if strings.Contains(err.Error(), "Member not found") {
+		if strings.Contains(err.Error(), "state cache not found") {
 			return
 		}
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
