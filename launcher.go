@@ -169,6 +169,7 @@ func main() {
 		log.WithField("module", "launcher").Info("Connecting bot to elastic search...")
 		client, err := elastic.NewClient(
 			elastic.SetURL(config.Path("elasticsearch.url").Data().(string)),
+			elastic.SetSniff(false),
 		)
 		if err != nil {
 			panic(err)
