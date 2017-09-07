@@ -427,16 +427,9 @@ func sendHelp(message *discordgo.MessageCreate) {
 // Changes the game interval every ten minutes after called
 func changeGameInterval(session *discordgo.Session) {
 	for {
-		users := make(map[string]string)
 		guilds := session.State.Guilds
 
-		for _, guild := range guilds {
-			for _, u := range guild.Members {
-				users[u.User.ID] = u.User.Username
-			}
-		}
-
-		err := session.UpdateStatus(0, fmt.Sprintf("%d users on %d servers | robyul.chat | _help", len(users), len(guilds)))
+		err := session.UpdateStatus(0, fmt.Sprintf("on %d servers | robyul.chat | _help", len(guilds)))
 		if err != nil {
 			raven.CaptureError(err, map[string]string{})
 		}
