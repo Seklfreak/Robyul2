@@ -85,7 +85,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				newCommand.CreatedAt = time.Now().UTC()
 				newCommand.Triggered = 0
 				newCommand.Keyword = args[1]
-				newCommand.Content = strings.Join(args[2:], " ")
+				newCommand.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(newCommand)
 
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
@@ -197,7 +197,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				entryBucket.CreatedByUserID = msg.Author.ID
 				entryBucket.CreatedAt = time.Now().UTC()
 				entryBucket.Triggered = 0
-				entryBucket.Content = strings.Join(args[2:], " ")
+				entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(entryBucket)
 
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
