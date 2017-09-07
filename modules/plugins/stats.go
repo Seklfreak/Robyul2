@@ -557,8 +557,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 			channel, err = helpers.GetFreshChannel(channel.ID)
 			helpers.Relax(err)
-			fmt.Println(channel.GuildID)
-			fmt.Println(sourceChannel.GuildID)
 			if channel.GuildID != sourceChannel.GuildID && !helpers.IsRobyulMod(msg.Author.ID) {
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
