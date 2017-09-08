@@ -65,14 +65,15 @@ func ElasticAddMessage(message *discordgo.Message) error {
 	}
 
 	elasticMessageData := models.ElasticMessage{
-		MessageID:   message.ID,
-		Content:     message.Content,
-		Attachments: attachments,
-		CreatedAt:   GetTimeFromSnowflake(message.ID),
-		AuthorID:    message.Author.ID,
-		GuildID:     channel.GuildID,
-		ChannelID:   message.ChannelID,
-		Embeds:      len(message.Embeds),
+		MessageID:     message.ID,
+		Content:       message.Content,
+		ContentLength: len(message.Content),
+		Attachments:   attachments,
+		CreatedAt:     GetTimeFromSnowflake(message.ID),
+		AuthorID:      message.Author.ID,
+		GuildID:       channel.GuildID,
+		ChannelID:     message.ChannelID,
+		Embeds:        len(message.Embeds),
 	}
 	_, err = cache.GetElastic().Index().
 		Index("robyul-messages").

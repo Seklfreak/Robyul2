@@ -3,14 +3,15 @@ package models
 import "time"
 
 type ElasticMessage struct {
-	CreatedAt   time.Time
-	MessageID   string
-	Content     string
-	Attachments []string
-	AuthorID    string
-	GuildID     string
-	ChannelID   string
-	Embeds      int
+	CreatedAt     time.Time
+	MessageID     string
+	Content       string
+	ContentLength int
+	Attachments   []string
+	AuthorID      string
+	GuildID       string
+	ChannelID     string
+	Embeds        int
 }
 
 type ElasticJoin struct {
