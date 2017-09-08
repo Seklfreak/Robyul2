@@ -70,7 +70,7 @@ func ElasticAddMessage(message *discordgo.Message) error {
 		ContentLength: len(message.Content),
 		Attachments:   attachments,
 		CreatedAt:     GetTimeFromSnowflake(message.ID),
-		AuthorID:      message.Author.ID,
+		UserID:        message.Author.ID,
 		GuildID:       channel.GuildID,
 		ChannelID:     message.ChannelID,
 		Embeds:        len(message.Embeds),

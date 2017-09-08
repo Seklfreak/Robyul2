@@ -16,7 +16,7 @@ type ElasticMessage struct {
 	Content       string
 	ContentLength int
 	Attachments   []string
-	AuthorID      string
+	UserID        string
 	GuildID       string
 	ChannelID     string
 	Embeds        int
