@@ -40,7 +40,7 @@ func m28_create_elastic_indexes() {
 					"Attachments": map[string]interface{}{
 						"type": "string",
 					},
-					"AuthorID": map[string]interface{}{
+					"UserID": map[string]interface{}{
 						"type": "string",
 					},
 					"GuildID": map[string]interface{}{
