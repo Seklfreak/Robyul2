@@ -158,7 +158,13 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 	}
 
 	targetChannel, err := helpers.GetChannelFromMention(in, args[1])
-	helpers.Relax(err)
+	if err != nil {
+		if strings.Contains(err.Error(), "Channel not found") {
+			*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+			return s.actionFinish
+		}
+		helpers.Relax(err)
+	}
 	guildSettings.StarboardChannelID = targetChannel.ID
 	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
 	helpers.Relax(err)
