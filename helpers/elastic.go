@@ -76,8 +76,8 @@ func ElasticAddMessage(message *discordgo.Message) error {
 		Embeds:        len(message.Embeds),
 	}
 	_, err = cache.GetElastic().Index().
-		Index("robyul-messages").
-		Type("message").
+		Index(models.ElasticIndex).
+		Type(models.ElasticTypeMessage).
 		BodyJson(elasticMessageData).
 		Do(context.Background())
 	return err
@@ -103,8 +103,8 @@ func ElasticAddJoin(member *discordgo.Member) error {
 		UserID:    member.User.ID,
 	}
 	_, err = cache.GetElastic().Index().
-		Index("robyul-joins").
-		Type("join").
+		Index(models.ElasticIndex).
+		Type(models.ElasticTypeJoin).
 		BodyJson(elasticJoinData).
 		Do(context.Background())
 	return err
@@ -130,8 +130,8 @@ func ElasticAddLeave(member *discordgo.Member) error {
 		UserID:    member.User.ID,
 	}
 	_, err = cache.GetElastic().Index().
-		Index("robyul-leaves").
-		Type("leave").
+		Index(models.ElasticIndex).
+		Type(models.ElasticTypeLeave).
 		BodyJson(elasticLeaveData).
 		Do(context.Background())
 	return err
@@ -158,8 +158,8 @@ func ElasticAddReaction(reaction *discordgo.MessageReaction) error {
 		EmojiName: reaction.Emoji.Name,
 	}
 	_, err = cache.GetElastic().Index().
-		Index("robyul-reactions").
-		Type("reaction").
+		Index(models.ElasticIndex).
+		Type(models.ElasticTypeReaction).
 		BodyJson(elasticLeaveData).
 		Do(context.Background())
 	return err

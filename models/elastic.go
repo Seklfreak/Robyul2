@@ -2,6 +2,14 @@ package models
 
 import "time"
 
+const (
+	ElasticIndex        = "robyul"
+	ElasticTypeMessage  = "message"
+	ElasticTypeJoin     = "join"
+	ElasticTypeLeave    = "leave"
+	ElasticTypeReaction = "reaction"
+)
+
 type ElasticMessage struct {
 	CreatedAt     time.Time
 	MessageID     string
