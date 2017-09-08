@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
@@ -86,7 +85,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				newCommand.CreatedAt = time.Now().UTC()
 				newCommand.Triggered = 0
 				newCommand.Keyword = args[1]
-				newCommand.Content = strings.Join(args[2:], " ")
+				newCommand.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(newCommand)
 
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
@@ -198,7 +197,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				entryBucket.CreatedByUserID = msg.Author.ID
 				entryBucket.CreatedAt = time.Now().UTC()
 				entryBucket.Triggered = 0
-				entryBucket.Content = strings.Join(args[2:], " ")
+				entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(entryBucket)
 
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
@@ -357,7 +356,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 }
 
 func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-	channel, err := cache.Channel(msg.ChannelID)
+	channel, err := helpers.GetChannel(msg.ChannelID)
 	if err != nil {
 		go raven.CaptureError(err, map[string]string{})
 		return
@@ -470,5 +469,8 @@ func (cc *CustomCommands) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *di
 
 }
 func (cc *CustomCommands) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+func (cc *CustomCommands) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
 }

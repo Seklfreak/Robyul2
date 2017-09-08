@@ -5,12 +5,16 @@ import (
 	"regexp"
 	"strings"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/vmihailenco/msgpack"
 )
 
 type Gallery struct{}
@@ -183,58 +187,132 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 }
 
 func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-TryNextGallery:
-	for _, gallery := range galleries {
-		if gallery.SourceChannelID == msg.ChannelID {
-			// ignore bot messages
-			if msg.Author.Bot == true {
-				continue TryNextGallery
-			}
-			sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-			helpers.Relax(err)
-			// ignore commands
-			prefix := helpers.GetPrefixForServer(sourceChannel.GuildID)
-			if prefix != "" {
-				if strings.HasPrefix(content, prefix) {
-					return
+	go func() {
+		defer helpers.Recover()
+	TryNextGallery:
+		for _, gallery := range galleries {
+			if gallery.SourceChannelID == msg.ChannelID {
+				// ignore bot messages
+				if msg.Author.Bot == true {
+					continue TryNextGallery
 				}
-			}
-			var linksToRepost []string
-			// get mirror attachements
-			if len(msg.Attachments) > 0 {
-				for _, attachement := range msg.Attachments {
-					linksToRepost = append(linksToRepost, attachement.URL)
+				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				// ignore commands
+				prefix := helpers.GetPrefixForServer(sourceChannel.GuildID)
+				if prefix != "" {
+					if strings.HasPrefix(content, prefix) {
+						return
+					}
 				}
-			}
-			// get mirror links
-			if strings.Contains(msg.Content, "http") {
-				linksFound := galleryUrlRegex.FindAllString(msg.Content, -1)
-				if len(linksFound) > 0 {
-					for _, linkFound := range linksFound {
-						if strings.HasPrefix(linkFound, "<") == false && strings.HasSuffix(linkFound, ">") == false {
-							linksToRepost = append(linksToRepost, linkFound)
+				var linksToRepost []string
+				// get mirror attachements
+				if len(msg.Attachments) > 0 {
+					for _, attachement := range msg.Attachments {
+						linksToRepost = append(linksToRepost, attachement.URL)
+					}
+				}
+				// get mirror links
+				if strings.Contains(msg.Content, "http") {
+					linksFound := galleryUrlRegex.FindAllString(msg.Content, -1)
+					if len(linksFound) > 0 {
+						for _, linkFound := range linksFound {
+							if strings.HasPrefix(linkFound, "<") == false && strings.HasSuffix(linkFound, ">") == false {
+								linksToRepost = append(linksToRepost, linkFound)
+							}
 						}
 					}
 				}
-			}
-			// post mirror links
-			if len(linksToRepost) > 0 {
-				for _, linkToRepost := range linksToRepost {
-					err := session.WebhookExecute(gallery.TargetChannelWebhookID, gallery.TargetChannelWebhookToken,
-						false, &discordgo.WebhookParams{
-							Content:   fmt.Sprintf("posted %s", linkToRepost),
-							Username:  msg.Author.Username,
-							AvatarURL: helpers.GetAvatarUrl(msg.Author),
-						})
-					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				// post mirror links
+				if len(linksToRepost) > 0 {
+					for _, linkToRepost := range linksToRepost {
+						result, err := helpers.WebhookExecuteWithResult(
+							gallery.TargetChannelWebhookID,
+							gallery.TargetChannelWebhookToken,
+							&discordgo.WebhookParams{
+								Content:   fmt.Sprintf("posted %s", linkToRepost),
+								Username:  msg.Author.Username,
+								AvatarURL: helpers.GetAvatarUrl(msg.Author),
+							},
+						)
+						if err != nil {
+							if errD, ok := err.(*discordgo.RESTError); ok {
+								if errD.Message.Code == 10015 {
+									cache.GetLogger().WithField("module", "gallery").Error(fmt.Sprintf("Webhook for gallery #%d not found", gallery.ID))
+									continue
+								}
+							}
+							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+							continue
+						}
+						err = g.rememberPostedMessage(msg, result)
+						if err != nil {
+							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						}
+						metrics.GalleryPostsSent.Add(1)
 					}
-					metrics.GalleryPostsSent.Add(1)
 				}
 			}
 		}
+	}()
+}
+
+type Gallery_PostedMessage struct {
+	ChannelID string
+	MessageID string
+}
+
+func (g *Gallery) rememberPostedMessage(sourceMessage *discordgo.Message, mirroredMessage *discordgo.Message) error {
+	redis := cache.GetRedisClient()
+	key := fmt.Sprintf("robyul2-discord:gallery:postedmessage:%s", sourceMessage.ID)
+
+	item := new(Gallery_PostedMessage)
+	item.ChannelID = mirroredMessage.ChannelID
+	item.MessageID = mirroredMessage.ID
+
+	itemBytes, err := msgpack.Marshal(&item)
+	if err != nil {
+		return err
 	}
 
+	_, err = redis.LPush(key, itemBytes).Result()
+	if err != nil {
+		return err
+	}
+
+	_, err = redis.Expire(key, time.Hour*1).Result()
+	return err
+}
+
+func (g *Gallery) getRememberedMessages(sourceMessage *discordgo.Message) ([]Gallery_PostedMessage, error) {
+	redis := cache.GetRedisClient()
+	key := fmt.Sprintf("robyul2-discord:gallery:postedmessage:%s", sourceMessage.ID)
+
+	length, err := redis.LLen(key).Result()
+	if err != nil {
+		return []Gallery_PostedMessage{}, err
+	}
+
+	if length <= 0 {
+		return []Gallery_PostedMessage{}, err
+	}
+
+	result, err := redis.LRange(key, 0, length-1).Result()
+	if err != nil {
+		return []Gallery_PostedMessage{}, err
+	}
+
+	rememberedMessages := make([]Gallery_PostedMessage, 0)
+	for _, messageData := range result {
+		var message Gallery_PostedMessage
+		err = msgpack.Unmarshal([]byte(messageData), &message)
+		if err != nil {
+			continue
+		}
+		rememberedMessages = append(rememberedMessages, message)
+	}
+
+	return rememberedMessages, nil
 }
 
 func (g *Gallery) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
@@ -323,4 +401,34 @@ func (g *Gallery) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.
 }
 func (g *Gallery) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
+}
+func (g *Gallery) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+		var err error
+		var rememberedMessages []Gallery_PostedMessage
+
+		for _, gallery := range galleries {
+			if gallery.SourceChannelID == msg.ChannelID {
+				rememberedMessages, err = g.getRememberedMessages(msg.Message)
+				helpers.Relax(err)
+
+				for _, messageData := range rememberedMessages {
+					err = session.ChannelMessageDelete(messageData.ChannelID, messageData.MessageID)
+					if err != nil {
+						cache.GetLogger().WithFields(logrus.Fields{
+							"module":            "gallery",
+							"sourceChannelID":   msg.ChannelID,
+							"sourceMessageID":   msg.ID,
+							"sourceAuthorID":    msg.Author.ID,
+							"mirroredChannelID": messageData.ChannelID,
+							"mirroredMessageID": messageData.MessageID,
+						}).Error(
+							"Deleting mirrored message failed:", err.Error(),
+						)
+					}
+				}
+			}
+		}
+	}()
 }

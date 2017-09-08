@@ -77,8 +77,8 @@
       "refreshed": ":cyclone: Refreshed!"
     },
     "help": [
-      "<@%s> Check out <https://robyul.chat/commands>",
-      "<@%s> It's at <https://robyul.chat/commands> <:googlesmile:317031693951434752>"
+      "<@%s> Check out <https://robyul.chat/commands/%s>",
+      "<@%s> It's at <https://robyul.chat/commands/%s> <:googlesmile:317031693951434752>"
     ],
     "check-your-dms": "<@%s> Please check your DMs. <:blobeyes:317029938568101890>"
   },
@@ -478,7 +478,9 @@
       "get-mute-role-no-permissions": "I was unable to create the mute role.",
       "user-banned-failed-too-low": "I wasn't able to ban the user. Please make sure Robyul is above the user you want to ban.",
       "edit-error-not-found": "I wasn't able to find that message!",
-      "user-kicked-failed-too-low": "I wasn't able to kick the user. Please make sure Robyul is above the user you want to kick."
+      "user-kicked-failed-too-low": "I wasn't able to kick the user. Please make sure Robyul is above the user you want to kick.",
+      "prefix-info": "The Robyul prefix for this server is `%s`. Example: `%shelp`.",
+      "prefix-set-success": "The new Robyul prefix for this server is `%s`."
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
@@ -583,13 +585,14 @@
         "I removed the Role from you! <:blobsplosion:317044658213748746>"
       ],
       "role-limit-reached": "You already got enough Roles! <:blobnogood:317029275742109706>",
-      "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**",
+      "bias-help-message": "Use **`+name` to add** or **`-name` to remove** a role.\n%s\n\nExample: **`+%s`** or **`-%s`**. You can **combine multiple changes** by putting multiple **+** and **-** in one message.",
       "no-bias-config": "No Bias Config set for this Channel.",
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
       "updated-config": "I updated the config for the channel. <:blobokhand:317032017164238848>",
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
       "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>",
-      "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>"
+      "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>",
+      "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",
@@ -801,6 +804,13 @@
       "invite-error-no-friend-available": "No friend with free slots available! <:blobweary:317036265071575050>",
       "invite-error-invite-creation-failed": "I wasn't able to create a Discord Invite for my friend. <:blobweary:317036265071575050>",
       "invite-error-accept-invite-invalid-statuscode": "Something went wrong trying to invite my friend. <:blobscream:317043778823389184>"
+    },
+    "starboard": {
+      "status-none": "There is no starboard set on this server. <:blobweary:317036265071575050>",
+      "status-set": "The starboard on this server is set to <#%s>. :star:\nPlease make sure I can write messages, manage messages and embed links in that channel.",
+      "set-success": "I successfully set the starboard channel to <#%s>. :star:",
+      "reset-success": "I disabled the starboard for this server. <:blobshh:317044272161357824>",
+      "top-no-entries": "Nothing starred on this server. <:blobweary:317036265071575050>"
     }
   }
 }

@@ -92,7 +92,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 func (r *Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	switch command {
 	case "rm", "remind", "remindme":
-		channel, err := cache.Channel(msg.ChannelID)
+		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
 
 		parts := strings.Fields(content)

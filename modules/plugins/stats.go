@@ -35,6 +35,7 @@ func (s *Stats) Commands() []string {
 		"memberlist",
 		"members",
 		"invite",
+		"channelinfo",
 	}
 }
 
@@ -144,17 +145,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		for _, guild := range guilds {
 			channels += len(guild.Channels)
 
-			lastAfterMemberId := ""
-			for {
-				members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-				if len(members) <= 0 {
-					break
-				}
-				lastAfterMemberId = members[len(members)-1].User.ID
-				helpers.Relax(err)
-				for _, u := range members {
-					users[u.User.ID] = u.User.Username
-				}
+			for _, u := range guild.Members {
+				users[u.User.ID] = u.User.Username
 			}
 		}
 
@@ -205,10 +197,29 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		})
 	case "serverinfo":
 		session.ChannelTyping(msg.ChannelID)
-		currentChannel, err := helpers.GetChannel(msg.ChannelID)
-		helpers.Relax(err)
-		guild, err := helpers.GetFreshGuild(currentChannel.GuildID)
-		helpers.Relax(err)
+
+		args := strings.Fields(content)
+		var err error
+		var guild *discordgo.Guild
+		if len(args) > 0 && helpers.IsRobyulMod(msg.Author.ID) {
+			guild, err = helpers.GetFreshGuild(args[0])
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == 50001 {
+						_, err = session.ChannelMessageSend(msg.ChannelID, "Unable to get information for this Server.")
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+				}
+				helpers.Relax(err)
+			}
+		} else {
+			currentChannel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			guild, err = helpers.GetFreshGuild(currentChannel.GuildID)
+			helpers.Relax(err)
+		}
+
 		users := make(map[string]string)
 		lastAfterMemberId := ""
 		for {
@@ -273,6 +284,34 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		totalMessagesText := "N/A"
+		searchResponse, err := helpers.GuildFriendRequest(
+			guild.ID,
+			"GET",
+			fmt.Sprintf("guilds/%s/messages/search", guild.ID),
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "No friend on this server!") {
+				totalMessagesText = ""
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
+			}
+		} else {
+			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			if err == nil {
+				if searchResult.Exists("total_results") {
+					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
+				}
+			}
+		}
+
 		serverinfoEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
 			Title:       guild.Name,
@@ -292,6 +331,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if guild.Icon != "" {
 			serverinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)}
 			serverinfoEmbed.URL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)
+		}
+
+		if totalMessagesText != "" {
+			serverinfoEmbed.Fields = append(serverinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, serverinfoEmbed)
@@ -492,6 +535,111 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
+		helpers.Relax(err)
+	case "channelinfo":
+		session.ChannelTyping(msg.ChannelID)
+
+		sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+
+		args := strings.Fields(content)
+		var channel *discordgo.Channel
+		if len(args) > 0 {
+			channel, err = helpers.GetGlobalChannelFromMention(args[0])
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == 50001 {
+						_, err = session.ChannelMessageSend(msg.ChannelID, "Unable to get information for this Channel.")
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+				}
+			}
+			channel, err = helpers.GetFreshChannel(channel.ID)
+			helpers.Relax(err)
+			if channel.GuildID != sourceChannel.GuildID && !helpers.IsRobyulMod(msg.Author.ID) {
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
+			}
+		} else {
+			channel, err = helpers.GetFreshChannel(msg.ChannelID)
+			helpers.Relax(err)
+		}
+
+		guild, err := helpers.GetGuild(channel.GuildID)
+		helpers.Relax(err)
+
+		createdAtTime := helpers.GetTimeFromSnowflake(channel.ID)
+
+		totalMessagesText := "N/A"
+		searchResponse, err := helpers.GuildFriendRequest(
+			guild.ID,
+			"GET",
+			fmt.Sprintf("guilds/%s/messages/search?channel_id=%s", guild.ID, channel.ID),
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "No friend on this server!") {
+				totalMessagesText = ""
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
+			}
+		} else {
+			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			if err == nil {
+				if searchResult.Exists("total_results") {
+					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
+				}
+			}
+		}
+
+		nsfwText := "No"
+		if channel.NSFW {
+			nsfwText = "Yes"
+		}
+
+		channelTypeText := "N/A"
+		switch channel.Type {
+		case discordgo.ChannelTypeGuildCategory:
+			channelTypeText = "Category"
+			break
+		case discordgo.ChannelTypeGuildText:
+			channelTypeText = "Text"
+			break
+		case discordgo.ChannelTypeGuildVoice:
+			channelTypeText = "Voice"
+			break
+		}
+
+		topicText := "_None_"
+		if channel.Topic != "" {
+			topicText = channel.Topic
+		}
+
+		channelinfoEmbed := &discordgo.MessageEmbed{
+			Color:       0x0FADED,
+			Title:       channel.Name + " / " + guild.Name,
+			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), helpers.SinceInDaysText(createdAtTime)),
+			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Channel ID: %s | Server ID: %s", channel.ID, guild.ID)},
+			Fields: []*discordgo.MessageEmbedField{
+				{Name: "Topic", Value: topicText, Inline: false},
+				{Name: "Type", Value: channelTypeText, Inline: true},
+				{Name: "NSFW", Value: nsfwText, Inline: true},
+			},
+		}
+
+		if totalMessagesText != "" {
+			channelinfoEmbed.Fields = append(channelinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
+		}
+
+		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, channelinfoEmbed)
 		helpers.Relax(err)
 	case "voicestats": // [p]voicestats <user> or [p]voicestats top // @TODO: sort by time connected
 		session.ChannelTyping(msg.ChannelID)

@@ -3,12 +3,13 @@ package models
 import "time"
 
 type Rest_Guild struct {
-	ID       string
-	Name     string
-	Icon     string
-	OwnerID  string
-	JoinedAt time.Time
-	Features Rest_Guild_Features
+	ID        string
+	Name      string
+	Icon      string
+	OwnerID   string
+	JoinedAt  time.Time
+	BotPrefix string
+	Features  Rest_Guild_Features
 }
 
 type Rest_Guild_Features struct {

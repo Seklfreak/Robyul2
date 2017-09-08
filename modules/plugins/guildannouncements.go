@@ -180,17 +180,19 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 	} else {
 		helpers.Relax(err)
 	}
-	lastAfterMemberId := ""
-	var allMembers []*discordgo.Member
-	for {
-		members, err := cache.GetSession().GuildMembers(member.GuildID, lastAfterMemberId, 1000)
-		if len(members) <= 0 {
-			break
-		}
-		lastAfterMemberId = members[len(members)-1].User.ID
-		helpers.Relax(err)
-		for _, u := range members {
-			allMembers = append(allMembers, u)
+	allMembers := make([]*discordgo.Member, 0)
+	for _, botGuild := range cache.GetSession().State.Guilds {
+		if botGuild.ID == guild.ID {
+			for _, member := range guild.Members {
+				if member.JoinedAt == "" {
+					member, err := helpers.GetGuildMember(member.GuildID, member.User.ID)
+					if err == nil && member.JoinedAt != "" {
+						allMembers = append(allMembers, member)
+					}
+				} else {
+					allMembers = append(allMembers, member)
+				}
+			}
 		}
 	}
 	slice.Sort(allMembers[:], func(i, j int) bool {
@@ -261,5 +263,8 @@ func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session 
 
 }
 func (m *GuildAnnouncements) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+func (m *GuildAnnouncements) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
 }

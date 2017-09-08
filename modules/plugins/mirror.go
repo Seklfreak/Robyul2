@@ -144,7 +144,15 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (%d channels):\n", entry.ID, len(entry.ConnectedChannels))
 					for _, mirroredChannelEntry := range entry.ConnectedChannels {
 						mirroredChannel, err := helpers.GetChannel(mirroredChannelEntry.ChannelID)
-						helpers.Relax(err)
+						if err != nil {
+							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` `(#%s)` on `N/A` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
+								mirroredChannelEntry.ChannelID,
+								mirroredChannelEntry.GuildID,
+								mirroredChannelEntry.ChannelID,
+								mirroredChannelEntry.ChannelWebhookID,
+							)
+							continue
+						}
 						mirroredChannelGuild, err := helpers.GetGuild(mirroredChannelEntry.GuildID)
 						helpers.Relax(err)
 						resultMessage += fmt.Sprintf(":arrow_forward: `#%s` `(#%s)` on `%s` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
@@ -240,16 +248,24 @@ TryNextMirror:
 					for _, linkToRepost := range linksToRepost {
 						for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
 							if channelToMirrorToEntry.ChannelID != msg.ChannelID {
-								err := session.WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
-									false, &discordgo.WebhookParams{
-										Content: fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
-											linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
-										),
-										Username:  msg.Author.Username,
-										AvatarURL: helpers.GetAvatarUrl(msg.Author),
-									})
-								helpers.Relax(err)
-								metrics.MirrorsPostsSent.Add(1)
+								robyulIsOnTargetGuild := false
+								for _, guild := range cache.GetSession().State.Guilds {
+									if guild.ID == channelToMirrorToEntry.GuildID {
+										robyulIsOnTargetGuild = true
+									}
+								}
+								if robyulIsOnTargetGuild {
+									err := session.WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
+										false, &discordgo.WebhookParams{
+											Content: fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
+												linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
+											),
+											Username:  msg.Author.Username,
+											AvatarURL: helpers.GetAvatarUrl(msg.Author),
+										})
+									helpers.Relax(err)
+									metrics.MirrorsPostsSent.Add(1)
+								}
 							}
 						}
 					}
@@ -345,5 +361,8 @@ func (m *Mirror) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.S
 
 }
 func (m *Mirror) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+func (m *Mirror) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
 }

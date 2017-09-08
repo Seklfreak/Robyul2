@@ -19,7 +19,7 @@ type Notifications struct{}
 var (
 	notificationSettingsCache []DB_NotificationSetting
 	ignoredChannelsCache      []DB_IgnoredChannel
-	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n"}
+	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…"}
 )
 
 type DB_IgnoredChannel struct {
@@ -95,7 +95,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			m.setNotificationSetting(entry)
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-added-success", msg.Author.ID))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", entry.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
 			go m.refreshNotificationSettingsCache()
@@ -133,7 +133,8 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			}
 			m.deleteNotificationSettingByID(entryBucket.ID)
 
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notification Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
 			go m.refreshNotificationSettingsCache()
@@ -177,11 +178,11 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
 				_, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, "", "")
 			}
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		case "ignore-channel":
 			if len(args) < 2 {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
@@ -215,7 +216,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				resultMessage += fmt.Sprintf("Found **%d** Ignored Channels in total.", len(entryBucket))
 
 				_, err = session.ChannelMessageSend(msg.ChannelID, resultMessage)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			default: // [p]notifications ignore-channel <channel>
 				helpers.RequireAdmin(msg, func() {
 					targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
@@ -266,8 +267,16 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 		})
 		return
 	}
+	if channel.GuildID == "" {
+		return
+	}
 	guild, err := helpers.GetGuild(channel.GuildID)
 	if err != nil {
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Code == 0 {
+				return
+			}
+		}
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
 			"ChannelID":       msg.ChannelID,
 			"Content":         msg.Content,
@@ -700,5 +709,8 @@ func (m *Notifications) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *disc
 
 }
 func (m *Notifications) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+func (m *Notifications) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
 }

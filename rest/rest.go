@@ -93,6 +93,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 	var key string
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var botPrefix string
 	var err error
 
 	returnGuilds := make([]models.Rest_Guild, 0)
@@ -112,12 +113,15 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 			}
 		}
 
+		botPrefix = helpers.GetPrefixForServer(guild.ID)
+
 		returnGuilds = append(returnGuilds, models.Rest_Guild{
-			ID:       guild.ID,
-			Name:     guild.Name,
-			Icon:     guild.Icon,
-			OwnerID:  guild.OwnerID,
-			JoinedAt: joinedAt,
+			ID:        guild.ID,
+			Name:      guild.Name,
+			Icon:      guild.Icon,
+			OwnerID:   guild.OwnerID,
+			JoinedAt:  joinedAt,
+			BotPrefix: botPrefix,
 			Features: models.Rest_Guild_Features{
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
@@ -176,8 +180,7 @@ func IsMember(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	userID := request.PathParameter("user-id")
 
-	isInGuild, _ := helpers.GetIsInGuild(guildID, userID)
-	if isInGuild == true {
+	if helpers.GetIsInGuild(guildID, userID) {
 		response.WriteEntity(&models.Rest_Is_Member{
 			IsMember: true,
 		})
@@ -271,7 +274,17 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 		if err = cacheCodec.Get(keyByRank, &rankingItem); err != nil {
 			break
 		}
-		user, _ := helpers.GetUser(rankingItem.UserID)
+		var user *discordgo.User
+		if guildID != "global" {
+			member, _ := helpers.GetGuildMemberWithoutApi(guildID, rankingItem.UserID)
+			if member != nil && member.User != nil && member.User.ID != "" {
+				user = member.User
+			} else {
+				user, _ = helpers.GetUser(rankingItem.UserID)
+			}
+		} else {
+			user, _ = helpers.GetUser(rankingItem.UserID)
+		}
 		if user != nil && user.ID != "" {
 			userItem = models.Rest_User{
 				ID:            user.ID,
@@ -284,8 +297,8 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 			if guildID == "global" {
 				isMember = true
 			} else {
-				isMember, err = helpers.GetIsInGuild(guildID, user.ID)
-				if err != nil {
+				isMember = true
+				if !helpers.GetIsInGuild(guildID, user.ID) {
 					isMember = false
 				}
 			}
@@ -339,8 +352,8 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 	if guildID == "global" {
 		isMember = true
 	} else {
-		isMember, err = helpers.GetIsInGuild(guildID, user.ID)
-		if err != nil {
+		isMember = true
+		if !helpers.GetIsInGuild(guildID, user.ID) {
 			isMember = false
 		}
 	}
@@ -366,6 +379,11 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 func FindGuild(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 
+	cacheCodec := cache.GetRedisCacheCodec()
+	var key string
+	var featureLevels_Badges models.Rest_Feature_Levels_Badges
+	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var botPrefix string
 	guild, _ := helpers.GetGuild(guildID)
 	if guild != nil && guild.ID != "" {
 		joinedAt, err := guild.JoinedAt.Parse()
@@ -374,12 +392,33 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
 
+		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
+			featureLevels_Badges = models.Rest_Feature_Levels_Badges{
+				Count: 0,
+			}
+		}
+
+		key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+		if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
+			featureRandomPictures = models.Rest_Feature_RandomPictures{
+				Count: 0,
+			}
+		}
+
+		botPrefix = helpers.GetPrefixForServer(guild.ID)
+
 		returnGuild := &models.Rest_Guild{
-			ID:       guild.ID,
-			Name:     guild.Name,
-			Icon:     guild.Icon,
-			OwnerID:  guild.OwnerID,
-			JoinedAt: joinedAt,
+			ID:        guild.ID,
+			Name:      guild.Name,
+			Icon:      guild.Icon,
+			OwnerID:   guild.OwnerID,
+			JoinedAt:  joinedAt,
+			BotPrefix: botPrefix,
+			Features: models.Rest_Guild_Features{
+				Levels_Badges:  featureLevels_Badges,
+				RandomPictures: featureRandomPictures,
+			},
 		}
 
 		response.WriteEntity(returnGuild)

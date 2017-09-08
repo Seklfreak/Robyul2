@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/modules"
 	"github.com/Seklfreak/Robyul2/ratelimits"
+	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 )
@@ -39,8 +40,17 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	// Run async game-changer
 	go changeGameInterval(session)
 
-	// Run members cacher
-	go helpers.MembersCacheLoop()
+	// request guild members from the gateway
+	go func() {
+		time.Sleep(30 * time.Second)
+
+		for _, guild := range session.State.Guilds {
+			err := session.RequestGuildMembers(guild.ID, "", 0)
+			if err != nil {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			}
+		}
+	}()
 
 	// Run auto-leaver for non-beta guilds
 	//go autoLeaver(session)
@@ -84,6 +94,64 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	//go autoLeaver(session)
 }
 
+func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {
+	cache.GetLogger().WithField("module", "bot").Debug(
+		fmt.Sprintf("received guild member chunk for guild: %s (%d members)",
+			members.GuildID, len(members.Members)))
+	var err error
+	for _, member := range members.Members {
+		member.GuildID = members.GuildID
+		err = session.State.MemberAdd(member)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		}
+	}
+}
+
+func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.PresenceUpdate) {
+	if presence.GuildID == "" {
+		return
+	}
+
+	member, err := cache.GetSession().State.Member(presence.GuildID, presence.User.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "state cache not found") {
+			return
+		}
+		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		return
+	}
+
+	change := false
+	if presence.User.Avatar != "" {
+		member.User.Avatar = presence.User.Avatar
+		change = true
+	}
+	if presence.User.Discriminator != "" {
+		member.User.Discriminator = presence.User.Discriminator
+		change = true
+	}
+	if presence.User.Email != "" {
+		member.User.Email = presence.User.Email
+		change = true
+	}
+	if presence.User.Token != "" {
+		member.User.Token = presence.User.Token
+		change = true
+	}
+	if presence.User.Username != "" {
+		member.User.Username = presence.User.Username
+		change = true
+	}
+
+	if change == true {
+		err = session.State.MemberAdd(member)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		}
+	}
+}
+
 func BotOnGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
 	modules.CallExtendedPluginOnGuildMemberAdd(
 		member.Member,
@@ -123,40 +191,41 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Get the channel
 	// Ignore the event if we cannot resolve the channel
-	channel, err := cache.Channel(message.ChannelID)
+	channel, err := helpers.GetChannel(message.ChannelID)
 	if err != nil {
 		go raven.CaptureError(err, map[string]string{})
 		return
 	}
 
-	if channel.Type == discordgo.ChannelTypeDM {
-		// Track usage
-		metrics.CleverbotRequests.Add(1)
+	/*
+		if channel.Type == discordgo.ChannelTypeDM {
+			// Track usage
+			metrics.CleverbotRequests.Add(1)
 
-		// Mark typing
-		session.ChannelTyping(message.ChannelID)
+			// Mark typing
+			session.ChannelTyping(message.ChannelID)
 
-		// Prepare content for editing
-		msg := message.Content
+			// Prepare content for editing
+			msg := message.Content
 
-		/// Remove our @mention
-		msg = strings.Replace(msg, "<@"+session.State.User.ID+">", "", -1)
+			/// Remove our @mention
+			msg = strings.Replace(msg, "<@"+session.State.User.ID+">", "", -1)
 
-		// Trim message
-		msg = strings.TrimSpace(msg)
+			// Trim message
+			msg = strings.TrimSpace(msg)
 
-		// Resolve other @mentions before sending the message
-		for _, user := range message.Mentions {
-			msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
-		}
+			// Resolve other @mentions before sending the message
+			for _, user := range message.Mentions {
+				msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
+			}
 
-		// Remove smileys
-		msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
+			// Remove smileys
+			msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
-		// Send to cleverbot
-		helpers.CleverbotSend(session, channel.ID, msg)
-		return
-	}
+			// Send to cleverbot
+			helpers.CleverbotSend(session, channel.ID, msg)
+			return
+		}*/
 
 	// Check if the message contains @mentions for us
 	if strings.HasPrefix(message.Content, "<@") && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
@@ -202,14 +271,15 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			)
 			return
 
-		case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
-			metrics.CommandsExecuted.Add(1)
-			helpers.RequireAdmin(message.Message, func() {
-				// Refresh cleverbot session
-				helpers.CleverbotRefreshSession(channel.ID)
-				cache.GetSession().ChannelMessageSend(channel.ID, helpers.GetText("bot.cleverbot.refreshed"))
-			})
-			return
+			/*
+				case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
+					metrics.CommandsExecuted.Add(1)
+					helpers.RequireAdmin(message.Message, func() {
+						// Refresh cleverbot session
+						helpers.CleverbotRefreshSession(channel.ID)
+						cache.GetSession().ChannelMessageSend(channel.ID, helpers.GetText("bot.cleverbot.refreshed"))
+					})
+					return*/
 
 		case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
 			metrics.CommandsExecuted.Add(1)
@@ -231,24 +301,25 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			})
 			return
 
-		default:
-			// Track usage
-			metrics.CleverbotRequests.Add(1)
+			/*
+				default:
+					// Track usage
+					metrics.CleverbotRequests.Add(1)
 
-			// Mark typing
-			session.ChannelTyping(message.ChannelID)
+					// Mark typing
+					session.ChannelTyping(message.ChannelID)
 
-			// Resolve other @mentions before sending the message
-			for _, user := range message.Mentions {
-				msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
-			}
+					// Resolve other @mentions before sending the message
+					for _, user := range message.Mentions {
+						msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
+					}
 
-			// Remove smileys
-			msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
+					// Remove smileys
+					msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
-			// Send to cleverbot
-			helpers.CleverbotSend(session, channel.ID, msg)
-			return
+					// Send to cleverbot
+					helpers.CleverbotSend(session, channel.ID, msg)
+					return*/
 		}
 	}
 
@@ -294,7 +365,11 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	content := strings.TrimSpace(strings.Replace(message.Content, prefix+cmd, "", -1))
 
 	// Log commands
-	cache.GetLogger().WithField("module", "bot").Debug(fmt.Sprintf("%s (#%s): %s",
+	cache.GetLogger().WithFields(logrus.Fields{
+		"module":    "bot",
+		"channelID": message.ChannelID,
+		"userID":    message.Author.ID,
+	}).Debug(fmt.Sprintf("%s (#%s): %s",
 		message.Author.Username, message.Author.ID, message.Content))
 
 	// Check if a module matches said command
@@ -302,6 +377,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Check if a trigger matches
 	modules.CallTriggerPlugin(cmd, content, message.Message)
+}
+
+func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
+	modules.CallExtendedPluginOnMessageDelete(message)
 }
 
 // BotOnReactionAdd gets called after a reaction is added
@@ -334,34 +413,23 @@ func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.Message
 }
 
 func sendHelp(message *discordgo.MessageCreate) {
+	channel, err := helpers.GetChannel(message.ChannelID)
+	if err != nil {
+		channel.GuildID = ""
+	}
+
 	cache.GetSession().ChannelMessageSend(
 		message.ChannelID,
-		helpers.GetTextF("bot.help", message.Author.ID),
+		helpers.GetTextF("bot.help", message.Author.ID, channel.GuildID),
 	)
 }
 
-// Changes the game interval every 10 seconds after called
+// Changes the game interval every ten minutes after called
 func changeGameInterval(session *discordgo.Session) {
 	for {
-		users := make(map[string]string)
 		guilds := session.State.Guilds
 
-		for _, guild := range guilds {
-			lastAfterMemberId := ""
-			for {
-				members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-				if len(members) <= 0 {
-					break
-				}
-				lastAfterMemberId = members[len(members)-1].User.ID
-				helpers.Relax(err)
-				for _, u := range members {
-					users[u.User.ID] = u.User.Username
-				}
-			}
-		}
-
-		err := session.UpdateStatus(0, fmt.Sprintf("%d users on %d servers | robyul.chat | _help", len(users), len(guilds)))
+		err := session.UpdateStatus(0, fmt.Sprintf("on %d servers | robyul.chat | _help", len(guilds)))
 		if err != nil {
 			raven.CaptureError(err, map[string]string{})
 		}

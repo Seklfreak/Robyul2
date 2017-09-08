@@ -63,7 +63,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						}
 					}
 
-					reason := strings.Trim(safeArgs[2], "\"")
+					reason := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 
 					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.nuke-confirm",
 						targetUser.Username, targetUser.ID, targetUser.ID, reason), "✅", "🚫") == true {
@@ -93,11 +93,14 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 						bannedOnN := 0
 
+						reasonText := fmt.Sprintf("Nuke Ban | Issued by: %s#%s (#%s) | Delete Days: %d | Reason: %s",
+							msg.Author.Username, msg.Author.Discriminator, msg.Author.ID, 1, strings.TrimSpace(reason))
+
 						for _, targetGuild := range session.State.Guilds {
 							targetGuildSettings := helpers.GuildSettingsGetCached(targetGuild.ID)
 							fmt.Println("checking server: ", targetGuild.Name)
 							if targetGuildSettings.NukeIsParticipating == true {
-								err = session.GuildBanCreate(targetGuild.ID, targetUser.ID, 1)
+								err = session.GuildBanCreateWithReason(targetGuild.ID, targetUser.ID, reasonText, 1)
 								if err != nil {
 									if err, ok := err.(*discordgo.RESTError); ok {
 										session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",

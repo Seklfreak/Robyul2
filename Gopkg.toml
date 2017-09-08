@@ -153,3 +153,6 @@
 [[constraint]]
   name = "gopkg.in/oleiade/lane.v1"
   version = "1.0.0"
+
+[[constraint]]
+  name = "gopkg.in/olivere/elastic.v5"

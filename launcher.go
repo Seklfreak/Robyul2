@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"time"
 
+	elastic "gopkg.in/olivere/elastic.v5"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -75,6 +77,19 @@ func main() {
 	// Close DB when main dies
 	defer helpers.GetDB().Close()
 
+	// Connect to elastic search
+	if config.Path("elasticsearch.url").Data().(string) != "" {
+		log.WithField("module", "launcher").Info("Connecting bot to elastic search...")
+		client, err := elastic.NewClient(
+			elastic.SetURL(config.Path("elasticsearch.url").Data().(string)),
+			elastic.SetSniff(false),
+		)
+		if err != nil {
+			panic(err)
+		}
+		cache.SetElastic(client)
+	}
+
 	// Run migrations
 	migrations.Run()
 
@@ -102,6 +117,7 @@ func main() {
 
 	discord.AddHandlerOnce(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
+	discord.AddHandler(BotOnMessageDelete)
 	discord.AddHandler(BotOnGuildMemberAdd)
 	discord.AddHandler(BotOnGuildMemberRemove)
 	discord.AddHandler(BotOnReactionAdd)
@@ -110,6 +126,15 @@ func main() {
 	discord.AddHandler(BotOnGuildBanRemove)
 	discord.AddHandlerOnce(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
+	discord.AddHandler(BotOnMemberListChunk)
+	discord.AddHandler(BotGuildOnPresenceUpdate)
+
+	if cache.HasElastic() {
+		discord.AddHandler(helpers.ElasticOnMessageCreate)
+		discord.AddHandler(helpers.ElasticOnGuildMemberAdd)
+		discord.AddHandler(helpers.ElasticOnGuildMemberRemove)
+		discord.AddHandler(helpers.ElasticOnReactionAdd)
+	}
 
 	// Connect to discord
 	err = discord.Open()
@@ -154,7 +179,9 @@ func main() {
 	for _, service := range rest.NewRestServices() {
 		restful.Add(service)
 	}
-	log.Fatal(http.ListenAndServe("localhost:2021", nil))
+	go func() {
+		log.Fatal(http.ListenAndServe("localhost:2021", nil))
+	}()
 	log.WithField("module", "launcher").Info("REST API listening on localhost:2021")
 
 	// Make a channel that waits for a os signal

@@ -307,9 +307,21 @@
   revision = "28f7c3f09254f12b51e620fa4db136ba58804762"
   version = "v1.0.0"
 
+[[projects]]
+  name = "gopkg.in/olivere/elastic.v5"
+  packages = [".","config","uritemplates"]
+  revision = "edbef41beaacc2ee95e61af8faff04e67c01e268"
+  version = "v5.0.45"
+
+[[projects]]
+  name = "mvdan.cc/xurls"
+  packages = ["."]
+  revision = "d315b61cf6727664f310fa87b3197e9faf2a8513"
+  version = "v1.1.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e8b847af43522567addf7dfaf809771c36f708dd8477e8ea7eb55d43bcf96bdd"
+  inputs-digest = "e8e9e9413347562d8f98530486d784ab309e33a159072ea94816308c22a2078c"
   solver-name = "gps-cdcl"
   solver-version = 1

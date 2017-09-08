@@ -224,17 +224,11 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				}
 
 				users := make([]string, 0)
-				lastAfterMemberId := ""
-				for {
-					members, err := session.GuildMembers(channel.GuildID, lastAfterMemberId, 1000)
-					helpers.Relax(err)
-					if len(members) <= 0 {
-						break
-					}
-
-					lastAfterMemberId = members[len(members)-1].User.ID
-					for _, u := range members {
-						users = append(users, u.User.ID)
+				for _, botGuild := range session.State.Guilds {
+					if botGuild.ID == channel.GuildID {
+						for _, member := range botGuild.Members {
+							users = append(users, member.User.ID)
+						}
 					}
 				}
 
@@ -307,5 +301,8 @@ func (a *AutoRoles) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordg
 }
 
 func (a *AutoRoles) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+func (a *AutoRoles) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
 }

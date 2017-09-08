@@ -16,5 +16,5 @@ func (d *Donators) Triggers() []string {
 }
 
 func (d *Donators) Response(trigger string, content string) string {
-	return "<:robyulblush:327206930437373952> **These awesome people support me:**\nKakkela 💕\nSunny 💓\nsomicidal minaiac 💞\nOokami 🖤\nKeldra 💗\nTN 💝\nseulguille 💘\nSlenn 💜\nFugu ❣️\nWoori 💞\nhikari 💙\nAshton 💖\nKay 💝\njamie 💓\nHomeboywill 💘\nRimbol 💕\nGenisphere 💖\nekgus 💗\nCPark 💞\njungoo 💕\nShawn 💗\nSaltiestPeach 💘\nThank you so much!\n_You want to be in this list? <https://www.patreon.com/sekl>!_"
+	return "<:robyulblush:327206930437373952> **These awesome people support me:**\nKakkela 💕\nSunny 💓\nsomicidal minaiac 💞\nOokami 🖤\nKeldra 💗\nTN 💝\nseulguille 💘\nSlenn 💜\nFugu ❣️\nWoori 💞\nhikari 💙\nAshton 💖\nKay 💝\njamie 💓\nHomeboywill 💘\nRimbol 💕\nGenisphere 💖\nekgus 💗\nCPark 💞\njungoo 💕\nShawn 💗\nSaltiestPeach 💘\nBae Nja Min 💖\nThank you so much!\n_You want to be in this list? <https://www.patreon.com/sekl>!_"
 }

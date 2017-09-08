@@ -2240,8 +2240,7 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string)
 	session := cache.GetSession()
 
 	for _, guild := range session.State.Guilds {
-		is, _ := helpers.GetIsInGuild(guild.ID, user.ID)
-		if is == true {
+		if helpers.GetIsInGuild(guild.ID, user.ID) {
 			guildsToCheck = append(guildsToCheck, guild.ID)
 		}
 	}
@@ -2254,7 +2253,6 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string)
 	}
 	if sourceServerAlreadyIn == false {
 		guildsToCheck = append(guildsToCheck, sourceServerID)
-		helpers.GetFreshIsInGuild(sourceServerID, user.ID) // bust cache
 	}
 
 	var allBadges []DB_Badge
@@ -2401,8 +2399,7 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []
 			if badge.GuildID == "global" {
 				activeBadges = append(activeBadges, badge)
 			} else {
-				is, _ := helpers.GetIsInGuild(badge.GuildID, user.ID)
-				if is == true {
+				if helpers.GetIsInGuild(badge.GuildID, user.ID) {
 					activeBadges = append(activeBadges, badge)
 				}
 			}
@@ -3124,6 +3121,9 @@ func (b *Levels) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.S
 
 }
 func (b *Levels) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+}
+func (b *Levels) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
 }
 
