@@ -171,6 +171,11 @@ func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **di
 		return yt.actionFinish
 	}
 
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+	*out = yt.newMsg("bot.arguments.invalid")
+	return yt.actionFinish
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+
 	// _yt video add <video id/link> <discord channel>
 
 	testContent := DB_Youtube_Content_Video{
@@ -205,6 +210,11 @@ func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out *
 		return yt.actionFinish
 	}
 
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+	*out = yt.newMsg("bot.arguments.invalid")
+	return yt.actionFinish
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+
 	// _yt video delete <video id/link> <discord channel>
 
 	err := yt.deleteEntry(args[2])
@@ -218,6 +228,11 @@ func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out *
 }
 
 func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+	*out = yt.newMsg("bot.arguments.invalid")
+	return yt.actionFinish
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt video list
 
@@ -280,6 +295,11 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		return yt.actionFinish
 	}
 
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+	*out = yt.newMsg("bot.arguments.invalid")
+	return yt.actionFinish
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+
 	// _yt channel add <video id/link> <discord channel>
 
 	testContent := DB_Youtube_Content_Channel{
@@ -312,6 +332,11 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 		return yt.actionFinish
 	}
 
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+	*out = yt.newMsg("bot.arguments.invalid")
+	return yt.actionFinish
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+
 	// _yt channel delete <video id/link> <discord channel>
 
 	err := yt.deleteEntry(args[2])
@@ -325,6 +350,11 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 }
 
 func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
+	*out = yt.newMsg("bot.arguments.invalid")
+	return yt.actionFinish
+	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt channel list
 
