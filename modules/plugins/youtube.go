@@ -34,7 +34,7 @@ type DB_Youtube_Entry struct {
 	ID        string `gorethink:"id,omitempty"`
 	ServerID  string `gorethink:"serverid"`
 	ChannelID string `gorethink:"channelid"`
-	Timestamp uint64 `gorethink:"timestamp"`
+	Timestamp int64  `gorethink:"timestamp"`
 
 	// Content specific data fields.
 	// Content can be about channel or video.
@@ -302,27 +302,75 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 
 	// _yt channel add <video id/link> <discord channel>
 
-	testContent := DB_Youtube_Content_Channel{
-		ID:        "test",
-		Timestamp: "teststamp",
+	// check permission
+	if helpers.IsMod(in) == false {
+		*out = yt.newMsg("mod.no_permission")
+		return yt.actionFinish
 	}
 
-	testEntry := DB_Youtube_Entry{
-		ServerID:  "test",
-		ChannelID: "test",
-		Timestamp: 201709021604,
+	// check discord channel
+	dc, err := helpers.GetChannelFromMention(in, args[len(args)-1])
+	if err != nil {
+		*out = yt.newMsg("bot.arguments.invalid")
+		return yt.actionFinish
+	}
+
+	// search channel
+	yc, err := yt.searchSingle(args[2:len(args)-1], "channel")
+	if err != nil {
+		yt.logger().Error(err)
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	if yc == nil {
+		*out = yt.newMsg("plugins.youtube.channel-not-found")
+		return yt.actionFinish
+	}
+
+	// fill content with default timestamp(channel published date)
+	content := DB_Youtube_Content_Channel{
+		ID:        yc.Id.ChannelId,
+		Timestamp: yc.Snippet.PublishedAt,
+	}
+
+	// search the last video of youtube channel
+	call := yt.service.Search.List("id, snippet").
+		Type("video").
+		ChannelId(yc.Id.ChannelId).
+		Order("date").
+		MaxResults(1)
+
+	res, err := call.Do()
+	if err != nil {
+		yt.logger().Error(err)
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	// update timestamp to the last video content
+	if len(res.Items) > 0 {
+		content.Timestamp = res.Items[0].Snippet.PublishedAt
+	}
+
+	// fill db entry
+	entry := DB_Youtube_Entry{
+		ServerID:  dc.GuildID,
+		ChannelID: dc.ID,
+		Timestamp: time.Now().Unix(),
 
 		ContentType: "channel",
-		Content:     testContent,
+		Content:     content,
 	}
 
-	id, err := yt.createEntry(testEntry)
+	// insert entry into the db
+	_, err = yt.createEntry(entry)
 	if err != nil {
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
 
-	*out = yt.newMsg("Add test channel, ID: " + id)
+	*out = yt.newMsg("Added youtube channel <" + yc.Snippet.ChannelTitle + "> to the discord channel " + dc.ID)
 	return yt.actionFinish
 }
 
