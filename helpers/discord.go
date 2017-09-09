@@ -540,6 +540,9 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
 		if err != nil {
 			return targetChannel, err
 		}
+		if targetChannel.Type != discordgo.ChannelTypeGuildText {
+			return targetChannel, errors.New("not a text channel")
+		}
 		if sourceChannel.GuildID != targetChannel.GuildID {
 			return targetChannel, errors.New("Channel on different guild.")
 		}
