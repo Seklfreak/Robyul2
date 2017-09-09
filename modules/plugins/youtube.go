@@ -217,6 +217,12 @@ func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out *
 
 	// _yt video delete <video id/link> <discord channel>
 
+	// check permission
+	if helpers.IsMod(in) == false {
+		*out = yt.newMsg("mod.no_permission")
+		return yt.actionFinish
+	}
+
 	err := yt.deleteEntry(args[2])
 	if err != nil {
 		*out = yt.newMsg(err.Error())
@@ -401,6 +407,12 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt channel delete <video id/link> <discord channel>
+
+	// check permission
+	if helpers.IsMod(in) == false {
+		*out = yt.newMsg("mod.no_permission")
+		return yt.actionFinish
+	}
 
 	err := yt.deleteEntry(args[2])
 	if err != nil {
