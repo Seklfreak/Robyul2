@@ -21,8 +21,9 @@ import (
 )
 
 type YouTube struct {
-	service   *youtube.Service
-	regexpSet []*regexp.Regexp
+	service          *youtube.Service
+	regexpSet        []*regexp.Regexp
+	feedsLoopRunning bool
 
 	// make sure initalize routine only works when no left yt.Action() jobs
 	sync.RWMutex
@@ -88,6 +89,8 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
 	yt.newYoutubeService()
+
+	yt.runYoutubeFeedsLoop()
 }
 
 func (yt *YouTube) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -760,4 +763,133 @@ func (yt *YouTube) deleteEntry(id string) (err error) {
 
 	_, err = query.RunWrite(helpers.GetDB())
 	return
+}
+
+// yt.lock must held.
+func (yt *YouTube) runYoutubeFeedsLoop() {
+	if yt.feedsLoopRunning {
+		yt.logger().Error("youtube feeds loop already running")
+		return
+	}
+	yt.feedsLoopRunning = true
+
+	go yt.youtubeFeedsLoop()
+
+	return
+}
+
+func (yt *YouTube) youtubeFeedsLoop() {
+	defer helpers.Recover()
+	defer func() {
+		yt.Lock()
+		yt.feedsLoopRunning = false
+		yt.Unlock()
+		go func() {
+			yt.logger().Error("The checkYoutubeFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			yt.Lock()
+			yt.runYoutubeFeedsLoop()
+			yt.Unlock()
+		}()
+	}()
+
+	for ; ; time.Sleep(10 * time.Minute) {
+		yt.checkYoutubeFeeds()
+	}
+}
+
+func (yt *YouTube) checkYoutubeFeeds() {
+	yt.RLock()
+	defer yt.RUnlock()
+
+	entries, err := yt.readEntries(map[string]interface{}{})
+	if err != nil {
+		yt.logger().Error(err.Error() + " occurs in checkYoutubeFeeds()")
+		return
+	}
+
+	for _, e := range entries {
+		switch e.ContentType {
+		case "channel":
+			yt.checkYoutubeChannelFeeds(e)
+		default:
+			yt.logger().Error("unknown contents type: " + e.ContentType)
+			continue
+		}
+	}
+}
+
+func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
+	c, ok := e.Content.(map[string]interface{})
+	if ok == false {
+		yt.logger().Error("contents type mismatch: " + e.ID)
+		return
+	}
+
+	// get content id
+	id, ok := c["content_id"].(string)
+	if ok == false {
+		yt.logger().Error("no content_id: " + e.ID)
+		return
+	}
+
+	// get content timestamp
+	ts, ok := c["content_timestamp"].(string)
+	if ok == false {
+		yt.logger().Error("no content_timestamp: " + e.ID)
+		return
+	}
+
+	if yt.service == nil {
+		yt.logger().Error("plugins.youtube.service-not-available")
+		return
+	}
+
+	call := yt.service.Search.List("id, snippet").
+		Type("video").
+		ChannelId(id).
+		Order("date").
+		PublishedAfter(ts).
+		MaxResults(50)
+
+	res, err := call.Do()
+	if err != nil {
+		yt.logger().Error(err)
+		return
+	}
+
+	if len(res.Items) <= 0 {
+		return
+	}
+
+	for i := len(res.Items) - 1; i >= 0; i-- {
+		item := res.Items[i]
+
+		videoUrl := fmt.Sprintf(YouTubeVideoBaseUrl, item.Id.VideoId)
+
+		msg := yt.newMsg(videoUrl)
+
+		parsedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
+		if err != nil {
+			yt.logger().Error(err)
+			break
+		}
+		increasedTime := parsedTime.Add(1 * time.Second).Format(time.RFC3339)
+
+		_, err = cache.GetSession().ChannelMessageSendComplex(e.ChannelID, msg)
+		if err != nil {
+			yt.logger().Error(err)
+			break
+		}
+
+		c["content_timestamp"] = increasedTime
+		yt.logger().Info("Posting youtube video: " + item.Snippet.Title)
+	}
+
+	e.Timestamp = time.Now().Unix()
+	e.Content = c
+
+	if err := yt.updateEntry(e); err != nil {
+		yt.logger().Error(err)
+	}
 }
