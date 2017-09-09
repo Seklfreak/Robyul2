@@ -236,7 +236,22 @@ func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **d
 
 	// _yt video list
 
-	entries, err := yt.readEntries("content_type", "video")
+	// check permission
+	if helpers.IsMod(in) == false {
+		*out = yt.newMsg("mod.no_permission")
+		return yt.actionFinish
+	}
+
+	ch, err := helpers.GetChannel(in.ChannelID)
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	entries, err := yt.readEntries(map[string]interface{}{
+		"content_type": "video",
+		"serverid":     ch.GuildID,
+	})
 	if err != nil {
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
@@ -406,7 +421,22 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 
 	// _yt channel list
 
-	entries, err := yt.readEntries("content_type", "channel")
+	// check permission
+	if helpers.IsMod(in) == false {
+		*out = yt.newMsg("mod.no_permission")
+		return yt.actionFinish
+	}
+
+	ch, err := helpers.GetChannel(in.ChannelID)
+	if err != nil {
+		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	entries, err := yt.readEntries(map[string]interface{}{
+		"content_type": "channel",
+		"serverid":     ch.GuildID,
+	})
 	if err != nil {
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
@@ -693,8 +723,8 @@ func (yt *YouTube) createEntry(entry DB_Youtube_Entry) (id string, err error) {
 	return res.GeneratedKeys[0], nil
 }
 
-func (yt *YouTube) readEntries(field, equal string) (entry []DB_Youtube_Entry, err error) {
-	query := rethink.Table(youtubeDbTableName).Filter(rethink.Row.Field(field).Eq(equal))
+func (yt *YouTube) readEntries(filter map[string]interface{}) (entry []DB_Youtube_Entry, err error) {
+	query := rethink.Table(youtubeDbTableName).Filter(filter)
 
 	cursor, err := query.Run(helpers.GetDB())
 	if err != nil {
