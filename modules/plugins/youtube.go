@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"reflect"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Sirupsen/logrus"
@@ -32,10 +34,11 @@ type YouTube struct {
 type DB_Youtube_Entry struct {
 	// Common fields.
 	// Timestamp is updated when operation succeed with this entry.
-	ID        string `gorethink:"id,omitempty"`
-	ServerID  string `gorethink:"serverid"`
-	ChannelID string `gorethink:"channelid"`
-	Timestamp int64  `gorethink:"timestamp"`
+	ID            string `gorethink:"id,omitempty"`
+	ServerID      string `gorethink:"server_id"`
+	ChannelID     string `gorethink:"channel_id"`
+	ScheduledTime int64  `gorethink:"scheduled_time"`
+	TimeInterval  int64  `gorethink:"time_interval"`
 
 	// Content specific data fields.
 	// Content can be about channel or video.
@@ -44,8 +47,8 @@ type DB_Youtube_Entry struct {
 }
 
 type DB_Youtube_Content_Channel struct {
-	ID        string `gorethink:"content_id"`
-	Timestamp string `gorethink:"content_timestamp"`
+	ID          string   `gorethink:"content_id"`
+	PostedVideo []string `gorethink:"content_posted_videos"`
 }
 
 type DB_Youtube_Content_Video struct {
@@ -189,9 +192,9 @@ func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **di
 	}
 
 	testEntry := DB_Youtube_Entry{
-		ServerID:  "test",
-		ChannelID: "test",
-		Timestamp: 201709021604,
+		ServerID:      "test",
+		ChannelID:     "test",
+		ScheduledTime: 201709021604,
 
 		ContentType: "video",
 		Content:     testContent,
@@ -259,7 +262,7 @@ func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **d
 
 	entries, err := yt.readEntries(map[string]interface{}{
 		"content_type": "video",
-		"serverid":     ch.GuildID,
+		"server_id":    ch.GuildID,
 	})
 	if err != nil {
 		*out = yt.newMsg(err.Error())
@@ -354,34 +357,15 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 
 	// fill content with default timestamp(channel published date)
 	content := DB_Youtube_Content_Channel{
-		ID:        yc.Id.ChannelId,
-		Timestamp: yc.Snippet.PublishedAt,
-	}
-
-	// search the last video of youtube channel
-	call := yt.service.Search.List("id, snippet").
-		Type("video").
-		ChannelId(yc.Id.ChannelId).
-		Order("date").
-		MaxResults(1)
-
-	res, err := call.Do()
-	if err != nil {
-		yt.logger().Error(err)
-		*out = yt.newMsg(err.Error())
-		return yt.actionFinish
-	}
-
-	// update timestamp to the last video content
-	if len(res.Items) > 0 {
-		content.Timestamp = res.Items[0].Snippet.PublishedAt
+		ID: yc.Id.ChannelId,
 	}
 
 	// fill db entry
 	entry := DB_Youtube_Entry{
-		ServerID:  dc.GuildID,
-		ChannelID: dc.ID,
-		Timestamp: time.Now().Unix(),
+		ServerID:      dc.GuildID,
+		ChannelID:     dc.ID,
+		ScheduledTime: time.Now().Unix(),
+		TimeInterval:  1,
 
 		ContentType: "channel",
 		Content:     content,
@@ -450,7 +434,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 
 	entries, err := yt.readEntries(map[string]interface{}{
 		"content_type": "channel",
-		"serverid":     ch.GuildID,
+		"server_id":    ch.GuildID,
 	})
 	if err != nil {
 		*out = yt.newMsg(err.Error())
@@ -738,7 +722,7 @@ func (yt *YouTube) createEntry(entry DB_Youtube_Entry) (id string, err error) {
 	return res.GeneratedKeys[0], nil
 }
 
-func (yt *YouTube) readEntries(filter map[string]interface{}) (entry []DB_Youtube_Entry, err error) {
+func (yt *YouTube) readEntries(filter interface{}) (entry []DB_Youtube_Entry, err error) {
 	query := rethink.Table(youtubeDbTableName).Filter(filter)
 
 	cursor, err := query.Run(helpers.GetDB())
@@ -793,7 +777,7 @@ func (yt *YouTube) youtubeFeedsLoop() {
 		}()
 	}()
 
-	for ; ; time.Sleep(10 * time.Minute) {
+	for ; ; time.Sleep(1 * time.Minute) {
 		yt.checkYoutubeFeeds()
 	}
 }
@@ -802,7 +786,8 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	yt.RLock()
 	defer yt.RUnlock()
 
-	entries, err := yt.readEntries(map[string]interface{}{})
+	t := time.Now().Unix()
+	entries, err := yt.readEntries(rethink.Row.Field("scheduled_time").Le(t))
 	if err != nil {
 		yt.logger().Error(err.Error() + " occurs in checkYoutubeFeeds()")
 		return
@@ -829,27 +814,40 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 	// get content id
 	id, ok := c["content_id"].(string)
 	if ok == false {
-		yt.logger().Error("no content_id: " + e.ID)
+		yt.logger().Error("wrong content_id type, ID: " + e.ID)
 		return
 	}
 
-	// get content timestamp
-	ts, ok := c["content_timestamp"].(string)
-	if ok == false {
-		yt.logger().Error("no content_timestamp: " + e.ID)
+	// get posted Videos
+	s := reflect.ValueOf(c["content_posted_videos"])
+	if s.Kind() != reflect.Slice {
+		yt.logger().Error("wrong content_posted_videos type: " + s.Kind().String() + ", ID: " + id)
 		return
 	}
+
+	postedVideos := make([]string, s.Len())
+	for i := 0; i < s.Len(); i++ {
+		postedVideo, _ := s.Index(i).Interface().(string)
+		postedVideos[i] = postedVideo
+	}
+
+	// get scheduled checking time
+	ot := time.Unix(e.ScheduledTime, 0)
+
+	// retrieves updated video one hour before scheduled time
+	t := ot.Add(-64 * time.Minute)
+
+	// youtube 'activities' api call requires ISO8601 time format.
+	tIso8601 := t.Format("2006-01-02T15:04:05-0700")
 
 	if yt.service == nil {
 		yt.logger().Error("plugins.youtube.service-not-available")
 		return
 	}
 
-	call := yt.service.Search.List("id, snippet").
-		Type("video").
+	call := yt.service.Activities.List("contentDetails, snippet").
 		ChannelId(id).
-		Order("date").
-		PublishedAfter(ts).
+		PublishedAfter(tIso8601).
 		MaxResults(50)
 
 	res, err := call.Do()
@@ -858,35 +856,60 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		return
 	}
 
-	if len(res.Items) <= 0 {
-		return
-	}
+	newPostedVideos := make([]string, 0)
+	alreadyPostedVideos := make([]string, 0)
 
+	isErrored := false
 	for i := len(res.Items) - 1; i >= 0; i-- {
 		item := res.Items[i]
 
-		videoUrl := fmt.Sprintf(YouTubeVideoBaseUrl, item.Id.VideoId)
+		if item.Snippet.Type != "upload" {
+			yt.logger().Error("item type: " + item.Snippet.Type)
+			continue
+		}
+		videoId := item.ContentDetails.Upload.VideoId
+
+		isPosted := false
+		for _, v := range postedVideos {
+			if videoId == v {
+				alreadyPostedVideos = append(alreadyPostedVideos, v)
+				isPosted = true
+				break
+			}
+		}
+
+		if isPosted {
+			continue
+		}
+
+		videoUrl := fmt.Sprintf(YouTubeVideoBaseUrl, videoId)
 
 		msg := yt.newMsg(videoUrl)
-
-		parsedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
-		if err != nil {
-			yt.logger().Error(err)
-			break
-		}
-		increasedTime := parsedTime.Add(1 * time.Second).Format(time.RFC3339)
 
 		_, err = cache.GetSession().ChannelMessageSendComplex(e.ChannelID, msg)
 		if err != nil {
 			yt.logger().Error(err)
+			isErrored = true
 			break
 		}
 
-		c["content_timestamp"] = increasedTime
+		newPostedVideos = append(newPostedVideos, videoId)
+
 		yt.logger().Info("Posting youtube video: " + item.Snippet.Title)
 	}
 
-	e.Timestamp = time.Now().Unix()
+	if isErrored {
+		postedVideos = append(postedVideos, newPostedVideos...)
+		c["content_posted_videos"] = postedVideos
+	} else {
+		if len(newPostedVideos) > 0 {
+			e.TimeInterval = 1
+		} else if e.TimeInterval < 64 {
+			e.TimeInterval *= 2
+		}
+		e.ScheduledTime = ot.Add(time.Duration(e.TimeInterval) * time.Minute).Unix()
+		c["content_posted_videos"] = append(alreadyPostedVideos, newPostedVideos...)
+	}
 	e.Content = c
 
 	if err := yt.updateEntry(e); err != nil {
