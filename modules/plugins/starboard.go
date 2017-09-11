@@ -338,6 +338,20 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 		for _, attachment := range msg.Attachments {
 			urls = append(urls, attachment.URL)
 		}
+		embedImage := ""
+		if len(msg.Embeds) > 0 {
+			for _, embed := range msg.Embeds {
+				if embed.Video != nil && embed.Video.URL != "" {
+					embedImage = embed.Video.URL
+				}
+				if embed.Image != nil && embed.Image.URL != "" {
+					embedImage = embed.Image.URL
+				}
+				if embed.Thumbnail != nil && embed.Thumbnail.URL != "" {
+					embedImage = embed.Thumbnail.URL
+				}
+			}
+		}
 
 		if strings.Contains(err.Error(), "no starboard entry") {
 			starboardEntry, err = s.createStarboardEntry(
@@ -347,6 +361,7 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 				msg.Author.ID,
 				msg.Content,
 				urls,
+				embedImage,
 			)
 			helpers.Relax(err)
 		} else {
@@ -429,7 +444,9 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 	if content != "" {
 		starboardPostEmbed.Description = content
 	}
-	if len(starEntry.MessageAttachmentURLs) > 0 {
+	if starEntry.MessageEmbedImageURL != "" {
+		starboardPostEmbed.Image = &discordgo.MessageEmbedImage{URL: starEntry.MessageEmbedImageURL}
+	} else if len(starEntry.MessageAttachmentURLs) > 0 {
 		starboardPostEmbed.Image = &discordgo.MessageEmbedImage{URL: starEntry.MessageAttachmentURLs[0]}
 	} else {
 		imageFileExtensions := []string{"jpg", "jpeg", "png", "gif"}
@@ -512,6 +529,9 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 	for _, url := range starEntry.MessageAttachmentURLs {
 		content += "\n" + url
 	}
+	if starEntry.MessageEmbedImageURL != "" {
+		content += "\n" + starEntry.MessageEmbedImageURL
+	}
 
 	starrersEmbed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("Starrers of message #%s by @%s in #%s:", starEntry.MessageID, authorName, channelName),
@@ -555,6 +575,13 @@ func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discor
 				if len(starMessage.MessageAttachmentURLs) > 1 {
 					content += " ..."
 				}
+			} else if !strings.HasSuffix(content, "...") {
+				content += " ..."
+			}
+		}
+		if starMessage.MessageEmbedImageURL != "" {
+			if content == "" {
+				content = starMessage.MessageEmbedImageURL
 			} else if !strings.HasSuffix(content, "...") {
 				content += " ..."
 			}
@@ -651,6 +678,7 @@ func (s *Starboard) createStarboardEntry(
 	authorID string,
 	messageContent string,
 	messageAttachmentURLs []string,
+	messageEmbedImageURL string,
 ) (models.StarEntry, error) {
 	insert := rethink.Table("starboard_entries").Insert(models.StarEntry{
 		GuildID:               guildID,
@@ -659,6 +687,7 @@ func (s *Starboard) createStarboardEntry(
 		AuthorID:              authorID,
 		MessageContent:        messageContent,
 		MessageAttachmentURLs: messageAttachmentURLs,
+		MessageEmbedImageURL:  messageEmbedImageURL,
 		StarUserIDs:           []string{},
 		Stars:                 0,
 		FirstStarred:          time.Now(),

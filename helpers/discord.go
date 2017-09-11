@@ -524,6 +524,18 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 	return &targetChannel, err
 }
 
+func GetMessage(channelID string, messageID string) (*discordgo.Message, error) {
+	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
+	if err != nil {
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
+			fmt.Sprintf("api request: Message: %s in Channel: %s", messageID, channelID))
+		targetMessage, err = cache.GetSession().ChannelMessage(channelID, messageID)
+		cache.GetSession().State.MessageAdd(targetMessage)
+		return targetMessage, err
+	}
+	return targetMessage, nil
+}
+
 func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
 	var targetChannel *discordgo.Channel
 	re := regexp.MustCompile("(<#)?(\\d+)(>)?")

@@ -623,6 +623,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			topicText = channel.Topic
 		}
 
+		/*
+			if channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildVoice {
+				serverChannels := guild.Channels
+				sort.Slice(serverChannels, func(i, j int) bool { return serverChannels[i].Position < serverChannels[j].Position })
+				for _, serverChannel := range serverChannels {
+					fmt.Println("#", serverChannel.Position, serverChannel.Name, serverChannel.Type)
+				}
+			}
+		*/
+
 		channelinfoEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
 			Title:       channel.Name + " / " + guild.Name,
