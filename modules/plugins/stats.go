@@ -220,19 +220,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			helpers.Relax(err)
 		}
 
-		users := make(map[string]string)
-		lastAfterMemberId := ""
-		for {
-			members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-			helpers.Relax(err)
-			if len(members) <= 0 {
-				break
-			}
-
-			lastAfterMemberId = members[len(members)-1].User.ID
-			for _, u := range members {
-				users[u.User.ID] = u.User.Username
-			}
+		usersCount := guild.MemberCount
+		if guild.MemberCount == 0 {
+			usersCount = len(guild.Members)
 		}
 
 		textChannels := 0
@@ -319,7 +309,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server ID: %s", guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Region", Value: guild.Region, Inline: true},
-				{Name: "Users", Value: fmt.Sprintf("%d/%d", online, len(users)), Inline: true},
+				{Name: "Users", Value: fmt.Sprintf("%d/%d", online, usersCount), Inline: true},
 				{Name: "Text Channels", Value: strconv.Itoa(textChannels), Inline: true},
 				{Name: "Voice Channels", Value: strconv.Itoa(voiceChannels), Inline: true},
 				{Name: "Roles", Value: strconv.Itoa(numberOfRoles), Inline: true},
@@ -445,18 +435,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		}
 
-		lastAfterMemberId := ""
 		var allMembers []*discordgo.Member
-		for {
-			members, err := session.GuildMembers(currentGuild.ID, lastAfterMemberId, 1000)
-			if len(members) <= 0 {
-				break
-			}
-			lastAfterMemberId = members[len(members)-1].User.ID
-			helpers.Relax(err)
-			for _, u := range members {
-				allMembers = append(allMembers, u)
-			}
+		for _, u := range currentGuild.Members {
+			allMembers = append(allMembers, u)
 		}
 		slice.Sort(allMembers[:], func(i, j int) bool {
 			if allMembers[i].JoinedAt != "" && allMembers[j].JoinedAt != "" {
@@ -935,19 +916,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		memberlistEmbedMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.memberlist-gathering"))
 		helpers.Relax(err)
 
-		lastAfterMemberId := ""
-		var allMembers []*discordgo.Member
-		for {
-			members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-			if len(members) <= 0 {
-				break
-			}
-			lastAfterMemberId = members[len(members)-1].User.ID
-			helpers.Relax(err)
-			for _, u := range members {
-				allMembers = append(allMembers, u)
-			}
-		}
+		allMembers := guild.Members
 		slice.Sort(allMembers[:], func(i, j int) bool {
 			iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			helpers.Relax(err)
