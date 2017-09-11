@@ -294,7 +294,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				})
 			}
 		} else {
-			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			searchResult, err := gabs.ParseJSON(searchResponse)
 			if err == nil {
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
@@ -478,7 +478,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				})
 			}
 		} else {
-			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			searchResult, err := gabs.ParseJSON(searchResponse)
 			if err == nil {
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
@@ -573,7 +573,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				})
 			}
 		} else {
-			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			searchResult, err := gabs.ParseJSON(searchResponse)
 			if err == nil {
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"

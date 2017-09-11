@@ -102,19 +102,8 @@ func (f *Friend) actionInvite(args []string, in *discordgo.Message, out **discor
 		return f.actionFinish
 	}
 
-	response, err := helpers.FriendRequest(friend, "POST", "invites/"+invite.Code)
+	_, err = helpers.FriendRequest(friend, "POST", "invites/"+invite.Code)
 	f.Relax(err)
-
-	if response.StatusCode != 200 {
-		f.logger().Error(fmt.Sprintf(
-			"Unexpected status code trying to invite Friend %s (#%s) to Guild %s (#%s): %d",
-			friend.State.User.Username, friend.State.User.ID,
-			guild.Name, guild.ID,
-			response.StatusCode,
-		))
-		*out = f.newMsg(helpers.GetTextF("plugins.friends.invite-error-accept-invite-invalid-statuscode"))
-		return f.actionFinish
-	}
 
 	*out = f.newMsg(helpers.GetTextF("plugins.friends.invite-success", friend.State.User.Username))
 	return f.actionFinish
