@@ -155,7 +155,7 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 
 	// _yt video <search by keywords...>
 
-	item, err := yt.searchSingle(args[1:], "video")
+	item, err := yt.searchQuerySingle(args[1:], "video")
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
@@ -300,7 +300,7 @@ func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **dis
 
 	// _yt channel <search by keywords...>
 
-	item, err := yt.searchSingle(args[1:], "channel")
+	item, err := yt.searchQuerySingle(args[1:], "channel")
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
@@ -343,7 +343,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	}
 
 	// search channel
-	yc, err := yt.searchSingle(args[2:len(args)-1], "channel")
+	yc, err := yt.searchQuerySingle(args[2:len(args)-1], "channel")
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
@@ -481,7 +481,7 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 
 	// _yt <video or channel search by keywords...>
 
-	item, err := yt.searchSingle(args[0:], "channel, video")
+	item, err := yt.searchQuerySingle(args[0:], "channel, video")
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
@@ -503,9 +503,9 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 	return yt.actionFinish
 }
 
-// searchSingle retuns single search result with given type @searchType.
+// searchQuerySingle retuns single search result with given type @searchType.
 // returns (nil, nil) when there is no matching results.
-func (yt *YouTube) searchSingle(keywords []string, searchType string) (*youtube.SearchResult, error) {
+func (yt *YouTube) searchQuerySingle(keywords []string, searchType string) (*youtube.SearchResult, error) {
 	if yt.service == nil {
 		return nil, errors.New("plugins.youtube.service-not-available")
 	}
@@ -514,7 +514,7 @@ func (yt *YouTube) searchSingle(keywords []string, searchType string) (*youtube.
 		Type(searchType).
 		MaxResults(1)
 
-	items, err := yt.search(keywords, call)
+	items, err := yt.searchQuery(keywords, call)
 	if err != nil {
 		return nil, err
 	}
@@ -526,8 +526,8 @@ func (yt *YouTube) searchSingle(keywords []string, searchType string) (*youtube.
 	return items[0], nil
 }
 
-// search returns search results with given keywords and searchListCall.
-func (yt *YouTube) search(keywords []string, call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
+// search returns searchQuery results with given keywords and searchListCall.
+func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
 	// extract ID from valid youtube url
 	for i, w := range keywords {
 		keywords[i], _ = yt.getIdFromUrl(w)
@@ -536,6 +536,29 @@ func (yt *YouTube) search(keywords []string, call *youtube.SearchListCall) ([]*y
 	query := strings.Join(keywords, " ")
 
 	call = call.Q(query)
+
+	return yt.search(call)
+}
+
+// search returns search results with given searchListCall.
+func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
+	response, err := call.Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Items, nil
+}
+
+func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube.Activity, error) {
+	if yt.service == nil {
+		return nil, errors.New("plugins.youtube.service-not-available")
+	}
+
+	call := yt.service.Activities.List("contentDetails, snippet").
+		ChannelId(channelId).
+		PublishedAfter(publishedAfter).
+		MaxResults(50)
 
 	response, err := call.Do()
 	if err != nil {
@@ -832,27 +855,17 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 	}
 
 	// get scheduled checking time
-	ot := time.Unix(e.ScheduledTime, 0)
+	scheduledTime := time.Unix(e.ScheduledTime, 0)
 
 	// retrieves updated video one hour before scheduled time
-	t := ot.Add(-64 * time.Minute)
+	checkingTime := scheduledTime.Add(-64 * time.Minute)
 
 	// youtube 'activities' api call requires ISO8601 time format.
-	tIso8601 := t.Format("2006-01-02T15:04:05-0700")
+	checkingTimeIso8601 := checkingTime.Format("2006-01-02T15:04:05-0700")
 
-	if yt.service == nil {
-		yt.logger().Error("plugins.youtube.service-not-available")
-		return
-	}
-
-	call := yt.service.Activities.List("contentDetails, snippet").
-		ChannelId(id).
-		PublishedAfter(tIso8601).
-		MaxResults(50)
-
-	res, err := call.Do()
+	feeds, err := yt.getChannelFeeds(id, checkingTimeIso8601)
 	if err != nil {
-		yt.logger().Error(err)
+		yt.logger().Error("check channel feeds error: " + err.Error())
 		return
 	}
 
@@ -860,14 +873,14 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 	alreadyPostedVideos := make([]string, 0)
 
 	isErrored := false
-	for i := len(res.Items) - 1; i >= 0; i-- {
-		item := res.Items[i]
+	for i := len(feeds) - 1; i >= 0; i-- {
+		feed := feeds[i]
 
-		if item.Snippet.Type != "upload" {
-			yt.logger().Error("item type: " + item.Snippet.Type)
+		if feed.Snippet.Type != "upload" {
+			yt.logger().Error("item type: " + feed.Snippet.Type)
 			continue
 		}
-		videoId := item.ContentDetails.Upload.VideoId
+		videoId := feed.ContentDetails.Upload.VideoId
 
 		isPosted := false
 		for _, v := range postedVideos {
@@ -895,7 +908,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 
 		newPostedVideos = append(newPostedVideos, videoId)
 
-		yt.logger().Info("Posting youtube video: " + item.Snippet.Title)
+		yt.logger().Info("Posting youtube video: " + feed.Snippet.Title)
 	}
 
 	if isErrored {
@@ -907,7 +920,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		} else if e.TimeInterval < 64 {
 			e.TimeInterval *= 2
 		}
-		e.ScheduledTime = ot.Add(time.Duration(e.TimeInterval) * time.Minute).Unix()
+		e.ScheduledTime = scheduledTime.Add(time.Duration(e.TimeInterval) * time.Minute).Unix()
 		c["content_posted_videos"] = append(alreadyPostedVideos, newPostedVideos...)
 	}
 	e.Content = c
