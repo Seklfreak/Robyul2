@@ -28,6 +28,7 @@ var botAdmins = []string{
 var NukeMods = []string{
 	"116620585638821891", // Sekl
 	"134298438559858688", // Kakkela
+	"68661361537712128",  // Berk
 }
 var RobyulMod = []string{
 	"132633380628987904", // sunny
