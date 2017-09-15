@@ -626,7 +626,7 @@ func (s *Starboard) getTopStarboardEntries(guildID string) ([]models.StarEntry, 
 	var entryBucket []models.StarEntry
 	listCursor, err := rethink.Table("starboard_entries").Filter(
 		rethink.Row.Field("guild_id").Eq(guildID),
-	).OrderBy(rethink.Asc("stars")).Limit(10).Run(helpers.GetDB())
+	).OrderBy(rethink.Desc("stars")).Limit(10).Run(helpers.GetDB())
 	if err != nil {
 		return entryBucket, err
 	}
