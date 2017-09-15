@@ -10,6 +10,8 @@ import (
 
 	"fmt"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -69,6 +71,8 @@ func (s *Starboard) actionStart(args []string, in *discordgo.Message, out **disc
 		return s.actionStatus
 	case "set":
 		return s.actionSet
+	case "minimum":
+		return s.actionMinimum
 	}
 
 	*out = s.newMsg("bot.arguments.invalid")
@@ -170,6 +174,41 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 	helpers.Relax(err)
 
 	*out = s.newMsg(helpers.GetTextF("plugins.starboard.set-success", guildSettings.StarboardChannelID))
+	return s.actionFinish
+}
+
+func (s *Starboard) actionMinimum(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
+	if !helpers.IsMod(in) {
+		*out = s.newMsg(helpers.GetText("mod.no_permission"))
+		return s.actionFinish
+	}
+
+	if len(args) < 2 {
+		*out = s.newMsg(helpers.GetText("bot.arguments.too-few"))
+		return s.actionFinish
+	}
+
+	var err error
+	var newMinimum int
+	if newMinimum, err = strconv.Atoi(args[1]); err != nil {
+		*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return s.actionFinish
+	}
+
+	if newMinimum < 1 {
+		*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return s.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+	guildSettings.StarboardMinimum = newMinimum
+	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
+	helpers.Relax(err)
+
+	*out = s.newMsg(helpers.GetTextF("plugins.starboard.minimum-success", guildSettings.StarboardMinimum))
 	return s.actionFinish
 }
 
@@ -374,7 +413,10 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 		return err
 	}
 
-	return s.PostOrUpdateDiscordMessage(starboardEntry)
+	if starboardEntry.Stars >= s.getMinimum(guildID) {
+		return s.PostOrUpdateDiscordMessage(starboardEntry)
+	}
+	return nil
 }
 
 func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserID string) error {
@@ -396,7 +438,17 @@ func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserI
 				starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
 			helpers.Relax(err)
 		} else {
-			return s.PostOrUpdateDiscordMessage(starboardEntry)
+			if starboardEntry.Stars >= s.getMinimum(guildID) {
+				return s.PostOrUpdateDiscordMessage(starboardEntry)
+			} else {
+				err = cache.GetSession().ChannelMessageDelete(
+					starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
+				helpers.Relax(err)
+				starboardEntry.StarboardMessageID = ""
+				starboardEntry.StarboardMessageChannelID = ""
+				err = s.setStarboardEntry(starboardEntry)
+				helpers.Relax(err)
+			}
 		}
 	}
 	return nil
@@ -715,6 +767,14 @@ func (s *Starboard) deleteStarboardEntry(starEntry models.StarEntry) error {
 		return err
 	}
 	return errors.New("empty starEntry submitted")
+}
+
+func (s *Starboard) getMinimum(guildID string) int {
+	guildSettings := helpers.GuildSettingsGetCached(guildID)
+	if guildSettings.StarboardMinimum > 0 {
+		return guildSettings.StarboardMinimum
+	}
+	return 1
 }
 
 func (s *Starboard) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {

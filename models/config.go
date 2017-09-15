@@ -49,6 +49,7 @@ type Config struct {
 	AutoRoleIDs []string `rethink:"autorole_roleids"`
 
 	StarboardChannelID string `rethink:"starboard_channel_id"`
+	StarboardMinimum   int    `rethink:"starboard_minimum"`
 }
 
 // Default is a helper for generating default config values
