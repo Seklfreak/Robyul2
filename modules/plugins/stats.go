@@ -9,17 +9,23 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
+	"reflect"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type Stats struct{}
@@ -487,6 +493,48 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		var sinceStatusName, sinceStatusValue, lastMessageText string
+		if cache.HasElastic() {
+			termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\"")
+			searchResult, err := cache.GetElastic().Search().
+				Index(models.ElasticIndex).
+				Query(termQuery).
+				Sort("CreatedAt", false).
+				From(0).Size(1).
+				Do(context.Background())
+			helpers.Relax(err)
+			if searchResult.TotalHits() > 0 {
+				var ttyp models.ElasticPresenceUpdate
+				for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+					if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
+						sinceStatusName = presenceUpdate.Status
+						sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)
+						switch sinceStatusName {
+						case "dnd":
+							sinceStatusName = "Do Not Disturb"
+						}
+					}
+				}
+			}
+
+			termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID)
+			searchResult, err = cache.GetElastic().Search().
+				Index(models.ElasticIndex).
+				Query(termQuery).
+				Sort("CreatedAt", false).
+				From(0).Size(1).
+				Do(context.Background())
+			helpers.Relax(err)
+			if searchResult.TotalHits() > 0 {
+				var ttyp models.ElasticMessage
+				for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+					if message, ok := item.(models.ElasticMessage); ok {
+						lastMessageText = humanize.Time(message.CreatedAt)
+					}
+				}
+			}
+		}
+
 		userinfoEmbed := &discordgo.MessageEmbed{
 			Color:  0x0FADED,
 			Title:  title,
@@ -512,8 +560,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if gameUrl != "" {
 			userinfoEmbed.URL = gameUrl
 		}
+
+		if sinceStatusName != "" && sinceStatusValue != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: strings.Title(sinceStatusName) + " since", Value: sinceStatusValue, Inline: true})
+		}
+		if lastMessageText != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Last Message", Value: lastMessageText, Inline: true})
+		}
+
 		if totalMessagesText != "" {
-			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: true})
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
