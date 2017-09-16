@@ -38,6 +38,7 @@ var migrations = []helpers.Callback{
 	m26_create_table_mod_joinlog,
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
+	m29_create_elastic_presence_update_index,
 }
 
 // Run executes all registered migrations

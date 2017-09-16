@@ -7,10 +7,15 @@ import (
 
 	"time"
 
+	"sync"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 )
+
+var lastPresenceUpdates map[string]models.ElasticPresenceUpdate
+var lastPresenceUpdatesLock = sync.RWMutex{}
 
 func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	go func() {
@@ -46,6 +51,91 @@ func ElasticOnReactionAdd(session *discordgo.Session, reaction *discordgo.Messag
 		err := ElasticAddReaction(reaction.MessageReaction)
 		Relax(err)
 	}()
+}
+
+func ElasticOnPresenceUpdate(session *discordgo.Session, presence *discordgo.PresenceUpdate) {
+	go func() {
+		defer Recover()
+
+		err := ElasticAddPresenceUpdate(&presence.Presence)
+		Relax(err)
+	}()
+}
+
+func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	if presence.User == nil || presence.User.ID == "" {
+		return nil
+	}
+
+	gameType := -1
+	var gameName, gameURL, Status string
+
+	if presence.Game != nil && presence.Game.Name != "" {
+		gameName = presence.Game.Name
+		gameType = presence.Game.Type
+		gameURL = presence.Game.URL
+	}
+
+	if presence.Status != "" {
+		switch presence.Status {
+		case discordgo.StatusOffline, discordgo.StatusInvisible:
+			Status = "offline"
+		case discordgo.StatusDoNotDisturb:
+			Status = "dnd"
+		case discordgo.StatusIdle:
+			Status = "idle"
+		case discordgo.StatusOnline:
+			Status = "online"
+		}
+	}
+
+	if gameName == "" && Status == "" {
+		return nil
+	}
+
+	elasticPresenceUpdate := models.ElasticPresenceUpdate{
+		CreatedAt: time.Now(),
+		UserID:    presence.User.ID,
+		GameType:  gameType,
+		GameURL:   gameName,
+		GameName:  gameURL,
+		Status:    Status,
+	}
+
+	updatePresence := true
+	lastPresenceUpdatesLock.Lock()
+	if lastPresenceUpdates == nil {
+		lastPresenceUpdates = make(map[string]models.ElasticPresenceUpdate, 0)
+	}
+	lastPresenceUpdatesLock.Unlock()
+
+	lastPresenceUpdatesLock.RLock()
+	if lastPresence, ok := lastPresenceUpdates[presence.User.ID]; ok {
+		if elasticPresenceUpdate.GameType == lastPresence.GameType &&
+			elasticPresenceUpdate.GameURL == lastPresence.GameURL &&
+			elasticPresenceUpdate.GameName == lastPresence.GameName &&
+			elasticPresenceUpdate.Status == lastPresence.Status {
+			updatePresence = false
+		}
+	}
+	lastPresenceUpdatesLock.RUnlock()
+
+	if updatePresence {
+		lastPresenceUpdatesLock.Lock()
+		lastPresenceUpdates[presence.User.ID] = elasticPresenceUpdate
+		lastPresenceUpdatesLock.Unlock()
+		_, err := cache.GetElastic().Index().
+			Index(models.ElasticIndex).
+			Type(models.ElasticTypePresenceUpdate).
+			BodyJson(elasticPresenceUpdate).
+			Do(context.Background())
+		return err
+	}
+	return nil
 }
 
 func ElasticAddMessage(message *discordgo.Message) error {
