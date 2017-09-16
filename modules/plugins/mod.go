@@ -1400,7 +1400,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		})
 		return
 	case "leave-server":
-		helpers.RequireBotAdmin(msg, func() {
+		helpers.RequireRobyulMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
 			args := strings.Fields(content)
 			if len(args) < 1 {
@@ -1421,7 +1421,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		})
 		return
 	case "create-invite":
-		helpers.RequireBotAdmin(msg, func() {
+		helpers.RequireRobyulMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
 
 			args := strings.Fields(content)
