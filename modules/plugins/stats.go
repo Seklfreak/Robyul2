@@ -447,6 +447,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			allMembers = append(allMembers, u)
 		}
 		slice.Sort(allMembers[:], func(i, j int) bool {
+			defer helpers.Recover()
+
 			if allMembers[i].JoinedAt != "" && allMembers[j].JoinedAt != "" {
 				iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 				helpers.Relax(err)
