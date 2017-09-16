@@ -32,6 +32,7 @@ func (s *Stats) Commands() []string {
 		"voicestats",
 		"emotes",
 		"emojis",
+		"emoji",
 		"memberlist",
 		"members",
 		"invite",
@@ -825,7 +826,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, voicestatsEmbed)
 		helpers.Relax(err)
-	case "emotes", "emojis": // [p]emotes
+	case "emotes", "emojis", "emoji": // [p]emotes
 		session.ChannelTyping(msg.ChannelID)
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
