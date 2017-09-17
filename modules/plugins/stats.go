@@ -504,19 +504,29 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				Sort("CreatedAt", false).
 				From(0).Size(1).
 				Do(context.Background())
-			helpers.Relax(err)
-			if searchResult.TotalHits() > 0 {
-				var ttyp models.ElasticPresenceUpdate
-				for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-					if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
-						sinceStatusName = presenceUpdate.Status
-						sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)
-						switch sinceStatusName {
-						case "dnd":
-							sinceStatusName = "Do Not Disturb"
+			if err == nil {
+				if searchResult.TotalHits() > 0 {
+					var ttyp models.ElasticPresenceUpdate
+					for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+						if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
+							sinceStatusName = presenceUpdate.Status
+							sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)
+							switch sinceStatusName {
+							case "dnd":
+								sinceStatusName = "Do Not Disturb"
+							}
 						}
 					}
 				}
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
 			}
 
 			termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID)
@@ -526,14 +536,24 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				Sort("CreatedAt", false).
 				From(0).Size(1).
 				Do(context.Background())
-			helpers.Relax(err)
-			if searchResult.TotalHits() > 0 {
-				var ttyp models.ElasticMessage
-				for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-					if message, ok := item.(models.ElasticMessage); ok {
-						lastMessageText = humanize.Time(message.CreatedAt)
+			if err == nil {
+				if searchResult.TotalHits() > 0 {
+					var ttyp models.ElasticMessage
+					for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+						if message, ok := item.(models.ElasticMessage); ok {
+							lastMessageText = humanize.Time(message.CreatedAt)
+						}
 					}
 				}
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
 			}
 		}
 
