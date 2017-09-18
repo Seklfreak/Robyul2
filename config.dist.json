@@ -78,7 +78,8 @@
   },
   "website": {
     "ranking_base_url": "https://robyul.chat/ranking",
-    "randompictures_base_url": "https://robyul.chat/d/randompictures/"
+    "randompictures_base_url": "https://robyul.chat/d/randompictures/",
+    "webkey": "your-secure-webkey"
   },
   "streamable": {
     "username": "",

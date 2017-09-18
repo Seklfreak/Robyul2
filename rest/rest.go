@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/generator"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -26,7 +28,7 @@ func NewRestServices() []*restful.WebService {
 		Path("/bot/guilds").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
-	service.Route(service.GET("").To(GetAllBotGuilds))
+	service.Route(service.GET("").Filter(webkeyAuthenticate).To(GetAllBotGuilds))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -35,7 +37,7 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{user-id}").To(FindUser))
+	service.Route(service.GET("/{user-id}").Filter(sessionAndWebkeyAuthenticate).To(FindUser))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -44,8 +46,8 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}/{user-id}").To(FindMember))
-	service.Route(service.GET("/{guild-id}/{user-id}/is").To(IsMember))
+	service.Route(service.GET("/{guild-id}/{user-id}").Filter(webkeyAuthenticate).To(FindMember))
+	service.Route(service.GET("/{guild-id}/{user-id}/is").Filter(webkeyAuthenticate).To(IsMember))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -54,7 +56,7 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces("text/html")
 
-	service.Route(service.GET("/{user-id}/{guild-id}").To(GetProfile))
+	service.Route(service.GET("/{user-id}/{guild-id}").Filter(webkeyAuthenticate).To(GetProfile))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -63,8 +65,8 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}").To(GetRankings))
-	service.Route(service.GET("/user/{user-id}/{guild-id}").To(GetUserRanking))
+	service.Route(service.GET("/{guild-id}").Filter(webkeyAuthenticate).To(GetRankings))
+	service.Route(service.GET("/user/{user-id}/{guild-id}").Filter(webkeyAuthenticate).To(GetUserRanking))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -73,7 +75,7 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}").To(FindGuild))
+	service.Route(service.GET("/{guild-id}").Filter(webkeyAuthenticate).To(FindGuild))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -82,9 +84,68 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/history/{guild-id}/{start}/{end}").To(GetRandomPicturesGuildHistory))
+	service.Route(service.GET("/history/{guild-id}/{start}/{end}").Filter(webkeyAuthenticate).To(GetRandomPicturesGuildHistory))
 	services = append(services, service)
 	return services
+}
+
+func webkeyAuthenticate(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+	authorizationHeader := strings.TrimSpace(request.HeaderParameter("Authorization"))
+
+	isAuthenticated := false
+
+	if strings.HasPrefix(authorizationHeader, "Webkey ") {
+		webkey := strings.TrimSpace(strings.Replace(authorizationHeader, "Webkey ", "", -1))
+		if webkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+			isAuthenticated = true
+			request.SetAttribute("UserID", "global")
+		}
+	}
+
+	if isAuthenticated == false {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	chain.ProcessFilter(request, response)
+	return
+}
+
+func sessionAndWebkeyAuthenticate(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+	authorizationHeader := strings.TrimSpace(request.HeaderParameter("Authorization"))
+
+	isAuthenticated := false
+
+	if strings.HasPrefix(authorizationHeader, "Webkey ") {
+		webkey := strings.TrimSpace(strings.Replace(authorizationHeader, "Webkey ", "", -1))
+		if webkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+			isAuthenticated = true
+			request.SetAttribute("UserID", "global")
+		}
+	}
+
+	if strings.HasPrefix(authorizationHeader, "PHP-Session ") {
+		sessionID := strings.TrimSpace(strings.Replace(authorizationHeader, "PHP-Session ", "", -1))
+		key := "robyul2-web:robyul-session:" + sessionID
+		redis := cache.GetRedisClient()
+		sessionDataString, err := redis.Get(key).Result()
+		if err == nil {
+			var sessionData models.Website_Session_Data
+			msgpack.Unmarshal([]byte(sessionDataString), &sessionData)
+			if sessionData.DiscordUserID != "" {
+				isAuthenticated = true
+				request.SetAttribute("UserID", sessionData.DiscordUserID)
+			}
+		}
+	}
+
+	if isAuthenticated == false {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	chain.ProcessFilter(request, response)
+	return
 }
 
 func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
@@ -134,6 +195,11 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 
 func FindUser(request *restful.Request, response *restful.Response) {
 	userID := request.PathParameter("user-id")
+
+	if request.Attribute("UserID").(string) != "global" && request.Attribute("UserID").(string) != userID {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
 
 	user, _ := helpers.GetUser(userID)
 	if user != nil && user.ID != "" {

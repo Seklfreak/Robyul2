@@ -12,6 +12,10 @@ type Rest_Guild struct {
 	Features  Rest_Guild_Features
 }
 
+type Website_Session_Data struct {
+	DiscordUserID string
+}
+
 type Rest_Guild_Features struct {
 	Levels_Badges  Rest_Feature_Levels_Badges
 	RandomPictures Rest_Feature_RandomPictures
