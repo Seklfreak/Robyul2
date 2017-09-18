@@ -850,8 +850,10 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 
 	postedVideos := make([]string, s.Len())
 	for i := 0; i < s.Len(); i++ {
-		postedVideo, _ := s.Index(i).Interface().(string)
-		postedVideos[i] = postedVideo
+		postedVideo, ok := s.Index(i).Interface().(string)
+		if ok {
+			postedVideos = append(postedVideos, postedVideo)
+		}
 	}
 
 	// get scheduled checking time
