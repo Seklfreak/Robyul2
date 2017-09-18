@@ -102,6 +102,12 @@ func webkeyAuthenticate(request *restful.Request, response *restful.Response, ch
 		}
 	}
 
+	queryWebkey := strings.TrimSpace(request.QueryParameter("webkey"))
+	if queryWebkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+		isAuthenticated = true
+		request.SetAttribute("UserID", "global")
+	}
+
 	if isAuthenticated == false {
 		response.WriteErrorString(401, "401: Not Authorized")
 		return
@@ -122,6 +128,12 @@ func sessionAndWebkeyAuthenticate(request *restful.Request, response *restful.Re
 			isAuthenticated = true
 			request.SetAttribute("UserID", "global")
 		}
+	}
+
+	queryWebkey := strings.TrimSpace(request.QueryParameter("webkey"))
+	if queryWebkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+		isAuthenticated = true
+		request.SetAttribute("UserID", "global")
 	}
 
 	if strings.HasPrefix(authorizationHeader, "PHP-Session ") {
