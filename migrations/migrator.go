@@ -38,7 +38,9 @@ var migrations = []helpers.Callback{
 	m26_create_table_mod_joinlog,
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
-	m29_create_table_youtube,
+	m29_create_elastic_presence_update_index,
+	m30_create_table_autoleaver_whitelist,
+	m31_create_table_youtube,
 }
 
 // Run executes all registered migrations

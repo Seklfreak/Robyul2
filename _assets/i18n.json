@@ -809,8 +809,24 @@
       "status-none": "There is no starboard set on this server. <:blobweary:317036265071575050>",
       "status-set": "The starboard on this server is set to <#%s>. :star:\nPlease make sure I can write messages, manage messages and embed links in that channel.",
       "set-success": "I successfully set the starboard channel to <#%s>. :star:",
+      "minimum-success": "I successfully set the minimum stars required to %d stars. :star2:",
       "reset-success": "I disabled the starboard for this server. <:blobshh:317044272161357824>",
       "top-no-entries": "Nothing starred on this server. <:blobweary:317036265071575050>"
+    },
+    "autoleaver": {
+      "check-no-entries": ":question: The whitelist is currently empty.",
+      "check-no-not-whitelisted": ":white_check_mark: **All %d servers are whitelisted.**",
+      "check-not-whitelisted-title": ":x: **There are %d Guilds not on the Whitelist:**",
+      "check-not-whitelisted-footer": "_%d out of %d Guilds are not on the whitelist._",
+      "noti-join-not-whitelisted": ":x: Robyul joined a not whitelisted Guild: %s `(#%s)`!",
+      "noti-join": ":arrow_forward: Robyul joined Guild: %s `(#%s)`.",
+      "noti-leave": ":arrow_backward: Robyul left Guild: %s `(#%s)`.",
+      "add-success": ":white_check_mark: Added Guild %s `(#%s)` to the whitelist.",
+      "add-error-duplicate": ":x: Guild %s `(#%s)` is already on the whitelist.",
+      "remove-error-not-found": ":x: Guild %s `(#%s)` is not on the whitelist.",
+      "remove-success": ":white_check_mark: Removes Guild %s `(#%s)` from the whitelist.",
+      "bulk-title": "Added the following Guilds:",
+      "bulk-footer": "_added %d Guilds in total._"
     }
   }
 }

@@ -10,9 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"crypto/md5"
-	"encoding/hex"
-
 	"errors"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -703,9 +700,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 }
 
 func (rp *RandomPictures) GetFileHash(sourceID string, fileID string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(sourceID + "-" + fileID))
-	return hex.EncodeToString(hasher.Sum(nil))
+	return helpers.GetMD5Hash(sourceID + "-" + fileID)
 }
 
 func (rp *RandomPictures) appendLinkToServerHistory(link string, sourceID string, pictureID string, fileName string, guildID string) error {

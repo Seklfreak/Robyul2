@@ -3,11 +3,12 @@ package models
 import "time"
 
 const (
-	ElasticIndex        = "robyul"
-	ElasticTypeMessage  = "message"
-	ElasticTypeJoin     = "join"
-	ElasticTypeLeave    = "leave"
-	ElasticTypeReaction = "reaction"
+	ElasticIndex              = "robyul"
+	ElasticTypeMessage        = "message"
+	ElasticTypeJoin           = "join"
+	ElasticTypeLeave          = "leave"
+	ElasticTypeReaction       = "reaction"
+	ElasticTypePresenceUpdate = "presence_update"
 )
 
 type ElasticMessage struct {
@@ -42,4 +43,13 @@ type ElasticReaction struct {
 	GuildID   string
 	EmojiID   string
 	EmojiName string
+}
+
+type ElasticPresenceUpdate struct {
+	CreatedAt time.Time
+	UserID    string
+	GameType  int
+	GameName  string
+	GameURL   string
+	Status    string
 }

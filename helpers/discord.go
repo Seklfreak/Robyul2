@@ -28,6 +28,7 @@ var botAdmins = []string{
 var NukeMods = []string{
 	"116620585638821891", // Sekl
 	"134298438559858688", // Kakkela
+	"68661361537712128",  // Berk
 }
 var RobyulMod = []string{
 	"132633380628987904", // sunny
@@ -524,6 +525,18 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 	return &targetChannel, err
 }
 
+func GetMessage(channelID string, messageID string) (*discordgo.Message, error) {
+	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
+	if err != nil {
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
+			fmt.Sprintf("api request: Message: %s in Channel: %s", messageID, channelID))
+		targetMessage, err = cache.GetSession().ChannelMessage(channelID, messageID)
+		cache.GetSession().State.MessageAdd(targetMessage)
+		return targetMessage, err
+	}
+	return targetMessage, nil
+}
+
 func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
 	var targetChannel *discordgo.Channel
 	re := regexp.MustCompile("(<#)?(\\d+)(>)?")
@@ -539,6 +552,9 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
 		targetChannel, err := GetChannel(result[2])
 		if err != nil {
 			return targetChannel, err
+		}
+		if targetChannel.Type != discordgo.ChannelTypeGuildText {
+			return targetChannel, errors.New("not a text channel")
 		}
 		if sourceChannel.GuildID != targetChannel.GuildID {
 			return targetChannel, errors.New("Channel on different guild.")

@@ -47,13 +47,18 @@ func SoftRelax(err error, cb Callback) {
 func Relax(err error) {
 	if err != nil {
 		if DEBUG_MODE == true {
-			fmt.Printf("%#v\n", err)
-			panic(err)
-			if err, ok := err.(*discordgo.RESTError); ok && err != nil && err.Message != nil {
-				fmt.Println(strconv.Itoa(err.Message.Code)+":", err.Message.Message)
-			} else {
-				fmt.Println(err)
+			fmt.Printf("%#v:\n", err)
+
+			buf := make([]byte, 1<<16)
+			stackSize := runtime.Stack(buf, false)
+
+			fmt.Println(string(buf[0:stackSize]))
+
+			if errD, ok := err.(*discordgo.RESTError); ok && errD != nil && errD.Message != nil {
+				fmt.Println(strconv.Itoa(errD.Message.Code)+":", errD.Message.Message)
 			}
+
+			panic(err)
 		}
 		panic(err)
 	}

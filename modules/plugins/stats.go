@@ -9,17 +9,23 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
+	"reflect"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type Stats struct{}
@@ -32,6 +38,7 @@ func (s *Stats) Commands() []string {
 		"voicestats",
 		"emotes",
 		"emojis",
+		"emoji",
 		"memberlist",
 		"members",
 		"invite",
@@ -220,19 +227,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			helpers.Relax(err)
 		}
 
-		users := make(map[string]string)
-		lastAfterMemberId := ""
-		for {
-			members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-			helpers.Relax(err)
-			if len(members) <= 0 {
-				break
-			}
-
-			lastAfterMemberId = members[len(members)-1].User.ID
-			for _, u := range members {
-				users[u.User.ID] = u.User.Username
-			}
+		usersCount := guild.MemberCount
+		if guild.MemberCount == 0 {
+			usersCount = len(guild.Members)
 		}
 
 		textChannels := 0
@@ -304,7 +301,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				})
 			}
 		} else {
-			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			searchResult, err := gabs.ParseJSON(searchResponse)
 			if err == nil {
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
@@ -319,7 +316,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server ID: %s", guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Region", Value: guild.Region, Inline: true},
-				{Name: "Users", Value: fmt.Sprintf("%d/%d", online, len(users)), Inline: true},
+				{Name: "Users", Value: fmt.Sprintf("%d/%d", online, usersCount), Inline: true},
 				{Name: "Text Channels", Value: strconv.Itoa(textChannels), Inline: true},
 				{Name: "Voice Channels", Value: strconv.Itoa(voiceChannels), Inline: true},
 				{Name: "Roles", Value: strconv.Itoa(numberOfRoles), Inline: true},
@@ -445,20 +442,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		}
 
-		lastAfterMemberId := ""
 		var allMembers []*discordgo.Member
-		for {
-			members, err := session.GuildMembers(currentGuild.ID, lastAfterMemberId, 1000)
-			if len(members) <= 0 {
-				break
-			}
-			lastAfterMemberId = members[len(members)-1].User.ID
-			helpers.Relax(err)
-			for _, u := range members {
-				allMembers = append(allMembers, u)
-			}
+		for _, u := range currentGuild.Members {
+			allMembers = append(allMembers, u)
 		}
 		slice.Sort(allMembers[:], func(i, j int) bool {
+			defer helpers.Recover()
+
 			if allMembers[i].JoinedAt != "" && allMembers[j].JoinedAt != "" {
 				iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 				helpers.Relax(err)
@@ -497,11 +487,73 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				})
 			}
 		} else {
-			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			searchResult, err := gabs.ParseJSON(searchResponse)
 			if err == nil {
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
 				}
+			}
+		}
+
+		var sinceStatusName, sinceStatusValue, lastMessageText string
+		if cache.HasElastic() {
+			termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\"")
+			searchResult, err := cache.GetElastic().Search().
+				Index(models.ElasticIndex).
+				Query(termQuery).
+				Sort("CreatedAt", false).
+				From(0).Size(1).
+				Do(context.Background())
+			if err == nil {
+				if searchResult.TotalHits() > 0 {
+					var ttyp models.ElasticPresenceUpdate
+					for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+						if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
+							sinceStatusName = presenceUpdate.Status
+							sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)
+							switch sinceStatusName {
+							case "dnd":
+								sinceStatusName = "Do Not Disturb"
+							}
+						}
+					}
+				}
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
+			}
+
+			termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID)
+			searchResult, err = cache.GetElastic().Search().
+				Index(models.ElasticIndex).
+				Query(termQuery).
+				Sort("CreatedAt", false).
+				From(0).Size(1).
+				Do(context.Background())
+			if err == nil {
+				if searchResult.TotalHits() > 0 {
+					var ttyp models.ElasticMessage
+					for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+						if message, ok := item.(models.ElasticMessage); ok {
+							lastMessageText = humanize.Time(message.CreatedAt)
+						}
+					}
+				}
+			} else {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+					"ChannelID":       msg.ChannelID,
+					"Content":         msg.Content,
+					"Timestamp":       string(msg.Timestamp),
+					"TTS":             strconv.FormatBool(msg.Tts),
+					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
+					"IsBot":           strconv.FormatBool(msg.Author.Bot),
+				})
 			}
 		}
 
@@ -530,8 +582,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if gameUrl != "" {
 			userinfoEmbed.URL = gameUrl
 		}
+
+		if sinceStatusName != "" && sinceStatusValue != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: strings.Title(sinceStatusName) + " since", Value: sinceStatusValue, Inline: true})
+		}
+		if lastMessageText != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Last Message", Value: lastMessageText, Inline: true})
+		}
+
 		if totalMessagesText != "" {
-			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: true})
 		}
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
@@ -592,7 +652,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				})
 			}
 		} else {
-			searchResult, err := gabs.ParseJSONBuffer(searchResponse.Body)
+			searchResult, err := gabs.ParseJSON(searchResponse)
 			if err == nil {
 				if searchResult.Exists("total_results") {
 					totalMessagesText = humanize.Commaf(searchResult.Path("total_results").Data().(float64)) + " Messages"
@@ -622,6 +682,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if channel.Topic != "" {
 			topicText = channel.Topic
 		}
+
+		/*
+			if channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildVoice {
+				serverChannels := guild.Channels
+				sort.Slice(serverChannels, func(i, j int) bool { return serverChannels[i].Position < serverChannels[j].Position })
+				for _, serverChannel := range serverChannels {
+					fmt.Println("#", serverChannel.Position, serverChannel.Name, serverChannel.Type)
+				}
+			}
+		*/
 
 		channelinfoEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
@@ -834,7 +904,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, voicestatsEmbed)
 		helpers.Relax(err)
-	case "emotes", "emojis": // [p]emotes
+	case "emotes", "emojis", "emoji": // [p]emotes
 		session.ChannelTyping(msg.ChannelID)
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
@@ -925,19 +995,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		memberlistEmbedMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.memberlist-gathering"))
 		helpers.Relax(err)
 
-		lastAfterMemberId := ""
-		var allMembers []*discordgo.Member
-		for {
-			members, err := session.GuildMembers(guild.ID, lastAfterMemberId, 1000)
-			if len(members) <= 0 {
-				break
-			}
-			lastAfterMemberId = members[len(members)-1].User.ID
-			helpers.Relax(err)
-			for _, u := range members {
-				allMembers = append(allMembers, u)
-			}
-		}
+		allMembers := guild.Members
 		slice.Sort(allMembers[:], func(i, j int) bool {
 			iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			helpers.Relax(err)

@@ -134,6 +134,7 @@ func main() {
 		discord.AddHandler(helpers.ElasticOnGuildMemberAdd)
 		discord.AddHandler(helpers.ElasticOnGuildMemberRemove)
 		discord.AddHandler(helpers.ElasticOnReactionAdd)
+		discord.AddHandler(helpers.ElasticOnPresenceUpdate)
 	}
 
 	// Connect to discord

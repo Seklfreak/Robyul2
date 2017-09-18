@@ -10,6 +10,8 @@ import (
 
 	"fmt"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -69,6 +71,8 @@ func (s *Starboard) actionStart(args []string, in *discordgo.Message, out **disc
 		return s.actionStatus
 	case "set":
 		return s.actionSet
+	case "minimum":
+		return s.actionMinimum
 	}
 
 	*out = s.newMsg("bot.arguments.invalid")
@@ -170,6 +174,41 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 	helpers.Relax(err)
 
 	*out = s.newMsg(helpers.GetTextF("plugins.starboard.set-success", guildSettings.StarboardChannelID))
+	return s.actionFinish
+}
+
+func (s *Starboard) actionMinimum(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
+	if !helpers.IsMod(in) {
+		*out = s.newMsg(helpers.GetText("mod.no_permission"))
+		return s.actionFinish
+	}
+
+	if len(args) < 2 {
+		*out = s.newMsg(helpers.GetText("bot.arguments.too-few"))
+		return s.actionFinish
+	}
+
+	var err error
+	var newMinimum int
+	if newMinimum, err = strconv.Atoi(args[1]); err != nil {
+		*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return s.actionFinish
+	}
+
+	if newMinimum < 1 {
+		*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return s.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+	guildSettings.StarboardMinimum = newMinimum
+	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
+	helpers.Relax(err)
+
+	*out = s.newMsg(helpers.GetTextF("plugins.starboard.minimum-success", guildSettings.StarboardMinimum))
 	return s.actionFinish
 }
 
@@ -338,6 +377,20 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 		for _, attachment := range msg.Attachments {
 			urls = append(urls, attachment.URL)
 		}
+		embedImage := ""
+		if len(msg.Embeds) > 0 {
+			for _, embed := range msg.Embeds {
+				if embed.Video != nil && embed.Video.URL != "" {
+					embedImage = embed.Video.URL
+				}
+				if embed.Image != nil && embed.Image.URL != "" {
+					embedImage = embed.Image.URL
+				}
+				if embed.Thumbnail != nil && embed.Thumbnail.URL != "" {
+					embedImage = embed.Thumbnail.URL
+				}
+			}
+		}
 
 		if strings.Contains(err.Error(), "no starboard entry") {
 			starboardEntry, err = s.createStarboardEntry(
@@ -347,6 +400,7 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 				msg.Author.ID,
 				msg.Content,
 				urls,
+				embedImage,
 			)
 			helpers.Relax(err)
 		} else {
@@ -359,7 +413,10 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 		return err
 	}
 
-	return s.PostOrUpdateDiscordMessage(starboardEntry)
+	if starboardEntry.Stars >= s.getMinimum(guildID) {
+		return s.PostOrUpdateDiscordMessage(starboardEntry)
+	}
+	return nil
 }
 
 func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserID string) error {
@@ -381,7 +438,17 @@ func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserI
 				starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
 			helpers.Relax(err)
 		} else {
-			return s.PostOrUpdateDiscordMessage(starboardEntry)
+			if starboardEntry.Stars >= s.getMinimum(guildID) {
+				return s.PostOrUpdateDiscordMessage(starboardEntry)
+			} else {
+				err = cache.GetSession().ChannelMessageDelete(
+					starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
+				helpers.Relax(err)
+				starboardEntry.StarboardMessageID = ""
+				starboardEntry.StarboardMessageChannelID = ""
+				err = s.setStarboardEntry(starboardEntry)
+				helpers.Relax(err)
+			}
 		}
 	}
 	return nil
@@ -429,7 +496,9 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 	if content != "" {
 		starboardPostEmbed.Description = content
 	}
-	if len(starEntry.MessageAttachmentURLs) > 0 {
+	if starEntry.MessageEmbedImageURL != "" {
+		starboardPostEmbed.Image = &discordgo.MessageEmbedImage{URL: starEntry.MessageEmbedImageURL}
+	} else if len(starEntry.MessageAttachmentURLs) > 0 {
 		starboardPostEmbed.Image = &discordgo.MessageEmbedImage{URL: starEntry.MessageAttachmentURLs[0]}
 	} else {
 		imageFileExtensions := []string{"jpg", "jpeg", "png", "gif"}
@@ -512,6 +581,9 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 	for _, url := range starEntry.MessageAttachmentURLs {
 		content += "\n" + url
 	}
+	if starEntry.MessageEmbedImageURL != "" {
+		content += "\n" + starEntry.MessageEmbedImageURL
+	}
 
 	starrersEmbed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("Starrers of message #%s by @%s in #%s:", starEntry.MessageID, authorName, channelName),
@@ -559,6 +631,13 @@ func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discor
 				content += " ..."
 			}
 		}
+		if starMessage.MessageEmbedImageURL != "" {
+			if content == "" {
+				content = starMessage.MessageEmbedImageURL
+			} else if !strings.HasSuffix(content, "...") {
+				content += " ..."
+			}
+		}
 
 		topText += fmt.Sprintf("#%d by %s (%s ⭐): %s\n",
 			i, authorName, humanize.Comma(int64(starMessage.Stars)), content)
@@ -599,7 +678,7 @@ func (s *Starboard) getTopStarboardEntries(guildID string) ([]models.StarEntry, 
 	var entryBucket []models.StarEntry
 	listCursor, err := rethink.Table("starboard_entries").Filter(
 		rethink.Row.Field("guild_id").Eq(guildID),
-	).OrderBy(rethink.Asc("stars")).Limit(10).Run(helpers.GetDB())
+	).OrderBy(rethink.Desc("stars")).Limit(10).Run(helpers.GetDB())
 	if err != nil {
 		return entryBucket, err
 	}
@@ -651,6 +730,7 @@ func (s *Starboard) createStarboardEntry(
 	authorID string,
 	messageContent string,
 	messageAttachmentURLs []string,
+	messageEmbedImageURL string,
 ) (models.StarEntry, error) {
 	insert := rethink.Table("starboard_entries").Insert(models.StarEntry{
 		GuildID:               guildID,
@@ -659,6 +739,7 @@ func (s *Starboard) createStarboardEntry(
 		AuthorID:              authorID,
 		MessageContent:        messageContent,
 		MessageAttachmentURLs: messageAttachmentURLs,
+		MessageEmbedImageURL:  messageEmbedImageURL,
 		StarUserIDs:           []string{},
 		Stars:                 0,
 		FirstStarred:          time.Now(),
@@ -686,6 +767,14 @@ func (s *Starboard) deleteStarboardEntry(starEntry models.StarEntry) error {
 		return err
 	}
 	return errors.New("empty starEntry submitted")
+}
+
+func (s *Starboard) getMinimum(guildID string) int {
+	guildSettings := helpers.GuildSettingsGetCached(guildID)
+	if guildSettings.StarboardMinimum > 0 {
+		return guildSettings.StarboardMinimum
+	}
+	return 1
 }
 
 func (s *Starboard) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {

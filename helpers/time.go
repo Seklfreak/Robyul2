@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +38,7 @@ func Rev(s string) string {
 func SinceInDaysText(timeThen time.Time) string {
 	duration := time.Since(timeThen)
 	if duration.Hours() >= 24 {
-		return strconv.FormatFloat(duration.Hours()/24, 'f', 0, 64) + " days ago"
+		return strconv.FormatFloat(math.Floor(duration.Hours()/24), 'f', 0, 64) + " days ago"
 	} else {
 		return "Less then a Day ago"
 	}

@@ -1,5 +1,5 @@
 package migrations
 
-func m29_create_table_youtube() {
+func m31_create_table_youtube() {
 	CreateTableIfNotExists("youtube")
 }

@@ -11,9 +11,10 @@ type StarEntry struct {
 	AuthorID                  string    `rethink:"author_id"`
 	MessageContent            string    `rethink:"message_content"`
 	MessageAttachmentURLs     []string  `rethink:"message_attachment_urls"`
-	StarboardMessageID        string    `rethinK:"starboard_message_id"`
-	StarboardMessageChannelID string    `rethinK:"starboard_message_channel_id"`
+	MessageEmbedImageURL      string    `rethink:"message_embed_image_url"`
+	StarboardMessageID        string    `rethink:"starboard_message_id"`
+	StarboardMessageChannelID string    `rethink:"starboard_message_channel_id"`
 	StarUserIDs               []string  `rethink:"star_user_ids"`
-	Stars                     int       `rethin:"stars"`
+	Stars                     int       `rethink:"stars"`
 	FirstStarred              time.Time `rethink:"first_starred"`
 }
