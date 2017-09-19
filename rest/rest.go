@@ -48,6 +48,7 @@ func NewRestServices() []*restful.WebService {
 
 	service.Route(service.GET("/{guild-id}/{user-id}").Filter(webkeyAuthenticate).To(FindMember))
 	service.Route(service.GET("/{guild-id}/{user-id}/is").Filter(webkeyAuthenticate).To(IsMember))
+	service.Route(service.GET("/{guild-id}/{user-id}/status").Filter(webkeyAuthenticate).To(StatusMember))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -267,6 +268,35 @@ func IsMember(request *restful.Request, response *restful.Response) {
 			IsMember: false,
 		})
 	}
+}
+
+func StatusMember(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	userID := request.PathParameter("user-id")
+
+	returnStatus := &models.Rest_Status_member{}
+
+	if helpers.GetIsInGuild(guildID, userID) {
+		if helpers.IsBotAdmin(userID) {
+			returnStatus.IsBotAdmin = true
+		}
+		if helpers.IsNukeMod(userID) {
+			returnStatus.IsNukeMod = true
+		}
+		if helpers.IsRobyulMod(userID) {
+			returnStatus.IsRobyulStaff = true
+		}
+		if helpers.IsBlacklisted(userID) {
+			returnStatus.IsBlacklisted = true
+		}
+		if helpers.IsAdminByID(guildID, userID) {
+			returnStatus.IsGuildAdmin = true
+		}
+		if helpers.IsModByID(guildID, userID) {
+			returnStatus.IsGuildMod = true
+		}
+	}
+	response.WriteEntity(returnStatus)
 }
 
 func GetProfile(request *restful.Request, response *restful.Response) {

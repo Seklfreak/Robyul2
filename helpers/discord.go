@@ -165,6 +165,38 @@ func IsAdmin(msg *discordgo.Message) bool {
 	return false
 }
 
+func IsAdminByID(guildID string, userID string) bool {
+	guild, e := GetFreshGuild(guildID)
+	if e != nil {
+		return false
+	}
+
+	if userID == guild.OwnerID || IsBotAdmin(userID) {
+		return true
+	}
+
+	guildMember, e := GetFreshGuildMember(guild.ID, userID)
+	if e != nil {
+		return false
+	}
+	// Check if role may manage server or a role is in admin role list
+	for _, role := range guild.Roles {
+		for _, userRole := range guildMember.Roles {
+			if userRole == role.ID {
+				if role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+					return true
+				}
+				for _, adminRoleName := range adminRoleNames {
+					if role.Name == adminRoleName {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 func IsMod(msg *discordgo.Message) bool {
 	if IsAdmin(msg) == true {
 		return true
@@ -178,6 +210,34 @@ func IsMod(msg *discordgo.Message) bool {
 			return false
 		}
 		guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+		if e != nil {
+			return false
+		}
+		// check if a role is in mod role list
+		for _, role := range guild.Roles {
+			for _, userRole := range guildMember.Roles {
+				if userRole == role.ID {
+					for _, modRoleName := range modRoleNames {
+						if role.Name == modRoleName {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func IsModByID(guildID string, userID string) bool {
+	if IsAdminByID(guildID, userID) == true {
+		return true
+	} else {
+		guild, e := GetFreshGuild(guildID)
+		if e != nil {
+			return false
+		}
+		guildMember, e := GetFreshGuildMember(guild.ID, userID)
 		if e != nil {
 			return false
 		}

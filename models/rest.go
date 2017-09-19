@@ -40,6 +40,15 @@ type Rest_Is_Member struct {
 	IsMember bool
 }
 
+type Rest_Status_member struct {
+	IsBotAdmin bool
+	IsNukeMod bool
+	IsRobyulStaff bool
+	IsBlacklisted bool
+	IsGuildAdmin bool
+	IsGuildMod bool
+}
+
 type Rest_Ranking struct {
 	Ranks []Rest_Ranking_Rank_Item
 	Count int
