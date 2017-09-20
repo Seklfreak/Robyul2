@@ -594,7 +594,8 @@
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
       "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>",
       "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>",
-      "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>"
+      "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>",
+      "delete-config-success": "I removed the config for the given channel. <:blobokhand:317032017164238848>"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",

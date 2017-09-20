@@ -3,6 +3,7 @@ package plugins
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -189,6 +190,37 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				_, err = session.ChannelFileSend(msg.ChannelID, targetChannel.Name+"-robyul-bias-config.json", bytes.NewReader(channelConfigJson))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
+				return
+			})
+		case "delete-config", "remove-config":
+			helpers.RequireAdmin(msg, func() {
+				session.ChannelTyping(msg.ChannelID)
+
+				if len(args) < 2 {
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.Relax(err)
+					return
+				}
+
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+
+				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
+				if channelDb.ChannelID == "" {
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+					helpers.Relax(err)
+					return
+				}
+
+				err = m.deleteChannelConfig(channelDb)
+				helpers.Relax(err)
+				biasChannels = m.GetBiasChannels()
+
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.delete-config-success"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
 		case "stats":
@@ -519,6 +551,14 @@ func (m *Bias) getChannelConfigBy(key string, id string) AssignableRole_Channel 
 func (m *Bias) setChannelConfig(entry AssignableRole_Channel) {
 	_, err := rethink.Table("bias").Update(entry).Run(helpers.GetDB())
 	helpers.Relax(err)
+}
+
+func (m *Bias) deleteChannelConfig(entry AssignableRole_Channel) error {
+	if entry.ID != "" {
+		_, err := rethink.Table("bias").Get(entry.ID).Delete().RunWrite(helpers.GetDB())
+		return err
+	}
+	return errors.New("empty starEntry submitted")
 }
 
 func (m *Bias) GetBiasChannels() []AssignableRole_Channel {
