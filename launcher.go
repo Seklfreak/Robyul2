@@ -9,6 +9,8 @@ import (
 
 	elastic "gopkg.in/olivere/elastic.v5"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -177,11 +179,35 @@ func main() {
 	}
 
 	// Open REST API
+	wsContainer := restful.NewContainer()
+
 	for _, service := range rest.NewRestServices() {
-		restful.Add(service)
+		wsContainer.Add(service)
 	}
+	wsContainer.Filter(func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+		// Add CORS header
+		allowedHosts := []string{"https://robyul.chat", "https://api.robyul.chat", "http://localhost:8000"}
+		if origin := req.Request.Header.Get("Origin"); origin != "" {
+			for _, allowedHost := range allowedHosts {
+				if allowedHost == origin {
+					resp.AddHeader("Access-Control-Allow-Origin", origin)
+					resp.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+					resp.AddHeader("Access-Control-Max-Age", "1000")
+					resp.AddHeader("Access-Control-Allow-Headers", "origin, x-csrftoken, content-type, accept, Authorization")
+				}
+			}
+		}
+		// Log request and time
+		now := time.Now()
+		chain.ProcessFilter(req, resp)
+		log.WithField("module", "launcher").Info(fmt.Sprintf("api request: %s: %s%s (took %v)",
+			req.Request.Method, req.Request.Host, req.Request.URL, time.Now().Sub(now)))
+	})
+	wsContainer.Filter(wsContainer.OPTIONSFilter)
+
 	go func() {
-		log.Fatal(http.ListenAndServe("localhost:2021", nil))
+		server := &http.Server{Addr: "localhost:2021", Handler: wsContainer}
+		log.Fatal(server.ListenAndServe())
 	}()
 	log.WithField("module", "launcher").Info("REST API listening on localhost:2021")
 

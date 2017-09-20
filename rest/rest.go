@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 func NewRestServices() []*restful.WebService {
@@ -86,6 +88,15 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/history/{guild-id}/{start}/{end}").Filter(webkeyAuthenticate).To(GetRandomPicturesGuildHistory))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/statistics").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{guild-id}/messages/{interval}").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatistics))
 	services = append(services, service)
 	return services
 }
@@ -579,4 +590,55 @@ func GetRandomPicturesGuildHistory(request *restful.Request, response *restful.R
 	}
 
 	response.WriteEntity(resultItems)
+}
+
+func GetMessageStatistics(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	agg := elastic.NewDateHistogramAggregation().
+		Field("CreatedAt").
+		//Format("yyyy-MM-dd HH:mm:ss").
+		Interval(interval)
+
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Aggregation("messages", agg).
+		Size(24).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	result := make([]models.Rest_Statistics_Interval, 0)
+
+	var timestamp int64
+	var timeConverted time.Time
+	var timeISO8601 string
+	if agg, found := searchResult.Aggregations.Terms("messages"); found {
+		for _, bucket := range agg.Buckets {
+			timestamp = int64(bucket.Key.(float64) / 1000)
+			timeConverted = time.Unix(timestamp, 0)
+			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			result = append(result, models.Rest_Statistics_Interval{
+				Time:  timeISO8601,
+				Count: bucket.DocCount,
+			})
+			if len(result) >= 24 {
+				break
+			}
+		}
+	}
+
+	response.WriteEntity(result)
 }

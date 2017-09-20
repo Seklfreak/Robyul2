@@ -41,12 +41,12 @@ type Rest_Is_Member struct {
 }
 
 type Rest_Status_member struct {
-	IsBotAdmin bool
-	IsNukeMod bool
+	IsBotAdmin    bool
+	IsNukeMod     bool
 	IsRobyulStaff bool
 	IsBlacklisted bool
-	IsGuildAdmin bool
-	IsGuildMod bool
+	IsGuildAdmin  bool
+	IsGuildMod    bool
 }
 
 type Rest_Ranking struct {
@@ -77,6 +77,11 @@ type Rest_RandomPictures_HistoryItem struct {
 	Filename  string
 	GuildID   string
 	Time      time.Time
+}
+
+type Rest_Statistics_Interval struct {
+	Time  string // ISO 8601
+	Count int64
 }
 
 const (
