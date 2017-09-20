@@ -497,7 +497,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		var sinceStatusName, sinceStatusValue, lastMessageText string
 		if cache.HasElastic() {
-			termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\"")
+			queryString := "_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\""
+			termQuery := elastic.NewQueryStringQuery(queryString)
 			searchResult, err := cache.GetElastic().Search().
 				Index(models.ElasticIndex).
 				Query(termQuery).
@@ -519,17 +520,31 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 			} else {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-					"ChannelID":       msg.ChannelID,
-					"Content":         msg.Content,
-					"Timestamp":       string(msg.Timestamp),
-					"TTS":             strconv.FormatBool(msg.Tts),
-					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-					"IsBot":           strconv.FormatBool(msg.Author.Bot),
-				})
+				if errE, ok := err.(*elastic.Error); ok {
+					raven.CaptureError(fmt.Errorf("%#v", errE), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				} else {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				}
 			}
 
-			termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID)
+			queryString = "_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID
+			termQuery = elastic.NewQueryStringQuery(queryString)
 			searchResult, err = cache.GetElastic().Search().
 				Index(models.ElasticIndex).
 				Query(termQuery).
@@ -546,14 +561,27 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 			} else {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-					"ChannelID":       msg.ChannelID,
-					"Content":         msg.Content,
-					"Timestamp":       string(msg.Timestamp),
-					"TTS":             strconv.FormatBool(msg.Tts),
-					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-					"IsBot":           strconv.FormatBool(msg.Author.Bot),
-				})
+				if errE, ok := err.(*elastic.Error); ok {
+					raven.CaptureError(fmt.Errorf("%#v", errE), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				} else {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				}
 			}
 		}
 
