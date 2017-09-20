@@ -383,7 +383,34 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		case "topalbums", "topalbum":
+			timeLookup := "overall"
+			timeString := "all time"
 			if len(args) >= 2 {
+				switch args[len(args)-1] {
+				case "7days", "week", "7day":
+					timeString = "the last seven days"
+					timeLookup = "7day"
+					break
+				case "1month", "month":
+					timeString = "the last month"
+					timeLookup = "1month"
+					break
+				case "3month":
+					timeString = "the last three months"
+					timeLookup = "3month"
+					break
+				case "6month":
+					timeString = "the last six months"
+					timeLookup = "6month"
+					break
+				case "12month", "year":
+					timeString = "the last twelve months"
+					timeLookup = "12month"
+					break
+				}
+			}
+
+			if (len(args) >= 2 && timeLookup == "overall") || len(args) > 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
@@ -397,7 +424,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			session.ChannelTyping(msg.ChannelID)
 			lastfmTopAlbums, err := lastfmClient.User.GetTopAlbums(lastfm.P{
 				"limit":  10,
-				"period": "overall",
+				"period": timeLookup,
 				"user":   lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -411,7 +438,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				topAlbumsEmbed := &discordgo.MessageEmbed{
 					Title:       helpers.GetTextF("plugins.lastfm.topalbums-embed-title", lastfmUsername),
 					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopAlbums.User),
-					Description: "of **all Time**",
+					Description: "of **" + timeString + "**",
 					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
 					Fields:      []*discordgo.MessageEmbedField{},
 					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
@@ -429,7 +456,34 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		case "topartists", "topartist":
+			timeLookup := "overall"
+			timeString := "all time"
 			if len(args) >= 2 {
+				switch args[len(args)-1] {
+				case "7days", "week", "7day":
+					timeString = "the last seven days"
+					timeLookup = "7day"
+					break
+				case "1month", "month":
+					timeString = "the last month"
+					timeLookup = "1month"
+					break
+				case "3month":
+					timeString = "the last three months"
+					timeLookup = "3month"
+					break
+				case "6month":
+					timeString = "the last six months"
+					timeLookup = "6month"
+					break
+				case "12month", "year":
+					timeString = "the last twelve months"
+					timeLookup = "12month"
+					break
+				}
+			}
+
+			if (len(args) >= 2 && timeLookup == "overall") || len(args) > 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
@@ -441,9 +495,10 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
+
 			lastfmTopArtists, err := lastfmClient.User.GetTopArtists(lastfm.P{
 				"limit":  10,
-				"period": "overall",
+				"period": timeLookup,
 				"user":   lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -457,7 +512,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				topArtistsEmbed := &discordgo.MessageEmbed{
 					Title:       helpers.GetTextF("plugins.lastfm.topartists-embed-title", lastfmUsername),
 					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopArtists.User),
-					Description: "of **all Time**",
+					Description: "of **" + timeString + "**",
 					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
 					Fields:      []*discordgo.MessageEmbedField{},
 					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
@@ -475,7 +530,34 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		case "toptracks", "topsongs", "toptrack", "topsong":
+			timeLookup := "overall"
+			timeString := "all time"
 			if len(args) >= 2 {
+				switch args[len(args)-1] {
+				case "7days", "week", "7day":
+					timeString = "the last seven days"
+					timeLookup = "7day"
+					break
+				case "1month", "month":
+					timeString = "the last month"
+					timeLookup = "1month"
+					break
+				case "3month":
+					timeString = "the last three months"
+					timeLookup = "3month"
+					break
+				case "6month":
+					timeString = "the last six months"
+					timeLookup = "6month"
+					break
+				case "12month", "year":
+					timeString = "the last twelve months"
+					timeLookup = "12month"
+					break
+				}
+			}
+
+			if (len(args) >= 2 && timeLookup == "overall") || len(args) > 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
@@ -487,9 +569,10 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
+
 			lastfmTopTracks, err := lastfmClient.User.GetTopTracks(lastfm.P{
 				"limit":  10,
-				"period": "overall",
+				"period": timeLookup,
 				"user":   lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -503,7 +586,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				topTracksEmbed := &discordgo.MessageEmbed{
 					Title:       helpers.GetTextF("plugins.lastfm.toptracks-embed-title", lastfmUsername),
 					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopTracks.User),
-					Description: "of **all Time**",
+					Description: "of **" + timeString + "**",
 					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
 					Fields:      []*discordgo.MessageEmbedField{},
 					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
@@ -551,7 +634,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					timeString = "all time"
 					topTracks = combinedStats.Overall
 					break
-				case "7days", "week":
+				case "7days", "week", "7day":
 					timeString = "the last seven days"
 					topTracks = combinedStats.SevenDay
 					break
