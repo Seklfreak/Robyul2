@@ -364,6 +364,11 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 	go func() {
 		defer helpers.Recover()
 
+		// don't continue if bot didn't just join this guild
+		if !cache.AddAutoleaverGuildID(guild.ID) {
+			return
+		}
+
 		onWhitelist, err := a.isOnWhitelist(guild.ID, nil)
 		helpers.Relax(err)
 
@@ -401,6 +406,7 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Leave Notification failed, Error: %s", err.Error()))
 			}
 		}
+		cache.RemoveAutoleaverGuildID(guild.ID)
 	}()
 }
 

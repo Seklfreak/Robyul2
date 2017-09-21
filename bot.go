@@ -28,6 +28,10 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 		helpers.GetConfig().Path("discord.perms").Data().(string),
 	))
 
+	for _, guild := range session.State.Guilds {
+		cache.AddAutoleaverGuildID(guild.ID)
+	}
+
 	// Cache the session
 	cache.SetSession(session)
 
