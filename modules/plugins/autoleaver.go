@@ -255,7 +255,7 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 	notWhitelistedGuildsMessage := helpers.GetTextF("plugins.autoleaver.check-not-whitelisted-title", len(notWhitelistedGuilds)) + "\n"
 	for _, notWhitelistedGuild := range notWhitelistedGuilds {
 		notWhitelistedGuildsMessage += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
-			notWhitelistedGuild.Name, notWhitelistedGuild.ID, len(notWhitelistedGuild.Channels), notWhitelistedGuild.MemberCount, notWhitelistedGuild.Region)
+			notWhitelistedGuild.Name, notWhitelistedGuild.ID, len(notWhitelistedGuild.Channels), len(notWhitelistedGuild.Members), notWhitelistedGuild.Region)
 	}
 	notWhitelistedGuildsMessage += helpers.GetTextF("plugins.autoleaver.check-not-whitelisted-footer", len(notWhitelistedGuilds), len(cache.GetSession().State.Guilds)) + "\n"
 

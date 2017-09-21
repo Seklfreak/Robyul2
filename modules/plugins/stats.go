@@ -1137,7 +1137,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		result := fmt.Sprintf("Invite for\nChannel `%s (#%s)`\non Server `%s (#%s)` with %d Channels and %d Members\nUsed %d times, Expires %s, Max Uses %s, %s\nCreated By `%s (#%s)` %s",
 			invite.Channel.Name, invite.Channel.ID,
-			invite.Guild.Name, invite.Guild.ID, len(invite.Guild.Channels), invite.Guild.MemberCount,
+			invite.Guild.Name, invite.Guild.ID, len(invite.Guild.Channels), len(invite.Guild.Members),
 			invite.Uses, maxAgeText, maxUsesText, revokedText,
 			invite.Inviter.Username, invite.Inviter.ID, humanize.Time(createdAt),
 		)
