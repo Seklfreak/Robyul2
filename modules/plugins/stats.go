@@ -227,10 +227,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			helpers.Relax(err)
 		}
 
-		usersCount := guild.MemberCount
-		if guild.MemberCount == 0 {
-			usersCount = len(guild.Members)
-		}
+		usersCount := len(guild.Members)
 
 		textChannels := 0
 		voiceChannels := 0

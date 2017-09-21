@@ -200,7 +200,7 @@ func main() {
 		// Log request and time
 		now := time.Now()
 		chain.ProcessFilter(req, resp)
-		log.WithField("module", "launcher").Info(fmt.Sprintf("api request: %s: %s%s (took %v)",
+		log.WithField("module", "launcher").Info(fmt.Sprintf("api request: %s %s%s (took %v)",
 			req.Request.Method, req.Request.Host, req.Request.URL, time.Now().Sub(now)))
 	})
 	wsContainer.Filter(wsContainer.OPTIONSFilter)
