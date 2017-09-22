@@ -1121,6 +1121,24 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 
+		guild, err := helpers.GetGuild(invite.Guild.ID)
+		if err == nil {
+			invite.Guild.Channels = guild.Channels
+			invite.Guild.Members = guild.Members
+			guildInvites, err := session.GuildInvites(invite.Guild.ID)
+			if err == nil {
+				for _, guildInvite := range guildInvites {
+					if guildInvite.Code == invite.Code {
+						invite.Uses = guildInvite.Uses
+						invite.MaxAge = guildInvite.MaxAge
+						invite.MaxUses = guildInvite.MaxUses
+						invite.Revoked = guildInvite.Revoked
+						invite.CreatedAt = guildInvite.CreatedAt
+					}
+				}
+			}
+		}
+
 		maxAgeText := "never"
 		if invite.MaxAge > 0 {
 			maxAgeText = strconv.Itoa((invite.MaxAge/60)/60) + " hours"
