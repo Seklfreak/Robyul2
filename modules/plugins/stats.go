@@ -708,21 +708,25 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			topicText = channel.Topic
 		}
 
-		/*
-			if channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildVoice {
-				serverChannels := guild.Channels
-				sort.Slice(serverChannels, func(i, j int) bool { return serverChannels[i].Position < serverChannels[j].Position })
-				for _, serverChannel := range serverChannels {
-					fmt.Println("#", serverChannel.Position, serverChannel.Name, serverChannel.Type)
-				}
+		var parentChannelTitleText string
+		var parentChannelFooterText string
+		if (channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildVoice) &&
+			channel.ParentID != "" {
+			parentChannel, err := helpers.GetChannel(channel.ParentID)
+			if err != nil {
+				parentChannel = new(discordgo.Channel)
+				parentChannel.ID = "N/A"
+				parentChannel.Name = "N/A"
 			}
-		*/
+			parentChannelTitleText = parentChannel.Name + " / "
+			parentChannelFooterText = "| Parent Channel #" + parentChannel.ID + " "
+		}
 
 		channelinfoEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
-			Title:       channel.Name + " / " + guild.Name,
+			Title:       channel.Name + " / " + parentChannelTitleText + guild.Name,
 			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), helpers.SinceInDaysText(createdAtTime)),
-			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Channel ID: %s | Server ID: %s", channel.ID, guild.ID)},
+			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Channel #%s %s| Server #%s", channel.ID, parentChannelFooterText, guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Topic", Value: topicText, Inline: false},
 				{Name: "Type", Value: channelTypeText, Inline: true},
