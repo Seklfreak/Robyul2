@@ -103,6 +103,14 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 	}
 }
 
+func RelaxLog(err error) {
+	if err != nil {
+		fmt.Printf("Error: %#v\n", err)
+
+		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+	}
+}
+
 // RelaxAssertEqual panics if a is not b
 func RelaxAssertEqual(a interface{}, b interface{}, err error) {
 	if !reflect.DeepEqual(a, b) {

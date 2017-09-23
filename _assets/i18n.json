@@ -830,6 +830,9 @@
       "remove-success": ":white_check_mark: Removes Guild %s `(#%s)` from the whitelist.",
       "bulk-title": "Added the following Guilds:",
       "bulk-footer": "_added %d Guilds in total._"
+    },
+    "names": {
+      "list-result": "**Name history for `%s#%s` (`#%s`)**\nUsernames: %s\nNicknames: %s"
     }
   }
 }

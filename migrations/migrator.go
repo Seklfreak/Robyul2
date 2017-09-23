@@ -40,6 +40,7 @@ var migrations = []helpers.Callback{
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
 	m30_create_table_autoleaver_whitelist,
+	m31_create_table_names,
 }
 
 // Run executes all registered migrations
