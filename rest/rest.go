@@ -97,6 +97,8 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{guild-id}/messages/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsCount))
+	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
+	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
 	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
 	services = append(services, service)
 	return services
@@ -608,6 +610,62 @@ func GetMessageStatisticsCount(request *restful.Request, response *restful.Respo
 		Gte("now-" + interval).
 		Lte("now")
 	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Count().
+		Index(models.ElasticIndex).
+		Query(finalQuery).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
+}
+
+func GetJoinsStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeJoin + " AND GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Count().
+		Index(models.ElasticIndex).
+		Query(finalQuery).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
+}
+
+func GetLeavesStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeLeave + " AND GuildID:" + guildID)
 	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
 	searchResult, err := cache.GetElastic().Count().
 		Index(models.ElasticIndex).
