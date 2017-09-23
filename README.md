@@ -24,7 +24,6 @@ Robyul provides various features with the needs of KPop Servers in mind, some ex
 - Custom Commands
 - Spoilers
 - Reaction Polls
-- [Cleverbot](https://cleverbot.com)
 - and much more...
 
 If you want Robyul on your Discord Server please DM `Sekl#7397` on Discord.
