@@ -8,8 +8,6 @@ import (
 
 	"sync"
 
-	"fmt"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -218,7 +216,6 @@ func (n *Names) UpdateUsername(userID string, newUsername string) (err error) {
 	if err != nil && !strings.Contains(err.Error(), "no username entry") {
 		helpers.RelaxLog(err)
 	}
-	fmt.Println("lastSavedUsername:", lastSavedUsername, "oldUsername:", oldUsername)
 
 	if oldUsername != "" && lastSavedUsername != oldUsername {
 		err = n.SaveUsername(userID, oldUsername)
