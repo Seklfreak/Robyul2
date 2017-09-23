@@ -79,8 +79,12 @@ type Rest_RandomPictures_HistoryItem struct {
 	Time      time.Time
 }
 
-type Rest_Statistics_Interval struct {
+type Rest_Statistics_Histogram struct {
 	Time  string // ISO 8601
+	Count int64
+}
+
+type Rest_Statistics_Count struct {
 	Count int64
 }
 

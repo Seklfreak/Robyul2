@@ -96,7 +96,8 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}/messages/{interval}").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatistics))
+	service.Route(service.GET("/{guild-id}/messages/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsCount))
+	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
 	services = append(services, service)
 	return services
 }
@@ -592,7 +593,35 @@ func GetRandomPicturesGuildHistory(request *restful.Request, response *restful.R
 	response.WriteEntity(resultItems)
 }
 
-func GetMessageStatistics(request *restful.Request, response *restful.Response) {
+func GetMessageStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Count().
+		Index(models.ElasticIndex).
+		Query(finalQuery).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
+}
+
+func GetMessageStatisticsHistogram(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	interval := request.PathParameter("interval")
 
@@ -620,7 +649,7 @@ func GetMessageStatistics(request *restful.Request, response *restful.Response) 
 		return
 	}
 
-	result := make([]models.Rest_Statistics_Interval, 0)
+	result := make([]models.Rest_Statistics_Histogram, 0)
 
 	var timestamp int64
 	var timeConverted time.Time
@@ -630,7 +659,7 @@ func GetMessageStatistics(request *restful.Request, response *restful.Response) 
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
 			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
-			result = append(result, models.Rest_Statistics_Interval{
+			result = append(result, models.Rest_Statistics_Histogram{
 				Time:  timeISO8601,
 				Count: bucket.DocCount,
 			})
