@@ -203,7 +203,7 @@ func HasPermissionByID(guildID string, userID string, permission int) bool {
 		return false
 	}
 
-	if userID == guild.OwnerID || IsBotAdmin(userID) {
+	if userID == guild.OwnerID {
 		return true
 	}
 
