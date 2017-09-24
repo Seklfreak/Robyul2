@@ -309,6 +309,9 @@ func StatusMember(request *restful.Request, response *restful.Response) {
 		if helpers.IsModByID(guildID, userID) {
 			returnStatus.IsGuildMod = true
 		}
+		if helpers.HasPermissionByID(guildID, userID, discordgo.PermissionAdministrator) {
+			returnStatus.HasGuildPermissionAdministrator = true
+		}
 	}
 	response.WriteEntity(returnStatus)
 }

@@ -197,6 +197,32 @@ func IsAdminByID(guildID string, userID string) bool {
 	return false
 }
 
+func HasPermissionByID(guildID string, userID string, permission int) bool {
+	guild, e := GetFreshGuild(guildID)
+	if e != nil {
+		return false
+	}
+
+	if userID == guild.OwnerID || IsBotAdmin(userID) {
+		return true
+	}
+
+	guildMember, e := GetFreshGuildMember(guild.ID, userID)
+	if e != nil {
+		return false
+	}
+	for _, role := range guild.Roles {
+		for _, userRole := range guildMember.Roles {
+			if userRole == role.ID {
+				if role.Permissions&permission == permission {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func IsMod(msg *discordgo.Message) bool {
 	if IsAdmin(msg) == true {
 		return true
