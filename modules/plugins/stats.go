@@ -540,7 +540,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				}
 			}
 
-			queryString = "_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID
+			queryString = "_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
 			termQuery = elastic.NewQueryStringQuery(queryString)
 			searchResult, err = cache.GetElastic().Search().
 				Index(models.ElasticIndex).
