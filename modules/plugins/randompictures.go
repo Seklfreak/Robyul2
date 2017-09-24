@@ -173,7 +173,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 								defer helpers.Recover()
 								err = rp.postItem(sourceEntry.GuildID, postToChannelID, "", gPicture, sourceEntry.ID, strconv.Itoa(chosenPicN))
 								if err != nil {
-									if errG := err.(*googleapi.Error); errG != nil {
+									if errG, ok := err.(*googleapi.Error); ok {
 										if strings.Contains("The download quota for this file has been exceeded", errG.Error()) {
 											goto RetryNewPicture
 										} else {
