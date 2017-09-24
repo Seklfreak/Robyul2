@@ -272,7 +272,9 @@ func (a *AutoRoles) OnGuildMemberAdd(member *discordgo.Member, session *discordg
 			err := session.GuildMemberRoleAdd(member.GuildID, member.User.ID, roleID)
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok == true {
-					if errD.Message.Code != 50013 && errD.Message.Code != 10011 {
+					if errD.Message.Code != discordgo.ErrCodeMissingPermissions &&
+						errD.Message.Code != discordgo.ErrCodeMissingAccess &&
+							errD.Message.Code != discordgo.ErrCodeUnknownRole {
 						raven.CaptureError(fmt.Errorf("%#v", errD), map[string]string{})
 					}
 				} else {
