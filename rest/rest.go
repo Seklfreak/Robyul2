@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
 	"strings"
+
+	"reflect"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/generator"
@@ -100,6 +103,15 @@ func NewRestServices() []*restful.WebService {
 	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
 	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
 	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/chatlog").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{guild-id}/{channel-id}/around/{message-id}").Filter(sessionAndWebkeyAuthenticate).To(GetChatlogAroundMessageID))
 	services = append(services, service)
 	return services
 }
@@ -533,6 +545,27 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
 
+		channels := make([]models.Rest_Channel, 0)
+		sort.Slice(guild.Channels, func(i, j int) bool { return guild.Channels[i].Position < guild.Channels[j].Position })
+		for _, channel := range guild.Channels {
+			channelType := "text"
+			switch channel.Type {
+			case discordgo.ChannelTypeGuildVoice:
+				channelType = "voice"
+			case discordgo.ChannelTypeGuildCategory:
+				channelType = "category"
+			}
+			channels = append(channels, models.Rest_Channel{
+				ID:       channel.ID,
+				ParentID: channel.ParentID,
+				GuildID:  channel.GuildID,
+				Name:     channel.Name,
+				Type:     channelType,
+				Topic:    channel.Topic,
+				Position: channel.Position,
+			})
+		}
+
 		returnGuild := &models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -544,6 +577,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
 			},
+			Channels: channels,
 		}
 
 		response.WriteEntity(returnGuild)
@@ -728,6 +762,131 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 				break
 			}
 		}
+	}
+
+	response.WriteEntity(result)
+}
+
+func GetChatlogAroundMessageID(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	channelID := request.PathParameter("channel-id")
+	messageID := request.PathParameter("message-id")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.HasPermissionByID(
+			guildID, request.Attribute("UserID").(string), discordgo.PermissionAdministrator) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(1).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if searchResult.TotalHits() <= 0 {
+		response.WriteError(http.StatusNoContent, errors.New("Message not found"))
+		return
+	}
+
+	result := make([]models.Rest_Chatlog_Message, 0)
+	var sortValues []interface{}
+	var ttyp models.ElasticMessage
+	for _, item := range searchResult.Hits.Hits {
+		sortValues = item.Sort
+	}
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		m := item.(models.ElasticMessage)
+
+		author, _ := helpers.GetUser(m.UserID)
+		if author == nil || author.ID == "" {
+			author = new(discordgo.User)
+			author.Username = "N/A"
+		}
+
+		result = append(result, models.Rest_Chatlog_Message{
+			CreatedAt:      m.CreatedAt,
+			ID:             m.MessageID,
+			Content:        m.Content,
+			Attachments:    m.Attachments,
+			AuthorID:       m.UserID,
+			AuthorUsername: author.Username,
+			Embeds:         m.Embeds,
+		})
+	}
+
+	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(50).
+		SearchAfter(sortValues[0]).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		m := item.(models.ElasticMessage)
+
+		author, _ := helpers.GetUser(m.UserID)
+		if author == nil || author.ID == "" {
+			author = new(discordgo.User)
+			author.Username = "N/A"
+		}
+
+		result = append(result, models.Rest_Chatlog_Message{
+			CreatedAt:      m.CreatedAt,
+			ID:             m.MessageID,
+			Content:        m.Content,
+			Attachments:    m.Attachments,
+			AuthorID:       m.UserID,
+			AuthorUsername: author.Username,
+			Embeds:         m.Embeds,
+		})
+	}
+
+	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(50).
+		SearchAfter(sortValues[0]).
+		Sort("CreatedAt", false).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		m := item.(models.ElasticMessage)
+
+		author, _ := helpers.GetUser(m.UserID)
+		if author == nil || author.ID == "" {
+			author = new(discordgo.User)
+			author.Username = "N/A"
+		}
+
+		result = append([]models.Rest_Chatlog_Message{{
+			CreatedAt:      m.CreatedAt,
+			ID:             m.MessageID,
+			Content:        m.Content,
+			Attachments:    m.Attachments,
+			AuthorID:       m.UserID,
+			AuthorUsername: author.Username,
+			Embeds:         m.Embeds,
+		}}, result...)
 	}
 
 	response.WriteEntity(result)

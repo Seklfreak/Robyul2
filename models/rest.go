@@ -10,6 +10,17 @@ type Rest_Guild struct {
 	JoinedAt  time.Time
 	BotPrefix string
 	Features  Rest_Guild_Features
+	Channels  []Rest_Channel
+}
+
+type Rest_Channel struct {
+	ID       string
+	GuildID  string
+	Name     string
+	ParentID string
+	Type     string
+	Topic    string
+	Position int
 }
 
 type Website_Session_Data struct {
@@ -87,6 +98,16 @@ type Rest_Statistics_Histogram struct {
 
 type Rest_Statistics_Count struct {
 	Count int64
+}
+
+type Rest_Chatlog_Message struct {
+	CreatedAt      time.Time
+	ID             string
+	Content        string
+	Attachments    []string
+	AuthorID       string
+	AuthorUsername string
+	Embeds         int
 }
 
 const (
