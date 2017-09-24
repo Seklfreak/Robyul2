@@ -539,7 +539,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				// Get Reason
 				reasonText := fmt.Sprintf("Issued by: %s#%s (#%s) | Delete Days: %d | Reason: ",
 					msg.Author.Username, msg.Author.Discriminator, msg.Author.ID, days)
-				if len(args) > 0 {
+				if len(args) > 1 {
 					if regexNumberOnly.MatchString(args[1]) && len(args) > 1 {
 						reasonText += strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 					} else {
