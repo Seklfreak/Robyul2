@@ -241,25 +241,27 @@ func main() {
 }
 
 type KeenRestEvent struct {
-	Seconds float64
-	Method  string
-	Host    string
-	Referer string
-	URL     string
-	Origin  string
-	Query   string
+	Seconds   float64
+	Method    string
+	Host      string
+	Referer   string
+	URL       string
+	Origin    string
+	UserAgent string
+	Query     string
 }
 
 func logKeenRequest(request *restful.Request, timeInSeconds float64) {
 	if keenClient.ApiKey != "" && keenClient.ProjectToken != "" {
 		err := keenClient.AddEvent("Robyul_REST_API", &KeenRestEvent{
-			Seconds: timeInSeconds,
-			Method:  request.Request.Method,
-			Host:    request.Request.Host,
-			Referer: request.Request.Referer(),
-			URL:     request.Request.URL.Path,
-			Origin:  request.Request.Header.Get("Origin"),
-			Query:   request.Request.URL.RawQuery,
+			Seconds:   timeInSeconds,
+			Method:    request.Request.Method,
+			Host:      request.Request.Host,
+			Referer:   request.Request.Referer(),
+			URL:       request.Request.URL.Path,
+			Origin:    request.Request.Header.Get("Origin"),
+			UserAgent: request.Request.Header.Get("User-Agent"),
+			Query:     request.Request.URL.RawQuery,
 		})
 		if err != nil {
 			cache.GetLogger().WithField("module", "launcher").Error("Error logging API request to keen: ", err.Error())
