@@ -46,12 +46,20 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 
 	// request guild members from the gateway
 	go func() {
-		time.Sleep(30 * time.Second)
+		time.Sleep(5 * time.Second)
 
 		for _, guild := range session.State.Guilds {
-			err := session.RequestGuildMembers(guild.ID, "", 0)
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			if guild.Large {
+				err := session.RequestGuildMembers(guild.ID, "", 0)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+
+				cache.GetLogger().WithField("module", "bot").Debug(
+					fmt.Sprintf("requesting guild member chunks for guild: %s",
+						guild.ID))
+
+				time.Sleep(1 * time.Second)
 			}
 		}
 	}()
