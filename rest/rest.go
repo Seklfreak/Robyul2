@@ -304,6 +304,7 @@ func StatusMember(request *restful.Request, response *restful.Response) {
 	returnStatus := &models.Rest_Status_member{}
 
 	if helpers.GetIsInGuild(guildID, userID) {
+		returnStatus.IsMember = true
 		if helpers.IsBotAdmin(userID) {
 			returnStatus.IsBotAdmin = true
 		}

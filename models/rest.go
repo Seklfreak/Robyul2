@@ -52,6 +52,7 @@ type Rest_Is_Member struct {
 }
 
 type Rest_Status_member struct {
+	IsMember                        bool
 	IsBotAdmin                      bool
 	IsNukeMod                       bool
 	IsRobyulStaff                   bool
