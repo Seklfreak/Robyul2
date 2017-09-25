@@ -22,6 +22,11 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
 	"github.com/go-redis/redis"
+	"gopkg.in/inconshreveable/go-keen.v0"
+)
+
+var (
+	keenClient *keen.Client
 )
 
 // Entrypoint
@@ -178,6 +183,16 @@ func main() {
 		}
 	}
 
+	// create keen client
+	if config.Path("keen.project_id").Data().(string) != "" &&
+		config.Path("keen.key").Data().(string) != "" {
+		log.WithField("module", "launcher").Info("Connecting bot to keen.io...")
+		keenClient = &keen.Client{
+			ProjectToken: config.Path("keen.project_id").Data().(string),
+			ApiKey:       config.Path("keen.key").Data().(string),
+		}
+	}
+
 	// Open REST API
 	wsContainer := restful.NewContainer()
 
@@ -200,8 +215,10 @@ func main() {
 		// Log request and time
 		now := time.Now()
 		chain.ProcessFilter(req, resp)
+		tookTime := time.Now().Sub(now)
 		log.WithField("module", "launcher").Info(fmt.Sprintf("api request: %s %s%s (took %v)",
-			req.Request.Method, req.Request.Host, req.Request.URL, time.Now().Sub(now)))
+			req.Request.Method, req.Request.Host, req.Request.URL, tookTime))
+		logKeenRequest(req, tookTime.Seconds())
 	})
 	wsContainer.Filter(wsContainer.OPTIONSFilter)
 
@@ -221,4 +238,31 @@ func main() {
 	log.WithField("module", "launcher").Info("The OS is killing me :c")
 	log.WithField("module", "launcher").Info("Disconnecting...")
 	discord.Close()
+}
+
+type KeenRestEvent struct {
+	Seconds float64
+	Method  string
+	Host    string
+	Referer string
+	URL     string
+	Origin  string
+	Query   string
+}
+
+func logKeenRequest(request *restful.Request, timeInSeconds float64) {
+	if keenClient.ApiKey != "" && keenClient.ProjectToken != "" {
+		err := keenClient.AddEvent("Robyul_REST_API", &KeenRestEvent{
+			Seconds: timeInSeconds,
+			Method:  request.Request.Method,
+			Host:    request.Request.Host,
+			Referer: request.Request.Referer(),
+			URL:     request.Request.URL.Path,
+			Origin:  request.Request.Header.Get("Origin"),
+			Query:   request.Request.URL.RawQuery,
+		})
+		if err != nil {
+			cache.GetLogger().WithField("module", "launcher").Error("Error logging API request to keen: ", err.Error())
+		}
+	}
 }

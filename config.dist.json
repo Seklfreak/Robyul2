@@ -87,5 +87,9 @@
   },
   "elasticsearch": {
     "url": "http://localhost:9200"
+  },
+  "keen": {
+    "project_id": "",
+    "key": ""
   }
 }

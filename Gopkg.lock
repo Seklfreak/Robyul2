@@ -302,6 +302,12 @@
   version = "v3.0.4"
 
 [[projects]]
+  branch = "v0"
+  name = "gopkg.in/inconshreveable/go-keen.v0"
+  packages = ["."]
+  revision = "abddc16d5dc65ffcb78438e043e628d7f4664735"
+
+[[projects]]
   name = "gopkg.in/oleiade/lane.v1"
   packages = ["."]
   revision = "28f7c3f09254f12b51e620fa4db136ba58804762"
@@ -322,6 +328,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e8e9e9413347562d8f98530486d784ab309e33a159072ea94816308c22a2078c"
+  inputs-digest = "987020c58c3a3e89de97b4a56f5186ec7458abd502984647ba5ca7968e96a2e9"
   solver-name = "gps-cdcl"
   solver-version = 1
