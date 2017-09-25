@@ -103,6 +103,7 @@ func NewRestServices() []*restful.WebService {
 	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
 	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
 	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
+	service.Route(service.GET("/bot").Filter(webkeyAuthenticate).To(GotBotStatistics))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -765,6 +766,21 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 	}
 
 	response.WriteEntity(result)
+}
+
+func GotBotStatistics(request *restful.Request, response *restful.Response) {
+	users := make(map[string]string)
+
+	for _, guild := range cache.GetSession().State.Guilds {
+		for _, u := range guild.Members {
+			users[u.User.ID] = u.User.Username
+		}
+	}
+
+	response.WriteEntity(models.Rest_Statitics_Bot{
+		Guilds: len(cache.GetSession().State.Guilds),
+		Users:  len(users),
+	})
 }
 
 func GetChatlogAroundMessageID(request *restful.Request, response *restful.Response) {

@@ -100,6 +100,11 @@ type Rest_Statistics_Count struct {
 	Count int64
 }
 
+type Rest_Statitics_Bot struct {
+	Users  int
+	Guilds int
+}
+
 type Rest_Chatlog_Message struct {
 	CreatedAt      time.Time
 	ID             string
