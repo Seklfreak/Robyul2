@@ -209,7 +209,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		var err error
 		var guild *discordgo.Guild
 		if len(args) > 0 && helpers.IsRobyulMod(msg.Author.ID) {
-			guild, err = helpers.GetFreshGuild(args[0])
+			guild, err = helpers.GetGuild(args[0])
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == 50001 {
@@ -223,7 +223,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		} else {
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			guild, err = helpers.GetFreshGuild(currentChannel.GuildID)
+			guild, err = helpers.GetGuild(currentChannel.GuildID)
 			helpers.Relax(err)
 		}
 

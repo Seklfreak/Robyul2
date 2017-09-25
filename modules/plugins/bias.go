@@ -304,7 +304,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 			if msg.ChannelID == biasChannel.ChannelID {
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
-				guild, err := helpers.GetFreshGuild(channel.GuildID)
+				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
 				member, err := helpers.GetFreshGuildMember(guild.ID, msg.Author.ID)
 				helpers.Relax(err)
@@ -633,7 +633,7 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 			if reaction.ChannelID == biasChannel.ChannelID {
 				channel, err := helpers.GetChannel(reaction.ChannelID)
 				helpers.Relax(err)
-				guild, err := helpers.GetFreshGuild(channel.GuildID)
+				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
 				member, err := helpers.GetFreshGuildMember(guild.ID, reaction.UserID)
 				helpers.Relax(err)
