@@ -354,7 +354,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 		currentGuild, err := helpers.GetGuild(currentChannel.GuildID)
 		helpers.Relax(err)
-		targetMember, err := helpers.GetFreshGuildMember(currentGuild.ID, targetUser.ID)
+		targetMember, err := helpers.GetGuildMember(currentGuild.ID, targetUser.ID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10007 {
 				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
@@ -640,7 +640,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 			}
-			channel, err = helpers.GetFreshChannel(channel.ID)
+			channel, err = helpers.GetChannel(channel.ID)
 			helpers.Relax(err)
 			if channel.GuildID != sourceChannel.GuildID && !helpers.IsRobyulMod(msg.Author.ID) {
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -648,7 +648,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				return
 			}
 		} else {
-			channel, err = helpers.GetFreshChannel(msg.ChannelID)
+			channel, err = helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 		}
 

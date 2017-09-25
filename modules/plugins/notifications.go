@@ -338,7 +338,7 @@ NextKeyword:
 				doesMatch = true
 			}
 			if doesMatch == true {
-				memberToNotify, err := helpers.GetFreshGuildMember(guild.ID, notificationSetting.UserID)
+				memberToNotify, err := helpers.GetGuildMember(guild.ID, notificationSetting.UserID)
 				if err != nil {
 					cache.GetLogger().WithField("module", "notifications").Error("error getting member to notify: " + err.Error())
 					continue NextKeyword

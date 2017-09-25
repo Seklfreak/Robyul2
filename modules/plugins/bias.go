@@ -306,7 +306,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 				helpers.Relax(err)
 				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
-				member, err := helpers.GetFreshGuildMember(guild.ID, msg.Author.ID)
+				member, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
 				helpers.Relax(err)
 				guildRoles, err := session.GuildRoles(guild.ID)
 				if err != nil {
@@ -443,7 +443,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 												}
 											}
 
-											member, err = helpers.GetFreshGuildMember(channel.GuildID, msg.Author.ID)
+											member, err = helpers.GetGuildMember(channel.GuildID, msg.Author.ID)
 											helpers.Relax(err)
 
 											break FindRoleLoop
@@ -635,7 +635,7 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 				helpers.Relax(err)
 				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
-				member, err := helpers.GetFreshGuildMember(guild.ID, reaction.UserID)
+				member, err := helpers.GetGuildMember(guild.ID, reaction.UserID)
 				helpers.Relax(err)
 				if member.User.Bot {
 					return
