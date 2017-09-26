@@ -1676,6 +1676,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		}
 		go func() {
+			if member.User.ID == session.State.User.ID { // Don't inspect Robyul
+				return
+			}
+
 			if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
 				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
 				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
@@ -1895,6 +1899,10 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 		}
 		for _, targetGuild := range cache.GetSession().State.Guilds {
 			if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
+				if user.User.ID == session.State.User.ID { // Don't inspect Robyul
+					return
+				}
+
 				// check if user is on this guild
 				if helpers.GetIsInGuild(targetGuild.ID, user.User.ID) {
 					guild, err := helpers.GetGuild(targetGuild.ID)
