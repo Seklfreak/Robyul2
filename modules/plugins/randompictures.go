@@ -181,7 +181,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 											continue
 										}
 									} else {
-										raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+										raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{"GuildID": sourceEntry.GuildID})
 										continue
 									}
 								}
