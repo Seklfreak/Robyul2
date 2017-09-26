@@ -213,7 +213,7 @@ const (
 	deviceId                 string = "android-3deeb2d04b2ab0ee" // TODO: generate a random device id
 	instagramFriendlyUser    string = "https://www.instagram.com/%s/"
 	instagramFriendlyPost    string = "https://www.instagram.com/p/%s/"
-	instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?([a-z0-9]+\/.+\.jpg)`
+	instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
 )
 
 func (m *Instagram) Commands() []string {
