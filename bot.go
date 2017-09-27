@@ -17,8 +17,18 @@ import (
 	"github.com/getsentry/raven-go"
 )
 
-// BotOnReady gets called after the gateway connected
+var didLaunch = false
+
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
+	if !didLaunch {
+		OnFirstReady(session, event)
+		didLaunch = true
+	} else {
+		OnReconnect(session, event)
+	}
+}
+
+func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 	log := cache.GetLogger()
 
 	log.WithField("module", "bot").Info("Connected to discord!")
@@ -101,9 +111,30 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 
 	// Run async game-changer
 	//go changeGameInterval(session)
+}
 
-	// Run auto-leaver for non-beta guilds
-	//go autoLeaver(session)
+func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
+	cache.GetLogger().WithField("module", "bot").Info("Reconnected to discord!")
+
+	// request guild members from the gateway
+	go func() {
+		time.Sleep(5 * time.Second)
+
+		for _, guild := range session.State.Guilds {
+			if guild.Large {
+				err := session.RequestGuildMembers(guild.ID, "", 0)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+
+				cache.GetLogger().WithField("module", "bot").Debug(
+					fmt.Sprintf("requesting guild member chunks for guild: %s",
+						guild.ID))
+
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}()
 }
 
 func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {

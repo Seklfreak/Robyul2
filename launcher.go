@@ -122,7 +122,7 @@ func main() {
 	discord.StateEnabled = true
 	discord.Unlock()
 
-	discord.AddHandlerOnce(BotOnReady)
+	discord.AddHandler(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
 	discord.AddHandler(BotOnMessageDelete)
 	discord.AddHandler(BotOnGuildMemberAdd)
