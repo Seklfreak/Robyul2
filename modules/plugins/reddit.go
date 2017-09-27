@@ -96,11 +96,22 @@ func (r *Reddit) checkSubredditLoop() {
 		}
 
 		for subredditName, entries := range bundledEntries {
+		BundleStart:
 			r.logger().Info(fmt.Sprintf("checking subreddit r/%s for %d channels", subredditName, len(entries)))
 			newSubmissions, err := redditSession.SubredditSubmissions(subredditName, geddit.NewSubmissions, geddit.ListingOptions{
 				Limit: 5,
 			})
 			if err != nil {
+				if strings.Contains(err.Error(), "oauth2: token expired and refresh token is not set") {
+					// login when token expired
+					err = redditSession.LoginAuth(
+						helpers.GetConfig().Path("reddit.username").Data().(string),
+						helpers.GetConfig().Path("reddit.password").Data().(string),
+					)
+					helpers.Relax(err)
+					r.logger().Error("logged in again after token expired")
+					goto BundleStart
+				}
 				r.logger().Error(fmt.Sprintf("updating subreddit r/%s failed: %s", subredditName, err.Error()))
 				continue
 			}
