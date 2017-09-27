@@ -205,6 +205,10 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 		}
 	}
 	slice.Sort(allMembers[:], func(i, j int) bool {
+		if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
+			return false
+		}
+
 		iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 		helpers.Relax(err)
 		jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
