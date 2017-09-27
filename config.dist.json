@@ -91,5 +91,11 @@
   "keen": {
     "project_id": "",
     "key": ""
+  },
+  "reddit": {
+    "id": "",
+    "secret": "",
+    "username": "",
+    "password": ""
   }
 }
