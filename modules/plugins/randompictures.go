@@ -654,7 +654,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 
 	splitFilename := strings.Split(file.Name, ".")
 
-	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
+	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+strings.ToLower(splitFilename[len(splitFilename)-1])))
 	linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
 	// open link to prepare cache
