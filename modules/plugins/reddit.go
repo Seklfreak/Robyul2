@@ -8,6 +8,8 @@ import (
 
 	"time"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -109,14 +111,37 @@ func (r *Reddit) checkSubredditLoop() {
 						continue
 					}
 
-					r.logger().Info(fmt.Sprintf("posting Submission: #%s on r/%s (%s)",
-						submission.ID, subredditName, RedditBaseUrl+submission.Permalink))
-
 					postSubmission := submission
 					postChannelID := entry.ChannelID
+					postDelay := entry.PostDelay
 					go func() {
 						defer helpers.Recover()
 
+						if postDelay > 0 {
+							time.Sleep(time.Duration(postDelay) * time.Minute)
+
+							// don't post if post got deleted
+							refreshedSubmission := helpers.GetJSON(RedditBaseUrl + postSubmission.Permalink + ".json")
+							if refreshedSubmission.ExistsP("data.children.data.selftext") {
+								selftext := strings.ToLower(refreshedSubmission.Path("data.children.data.selftext").String())
+								if strings.Contains(selftext, "[deleted]") || strings.Contains(selftext, "[removed]") {
+									r.logger().Info(fmt.Sprintf("NOT posting submission because it has been deleted: #%s on r/%s (%s) to #%s",
+										postSubmission.ID, subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
+									return
+								}
+							}
+							if refreshedSubmission.ExistsP("data.children.data.author") {
+								author := strings.ToLower(refreshedSubmission.Path("data.children.data.author").String())
+								if strings.Contains(author, "[deleted]") || strings.Contains(author, "[removed]") {
+									r.logger().Info(fmt.Sprintf("NOT posting submission because it has been deleted: #%s on r/%s (%s) to #%s",
+										postSubmission.ID, subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
+									return
+								}
+							}
+						}
+
+						r.logger().Info(fmt.Sprintf("posting submission: #%s on r/%s (%s) to #%s",
+							postSubmission.ID, subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
 						helpers.Relax(r.postSubmission(postChannelID, postSubmission))
 					}()
 				}
@@ -193,6 +218,7 @@ func (r *Reddit) actionStart(args []string, in *discordgo.Message, out **discord
 }
 
 func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo.MessageSend) redditAction {
+	var err error
 	if !helpers.IsMod(in) {
 		*out = r.newMsg(helpers.GetText("mod.no_permission"))
 		return r.actionFinish
@@ -201,6 +227,15 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 	if len(args) < 3 {
 		*out = r.newMsg("bot.arguments.too-few")
 		return r.actionFinish
+	}
+
+	var postDelay int
+	if len(args) > 3 {
+		postDelay, err = strconv.Atoi(args[3])
+		if err != nil {
+			*out = r.newMsg("bot.arguments.invalid")
+			return r.actionFinish
+		}
 	}
 
 	targetChannel, err := helpers.GetChannelFromMention(in, args[2])
@@ -220,7 +255,7 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 		return r.actionFinish
 	}
 
-	_, err = r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID)
+	_, err = r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID, postDelay)
 	helpers.Relax(err)
 
 	// TODO: Post preview post
@@ -242,8 +277,8 @@ func (r *Reddit) actionList(args []string, in *discordgo.Message, out **discordg
 
 	subredditListText := ""
 	for _, subredditEntry := range subredditEntries {
-		subredditListText += fmt.Sprintf("`%s`: Subreddit `r/%s` posting to <#%s>\n",
-			subredditEntry.ID, subredditEntry.SubredditName, subredditEntry.ChannelID)
+		subredditListText += fmt.Sprintf("`%s`: Subreddit `r/%s` posting to <#%s> (Delay: %d minutes)\n",
+			subredditEntry.ID, subredditEntry.SubredditName, subredditEntry.ChannelID, subredditEntry.PostDelay)
 	}
 	subredditListText += fmt.Sprintf("Found **%d** Subreddits in total.", len(subredditEntries))
 
@@ -330,14 +365,15 @@ func (r *Reddit) getSubredditInfo(subreddit string) (data *discordgo.MessageSend
 	return
 }
 
-func (r *Reddit) addSubredditEntry(subreddit string, guildID string, channelID string, UserID string) (subredditEntry models.RedditSubredditEntry, err error) {
+func (r *Reddit) addSubredditEntry(subreddit string, guildID string, channelID string, userID string, postDelay int) (subredditEntry models.RedditSubredditEntry, err error) {
 	insert := rethink.Table(models.RedditSubredditsTable).Insert(models.RedditSubredditEntry{
 		SubredditName: subreddit,
 		GuildID:       guildID,
 		ChannelID:     channelID,
-		AddedByUserID: UserID,
+		AddedByUserID: userID,
 		AddedAt:       time.Now(),
 		LastChecked:   time.Now(),
+		PostDelay:     postDelay,
 	})
 	res, err := insert.RunWrite(helpers.GetDB())
 	if err != nil {

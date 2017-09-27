@@ -14,4 +14,5 @@ type RedditSubredditEntry struct {
 	ChannelID     string    `rethink:"channel_id"`
 	AddedByUserID string    `rethink:"addedby_user_id"`
 	AddedAt       time.Time `rethink:"addedat"`
+	PostDelay     int       `rethink:"post_delay"`
 }
