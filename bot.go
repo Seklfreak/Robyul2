@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"math/rand"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -108,9 +110,6 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 			)
 		}
 	}()
-
-	// Run async game-changer
-	//go changeGameInterval(session)
 }
 
 func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
@@ -470,15 +469,30 @@ func sendHelp(message *discordgo.MessageCreate) {
 	)
 }
 
-// Changes the game interval every ten minutes after called
 func changeGameInterval(session *discordgo.Session) {
-	for {
-		guilds := session.State.Guilds
+	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-		err := session.UpdateStatus(0, fmt.Sprintf("on %d servers | robyul.chat | _help", len(guilds)))
-		if err != nil {
-			raven.CaptureError(err, map[string]string{})
+	var newStatus string
+	for {
+
+		switch randGen.Intn(2) {
+		case 0:
+			newStatus = fmt.Sprintf("on %d servers | robyul.chat | _help", len(session.State.Guilds))
+		case 1:
+			users := make(map[string]string)
+
+			for _, guild := range session.State.Guilds {
+				for _, u := range guild.Members {
+					users[u.User.ID] = u.User.Username
+				}
+			}
+
+			newStatus = fmt.Sprintf("with %d members | robyul.chat | _help", len(users))
 		}
+
+		fmt.Println("setting status to:", newStatus)
+		err := session.UpdateStatus(0, newStatus)
+		helpers.RelaxLog(err)
 
 		time.Sleep(1 * time.Hour)
 	}

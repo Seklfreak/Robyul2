@@ -374,8 +374,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				switch status {
 				case "dnd":
 					status = "Do Not Disturb"
-				case "idle":
-					status = "Away"
 				}
 				if presence.Game != nil {
 					game = presence.Game.Name
