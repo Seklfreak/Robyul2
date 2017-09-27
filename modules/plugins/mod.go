@@ -47,6 +47,7 @@ func (m *Mod) Commands() []string {
 		"create-invite",
 		"prefix",
 		"react",
+		"toggle-chatlog",
 	}
 }
 
@@ -1494,6 +1495,29 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				helpers.GetPrefixForServer(channel.GuildID),
 			))
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		return
+	case "toggle-chatlog":
+		session.ChannelTyping(msg.ChannelID)
+		helpers.RequireAdmin(msg, func() {
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			settings := helpers.GuildSettingsGetCached(channel.GuildID)
+			var setMessage string
+			if settings.ChatlogDisabled {
+				settings.ChatlogDisabled = false
+				setMessage = "Chatlog has been enabled."
+			} else {
+				settings.ChatlogDisabled = true
+				setMessage = "Chatlog has been disabled and Server Statistics will be stored anonymized."
+			}
+			err = helpers.GuildSettingsSet(channel.GuildID, settings)
+			helpers.Relax(err)
+
+			_, err = session.ChannelMessageSend(msg.ChannelID, setMessage)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		})
 		return
 	}
 }

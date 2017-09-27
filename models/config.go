@@ -50,6 +50,8 @@ type Config struct {
 
 	StarboardChannelID string `rethink:"starboard_channel_id"`
 	StarboardMinimum   int    `rethink:"starboard_minimum"`
+
+	ChatlogDisabled bool `rethink:"chatlog_disabled"`
 }
 
 // Default is a helper for generating default config values

@@ -216,6 +216,12 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
 
+		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+		if guildSettings.ChatlogDisabled {
+			featureChatlog.Enabled = false
+		}
+
 		returnGuilds = append(returnGuilds, models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -226,6 +232,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 			Features: models.Rest_Guild_Features{
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
+				Chatlog:        featureChatlog,
 			},
 		})
 	}
@@ -795,6 +802,11 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			response.WriteErrorString(401, "401: Not Authorized")
 			return
 		}
+	}
+
+	if helpers.GuildSettingsGetCached(guildID).ChatlogDisabled {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
 	}
 
 	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
