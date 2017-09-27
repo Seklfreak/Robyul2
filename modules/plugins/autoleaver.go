@@ -78,7 +78,7 @@ func (a *Autoleaver) actionStart(args []string, in *discordgo.Message, out **dis
 }
 
 func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -117,7 +117,7 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 }
 
 func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -181,7 +181,7 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 }
 
 func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -221,7 +221,7 @@ func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **di
 }
 
 func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
