@@ -40,7 +40,6 @@ func (r *Reddit) Commands() []string {
 
 func (r *Reddit) Init(session *discordgo.Session) {
 	var err error
-	// 60 per minute
 	redditSession, err = geddit.NewOAuthSession(
 		helpers.GetConfig().Path("reddit.id").Data().(string),
 		helpers.GetConfig().Path("reddit.secret").Data().(string),
@@ -97,7 +96,7 @@ func (r *Reddit) checkSubredditLoop() {
 		for subredditName, entries := range bundledEntries {
 			r.logger().Info(fmt.Sprintf("checking subreddit r/%s for %d channels", subredditName, len(entries)))
 			newSubmissions, err := redditSession.SubredditSubmissions(subredditName, geddit.NewSubmissions, geddit.ListingOptions{
-				Limit: 10,
+				Limit: 5,
 			})
 			if err != nil {
 				r.logger().Error(fmt.Sprintf("updating subreddit r/%s failed: %s", subredditName, err.Error()))
@@ -153,7 +152,7 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 			data.Embed.Title = submission.Title[:1499] + "…"
 		}
 	}
-	if submission.ThumbnailURL != "" && submission.ThumbnailURL != "self" {
+	if submission.ThumbnailURL != "" && strings.HasPrefix(submission.ThumbnailURL, "http") {
 		data.Embed.Image = &discordgo.MessageEmbedImage{URL: submission.ThumbnailURL}
 	}
 
