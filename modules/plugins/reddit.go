@@ -10,6 +10,7 @@ import (
 
 	"strconv"
 
+	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -26,7 +27,8 @@ type redditAction func(args []string, in *discordgo.Message, out **discordgo.Mes
 type Reddit struct{}
 
 var (
-	redditSession *geddit.OAuthSession
+	redditSession   *geddit.OAuthSession
+	RedditUserAgent string = "geddit:Robyul:" + version.BOT_VERSION + " by /u/Seklfreak"
 )
 
 const (
@@ -45,7 +47,7 @@ func (r *Reddit) Init(session *discordgo.Session) {
 	redditSession, err = geddit.NewOAuthSession(
 		helpers.GetConfig().Path("reddit.id").Data().(string),
 		helpers.GetConfig().Path("reddit.secret").Data().(string),
-		fmt.Sprint("geddit:Robyul:%s by /u/Seklfreak", version.BOT_VERSION),
+		RedditUserAgent,
 		"https://robyul.chat",
 	)
 	helpers.Relax(err)
@@ -113,6 +115,7 @@ func (r *Reddit) checkSubredditLoop() {
 					goto BundleStart
 				}
 				r.logger().Error(fmt.Sprintf("updating subreddit r/%s failed: %s", subredditName, err.Error()))
+				time.Sleep(2 * time.Second)
 				continue
 			}
 			for _, entry := range entries {
@@ -131,8 +134,13 @@ func (r *Reddit) checkSubredditLoop() {
 						if postDelay > 0 {
 							time.Sleep(time.Duration(postDelay) * time.Minute)
 
-							// don't post if post got deleted
-							refreshedSubmission := helpers.GetJSON(RedditBaseUrl + postSubmission.Permalink + ".json")
+							// don't post if submission got deleted
+							refreshedSubmission, err := gabs.ParseJSON(helpers.NetGetUA(
+								RedditBaseUrl+postSubmission.Permalink+".json",
+								RedditUserAgent,
+							))
+							helpers.Relax(err)
+
 							if refreshedSubmission.ExistsP("data.children.data.selftext") {
 								selftext := strings.ToLower(refreshedSubmission.Path("data.children.data.selftext").String())
 								if strings.Contains(selftext, "[deleted]") || strings.Contains(selftext, "[removed]") {
