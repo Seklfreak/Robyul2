@@ -295,6 +295,10 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 			return
 		}
 	}
+	// ignore music bot prefixes
+	if strings.HasPrefix(content, "__") || strings.HasPrefix(content, "//") {
+		return
+	}
 	// ignore bot messages
 	if msg.Author.Bot == true {
 		return
