@@ -76,9 +76,6 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		}
 	}()
 
-	// Run auto-leaver for non-beta guilds
-	//go autoLeaver(session)
-
 	// Run ratelimiter
 	ratelimits.Container.Init()
 
@@ -474,7 +471,6 @@ func changeGameInterval(session *discordgo.Session) {
 
 	var newStatus string
 	for {
-
 		switch randGen.Intn(2) {
 		case 0:
 			newStatus = fmt.Sprintf("on %d servers | robyul.chat | _help", len(session.State.Guilds))
@@ -490,7 +486,6 @@ func changeGameInterval(session *discordgo.Session) {
 			newStatus = fmt.Sprintf("with %d members | robyul.chat | _help", len(users))
 		}
 
-		fmt.Println("setting status to:", newStatus)
 		err := session.UpdateStatus(0, newStatus)
 		helpers.RelaxLog(err)
 
