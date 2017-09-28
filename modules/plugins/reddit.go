@@ -134,7 +134,13 @@ func (r *Reddit) checkSubredditLoop() {
 
 						r.logger().Info(fmt.Sprintf("posting submission: #%s (%s) on r/%s (%s) to #%s",
 							postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
-						helpers.Relax(r.postSubmission(postChannelID, postSubmission))
+
+						err = r.postSubmission(postChannelID, postSubmission)
+						if err != nil {
+							if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingPermissions {
+								helpers.Relax(err)
+							}
+						}
 					}()
 				}
 				entry.LastChecked = hasToBeBefore
