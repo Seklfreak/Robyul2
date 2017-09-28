@@ -90,7 +90,6 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 
 	if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {
 		errorMessage := ""
-		fmt.Println(jsonResult.Path("errorMessage").Data().(string))
 		if jsonResult.ExistsP("errorMessage") && jsonResult.Path("errorMessage").Data().(string) != "" {
 			parsedErrorMessage, err := gabs.ParseJSON([]byte(jsonResult.Path("errorMessage").Data().(string))) // weird gfycat api is weird?
 			helpers.Relax(err)
