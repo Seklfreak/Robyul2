@@ -10,7 +10,6 @@ import (
 
 	"strconv"
 
-	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -101,7 +100,7 @@ func (r *Reddit) checkSubredditLoop() {
 		BundleStart:
 			r.logger().Info(fmt.Sprintf("checking subreddit r/%s for %d channels", subredditName, len(entries)))
 			newSubmissions, err := redditSession.SubredditSubmissions(subredditName, geddit.NewSubmissions, geddit.ListingOptions{
-				Limit: 5,
+				Limit: 10,
 			})
 			if err != nil {
 				if strings.Contains(err.Error(), "oauth2: token expired and refresh token is not set") {
@@ -119,52 +118,26 @@ func (r *Reddit) checkSubredditLoop() {
 				continue
 			}
 			for _, entry := range entries {
+				hasToBeBefore := time.Now().Add(-(time.Duration(entry.PostDelay) * time.Minute))
+				hasToBeAfter := entry.LastChecked
+
 				for _, submission := range newSubmissions {
 					submissionTime := time.Unix(int64(submission.DateCreated), 0)
-					if submissionTime.Before(entry.LastChecked) {
+					if !submissionTime.Before(hasToBeBefore) || !submissionTime.After(hasToBeAfter) {
 						continue
 					}
 
 					postSubmission := submission
 					postChannelID := entry.ChannelID
-					postDelay := entry.PostDelay
 					go func() {
 						defer helpers.Recover()
 
-						if postDelay > 0 {
-							time.Sleep(time.Duration(postDelay) * time.Minute)
-
-							// don't post if submission got deleted
-							refreshedSubmission, err := gabs.ParseJSON(helpers.NetGetUA(
-								RedditBaseUrl+postSubmission.Permalink+".json",
-								RedditUserAgent,
-							))
-							helpers.Relax(err)
-
-							if refreshedSubmission.ExistsP("data.children.data.selftext") {
-								selftext := strings.ToLower(refreshedSubmission.Path("data.children.data.selftext").String())
-								if strings.Contains(selftext, "[deleted]") || strings.Contains(selftext, "[removed]") {
-									r.logger().Info(fmt.Sprintf("NOT posting submission because it has been deleted: #%s on r/%s (%s) to #%s",
-										postSubmission.ID, subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
-									return
-								}
-							}
-							if refreshedSubmission.ExistsP("data.children.data.author") {
-								author := strings.ToLower(refreshedSubmission.Path("data.children.data.author").String())
-								if strings.Contains(author, "[deleted]") || strings.Contains(author, "[removed]") {
-									r.logger().Info(fmt.Sprintf("NOT posting submission because it has been deleted: #%s on r/%s (%s) to #%s",
-										postSubmission.ID, subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
-									return
-								}
-							}
-						}
-
-						r.logger().Info(fmt.Sprintf("posting submission: #%s on r/%s (%s) to #%s",
-							postSubmission.ID, subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
+						r.logger().Info(fmt.Sprintf("posting submission: #%s (%s) on r/%s (%s) to #%s",
+							postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
 						helpers.Relax(r.postSubmission(postChannelID, postSubmission))
 					}()
 				}
-				entry.LastChecked = time.Now()
+				entry.LastChecked = hasToBeBefore
 				err = r.setSubredditEntry(entry)
 				helpers.Relax(err)
 			}
@@ -391,7 +364,7 @@ func (r *Reddit) addSubredditEntry(subreddit string, guildID string, channelID s
 		ChannelID:     channelID,
 		AddedByUserID: userID,
 		AddedAt:       time.Now(),
-		LastChecked:   time.Now(),
+		LastChecked:   time.Now().Add(-(time.Duration(postDelay) * time.Minute)),
 		PostDelay:     postDelay,
 	})
 	res, err := insert.RunWrite(helpers.GetDB())
