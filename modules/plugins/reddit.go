@@ -161,12 +161,12 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 
 	data.Embed.Title = submission.Title
 	if len(data.Embed.Title) > 256 {
-		data.Embed.Title = submission.Title[:255] + "…"
+		data.Embed.Title = submission.Title[:254] + "…"
 	}
 	if submission.Selftext != "" {
 		data.Embed.Description = submission.Selftext
 		if len(data.Embed.Description) > 1500 {
-			data.Embed.Title = submission.Title[:1499] + "…"
+			data.Embed.Title = submission.Title[:1498] + "…"
 		}
 	}
 	if submission.ThumbnailURL != "" && strings.HasPrefix(submission.ThumbnailURL, "http") {
