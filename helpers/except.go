@@ -83,7 +83,7 @@ func RelaxEmbed(err error, channelID string, commandMessageID string) {
 // RelaxEmbed does nothing if $err is nil or if there are no permissions to send a message, else sends it to Relax()
 func RelaxMessage(err error, channelID string, commandMessageID string) {
 	if err != nil {
-		if errD, ok := err.(*discordgo.RESTError); ok {
+		if errD, ok := err.(*discordgo.RESTError); ok && errD != nil {
 			if errD.Message.Code == 50013 {
 				if channelID != "" && commandMessageID != "" {
 					reactions := []string{
