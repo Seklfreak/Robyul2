@@ -79,21 +79,17 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	}
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
-	member, err := helpers.GetGuildMember(channel.GuildID, user.ID)
-	if err != nil || user == nil || user.ID == "" {
-		*out = n.newMsg(helpers.GetText("bot.arguments.invalid"))
-		return n.actionFinish
-	}
+	member, _ := helpers.GetGuildMember(channel.GuildID, user.ID)
 
 	var pastUsernamesText, pastNicknamesText string
 
-	pastUsernames, err := n.GetUsernames(member.User.ID)
+	pastUsernames, err := n.GetUsernames(user.ID)
 	if err != nil && strings.Contains(err.Error(), "no username entries") {
 		helpers.Relax(err)
 	}
 
-	if len(pastUsernames) <= 0 || pastUsernames[len(pastUsernames)-1] != member.User.Username+"#"+member.User.Discriminator {
-		pastUsernames = append(pastUsernames, member.User.Username+"#"+member.User.Discriminator)
+	if len(pastUsernames) <= 0 || pastUsernames[len(pastUsernames)-1] != user.Username+"#"+user.Discriminator {
+		pastUsernames = append(pastUsernames, user.Username+"#"+user.Discriminator)
 	}
 
 	for i, pastUsername := range pastUsernames {
@@ -110,14 +106,16 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 		pastUsernamesText = "None"
 	}
 
-	pastNicknames, err := n.GetNicknames(member.GuildID, member.User.ID)
+	pastNicknames, err := n.GetNicknames(channel.GuildID, user.ID)
 	if err != nil && strings.Contains(err.Error(), "no nickname entries") {
 		helpers.Relax(err)
 	}
 
-	if member.Nick != "" {
-		if len(pastNicknames) <= 0 || pastNicknames[len(pastNicknames)-1] != member.Nick {
-			pastNicknames = append(pastNicknames, member.Nick)
+	if member != nil && member.User != nil && member.User.ID != "" {
+		if member.Nick != "" {
+			if len(pastNicknames) <= 0 || pastNicknames[len(pastNicknames)-1] != member.Nick {
+				pastNicknames = append(pastNicknames, member.Nick)
+			}
 		}
 	}
 
@@ -136,7 +134,7 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	}
 
 	resultText := helpers.GetTextF("plugins.names.list-result",
-		member.User.Username, member.User.Discriminator, member.User.ID, pastUsernamesText, pastNicknamesText)
+		user.Username, user.Discriminator, user.ID, pastUsernamesText, pastNicknamesText)
 	for _, page := range helpers.Pagify(resultText, ",") {
 		_, err := cache.GetSession().ChannelMessageSend(in.ChannelID, page)
 		helpers.RelaxMessage(err, in.ChannelID, in.ID)
