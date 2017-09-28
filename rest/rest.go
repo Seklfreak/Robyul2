@@ -526,17 +526,14 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 
 	cacheCodec := cache.GetRedisCacheCodec()
+	var err error
 	var key string
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
 	var botPrefix string
 	guild, _ := helpers.GetGuild(guildID)
 	if guild != nil && guild.ID != "" {
-		joinedAt, err := guild.JoinedAt.Parse()
-		if err != nil {
-			joinedAt = time.Now()
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
+		joinedAt, _ := guild.JoinedAt.Parse()
 
 		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
 		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {

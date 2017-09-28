@@ -1215,8 +1215,7 @@ func (r *Stats) setEmbedMemberlistPage(memberlistEmbed *discordgo.MessageEmbed, 
 				title = fmt.Sprintf("%s#%s ~ %s", allMembers[i].User.Username, allMembers[i].User.Discriminator, allMembers[i].Nick)
 			}
 
-			joinedServerTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
-			helpers.Relax(err)
+			joinedServerTime, _ := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			memberlistEmbed.Description += fmt.Sprintf("%d: %s joined %s\n", i+1, title, helpers.SinceInDaysText(joinedServerTime))
 		}
 		i++
