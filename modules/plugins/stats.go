@@ -1071,7 +1071,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
-			helpers.Recover()
+			defer helpers.Recover()
 
 			if reaction.MessageID == memberlistEmbedMessage.ID {
 				if reaction.UserID == session.State.User.ID {
@@ -1095,8 +1095,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						}
 					}
 				}
-				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				helpers.Relax(err)
+				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 			}
 		})
 		time.Sleep(3 * time.Minute)
