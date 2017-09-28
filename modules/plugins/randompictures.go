@@ -181,7 +181,9 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 											continue
 										}
 									} else {
-										raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{"GuildID": sourceEntry.GuildID})
+										if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingPermissions {
+											raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{"GuildID": sourceEntry.GuildID})
+										}
 										continue
 									}
 								}
