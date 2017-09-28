@@ -1024,6 +1024,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		allMembers := guild.Members
 		slice.Sort(allMembers[:], func(i, j int) bool {
+			if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
+				return false
+			}
+
 			iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			helpers.Relax(err)
 			jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
@@ -1067,6 +1071,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+			helpers.Recover()
+
 			if reaction.MessageID == memberlistEmbedMessage.ID {
 				if reaction.UserID == session.State.User.ID {
 					return
