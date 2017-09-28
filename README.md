@@ -32,7 +32,7 @@ If you want Robyul on your Discord Server please ask on the Discord for Robyul: 
 Robyul is build on top of [Karen, the highly efficient, multipurpose Discord bot written in Golang.](https://github.com/SubliminalHQ/karen)
 
 ## Selfhosting Robyul
-Robyul is built on top of a lot of different components that make running your own instance rather complicated. Feel free to run your own local version of Robyul, but don't expect any help trying to get it to work. That being said, please do not run a public version of Robyul.
+Robyul is built on top of a lot of different components that make running your own instance rather complicated. Feel free to run your own local version of Robyul, but don't expect any help trying to get it to work.
 
 ## Development
 Feature requests can be made on the Robyul Discord Server (https://discord.gg/s5qZvUV). PRs are welcomed and will likely be merged if the quality is good and the change fits into Robyuls feature set.
