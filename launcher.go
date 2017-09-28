@@ -216,7 +216,7 @@ func main() {
 		now := time.Now()
 		chain.ProcessFilter(req, resp)
 		tookTime := time.Now().Sub(now)
-		log.WithField("module", "launcher").Info(fmt.Sprintf("api request: %s %s%s (took %v)",
+		log.WithField("module", "launcher").Info(fmt.Sprintf("received api request: %s %s%s (took %v)",
 			req.Request.Method, req.Request.Host, req.Request.URL, tookTime))
 		logKeenRequest(req, tookTime.Seconds())
 	})

@@ -408,7 +408,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 	targetMember, err := cache.GetSession().State.Member(guildID, userID)
 	if targetMember == nil || targetMember.GuildID == "" || targetMember.JoinedAt == "" {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuildMember").Debug(
-			fmt.Sprintf("api request: GuildMember: %s, %s", guildID, userID))
+			fmt.Sprintf("discord api request: GuildMember: %s, %s", guildID, userID))
 		targetMember, err = cache.GetSession().GuildMember(guildID, userID)
 	}
 	return targetMember, err
@@ -431,7 +431,7 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 	targetGuild, err := cache.GetSession().State.Guild(guildID)
 	if targetGuild == nil || targetGuild.ID == "" {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
-			fmt.Sprintf("api request: Guild: %s", guildID))
+			fmt.Sprintf("discord api request: Guild: %s", guildID))
 		targetGuild, err = cache.GetSession().Guild(guildID)
 	}
 	return targetGuild, err
@@ -441,7 +441,7 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
-			fmt.Sprintf("api request: Channel: %s", channelID))
+			fmt.Sprintf("discord api request: Channel: %s", channelID))
 		targetChannel, err = cache.GetSession().Channel(channelID)
 	}
 	return targetChannel, err
@@ -451,7 +451,7 @@ func GetMessage(channelID string, messageID string) (*discordgo.Message, error) 
 	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
 	if targetMessage == nil || targetMessage.ID == "" {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
-			fmt.Sprintf("api request: Message: %s in Channel: %s", messageID, channelID))
+			fmt.Sprintf("discord api request: Message: %s in Channel: %s", messageID, channelID))
 		targetMessage, err = cache.GetSession().ChannelMessage(channelID, messageID)
 		cache.GetSession().State.MessageAdd(targetMessage)
 		return targetMessage, err
@@ -517,7 +517,7 @@ func GetUser(userID string) (*discordgo.User, error) {
 
 	if err = cacheCodec.Get(key, &targetUser); err != nil {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetUser").Debug(
-			fmt.Sprintf("api request: User: %s", userID))
+			fmt.Sprintf("discord api request: User: %s", userID))
 		targetUser, err := cache.GetSession().User(userID)
 		if err == nil {
 			err = cacheCodec.Set(&redisCache.Item{
