@@ -575,6 +575,12 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			})
 		}
 
+		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+		if guildSettings.ChatlogDisabled {
+			featureChatlog.Enabled = false
+		}
+
 		returnGuild := &models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -585,6 +591,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			Features: models.Rest_Guild_Features{
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
+				Chatlog:        featureChatlog,
 			},
 			Channels: channels,
 		}
