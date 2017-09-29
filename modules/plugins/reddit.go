@@ -171,8 +171,8 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 	}
 	if submission.Selftext != "" {
 		data.Embed.Description = submission.Selftext
-		if len(data.Embed.Description) > 1500 {
-			data.Embed.Description = data.Embed.Description[0:1499] + "…"
+		if len(data.Embed.Description) > 500 {
+			data.Embed.Description = data.Embed.Description[0:499] + "…"
 		}
 	}
 	if submission.ThumbnailURL != "" && strings.HasPrefix(submission.ThumbnailURL, "http") {
