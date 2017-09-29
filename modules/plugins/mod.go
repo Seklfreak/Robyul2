@@ -359,60 +359,57 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		helpers.RequireMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
 			args := strings.Fields(content)
-			if len(args) >= 2 {
-				targetUser, err := helpers.GetUserFromMention(args[1])
+			if len(args) >= 1 {
+				targetUser, err := helpers.GetUserFromMention(args[0])
 				if err != nil {
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 					return
 				}
-				switch args[0] {
-				case "server":
-					channel, err := helpers.GetChannel(msg.ChannelID)
-					helpers.Relax(err)
-					muteRole, err := helpers.GetMuteRole(channel.GuildID)
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				muteRole, err := helpers.GetMuteRole(channel.GuildID)
+				if err != nil {
+					if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.get-mute-role-no-permissions"))
+						return
+					} else {
+						helpers.Relax(err)
+					}
+				}
+				if helpers.GetIsInGuild(channel.GuildID, targetUser.ID) {
+					err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
 					if err != nil {
-						if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.get-mute-role-no-permissions"))
-							return
+						if errD, ok := err.(discordgo.RESTError); ok {
+							if errD.Message.Code == 10007 {
+								_, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to assign the mute role to the given user.")
+								helpers.Relax(err)
+								return
+							} else {
+								helpers.Relax(err)
+							}
 						} else {
 							helpers.Relax(err)
 						}
 					}
-					if helpers.GetIsInGuild(channel.GuildID, targetUser.ID) {
-						err = session.GuildMemberRoleAdd(channel.GuildID, targetUser.ID, muteRole.ID)
-						if err != nil {
-							if errD, ok := err.(discordgo.RESTError); ok {
-								if errD.Message.Code == 10007 {
-									_, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to assign the mute role to the given user.")
-									helpers.Relax(err)
-									return
-								} else {
-									helpers.Relax(err)
-								}
-							} else {
-								helpers.Relax(err)
-							}
-						}
-					}
-
-					settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
-					alreadyMutedInSettings := false
-					for _, mutedMember := range settings.MutedMembers {
-						if mutedMember == targetUser.ID {
-							alreadyMutedInSettings = true
-						}
-					}
-					if alreadyMutedInSettings == false {
-						settings.MutedMembers = append(settings.MutedMembers, targetUser.ID)
-						err = helpers.GuildSettingsSet(channel.GuildID, settings)
-						helpers.Relax(err)
-					}
-
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
-					helpers.Relax(err)
-					return
 				}
+
+				settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+				alreadyMutedInSettings := false
+				for _, mutedMember := range settings.MutedMembers {
+					if mutedMember == targetUser.ID {
+						alreadyMutedInSettings = true
+					}
+				}
+				if alreadyMutedInSettings == false {
+					settings.MutedMembers = append(settings.MutedMembers, targetUser.ID)
+					err = helpers.GuildSettingsSet(channel.GuildID, settings)
+					helpers.Relax(err)
+				}
+
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
+				helpers.Relax(err)
+				return
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
@@ -423,55 +420,52 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		helpers.RequireMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
 			args := strings.Fields(content)
-			if len(args) >= 2 {
-				targetUser, _ := helpers.GetUserFromMention(args[1])
+			if len(args) >= 1 {
+				targetUser, _ := helpers.GetUserFromMention(args[0])
 				if targetUser == nil {
 					targetUser = new(discordgo.User)
 					targetUser.ID = args[1]
 					targetUser.Username = "N/A"
 				}
-				switch args[0] {
-				case "server", "global":
-					channel, err := helpers.GetChannel(msg.ChannelID)
-					helpers.Relax(err)
-					muteRole, err := helpers.GetMuteRole(channel.GuildID)
-					helpers.Relax(err)
-					err = session.GuildMemberRoleRemove(channel.GuildID, targetUser.ID, muteRole.ID)
-					roleRemoved := true
-					if err != nil {
-						roleRemoved = false
-						if errD, ok := err.(*discordgo.RESTError); ok {
-							if errD.Message.Code != 10007 && errD.Message.Code != 10013 && errD.Message.Code != 0 {
-								helpers.Relax(err)
-							}
-						} else {
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				muteRole, err := helpers.GetMuteRole(channel.GuildID)
+				helpers.Relax(err)
+				err = session.GuildMemberRoleRemove(channel.GuildID, targetUser.ID, muteRole.ID)
+				roleRemoved := true
+				if err != nil {
+					roleRemoved = false
+					if errD, ok := err.(*discordgo.RESTError); ok {
+						if errD.Message.Code != 10007 && errD.Message.Code != 10013 && errD.Message.Code != 0 {
 							helpers.Relax(err)
 						}
-					}
-
-					settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
-					removedFromDb := false
-					newMutedMembers := make([]string, 0)
-					for _, mutedMember := range settings.MutedMembers {
-						if mutedMember != targetUser.ID {
-							newMutedMembers = append(newMutedMembers, mutedMember)
-						} else {
-							removedFromDb = true
-						}
-					}
-
-					if removedFromDb {
-						settings.MutedMembers = newMutedMembers
-						err = helpers.GuildSettingsSet(channel.GuildID, settings)
+					} else {
 						helpers.Relax(err)
 					}
+				}
 
-					if !removedFromDb && !roleRemoved {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-unmuted-error"))
+				settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+				removedFromDb := false
+				newMutedMembers := make([]string, 0)
+				for _, mutedMember := range settings.MutedMembers {
+					if mutedMember != targetUser.ID {
+						newMutedMembers = append(newMutedMembers, mutedMember)
 					} else {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
+						removedFromDb = true
 					}
+				}
+
+				if removedFromDb {
+					settings.MutedMembers = newMutedMembers
+					err = helpers.GuildSettingsSet(channel.GuildID, settings)
+					helpers.Relax(err)
+				}
+
+				if !removedFromDb && !roleRemoved {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-unmuted-error"))
+				} else {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
 				}
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
