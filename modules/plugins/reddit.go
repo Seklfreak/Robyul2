@@ -100,7 +100,7 @@ func (r *Reddit) checkSubredditLoop() {
 		BundleStart:
 			r.logger().Info(fmt.Sprintf("checking subreddit r/%s for %d channels", subredditName, len(entries)))
 			newSubmissions, err := redditSession.SubredditSubmissions(subredditName, geddit.NewSubmissions, geddit.ListingOptions{
-				Limit: 10,
+				Limit: 30,
 			})
 			if err != nil {
 				if strings.Contains(err.Error(), "oauth2: token expired and refresh token is not set") {
