@@ -43,6 +43,7 @@ func (s *Stats) Commands() []string {
 		"members",
 		"invite",
 		"channelinfo",
+		"serverindex",
 	}
 }
 
@@ -1169,6 +1170,56 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = session.ChannelMessageSend(msg.ChannelID, result)
 		helpers.Relax(err)
+		return
+	case "serverindex": // [p]serverindex [<excluded channel> <excluded channel ...>]
+		session.ChannelTyping(msg.ChannelID)
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+		guild, err := helpers.GetGuild(channel.GuildID)
+		helpers.Relax(err)
+
+		hiddenChannels := make([]string, 0)
+		for _, fieldChannelTag := range strings.Fields(content) {
+			fieldChannel, err := helpers.GetChannelFromMention(msg, fieldChannelTag)
+			if err == nil {
+				hiddenChannels = append(hiddenChannels, fieldChannel.ID)
+			}
+		}
+
+		countedLinks := make(map[string]int, 0)
+		var links int
+	NextChannel:
+		for _, guildChannel := range guild.Channels {
+			for _, hiddenChannel := range hiddenChannels {
+				if guildChannel.ID == hiddenChannel {
+					continue NextChannel
+				}
+			}
+
+			messages, err := session.ChannelMessages(guildChannel.ID, 100, "", "", "")
+			links = 0
+			for _, message := range messages {
+				links += strings.Count(message.Content, "discord.gg")
+			}
+			if err == nil {
+				countedLinks[guildChannel.ID] = links
+			}
+		}
+
+		var totalLinks int
+		resultText := "__**Server Index Stats**__\n"
+		for channelID, links := range countedLinks {
+			if links > 0 {
+				resultText += fmt.Sprintf("<#%s>: %d invites\n", channelID, links)
+				totalLinks += links
+			}
+		}
+		resultText += fmt.Sprintf("_Found **%d invites** in total._", totalLinks)
+
+		for _, page := range helpers.Pagify(resultText, "\n") {
+			_, err := session.ChannelMessageSend(msg.ChannelID, page)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		}
 		return
 	}
 }
