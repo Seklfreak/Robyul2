@@ -43,6 +43,7 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{user-id}").Filter(sessionAndWebkeyAuthenticate).To(FindUser))
+	service.Route(service.GET("/{user-id}/guilds").Filter(webkeyAuthenticate).To(FindUserGuilds))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -264,6 +265,89 @@ func FindUser(request *restful.Request, response *restful.Response) {
 	}
 }
 
+func FindUserGuilds(request *restful.Request, response *restful.Response) {
+	userID := request.PathParameter("user-id")
+
+	allGuilds := cache.GetSession().State.Guilds
+	cacheCodec := cache.GetRedisCacheCodec()
+	var key string
+	var featureLevels_Badges models.Rest_Feature_Levels_Badges
+	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var botPrefix string
+	var err error
+
+	returnGuilds := make([]models.Rest_Member_Guild, 0)
+	for _, guild := range allGuilds {
+		if !helpers.GetIsInGuild(guild.ID, userID) {
+			continue
+		}
+
+		joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
+		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
+			featureLevels_Badges = models.Rest_Feature_Levels_Badges{
+				Count: 0,
+			}
+		}
+
+		key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+		if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
+			featureRandomPictures = models.Rest_Feature_RandomPictures{
+				Count: 0,
+			}
+		}
+
+		botPrefix = helpers.GetPrefixForServer(guild.ID)
+
+		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+		if guildSettings.ChatlogDisabled {
+			featureChatlog.Enabled = false
+		}
+
+		returnStatus := models.Rest_Status_Member{}
+		returnStatus.IsMember = true
+		if helpers.IsBotAdmin(userID) {
+			returnStatus.IsBotAdmin = true
+		}
+		if helpers.IsNukeMod(userID) {
+			returnStatus.IsNukeMod = true
+		}
+		if helpers.IsRobyulMod(userID) {
+			returnStatus.IsRobyulStaff = true
+		}
+		if helpers.IsBlacklisted(userID) {
+			returnStatus.IsBlacklisted = true
+		}
+		if helpers.IsAdminByID(guild.ID, userID) {
+			returnStatus.IsGuildAdmin = true
+		}
+		if helpers.IsModByID(guild.ID, userID) {
+			returnStatus.IsGuildMod = true
+		}
+		if helpers.HasPermissionByID(guild.ID, userID, discordgo.PermissionAdministrator) {
+			returnStatus.HasGuildPermissionAdministrator = true
+		}
+
+		returnGuilds = append(returnGuilds, models.Rest_Member_Guild{
+			ID:        guild.ID,
+			Name:      guild.Name,
+			Icon:      guild.Icon,
+			OwnerID:   guild.OwnerID,
+			JoinedAt:  joinedAt,
+			BotPrefix: botPrefix,
+			Features: models.Rest_Guild_Features{
+				Levels_Badges:  featureLevels_Badges,
+				RandomPictures: featureRandomPictures,
+				Chatlog:        featureChatlog,
+			},
+			Status: returnStatus,
+		})
+	}
+
+	response.WriteEntity(returnGuilds)
+}
+
 func FindMember(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	userID := request.PathParameter("user-id")
@@ -308,7 +392,7 @@ func StatusMember(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	userID := request.PathParameter("user-id")
 
-	returnStatus := &models.Rest_Status_member{}
+	returnStatus := &models.Rest_Status_Member{}
 
 	if helpers.GetIsInGuild(guildID, userID) {
 		returnStatus.IsMember = true

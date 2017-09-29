@@ -52,7 +52,7 @@ type Rest_Is_Member struct {
 	IsMember bool
 }
 
-type Rest_Status_member struct {
+type Rest_Status_Member struct {
 	IsMember                        bool
 	IsBotAdmin                      bool
 	IsNukeMod                       bool
@@ -61,6 +61,18 @@ type Rest_Status_member struct {
 	IsGuildAdmin                    bool
 	IsGuildMod                      bool
 	HasGuildPermissionAdministrator bool
+}
+
+type Rest_Member_Guild struct {
+	ID        string
+	Name      string
+	Icon      string
+	OwnerID   string
+	JoinedAt  time.Time
+	BotPrefix string
+	Features  Rest_Guild_Features
+	Channels  []Rest_Channel
+	Status    Rest_Status_Member
 }
 
 type Rest_Ranking struct {
