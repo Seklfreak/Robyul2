@@ -159,3 +159,7 @@
 
 [[constraint]]
   name = "gopkg.in/inconshreveable/go-keen.v0"
+
+[[constraint]]
+  name = "github.com/RichardKnop/machinery"
+  version = "1.0.0"

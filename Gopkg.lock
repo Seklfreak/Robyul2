@@ -26,6 +26,18 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/RichardKnop/logging"
+  packages = ["."]
+  revision = "0745ebe7cc826d7d0453c7c9f08ea75a7fe86f7b"
+
+[[projects]]
+  name = "github.com/RichardKnop/machinery"
+  packages = ["v1","v1/backends","v1/brokers","v1/common","v1/config","v1/log","v1/retry","v1/tasks"]
+  revision = "0601e258f06e604ad366da879427eb75ff25a51e"
+  version = "v1.0.3"
+
+[[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
   revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
@@ -42,6 +54,18 @@
   name = "github.com/andybons/gogif"
   packages = ["."]
   revision = "16d573594812bc09bc62ad1d8a4129c7ba885dc6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/beefsack/go-rate"
+  packages = ["."]
+  revision = "de575b104f4218f4aebdc95ba56f61f38d0dad86"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/bradfitz/gomemcache"
+  packages = ["memcache"]
+  revision = "1952afaa557dc08e8e0d89eafab110fb501c1a2b"
 
 [[projects]]
   branch = "master"
@@ -96,6 +120,12 @@
   packages = [".","log"]
   revision = "777bb3f19bcafe2575ffb2a3e46af92509ae9594"
   version = "v1.2"
+
+[[projects]]
+  name = "github.com/garyburd/redigo"
+  packages = ["internal","redis"]
+  revision = "433969511232c397de61b1442f9fd49ec06ae9ba"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -159,6 +189,18 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/jzelinskie/geddit"
+  packages = ["."]
+  revision = "45ce9276f237de3e26c16a1d129171a187b32a0a"
+
+[[projects]]
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/lucasb-eyer/go-colorful"
   packages = ["."]
   revision = "231272389856c976b7500c4fffcc52ddf06ff4eb"
@@ -210,6 +252,12 @@
   name = "github.com/shkh/lastfm-go"
   packages = ["lastfm"]
   revision = "125b747251b36e1e4a2f20391d674ff98a09a239"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/streadway/amqp"
+  packages = ["."]
+  revision = "cefed15a0bd808d13947f228770a81b06ebe8e45"
 
 [[projects]]
   branch = "master"
@@ -308,6 +356,12 @@
   revision = "abddc16d5dc65ffcb78438e043e628d7f4664735"
 
 [[projects]]
+  branch = "v2"
+  name = "gopkg.in/mgo.v2"
+  packages = [".","bson","internal/json","internal/sasl","internal/scram"]
+  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+
+[[projects]]
   name = "gopkg.in/oleiade/lane.v1"
   packages = ["."]
   revision = "28f7c3f09254f12b51e620fa4db136ba58804762"
@@ -320,6 +374,18 @@
   version = "v5.0.47"
 
 [[projects]]
+  name = "gopkg.in/redsync.v1"
+  packages = ["."]
+  revision = "98dabdf1c8574561bf976911c14ff652c47b1ddf"
+  version = "v1.0.1"
+
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
+
+[[projects]]
   name = "mvdan.cc/xurls"
   packages = ["."]
   revision = "d315b61cf6727664f310fa87b3197e9faf2a8513"
@@ -328,6 +394,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "987020c58c3a3e89de97b4a56f5186ec7458abd502984647ba5ca7968e96a2e9"
+  inputs-digest = "ae601ae60aaa09840b2f266e8329cf2b94b1ede33d094780822681351891d484"
   solver-name = "gps-cdcl"
   solver-version = 1
