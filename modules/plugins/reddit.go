@@ -71,6 +71,7 @@ func (r *Reddit) checkSubredditLoop() {
 
 	var entries []models.RedditSubredditEntry
 	var bundledEntries map[string][]models.RedditSubredditEntry
+	var newPost bool
 
 	for {
 		cursor, err := rethink.Table(models.RedditSubredditsTable).Run(helpers.GetDB())
@@ -118,6 +119,7 @@ func (r *Reddit) checkSubredditLoop() {
 				continue
 			}
 			for _, entry := range entries {
+				newPost = false
 				hasToBeBefore := time.Now().Add(-(time.Duration(entry.PostDelay) * time.Minute))
 				hasToBeAfter := entry.LastChecked
 
@@ -126,6 +128,7 @@ func (r *Reddit) checkSubredditLoop() {
 					if !submissionTime.Before(hasToBeBefore) || !submissionTime.After(hasToBeAfter) {
 						continue
 					}
+					newPost = true
 
 					postSubmission := submission
 					postChannelID := entry.ChannelID
@@ -143,9 +146,11 @@ func (r *Reddit) checkSubredditLoop() {
 						}
 					}()
 				}
-				entry.LastChecked = hasToBeBefore
-				err = r.setSubredditEntry(entry)
-				helpers.Relax(err)
+				if newPost {
+					entry.LastChecked = hasToBeBefore
+					err = r.setSubredditEntry(entry)
+					helpers.Relax(err)
+				}
 			}
 			time.Sleep(2 * time.Second)
 		}
