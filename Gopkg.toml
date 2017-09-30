@@ -156,3 +156,6 @@
 
 [[constraint]]
   name = "gopkg.in/olivere/elastic.v5"
+
+[[constraint]]
+  name = "gopkg.in/inconshreveable/go-keen.v0"

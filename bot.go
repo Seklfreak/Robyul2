@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"math/rand"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -17,8 +19,18 @@ import (
 	"github.com/getsentry/raven-go"
 )
 
-// BotOnReady gets called after the gateway connected
+var didLaunch = false
+
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
+	if !didLaunch {
+		OnFirstReady(session, event)
+		didLaunch = true
+	} else {
+		OnReconnect(session, event)
+	}
+}
+
+func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 	log := cache.GetLogger()
 
 	log.WithField("module", "bot").Info("Connected to discord!")
@@ -27,6 +39,10 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 		helpers.GetConfig().Path("discord.id").Data().(string),
 		helpers.GetConfig().Path("discord.perms").Data().(string),
 	))
+
+	for _, guild := range session.State.Guilds {
+		cache.AddAutoleaverGuildID(guild.ID)
+	}
 
 	// Cache the session
 	cache.SetSession(session)
@@ -42,18 +58,23 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 
 	// request guild members from the gateway
 	go func() {
-		time.Sleep(30 * time.Second)
+		time.Sleep(5 * time.Second)
 
 		for _, guild := range session.State.Guilds {
-			err := session.RequestGuildMembers(guild.ID, "", 0)
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			if guild.Large {
+				err := session.RequestGuildMembers(guild.ID, "", 0)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+
+				cache.GetLogger().WithField("module", "bot").Debug(
+					fmt.Sprintf("requesting guild member chunks for guild: %s",
+						guild.ID))
+
+				time.Sleep(1 * time.Second)
 			}
 		}
 	}()
-
-	// Run auto-leaver for non-beta guilds
-	//go autoLeaver(session)
 
 	// Run ratelimiter
 	ratelimits.Container.Init()
@@ -86,26 +107,47 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 			)
 		}
 	}()
+}
 
-	// Run async game-changer
-	//go changeGameInterval(session)
+func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
+	cache.GetLogger().WithField("module", "bot").Info("Reconnected to discord!")
 
-	// Run auto-leaver for non-beta guilds
-	//go autoLeaver(session)
+	// request guild members from the gateway
+	go func() {
+		time.Sleep(5 * time.Second)
+
+		for _, guild := range session.State.Guilds {
+			if guild.Large {
+				err := session.RequestGuildMembers(guild.ID, "", 0)
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
+
+				cache.GetLogger().WithField("module", "bot").Debug(
+					fmt.Sprintf("requesting guild member chunks for guild: %s",
+						guild.ID))
+
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}()
 }
 
 func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {
-	cache.GetLogger().WithField("module", "bot").Debug(
-		fmt.Sprintf("received guild member chunk for guild: %s (%d members)",
-			members.GuildID, len(members.Members)))
+	i := 0
 	var err error
 	for _, member := range members.Members {
 		member.GuildID = members.GuildID
 		err = session.State.MemberAdd(member)
 		if err != nil {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		} else {
+			i++
 		}
 	}
+	cache.GetLogger().WithField("module", "bot").Debug(
+		fmt.Sprintf("received guild member chunk for guild: %s (%d/%d received/added)",
+			members.GuildID, len(members.Members), i))
 }
 
 func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.PresenceUpdate) {
@@ -424,15 +466,28 @@ func sendHelp(message *discordgo.MessageCreate) {
 	)
 }
 
-// Changes the game interval every ten minutes after called
 func changeGameInterval(session *discordgo.Session) {
-	for {
-		guilds := session.State.Guilds
+	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-		err := session.UpdateStatus(0, fmt.Sprintf("on %d servers | robyul.chat | _help", len(guilds)))
-		if err != nil {
-			raven.CaptureError(err, map[string]string{})
+	var newStatus string
+	for {
+		switch randGen.Intn(2) {
+		case 0:
+			newStatus = fmt.Sprintf("on %d servers | robyul.chat | _help", len(session.State.Guilds))
+		case 1:
+			users := make(map[string]string)
+
+			for _, guild := range session.State.Guilds {
+				for _, u := range guild.Members {
+					users[u.User.ID] = u.User.Username
+				}
+			}
+
+			newStatus = fmt.Sprintf("with %d members | robyul.chat | _help", len(users))
 		}
+
+		err := session.UpdateStatus(0, newStatus)
+		helpers.RelaxLog(err)
 
 		time.Sleep(1 * time.Hour)
 	}

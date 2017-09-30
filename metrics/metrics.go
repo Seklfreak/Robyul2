@@ -8,6 +8,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 )
@@ -51,6 +52,9 @@ var (
 
 	// FacebookPagesCount counts all connected instagram accounts
 	FacebookPagesCount = expvar.NewInt("facebook_pages_count")
+
+	// RedditSubredditsCount counts all connected subreddits accounts
+	RedditSubredditsCount = expvar.NewInt("reddit_subreddits_count")
 
 	// WolframAlphaRequests increases after each request to wolframalpha.com
 	WolframAlphaRequests = expvar.NewInt("wolframalpha_requests")
@@ -185,5 +189,11 @@ func CollectRuntimeMetrics() {
 		cursor.One(&cnt)
 		cursor.Close()
 		RandomPictureSourcesCount.Set(int64(cnt))
+
+		cursor, err = rethink.Table(models.RedditSubredditsTable).Count().Run(helpers.GetDB())
+		helpers.Relax(err)
+		cursor.One(&cnt)
+		cursor.Close()
+		RedditSubredditsCount.Set(int64(cnt))
 	}
 }

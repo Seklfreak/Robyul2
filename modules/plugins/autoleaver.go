@@ -78,7 +78,7 @@ func (a *Autoleaver) actionStart(args []string, in *discordgo.Message, out **dis
 }
 
 func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -117,7 +117,7 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 }
 
 func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -181,7 +181,7 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 }
 
 func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -221,7 +221,7 @@ func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **di
 }
 
 func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsMod(in) {
+	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -255,7 +255,7 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 	notWhitelistedGuildsMessage := helpers.GetTextF("plugins.autoleaver.check-not-whitelisted-title", len(notWhitelistedGuilds)) + "\n"
 	for _, notWhitelistedGuild := range notWhitelistedGuilds {
 		notWhitelistedGuildsMessage += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
-			notWhitelistedGuild.Name, notWhitelistedGuild.ID, len(notWhitelistedGuild.Channels), notWhitelistedGuild.MemberCount, notWhitelistedGuild.Region)
+			notWhitelistedGuild.Name, notWhitelistedGuild.ID, len(notWhitelistedGuild.Channels), len(notWhitelistedGuild.Members), notWhitelistedGuild.Region)
 	}
 	notWhitelistedGuildsMessage += helpers.GetTextF("plugins.autoleaver.check-not-whitelisted-footer", len(notWhitelistedGuilds), len(cache.GetSession().State.Guilds)) + "\n"
 
@@ -364,6 +364,11 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 	go func() {
 		defer helpers.Recover()
 
+		// don't continue if bot didn't just join this guild
+		if !cache.AddAutoleaverGuildID(guild.ID) {
+			return
+		}
+
 		onWhitelist, err := a.isOnWhitelist(guild.ID, nil)
 		helpers.Relax(err)
 
@@ -401,6 +406,7 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Leave Notification failed, Error: %s", err.Error()))
 			}
 		}
+		cache.RemoveAutoleaverGuildID(guild.ID)
 	}()
 }
 

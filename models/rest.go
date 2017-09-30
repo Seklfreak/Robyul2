@@ -10,11 +10,27 @@ type Rest_Guild struct {
 	JoinedAt  time.Time
 	BotPrefix string
 	Features  Rest_Guild_Features
+	Channels  []Rest_Channel
+}
+
+type Rest_Channel struct {
+	ID       string
+	GuildID  string
+	Name     string
+	ParentID string
+	Type     string
+	Topic    string
+	Position int
+}
+
+type Website_Session_Data struct {
+	DiscordUserID string
 }
 
 type Rest_Guild_Features struct {
 	Levels_Badges  Rest_Feature_Levels_Badges
 	RandomPictures Rest_Feature_RandomPictures
+	Chatlog        Rest_Feature_Chatlog
 }
 
 type Rest_User struct {
@@ -34,6 +50,29 @@ type Rest_Member struct {
 
 type Rest_Is_Member struct {
 	IsMember bool
+}
+
+type Rest_Status_Member struct {
+	IsMember                        bool
+	IsBotAdmin                      bool
+	IsNukeMod                       bool
+	IsRobyulStaff                   bool
+	IsBlacklisted                   bool
+	IsGuildAdmin                    bool
+	IsGuildMod                      bool
+	HasGuildPermissionAdministrator bool
+}
+
+type Rest_Member_Guild struct {
+	ID        string
+	Name      string
+	Icon      string
+	OwnerID   string
+	JoinedAt  time.Time
+	BotPrefix string
+	Features  Rest_Guild_Features
+	Channels  []Rest_Channel
+	Status    Rest_Status_Member
 }
 
 type Rest_Ranking struct {
@@ -57,6 +96,10 @@ type Rest_Feature_RandomPictures struct {
 	Count int
 }
 
+type Rest_Feature_Chatlog struct {
+	Enabled bool
+}
+
 type Rest_RandomPictures_HistoryItem struct {
 	Link      string
 	SourceID  string
@@ -64,6 +107,30 @@ type Rest_RandomPictures_HistoryItem struct {
 	Filename  string
 	GuildID   string
 	Time      time.Time
+}
+
+type Rest_Statistics_Histogram struct {
+	Time  string // ISO 8601
+	Count int64
+}
+
+type Rest_Statistics_Count struct {
+	Count int64
+}
+
+type Rest_Statitics_Bot struct {
+	Users  int
+	Guilds int
+}
+
+type Rest_Chatlog_Message struct {
+	CreatedAt      time.Time
+	ID             string
+	Content        string
+	Attachments    []string
+	AuthorID       string
+	AuthorUsername string
+	Embeds         int
 }
 
 const (

@@ -173,7 +173,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 								defer helpers.Recover()
 								err = rp.postItem(sourceEntry.GuildID, postToChannelID, "", gPicture, sourceEntry.ID, strconv.Itoa(chosenPicN))
 								if err != nil {
-									if errG := err.(*googleapi.Error); errG != nil {
+									if errG, ok := err.(*googleapi.Error); ok {
 										if strings.Contains("The download quota for this file has been exceeded", errG.Error()) {
 											goto RetryNewPicture
 										} else {
@@ -181,7 +181,9 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 											continue
 										}
 									} else {
-										raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+										if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingPermissions {
+											raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{"GuildID": sourceEntry.GuildID})
+										}
 										continue
 									}
 								}
@@ -654,7 +656,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 
 	splitFilename := strings.Split(file.Name, ".")
 
-	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+splitFilename[len(splitFilename)-1]))
+	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+strings.ToLower(splitFilename[len(splitFilename)-1])))
 	linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
 	// open link to prepare cache

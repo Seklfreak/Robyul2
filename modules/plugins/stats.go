@@ -43,6 +43,7 @@ func (s *Stats) Commands() []string {
 		"members",
 		"invite",
 		"channelinfo",
+		"serverindex",
 	}
 }
 
@@ -209,7 +210,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		var err error
 		var guild *discordgo.Guild
 		if len(args) > 0 && helpers.IsRobyulMod(msg.Author.ID) {
-			guild, err = helpers.GetFreshGuild(args[0])
+			guild, err = helpers.GetGuild(args[0])
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == 50001 {
@@ -223,14 +224,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		} else {
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			guild, err = helpers.GetFreshGuild(currentChannel.GuildID)
+			guild, err = helpers.GetGuild(currentChannel.GuildID)
 			helpers.Relax(err)
 		}
 
-		usersCount := guild.MemberCount
-		if guild.MemberCount == 0 {
-			usersCount = len(guild.Members)
-		}
+		usersCount := len(guild.Members)
 
 		textChannels := 0
 		voiceChannels := 0
@@ -357,7 +355,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 		currentGuild, err := helpers.GetGuild(currentChannel.GuildID)
 		helpers.Relax(err)
-		targetMember, err := helpers.GetFreshGuildMember(currentGuild.ID, targetUser.ID)
+		targetMember, err := helpers.GetGuildMember(currentGuild.ID, targetUser.ID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10007 {
 				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
@@ -377,8 +375,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				switch status {
 				case "dnd":
 					status = "Do Not Disturb"
-				case "idle":
-					status = "Away"
 				}
 				if presence.Game != nil {
 					game = presence.Game.Name
@@ -497,7 +493,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		var sinceStatusName, sinceStatusValue, lastMessageText string
 		if cache.HasElastic() {
-			termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\"")
+			queryString := "_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\""
+			termQuery := elastic.NewQueryStringQuery(queryString)
 			searchResult, err := cache.GetElastic().Search().
 				Index(models.ElasticIndex).
 				Query(termQuery).
@@ -519,17 +516,31 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 			} else {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-					"ChannelID":       msg.ChannelID,
-					"Content":         msg.Content,
-					"Timestamp":       string(msg.Timestamp),
-					"TTS":             strconv.FormatBool(msg.Tts),
-					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-					"IsBot":           strconv.FormatBool(msg.Author.Bot),
-				})
+				if errE, ok := err.(*elastic.Error); ok {
+					raven.CaptureError(fmt.Errorf("%#v", errE), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				} else {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				}
 			}
 
-			termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + targetMember.GuildID)
+			queryString = "_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
+			termQuery = elastic.NewQueryStringQuery(queryString)
 			searchResult, err = cache.GetElastic().Search().
 				Index(models.ElasticIndex).
 				Query(termQuery).
@@ -546,14 +557,27 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 			} else {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-					"ChannelID":       msg.ChannelID,
-					"Content":         msg.Content,
-					"Timestamp":       string(msg.Timestamp),
-					"TTS":             strconv.FormatBool(msg.Tts),
-					"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-					"IsBot":           strconv.FormatBool(msg.Author.Bot),
-				})
+				if errE, ok := err.(*elastic.Error); ok {
+					raven.CaptureError(fmt.Errorf("%#v", errE), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				} else {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				}
 			}
 		}
 
@@ -615,7 +639,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 			}
-			channel, err = helpers.GetFreshChannel(channel.ID)
+			channel, err = helpers.GetChannel(channel.ID)
 			helpers.Relax(err)
 			if channel.GuildID != sourceChannel.GuildID && !helpers.IsRobyulMod(msg.Author.ID) {
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -623,7 +647,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				return
 			}
 		} else {
-			channel, err = helpers.GetFreshChannel(msg.ChannelID)
+			channel, err = helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 		}
 
@@ -683,21 +707,25 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			topicText = channel.Topic
 		}
 
-		/*
-			if channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildVoice {
-				serverChannels := guild.Channels
-				sort.Slice(serverChannels, func(i, j int) bool { return serverChannels[i].Position < serverChannels[j].Position })
-				for _, serverChannel := range serverChannels {
-					fmt.Println("#", serverChannel.Position, serverChannel.Name, serverChannel.Type)
-				}
+		var parentChannelTitleText string
+		var parentChannelFooterText string
+		if (channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildVoice) &&
+			channel.ParentID != "" {
+			parentChannel, err := helpers.GetChannel(channel.ParentID)
+			if err != nil {
+				parentChannel = new(discordgo.Channel)
+				parentChannel.ID = "N/A"
+				parentChannel.Name = "N/A"
 			}
-		*/
+			parentChannelTitleText = parentChannel.Name + " / "
+			parentChannelFooterText = "| Parent Channel #" + parentChannel.ID + " "
+		}
 
 		channelinfoEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
-			Title:       channel.Name + " / " + guild.Name,
+			Title:       channel.Name + " / " + parentChannelTitleText + guild.Name,
 			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), helpers.SinceInDaysText(createdAtTime)),
-			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Channel ID: %s | Server ID: %s", channel.ID, guild.ID)},
+			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Channel #%s %s| Server #%s", channel.ID, parentChannelFooterText, guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Topic", Value: topicText, Inline: false},
 				{Name: "Type", Value: channelTypeText, Inline: true},
@@ -946,6 +974,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+			defer helpers.Recover()
 			if reaction.MessageID == reactionEmbedMessage.ID {
 				if reaction.UserID == session.State.User.ID {
 					return
@@ -959,8 +988,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						helpers.Relax(err)
 					}
 				}
-				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				helpers.Relax(err)
+				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 			}
 		})
 		time.Sleep(3 * time.Minute)
@@ -997,6 +1025,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		allMembers := guild.Members
 		slice.Sort(allMembers[:], func(i, j int) bool {
+			if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
+				return false
+			}
+
 			iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			helpers.Relax(err)
 			jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
@@ -1040,6 +1072,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+			defer helpers.Recover()
+
 			if reaction.MessageID == memberlistEmbedMessage.ID {
 				if reaction.UserID == session.State.User.ID {
 					return
@@ -1062,8 +1096,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						}
 					}
 				}
-				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				helpers.Relax(err)
+				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 			}
 		})
 		time.Sleep(3 * time.Minute)
@@ -1096,6 +1129,24 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 
+		guild, err := helpers.GetGuild(invite.Guild.ID)
+		if err == nil {
+			invite.Guild.Channels = guild.Channels
+			invite.Guild.Members = guild.Members
+			guildInvites, err := session.GuildInvites(invite.Guild.ID)
+			if err == nil {
+				for _, guildInvite := range guildInvites {
+					if guildInvite.Code == invite.Code {
+						invite.Uses = guildInvite.Uses
+						invite.MaxAge = guildInvite.MaxAge
+						invite.MaxUses = guildInvite.MaxUses
+						invite.Revoked = guildInvite.Revoked
+						invite.CreatedAt = guildInvite.CreatedAt
+					}
+				}
+			}
+		}
+
 		maxAgeText := "never"
 		if invite.MaxAge > 0 {
 			maxAgeText = strconv.Itoa((invite.MaxAge/60)/60) + " hours"
@@ -1112,13 +1163,63 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		result := fmt.Sprintf("Invite for\nChannel `%s (#%s)`\non Server `%s (#%s)` with %d Channels and %d Members\nUsed %d times, Expires %s, Max Uses %s, %s\nCreated By `%s (#%s)` %s",
 			invite.Channel.Name, invite.Channel.ID,
-			invite.Guild.Name, invite.Guild.ID, len(invite.Guild.Channels), invite.Guild.MemberCount,
+			invite.Guild.Name, invite.Guild.ID, len(invite.Guild.Channels), len(invite.Guild.Members),
 			invite.Uses, maxAgeText, maxUsesText, revokedText,
 			invite.Inviter.Username, invite.Inviter.ID, humanize.Time(createdAt),
 		)
 
 		_, err = session.ChannelMessageSend(msg.ChannelID, result)
 		helpers.Relax(err)
+		return
+	case "serverindex": // [p]serverindex [<excluded channel> <excluded channel ...>]
+		session.ChannelTyping(msg.ChannelID)
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+		guild, err := helpers.GetGuild(channel.GuildID)
+		helpers.Relax(err)
+
+		hiddenChannels := make([]string, 0)
+		for _, fieldChannelTag := range strings.Fields(content) {
+			fieldChannel, err := helpers.GetChannelFromMention(msg, fieldChannelTag)
+			if err == nil {
+				hiddenChannels = append(hiddenChannels, fieldChannel.ID)
+			}
+		}
+
+		countedLinks := make(map[string]int, 0)
+		var links int
+	NextChannel:
+		for _, guildChannel := range guild.Channels {
+			for _, hiddenChannel := range hiddenChannels {
+				if guildChannel.ID == hiddenChannel {
+					continue NextChannel
+				}
+			}
+
+			messages, err := session.ChannelMessages(guildChannel.ID, 100, "", "", "")
+			links = 0
+			for _, message := range messages {
+				links += strings.Count(message.Content, "discord.gg")
+			}
+			if err == nil {
+				countedLinks[guildChannel.ID] = links
+			}
+		}
+
+		var totalLinks int
+		resultText := "__**Server Index Stats**__\n"
+		for channelID, links := range countedLinks {
+			if links > 0 {
+				resultText += fmt.Sprintf("<#%s>: %d invites\n", channelID, links)
+				totalLinks += links
+			}
+		}
+		resultText += fmt.Sprintf("_Found **%d invites** in total._", totalLinks)
+
+		for _, page := range helpers.Pagify(resultText, "\n") {
+			_, err := session.ChannelMessageSend(msg.ChannelID, page)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		}
 		return
 	}
 }
@@ -1165,8 +1266,7 @@ func (r *Stats) setEmbedMemberlistPage(memberlistEmbed *discordgo.MessageEmbed, 
 				title = fmt.Sprintf("%s#%s ~ %s", allMembers[i].User.Username, allMembers[i].User.Discriminator, allMembers[i].Nick)
 			}
 
-			joinedServerTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
-			helpers.Relax(err)
+			joinedServerTime, _ := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			memberlistEmbed.Description += fmt.Sprintf("%d: %s joined %s\n", i+1, title, helpers.SinceInDaysText(joinedServerTime))
 		}
 		i++

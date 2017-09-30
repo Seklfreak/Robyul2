@@ -121,7 +121,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 			return
 		}
 		helpers.Relax(err)
-		for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
+		for _, guildAnnouncementSetting := range m.GetAnnouncementSettingsFor("guildid", member.GuildID) {
 			if guildAnnouncementSetting.GuildJoinEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
 				guildJoinChannelID := guildAnnouncementSetting.GuildJoinChannelID
 				guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member)
@@ -148,7 +148,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			return
 		}
-		for _, guildAnnouncementSetting := range m.GetAnnouncementSettings() {
+		for _, guildAnnouncementSetting := range m.GetAnnouncementSettingsFor("guildid", member.GuildID) {
 			if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
 				guildLeaveChannelID := guildAnnouncementSetting.GuildLeaveChannelID
 				guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member)
@@ -178,8 +178,21 @@ func (m *GuildAnnouncements) GetAnnouncementSettings() []Announcement_Setting {
 	return entryBucket
 }
 
+func (m *GuildAnnouncements) GetAnnouncementSettingsFor(key string, value string) []Announcement_Setting {
+	var entryBucket []Announcement_Setting
+	cursor, err := rethink.Table("guild_announcements").Filter(
+		rethink.Row.Field(key).Eq(value),
+	).Run(helpers.GetDB())
+	helpers.Relax(err)
+
+	err = cursor.All(&entryBucket)
+	helpers.Relax(err)
+
+	return entryBucket
+}
+
 func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Member) string {
-	guild, err := cache.GetSession().Guild(member.GuildID)
+	guild, err := helpers.GetGuild(member.GuildID)
 	if errD, ok := err.(*discordgo.RESTError); ok {
 		if errD.Message.Code != 50001 { // It's probably Robyul leaving a server :sob:
 			return ""
@@ -205,6 +218,10 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 		}
 	}
 	slice.Sort(allMembers[:], func(i, j int) bool {
+		if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
+			return false
+		}
+
 		iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 		helpers.Relax(err)
 		jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()

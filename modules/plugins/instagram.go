@@ -37,6 +37,7 @@ type DB_Instagram_Entry struct {
 	PostedPosts      []DB_Instagram_Post      `gorethink:"posted_posts"`
 	PostedReelMedias []DB_Instagram_ReelMedia `gorethink:"posted_reelmedias"`
 	IsLive           bool                     `gorethink:"islive"`
+	PostDirectLinks  bool                     `gorethink:"post_direct_links"`
 }
 
 type DB_Instagram_Post struct {
@@ -212,7 +213,7 @@ const (
 	deviceId                 string = "android-3deeb2d04b2ab0ee" // TODO: generate a random device id
 	instagramFriendlyUser    string = "https://www.instagram.com/%s/"
 	instagramFriendlyPost    string = "https://www.instagram.com/p/%s/"
-	instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?([a-z0-9]+\/.+\.jpg)`
+	instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
 )
 
 func (m *Instagram) Commands() []string {
@@ -286,7 +287,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 					log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
 					entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
 					changes = true
-					go m.postPostToChannel(entry.ChannelID, post, instagramUser)
+					go m.postPostToChannel(entry.ChannelID, post, instagramUser, entry.PostDirectLinks)
 				}
 
 			}
@@ -433,6 +434,31 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				_, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
+		case "toggle-direct-link", "toggle-direct-links": // [p]instagram toggle-direct-links <id>
+			helpers.RequireMod(msg, func() {
+				session.ChannelTyping(msg.ChannelID)
+				if len(args) < 2 {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					return
+				}
+				entryId := args[1]
+				entryBucket := m.getEntryBy("id", entryId)
+				if entryBucket.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+				var messageText string
+				if entryBucket.PostDirectLinks {
+					entryBucket.PostDirectLinks = false
+					messageText = helpers.GetText("plugins.instagram.post-direct-links-disabled")
+				} else {
+					entryBucket.PostDirectLinks = true
+					messageText = helpers.GetText("plugins.instagram.post-direct-links-enabled")
+				}
+				m.setEntry(entryBucket)
+				session.ChannelMessageSend(msg.ChannelID, messageText)
+				return
+			})
 		default:
 			session.ChannelTyping(msg.ChannelID)
 			instagramUsername := strings.Replace(args[0], "@", "", 1)
@@ -585,7 +611,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
 	}
 }
 
-func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, instagramUser Instagram_User) {
+func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, instagramUser Instagram_User, postDirectLinks bool) {
 	instagramNameModifier := ""
 	if instagramUser.IsVerified {
 		instagramNameModifier += " ☑"
@@ -611,6 +637,7 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 		}
 	}
 
+	var content string
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:       helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier),
 		URL:         fmt.Sprintf(instagramFriendlyPost, post.Code),
@@ -618,6 +645,12 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
 		Description: post.Caption.Text,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
+	}
+	if postDirectLinks {
+		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier) + "**\n"
+		if post.Caption.Text != "" {
+			content += post.Caption.Text + "\n"
+		}
 	}
 
 	if len(post.ImageVersions2.Candidates) > 0 {
@@ -636,17 +669,26 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 		}
 	}
 
+	content += fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code))
+
 	if len(mediaUrls) > 0 {
 		channelEmbed.Description += "\n\n`Links:` "
 		for i, mediaUrl := range mediaUrls {
+			if postDirectLinks {
+				content += "\n" + getFullResUrl(mediaUrl)
+			}
 			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl))
 		}
 	}
 
-	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
-		Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code)),
-		Embed:   channelEmbed,
-	})
+	messageSend := &discordgo.MessageSend{
+		Content: content,
+	}
+	if !postDirectLinks {
+		messageSend.Embed = channelEmbed
+	}
+
+	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, messageSend)
 	if err != nil {
 		cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
 	}

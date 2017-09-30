@@ -165,6 +165,15 @@ func ElasticAddMessage(message *discordgo.Message) error {
 		ChannelID:     message.ChannelID,
 		Embeds:        len(message.Embeds),
 	}
+
+	if GuildSettingsGetCached(channel.GuildID).ChatlogDisabled {
+		elasticMessageData.Content = ""
+		elasticMessageData.Attachments = []string{}
+		elasticMessageData.ContentLength = 0
+		elasticMessageData.UserID = ""
+		elasticMessageData.Embeds = 0
+	}
+
 	_, err = cache.GetElastic().Index().
 		Index(models.ElasticIndex).
 		Type(models.ElasticTypeMessage).
@@ -192,6 +201,11 @@ func ElasticAddJoin(member *discordgo.Member) error {
 		GuildID:   member.GuildID,
 		UserID:    member.User.ID,
 	}
+
+	if GuildSettingsGetCached(member.GuildID).ChatlogDisabled {
+		elasticJoinData.UserID = ""
+	}
+
 	_, err = cache.GetElastic().Index().
 		Index(models.ElasticIndex).
 		Type(models.ElasticTypeJoin).
@@ -219,6 +233,11 @@ func ElasticAddLeave(member *discordgo.Member) error {
 		GuildID:   member.GuildID,
 		UserID:    member.User.ID,
 	}
+
+	if GuildSettingsGetCached(member.GuildID).ChatlogDisabled {
+		elasticLeaveData.UserID = ""
+	}
+
 	_, err = cache.GetElastic().Index().
 		Index(models.ElasticIndex).
 		Type(models.ElasticTypeLeave).
@@ -247,6 +266,14 @@ func ElasticAddReaction(reaction *discordgo.MessageReaction) error {
 		EmojiID:   reaction.Emoji.ID,
 		EmojiName: reaction.Emoji.Name,
 	}
+
+	if GuildSettingsGetCached(channel.GuildID).ChatlogDisabled {
+		elasticLeaveData.UserID = ""
+		elasticLeaveData.MessageID = ""
+		elasticLeaveData.EmojiID = ""
+		elasticLeaveData.EmojiName = ""
+	}
+
 	_, err = cache.GetElastic().Index().
 		Index(models.ElasticIndex).
 		Type(models.ElasticTypeReaction).

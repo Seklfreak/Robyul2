@@ -60,6 +60,8 @@ var (
 		&plugins.Troublemaker{},
 		&plugins.Lyrics{},
 		&plugins.Friend{},
+		&plugins.Names{},
+		&plugins.Reddit{},
 	}
 
 	// PluginList is the list of active plugins

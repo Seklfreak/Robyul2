@@ -524,7 +524,9 @@
       "account-list-no-accounts-error": "No Instagram Accounts found on this server!",
       "post-embed-title": "%s (@%s)%s posted a new %s",
       "reelmedia-embed-title": "%s (@%s)%s posted a new %s to their story",
-      "live-embed-title": "📣 %s (@%s)%s just went live!"
+      "live-embed-title": "📣 %s (@%s)%s just went live!",
+      "post-direct-links-disabled": "I won't post direct links for this account anymore.",
+      "post-direct-links-enabled": "I will now post direct links for this account."
     },
     "facebook": {
       "page-not-found": "Page not found!",
@@ -592,7 +594,8 @@
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
       "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>",
       "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>",
-      "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>"
+      "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>",
+      "delete-config-success": "I removed the config for the given channel. <:blobokhand:317032017164238848>"
     },
     "guildannouncements": {
       "message-edited": "I saved the new message!",
@@ -827,6 +830,17 @@
       "remove-success": ":white_check_mark: Removes Guild %s `(#%s)` from the whitelist.",
       "bulk-title": "Added the following Guilds:",
       "bulk-footer": "_added %d Guilds in total._"
+    },
+    "names": {
+      "list-result": "**Name history for `%s#%s` (`#%s`)**\nUsernames: %s\nNicknames: %s"
+    },
+    "reddit": {
+      "embed-footer": "powered by reddit.com",
+      "subreddit-not-found": "I wasn't able to find a subreddit with that name. <:blobthinking:317028940885524490>",
+      "add-subreddit-success": "I will now post new submission on `r/%s` to <#%s>! <:blobokhand:317032017164238848>",
+      "remove-subreddit-error-not-found": "I wasn't able to find a subreddit with that ID. <:blobthinking:317028940885524490>",
+      "remove-subreddit-success": "I removed the subreddit `r/%s` from my database! <:blobokhand:317032017164238848>",
+      "list-none": "There are no subreddits set up on this server yet! <:googlenerd:317030369205682186>"
     }
   }
 }

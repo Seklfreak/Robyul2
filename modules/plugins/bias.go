@@ -3,6 +3,7 @@ package plugins
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -191,6 +192,37 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 
 				return
 			})
+		case "delete-config", "remove-config":
+			helpers.RequireAdmin(msg, func() {
+				session.ChannelTyping(msg.ChannelID)
+
+				if len(args) < 2 {
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.Relax(err)
+					return
+				}
+
+				targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+				if err != nil || targetChannel.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+
+				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
+				if channelDb.ChannelID == "" {
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+					helpers.Relax(err)
+					return
+				}
+
+				err = m.deleteChannelConfig(channelDb)
+				helpers.Relax(err)
+				biasChannels = m.GetBiasChannels()
+
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.delete-config-success"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
+			})
 		case "stats":
 			session.ChannelTyping(msg.ChannelID)
 
@@ -272,9 +304,9 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 			if msg.ChannelID == biasChannel.ChannelID {
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
-				guild, err := helpers.GetFreshGuild(channel.GuildID)
+				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
-				member, err := helpers.GetFreshGuildMember(guild.ID, msg.Author.ID)
+				member, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
 				helpers.Relax(err)
 				guildRoles, err := session.GuildRoles(guild.ID)
 				if err != nil {
@@ -411,7 +443,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 												}
 											}
 
-											member, err = helpers.GetFreshGuildMember(channel.GuildID, msg.Author.ID)
+											member, err = helpers.GetGuildMember(channel.GuildID, msg.Author.ID)
 											helpers.Relax(err)
 
 											break FindRoleLoop
@@ -521,6 +553,14 @@ func (m *Bias) setChannelConfig(entry AssignableRole_Channel) {
 	helpers.Relax(err)
 }
 
+func (m *Bias) deleteChannelConfig(entry AssignableRole_Channel) error {
+	if entry.ID != "" {
+		_, err := rethink.Table("bias").Get(entry.ID).Delete().RunWrite(helpers.GetDB())
+		return err
+	}
+	return errors.New("empty starEntry submitted")
+}
+
 func (m *Bias) GetBiasChannels() []AssignableRole_Channel {
 	var entryBucket []AssignableRole_Channel
 	cursor, err := rethink.Table("bias").Run(helpers.GetDB())
@@ -593,9 +633,9 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 			if reaction.ChannelID == biasChannel.ChannelID {
 				channel, err := helpers.GetChannel(reaction.ChannelID)
 				helpers.Relax(err)
-				guild, err := helpers.GetFreshGuild(channel.GuildID)
+				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
-				member, err := helpers.GetFreshGuildMember(guild.ID, reaction.UserID)
+				member, err := helpers.GetGuildMember(guild.ID, reaction.UserID)
 				helpers.Relax(err)
 				if member.User.Bot {
 					return

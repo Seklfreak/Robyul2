@@ -9,6 +9,8 @@ import (
 
 	elastic "gopkg.in/olivere/elastic.v5"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -20,6 +22,11 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
 	"github.com/go-redis/redis"
+	"gopkg.in/inconshreveable/go-keen.v0"
+)
+
+var (
+	keenClient *keen.Client
 )
 
 // Entrypoint
@@ -115,7 +122,7 @@ func main() {
 	discord.StateEnabled = true
 	discord.Unlock()
 
-	discord.AddHandlerOnce(BotOnReady)
+	discord.AddHandler(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
 	discord.AddHandler(BotOnMessageDelete)
 	discord.AddHandler(BotOnGuildMemberAdd)
@@ -176,12 +183,48 @@ func main() {
 		}
 	}
 
-	// Open REST API
-	for _, service := range rest.NewRestServices() {
-		restful.Add(service)
+	// create keen client
+	if config.Path("keen.project_id").Data().(string) != "" &&
+		config.Path("keen.key").Data().(string) != "" {
+		log.WithField("module", "launcher").Info("Connecting bot to keen.io...")
+		keenClient = &keen.Client{
+			ProjectToken: config.Path("keen.project_id").Data().(string),
+			ApiKey:       config.Path("keen.key").Data().(string),
+		}
 	}
+
+	// Open REST API
+	wsContainer := restful.NewContainer()
+
+	for _, service := range rest.NewRestServices() {
+		wsContainer.Add(service)
+	}
+	wsContainer.Filter(func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+		// Add CORS header
+		allowedHosts := []string{"https://robyul.chat", "https://api.robyul.chat", "http://localhost:8000"}
+		if origin := req.Request.Header.Get("Origin"); origin != "" {
+			for _, allowedHost := range allowedHosts {
+				if allowedHost == origin {
+					resp.AddHeader("Access-Control-Allow-Origin", origin)
+					resp.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+					resp.AddHeader("Access-Control-Max-Age", "1000")
+					resp.AddHeader("Access-Control-Allow-Headers", "origin, x-csrftoken, content-type, accept, Authorization")
+				}
+			}
+		}
+		// Log request and time
+		now := time.Now()
+		chain.ProcessFilter(req, resp)
+		tookTime := time.Now().Sub(now)
+		log.WithField("module", "launcher").Info(fmt.Sprintf("received api request: %s %s%s (took %v)",
+			req.Request.Method, req.Request.Host, req.Request.URL, tookTime))
+		logKeenRequest(req, tookTime.Seconds())
+	})
+	wsContainer.Filter(wsContainer.OPTIONSFilter)
+
 	go func() {
-		log.Fatal(http.ListenAndServe("localhost:2021", nil))
+		server := &http.Server{Addr: "localhost:2021", Handler: wsContainer}
+		log.Fatal(server.ListenAndServe())
 	}()
 	log.WithField("module", "launcher").Info("REST API listening on localhost:2021")
 
@@ -195,4 +238,33 @@ func main() {
 	log.WithField("module", "launcher").Info("The OS is killing me :c")
 	log.WithField("module", "launcher").Info("Disconnecting...")
 	discord.Close()
+}
+
+type KeenRestEvent struct {
+	Seconds   float64
+	Method    string
+	Host      string
+	Referer   string
+	URL       string
+	Origin    string
+	UserAgent string
+	Query     string
+}
+
+func logKeenRequest(request *restful.Request, timeInSeconds float64) {
+	if keenClient.ApiKey != "" && keenClient.ProjectToken != "" {
+		err := keenClient.AddEvent("Robyul_REST_API", &KeenRestEvent{
+			Seconds:   timeInSeconds,
+			Method:    request.Request.Method,
+			Host:      request.Request.Host,
+			Referer:   request.Request.Referer(),
+			URL:       request.Request.URL.Path,
+			Origin:    request.Request.Header.Get("Origin"),
+			UserAgent: request.Request.Header.Get("User-Agent"),
+			Query:     request.Request.URL.RawQuery,
+		})
+		if err != nil {
+			cache.GetLogger().WithField("module", "launcher").Error("Error logging API request to keen: ", err.Error())
+		}
+	}
 }

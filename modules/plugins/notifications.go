@@ -295,6 +295,10 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 			return
 		}
 	}
+	// ignore music bot prefixes
+	if strings.HasPrefix(content, "__") || strings.HasPrefix(content, "//") {
+		return
+	}
 	// ignore bot messages
 	if msg.Author.Bot == true {
 		return
@@ -338,7 +342,7 @@ NextKeyword:
 				doesMatch = true
 			}
 			if doesMatch == true {
-				memberToNotify, err := helpers.GetFreshGuildMember(guild.ID, notificationSetting.UserID)
+				memberToNotify, err := helpers.GetGuildMember(guild.ID, notificationSetting.UserID)
 				if err != nil {
 					cache.GetLogger().WithField("module", "notifications").Error("error getting member to notify: " + err.Error())
 					continue NextKeyword

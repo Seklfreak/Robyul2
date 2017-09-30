@@ -105,12 +105,12 @@ func CanInspectExtended(msg *discordgo.Message) bool {
 		return false
 	}
 
-	guild, e := GetFreshGuild(channel.GuildID)
+	guild, e := GetGuild(channel.GuildID)
 	if e != nil {
 		return false
 	}
 
-	guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+	guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
 	if e != nil {
 		return false
 	}
@@ -134,7 +134,7 @@ func IsAdmin(msg *discordgo.Message) bool {
 		return false
 	}
 
-	guild, e := GetFreshGuild(channel.GuildID)
+	guild, e := GetGuild(channel.GuildID)
 	if e != nil {
 		return false
 	}
@@ -143,7 +143,7 @@ func IsAdmin(msg *discordgo.Message) bool {
 		return true
 	}
 
-	guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+	guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
 	if e != nil {
 		return false
 	}
@@ -165,6 +165,64 @@ func IsAdmin(msg *discordgo.Message) bool {
 	return false
 }
 
+func IsAdminByID(guildID string, userID string) bool {
+	guild, e := GetGuild(guildID)
+	if e != nil {
+		return false
+	}
+
+	if userID == guild.OwnerID || IsBotAdmin(userID) {
+		return true
+	}
+
+	guildMember, e := GetGuildMember(guild.ID, userID)
+	if e != nil {
+		return false
+	}
+	// Check if role may manage server or a role is in admin role list
+	for _, role := range guild.Roles {
+		for _, userRole := range guildMember.Roles {
+			if userRole == role.ID {
+				if role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+					return true
+				}
+				for _, adminRoleName := range adminRoleNames {
+					if role.Name == adminRoleName {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func HasPermissionByID(guildID string, userID string, permission int) bool {
+	guild, e := GetGuild(guildID)
+	if e != nil {
+		return false
+	}
+
+	if userID == guild.OwnerID {
+		return true
+	}
+
+	guildMember, e := GetGuildMember(guild.ID, userID)
+	if e != nil {
+		return false
+	}
+	for _, role := range guild.Roles {
+		for _, userRole := range guildMember.Roles {
+			if userRole == role.ID {
+				if role.Permissions&permission == permission {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func IsMod(msg *discordgo.Message) bool {
 	if IsAdmin(msg) == true {
 		return true
@@ -173,11 +231,39 @@ func IsMod(msg *discordgo.Message) bool {
 		if e != nil {
 			return false
 		}
-		guild, e := GetFreshGuild(channel.GuildID)
+		guild, e := GetGuild(channel.GuildID)
 		if e != nil {
 			return false
 		}
-		guildMember, e := GetFreshGuildMember(guild.ID, msg.Author.ID)
+		guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
+		if e != nil {
+			return false
+		}
+		// check if a role is in mod role list
+		for _, role := range guild.Roles {
+			for _, userRole := range guildMember.Roles {
+				if userRole == role.ID {
+					for _, modRoleName := range modRoleNames {
+						if role.Name == modRoleName {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func IsModByID(guildID string, userID string) bool {
+	if IsAdminByID(guildID, userID) == true {
+		return true
+	} else {
+		guild, e := GetGuild(guildID)
+		if e != nil {
+			return false
+		}
+		guildMember, e := GetGuildMember(guild.ID, userID)
 		if e != nil {
 			return false
 		}
@@ -284,7 +370,7 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 }
 
 func GetMuteRole(guildID string) (*discordgo.Role, error) {
-	guild, err := GetFreshGuild(guildID)
+	guild, err := GetGuild(guildID)
 	Relax(err)
 	var muteRole *discordgo.Role
 	settings, err := GuildSettingsGet(guildID)
@@ -318,98 +404,18 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
 	return muteRole, nil
 }
 
-func GetFreshGuildMember(guildID string, userID string) (*discordgo.Member, error) {
-	var err error
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
-
-	targetMember, _ := cache.GetSession().State.Member(guildID, userID)
+func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
+	targetMember, err := cache.GetSession().State.Member(guildID, userID)
 	if targetMember == nil || targetMember.GuildID == "" || targetMember.JoinedAt == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshGuildMember").Debug(
-			fmt.Sprintf("api request: GuildMember: %s, %s", guildID, userID))
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuildMember").Debug(
+			fmt.Sprintf("discord api request: GuildMember: %s, %s", guildID, userID))
 		targetMember, err = cache.GetSession().GuildMember(guildID, userID)
-	}
-	if err == nil {
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     targetMember,
-			Expiration: time.Minute * 30,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
 	}
 	return targetMember, err
 }
 
-func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
-	var err error
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
-
-	// try state
-	targetMember, err := cache.GetSession().State.Member(guildID, userID)
-	if err == nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     targetMember,
-			Expiration: time.Minute * 30,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
-		return targetMember, err
-	} else {
-		var targetMemberS discordgo.Member
-		// try api cache
-		if err = cacheCodec.Get(key, &targetMemberS); err != nil || targetMemberS.GuildID == "" {
-			// try api
-			cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuildMember").Debug(
-				fmt.Sprintf("api request: GuildMember: %s, %s", guildID, userID))
-			targetMember, err := cache.GetSession().GuildMember(guildID, userID)
-			if err != nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
-				err = cacheCodec.Set(&redisCache.Item{
-					Key:        key,
-					Object:     targetMember,
-					Expiration: time.Minute * 30,
-				})
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-			}
-			return targetMember, err
-		} else {
-			return &targetMemberS, nil
-		}
-	}
-}
-
 func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member, error) {
-	var err error
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s:member:%s", guildID, userID)
-
-	// try state
-	targetMember, err := cache.GetSession().State.Member(guildID, userID)
-	if err == nil && targetMember != nil && targetMember.User != nil && targetMember.User.ID != "" {
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     targetMember,
-			Expiration: time.Minute * 30,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
-		return targetMember, err
-	} else {
-		var targetMemberS discordgo.Member
-		// try api cache
-		if err = cacheCodec.Get(key, &targetMemberS); err != nil || targetMemberS.GuildID == "" {
-			return &targetMemberS, errors.New("Member not found")
-		} else {
-			return &targetMemberS, nil
-		}
-	}
+	return cache.GetSession().State.Member(guildID, userID)
 }
 
 func GetIsInGuild(guildID string, userID string) bool {
@@ -421,115 +427,31 @@ func GetIsInGuild(guildID string, userID string) bool {
 	}
 }
 
-func GetFreshGuild(guildID string) (*discordgo.Guild, error) {
-	var err error
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
-
+func GetGuild(guildID string) (*discordgo.Guild, error) {
 	targetGuild, err := cache.GetSession().State.Guild(guildID)
 	if targetGuild == nil || targetGuild.ID == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshGuild").Debug(
-			fmt.Sprintf("api request: Guild: %s", guildID))
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
+			fmt.Sprintf("discord api request: Guild: %s", guildID))
 		targetGuild, err = cache.GetSession().Guild(guildID)
-	}
-	if err == nil {
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     targetGuild,
-			Expiration: time.Minute * 60,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
 	}
 	return targetGuild, err
 }
 
-func GetGuild(guildID string) (*discordgo.Guild, error) {
-	var err error
-	var targetGuild discordgo.Guild
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:guild:%s", guildID)
-
-	if err = cacheCodec.Get(key, &targetGuild); err != nil || targetGuild.JoinedAt == "" {
-		targetGuild, err := cache.GetSession().State.Guild(guildID)
-		if targetGuild == nil || targetGuild.ID == "" {
-			cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
-				fmt.Sprintf("api request: Guild: %s", guildID))
-			targetGuild, err = cache.GetSession().Guild(guildID)
-		}
-		if err == nil {
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        key,
-				Object:     targetGuild,
-				Expiration: time.Minute * 60,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
-		}
-		return targetGuild, err
-	}
-	return &targetGuild, err
-}
-
-func GetFreshChannel(channelID string) (*discordgo.Channel, error) {
-	var err error
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
-
+func GetChannel(channelID string) (*discordgo.Channel, error) {
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshChannel").Debug(
-			fmt.Sprintf("api request: Channel: %s", channelID))
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
+			fmt.Sprintf("discord api request: Channel: %s", channelID))
 		targetChannel, err = cache.GetSession().Channel(channelID)
-	}
-	if err == nil {
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     targetChannel,
-			Expiration: time.Minute * 60,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
 	}
 	return targetChannel, err
 }
 
-func GetChannel(channelID string) (*discordgo.Channel, error) {
-	var err error
-	var targetChannel discordgo.Channel
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:channel:%s", channelID)
-
-	if err = cacheCodec.Get(key, &targetChannel); err != nil {
-		targetChannel, err := cache.GetSession().State.Channel(channelID)
-		if targetChannel == nil || targetChannel.ID == "" {
-			cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
-				fmt.Sprintf("api request: Channel: %s", channelID))
-			targetChannel, err = cache.GetSession().Channel(channelID)
-		}
-		if err == nil {
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        key,
-				Object:     targetChannel,
-				Expiration: time.Minute * 60,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
-		}
-		return targetChannel, err
-	}
-	return &targetChannel, err
-}
-
 func GetMessage(channelID string, messageID string) (*discordgo.Message, error) {
 	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
-	if err != nil {
+	if targetMessage == nil || targetMessage.ID == "" {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
-			fmt.Sprintf("api request: Message: %s in Channel: %s", messageID, channelID))
+			fmt.Sprintf("discord api request: Message: %s in Channel: %s", messageID, channelID))
 		targetMessage, err = cache.GetSession().ChannelMessage(channelID, messageID)
 		cache.GetSession().State.MessageAdd(targetMessage)
 		return targetMessage, err
@@ -580,32 +502,11 @@ func GetGlobalChannelFromMention(mention string) (*discordgo.Channel, error) {
 	}
 }
 
-func GetFreshUser(userID string) (*discordgo.User, error) {
-	var err error
-	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
-
-	cache.GetLogger().WithField("module", "discord").WithField("method", "GetFreshUser").Debug(
-		fmt.Sprintf("api request: User: %s", userID))
-	targetUser, err := cache.GetSession().User(userID)
-	if err == nil {
-		err = cacheCodec.Set(&redisCache.Item{
-			Key:        key,
-			Object:     targetUser,
-			Expiration: time.Minute * 10,
-		})
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
-	}
-	return targetUser, err
-}
-
 func GetUser(userID string) (*discordgo.User, error) {
 	var err error
 	var targetUser discordgo.User
 	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID)
+	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID) // TOOD: Should we cache this?
 
 	for _, guild := range cache.GetSession().State.Guilds {
 		member, err := GetGuildMemberWithoutApi(guild.ID, userID)
@@ -616,7 +517,7 @@ func GetUser(userID string) (*discordgo.User, error) {
 
 	if err = cacheCodec.Get(key, &targetUser); err != nil {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetUser").Debug(
-			fmt.Sprintf("api request: User: %s", userID))
+			fmt.Sprintf("discord api request: User: %s", userID))
 		targetUser, err := cache.GetSession().User(userID)
 		if err == nil {
 			err = cacheCodec.Set(&redisCache.Item{

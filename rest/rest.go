@@ -1,10 +1,16 @@
 package rest
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
+
+	"strings"
+
+	"reflect"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/generator"
@@ -16,6 +22,7 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 func NewRestServices() []*restful.WebService {
@@ -26,7 +33,7 @@ func NewRestServices() []*restful.WebService {
 		Path("/bot/guilds").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
-	service.Route(service.GET("").To(GetAllBotGuilds))
+	service.Route(service.GET("").Filter(webkeyAuthenticate).To(GetAllBotGuilds))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -35,7 +42,8 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{user-id}").To(FindUser))
+	service.Route(service.GET("/{user-id}").Filter(sessionAndWebkeyAuthenticate).To(FindUser))
+	service.Route(service.GET("/{user-id}/guilds").Filter(webkeyAuthenticate).To(FindUserGuilds))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -44,8 +52,9 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}/{user-id}").To(FindMember))
-	service.Route(service.GET("/{guild-id}/{user-id}/is").To(IsMember))
+	service.Route(service.GET("/{guild-id}/{user-id}").Filter(webkeyAuthenticate).To(FindMember))
+	service.Route(service.GET("/{guild-id}/{user-id}/is").Filter(webkeyAuthenticate).To(IsMember))
+	service.Route(service.GET("/{guild-id}/{user-id}/status").Filter(webkeyAuthenticate).To(StatusMember))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -54,7 +63,7 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces("text/html")
 
-	service.Route(service.GET("/{user-id}/{guild-id}").To(GetProfile))
+	service.Route(service.GET("/{user-id}/{guild-id}").Filter(webkeyAuthenticate).To(GetProfile))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -63,8 +72,8 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}").To(GetRankings))
-	service.Route(service.GET("/user/{user-id}/{guild-id}").To(GetUserRanking))
+	service.Route(service.GET("/{guild-id}").Filter(webkeyAuthenticate).To(GetRankings))
+	service.Route(service.GET("/user/{user-id}/{guild-id}").Filter(webkeyAuthenticate).To(GetUserRanking))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -73,7 +82,7 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}").To(FindGuild))
+	service.Route(service.GET("/{guild-id}").Filter(webkeyAuthenticate).To(FindGuild))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -82,9 +91,102 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/history/{guild-id}/{start}/{end}").To(GetRandomPicturesGuildHistory))
+	service.Route(service.GET("/history/{guild-id}/{start}/{end}").Filter(webkeyAuthenticate).To(GetRandomPicturesGuildHistory))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/statistics").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{guild-id}/messages/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsCount))
+	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
+	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
+	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
+	service.Route(service.GET("/bot").Filter(webkeyAuthenticate).To(GotBotStatistics))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/chatlog").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{guild-id}/{channel-id}/around/{message-id}").Filter(sessionAndWebkeyAuthenticate).To(GetChatlogAroundMessageID))
 	services = append(services, service)
 	return services
+}
+
+func webkeyAuthenticate(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+	authorizationHeader := strings.TrimSpace(request.HeaderParameter("Authorization"))
+
+	isAuthenticated := false
+
+	if strings.HasPrefix(authorizationHeader, "Webkey ") {
+		webkey := strings.TrimSpace(strings.Replace(authorizationHeader, "Webkey ", "", -1))
+		if webkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+			isAuthenticated = true
+			request.SetAttribute("UserID", "global")
+		}
+	}
+
+	queryWebkey := strings.TrimSpace(request.QueryParameter("webkey"))
+	if queryWebkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+		isAuthenticated = true
+		request.SetAttribute("UserID", "global")
+	}
+
+	if isAuthenticated == false {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	chain.ProcessFilter(request, response)
+	return
+}
+
+func sessionAndWebkeyAuthenticate(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+	authorizationHeader := strings.TrimSpace(request.HeaderParameter("Authorization"))
+
+	isAuthenticated := false
+
+	if strings.HasPrefix(authorizationHeader, "Webkey ") {
+		webkey := strings.TrimSpace(strings.Replace(authorizationHeader, "Webkey ", "", -1))
+		if webkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+			isAuthenticated = true
+			request.SetAttribute("UserID", "global")
+		}
+	}
+
+	queryWebkey := strings.TrimSpace(request.QueryParameter("webkey"))
+	if queryWebkey == helpers.GetConfig().Path("website.webkey").Data().(string) {
+		isAuthenticated = true
+		request.SetAttribute("UserID", "global")
+	}
+
+	if strings.HasPrefix(authorizationHeader, "PHP-Session ") {
+		sessionID := strings.TrimSpace(strings.Replace(authorizationHeader, "PHP-Session ", "", -1))
+		key := "robyul2-web:robyul-session:" + sessionID
+		redis := cache.GetRedisClient()
+		sessionDataString, err := redis.Get(key).Result()
+		if err == nil {
+			var sessionData models.Website_Session_Data
+			msgpack.Unmarshal([]byte(sessionDataString), &sessionData)
+			if sessionData.DiscordUserID != "" {
+				isAuthenticated = true
+				request.SetAttribute("UserID", sessionData.DiscordUserID)
+			}
+		}
+	}
+
+	if isAuthenticated == false {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	chain.ProcessFilter(request, response)
+	return
 }
 
 func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
@@ -115,6 +217,12 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
 
+		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+		if guildSettings.ChatlogDisabled {
+			featureChatlog.Enabled = false
+		}
+
 		returnGuilds = append(returnGuilds, models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -125,6 +233,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 			Features: models.Rest_Guild_Features{
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
+				Chatlog:        featureChatlog,
 			},
 		})
 	}
@@ -134,6 +243,11 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 
 func FindUser(request *restful.Request, response *restful.Response) {
 	userID := request.PathParameter("user-id")
+
+	if request.Attribute("UserID").(string) != "global" && request.Attribute("UserID").(string) != userID {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
 
 	user, _ := helpers.GetUser(userID)
 	if user != nil && user.ID != "" {
@@ -149,6 +263,89 @@ func FindUser(request *restful.Request, response *restful.Response) {
 	} else {
 		response.WriteError(http.StatusNotFound, errors.New("User not found."))
 	}
+}
+
+func FindUserGuilds(request *restful.Request, response *restful.Response) {
+	userID := request.PathParameter("user-id")
+
+	allGuilds := cache.GetSession().State.Guilds
+	cacheCodec := cache.GetRedisCacheCodec()
+	var key string
+	var featureLevels_Badges models.Rest_Feature_Levels_Badges
+	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var botPrefix string
+	var err error
+
+	returnGuilds := make([]models.Rest_Member_Guild, 0)
+	for _, guild := range allGuilds {
+		if !helpers.GetIsInGuild(guild.ID, userID) {
+			continue
+		}
+
+		joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
+		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
+			featureLevels_Badges = models.Rest_Feature_Levels_Badges{
+				Count: 0,
+			}
+		}
+
+		key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+		if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
+			featureRandomPictures = models.Rest_Feature_RandomPictures{
+				Count: 0,
+			}
+		}
+
+		botPrefix = helpers.GetPrefixForServer(guild.ID)
+
+		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+		if guildSettings.ChatlogDisabled {
+			featureChatlog.Enabled = false
+		}
+
+		returnStatus := models.Rest_Status_Member{}
+		returnStatus.IsMember = true
+		if helpers.IsBotAdmin(userID) {
+			returnStatus.IsBotAdmin = true
+		}
+		if helpers.IsNukeMod(userID) {
+			returnStatus.IsNukeMod = true
+		}
+		if helpers.IsRobyulMod(userID) {
+			returnStatus.IsRobyulStaff = true
+		}
+		if helpers.IsBlacklisted(userID) {
+			returnStatus.IsBlacklisted = true
+		}
+		if helpers.IsAdminByID(guild.ID, userID) {
+			returnStatus.IsGuildAdmin = true
+		}
+		if helpers.IsModByID(guild.ID, userID) {
+			returnStatus.IsGuildMod = true
+		}
+		if helpers.HasPermissionByID(guild.ID, userID, discordgo.PermissionAdministrator) {
+			returnStatus.HasGuildPermissionAdministrator = true
+		}
+
+		returnGuilds = append(returnGuilds, models.Rest_Member_Guild{
+			ID:        guild.ID,
+			Name:      guild.Name,
+			Icon:      guild.Icon,
+			OwnerID:   guild.OwnerID,
+			JoinedAt:  joinedAt,
+			BotPrefix: botPrefix,
+			Features: models.Rest_Guild_Features{
+				Levels_Badges:  featureLevels_Badges,
+				RandomPictures: featureRandomPictures,
+				Chatlog:        featureChatlog,
+			},
+			Status: returnStatus,
+		})
+	}
+
+	response.WriteEntity(returnGuilds)
 }
 
 func FindMember(request *restful.Request, response *restful.Response) {
@@ -189,6 +386,39 @@ func IsMember(request *restful.Request, response *restful.Response) {
 			IsMember: false,
 		})
 	}
+}
+
+func StatusMember(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	userID := request.PathParameter("user-id")
+
+	returnStatus := &models.Rest_Status_Member{}
+
+	if helpers.GetIsInGuild(guildID, userID) {
+		returnStatus.IsMember = true
+		if helpers.IsBotAdmin(userID) {
+			returnStatus.IsBotAdmin = true
+		}
+		if helpers.IsNukeMod(userID) {
+			returnStatus.IsNukeMod = true
+		}
+		if helpers.IsRobyulMod(userID) {
+			returnStatus.IsRobyulStaff = true
+		}
+		if helpers.IsBlacklisted(userID) {
+			returnStatus.IsBlacklisted = true
+		}
+		if helpers.IsAdminByID(guildID, userID) {
+			returnStatus.IsGuildAdmin = true
+		}
+		if helpers.IsModByID(guildID, userID) {
+			returnStatus.IsGuildMod = true
+		}
+		if helpers.HasPermissionByID(guildID, userID, discordgo.PermissionAdministrator) {
+			returnStatus.HasGuildPermissionAdministrator = true
+		}
+	}
+	response.WriteEntity(returnStatus)
 }
 
 func GetProfile(request *restful.Request, response *restful.Response) {
@@ -380,17 +610,14 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 
 	cacheCodec := cache.GetRedisCacheCodec()
+	var err error
 	var key string
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
 	var botPrefix string
 	guild, _ := helpers.GetGuild(guildID)
 	if guild != nil && guild.ID != "" {
-		joinedAt, err := guild.JoinedAt.Parse()
-		if err != nil {
-			joinedAt = time.Now()
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
+		joinedAt, _ := guild.JoinedAt.Parse()
 
 		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
 		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
@@ -408,6 +635,33 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
 
+		channels := make([]models.Rest_Channel, 0)
+		sort.Slice(guild.Channels, func(i, j int) bool { return guild.Channels[i].Position < guild.Channels[j].Position })
+		for _, channel := range guild.Channels {
+			channelType := "text"
+			switch channel.Type {
+			case discordgo.ChannelTypeGuildVoice:
+				channelType = "voice"
+			case discordgo.ChannelTypeGuildCategory:
+				channelType = "category"
+			}
+			channels = append(channels, models.Rest_Channel{
+				ID:       channel.ID,
+				ParentID: channel.ParentID,
+				GuildID:  channel.GuildID,
+				Name:     channel.Name,
+				Type:     channelType,
+				Topic:    channel.Topic,
+				Position: channel.Position,
+			})
+		}
+
+		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+		if guildSettings.ChatlogDisabled {
+			featureChatlog.Enabled = false
+		}
+
 		returnGuild := &models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -418,7 +672,9 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			Features: models.Rest_Guild_Features{
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
+				Chatlog:        featureChatlog,
 			},
+			Channels: channels,
 		}
 
 		response.WriteEntity(returnGuild)
@@ -471,4 +727,284 @@ func GetRandomPicturesGuildHistory(request *restful.Request, response *restful.R
 	}
 
 	response.WriteEntity(resultItems)
+}
+
+func GetMessageStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Count().
+		Index(models.ElasticIndex).
+		Query(finalQuery).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
+}
+
+func GetJoinsStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeJoin + " AND GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Count().
+		Index(models.ElasticIndex).
+		Query(finalQuery).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
+}
+
+func GetLeavesStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeLeave + " AND GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Count().
+		Index(models.ElasticIndex).
+		Query(finalQuery).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
+}
+
+func GetMessageStatisticsHistogram(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	agg := elastic.NewDateHistogramAggregation().
+		Field("CreatedAt").
+		//Format("yyyy-MM-dd HH:mm:ss").
+		Interval(interval)
+
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Aggregation("messages", agg).
+		Size(24).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	result := make([]models.Rest_Statistics_Histogram, 0)
+
+	var timestamp int64
+	var timeConverted time.Time
+	var timeISO8601 string
+	if agg, found := searchResult.Aggregations.Terms("messages"); found {
+		for _, bucket := range agg.Buckets {
+			timestamp = int64(bucket.Key.(float64) / 1000)
+			timeConverted = time.Unix(timestamp, 0)
+			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			result = append(result, models.Rest_Statistics_Histogram{
+				Time:  timeISO8601,
+				Count: bucket.DocCount,
+			})
+			if len(result) >= 24 {
+				break
+			}
+		}
+	}
+
+	response.WriteEntity(result)
+}
+
+func GotBotStatistics(request *restful.Request, response *restful.Response) {
+	users := make(map[string]string)
+
+	for _, guild := range cache.GetSession().State.Guilds {
+		for _, u := range guild.Members {
+			users[u.User.ID] = u.User.Username
+		}
+	}
+
+	response.WriteEntity(models.Rest_Statitics_Bot{
+		Guilds: len(cache.GetSession().State.Guilds),
+		Users:  len(users),
+	})
+}
+
+func GetChatlogAroundMessageID(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	channelID := request.PathParameter("channel-id")
+	messageID := request.PathParameter("message-id")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.HasPermissionByID(
+			guildID, request.Attribute("UserID").(string), discordgo.PermissionAdministrator) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	if helpers.GuildSettingsGetCached(guildID).ChatlogDisabled {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(1).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if searchResult.TotalHits() <= 0 {
+		response.WriteError(http.StatusNoContent, errors.New("Message not found"))
+		return
+	}
+
+	result := make([]models.Rest_Chatlog_Message, 0)
+	var sortValues []interface{}
+	var ttyp models.ElasticMessage
+	for _, item := range searchResult.Hits.Hits {
+		sortValues = item.Sort
+	}
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		m := item.(models.ElasticMessage)
+
+		author, _ := helpers.GetUser(m.UserID)
+		if author == nil || author.ID == "" {
+			author = new(discordgo.User)
+			author.Username = "N/A"
+		}
+
+		result = append(result, models.Rest_Chatlog_Message{
+			CreatedAt:      m.CreatedAt,
+			ID:             m.MessageID,
+			Content:        m.Content,
+			Attachments:    m.Attachments,
+			AuthorID:       m.UserID,
+			AuthorUsername: author.Username,
+			Embeds:         m.Embeds,
+		})
+	}
+
+	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(50).
+		SearchAfter(sortValues[0]).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		m := item.(models.ElasticMessage)
+
+		author, _ := helpers.GetUser(m.UserID)
+		if author == nil || author.ID == "" {
+			author = new(discordgo.User)
+			author.Username = "N/A"
+		}
+
+		result = append(result, models.Rest_Chatlog_Message{
+			CreatedAt:      m.CreatedAt,
+			ID:             m.MessageID,
+			Content:        m.Content,
+			Attachments:    m.Attachments,
+			AuthorID:       m.UserID,
+			AuthorUsername: author.Username,
+			Embeds:         m.Embeds,
+		})
+	}
+
+	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(50).
+		SearchAfter(sortValues[0]).
+		Sort("CreatedAt", false).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		m := item.(models.ElasticMessage)
+
+		author, _ := helpers.GetUser(m.UserID)
+		if author == nil || author.ID == "" {
+			author = new(discordgo.User)
+			author.Username = "N/A"
+		}
+
+		result = append([]models.Rest_Chatlog_Message{{
+			CreatedAt:      m.CreatedAt,
+			ID:             m.MessageID,
+			Content:        m.Content,
+			Attachments:    m.Attachments,
+			AuthorID:       m.UserID,
+			AuthorUsername: author.Username,
+			Embeds:         m.Embeds,
+		}}, result...)
+	}
+
+	response.WriteEntity(result)
 }

@@ -121,7 +121,7 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		session.ChannelMessageSend(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
 		break
 
-	case "rms", "reminders":
+	case "rms", "reminders": // TODO: better interface
 		reminders := getReminders(msg.Author.ID)
 		embedFields := []*discordgo.MessageEmbedField{}
 
