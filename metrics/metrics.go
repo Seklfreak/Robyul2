@@ -97,6 +97,9 @@ var (
 
 	// ReactionPollsCount increased with every time a new ReactionPoll is created
 	ReactionPollsCount = expvar.NewInt("reactionpolls_count")
+
+	// MachineryDelayedTasksCount counts all delayed machinery tasks
+	MachineryDelayedTasksCount = expvar.NewInt("machinery_delayedtasks_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -141,6 +144,8 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 
 // CollectRuntimeMetrics counts all running coroutines
 func CollectRuntimeMetrics() {
+	defer helpers.Recover()
+
 	for {
 		time.Sleep(15 * time.Second)
 
@@ -195,5 +200,10 @@ func CollectRuntimeMetrics() {
 		cursor.One(&cnt)
 		cursor.Close()
 		RedditSubredditsCount.Set(int64(cnt))
+
+		key := "delayed_tasks"
+		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
+		helpers.Relax(err)
+		MachineryDelayedTasksCount.Set(delayedTasks)
 	}
 }
