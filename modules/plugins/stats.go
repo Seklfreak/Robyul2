@@ -1186,10 +1186,18 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		countedLinks := make(map[string]int, 0)
+		channels := guild.Channels
+		sort.Slice(channels, func(i, j int) bool { return guild.Channels[i].Position < guild.Channels[j].Position })
+
+		type FoundLinks struct {
+			ChannelID string
+			Links     int
+		}
+
+		countedLinks := make([]FoundLinks, 0)
 		var links int
 	NextChannel:
-		for _, guildChannel := range guild.Channels {
+		for _, guildChannel := range channels {
 			for _, hiddenChannel := range hiddenChannels {
 				if guildChannel.ID == hiddenChannel {
 					continue NextChannel
@@ -1202,16 +1210,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				links += strings.Count(message.Content, "discord.gg")
 			}
 			if err == nil {
-				countedLinks[guildChannel.ID] = links
+				countedLinks = append(countedLinks, FoundLinks{ChannelID: guildChannel.ID, Links: links})
 			}
 		}
 
 		var totalLinks int
 		resultText := "__**Server Index Stats**__\n"
-		for channelID, links := range countedLinks {
-			if links > 0 {
-				resultText += fmt.Sprintf("<#%s>: %d invites\n", channelID, links)
-				totalLinks += links
+		for _, foundLink := range countedLinks {
+			if foundLink.Links > 0 {
+				resultText += fmt.Sprintf("<#%s>: %d invites\n", foundLink.ChannelID, foundLink.Links)
+				totalLinks += foundLink.Links
 			}
 		}
 		resultText += fmt.Sprintf("_Found **%d invites** in total._", totalLinks)
