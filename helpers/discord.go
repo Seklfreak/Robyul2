@@ -11,6 +11,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
@@ -404,6 +405,85 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
 	return muteRole, nil
 }
 
+func RemoveMuteRole(guildID string, userID string) (err error) {
+	muteRole, err := GetMuteRole(guildID)
+	if err != nil {
+		return err
+	}
+
+	err = cache.GetSession().GuildMemberRoleRemove(guildID, userID, muteRole.ID)
+	if err != nil {
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Code != discordgo.ErrCodeUnknownMember &&
+				errD.Message.Code != discordgo.ErrCodeUnknownUser {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+func RemoveMuteDatabase(guildID string, userID string) (err error) {
+	// TODO: lock guild mute settings
+	settings := GuildSettingsGetCached(guildID)
+
+	removedFromDb := false
+	newMutedMembers := make([]string, 0)
+	for _, mutedMember := range settings.MutedMembers {
+		if mutedMember != userID {
+			newMutedMembers = append(newMutedMembers, mutedMember)
+		} else {
+			removedFromDb = true
+		}
+	}
+
+	if removedFromDb {
+		settings.MutedMembers = newMutedMembers
+		err = GuildSettingsSet(guildID, settings)
+		return err
+	}
+	return nil
+}
+
+func UnmuteUser(guildID string, userID string) (err error) {
+	errRole := RemoveMuteRole(guildID, userID)
+	errDatabase := RemoveMuteRole(guildID, userID)
+
+	if errRole != nil {
+		return errRole
+	}
+	if errDatabase != nil {
+		return errDatabase
+	}
+	return nil
+}
+func UnmuteUserSignature(guildID string, userID string) (signature *tasks.Signature) {
+	signature = &tasks.Signature{
+		Name: "unmute_user",
+		Args: []tasks.Arg{
+			{
+				Type:  "string",
+				Value: guildID,
+			},
+			{
+				Type:  "string",
+				Value: userID,
+			},
+		},
+	}
+	signature.RetryCount = 3
+	signature.OnError = []*tasks.Signature{{Name: "log_error"}}
+	return signature
+}
+
+func LogMachineryError(errorMessage string) (err error) {
+	cache.GetLogger().WithField("module", "machinery").Error("Task Failed: ", errorMessage)
+	raven.CaptureError(errors.New(errorMessage), map[string]string{})
+	return err
+}
+
 func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 	targetMember, err := cache.GetSession().State.Member(guildID, userID)
 	if targetMember == nil || targetMember.GuildID == "" || targetMember.JoinedAt == "" {
@@ -576,6 +656,7 @@ func GetAllPermissions(guild *discordgo.Guild, member *discordgo.Member) int64 {
 	}
 	return perms
 }
+
 func Pagify(text string, delimiter string) []string {
 	result := make([]string, 0)
 	textParts := strings.Split(text, delimiter)

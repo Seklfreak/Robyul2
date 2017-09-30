@@ -19,10 +19,15 @@ import (
 	"github.com/getsentry/raven-go"
 	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/olebedev/when"
+	"github.com/olebedev/when/rules/common"
+	"github.com/olebedev/when/rules/en"
 	"github.com/renstrom/fuzzysearch/fuzzy"
 )
 
-type Mod struct{}
+type Mod struct {
+	parser *when.Parser
+}
 
 func (m *Mod) Commands() []string {
 	return []string{
@@ -74,6 +79,10 @@ var (
 )
 
 func (m *Mod) Init(session *discordgo.Session) {
+	m.parser = when.New(nil)
+	m.parser.Add(en.All...)
+	m.parser.Add(common.All...)
+
 	invitesCache = make(map[string][]CacheInviteInformation, 0)
 	go func() {
 		log := cache.GetLogger()
@@ -365,6 +374,18 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 					return
 				}
+				var timeToUnmuteAt time.Time
+				if len(args) > 1 {
+					timeText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:0], " "), "", 1))
+					timeText = strings.Replace(timeText, "for", "in", 1)
+					r, err := m.parser.Parse(timeText, time.Now())
+					if err != nil || r == nil {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+					timeToUnmuteAt = r.Time
+				}
+
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 				muteRole, err := helpers.GetMuteRole(channel.GuildID)
@@ -407,6 +428,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					helpers.Relax(err)
 				}
 
+				if time.Now().Before(timeToUnmuteAt) {
+					signature := helpers.UnmuteUserSignature(channel.GuildID, targetUser.ID)
+					signature.ETA = &timeToUnmuteAt
+
+					_, err = cache.GetMachineryServer().SendTask(signature)
+					helpers.Relax(err)
+				}
+
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
 				helpers.Relax(err)
 				return
@@ -429,44 +458,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
-				muteRole, err := helpers.GetMuteRole(channel.GuildID)
+
+				err = helpers.UnmuteUser(channel.GuildID, targetUser.ID)
 				helpers.Relax(err)
-				err = session.GuildMemberRoleRemove(channel.GuildID, targetUser.ID, muteRole.ID)
-				roleRemoved := true
-				if err != nil {
-					roleRemoved = false
-					if errD, ok := err.(*discordgo.RESTError); ok {
-						if errD.Message.Code != 10007 && errD.Message.Code != 10013 && errD.Message.Code != 0 {
-							helpers.Relax(err)
-						}
-					} else {
-						helpers.Relax(err)
-					}
-				}
 
-				settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
-				removedFromDb := false
-				newMutedMembers := make([]string, 0)
-				for _, mutedMember := range settings.MutedMembers {
-					if mutedMember != targetUser.ID {
-						newMutedMembers = append(newMutedMembers, mutedMember)
-					} else {
-						removedFromDb = true
-					}
-				}
-
-				if removedFromDb {
-					settings.MutedMembers = newMutedMembers
-					err = helpers.GuildSettingsSet(channel.GuildID, settings)
-					helpers.Relax(err)
-				}
-
-				if !removedFromDb && !roleRemoved {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-unmuted-error"))
-				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
-				}
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return

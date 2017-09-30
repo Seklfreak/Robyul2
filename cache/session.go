@@ -23,7 +23,7 @@ func GetSession() *discordgo.Session {
 	defer sessionMutex.RUnlock()
 
 	if session == nil {
-		panic(errors.New("Tried to get discord session before cache#setSession() was called"))
+		panic(errors.New("Tried to get discord session before cache#SetSession() was called"))
 	}
 
 	return session

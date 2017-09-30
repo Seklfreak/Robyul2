@@ -11,6 +11,9 @@ import (
 
 	"fmt"
 
+	"github.com/RichardKnop/machinery/v1"
+	marchineryConfig "github.com/RichardKnop/machinery/v1/config"
+	marchineryLog "github.com/RichardKnop/machinery/v1/log"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -154,6 +157,7 @@ func main() {
 	// Connect helper
 	friendsConfigs, err := config.Path("friends").Children()
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		panic(err)
 	}
 	for _, friendConfig := range friendsConfigs {
@@ -227,6 +231,35 @@ func main() {
 		log.Fatal(server.ListenAndServe())
 	}()
 	log.WithField("module", "launcher").Info("REST API listening on localhost:2021")
+
+	// Launch machinery
+	marchineryLog.Set(log.WithField("module", "machinery"))
+	machineryServerConfig := &marchineryConfig.Config{
+		Broker:          "redis://" + config.Path("redis.address").Data().(string) + "/1",
+		DefaultQueue:    "robyul_tasks",
+		ResultBackend:   "redis://" + config.Path("redis.address").Data().(string) + "/1",
+		ResultsExpireIn: 3600,
+	}
+	machineryServer, err := machinery.NewServer(machineryServerConfig)
+	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
+		panic(err)
+	}
+	log.WithField("module", "launcher").Info("started machinery server, default queue: robyul_tasks")
+	machineryServer.RegisterTasks(map[string]interface{}{
+		"unmute_user": helpers.UnmuteUser,
+		"log_error":   helpers.LogMachineryError,
+	})
+	cache.SetMachineryServer(machineryServer)
+	go func() {
+		worker := machineryServer.NewWorker("robyul_worker_1", 1)
+		err = worker.Launch()
+		if err != nil {
+			raven.CaptureErrorAndWait(err, nil)
+			panic(err)
+		}
+	}()
+	log.WithField("module", "launcher").Info("started machinery worker robyul_worker_1 with concurrency 1")
 
 	// Make a channel that waits for a os signal
 	channel := make(chan os.Signal, 1)
