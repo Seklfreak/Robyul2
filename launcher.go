@@ -260,6 +260,12 @@ func main() {
 		}
 	}()
 	log.WithField("module", "launcher").Info("started machinery worker robyul_worker_1 with concurrency 1")
+	machineryRedisClient := redis.NewClient(&redis.Options{
+		Addr:     config.Path("redis.address").Data().(string),
+		Password: "", // no password set
+		DB:       1,  // use default DB
+	})
+	cache.SetMachineryRedisClient(machineryRedisClient)
 
 	// Make a channel that waits for a os signal
 	channel := make(chan os.Signal, 1)

@@ -53,6 +53,8 @@ func (m *Mod) Commands() []string {
 		"prefix",
 		"react",
 		"toggle-chatlog",
+		"pending-unmutes",
+		"pending-mutes",
 	}
 }
 
@@ -364,6 +366,61 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		})
 		return
+	case "pending-unmutes", "pending-mutes": // [p]pending-unmutes
+		helpers.RequireMod(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			key := "delayed_tasks"
+			delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
+			helpers.Relax(err)
+
+			tasksJson, err := cache.GetMachineryRedisClient().ZRange(key, 0, delayedTasks).Result()
+			helpers.Relax(err)
+
+			resultText := ""
+
+			for _, taskJson := range tasksJson {
+				task, err := gabs.ParseJSON([]byte(taskJson))
+				helpers.Relax(err)
+
+				if task.Path("Name").Data().(string) != "unmute_user" {
+					continue
+				}
+
+				guildID := task.Path("Args").Index(0).Path("Value").Data().(string)
+				userID := task.Path("Args").Index(1).Path("Value").Data().(string)
+				etaString := task.Path("ETA").Data().(string)
+				eta, err := time.Parse(time.RFC3339, etaString)
+				helpers.Relax(err)
+
+				if guildID != channel.GuildID {
+					continue
+				}
+
+				user, err := helpers.GetUser(userID)
+				if err != nil {
+					user = new(discordgo.User)
+					user.Username = "N/A"
+					user.ID = userID
+				}
+
+				resultText += fmt.Sprintf("Unmuting %s (`#%s`) at %s UTC\n", user.Username, user.ID, eta.Format(time.ANSIC))
+			}
+
+			if resultText == "" {
+				resultText = "Found no pending unmutes."
+			} else {
+				resultText = "Found the following pending unmutes:\n" + resultText
+			}
+
+			for _, page := range helpers.Pagify(resultText, "\n") {
+				_, err = session.ChannelMessageSend(msg.ChannelID, page)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			}
+		})
 	case "mute": // [p]mute server <User>
 		helpers.RequireMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
@@ -436,6 +493,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					helpers.Relax(err)
 				}
 
+				// TODO: update text
 				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
 				helpers.Relax(err)
 				return

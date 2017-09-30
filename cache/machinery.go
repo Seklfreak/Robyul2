@@ -5,9 +5,11 @@ import (
 	"sync"
 
 	"github.com/RichardKnop/machinery/v1"
+	"github.com/go-redis/redis"
 )
 
 var (
+	machineryRedisClient *redis.Client
 	machineryServer      *machinery.Server
 	machineryServerMutex sync.RWMutex
 )
@@ -27,4 +29,22 @@ func GetMachineryServer() *machinery.Server {
 	}
 
 	return machineryServer
+}
+
+func SetMachineryRedisClient(s *redis.Client) {
+	machineryServerMutex.Lock()
+	defer machineryServerMutex.Unlock()
+
+	machineryRedisClient = s
+}
+
+func GetMachineryRedisClient() *redis.Client {
+	machineryServerMutex.RLock()
+	defer machineryServerMutex.RUnlock()
+
+	if machineryRedisClient == nil {
+		panic(errors.New("Tried to get machinery redis client before cache#SetMachineryRedisClient() was called"))
+	}
+
+	return machineryRedisClient
 }
