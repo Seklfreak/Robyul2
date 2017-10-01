@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"reflect"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -73,6 +72,11 @@ const (
 	videoShortUrl  string = `^(https?\:\/\/)?(youtu\.be)\/(.[A-Za-z0-9_]*)`
 	channelIdUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
 	channelUserUrl string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
+
+	// maximum time interval for feeds checking loop
+	// e.g.) maxCheckTimeInterval = 64
+	// 2 min -> 4 min -> 8 min -> 16 min -> 32 min -> 64 min
+	maxCheckTimeInterval int64 = 64
 )
 
 func (yt *YouTube) Commands() []string {
@@ -730,33 +734,40 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	for _, e := range entries {
 		switch e.ContentType {
 		case "channel":
-			yt.checkYoutubeChannelFeeds(e)
+			e = yt.checkYoutubeChannelFeeds(e)
 		default:
 			yt.logger().Error("unknown contents type: " + e.ContentType)
-			continue
+			e.CheckTimeInterval = maxCheckTimeInterval
+		}
+
+		// update next check time
+		e = yt.setNextCheckTime(e)
+		if err := yt.updateEntry(e); err != nil {
+			yt.logger().Error(err)
 		}
 	}
 }
 
-func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
+func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry {
+	// get content
 	c, ok := e.Content.(map[string]interface{})
 	if ok == false {
 		yt.logger().Error("contents type mismatch: " + e.ID)
-		return
+		return e
 	}
 
 	// get content id
 	id, ok := c["content_id"].(string)
 	if ok == false {
 		yt.logger().Error("wrong content_id type, ID: " + e.ID)
-		return
+		return e
 	}
 
 	// get posted Videos
 	s := reflect.ValueOf(c["content_posted_videos"])
 	if s.Kind() != reflect.Slice {
 		yt.logger().Error("wrong content_posted_videos type: " + s.Kind().String() + ", ID: " + id)
-		return
+		return e
 	}
 
 	postedVideos := make([]string, s.Len())
@@ -767,55 +778,45 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		}
 	}
 
-	// get checking time
-	nextCheckTime := time.Unix(e.NextCheckTime, 0)
+	// set iso8601 time which will be used search query filter "published after"
 	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
+	publishedAfter := lastSuccessfulCheckTime.
+		Add(time.Duration(-1*maxCheckTimeInterval) * time.Minute).
+		Format("2006-01-02T15:04:05-0700")
 
-	// retrieves updated video one hour before scheduled time
-	checkingTime := lastSuccessfulCheckTime.Add(-64 * time.Minute)
-
-	// youtube 'activities' api call requires ISO8601 time format.
-	checkingTimeIso8601 := checkingTime.Format("2006-01-02T15:04:05-0700")
-
-	feeds, err := yt.getChannelFeeds(id, checkingTimeIso8601)
+	// get updated feeds
+	feeds, err := yt.getChannelFeeds(id, publishedAfter)
 	if err != nil {
 		yt.logger().Error("check channel feeds error: " + err.Error())
-		return
+		return e
 	}
 
 	newPostedVideos := make([]string, 0)
 	alreadyPostedVideos := make([]string, 0)
 
-	isErrored := false
+	// check if posted videos and post new videos
 	for i := len(feeds) - 1; i >= 0; i-- {
 		feed := feeds[i]
 
+		// only 'upload' type video can be posted
 		if feed.Snippet.Type != "upload" {
 			continue
 		}
 		videoId := feed.ContentDetails.Upload.VideoId
 
-		isPosted := false
-		for _, v := range postedVideos {
-			if videoId == v {
-				alreadyPostedVideos = append(alreadyPostedVideos, v)
-				isPosted = true
-				break
-			}
-		}
-
-		if isPosted {
+		// check if the video is already posted
+		if yt.isPosted(videoId, postedVideos) {
+			alreadyPostedVideos = append(alreadyPostedVideos, videoId)
 			continue
 		}
 
+		// make a message and send to discord channel
 		videoUrl := fmt.Sprintf(YouTubeVideoBaseUrl, videoId)
-
 		msg := yt.newMsg(videoUrl)
 
 		_, err = cache.GetSession().ChannelMessageSendComplex(e.ChannelID, msg)
 		if err != nil {
 			yt.logger().Error(err)
-			isErrored = true
 			break
 		}
 
@@ -824,22 +825,38 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		yt.logger().Info("Posting youtube video: " + feed.Snippet.Title)
 	}
 
-	if isErrored {
-		postedVideos = append(postedVideos, newPostedVideos...)
-		c["content_posted_videos"] = postedVideos
-	} else {
+	if err == nil {
 		if len(newPostedVideos) > 0 {
 			e.CheckTimeInterval = 1
-		} else if e.CheckTimeInterval < 64 {
-			e.CheckTimeInterval *= 2
 		}
 		e.LastSuccessfulCheckTime = e.NextCheckTime
-		e.NextCheckTime = nextCheckTime.Add(time.Duration(e.CheckTimeInterval) * time.Minute).Unix()
-		c["content_posted_videos"] = append(alreadyPostedVideos, newPostedVideos...)
+		postedVideos = alreadyPostedVideos
 	}
+	c["content_posted_videos"] = append(postedVideos, newPostedVideos...)
 	e.Content = c
 
-	if err := yt.updateEntry(e); err != nil {
-		yt.logger().Error(err)
+	return e
+}
+
+func (yt *YouTube) setNextCheckTime(e DB_Youtube_Entry) DB_Youtube_Entry {
+	// update next check time
+	if e.CheckTimeInterval < maxCheckTimeInterval {
+		e.CheckTimeInterval *= 2
 	}
+
+	e.NextCheckTime = time.Unix(e.NextCheckTime, 0).
+		Add(time.Duration(e.CheckTimeInterval) * time.Minute).
+		Unix()
+
+	return e
+}
+
+func (yt *YouTube) isPosted(id string, postedIds []string) (ok bool) {
+	for _, postedId := range postedIds {
+		if id == postedId {
+			ok = true
+			break
+		}
+	}
+	return
 }
