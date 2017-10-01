@@ -319,11 +319,69 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				helpers.RequireBotAdmin(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 
-					insert := rethink.Table("randompictures_sources").Insert(DB_RandomPictures_Source{})
-					_, err := insert.RunWrite(helpers.GetDB())
+					if len(args) <= 1 {
+						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+						helpers.Relax(err)
+						return
+					}
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
 					helpers.Relax(err)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, "Created a new entry in the Database. Please fill it manually.")
+					postToChannelIDs := make([]string, 0)
+					driveFolderIDs := make([]string, 0)
+					aliases := make([]string, 0)
+					data := helpers.ParseKeyValueString(
+						strings.TrimSpace(strings.Replace(content, args[0], "", 1)),
+					)
+					if channelIDsText, ok := data["channel"]; ok {
+						postToChannelIDsParsed := strings.Split(channelIDsText, ",")
+						for _, parsedID := range postToChannelIDsParsed {
+							channelParsed, err := helpers.GetChannelFromMention(msg, parsedID)
+							if err != nil || channelParsed == nil || channelParsed.ID == "" {
+								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								helpers.Relax(err)
+								return
+							}
+							postToChannelIDs = append(postToChannelIDs, channelParsed.ID)
+						}
+					}
+					if folderIDsText, ok := data["folder"]; ok {
+						folderIDsParsed := strings.Split(folderIDsText, ",")
+						for _, parsedID := range folderIDsParsed {
+							result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, parsedID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1).Do()
+							if err != nil || len(result.Files) <= 0 {
+								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								helpers.Relax(err)
+								return
+							}
+							driveFolderIDs = append(driveFolderIDs, parsedID)
+						}
+					}
+					if aliasesText, ok := data["alias"]; ok {
+						aliasesParsed := strings.Split(aliasesText, ",")
+						for _, parsedAlias := range aliasesParsed {
+							parsedAlias = strings.TrimSpace(parsedAlias)
+							aliases = append(aliases, parsedAlias)
+						}
+					}
+
+					if len(aliases) <= 0 || len(driveFolderIDs) <= 0 {
+						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						helpers.Relax(err)
+						return
+					}
+
+					insert := rethink.Table("randompictures_sources").Insert(DB_RandomPictures_Source{
+						PostToChannelIDs: postToChannelIDs,
+						DriveFolderIDs:   driveFolderIDs,
+						Aliases:          aliases,
+						GuildID:          channel.GuildID,
+					})
+					inserted, err := insert.RunWrite(helpers.GetDB())
+					helpers.Relax(err)
+
+					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Created a new entry in the Database: `%s`.", inserted.GeneratedKeys[0]))
 					helpers.Relax(err)
 				})
 				return
