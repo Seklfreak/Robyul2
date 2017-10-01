@@ -55,6 +55,7 @@ func (m *Mod) Commands() []string {
 		"toggle-chatlog",
 		"pending-unmutes",
 		"pending-mutes",
+		"batch-roles",
 	}
 }
 
@@ -1563,6 +1564,117 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			helpers.Relax(err)
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, setMessage)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		})
+		return
+	case "batch-roles": // [p]batch-roles role a | role b | role c [| [after=role name] [color=hex code]]
+		// todo: permission settings
+		session.ChannelTyping(msg.ChannelID)
+		helpers.RequireMod(msg, func() {
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			serverRolesReceived, err := session.GuildRoles(channel.GuildID)
+			if err != nil {
+				if errD := err.(*discordgo.RESTError); errD != nil {
+					if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+						_, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
+						helpers.Relax(err)
+						return
+					} else {
+						helpers.Relax(err)
+					}
+				} else {
+					helpers.Relax(err)
+				}
+			}
+			serverRoles := make([]*discordgo.Role, 0)
+			for _, roleReceived := range serverRolesReceived {
+				serverRoles = append(serverRoles, &discordgo.Role{ID: roleReceived.ID, Position: roleReceived.Position, Name: roleReceived.Name})
+			}
+
+			var colour int
+			var afterRole *discordgo.Role
+
+			var data map[string]string
+			if strings.Contains(content, "=") {
+				args := strings.Split(content, "|")
+				data = helpers.ParseKeyValueString(strings.TrimSpace(args[len(args)-1]))
+			}
+			if colourText, ok := data["color"]; ok {
+				colour = helpers.GetDiscordColorFromHex(colourText)
+			}
+			if afterText, ok := data["after"]; ok {
+				for _, role := range serverRoles {
+					if strings.ToLower(role.Name) == strings.ToLower(afterText) || role.ID == afterText {
+						afterRole = role
+					}
+				}
+				if afterRole == nil || afterRole.ID == "" {
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.Relax(err)
+					return
+				}
+			}
+
+			rolesToCreate := strings.Split(content, "|")
+			var rolesCreated int
+			roleErrors := make([]error, 0)
+			for _, roleToCreate := range rolesToCreate {
+				if strings.Contains(roleToCreate, "=") {
+					continue
+				}
+
+				roleToCreate = strings.TrimSpace(roleToCreate)
+
+				newRole, err := session.GuildRoleCreate(channel.GuildID)
+				if err != nil {
+					roleErrors = append(roleErrors, err)
+					continue
+				}
+				newRole, err = session.GuildRoleEdit(channel.GuildID, newRole.ID, roleToCreate, colour, false, 0, false)
+				if err != nil {
+					roleErrors = append(roleErrors, err)
+					continue
+				}
+				if afterRole != nil && afterRole.ID != "" {
+					newServerRoles := make([]*discordgo.Role, 0)
+					sort.Slice(serverRoles, func(i, j int) bool { return serverRoles[i].Position < serverRoles[j].Position })
+					var position int
+
+					var roleAdded bool
+					for _, serverRole := range serverRoles {
+						newServerRoles = append(newServerRoles, &discordgo.Role{ID: serverRole.ID, Position: position})
+						position++
+						if serverRole.ID == afterRole.ID {
+							newServerRoles = append(newServerRoles, &discordgo.Role{ID: newRole.ID, Position: position})
+							afterRole = newRole
+							position++
+							roleAdded = true
+						}
+					}
+					if !roleAdded {
+						newServerRoles = append(newServerRoles, &discordgo.Role{ID: newRole.ID, Position: position})
+						position++
+					}
+					serverRoles = newServerRoles
+				}
+				rolesCreated++
+			}
+
+			resultText := fmt.Sprintf("Successfully created %d roles, failed to create %d roles", rolesCreated, len(roleErrors))
+
+			if afterRole != nil && afterRole.ID != "" {
+				_, err = session.GuildRoleReorder(channel.GuildID, serverRoles)
+				if err != nil {
+					resultText += ", failed to reorder roles"
+				} else {
+					resultText += ", reordered the roles successfully"
+				}
+			}
+
+			_, err = session.ChannelMessageSend(msg.ChannelID, resultText)
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		})
