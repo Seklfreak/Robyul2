@@ -33,12 +33,12 @@ type YouTube struct {
 
 type DB_Youtube_Entry struct {
 	// Common fields.
-	// Timestamp is updated when operation succeed with this entry.
-	ID            string `gorethink:"id,omitempty"`
-	ServerID      string `gorethink:"server_id"`
-	ChannelID     string `gorethink:"channel_id"`
-	ScheduledTime int64  `gorethink:"scheduled_time"`
-	TimeInterval  int64  `gorethink:"time_interval"`
+	ID                      string `gorethink:"id,omitempty"`
+	ServerID                string `gorethink:"server_id"`
+	ChannelID               string `gorethink:"channel_id"`
+	NextCheckTime           int64  `gorethink:"next_check_time"`
+	LastSuccessfulCheckTime int64  `gorethink:"last_successful_check_time"`
+	CheckTimeInterval       int64  `gorethink:"check_time_interval"`
 
 	// Content specific data fields.
 	// Content can be about channel or video.
@@ -192,9 +192,10 @@ func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **di
 	}
 
 	testEntry := DB_Youtube_Entry{
-		ServerID:      "test",
-		ChannelID:     "test",
-		ScheduledTime: 201709021604,
+		ServerID:                "test",
+		ChannelID:               "test",
+		NextCheckTime:           201709021604,
+		LastSuccessfulCheckTime: 201709021604,
 
 		ContentType: "video",
 		Content:     testContent,
@@ -362,10 +363,11 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 
 	// fill db entry
 	entry := DB_Youtube_Entry{
-		ServerID:      dc.GuildID,
-		ChannelID:     dc.ID,
-		ScheduledTime: time.Now().Unix(),
-		TimeInterval:  1,
+		ServerID:                dc.GuildID,
+		ChannelID:               dc.ID,
+		NextCheckTime:           time.Now().Unix(),
+		LastSuccessfulCheckTime: time.Now().Unix(),
+		CheckTimeInterval:       1,
 
 		ContentType: "channel",
 		Content:     content,
@@ -810,7 +812,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	defer yt.RUnlock()
 
 	t := time.Now().Unix()
-	entries, err := yt.readEntries(rethink.Row.Field("scheduled_time").Le(t))
+	entries, err := yt.readEntries(rethink.Row.Field("next_check_time").Le(t))
 	if err != nil {
 		yt.logger().Error(err.Error() + " occurs in checkYoutubeFeeds()")
 		return
@@ -856,11 +858,12 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		}
 	}
 
-	// get scheduled checking time
-	scheduledTime := time.Unix(e.ScheduledTime, 0)
+	// get checking time
+	nextCheckTime := time.Unix(e.NextCheckTime, 0)
+	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
 
 	// retrieves updated video one hour before scheduled time
-	checkingTime := scheduledTime.Add(-64 * time.Minute)
+	checkingTime := lastSuccessfulCheckTime.Add(-64 * time.Minute)
 
 	// youtube 'activities' api call requires ISO8601 time format.
 	checkingTimeIso8601 := checkingTime.Format("2006-01-02T15:04:05-0700")
@@ -879,7 +882,6 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		feed := feeds[i]
 
 		if feed.Snippet.Type != "upload" {
-			yt.logger().Error("item type: " + feed.Snippet.Type)
 			continue
 		}
 		videoId := feed.ContentDetails.Upload.VideoId
@@ -918,11 +920,12 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) {
 		c["content_posted_videos"] = postedVideos
 	} else {
 		if len(newPostedVideos) > 0 {
-			e.TimeInterval = 1
-		} else if e.TimeInterval < 64 {
-			e.TimeInterval *= 2
+			e.CheckTimeInterval = 1
+		} else if e.CheckTimeInterval < 64 {
+			e.CheckTimeInterval *= 2
 		}
-		e.ScheduledTime = scheduledTime.Add(time.Duration(e.TimeInterval) * time.Minute).Unix()
+		e.LastSuccessfulCheckTime = e.NextCheckTime
+		e.NextCheckTime = nextCheckTime.Add(time.Duration(e.CheckTimeInterval) * time.Minute).Unix()
 		c["content_posted_videos"] = append(alreadyPostedVideos, newPostedVideos...)
 	}
 	e.Content = c
