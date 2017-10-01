@@ -22,6 +22,10 @@ var (
 	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…"}
 )
 
+const (
+	GlobalKeywordsLimit = 3
+)
+
 type DB_IgnoredChannel struct {
 	ID        string `gorethink:"id,omitempty"`
 	GuildID   string `gorethink:"guildid"`
@@ -65,6 +69,13 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			guild, err := helpers.GetGuild(channel.GuildID)
 			helpers.Relax(err)
 
+			keywords := strings.TrimSpace(strings.Replace(content, args[0], "", 1))
+			keywordGuild := guild.ID
+			if strings.HasPrefix(keywords, "global ") {
+				keywords = strings.TrimSpace(strings.TrimPrefix(keywords, "global "))
+				keywordGuild = "global"
+			}
+
 			var entryBucket DB_NotificationSetting
 			listCursor, err := rethink.Table("notifications").Filter(
 				rethink.Or(
@@ -74,23 +85,45 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			).Filter(
 				rethink.Row.Field("userid").Eq(msg.Author.ID),
 			).Filter(
-				rethink.Row.Field("keyword").Eq(strings.Join(args[1:], " ")),
+				rethink.Row.Field("keyword").Eq(keywords),
 			).Run(helpers.GetDB())
 			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.One(&entryBucket)
 
 			if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-error-duplicate", msg.Author.ID))
-				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-error-duplicate", msg.Author.ID))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 				return
 			} else if err != nil && err != rethink.ErrEmptyResult {
 				helpers.Relax(err)
 			}
 
+			if keywordGuild == "global" {
+				var globalEntryBucket []DB_NotificationSetting
+				listCursor, err := rethink.Table("notifications").Filter(
+					rethink.Or(
+						rethink.Row.Field("guildid").Eq("global"),
+					),
+				).Filter(
+					rethink.Row.Field("userid").Eq(msg.Author.ID),
+				).Run(helpers.GetDB())
+				helpers.Relax(err)
+				defer listCursor.Close()
+				err = listCursor.All(&globalEntryBucket)
+
+				if len(globalEntryBucket) >= GlobalKeywordsLimit {
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-global-too-many", msg.Author.ID, GlobalKeywordsLimit))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					session.ChannelMessageDelete(msg.ChannelID, msg.ID)
+					return
+				}
+			}
+
 			entry := m.getNotificationSettingByOrCreateEmpty("id", "")
-			entry.Keyword = strings.Join(args[1:], " ")
-			entry.GuildID = guild.ID
+			entry.Keyword = keywords
+			entry.GuildID = keywordGuild
 			entry.UserID = msg.Author.ID
 			m.setNotificationSetting(entry)
 
@@ -110,6 +143,11 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			}
 			session.ChannelTyping(msg.ChannelID)
 
+			keywords := strings.TrimSpace(strings.Replace(content, args[0], "", 1))
+			if strings.HasPrefix(keywords, "global ") {
+				keywords = strings.TrimSpace(strings.TrimPrefix(keywords, "global "))
+			}
+
 			var entryBucket DB_NotificationSetting
 			listCursor, err := rethink.Table("notifications").Filter(
 				rethink.Or(
@@ -119,7 +157,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			).Filter(
 				rethink.Row.Field("userid").Eq(msg.Author.ID),
 			).Filter(
-				rethink.Row.Field("keyword").Eq(strings.Join(args[1:], " ")),
+				rethink.Row.Field("keyword").Eq(keywords),
 			).Run(helpers.GetDB())
 			helpers.Relax(err)
 			defer listCursor.Close()
@@ -165,11 +203,11 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 
 			resultMessage := fmt.Sprintf("Enabled keywords for the server: `%s`:\n", guild.Name)
 			for _, entry := range entryBucket {
+				resultMessage += fmt.Sprintf("`%s` (triggered `%d` times)", entry.Keyword, entry.Triggered)
 				if entry.GuildID == "global" {
-					resultMessage += fmt.Sprintf("**GLOBAL KEYWORD:** `%s` (triggered `%d` times)\n", entry.Keyword, entry.Triggered)
-				} else {
-					resultMessage += fmt.Sprintf("`%s` (triggered `%d` times)\n", entry.Keyword, entry.Triggered)
+					resultMessage += " `[Global Keyword]` :globe_with_meridians:"
 				}
+				resultMessage += "\n"
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Keywords in total.", len(entryBucket))
 
