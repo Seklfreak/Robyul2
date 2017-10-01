@@ -42,6 +42,7 @@ type DB_Youtube_Entry struct {
 	// Content specific data fields.
 	// Content can be about channel or video.
 	ContentType string      `gorethink:"content_type"`
+	ContentName string      `gorethink:"content_name"`
 	Content     interface{} `gorethink:"content"`
 }
 
@@ -294,6 +295,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		CheckTimeInterval:       1,
 
 		ContentType: "channel",
+		ContentName: yc.Snippet.ChannelTitle,
 		Content:     content,
 	}
 
@@ -363,8 +365,9 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 
 	msg := ""
 	for _, e := range entries {
-		msg += e.ID + " "
+		msg += fmt.Sprintf("`%s`: Youtube channel name `@%s` posting to <#%s>\n", e.ID, e.ContentName, e.ChannelID)
 	}
+	msg += fmt.Sprintf("Found **%d** Youtube channel in total.", len(entries))
 
 	*out = yt.newMsg(msg)
 	return yt.actionFinish
