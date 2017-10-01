@@ -1628,6 +1628,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 				roleToCreate = strings.TrimSpace(roleToCreate)
 
+				if roleToCreate == "" {
+					continue
+				}
+
 				newRole, err := session.GuildRoleCreate(channel.GuildID)
 				if err != nil {
 					roleErrors = append(roleErrors, err)
@@ -1645,17 +1649,17 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 					var roleAdded bool
 					for _, serverRole := range serverRoles {
-						newServerRoles = append(newServerRoles, &discordgo.Role{ID: serverRole.ID, Position: position})
-						position++
 						if serverRole.ID == afterRole.ID {
-							newServerRoles = append(newServerRoles, &discordgo.Role{ID: newRole.ID, Position: position})
+							newServerRoles = append(newServerRoles, &discordgo.Role{ID: newRole.ID, Position: position, Name: newRole.Name})
 							afterRole = newRole
-							position++
 							roleAdded = true
+							position++
 						}
+						newServerRoles = append(newServerRoles, &discordgo.Role{ID: serverRole.ID, Position: position, Name: serverRole.Name})
+						position++
 					}
 					if !roleAdded {
-						newServerRoles = append(newServerRoles, &discordgo.Role{ID: newRole.ID, Position: position})
+						newServerRoles = append(newServerRoles, &discordgo.Role{ID: newRole.ID, Position: position, Name: newRole.Name})
 						position++
 					}
 					serverRoles = newServerRoles
