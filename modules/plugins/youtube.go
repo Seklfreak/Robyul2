@@ -25,6 +25,7 @@ type YouTube struct {
 	service          *youtube.Service
 	regexpSet        []*regexp.Regexp
 	feedsLoopRunning bool
+	quota            youtubeQuota
 
 	// make sure initalize routine only works when no left yt.Action() jobs
 	sync.RWMutex
@@ -58,6 +59,63 @@ type DB_Youtube_Content_Video struct {
 	ViewCountsFinal    uint64 `gorethink:"content_view_counts_final"`
 }
 
+type youtubeQuota struct {
+	daily     int64
+	left      int64
+	resetTime time.Time
+	sync.Mutex
+}
+
+func (q *youtubeQuota) init() {
+	q.Lock()
+	defer q.Unlock()
+
+	q.daily = dailyQuota
+	q.left = q.daily
+	q.resetTime = q.getResetTime()
+}
+
+func (q *youtubeQuota) getResetTime() time.Time {
+	now := time.Now()
+	localZone := now.Location()
+
+	// Youtube quota is reset when every midnight in pacific time
+	pacific, err := time.LoadLocation("America/Los_Angeles")
+	if err == nil {
+		now = now.In(pacific)
+	}
+
+	y, m, d := now.Date()
+	resetTime := time.Date(y, m, d+1, 0, 0, 0, 0, now.Location())
+
+	return resetTime.In(localZone)
+}
+
+func (q *youtubeQuota) leftQuotaPerSec() int64 {
+	q.Lock()
+	defer q.Unlock()
+
+	delta := q.resetTime.Unix() - time.Now().Unix()
+	if delta <= 0 {
+		return 0
+	}
+
+	return q.left / delta
+}
+
+func (q *youtubeQuota) sub(i int64) int64 {
+	q.Lock()
+	defer q.Unlock()
+
+	if time.Now().After(q.resetTime) {
+		q.resetTime = q.getResetTime()
+		q.left = q.daily
+	}
+
+	q.left -= i
+	return q.left
+}
+
 type youtubeAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next youtubeAction)
 
 const (
@@ -78,6 +136,11 @@ const (
 	// e.g.) maxCheckTimeInterval = 64
 	// 2 min -> 4 min -> 8 min -> 16 min -> 32 min -> 64 min
 	maxCheckTimeInterval int64 = 64
+	dailyQuota           int64 = 1000000
+	activityQuota        int64 = 5
+	searchQuota          int64 = 100
+	videosQuota          int64 = 5
+	channelsQuota        int64 = 5
 )
 
 func (yt *YouTube) Commands() []string {
@@ -96,8 +159,9 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 	yt.service = nil
 
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
-	yt.newYoutubeService()
+	yt.quota.init()
 
+	yt.newYoutubeService()
 	yt.runYoutubeFeedsLoop()
 }
 
@@ -460,6 +524,7 @@ func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) 
 
 // search returns search results with given searchListCall.
 func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
+	yt.quota.sub(searchQuota)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -478,6 +543,7 @@ func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube
 		PublishedAfter(publishedAfter).
 		MaxResults(50)
 
+	yt.quota.sub(activityQuota)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -502,6 +568,7 @@ func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
+	yt.quota.sub(videosQuota)
 	call := yt.service.Videos.List("statistics, snippet").
 		Id(videoId).
 		MaxResults(1)
@@ -544,6 +611,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
+	yt.quota.sub(channelsQuota)
 	call := yt.service.Channels.List("statistics, snippet").
 		Id(channelId).
 		MaxResults(1)
@@ -718,7 +786,7 @@ func (yt *YouTube) youtubeFeedsLoop() {
 		}()
 	}()
 
-	for ; ; time.Sleep(1 * time.Minute) {
+	for ; ; time.Sleep(5 * time.Second) {
 		yt.checkYoutubeFeeds()
 	}
 }
