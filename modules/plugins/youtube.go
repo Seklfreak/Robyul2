@@ -183,32 +183,6 @@ func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **di
 	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt video add <video id/link> <discord channel>
-
-	testContent := DB_Youtube_Content_Video{
-		ID:                 "test",
-		ViewCountsPrevious: 0,
-		ViewCountsInterval: 0,
-		ViewCountsFinal:    0,
-	}
-
-	testEntry := DB_Youtube_Entry{
-		ServerID:                "test",
-		ChannelID:               "test",
-		NextCheckTime:           201709021604,
-		LastSuccessfulCheckTime: 201709021604,
-
-		ContentType: "video",
-		Content:     testContent,
-	}
-
-	id, err := yt.createEntry(testEntry)
-	if err != nil {
-		*out = yt.newMsg(err.Error())
-		return yt.actionFinish
-	}
-
-	*out = yt.newMsg("Add test video, ID: " + id)
-	return yt.actionFinish
 }
 
 func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
@@ -223,21 +197,6 @@ func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out *
 	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt video delete <video id/link> <discord channel>
-
-	// check permission
-	if helpers.IsMod(in) == false {
-		*out = yt.newMsg("mod.no_permission")
-		return yt.actionFinish
-	}
-
-	err := yt.deleteEntry(args[2])
-	if err != nil {
-		*out = yt.newMsg(err.Error())
-		return yt.actionFinish
-	}
-
-	*out = yt.newMsg("Delete video, ID: " + args[2])
-	return yt.actionFinish
 }
 
 func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
@@ -248,40 +207,6 @@ func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **d
 	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt video list
-
-	// check permission
-	if helpers.IsMod(in) == false {
-		*out = yt.newMsg("mod.no_permission")
-		return yt.actionFinish
-	}
-
-	ch, err := helpers.GetChannel(in.ChannelID)
-	if err != nil {
-		*out = yt.newMsg(err.Error())
-		return yt.actionFinish
-	}
-
-	entries, err := yt.readEntries(map[string]interface{}{
-		"content_type": "video",
-		"server_id":    ch.GuildID,
-	})
-	if err != nil {
-		*out = yt.newMsg(err.Error())
-		return yt.actionFinish
-	}
-
-	if len(entries) < 1 {
-		*out = yt.newMsg("No entries")
-		return yt.actionFinish
-	}
-
-	msg := ""
-	for _, e := range entries {
-		msg += e.ID + " "
-	}
-
-	*out = yt.newMsg(msg)
-	return yt.actionFinish
 }
 
 func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
@@ -322,11 +247,6 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
 	}
-
-	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
-	*out = yt.newMsg("bot.arguments.invalid")
-	return yt.actionFinish
-	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
 
 	// _yt channel add <video id/link> <discord channel>
 
@@ -390,11 +310,6 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 		return yt.actionFinish
 	}
 
-	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
-	*out = yt.newMsg("bot.arguments.invalid")
-	return yt.actionFinish
-	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
-
 	// _yt channel delete <video id/link> <discord channel>
 
 	// check permission
@@ -414,12 +329,6 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 }
 
 func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-
-	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
-	*out = yt.newMsg("bot.arguments.invalid")
-	return yt.actionFinish
-	// --- REMOVE THIS BLOCK WHEN THE IMPLEMENTATION IS COMPLETE --- //
-
 	// _yt channel list
 
 	// check permission
