@@ -486,16 +486,19 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					helpers.Relax(err)
 				}
 
+				successText := helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID)
+
 				if time.Now().Before(timeToUnmuteAt) {
 					signature := helpers.UnmuteUserSignature(channel.GuildID, targetUser.ID)
 					signature.ETA = &timeToUnmuteAt
 
 					_, err = cache.GetMachineryServer().SendTask(signature)
 					helpers.Relax(err)
+
+					successText = helpers.GetTextF("plugins.mod.user-muted-success-timed", targetUser.Username, targetUser.ID, timeToUnmuteAt.Format(time.ANSIC)+" UTC")
 				}
 
-				// TODO: update text
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID))
+				_, err = session.ChannelMessageSend(msg.ChannelID, successText)
 				helpers.Relax(err)
 				return
 			} else {
