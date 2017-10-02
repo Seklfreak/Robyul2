@@ -97,17 +97,29 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				customCommandsCache = cc.getAllCustomCommands()
 			})
 			return
-		case "list": // [p]commands list // @TODO: optional sort by times triggered
+		case "list": // [p]commands list [top]
 			session.ChannelTyping(msg.ChannelID)
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 			guild, err := helpers.GetGuild(channel.GuildID)
 			helpers.Relax(err)
 
+			var topCommands bool
+			if len(args) >= 2 && strings.ToLower(args[1]) == "top" {
+				topCommands = true
+			}
+
 			var entryBucket []DB_CustomCommands_Command
-			listCursor, err := rethink.Table("customcommands").Filter(
-				rethink.Row.Field("guildid").Eq(channel.GuildID),
-			).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+			var listCursor *rethink.Cursor
+			if topCommands {
+				listCursor, err = rethink.Table("customcommands").Filter(
+					rethink.Row.Field("guildid").Eq(channel.GuildID),
+				).OrderBy(rethink.Desc("triggered")).Run(helpers.GetDB())
+			} else {
+				listCursor, err = rethink.Table("customcommands").Filter(
+					rethink.Row.Field("guildid").Eq(channel.GuildID),
+				).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+			}
 			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.All(&entryBucket)
