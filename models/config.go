@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Config is a struct describing all config options a guild may set
 type Config struct {
 	Id string `rethink:"id,omitempty"`
@@ -46,12 +48,18 @@ type Config struct {
 
 	LevelsMaxBadges int `rethink:"levels_maxbadges"`
 
-	AutoRoleIDs []string `rethink:"autorole_roleids"`
+	AutoRoleIDs      []string          `rethink:"autorole_roleids"`
+	DelayedAutoRoles []DelayedAutoRole `rethink:"delayed_autoroles"`
 
 	StarboardChannelID string `rethink:"starboard_channel_id"`
 	StarboardMinimum   int    `rethink:"starboard_minimum"`
 
 	ChatlogDisabled bool `rethink:"chatlog_disabled"`
+}
+
+type DelayedAutoRole struct {
+	RoleID string
+	Delay  time.Duration
 }
 
 // Default is a helper for generating default config values

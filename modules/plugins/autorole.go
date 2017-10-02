@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"strings"
 
+	"time"
+
+	"github.com/RichardKnop/machinery/v1/tasks"
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/getsentry/raven-go"
+	"github.com/olebedev/when"
+	"github.com/olebedev/when/rules/common"
+	"github.com/olebedev/when/rules/en"
 )
 
-type AutoRoles struct{}
+type AutoRoles struct {
+	parser *when.Parser
+}
 
 func (a *AutoRoles) Commands() []string {
 	return []string{
@@ -19,6 +28,9 @@ func (a *AutoRoles) Commands() []string {
 }
 
 func (a *AutoRoles) Init(session *discordgo.Session) {
+	a.parser = when.New(nil)
+	a.parser.Add(en.All...)
+	a.parser.Add(common.All...)
 }
 
 func (a *AutoRoles) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -36,6 +48,19 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
+				var delay time.Duration
+				if len(args) >= 5 {
+					timeText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:len(args)-3], " "), "", 1))
+					timeText = strings.Replace(timeText, "after", "in", 1)
+					fmt.Println("timeText:", timeText)
+					now := time.Now()
+					r, err := a.parser.Parse(timeText, now)
+					if err == nil && r != nil {
+						delay = r.Time.Sub(now)
+					}
+				}
+				fmt.Println("delay:", delay.String())
+
 				serverRoles, err := session.GuildRoles(channel.GuildID)
 				if err != nil {
 					if errD := err.(*discordgo.RESTError); errD != nil {
@@ -52,6 +77,10 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				}
 
 				roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+				if delay > 0 {
+					roleNameToMatch = strings.TrimSpace(strings.Replace(roleNameToMatch, strings.Join(args[len(args)-3:], " "), "", 1))
+				}
+				fmt.Println("roleNameToMatch:", roleNameToMatch)
 
 				var targetRole *discordgo.Role
 				for _, role := range serverRoles {
@@ -74,14 +103,30 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 						return
 					}
 				}
+				for _, delayedRole := range settings.DelayedAutoRoles {
+					if delayedRole.RoleID == targetRole.ID {
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.autorole.role-add-error-duplicate"))
+						helpers.Relax(err)
+						return
+					}
+				}
 
-				settings.AutoRoleIDs = append(settings.AutoRoleIDs, targetRole.ID)
+				var successText string
+				if delay <= 0 {
+					settings.AutoRoleIDs = append(settings.AutoRoleIDs, targetRole.ID)
+					successText = helpers.GetTextF("plugins.autorole.role-add-success", targetRole.Name)
+				} else {
+					settings.DelayedAutoRoles = append(settings.DelayedAutoRoles, models.DelayedAutoRole{
+						RoleID: targetRole.ID,
+						Delay:  delay,
+					})
+					successText = helpers.GetTextF("plugins.autorole.delayed-role-add-success", targetRole.Name, delay.String())
+				}
 
 				err = helpers.GuildSettingsSet(channel.GuildID, settings)
 				helpers.Relax(err)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.autorole.role-add-success",
-					targetRole.Name))
+				_, err = session.ChannelMessageSend(msg.ChannelID, successText)
 				helpers.Relax(err)
 				return
 			})
@@ -103,9 +148,18 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 			for _, roleID := range settings.AutoRoleIDs {
 				role, err := session.State.Role(channel.GuildID, roleID)
 				if err == nil {
-					result += fmt.Sprintf("`%s (#%s)` ", role.Name, role.ID)
+					result += fmt.Sprintf("`%s (#%s)`\n", role.Name, role.ID)
 				} else {
-					result += fmt.Sprintf("`N/A (#%s)` ", roleID)
+					result += fmt.Sprintf("`N/A (#%s)`\n", roleID)
+				}
+			}
+
+			for _, delayedRole := range settings.DelayedAutoRoles {
+				role, err := session.State.Role(channel.GuildID, delayedRole.RoleID)
+				if err == nil {
+					result += fmt.Sprintf("`%s (#%s)` after %s\n", role.Name, role.ID, delayedRole.Delay.String())
+				} else {
+					result += fmt.Sprintf("`N/A (#%s)` after %s\n", delayedRole.RoleID, delayedRole.Delay.String())
 				}
 			}
 
@@ -158,6 +212,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 
 				roleWasInList := false
 				newRoleIDs := make([]string, 0)
+				newDelayedRoles := make([]models.DelayedAutoRole, 0)
 
 				for _, role := range settings.AutoRoleIDs {
 					if role == targetRole.ID {
@@ -167,13 +222,26 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 
-				if roleWasInList == false {
+				if !roleWasInList {
+					for _, delayedRole := range settings.DelayedAutoRoles {
+						if delayedRole.RoleID == targetRole.ID {
+							roleWasInList = true
+						} else {
+							newDelayedRoles = append(newDelayedRoles, delayedRole)
+						}
+					}
+				} else {
+					newDelayedRoles = settings.DelayedAutoRoles
+				}
+
+				if !roleWasInList {
 					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.autorole.role-remove-error-not-found"))
 					helpers.Relax(err)
 					return
 				}
 
 				settings.AutoRoleIDs = newRoleIDs
+				settings.DelayedAutoRoles = newDelayedRoles
 
 				err = helpers.GuildSettingsSet(channel.GuildID, settings)
 				helpers.Relax(err)
@@ -267,23 +335,61 @@ func (a *AutoRoles) OnMessage(content string, msg *discordgo.Message, session *d
 
 func (a *AutoRoles) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
 	go func() {
+		defer helpers.Recover()
+
 		settings := helpers.GuildSettingsGetCached(member.GuildID)
 		for _, roleID := range settings.AutoRoleIDs {
-			err := session.GuildMemberRoleAdd(member.GuildID, member.User.ID, roleID)
-			if err != nil {
-				if errD, ok := err.(*discordgo.RESTError); ok == true {
-					if errD.Message.Code != discordgo.ErrCodeMissingPermissions &&
-						errD.Message.Code != discordgo.ErrCodeMissingAccess &&
-						errD.Message.Code != discordgo.ErrCodeUnknownRole {
-						raven.CaptureError(fmt.Errorf("%#v", errD), map[string]string{})
-					}
-				} else {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-				continue
-			}
+			err := AutoroleApply(member.GuildID, member.User.ID, roleID)
+			helpers.RelaxLog(err)
+		}
+		for _, delayedAutorole := range settings.DelayedAutoRoles {
+			signature := AutoroleApplySignature(member.GuildID, member.User.ID, delayedAutorole.RoleID)
+			applyAt := time.Now().Add(delayedAutorole.Delay)
+			signature.ETA = &applyAt
+
+			_, err := cache.GetMachineryServer().SendTask(signature)
+			helpers.Relax(err)
 		}
 	}()
+}
+
+func AutoroleApply(guildID string, userID string, roleID string) (err error) {
+	err = cache.GetSession().GuildMemberRoleAdd(guildID, userID, roleID)
+	if err != nil {
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Code != discordgo.ErrCodeMissingPermissions &&
+				errD.Message.Code != discordgo.ErrCodeMissingAccess &&
+				errD.Message.Code != discordgo.ErrCodeUnknownRole {
+				return
+			}
+		} else {
+			return
+		}
+	}
+	err = nil
+	return
+}
+func AutoroleApplySignature(guildID string, userID string, roleID string) (signature *tasks.Signature) {
+	signature = &tasks.Signature{
+		Name: "apply_autorole",
+		Args: []tasks.Arg{
+			{
+				Type:  "string",
+				Value: guildID,
+			},
+			{
+				Type:  "string",
+				Value: userID,
+			},
+			{
+				Type:  "string",
+				Value: roleID,
+			},
+		},
+	}
+	signature.RetryCount = 3
+	signature.OnError = []*tasks.Signature{{Name: "log_error"}}
+	return signature
 }
 
 func (a *AutoRoles) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {

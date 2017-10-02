@@ -790,6 +790,7 @@
     "autorole": {
       "role-add-error-duplicate": "This role is already in the list of auto roles. <:blobthinking:317028940885524490>",
       "role-add-success": "Everyone who joins will get the role `%s` assigned now. <:blobsalute:317043033004703744>\nPlease make sure Robyul is allowed to assign the role.",
+      "delayed-role-add-success": "Everyone who joins will get the role `%s` assigned after %s now. <:blobsalute:317043033004703744>\nPlease make sure Robyul is allowed to assign the role.",
       "role-list-none": "There are no AutoRoles on this server. <:blobweary:317036265071575050>",
       "role-remove-error-not-found": "I wasn't able to find the role in the list of the AutoRoles on this server. <:blobthinking:317028940885524490>",
       "role-remove-success": "I won't assign this role to new members anymore. <:blobokhand:317032017164238848>",

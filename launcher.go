@@ -18,6 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/migrations"
+	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/rest"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/Sirupsen/logrus"
@@ -247,8 +248,9 @@ func main() {
 	}
 	log.WithField("module", "launcher").Info("started machinery server, default queue: robyul_tasks")
 	machineryServer.RegisterTasks(map[string]interface{}{
-		"unmute_user": helpers.UnmuteUser,
-		"log_error":   helpers.LogMachineryError,
+		"unmute_user":    helpers.UnmuteUser,
+		"apply_autorole": plugins.AutoroleApply,
+		"log_error":      helpers.LogMachineryError,
 	})
 	cache.SetMachineryServer(machineryServer)
 	go func() {
