@@ -305,7 +305,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.Relax(err)
 			return
 		case "import-json": // [p]command import-json (with json file attached)
-			helpers.RequireBotAdmin(msg, func() {
+			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(msg.Attachments) <= 0 {
@@ -335,8 +335,30 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				commandsContainer, err := commandsContainerJson.ChildrenMap()
 				helpers.Relax(err)
 
+				var entryBucket []DB_CustomCommands_Command
+				listCursor, err := rethink.Table("customcommands").Filter(
+					rethink.Row.Field("guildid").Eq(channel.GuildID),
+				).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+				helpers.Relax(err)
+				defer listCursor.Close()
+				err = listCursor.All(&entryBucket)
+				if err != nil && err != rethink.ErrEmptyResult {
+					helpers.Relax(err)
+				}
+
 				i := 0
 				for newCustomCommandName, newCustomCommandContent := range commandsContainer {
+					commandExists := false
+					for _, customCommand := range entryBucket {
+						if customCommand.Keyword == newCustomCommandName {
+							commandExists = true
+						}
+					}
+					if commandExists {
+						session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Command with the name `%s` already exists.", newCustomCommandName))
+						continue
+					}
+
 					newCustomCommandContentText := strings.TrimPrefix(strings.TrimSuffix(newCustomCommandContent.String(), "\""), "\"")
 					newCommand := cc.getEntryByOrCreateEmpty("id", "")
 					newCommand.GuildID = channel.GuildID
