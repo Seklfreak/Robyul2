@@ -30,20 +30,18 @@ func (m *WolframAlpha) Init(session *discordgo.Session) {
 }
 
 func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer func() {
-		err := recover()
-
-		if err != nil {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
-			return
-		}
-	}()
 	session.ChannelTyping(msg.ChannelID)
 
 	encodedQuery := url.QueryEscape(content)
 	queryUrl := fmt.Sprintf(wolframBaseUrl, helpers.GetConfig().Path("wolframalpha.appid").Data().(string), encodedQuery)
 
 	result := helpers.GetJSON(queryUrl)
+
+	numPods := result.Path("queryresult.numpods").Data().(float64)
+	if numPods <= 0 {
+		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
+		return
+	}
 
 	podResultItems, err := result.Path("queryresult.pods").Children()
 	helpers.Relax(err)
@@ -82,6 +80,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 		}
 	}
 
-	session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	metrics.WolframAlphaRequests.Add(1)
 }

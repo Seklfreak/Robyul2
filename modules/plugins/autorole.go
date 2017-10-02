@@ -52,14 +52,12 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				if len(args) >= 5 {
 					timeText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:len(args)-3], " "), "", 1))
 					timeText = strings.Replace(timeText, "after", "in", 1)
-					fmt.Println("timeText:", timeText)
 					now := time.Now()
 					r, err := a.parser.Parse(timeText, now)
 					if err == nil && r != nil {
 						delay = r.Time.Sub(now)
 					}
 				}
-				fmt.Println("delay:", delay.String())
 
 				serverRoles, err := session.GuildRoles(channel.GuildID)
 				if err != nil {
@@ -80,7 +78,6 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				if delay > 0 {
 					roleNameToMatch = strings.TrimSpace(strings.Replace(roleNameToMatch, strings.Join(args[len(args)-3:], " "), "", 1))
 				}
-				fmt.Println("roleNameToMatch:", roleNameToMatch)
 
 				var targetRole *discordgo.Role
 				for _, role := range serverRoles {
