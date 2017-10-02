@@ -200,6 +200,12 @@
   version = "v1.3.0"
 
 [[projects]]
+  name = "github.com/kennygrant/sanitize"
+  packages = ["."]
+  revision = "6a0bfdde8629a3a3a7418a7eae45c54154692514"
+  version = "v1.2"
+
+[[projects]]
   branch = "master"
   name = "github.com/lucasb-eyer/go-colorful"
   packages = ["."]
@@ -394,6 +400,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ae601ae60aaa09840b2f266e8329cf2b94b1ede33d094780822681351891d484"
+  inputs-digest = "0ce5007ea5e59fcf804b1ef03961908391ccee451fca20ce748e109f72a2c52d"
   solver-name = "gps-cdcl"
   solver-version = 1

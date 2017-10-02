@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/kennygrant/sanitize"
 )
 
 type Bias struct{}
@@ -176,6 +177,8 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
+				targetGuild, err := helpers.GetGuild(targetChannel.GuildID)
+				helpers.Relax(err)
 
 				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
 				if channelDb.ChannelID == "" {
@@ -187,7 +190,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				channelConfigJson, err := json.MarshalIndent(channelDb.Categories, "", "    ")
 				helpers.Relax(err)
 
-				_, err = session.ChannelFileSend(msg.ChannelID, targetChannel.Name+"-robyul-bias-config.json", bytes.NewReader(channelConfigJson))
+				_, err = session.ChannelFileSend(msg.ChannelID, sanitize.Path(targetGuild.Name)+"-"+sanitize.Path(targetChannel.Name)+"-robyul-bias-config.json", bytes.NewReader(channelConfigJson))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
 				return

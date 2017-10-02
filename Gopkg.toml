@@ -163,3 +163,7 @@
 [[constraint]]
   name = "github.com/RichardKnop/machinery"
   version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/kennygrant/sanitize"
+  version = "1.2.0"

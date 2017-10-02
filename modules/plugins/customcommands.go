@@ -6,12 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"bytes"
+
+	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/kennygrant/sanitize"
 )
 
 type CustomCommands struct{}
@@ -349,6 +353,43 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commnands.", msg.Author.ID, humanize.Comma(int64(i))))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
+			})
+			return
+		case "export-json": // [p]export-json
+			session.ChannelTyping(msg.ChannelID)
+			helpers.RequireMod(msg, func() {
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+				guild, err := helpers.GetGuild(channel.GuildID)
+				helpers.Relax(err)
+
+				var entryBucket []DB_CustomCommands_Command
+				listCursor, err := rethink.Table("customcommands").Filter(
+					rethink.Row.Field("guildid").Eq(channel.GuildID),
+				).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+				helpers.Relax(err)
+				defer listCursor.Close()
+				err = listCursor.All(&entryBucket)
+				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
+					helpers.Relax(err)
+					return
+				} else if err != nil {
+					helpers.Relax(err)
+				}
+
+				jsonObj := gabs.New()
+				for _, command := range entryBucket {
+					jsonObj.Set(command.Content, command.Keyword)
+				}
+				jsonObj.StringIndent("", "  ")
+
+				_, err = session.ChannelFileSend(msg.ChannelID, sanitize.Path(guild.Name)+"-robyul-custom-commands.json",
+					bytes.NewReader([]byte(jsonObj.StringIndent("", "  "))),
+				)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+
+				return
 			})
 			return
 		}
