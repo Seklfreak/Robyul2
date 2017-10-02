@@ -59,61 +59,16 @@ type DB_Youtube_Content_Video struct {
 	ViewCountsFinal    uint64 `gorethink:"content_view_counts_final"`
 }
 
+type DB_Youtube_Content_Quota struct {
+	Daily     int64 `gorethink:"content_daily"`
+	Left      int64 `gorethink:"content_left"`
+	ResetTime int64 `gorethink:"content_reset_time"`
+}
+
 type youtubeQuota struct {
-	daily     int64
-	left      int64
-	resetTime time.Time
+	entry   DB_Youtube_Entry
+	content DB_Youtube_Content_Quota
 	sync.Mutex
-}
-
-func (q *youtubeQuota) init() {
-	q.Lock()
-	defer q.Unlock()
-
-	q.daily = dailyQuota
-	q.left = q.daily
-	q.resetTime = q.getResetTime()
-}
-
-func (q *youtubeQuota) getResetTime() time.Time {
-	now := time.Now()
-	localZone := now.Location()
-
-	// Youtube quota is reset when every midnight in pacific time
-	pacific, err := time.LoadLocation("America/Los_Angeles")
-	if err == nil {
-		now = now.In(pacific)
-	}
-
-	y, m, d := now.Date()
-	resetTime := time.Date(y, m, d+1, 0, 0, 0, 0, now.Location())
-
-	return resetTime.In(localZone)
-}
-
-func (q *youtubeQuota) leftQuotaPerSec() int64 {
-	q.Lock()
-	defer q.Unlock()
-
-	delta := q.resetTime.Unix() - time.Now().Unix()
-	if delta <= 0 {
-		return 0
-	}
-
-	return q.left / delta
-}
-
-func (q *youtubeQuota) sub(i int64) int64 {
-	q.Lock()
-	defer q.Unlock()
-
-	if time.Now().After(q.resetTime) {
-		q.resetTime = q.getResetTime()
-		q.left = q.daily
-	}
-
-	q.left -= i
-	return q.left
 }
 
 type youtubeAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next youtubeAction)
@@ -159,7 +114,7 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 	yt.service = nil
 
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
-	yt.quota.init()
+	yt.initQuota()
 
 	yt.newYoutubeService()
 	yt.runYoutubeFeedsLoop()
@@ -524,7 +479,7 @@ func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) 
 
 // search returns search results with given searchListCall.
 func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
-	yt.quota.sub(searchQuota)
+	yt.subQuota(searchQuota)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -543,7 +498,7 @@ func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube
 		PublishedAfter(publishedAfter).
 		MaxResults(50)
 
-	yt.quota.sub(activityQuota)
+	yt.subQuota(activityQuota)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -568,7 +523,7 @@ func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
-	yt.quota.sub(videosQuota)
+	yt.subQuota(videosQuota)
 	call := yt.service.Videos.List("statistics, snippet").
 		Id(videoId).
 		MaxResults(1)
@@ -611,7 +566,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
-	yt.quota.sub(channelsQuota)
+	yt.subQuota(channelsQuota)
 	call := yt.service.Channels.List("statistics, snippet").
 		Id(channelId).
 		MaxResults(1)
@@ -806,6 +761,8 @@ func (yt *YouTube) checkYoutubeFeeds() {
 		switch e.ContentType {
 		case "channel":
 			e = yt.checkYoutubeChannelFeeds(e)
+		case "quota":
+			continue
 		default:
 			yt.logger().Error("unknown contents type: " + e.ContentType)
 			e.CheckTimeInterval = maxCheckTimeInterval
@@ -930,4 +887,118 @@ func (yt *YouTube) isPosted(id string, postedIds []string) (ok bool) {
 		}
 	}
 	return
+}
+
+func (yt *YouTube) initQuota() {
+	yt.quota.Lock()
+	defer yt.quota.Unlock()
+	defer func() {
+		yt.quota.entry.ContentType = "quota"
+		yt.quota.entry.Content = yt.quota.content
+
+		id, err := yt.createEntry(yt.quota.entry)
+		if err != nil {
+			yt.logger().Error(err)
+		} else {
+			yt.quota.entry.ID = id
+		}
+	}()
+
+	// make default content
+	yt.quota.content = DB_Youtube_Content_Quota{
+		Daily:     dailyQuota,
+		Left:      dailyQuota,
+		ResetTime: yt.getQuotaResetTime().Unix(),
+	}
+
+	entries, err := yt.readEntries(map[string]interface{}{
+		"content_type": "quota",
+	})
+
+	if err != nil {
+		yt.logger().Error(err)
+		return
+	}
+
+	if len(entries) > 0 {
+		e := entries[0]
+		yt.deleteEntry(e.ID)
+
+		// get content
+		oldContent, ok := e.Content.(map[string]interface{})
+		if ok == false {
+			yt.logger().Error("contents type mismatch: " + e.ID)
+			return
+		}
+
+		resetTime := yt.getQuotaResetTime().Unix()
+		// JSON numbers unmarshaled to float64
+		oldResetTime, ok := oldContent["content_reset_time"].(float64)
+		if ok == false {
+			yt.logger().Error("wrong content_reset_time type, ID: " + e.ID)
+			return
+		}
+
+		if int64(oldResetTime) < resetTime {
+			return
+		}
+
+		// get left quota
+		left, ok := oldContent["content_left"].(float64)
+		if ok == false {
+			yt.logger().Error("wrong content_left type, ID: " + e.ID)
+			return
+		}
+
+		yt.quota.content.Left = int64(left)
+	}
+}
+
+func (yt *YouTube) getQuotaResetTime() time.Time {
+	now := time.Now()
+	localZone := now.Location()
+
+	// Youtube quota is reset when every midnight in pacific time
+	pacific, err := time.LoadLocation("America/Los_Angeles")
+	if err == nil {
+		now = now.In(pacific)
+	}
+
+	y, m, d := now.Date()
+	resetTime := time.Date(y, m, d+1, 0, 0, 0, 0, now.Location())
+
+	return resetTime.In(localZone)
+}
+
+func (yt *YouTube) leftQuotaPerSec() int64 {
+	yt.quota.Lock()
+	defer yt.quota.Unlock()
+
+	delta := yt.quota.content.ResetTime - time.Now().Unix()
+	if delta <= 0 {
+		return 0
+	}
+
+	return yt.quota.content.Left / delta
+}
+
+func (yt *YouTube) subQuota(i int64) int64 {
+	yt.quota.Lock()
+	defer yt.quota.Unlock()
+
+	if time.Now().Unix() > yt.quota.content.ResetTime {
+		yt.quota.content.ResetTime = yt.getQuotaResetTime().Unix()
+		yt.quota.content.Left = dailyQuota
+	}
+
+	yt.quota.content.Left -= i
+	yt.quota.entry.Content = yt.quota.content
+
+	if yt.quota.entry.ID != "" {
+		if err := yt.updateEntry(yt.quota.entry); err != nil {
+			yt.logger().Error(err)
+		}
+	}
+
+	return yt.quota.content.Left
 }
