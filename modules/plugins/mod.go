@@ -544,6 +544,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
+					if days > 7 {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-error-too-many-days"))
+						return
+					}
 				}
 
 				targetUser, err := helpers.GetUserFromMention(args[0])
