@@ -317,9 +317,14 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 		return yt.actionFinish
 	}
 
-	err := yt.deleteEntry(args[2])
+	n, err := yt.deleteEntry(args[2])
 	if err != nil {
 		*out = yt.newMsg(err.Error())
+		return yt.actionFinish
+	}
+
+	if n < 1 {
+		*out = yt.newMsg("plugins.youtube.channel-delete-not-found-error")
 		return yt.actionFinish
 	}
 
@@ -673,10 +678,14 @@ func (yt *YouTube) updateEntry(entry DB_Youtube_Entry) (err error) {
 	return
 }
 
-func (yt *YouTube) deleteEntry(id string) (err error) {
+func (yt *YouTube) deleteEntry(id string) (n int, err error) {
 	query := rethink.Table(youtubeDbTableName).Filter(rethink.Row.Field("id").Eq(id)).Delete()
 
-	_, err = query.RunWrite(helpers.GetDB())
+	r, err := query.RunWrite(helpers.GetDB())
+	if err == nil {
+		n = r.Deleted
+	}
+
 	return
 }
 
