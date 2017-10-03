@@ -44,6 +44,8 @@ func (s *Stats) Commands() []string {
 		"invite",
 		"channelinfo",
 		"serverindex",
+		"roles",
+		"rolelist",
 	}
 }
 
@@ -1263,6 +1265,106 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		}
 		return
+	case "roles", "rolelist":
+		session.ChannelTyping(msg.ChannelID)
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+
+		guild, err := helpers.GetGuild(channel.GuildID)
+		helpers.Relax(err)
+
+		args := strings.Fields(content)
+		if len(args) >= 1 {
+			if helpers.IsBotAdmin(msg.Author.ID) {
+				otherGuild, err := helpers.GetGuild(args[len(args)-1])
+				if err == nil && otherGuild != nil && otherGuild.ID != "" {
+					guild = otherGuild
+				}
+			}
+		}
+
+		allRoles := guild.Roles
+
+		if len(allRoles) <= 0 {
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.rolelist-none"))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		}
+
+		slice.Sort(allRoles, func(i, j int) bool {
+			return allRoles[i].Position > allRoles[j].Position
+		})
+
+		numberOfPages := int(math.Ceil(float64(len(allRoles)) / float64(10)))
+		footerAdditionalText := ""
+		if numberOfPages > 1 {
+			footerAdditionalText += " Click on the arrows below to change the page."
+		}
+
+		currentPage := 1
+		if len(args) > 0 {
+			currentPage, err = strconv.Atoi(args[0])
+			if err != nil {
+				currentPage = 1
+			}
+		}
+		if currentPage > numberOfPages {
+			currentPage = 1
+		}
+
+		rolelistEmbed := &discordgo.MessageEmbed{
+			Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.rolelist-embed-footer", humanize.Comma(int64(len(allRoles)))) + footerAdditionalText},
+		}
+
+		s.setEmbedRolelistPage(rolelistEmbed, msg.Author, guild, allRoles, currentPage, numberOfPages)
+		rolelistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, rolelistEmbed)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if numberOfPages > 1 {
+			err = session.MessageReactionAdd(msg.ChannelID, rolelistEmbedMessage.ID, "⬅")
+			helpers.Relax(err)
+			err = session.MessageReactionAdd(msg.ChannelID, rolelistEmbedMessage.ID, "➡")
+			helpers.Relax(err)
+		}
+
+		closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+			defer helpers.Recover()
+
+			if reaction.MessageID == rolelistEmbedMessage.ID {
+				if reaction.UserID == session.State.User.ID {
+					return
+				}
+
+				if reaction.UserID == msg.Author.ID {
+					if reaction.Emoji.Name == "➡" {
+						if currentPage+1 <= numberOfPages {
+							currentPage += 1
+							s.setEmbedRolelistPage(rolelistEmbed, msg.Author, guild, allRoles, currentPage, numberOfPages)
+							rolelistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, rolelistEmbedMessage.ID, rolelistEmbed)
+							helpers.Relax(err)
+						}
+					} else if reaction.Emoji.Name == "⬅" {
+						if currentPage-1 >= 1 {
+							currentPage -= 1
+							s.setEmbedRolelistPage(rolelistEmbed, msg.Author, guild, allRoles, currentPage, numberOfPages)
+							rolelistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, rolelistEmbedMessage.ID, rolelistEmbed)
+							helpers.Relax(err)
+						}
+					}
+				}
+				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+			}
+		})
+		time.Sleep(3 * time.Minute)
+		closeHandler()
+		if numberOfPages > 1 {
+			err = session.MessageReactionRemove(msg.ChannelID, rolelistEmbedMessage.ID, "⬅", session.State.User.ID)
+			helpers.Relax(err)
+			err = session.MessageReactionRemove(msg.ChannelID, rolelistEmbedMessage.ID, "➡", session.State.User.ID)
+			helpers.Relax(err)
+		}
+
+		return
 	}
 }
 
@@ -1317,6 +1419,47 @@ func (r *Stats) setEmbedMemberlistPage(memberlistEmbed *discordgo.MessageEmbed, 
 
 			joinedServerTime, _ := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
 			memberlistEmbed.Description += fmt.Sprintf("%d: %s joined %s\n", i+1, title, helpers.SinceInDaysText(joinedServerTime))
+		}
+		i++
+		if i >= startMemberN+10 {
+			break
+		}
+	}
+	return
+}
+
+func (r *Stats) setEmbedRolelistPage(memberlistEmbed *discordgo.MessageEmbed, author *discordgo.User, guild *discordgo.Guild, allRoles []*discordgo.Role, pageN int, maxPagesN int) {
+	memberlistEmbed.Fields = []*discordgo.MessageEmbedField{}
+	pageText := ""
+	if maxPagesN > 1 {
+		pageText = fmt.Sprintf(" | Page %s of %s", humanize.Comma(int64(pageN)), humanize.Comma(int64(maxPagesN)))
+	}
+	memberlistEmbed.Title = helpers.GetTextF("plugins.stats.rolelist-embed-title", author.Username, guild.Name) + pageText
+	memberlistEmbed.Description = ""
+	startMemberN := (pageN - 1) * 10
+	i := startMemberN
+	for {
+		if i < len(allRoles) {
+			var information []string
+			var informationText string
+			if allRoles[i].Color > 0 {
+				information = append(information, "#"+helpers.GetHexFromDiscordColor(allRoles[i].Color))
+			}
+			if allRoles[i].Hoist {
+				information = append(information, "hoisted")
+			}
+			if allRoles[i].Mentionable {
+				information = append(information, "mentionable")
+			}
+			if allRoles[i].Managed {
+				information = append(information, "managed")
+			}
+			if len(information) > 0 {
+				informationText = ", " + strings.Join(information, ", ")
+			}
+
+			memberlistEmbed.Description += fmt.Sprintf(
+				"%d: %s (#%s%s)\n", i+1, allRoles[i].Name, allRoles[i].ID, informationText)
 		}
 		i++
 		if i >= startMemberN+10 {

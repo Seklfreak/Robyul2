@@ -633,6 +633,10 @@ func GetDiscordColorFromHex(hex string) int {
 	}
 }
 
+func GetHexFromDiscordColor(colour int) (hex string) {
+	return strings.ToUpper(big.NewInt(int64(colour)).Text(16))
+}
+
 func GetTimeFromSnowflake(id string) time.Time {
 	iid, err := strconv.ParseInt(id, 10, 64)
 	Relax(err)
