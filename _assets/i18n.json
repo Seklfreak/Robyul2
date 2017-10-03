@@ -654,7 +654,9 @@
       "user-not-found": "User not found!",
       "memberlist-gathering": "Gathering the list of all members... <:blobdetective:317045632856489985>",
       "memberlist-embed-footer": "There are %s members on this server.",
-      "memberlist-embed-title": "@%s: Members on %s"
+      "memberlist-embed-title": "@%s: Members on %s",
+      "role-memberlist-embed-title": "@%s: Members on %s in %s",
+      "memberlist-none": "No members found."
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! <:googlenerd:317030369205682186>",

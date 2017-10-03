@@ -1013,17 +1013,54 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		guild, err := helpers.GetGuild(channel.GuildID)
 		helpers.Relax(err)
+		var role discordgo.Role
 
 		args := strings.Fields(content)
-		if len(args) >= 2 && helpers.IsBotAdmin(msg.Author.ID) {
-			guild, err = helpers.GetGuild(args[1])
-			helpers.Relax(err)
+		if len(args) >= 1 {
+			if helpers.IsBotAdmin(msg.Author.ID) {
+				otherGuild, err := helpers.GetGuild(args[len(args)-1])
+				if err == nil && otherGuild != nil && otherGuild.ID != "" {
+					guild = otherGuild
+				}
+			}
+
+			// TODO: implement channel
+			/*
+				otherChannel, err := helpers.GetChannelFromMention(msg, args[len(args)-1])
+				if err == nil && otherChannel != nil && otherChannel.ID != "" {
+					// check if user can access channel
+					channel = otherChannel
+				}*/
+
+			for _, scanRole := range guild.Roles {
+				if scanRole.ID == args[len(args)-1] || strings.ToLower(scanRole.Name) == strings.ToLower(args[len(args)-1]) {
+					role = *scanRole
+				}
+			}
 		}
 
-		memberlistEmbedMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.memberlist-gathering"))
-		helpers.Relax(err)
-
 		allMembers := guild.Members
+		kind := "guild"
+		var kindTitle string
+		if role.ID != "" {
+			kind = "role"
+			kindTitle = role.Name
+			allMembers = make([]*discordgo.Member, 0)
+			for _, member := range guild.Members {
+				for _, memberRole := range member.Roles {
+					if memberRole == role.ID {
+						allMembers = append(allMembers, member)
+					}
+				}
+			}
+		}
+
+		if len(allMembers) <= 0 {
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.memberlist-none"))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		}
+
 		slice.Sort(allMembers[:], func(i, j int) bool {
 			if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
 				return false
@@ -1046,8 +1083,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if len(args) > 0 {
 			currentPage, err = strconv.Atoi(args[0])
 			if err != nil {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-				return
+				currentPage = 1
 			}
 		}
 		if currentPage > numberOfPages {
@@ -1058,11 +1094,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.memberlist-embed-footer", humanize.Comma(int64(len(allMembers)))) + footerAdditionalText},
 		}
 
-		s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
-		memberlistEmbedMessage, err = session.ChannelMessageEdit(msg.ChannelID, memberlistEmbedMessage.ID, "")
-		helpers.Relax(err)
-		memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
-		helpers.Relax(err)
+		s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages, kind, kindTitle)
+		memberlistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, memberlistEmbed)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 
 		if numberOfPages > 1 {
 			err = session.MessageReactionAdd(msg.ChannelID, memberlistEmbedMessage.ID, "⬅")
@@ -1083,14 +1117,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					if reaction.Emoji.Name == "➡" {
 						if currentPage+1 <= numberOfPages {
 							currentPage += 1
-							s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
+							s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages, kind, kindTitle)
 							memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
 							helpers.Relax(err)
 						}
 					} else if reaction.Emoji.Name == "⬅" {
 						if currentPage-1 >= 1 {
 							currentPage -= 1
-							s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages)
+							s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages, kind, kindTitle)
 							memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
 							helpers.Relax(err)
 						}
@@ -1257,13 +1291,20 @@ func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author 
 	return
 }
 
-func (r *Stats) setEmbedMemberlistPage(memberlistEmbed *discordgo.MessageEmbed, author *discordgo.User, guild *discordgo.Guild, allMembers []*discordgo.Member, pageN int, maxPagesN int) {
+func (r *Stats) setEmbedMemberlistPage(memberlistEmbed *discordgo.MessageEmbed, author *discordgo.User, guild *discordgo.Guild, allMembers []*discordgo.Member, pageN int, maxPagesN int, kind string, kindTitle string) {
 	memberlistEmbed.Fields = []*discordgo.MessageEmbedField{}
 	pageText := ""
 	if maxPagesN > 1 {
 		pageText = fmt.Sprintf(" | Page %s of %s", humanize.Comma(int64(pageN)), humanize.Comma(int64(maxPagesN)))
 	}
-	memberlistEmbed.Title = helpers.GetTextF("plugins.stats.memberlist-embed-title", author.Username, guild.Name) + pageText
+	switch kind {
+	case "role":
+		memberlistEmbed.Title = helpers.GetTextF("plugins.stats.role-memberlist-embed-title", author.Username, guild.Name, kindTitle) + pageText
+		break
+	default:
+		memberlistEmbed.Title = helpers.GetTextF("plugins.stats.memberlist-embed-title", author.Username, guild.Name) + pageText
+		break
+	}
 	memberlistEmbed.Description = ""
 	startMemberN := (pageN - 1) * 10
 	i := startMemberN
