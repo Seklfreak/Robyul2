@@ -120,7 +120,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				helpers.Relax(err)
 			})
 		case "set-config":
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
@@ -163,7 +163,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				return
 			})
 		case "get-config":
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
