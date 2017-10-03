@@ -195,7 +195,14 @@ func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **dis
 		return yt.actionFinish
 	}
 
-	*out = yt.getChannelInfo(item.Id.ChannelId)
+	// Very few channels only have snippet.ChannelID
+	// Maybe it's youtube API bug.
+	channelId := item.Id.ChannelId
+	if channelId == "" {
+		channelId = item.Snippet.ChannelId
+	}
+	*out = yt.getChannelInfo(channelId)
+
 	return yt.actionFinish
 }
 
@@ -236,6 +243,17 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	content := DB_Youtube_Content_Channel{
 		ID:   yc.Id.ChannelId,
 		Name: yc.Snippet.ChannelTitle,
+	}
+
+	// Very few channels only have snippet.ChannelID
+	// Maybe it's youtube API bug.
+	if content.ID == "" {
+		content.ID = yc.Snippet.ChannelId
+	}
+
+	if content.ID == "" || content.Name == "" {
+		*out = yt.newMsg("plugins.youtube.channel-not-found")
+		return yt.actionFinish
 	}
 
 	// fill db entry
@@ -379,7 +397,15 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 	case "youtube#video":
 		*out = yt.getVideoInfo(item.Id.VideoId)
 	case "youtube#channel":
-		*out = yt.getChannelInfo(item.Id.ChannelId)
+		// Very few channels only have snippet.ChannelID
+		// Maybe it's youtube API bug.
+		channelId := item.Id.ChannelId
+		if channelId == "" {
+			channelId = item.Snippet.ChannelId
+		}
+		*out = yt.getChannelInfo(channelId)
+	default:
+		*out = yt.newMsg("plugins.youtube.video-not-found")
 	}
 
 	return yt.actionFinish
@@ -736,7 +762,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 	// get updated feeds
 	feeds, err := yt.getChannelFeeds(c.ID, publishedAfter)
 	if err != nil {
-		yt.logger().Error("check channel feeds error: " + err.Error())
+		yt.logger().Error("check channel feeds error: " + err.Error() + " channel name: " + c.Name + "id: " + e.ID)
 		return e
 	}
 
