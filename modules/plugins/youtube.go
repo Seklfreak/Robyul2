@@ -33,40 +33,6 @@ type YouTube struct {
 	sync.RWMutex
 }
 
-type DB_Youtube_Entry struct {
-	// Common fields.
-	ID                      string `gorethink:"id,omitempty"`
-	ServerID                string `gorethink:"server_id"`
-	ChannelID               string `gorethink:"channel_id"`
-	NextCheckTime           int64  `gorethink:"next_check_time"`
-	LastSuccessfulCheckTime int64  `gorethink:"last_successful_check_time"`
-	CheckTimeInterval       int64  `gorethink:"check_time_interval"`
-
-	// Contents specific data fields.
-	// Contents can be channel or video or quota.
-	ContentType string      `gorethink:"content_type"`
-	ContentName string      `gorethink:"content_name"`
-	Content     interface{} `gorethink:"content"`
-}
-
-type DB_Youtube_Content_Channel struct {
-	ID          string   `gorethink:"content_id"`
-	PostedVideo []string `gorethink:"content_posted_videos"`
-}
-
-type DB_Youtube_Content_Video struct {
-	ID                 string `gorethink:"content_id"`
-	ViewCountsPrevious uint64 `gorethink:"content_view_counts_previous"`
-	ViewCountsInterval uint64 `gorethink:"content_view_counts_interval"`
-	ViewCountsFinal    uint64 `gorethink:"content_view_counts_final"`
-}
-
-type DB_Youtube_Content_Quota struct {
-	Daily     int64 `gorethink:"content_daily"`
-	Left      int64 `gorethink:"content_left"`
-	ResetTime int64 `gorethink:"content_reset_time"`
-}
-
 type youtubeQuota struct {
 	entry    DB_Youtube_Entry
 	content  DB_Youtube_Content_Quota
@@ -83,7 +49,6 @@ const (
 	youtubeColor          string = "cd201f"
 
 	youtubeConfigFileName string = "google.client_credentials_json_location"
-	youtubeDbTableName    string = "youtube"
 
 	// for yt.regexpSet
 	videoLongUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9_]*)`
@@ -276,7 +241,8 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 
 	// fill content with default timestamp(channel published date)
 	content := DB_Youtube_Content_Channel{
-		ID: yc.Id.ChannelId,
+		ID:   yc.Id.ChannelId,
+		Name: yc.Snippet.ChannelTitle,
 	}
 
 	// fill db entry
@@ -285,10 +251,8 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		ChannelID:               dc.ID,
 		NextCheckTime:           time.Now().Unix(),
 		LastSuccessfulCheckTime: time.Now().Unix(),
-		CheckTimeInterval:       1,
 
 		ContentType: "channel",
-		ContentName: yc.Snippet.ChannelTitle,
 		Content:     content,
 	}
 
@@ -363,7 +327,11 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 
 	msg := ""
 	for _, e := range entries {
-		msg += fmt.Sprintf("`%s`: Youtube channel name `@%s` posting to <#%s>\n", e.ID, e.ContentName, e.ChannelID)
+		c, err := e.getChannelContent()
+		if err != nil {
+			continue
+		}
+		msg += fmt.Sprintf("`%s`: Youtube channel name `@%s` posting to <#%s>\n", e.ID, c.Name, e.ChannelID)
 	}
 
 	for _, resultPage := range helpers.Pagify(msg, "\n") {
@@ -756,33 +724,10 @@ func (yt *YouTube) checkYoutubeFeeds() {
 }
 
 func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry {
-	// get content
-	c, ok := e.Content.(map[string]interface{})
-	if ok == false {
-		yt.logger().Error("contents type mismatch: " + e.ID)
+	c, err := e.getChannelContent()
+	if err != nil {
+		yt.logger().Error(err)
 		return e
-	}
-
-	// get content id
-	id, ok := c["content_id"].(string)
-	if ok == false {
-		yt.logger().Error("wrong content_id type, ID: " + e.ID)
-		return e
-	}
-
-	// get posted Videos
-	s := reflect.ValueOf(c["content_posted_videos"])
-	if s.Kind() != reflect.Slice {
-		yt.logger().Error("wrong content_posted_videos type: " + s.Kind().String() + ", ID: " + id)
-		return e
-	}
-
-	postedVideos := make([]string, s.Len())
-	for i := 0; i < s.Len(); i++ {
-		postedVideo, ok := s.Index(i).Interface().(string)
-		if ok {
-			postedVideos = append(postedVideos, postedVideo)
-		}
 	}
 
 	// set iso8601 time which will be used search query filter "published after"
@@ -792,7 +737,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 		Format("2006-01-02T15:04:05-0700")
 
 	// get updated feeds
-	feeds, err := yt.getChannelFeeds(id, publishedAfter)
+	feeds, err := yt.getChannelFeeds(c.ID, publishedAfter)
 	if err != nil {
 		yt.logger().Error("check channel feeds error: " + err.Error())
 		return e
@@ -812,7 +757,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 		videoId := feed.ContentDetails.Upload.VideoId
 
 		// check if the video is already posted
-		if yt.isPosted(videoId, postedVideos) {
+		if yt.isPosted(videoId, c.PostedVideos) {
 			alreadyPostedVideos = append(alreadyPostedVideos, videoId)
 			continue
 		}
@@ -834,9 +779,9 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 
 	if err == nil {
 		e.LastSuccessfulCheckTime = e.NextCheckTime
-		postedVideos = alreadyPostedVideos
+		c.PostedVideos = alreadyPostedVideos
 	}
-	c["content_posted_videos"] = append(postedVideos, newPostedVideos...)
+	c.PostedVideos = append(c.PostedVideos, newPostedVideos...)
 	e.Content = c
 
 	return e
@@ -864,7 +809,6 @@ func (yt *YouTube) initQuota() {
 	yt.quota.Lock()
 	defer yt.quota.Unlock()
 	defer func() {
-		yt.quota.entry.ContentType = "quota"
 		yt.quota.entry.Content = yt.quota.content
 
 		id, err := yt.createEntry(yt.quota.entry)
@@ -875,20 +819,24 @@ func (yt *YouTube) initQuota() {
 		}
 	}()
 
-	// get entry counts
+	// Set content type to quota.
+	yt.quota.entry.ContentType = "quota"
+
+	// Set entries count which will use in quota calculation.
+	// If failed to get entries count from db, then assume
+	// the server has about 200 entries(same with discord server count).
 	entries, err := yt.readEntries(map[string]interface{}{})
 	if err != nil {
-		yt.quota.count = 1000
+		yt.quota.count = 200
 	}
 	yt.quota.count = int64(len(entries))
 
-	// make default content
-	yt.quota.content = DB_Youtube_Content_Quota{
-		Daily:     dailyQuota,
-		Left:      dailyQuota,
-		ResetTime: yt.getQuotaResetTime().Unix(),
-	}
+	// fill default quota information
+	yt.quota.content.Daily = dailyQuota
+	yt.quota.content.Left = dailyQuota
+	yt.quota.content.ResetTime = yt.getQuotaResetTime().Unix()
 
+	// read quota entry from db
 	entries, err = yt.readEntries(map[string]interface{}{
 		"content_type": "quota",
 	})
@@ -897,38 +845,24 @@ func (yt *YouTube) initQuota() {
 		return
 	}
 
-	if len(entries) > 0 {
-		e := entries[0]
-		yt.deleteEntry(e.ID)
-
-		// get content
-		oldContent, ok := e.Content.(map[string]interface{})
-		if ok == false {
-			yt.logger().Error("contents type mismatch: " + e.ID)
-			return
-		}
-
-		resetTime := yt.getQuotaResetTime().Unix()
-		// JSON numbers unmarshaled to float64
-		oldResetTime, ok := oldContent["content_reset_time"].(float64)
-		if ok == false {
-			yt.logger().Error("wrong content_reset_time type, ID: " + e.ID)
-			return
-		}
-
-		if int64(oldResetTime) < resetTime {
-			return
-		}
-
-		// get left quota
-		left, ok := oldContent["content_left"].(float64)
-		if ok == false {
-			yt.logger().Error("wrong content_left type, ID: " + e.ID)
-			return
-		}
-
-		yt.quota.content.Left = int64(left)
+	if len(entries) < 1 {
+		return
 	}
+
+	for _, e := range entries {
+		yt.deleteEntry(e.ID)
+	}
+
+	oldQuota, err := entries[0].getQuotaContent()
+	if err != nil {
+		return
+	}
+
+	if yt.quota.content.ResetTime > oldQuota.ResetTime {
+		return
+	}
+
+	yt.quota.content.Left = oldQuota.Left
 }
 
 func (yt *YouTube) getQuotaResetTime() time.Time {
@@ -1029,4 +963,116 @@ func (yt *YouTube) updateCheckingInterval() {
 	yt.quota.Lock()
 	yt.quota.interval = yt.checkingTimeInterval()
 	yt.quota.Unlock()
+}
+
+type DB_Youtube_Entry struct {
+	// Common fields.
+	ID                      string `gorethink:"id,omitempty"`
+	ServerID                string `gorethink:"server_id"`
+	ChannelID               string `gorethink:"channel_id"`
+	NextCheckTime           int64  `gorethink:"next_check_time"`
+	LastSuccessfulCheckTime int64  `gorethink:"last_successful_check_time"`
+
+	// Contents specific data fields.
+	// Contents can be channel or video or quota.
+	ContentType string      `gorethink:"content_type"`
+	Content     interface{} `gorethink:"content"`
+}
+
+type DB_Youtube_Content_Channel struct {
+	ID           string   `gorethink:"content_channel_id"`
+	Name         string   `gorethink:"content_channel_name"`
+	PostedVideos []string `gorethink:"content_channel_posted_videos"`
+}
+
+type DB_Youtube_Content_Video struct {
+	ID                 string `gorethink:"content_video_id"`
+	ViewCountsPrevious uint64 `gorethink:"content_video_view_counts_previous"`
+	ViewCountsInterval uint64 `gorethink:"content_video_view_counts_interval"`
+	ViewCountsFinal    uint64 `gorethink:"content_video_view_counts_final"`
+}
+
+type DB_Youtube_Content_Quota struct {
+	Daily     int64 `gorethink:"content_quota_daily"`
+	Left      int64 `gorethink:"content_quota_left"`
+	ResetTime int64 `gorethink:"content_quota_reset_time"`
+}
+
+const youtubeDbTableName string = "youtube"
+
+func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, err error) {
+	if ye.ContentType != "channel" {
+		return c, fmt.Errorf("request content channel but the content type is %s", ye.ContentType)
+	}
+
+	// get content
+	m, ok := ye.Content.(map[string]interface{})
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: Content], [type: %s]", reflect.ValueOf(ye.Content).String())
+	}
+
+	// get channel id
+	id, ok := m["content_channel_id"].(string)
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: ID], [type: %s]", reflect.ValueOf(m["content_id"]).String())
+	}
+	c.ID = id
+
+	// get channel name
+	name, ok := m["content_channel_name"].(string)
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: Name], [type: %s]", reflect.ValueOf(m["content_name"]).String())
+	}
+	c.Name = name
+
+	// get posted Videos
+	s := reflect.ValueOf(m["content_channel_posted_videos"])
+	if s.Kind() != reflect.Slice {
+		return c, fmt.Errorf("type assertion failed. [field name: PostedVideo], [type: %s]", reflect.ValueOf(m["content_posted_videos"]).String())
+	}
+
+	c.PostedVideos = make([]string, s.Len())
+	for i := 0; i < s.Len(); i++ {
+		v, ok := s.Index(i).Interface().(string)
+		if ok {
+			c.PostedVideos = append(c.PostedVideos, v)
+		}
+	}
+
+	return
+}
+
+func (ye *DB_Youtube_Entry) getQuotaContent() (c DB_Youtube_Content_Quota, err error) {
+	if ye.ContentType != "quota" {
+		return c, fmt.Errorf("request content quota but the content type is %s", ye.ContentType)
+	}
+
+	// get content
+	m, ok := ye.Content.(map[string]interface{})
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: Content], [type: %s]", reflect.ValueOf(ye.Content).String())
+	}
+
+	// get daily quota
+	daily, ok := m["content_quota_daily"].(float64)
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: Daily], [type: %s]", reflect.ValueOf(m["content_id"]).String())
+	}
+	c.Daily = int64(daily)
+
+	// get left quota
+	left, ok := m["content_quota_left"].(float64)
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: Left], [type: %s]", reflect.ValueOf(m["content_name"]).String())
+	}
+	c.Left = int64(left)
+
+	// get reset time
+	rt, ok := m["content_quota_reset_time"].(float64)
+	if ok == false {
+		return c, fmt.Errorf("type assertion failed. [field name: ResetTime], [type: %s]", reflect.ValueOf(m["content_name"]).String())
+	}
+	c.ResetTime = int64(rt)
+
+	return
 }
