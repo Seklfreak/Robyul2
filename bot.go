@@ -19,7 +19,10 @@ import (
 	"github.com/getsentry/raven-go"
 )
 
-var didLaunch = false
+var (
+	didLaunch       = false
+	firstGameChange = true
+)
 
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 	if !didLaunch {
@@ -478,7 +481,11 @@ func changeGameInterval(session *discordgo.Session) {
 
 	var newStatus string
 	for {
-		switch randGen.Intn(2) {
+		randInt := randGen.Intn(2)
+		if firstGameChange {
+			randInt = 0
+		}
+		switch randInt {
 		case 0:
 			newStatus = fmt.Sprintf("on %d servers | robyul.chat | _help", len(session.State.Guilds))
 		case 1:
@@ -495,6 +502,8 @@ func changeGameInterval(session *discordgo.Session) {
 
 		err := session.UpdateStatus(0, newStatus)
 		helpers.RelaxLog(err)
+
+		firstGameChange = false
 
 		time.Sleep(1 * time.Hour)
 	}
