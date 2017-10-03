@@ -581,7 +581,7 @@ func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildRoles []*dis
 		for _, discordGuildRole := range guildRoles {
 			if discordRoleId == discordGuildRole.ID {
 				for _, assignableRole := range category.Roles {
-					if strings.ToLower(assignableRole.Name) == strings.ToLower(discordGuildRole.Name) {
+					if strings.ToLower(assignableRole.Name) == strings.ToLower(discordGuildRole.Name) || assignableRole.Name == discordGuildRole.ID {
 						rolesAssigned = append(rolesAssigned, assignableRole)
 					}
 				}
@@ -594,7 +594,7 @@ func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildRoles []*dis
 
 func (m *Bias) GetDiscordRole(role AssignableRole_Role, guild *discordgo.Guild) *discordgo.Role {
 	for _, discordRole := range guild.Roles {
-		if strings.ToLower(role.Name) == strings.ToLower(discordRole.Name) {
+		if strings.ToLower(role.Name) == strings.ToLower(discordRole.Name) || role.Name == discordRole.ID {
 			return discordRole
 		}
 	}
