@@ -391,6 +391,9 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Not Whitelisted Join Notification failed, Error: %s", err.Error()))
 			}
 		}
+
+		err = cache.GetSession().GuildLeave(guild.ID)
+		helpers.Relax(err)
 	}()
 }
 
