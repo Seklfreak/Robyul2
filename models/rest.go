@@ -82,6 +82,7 @@ type Rest_Ranking struct {
 
 type Rest_Ranking_Rank_Item struct {
 	User     Rest_User
+	GuildID  string
 	IsMember bool
 	EXP      int64
 	Level    int

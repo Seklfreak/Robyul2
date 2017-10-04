@@ -74,6 +74,7 @@ func NewRestServices() []*restful.WebService {
 
 	service.Route(service.GET("/{guild-id}").Filter(webkeyAuthenticate).To(GetRankings))
 	service.Route(service.GET("/user/{user-id}/{guild-id}").Filter(webkeyAuthenticate).To(GetUserRanking))
+	service.Route(service.GET("/user/{user-id}/all").Filter(webkeyAuthenticate).To(GetAllUserRanking))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -539,6 +540,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 				Level:    rankingItem.Level,
 				Ranking:  i,
 				IsMember: isMember,
+				GuildID:  guildID,
 			})
 		}
 		i += 1
@@ -601,7 +603,56 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 		Level:    rankingItem.Level,
 		Ranking:  rankingItem.Ranking,
 		IsMember: isMember,
+		GuildID:  guildID,
 	}
+
+	response.WriteEntity(result)
+}
+
+func GetAllUserRanking(request *restful.Request, response *restful.Response) {
+	userID := request.PathParameter("user-id")
+
+	var err error
+
+	var rankingItem plugins.Levels_Cache_Ranking_Item
+	cacheCodec := cache.GetRedisCacheCodec()
+
+	user, _ := helpers.GetUser(userID)
+	if user == nil || user.ID == "" {
+		response.WriteError(http.StatusNotFound, errors.New("User not found."))
+		return
+	}
+	userItem := models.Rest_User{
+		ID:            user.ID,
+		Username:      user.Username,
+		AvatarHash:    user.Avatar,
+		Discriminator: user.Discriminator,
+		Bot:           user.Bot,
+	}
+
+	result := make([]models.Rest_Ranking_Rank_Item, 0)
+
+	for _, guild := range append(cache.GetSession().State.Guilds, &discordgo.Guild{ID: "global", Name: "global"}) {
+		if guild.ID != "global" && !helpers.GetIsInGuild(guild.ID, userID) {
+			continue
+		}
+
+		rankingsKey := fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guild.ID, userID)
+		if err = cacheCodec.Get(rankingsKey, &rankingItem); err != nil {
+			continue
+		}
+
+		result = append(result, models.Rest_Ranking_Rank_Item{
+			User:     userItem,
+			GuildID:  guild.ID,
+			IsMember: true,
+			EXP:      rankingItem.EXP,
+			Level:    rankingItem.Level,
+			Ranking:  rankingItem.Ranking,
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool { return result[i].EXP > result[j].EXP })
 
 	response.WriteEntity(result)
 }

@@ -315,7 +315,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 	}
 	if subCom != "" || lastfmUsername != "" {
 		switch subCom {
-		case "set":
+		case "set", "register":
 			if len(args) >= 2 {
 				lastfmUsername = args[1]
 
