@@ -52,8 +52,8 @@ const (
 	dailyQuota    int64 = 1000000
 	activityQuota int64 = 5
 	searchQuota   int64 = 100
-	videosQuota   int64 = 5
-	channelsQuota int64 = 5
+	videosQuota   int64 = 7
+	channelsQuota int64 = 7
 )
 
 func (yt *YouTube) Commands() []string {
@@ -105,9 +105,23 @@ func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **disco
 		return yt.actionChannel
 	case "service":
 		return yt.actionSystem
+	case "quota":
+		return yt.actionQuota
 	default:
 		return yt.actionSearch
 	}
+}
+
+// DEBUG PURPOSE
+func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+	yt.quota.Lock()
+	defer yt.quota.Unlock()
+
+	msg := fmt.Sprintf("left time to reset: `%d`, left quota: `%d`, channel count: `%d`, time interval: `%d`",
+		yt.quota.content.ResetTime-time.Now().Unix(), yt.quota.content.Left, yt.quota.count, yt.quota.interval)
+	*out = yt.newMsg(msg)
+
+	return yt.actionFinish
 }
 
 func (yt *YouTube) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
@@ -450,6 +464,7 @@ func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) 
 
 // search returns search results with given searchListCall.
 func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
+	yt.quota.sub(searchQuota)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -721,6 +736,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	defer yt.RUnlock()
 
 	// DEBUG
+	yt.logger().Error("time left: ", yt.quota.content.ResetTime-time.Now().Unix())
 	yt.logger().Error("quota left: ", yt.quota.content.Left)
 	yt.logger().Error("entry count: ", yt.quota.count)
 	yt.logger().Error("checking time interval: ", yt.quota.interval)
@@ -959,8 +975,12 @@ func (yq *youtubeQuota) checkingTimeInterval() int64 {
 		return delta
 	}
 
-	// default interval(5sec) + (quota cost * checking entry count / available quota per seconds)
-	return defaultTimeInterval + (channelsQuota * yq.count / quotaPerSec)
+	calcTimeInterval := (channelsQuota * yq.count / quotaPerSec)
+	if calcTimeInterval < defaultTimeInterval {
+		return defaultTimeInterval
+	}
+
+	return calcTimeInterval
 }
 
 func (yq *youtubeQuota) incEntryCount() {
