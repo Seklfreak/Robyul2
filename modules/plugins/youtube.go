@@ -972,7 +972,12 @@ func (yq *youtubeQuota) checkingTimeInterval() int64 {
 
 	quotaPerSec := yq.content.Left / delta
 	if quotaPerSec < 1 {
-		return delta
+		// Adds 300 seconds for reducing "API limit exceed" error message.
+		//
+		// Just after reset time, youtube API server's quota isn't synchronized correctly for few minutes.
+		// It occurs some responses are OK, others are ERR(API limit exceed).
+		// Hence schedule to reset time + 300 seconds.
+		return delta + 300
 	}
 
 	calcTimeInterval := (channelsQuota * yq.count / quotaPerSec)
