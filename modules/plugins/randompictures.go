@@ -276,7 +276,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		}
 
 		initialMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
-		helpers.Relax(err)
+		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
 		postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
 		if err != nil || postedPic == false {
