@@ -49,11 +49,11 @@ const (
 	channelIdUrl   string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
 	channelUserUrl string = `^(https?\:\/\/)?(www\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 
-	dailyQuota    int64 = 1000000
-	activityQuota int64 = 5
-	searchQuota   int64 = 100
-	videosQuota   int64 = 7
-	channelsQuota int64 = 7
+	dailyQuotaLimit   int64 = 1000000
+	activityQuotaCost int64 = 5
+	searchQuotaCost   int64 = 100
+	videosQuotaCost   int64 = 7
+	channelsQuotaCost int64 = 7
 )
 
 func (yt *YouTube) Commands() []string {
@@ -464,7 +464,7 @@ func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) 
 
 // search returns search results with given searchListCall.
 func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
-	yt.quota.sub(searchQuota)
+	yt.quota.sub(searchQuotaCost)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -483,7 +483,7 @@ func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube
 		PublishedAfter(publishedAfter).
 		MaxResults(50)
 
-	yt.quota.sub(activityQuota)
+	yt.quota.sub(activityQuotaCost)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -508,7 +508,7 @@ func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
-	yt.quota.sub(videosQuota)
+	yt.quota.sub(videosQuotaCost)
 	call := yt.service.Videos.List("statistics, snippet").
 		Id(videoId).
 		MaxResults(1)
@@ -551,7 +551,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
-	yt.quota.sub(channelsQuota)
+	yt.quota.sub(channelsQuotaCost)
 	call := yt.service.Channels.List("statistics, snippet").
 		Id(channelId).
 		MaxResults(1)
@@ -874,8 +874,8 @@ func (yt *YouTube) initQuota() {
 	yt.quota.count = int64(len(entries))
 
 	// fill default quota information
-	yt.quota.content.Daily = dailyQuota
-	yt.quota.content.Left = dailyQuota
+	yt.quota.content.Daily = dailyQuotaLimit
+	yt.quota.content.Left = dailyQuotaLimit
 	yt.quota.content.ResetTime = yt.quota.calcResetTime().Unix()
 
 	// read quota entry from db
@@ -962,7 +962,7 @@ func (yq *youtubeQuota) checkingTimeInterval() int64 {
 
 	if now > yq.content.ResetTime {
 		yq.content.ResetTime = yq.calcResetTime().Unix()
-		yq.content.Left = dailyQuota
+		yq.content.Left = dailyQuotaLimit
 	}
 
 	delta := yq.content.ResetTime - now
@@ -980,7 +980,7 @@ func (yq *youtubeQuota) checkingTimeInterval() int64 {
 		return delta + 300
 	}
 
-	calcTimeInterval := (channelsQuota * yq.count / quotaPerSec)
+	calcTimeInterval := (channelsQuotaCost * yq.count / quotaPerSec)
 	if calcTimeInterval < defaultTimeInterval {
 		return defaultTimeInterval
 	}
