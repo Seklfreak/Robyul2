@@ -494,7 +494,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		var sinceStatusName, sinceStatusValue, lastMessageText string
-		if cache.HasElastic() {
+		if cache.HasElastic() && !helpers.GuildSettingsGetCached(currentGuild.ID).ChatlogDisabled {
 			queryString := "_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\""
 			termQuery := elastic.NewQueryStringQuery(queryString)
 			searchResult, err := cache.GetElastic().Search().
