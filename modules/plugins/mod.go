@@ -1607,7 +1607,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			var data map[string]string
 			if strings.Contains(content, "=") {
 				args := strings.Split(content, "|")
-				data = helpers.ParseKeyValueString(strings.TrimSpace(args[len(args)-1]))
+				if len(args) > 1 {
+					data = helpers.ParseKeyValueString(strings.TrimSpace(args[len(args)-1]))
+				}
 			}
 			if colourText, ok := data["color"]; ok {
 				colour = helpers.GetDiscordColorFromHex(colourText)
