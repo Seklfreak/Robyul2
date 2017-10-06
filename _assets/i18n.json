@@ -755,6 +755,7 @@
       "refreshed-polls": "Reaction Poll Cache successfully refreshed. <:blobgo:317034640181297163>"
     },
     "youtube": {
+      "not-found": "I couldn't find that video or channel.",
       "video-not-found": "I couldn't find that video.",
       "channel-not-found": "I couldn't find that channel.",
       "service-not-available": "Youtube service is not available right now, please contact the bot owner...",

@@ -24,8 +24,8 @@ import (
 type YouTube struct {
 	service          *youtube.Service
 	regexpSet        []*regexp.Regexp
-	feedsLoopRunning bool
 	quota            youtubeQuota
+	feedsLoopRunning bool
 
 	// 1) Every jobs which use youtube API calls, must hold read lock.
 	// 2) Change YouTube struct fields(except quota: quota has an own lock)
@@ -116,6 +116,11 @@ func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **disco
 func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	yt.quota.Lock()
 	defer yt.quota.Unlock()
+
+	if helpers.IsBotAdmin(in.Author.ID) == false {
+		*out = yt.newMsg("botadmin.no_permission")
+		return yt.actionFinish
+	}
 
 	msg := fmt.Sprintf("left time to reset: `%d`, left quota: `%d`, channel count: `%d`, time interval: `%d`",
 		yt.quota.content.ResetTime-time.Now().Unix(), yt.quota.content.Left, yt.quota.count, yt.quota.interval)
@@ -284,6 +289,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	// insert entry into the db
 	_, err = yt.createEntry(entry)
 	if err != nil {
+		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -308,6 +314,7 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 
 	n, err := yt.deleteEntry(args[2])
 	if err != nil {
+		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -341,6 +348,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 		"server_id":    ch.GuildID,
 	})
 	if err != nil {
+		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -354,6 +362,9 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 	for _, e := range entries {
 		c, err := e.getChannelContent()
 		if err != nil {
+			yt.logger().WithFields(logrus.Fields{
+				"id": e.ID,
+			}).Error(err)
 			continue
 		}
 		msg += fmt.Sprintf("`%s`: Youtube channel name `@%s` posting to <#%s>\n", e.ID, c.Name, e.ChannelID)
@@ -403,7 +414,7 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 	}
 
 	if item == nil {
-		*out = yt.newMsg("plugins.youtube.video-not-found")
+		*out = yt.newMsg("plugins.youtube.not-found")
 		return yt.actionFinish
 	}
 
@@ -765,7 +776,9 @@ func (yt *YouTube) checkYoutubeFeeds() {
 func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry {
 	c, err := e.getChannelContent()
 	if err != nil {
-		yt.logger().Error(err)
+		yt.logger().WithFields(logrus.Fields{
+			"id": e.ID,
+		}).Error(err)
 		return e
 	}
 
@@ -869,6 +882,7 @@ func (yt *YouTube) initQuota() {
 	// the server has about 200 entries(same with discord server count).
 	entries, err := yt.readEntries(map[string]interface{}{})
 	if err != nil {
+		yt.logger().Error(err)
 		yt.quota.count = 200
 	}
 	yt.quota.count = int64(len(entries))
@@ -897,6 +911,9 @@ func (yt *YouTube) initQuota() {
 
 	oldQuota, err := entries[0].getQuotaContent()
 	if err != nil {
+		yt.logger().WithFields(logrus.Fields{
+			"id": entries[0].ID,
+		}).Error(err)
 		return
 	}
 
@@ -935,6 +952,8 @@ func (yq *youtubeQuota) calcResetTime() time.Time {
 	pacific, err := time.LoadLocation("America/Los_Angeles")
 	if err == nil {
 		now = now.In(pacific)
+	} else {
+		cache.GetLogger().Error(err)
 	}
 
 	y, m, d := now.Date()
