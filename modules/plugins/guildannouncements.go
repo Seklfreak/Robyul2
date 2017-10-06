@@ -145,8 +145,10 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 
 		guild, err := helpers.GetGuild(member.GuildID)
 		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			return
+			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code == discordgo.ErrCodeMissingAccess {
+				helpers.RelaxLog(err)
+				return
+			}
 		}
 		for _, guildAnnouncementSetting := range m.GetAnnouncementSettingsFor("guildid", member.GuildID) {
 			if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
