@@ -255,9 +255,11 @@ func main() {
 		"log_error":      helpers.LogMachineryError,
 	})
 	cache.SetMachineryServer(machineryServer)
+	worker := machineryServer.NewWorker("robyul_worker_1", 1)
 	go func() {
-		worker := machineryServer.NewWorker("robyul_worker_1", 1)
+		cache.AddMachineryActiveWorker(worker)
 		err = worker.Launch()
+		cache.RemoveMachineryActiveWorker(worker)
 		if err != nil {
 			if !strings.Contains(err.Error(), "Signal received: interrupt") {
 				raven.CaptureErrorAndWait(err, nil)

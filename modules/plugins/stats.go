@@ -172,6 +172,47 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		uptime := time.Now().Sub(time.Unix(bootTime, 0)).String()
 
+		var activeWorkersText string
+		for _, worker := range cache.GetMachineryActiveWorkers() {
+			activeWorkersText += worker.ConsumerTag + " (" + strconv.Itoa(worker.Concurrency) + ")"
+		}
+		if activeWorkersText == "" {
+			activeWorkersText = "N/A"
+		}
+
+		var redisVersion, redisUptimeSecondsText, redisConnectedClients, redisUsedMemoryHuman string
+
+		redisInfoText, err := cache.GetRedisClient().Info().Result()
+		helpers.Relax(err)
+		for _, redisInfoLine := range strings.Split(redisInfoText, "\r\n") {
+			args := strings.Split(redisInfoLine, ":")
+			if len(args) < 2 {
+				continue
+			}
+
+			switch args[0] {
+			case "redis_version":
+				redisVersion = args[1]
+			case "uptime_in_seconds":
+				redisUptimeSecondsText = args[1]
+			case "connected_clients":
+				redisConnectedClients = args[1]
+			case "used_memory_human":
+				redisUsedMemoryHuman = args[1]
+			}
+		}
+
+		redisUptimeSeconds, err := strconv.Atoi(redisUptimeSecondsText)
+		helpers.Relax(err)
+
+		redisLaunched := time.Now().Add(time.Duration(redisUptimeSeconds) * time.Second * -1)
+		redisUptime := time.Now().Sub(redisLaunched).String()
+
+		// TODO: RethinkDB stats
+
+		pendingTasks, err := cache.GetMachineryServer().GetBroker().GetPendingTasks("robyul_tasks")
+		helpers.Relax(err)
+
 		session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{
@@ -183,7 +224,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			},
 			Fields: []*discordgo.MessageEmbedField{
 				// Build
-				{Name: "Build Time", Value: version.BUILD_TIME, Inline: false},
+				{Name: "Build Time", Value: version.BUILD_TIME, Inline: true},
 				{Name: "Build System", Value: version.BUILD_USER + "@" + version.BUILD_HOST, Inline: false},
 
 				// System
@@ -192,7 +233,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "GO Version", Value: runtime.Version(), Inline: true},
 
 				// Bot
-				{Name: "Used RAM", Value: humanize.Bytes(ram.Alloc) + "/" + humanize.Bytes(ram.Sys), Inline: true},
+				{Name: "Heap /  Sys RAM", Value: humanize.Bytes(ram.Alloc) + "/" + humanize.Bytes(ram.Sys), Inline: true},
 				{Name: "Collected garbage", Value: humanize.Bytes(ram.TotalAlloc), Inline: true},
 				{Name: "Running coroutines", Value: strconv.Itoa(runtime.NumGoroutine()), Inline: true},
 
@@ -201,8 +242,15 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Watching channels", Value: strconv.Itoa(channels), Inline: true},
 				{Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
 
+				// Machinery
+				{Name: "Pending / Delayed Tasks", Value: strconv.Itoa(len(pendingTasks)) + " / " + strconv.Itoa(int(metrics.MachineryDelayedTasksCount.Value())), Inline: true},
+				{Name: "Active Workers", Value: activeWorkersText, Inline: false},
+
+				// Redis
+				{Name: "Redis", Value: "v" + redisVersion + " Uptime: " + redisUptime + " Clients: " + redisConnectedClients + " Memory: " + redisUsedMemoryHuman, Inline: false},
+
 				// Link
-				{Name: "Want more stats and awesome graphs?", Value: "Visit my [datadog dashboard](https://robyul.chat/statistics)", Inline: false},
+				{Name: "Want more stats and awesome graphs?", Value: "Visit my [stats dashboard](https://robyul.chat/statistics)", Inline: false},
 			},
 		})
 	case "serverinfo":

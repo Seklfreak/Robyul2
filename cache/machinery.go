@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	machineryRedisClient *redis.Client
-	machineryServer      *machinery.Server
-	machineryServerMutex sync.RWMutex
+	machineryRedisClient   *redis.Client
+	machineryServer        *machinery.Server
+	machineryServerMutex   sync.RWMutex
+	machineryActiveWorkers []*machinery.Worker
 )
 
 func SetMachineryServer(s *machinery.Server) {
@@ -47,4 +48,24 @@ func GetMachineryRedisClient() *redis.Client {
 	}
 
 	return machineryRedisClient
+}
+
+func AddMachineryActiveWorker(worker *machinery.Worker) {
+	machineryActiveWorkers = append(machineryActiveWorkers, worker)
+}
+
+func RemoveMachineryActiveWorker(worker *machinery.Worker) {
+	newWorkers := make([]*machinery.Worker, 0)
+	for _, activeWorker := range machineryActiveWorkers {
+		if activeWorker.ConsumerTag == worker.ConsumerTag {
+			continue
+		}
+
+		newWorkers = append(newWorkers, activeWorker)
+	}
+	machineryActiveWorkers = newWorkers
+}
+
+func GetMachineryActiveWorkers() (workers []*machinery.Worker) {
+	return machineryActiveWorkers
 }
