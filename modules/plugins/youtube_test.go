@@ -54,3 +54,77 @@ func TestVerifyEmbedFields(t *testing.T) {
 		t.Fatalf("youtube.verifyEmbedFields() failed to trim invalid field")
 	}
 }
+
+func TestGetChannelContent(t *testing.T) {
+	e := DB_Youtube_Entry{}
+
+	// Wrong content type checking
+	e.ContentType = "wrong type"
+	_, err := e.getChannelContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getChannelContent() failed to ContentType string checking")
+	}
+	e.ContentType = "channel"
+
+	e.Content = "string"
+	_, err = e.getChannelContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getChannelContent() allows not map[string]interface{} type of Content")
+	}
+
+	// Empty fields checking
+	c := make(map[string]interface{})
+	e.Content = c
+	_, err = e.getChannelContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getChannelContent() allows empty fields")
+	}
+
+	// Wrong content fields type checking
+	c["content_channel_id"] = 100
+	c["content_channel_name"] = 100
+	c["content_channel_posted_videos"] = 100
+	e.Content = c
+
+	_, err = e.getChannelContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getChannelContent() allows wrong type of content fields")
+	}
+}
+
+func TestGetQuotaContent(t *testing.T) {
+	e := DB_Youtube_Entry{}
+
+	// Wrong content type checking
+	e.ContentType = "wrong type"
+	_, err := e.getQuotaContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getQuotaContent() failed to ContentType string checking")
+	}
+	e.ContentType = "quota"
+
+	e.Content = "string"
+	_, err = e.getQuotaContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getQuotaContent() allows not map[string]interface{} type of Content")
+	}
+
+	// Empty fields checking
+	c := make(map[string]interface{})
+	e.Content = c
+	_, err = e.getQuotaContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getQuotaContent() allows empty fields")
+	}
+
+	// Wrong content fields type checking
+	c["content_quota_daily"] = "wrong type"
+	c["content_quota_left"] = "wrong type"
+	c["content_quota_reset_time"] = "wrong type"
+	e.Content = c
+
+	_, err = e.getQuotaContent()
+	if err == nil {
+		t.Fatalf("DB_Youtube_Entry.getQuotaContent() allows wrong type of content fields")
+	}
+}

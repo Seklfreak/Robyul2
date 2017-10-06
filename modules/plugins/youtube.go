@@ -1072,21 +1072,36 @@ func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, e
 	}
 
 	// get channel id
-	id, ok := m["content_channel_id"].(string)
+	contentChannelId, ok := m["content_channel_id"]
+	if ok == false {
+		return c, fmt.Errorf("field not exist. [field name: ID]")
+	}
+
+	id, ok := contentChannelId.(string)
 	if ok == false {
 		return c, fmt.Errorf("type assertion failed. [field name: ID], [type: %s]", reflect.ValueOf(m["content_id"]).String())
 	}
 	c.ID = id
 
 	// get channel name
-	name, ok := m["content_channel_name"].(string)
+	contentChannelName, ok := m["content_channel_name"]
+	if ok == false {
+		return c, fmt.Errorf("field not exist. [field name: Name]")
+	}
+
+	name, ok := contentChannelName.(string)
 	if ok == false {
 		return c, fmt.Errorf("type assertion failed. [field name: Name], [type: %s]", reflect.ValueOf(m["content_name"]).String())
 	}
 	c.Name = name
 
 	// get posted Videos
-	s := reflect.ValueOf(m["content_channel_posted_videos"])
+	contentChannelPostedVideos, ok := m["content_channel_posted_videos"]
+	if ok == false {
+		return c, fmt.Errorf("field not exist. [field name: PostedVideos]")
+	}
+
+	s := reflect.ValueOf(contentChannelPostedVideos)
 	if s.Kind() != reflect.Slice {
 		return c, fmt.Errorf("type assertion failed. [field name: PostedVideo], [type: %s]", reflect.ValueOf(m["content_posted_videos"]).String())
 	}
@@ -1114,21 +1129,36 @@ func (ye *DB_Youtube_Entry) getQuotaContent() (c DB_Youtube_Content_Quota, err e
 	}
 
 	// get daily quota
-	daily, ok := m["content_quota_daily"].(float64)
+	contentQuotaDaily, ok := m["content_quota_daily"]
+	if ok == false {
+		return c, fmt.Errorf("field not exist. [field name: Daily]")
+	}
+
+	daily, ok := contentQuotaDaily.(float64)
 	if ok == false {
 		return c, fmt.Errorf("type assertion failed. [field name: Daily], [type: %s]", reflect.ValueOf(m["content_id"]).String())
 	}
 	c.Daily = int64(daily)
 
 	// get left quota
-	left, ok := m["content_quota_left"].(float64)
+	contentQuotaLeft, ok := m["content_quota_left"]
+	if ok == false {
+		return c, fmt.Errorf("field not exist. [field name: Left]")
+	}
+
+	left, ok := contentQuotaLeft.(float64)
 	if ok == false {
 		return c, fmt.Errorf("type assertion failed. [field name: Left], [type: %s]", reflect.ValueOf(m["content_name"]).String())
 	}
 	c.Left = int64(left)
 
 	// get reset time
-	rt, ok := m["content_quota_reset_time"].(float64)
+	contentQuotaResetTime, ok := m["content_quota_reset_time"]
+	if ok == false {
+		return c, fmt.Errorf("field not exist. [field name: ResetTime]")
+	}
+
+	rt, ok := contentQuotaResetTime.(float64)
 	if ok == false {
 		return c, fmt.Errorf("type assertion failed. [field name: ResetTime], [type: %s]", reflect.ValueOf(m["content_name"]).String())
 	}
