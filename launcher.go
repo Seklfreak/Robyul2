@@ -11,6 +11,8 @@ import (
 
 	"fmt"
 
+	"strings"
+
 	"github.com/RichardKnop/machinery/v1"
 	marchineryConfig "github.com/RichardKnop/machinery/v1/config"
 	marchineryLog "github.com/RichardKnop/machinery/v1/log"
@@ -257,8 +259,10 @@ func main() {
 		worker := machineryServer.NewWorker("robyul_worker_1", 1)
 		err = worker.Launch()
 		if err != nil {
-			raven.CaptureErrorAndWait(err, nil)
-			panic(err)
+			if !strings.Contains(err.Error(), "Signal received: interrupt") {
+				raven.CaptureErrorAndWait(err, nil)
+				panic(err)
+			}
 		}
 	}()
 	log.WithField("module", "launcher").Info("started machinery worker robyul_worker_1 with concurrency 1")
