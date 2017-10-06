@@ -4,6 +4,9 @@ import (
 	"net/url"
 	"strconv"
 
+	"strings"
+
+	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
@@ -31,13 +34,17 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 
 	endpoint := "http://api.urbandictionary.com/v0/define?term=" + url.QueryEscape(content)
 
-	json := helpers.GetJSON(endpoint)
+	result, err := helpers.NetGetUAWithError(endpoint, helpers.DEFAULT_UA)
+	helpers.Relax(err)
+	json, err := gabs.ParseJSON(result)
+	helpers.Relax(err)
 
-	res, e := json.Path("list").Children()
-	helpers.Relax(e)
+	res, err := json.Path("list").Children()
+	helpers.Relax(err)
 
 	if len(res) == 0 {
-		session.ChannelMessageSend(msg.ChannelID, "No results <:blobneutral:317029459720929281>")
+		_, err = session.ChannelMessageSend(msg.ChannelID, "No results <:blobneutral:317029459720929281>")
+		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
 
@@ -51,10 +58,16 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 	for _, child := range children {
 		tags += child.Data().(string) + ", "
 	}
+	tags = strings.TrimRight(tags, ", ")
 
 	description := object["definition"].Data().(string)
-	if len(description) > 2000 {
-		description = description[:1996] + " ..."
+	if len(description) > 1000 {
+		description = description[:998] + " …"
+	}
+
+	example := object["example"].Data().(string)
+	if len(example) > 250 {
+		example = example[:248] + " …"
 	}
 
 	definitionEmbed := &discordgo.MessageEmbed{
@@ -68,8 +81,8 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 		},
 	}
 
-	if object["example"].Data().(string) != "" {
-		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Example(s)", Value: object["example"].Data().(string), Inline: false})
+	if example != "" {
+		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Example(s)", Value: example, Inline: false})
 	}
 	if tags != "" {
 		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Tags", Value: tags, Inline: false})
@@ -83,6 +96,6 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 		})
 	}
 
-	_, err := session.ChannelMessageSendEmbed(msg.ChannelID, definitionEmbed)
+	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, definitionEmbed)
 	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 }
