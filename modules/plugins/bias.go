@@ -315,7 +315,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
 						newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
-						helpers.Relax(err)
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						// Delete messages after ten seconds
 						time.Sleep(10 * time.Second)
 						session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
