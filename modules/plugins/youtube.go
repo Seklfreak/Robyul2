@@ -70,7 +70,7 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 
 	yt.service = nil
 
-	yt.initQuota()
+	yt.quota.Init(yt)
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
 	yt.newYoutubeService()
 	yt.runYoutubeFeedsLoop()
@@ -112,28 +112,31 @@ func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **disco
 	}
 }
 
-// DEBUG PURPOSE
-func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	yt.quota.Lock()
-	defer yt.quota.Unlock()
-
-	if helpers.IsBotAdmin(in.Author.ID) == false {
-		*out = yt.newMsg("botadmin.no_permission")
-		return yt.actionFinish
-	}
-
-	msg := fmt.Sprintf("left time to reset: `%d`, left quota: `%d`, channel count: `%d`, time interval: `%d`",
-		yt.quota.content.ResetTime-time.Now().Unix(), yt.quota.content.Left, yt.quota.count, yt.quota.interval)
-	*out = yt.newMsg(msg)
-
-	return yt.actionFinish
-}
-
 func (yt *YouTube) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil
+}
+
+// DEBUG PURPOSE
+func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+	if helpers.IsBotAdmin(in.Author.ID) == false {
+		*out = yt.newMsg("botadmin.no_permission")
+		return yt.actionFinish
+	}
+
+	c := yt.quota.GetContent()
+
+	msg := fmt.Sprintf("left time to reset: `%d`, left quota: `%d`, channel count: `%d`, time interval: `%d`",
+		c.ResetTime-time.Now().Unix(),
+		c.Left,
+		yt.quota.GetCount(),
+		yt.quota.GetInterval())
+
+	*out = yt.newMsg(msg)
+
+	return yt.actionFinish
 }
 
 // _yt video <search by keywords...>
@@ -294,7 +297,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		return yt.actionFinish
 	}
 
-	yt.quota.incEntryCount()
+	yt.quota.IncEntryCount()
 
 	*out = yt.newMsg("Added youtube channel <" + yc.Snippet.ChannelTitle + "> to the discord channel " + dc.ID)
 	return yt.actionFinish
@@ -324,7 +327,7 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 		return yt.actionFinish
 	}
 
-	yt.quota.decEntryCount()
+	yt.quota.DecEntryCount()
 
 	*out = yt.newMsg("Delete channel, ID: " + args[2])
 	return yt.actionFinish
@@ -475,7 +478,7 @@ func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) 
 
 // search returns search results with given searchListCall.
 func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
-	yt.quota.sub(searchQuotaCost)
+	yt.quota.Sub(searchQuotaCost)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -494,7 +497,7 @@ func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube
 		PublishedAfter(publishedAfter).
 		MaxResults(50)
 
-	yt.quota.sub(activityQuotaCost)
+	yt.quota.Sub(activityQuotaCost)
 	response, err := call.Do()
 	if err != nil {
 		return nil, err
@@ -519,7 +522,7 @@ func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
-	yt.quota.sub(videosQuotaCost)
+	yt.quota.Sub(videosQuotaCost)
 	call := yt.service.Videos.List("statistics, snippet").
 		Id(videoId).
 		MaxResults(1)
@@ -562,7 +565,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
-	yt.quota.sub(channelsQuotaCost)
+	yt.quota.Sub(channelsQuotaCost)
 	call := yt.service.Channels.List("statistics, snippet").
 		Id(channelId).
 		MaxResults(1)
@@ -733,10 +736,8 @@ func (yt *YouTube) youtubeFeedsLoop() {
 	}()
 
 	for ; ; time.Sleep(10 * time.Second) {
-		yt.quota.updateCheckingInterval()
-		if err := yt.updateQuota(); err != nil {
-			yt.logger().Error(err)
-		}
+		err := yt.quota.UpdateCheckingInterval()
+		helpers.Relax(err)
 
 		yt.checkYoutubeFeeds()
 	}
@@ -841,7 +842,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 
 func (yt *YouTube) setNextCheckTime(e DB_Youtube_Entry) DB_Youtube_Entry {
 	e.NextCheckTime = time.Now().
-		Add(time.Duration(yt.quota.interval) * time.Second).
+		Add(time.Duration(yt.quota.GetInterval()) * time.Second).
 		Unix()
 
 	return e
@@ -857,90 +858,162 @@ func (yt *YouTube) isPosted(id string, postedIds []string) bool {
 }
 
 type youtubeQuota struct {
+	yt       *YouTube // For db call
 	entry    DB_Youtube_Entry
 	content  DB_Youtube_Content_Quota
 	count    int64
 	interval int64
+
 	sync.Mutex
 }
 
-func (yt *YouTube) initQuota() {
-	yt.quota.Lock()
-	defer yt.quota.Unlock()
-	defer func() {
-		if err := yt.createQuota(); err != nil {
-			yt.logger().Error(err)
-		}
-	}()
+func (yq *youtubeQuota) Init(yt *YouTube) {
+	yq.Lock()
+	defer yq.Unlock()
 
-	// Set content type to quota.
-	yt.quota.entry.ContentType = "quota"
+	yq.yt = yt
+	yq.count = yq.readEntryCount()
 
-	// Set entries count which will use in quota calculation.
-	// If failed to get entries count from db, then assume
-	// the server has about 200 entries(same with discord server count).
-	entries, err := yt.readEntries(map[string]interface{}{})
-	if err != nil {
-		yt.logger().Error(err)
-		yt.quota.count = 200
+	yq.content.Daily = dailyQuotaLimit
+	yq.content.Left = dailyQuotaLimit
+	yq.content.ResetTime = yq.calcResetTime().Unix()
+
+	yq.entry.ContentType = "quota"
+
+	oldQuota := yq.read()
+	if yq.content.ResetTime <= oldQuota.ResetTime {
+		yq.content.Left = oldQuota.Left
 	}
-	yt.quota.count = int64(len(entries))
 
-	// fill default quota information
-	yt.quota.content.Daily = dailyQuotaLimit
-	yt.quota.content.Left = dailyQuotaLimit
-	yt.quota.content.ResetTime = yt.quota.calcResetTime().Unix()
+	yq.entry.Content = yq.content
+	yq.create()
+}
 
-	// read quota entry from db
-	entries, err = yt.readEntries(map[string]interface{}{
+func (yq *youtubeQuota) GetInterval() int64 {
+	yq.Lock()
+	defer yq.Unlock()
+
+	return yq.interval
+}
+
+func (yq *youtubeQuota) GetCount() int64 {
+	yq.Lock()
+	defer yq.Unlock()
+
+	return yq.count
+}
+
+func (yq *youtubeQuota) GetContent() DB_Youtube_Content_Quota {
+	yq.Lock()
+	defer yq.Unlock()
+
+	return yq.content
+}
+
+func (yq *youtubeQuota) Sub(i int64) int64 {
+	yq.Lock()
+	defer yq.Unlock()
+
+	if yq.content.Left < i {
+		return -1
+	}
+
+	yq.content.Left -= i
+	return yq.content.Left
+}
+
+func (yq *youtubeQuota) IncEntryCount() {
+	yq.Lock()
+	defer yq.Unlock()
+
+	yq.count++
+}
+
+func (yq *youtubeQuota) DecEntryCount() {
+	yq.Lock()
+	defer yq.Unlock()
+
+	if yq.count > 0 {
+		yq.count--
+	}
+}
+
+func (yq *youtubeQuota) UpdateCheckingInterval() error {
+	yq.Lock()
+	defer yq.Unlock()
+
+	yq.interval = yq.calcCheckingTimeInterval()
+	return yq.update()
+}
+
+// Set entries count which will use in quota calculation.
+// If failed to get entries count from db, then assume
+// Robyul has about 200 entries(same with discord server count).
+func (yq *youtubeQuota) readEntryCount() int64 {
+	if yq.yt == nil {
+		return 200
+	}
+
+	entries, err := yq.yt.readEntries(map[string]interface{}{})
+	if err != nil {
+		yq.yt.logger().Error(err)
+		return 200
+	}
+	return int64(len(entries))
+}
+
+// readOldQuota reads previous quota information from database.
+// If failed, return zero filled quota.
+func (yq *youtubeQuota) read() DB_Youtube_Content_Quota {
+	q := DB_Youtube_Content_Quota{
+		Daily:     0,
+		Left:      0,
+		ResetTime: 0,
+	}
+
+	entries, err := yq.yt.readEntries(map[string]interface{}{
 		"content_type": "quota",
 	})
 	if err != nil {
-		yt.logger().Error(err)
-		return
+		yq.yt.logger().Error(err)
+		return q
 	}
 
 	if len(entries) < 1 {
-		return
+		return q
 	}
 
 	for _, e := range entries {
-		yt.deleteEntry(e.ID)
+		yq.yt.deleteEntry(e.ID)
 	}
 
 	oldQuota, err := entries[0].getQuotaContent()
 	if err != nil {
-		yt.logger().WithFields(logrus.Fields{
+		yq.yt.logger().WithFields(logrus.Fields{
 			"id": entries[0].ID,
 		}).Error(err)
-		return
+		return q
 	}
 
-	if yt.quota.content.ResetTime > oldQuota.ResetTime {
-		return
-	}
-
-	yt.quota.content.Left = oldQuota.Left
+	return oldQuota
 }
 
-func (yt *YouTube) updateQuota() error {
-	if yt.quota.entry.ID == "" {
+func (yq *youtubeQuota) create() {
+	id, err := yq.yt.createEntry(yq.entry)
+	if err != nil {
+		yq.yt.logger().Error(err)
+		return
+	}
+	yq.entry.ID = id
+}
+
+func (yq *youtubeQuota) update() error {
+	if yq.entry.ID == "" {
 		return fmt.Errorf("no quota entry id")
 	}
 
-	yt.quota.entry.Content = yt.quota.content
-	return yt.updateEntry(yt.quota.entry)
-}
-
-func (yt *YouTube) createQuota() error {
-	yt.quota.entry.Content = yt.quota.content
-
-	id, err := yt.createEntry(yt.quota.entry)
-	if err == nil {
-		yt.quota.entry.ID = id
-	}
-
-	return err
+	yq.entry.Content = yq.content
+	return yq.yt.updateEntry(yq.entry)
 }
 
 func (yq *youtubeQuota) calcResetTime() time.Time {
@@ -961,19 +1034,7 @@ func (yq *youtubeQuota) calcResetTime() time.Time {
 	return resetTime.In(localZone)
 }
 
-func (yq *youtubeQuota) sub(i int64) int64 {
-	yq.Lock()
-	defer yq.Unlock()
-
-	if yq.content.Left < i {
-		return -1
-	}
-
-	yq.content.Left -= i
-	return yq.content.Left
-}
-
-func (yq *youtubeQuota) checkingTimeInterval() int64 {
+func (yq *youtubeQuota) calcCheckingTimeInterval() int64 {
 	defaultTimeInterval := int64(5)
 
 	now := time.Now().Unix()
@@ -1004,29 +1065,6 @@ func (yq *youtubeQuota) checkingTimeInterval() int64 {
 	}
 
 	return calcTimeInterval
-}
-
-func (yq *youtubeQuota) incEntryCount() {
-	yq.Lock()
-	defer yq.Unlock()
-
-	yq.count++
-}
-
-func (yq *youtubeQuota) decEntryCount() {
-	yq.Lock()
-	defer yq.Unlock()
-
-	if yq.count > 0 {
-		yq.count--
-	}
-}
-
-func (yq *youtubeQuota) updateCheckingInterval() {
-	yq.Lock()
-	defer yq.Unlock()
-
-	yq.interval = yq.checkingTimeInterval()
 }
 
 type DB_Youtube_Entry struct {
