@@ -481,6 +481,7 @@ func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult
 	yt.quota.Sub(searchQuotaCost)
 	response, err := call.Do()
 	if err != nil {
+		err = yt.handleGoogleAPIError(err)
 		return nil, err
 	}
 
@@ -500,6 +501,7 @@ func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube
 	yt.quota.Sub(activityQuotaCost)
 	response, err := call.Do()
 	if err != nil {
+		err = yt.handleGoogleAPIError(err)
 		return nil, err
 	}
 
@@ -530,6 +532,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 	response, err := call.Do()
 	if err != nil {
 		yt.logger().Error(err)
+		err = yt.handleGoogleAPIError(err)
 		return yt.newMsg(err.Error())
 	}
 
@@ -573,6 +576,7 @@ func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend
 	response, err := call.Do()
 	if err != nil {
 		yt.logger().Error(err)
+		err = yt.handleGoogleAPIError(err)
 		return yt.newMsg(err.Error())
 	}
 
@@ -857,6 +861,24 @@ func (yt *YouTube) isPosted(id string, postedIds []string) bool {
 	return false
 }
 
+func (yt *YouTube) handleGoogleAPIError(err error) error {
+	var errCode int
+	var errMsg string
+	_, scanErr := fmt.Sscanf(err.Error(), "googleapi: Error %d: %s", &errCode, &errMsg)
+	if scanErr != nil {
+		return err
+	}
+
+	// Handle google API error by code
+	switch errCode {
+	case 403:
+		yt.quota.DailyLimitExceeded()
+		return fmt.Errorf("plugins.youtube.daily-limit-exceeded")
+	default:
+		return err
+	}
+}
+
 type youtubeQuota struct {
 	yt       *YouTube // For db call
 	entry    DB_Youtube_Entry
@@ -945,6 +967,13 @@ func (yq *youtubeQuota) UpdateCheckingInterval() error {
 
 	yq.interval = yq.calcCheckingTimeInterval()
 	return yq.update()
+}
+
+func (yq *youtubeQuota) DailyLimitExceeded() {
+	yq.Lock()
+	defer yq.Unlock()
+
+	yq.content.Left = 0
 }
 
 // Set entries count which will use in quota calculation.
