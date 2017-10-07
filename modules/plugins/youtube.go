@@ -146,6 +146,7 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 		return yt.actionFinish
 	}
 
+	/* TODO:
 	switch args[1] {
 	case "add":
 		return yt.actionAddVideo
@@ -154,6 +155,7 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 	case "list":
 		return yt.actionListVideo
 	}
+	*/
 
 	item, err := yt.searchQuerySingle(args[1:], "video")
 	if err != nil {
@@ -750,12 +752,6 @@ func (yt *YouTube) youtubeFeedsLoop() {
 func (yt *YouTube) checkYoutubeFeeds() {
 	yt.RLock()
 	defer yt.RUnlock()
-
-	// DEBUG
-	yt.logger().Error("time left: ", yt.quota.content.ResetTime-time.Now().Unix())
-	yt.logger().Error("quota left: ", yt.quota.content.Left)
-	yt.logger().Error("entry count: ", yt.quota.count)
-	yt.logger().Error("checking time interval: ", yt.quota.interval)
 
 	t := time.Now().Unix()
 	entries, err := yt.readEntries(rethink.Row.Field("next_check_time").Le(t))
