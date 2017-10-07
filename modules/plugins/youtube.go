@@ -299,7 +299,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 
 	yt.quota.IncEntryCount()
 
-	*out = yt.newMsg("Added youtube channel <" + yc.Snippet.ChannelTitle + "> to the discord channel " + dc.ID)
+	*out = yt.newMsg("Added youtube channel `" + yc.Snippet.ChannelTitle + "` to the discord channel <#" + dc.ID + ">")
 	return yt.actionFinish
 }
 
