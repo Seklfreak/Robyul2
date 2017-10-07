@@ -70,7 +70,6 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 
 	yt.service = nil
 
-	yt.quota.Init(yt)
 	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
 	yt.newYoutubeService()
 	yt.runYoutubeFeedsLoop()
@@ -263,7 +262,6 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		return yt.actionFinish
 	}
 
-	// fill content with default timestamp(channel published date)
 	content := DB_Youtube_Content_Channel{
 		ID:   yc.Id.ChannelId,
 		Name: yc.Snippet.ChannelTitle,
@@ -741,6 +739,10 @@ func (yt *YouTube) youtubeFeedsLoop() {
 		}()
 	}()
 
+	if err := yt.quota.Init(yt); err != nil {
+		helpers.Relax(err)
+	}
+
 	for ; ; time.Sleep(10 * time.Second) {
 		err := yt.quota.UpdateCheckingInterval()
 		helpers.Relax(err)
@@ -885,18 +887,24 @@ type youtubeQuota struct {
 	sync.Mutex
 }
 
-func (yq *youtubeQuota) Init(yt *YouTube) {
+func (yq *youtubeQuota) Init(yt *YouTube) (err error) {
 	yq.Lock()
 	defer yq.Unlock()
 
 	yq.yt = yt
-	yq.count = yq.readEntryCount()
+	if yq.count, err = yq.readEntryCount(); err != nil {
+		return
+	}
 
 	yq.content.Daily = dailyQuotaLimit
 	yq.content.Left = dailyQuotaLimit
 	yq.content.ResetTime = yq.calcResetTime().Unix()
 
-	oldQuota := yq.read()
+	oldQuota, err := yq.read()
+	if err != nil {
+		return err
+	}
+
 	if yq.content.ResetTime <= oldQuota.ResetTime {
 		yq.content.Left = oldQuota.Left
 	}
@@ -905,7 +913,7 @@ func (yq *youtubeQuota) Init(yt *YouTube) {
 		ContentType: "quota",
 		Content:     yq.content,
 	}
-	yq.create()
+	return yq.create()
 }
 
 func (yq *youtubeQuota) GetInterval() int64 {
@@ -973,24 +981,17 @@ func (yq *youtubeQuota) DailyLimitExceeded() {
 }
 
 // Set entries count which will use in quota calculation.
-// If failed to get entries count from db, then assume
-// Robyul has about 200 entries(same with discord server count).
-func (yq *youtubeQuota) readEntryCount() int64 {
-	if yq.yt == nil {
-		return 200
-	}
-
+func (yq *youtubeQuota) readEntryCount() (int64, error) {
 	entries, err := yq.yt.readEntries(map[string]interface{}{})
 	if err != nil {
-		yq.yt.logger().Error(err)
-		return 200
+		return -1, err
 	}
-	return int64(len(entries))
+	return int64(len(entries)), nil
 }
 
 // readOldQuota reads previous quota information from database.
 // If failed, return zero filled quota.
-func (yq *youtubeQuota) read() DB_Youtube_Content_Quota {
+func (yq *youtubeQuota) read() (DB_Youtube_Content_Quota, error) {
 	q := DB_Youtube_Content_Quota{
 		Daily:     0,
 		Left:      0,
@@ -1000,13 +1001,8 @@ func (yq *youtubeQuota) read() DB_Youtube_Content_Quota {
 	entries, err := yq.yt.readEntries(map[string]interface{}{
 		"content_type": "quota",
 	})
-	if err != nil {
-		yq.yt.logger().Error(err)
-		return q
-	}
-
-	if len(entries) < 1 {
-		return q
+	if err != nil || len(entries) < 1 {
+		return q, err
 	}
 
 	for _, e := range entries {
@@ -1018,19 +1014,19 @@ func (yq *youtubeQuota) read() DB_Youtube_Content_Quota {
 		yq.yt.logger().WithFields(logrus.Fields{
 			"id": entries[0].ID,
 		}).Error(err)
-		return q
+		return q, nil
 	}
 
-	return oldQuota
+	return oldQuota, nil
 }
 
-func (yq *youtubeQuota) create() {
+func (yq *youtubeQuota) create() error {
 	id, err := yq.yt.createEntry(yq.entry)
-	if err != nil {
-		yq.yt.logger().Error(err)
-		return
+	if err == nil {
+		yq.entry.ID = id
 	}
-	yq.entry.ID = id
+
+	return err
 }
 
 func (yq *youtubeQuota) update() error {
