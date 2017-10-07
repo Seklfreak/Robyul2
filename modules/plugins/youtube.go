@@ -847,14 +847,13 @@ func (yt *YouTube) setNextCheckTime(e DB_Youtube_Entry) DB_Youtube_Entry {
 	return e
 }
 
-func (yt *YouTube) isPosted(id string, postedIds []string) (ok bool) {
-	for _, postedId := range postedIds {
-		if id == postedId {
-			ok = true
-			break
+func (yt *YouTube) isPosted(id string, postedIds []string) bool {
+	for _, posted := range postedIds {
+		if id == posted {
+			return true
 		}
 	}
-	return
+	return false
 }
 
 type youtubeQuota struct {
@@ -1009,22 +1008,25 @@ func (yq *youtubeQuota) checkingTimeInterval() int64 {
 
 func (yq *youtubeQuota) incEntryCount() {
 	yq.Lock()
+	defer yq.Unlock()
+
 	yq.count++
-	yq.Unlock()
 }
 
 func (yq *youtubeQuota) decEntryCount() {
 	yq.Lock()
+	defer yq.Unlock()
+
 	if yq.count > 0 {
 		yq.count--
 	}
-	yq.Unlock()
 }
 
 func (yq *youtubeQuota) updateCheckingInterval() {
 	yq.Lock()
+	defer yq.Unlock()
+
 	yq.interval = yq.checkingTimeInterval()
-	yq.Unlock()
 }
 
 type DB_Youtube_Entry struct {
@@ -1079,7 +1081,7 @@ func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, e
 
 	id, ok := contentChannelId.(string)
 	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: ID], [type: %s]", reflect.ValueOf(m["content_id"]).String())
+		return c, fmt.Errorf("type assertion failed. [field name: ID], [type: %s]", reflect.ValueOf(m["content_channel_id"]).String())
 	}
 	c.ID = id
 
@@ -1091,7 +1093,7 @@ func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, e
 
 	name, ok := contentChannelName.(string)
 	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Name], [type: %s]", reflect.ValueOf(m["content_name"]).String())
+		return c, fmt.Errorf("type assertion failed. [field name: Name], [type: %s]", reflect.ValueOf(m["content_channel_name"]).String())
 	}
 	c.Name = name
 
@@ -1103,7 +1105,7 @@ func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, e
 
 	s := reflect.ValueOf(contentChannelPostedVideos)
 	if s.Kind() != reflect.Slice {
-		return c, fmt.Errorf("type assertion failed. [field name: PostedVideo], [type: %s]", reflect.ValueOf(m["content_posted_videos"]).String())
+		return c, fmt.Errorf("type assertion failed. [field name: PostedVideo], [type: %s]", reflect.ValueOf(m["content_channel_posted_videos"]).String())
 	}
 
 	c.PostedVideos = make([]string, s.Len())
@@ -1136,7 +1138,7 @@ func (ye *DB_Youtube_Entry) getQuotaContent() (c DB_Youtube_Content_Quota, err e
 
 	daily, ok := contentQuotaDaily.(float64)
 	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Daily], [type: %s]", reflect.ValueOf(m["content_id"]).String())
+		return c, fmt.Errorf("type assertion failed. [field name: Daily], [type: %s]", reflect.ValueOf(m["content_quota_id"]).String())
 	}
 	c.Daily = int64(daily)
 
@@ -1148,7 +1150,7 @@ func (ye *DB_Youtube_Entry) getQuotaContent() (c DB_Youtube_Content_Quota, err e
 
 	left, ok := contentQuotaLeft.(float64)
 	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Left], [type: %s]", reflect.ValueOf(m["content_name"]).String())
+		return c, fmt.Errorf("type assertion failed. [field name: Left], [type: %s]", reflect.ValueOf(m["content_quota_name"]).String())
 	}
 	c.Left = int64(left)
 
@@ -1160,7 +1162,7 @@ func (ye *DB_Youtube_Entry) getQuotaContent() (c DB_Youtube_Content_Quota, err e
 
 	rt, ok := contentQuotaResetTime.(float64)
 	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: ResetTime], [type: %s]", reflect.ValueOf(m["content_name"]).String())
+		return c, fmt.Errorf("type assertion failed. [field name: ResetTime], [type: %s]", reflect.ValueOf(m["content_quota_name"]).String())
 	}
 	c.ResetTime = int64(rt)
 
