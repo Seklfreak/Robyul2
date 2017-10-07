@@ -38,6 +38,11 @@ func TestYoutubeRegexp(t *testing.T) {
 	if ok == false || id != "abcdefg" {
 		t.Fatalf("youtube.getIdFromUrl() failed to extract id from valid url")
 	}
+
+	id, ok = testYoutube.getIdFromUrl("https://m.youtube.com/channel/abcdefg")
+	if ok == false || id != "abcdefg" {
+		t.Fatalf("youtube.getIdFromUrl() failed to extract id from valid url")
+	}
 }
 
 func TestVerifyEmbedFields(t *testing.T) {
