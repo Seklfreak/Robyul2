@@ -878,14 +878,15 @@ func (yq *youtubeQuota) Init(yt *YouTube) {
 	yq.content.Left = dailyQuotaLimit
 	yq.content.ResetTime = yq.calcResetTime().Unix()
 
-	yq.entry.ContentType = "quota"
-
 	oldQuota := yq.read()
 	if yq.content.ResetTime <= oldQuota.ResetTime {
 		yq.content.Left = oldQuota.Left
 	}
 
-	yq.entry.Content = yq.content
+	yq.entry = DB_Youtube_Entry{
+		ContentType: "quota",
+		Content:     yq.content,
+	}
 	yq.create()
 }
 
