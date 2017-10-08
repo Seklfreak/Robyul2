@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -34,6 +33,20 @@ type YouTube struct {
 	sync.RWMutex
 }
 
+type DB_Youtube_Channel_Entry struct {
+	// Discord related fields.
+	ID                      string `gorethink:"id,omitempty"`
+	ServerID                string `gorethink:"server_id"`
+	ChannelID               string `gorethink:"channel_id"`
+	NextCheckTime           int64  `gorethink:"next_check_time"`
+	LastSuccessfulCheckTime int64  `gorethink:"last_successful_check_time"`
+
+	// Youtube channel specific fields.
+	YoutubeChannelID    string   `gorethink:"youtube_channel_id"`
+	YoutubeChannelName  string   `gorethink:"youtube_channel_name"`
+	YoutubePostedVideos []string `gorethink:"youtube_posted_videos"`
+}
+
 type youtubeAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next youtubeAction)
 
 const (
@@ -41,8 +54,8 @@ const (
 	youtubeVideoBaseUrl   string = "https://youtu.be/%s"
 	youtubeColor          string = "cd201f"
 
-	youtubeConfigFileName string = "google.client_credentials_json_location"
-	youtubeDbTableName    string = "youtube"
+	youtubeConfigFileName     string = "google.client_credentials_json_location"
+	youtubeDbChannelTableName string = "youtube_channels"
 
 	// for yt.regexpSet
 	videoLongUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9_]*)`
@@ -264,31 +277,25 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		return yt.actionFinish
 	}
 
-	content := DB_Youtube_Content_Channel{
-		ID:   yc.Id.ChannelId,
-		Name: yc.Snippet.ChannelTitle,
-	}
-
-	// Very few channels only have snippet.ChannelID
-	// Maybe it's youtube API bug.
-	if content.ID == "" {
-		content.ID = yc.Snippet.ChannelId
-	}
-
-	if content.ID == "" || content.Name == "" {
-		*out = yt.newMsg("plugins.youtube.channel-not-found")
-		return yt.actionFinish
-	}
-
-	// fill db entry
-	entry := DB_Youtube_Entry{
+	entry := DB_Youtube_Channel_Entry{
 		ServerID:                dc.GuildID,
 		ChannelID:               dc.ID,
 		NextCheckTime:           time.Now().Unix(),
 		LastSuccessfulCheckTime: time.Now().Unix(),
 
-		ContentType: "channel",
-		Content:     content,
+		YoutubeChannelID:   yc.Id.ChannelId,
+		YoutubeChannelName: yc.Snippet.ChannelTitle,
+	}
+
+	// Very few channels only have snippet.ChannelID
+	// Maybe it's youtube API bug.
+	if entry.YoutubeChannelID == "" {
+		entry.YoutubeChannelID = yc.Snippet.ChannelId
+	}
+
+	if entry.YoutubeChannelID == "" || entry.YoutubeChannelName == "" {
+		*out = yt.newMsg("plugins.youtube.channel-not-found")
+		return yt.actionFinish
 	}
 
 	// insert entry into the db
@@ -349,8 +356,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 	}
 
 	entries, err := yt.readEntries(map[string]interface{}{
-		"content_type": "channel",
-		"server_id":    ch.GuildID,
+		"server_id": ch.GuildID,
 	})
 	if err != nil {
 		yt.logger().Error(err)
@@ -366,14 +372,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 	// TODO: pagify
 	msg := ""
 	for _, e := range entries {
-		c, err := e.getChannelContent()
-		if err != nil {
-			yt.logger().WithFields(logrus.Fields{
-				"id": e.ID,
-			}).Error(err)
-			continue
-		}
-		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", e.ID, c.Name, e.ChannelID)
+		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", e.ID, e.YoutubeChannelName, e.ChannelID)
 	}
 
 	for _, resultPage := range helpers.Pagify(msg, "\n") {
@@ -678,8 +677,8 @@ func (yt *YouTube) logger() *logrus.Entry {
 
 // RethinkDB CRUD wrapper functions.
 
-func (yt *YouTube) createEntry(entry DB_Youtube_Entry) (id string, err error) {
-	query := rethink.Table(youtubeDbTableName).Insert(entry)
+func (yt *YouTube) createEntry(entry DB_Youtube_Channel_Entry) (id string, err error) {
+	query := rethink.Table(youtubeDbChannelTableName).Insert(entry)
 
 	res, err := query.RunWrite(helpers.GetDB())
 	if err != nil {
@@ -689,8 +688,8 @@ func (yt *YouTube) createEntry(entry DB_Youtube_Entry) (id string, err error) {
 	return res.GeneratedKeys[0], nil
 }
 
-func (yt *YouTube) readEntries(filter interface{}) (entry []DB_Youtube_Entry, err error) {
-	query := rethink.Table(youtubeDbTableName).Filter(filter)
+func (yt *YouTube) readEntries(filter interface{}) (entry []DB_Youtube_Channel_Entry, err error) {
+	query := rethink.Table(youtubeDbChannelTableName).Filter(filter)
 
 	cursor, err := query.Run(helpers.GetDB())
 	if err != nil {
@@ -702,15 +701,15 @@ func (yt *YouTube) readEntries(filter interface{}) (entry []DB_Youtube_Entry, er
 	return
 }
 
-func (yt *YouTube) updateEntry(entry DB_Youtube_Entry) (err error) {
-	query := rethink.Table(youtubeDbTableName).Update(entry)
+func (yt *YouTube) updateEntry(entry DB_Youtube_Channel_Entry) (err error) {
+	query := rethink.Table(youtubeDbChannelTableName).Update(entry)
 
 	_, err = query.Run(helpers.GetDB())
 	return
 }
 
 func (yt *YouTube) deleteEntry(id string) (n int, err error) {
-	query := rethink.Table(youtubeDbTableName).Filter(rethink.Row.Field("id").Eq(id)).Delete()
+	query := rethink.Table(youtubeDbChannelTableName).Filter(rethink.Row.Field("id").Eq(id)).Delete()
 
 	r, err := query.RunWrite(helpers.GetDB())
 	if err == nil {
@@ -771,14 +770,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	helpers.Relax(err)
 
 	for _, e := range entries {
-		switch e.ContentType {
-		case "channel":
-			e = yt.checkYoutubeChannelFeeds(e)
-		case "quota":
-			continue
-		default:
-			yt.logger().Error("unknown contents type: " + e.ContentType)
-		}
+		e = yt.checkYoutubeChannelFeeds(e)
 
 		// update next check time
 		e = yt.setNextCheckTime(e)
@@ -787,15 +779,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	}
 }
 
-func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry {
-	c, err := e.getChannelContent()
-	if err != nil {
-		yt.logger().WithFields(logrus.Fields{
-			"id": e.ID,
-		}).Error(err)
-		return e
-	}
-
+func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Channel_Entry) DB_Youtube_Channel_Entry {
 	// set iso8601 time which will be used search query filter "published after"
 	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
 	publishedAfter := lastSuccessfulCheckTime.
@@ -803,9 +787,9 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 		Format("2006-01-02T15:04:05-0700")
 
 	// get updated feeds
-	feeds, err := yt.getChannelFeeds(c.ID, publishedAfter)
+	feeds, err := yt.getChannelFeeds(e.YoutubeChannelID, publishedAfter)
 	if err != nil {
-		yt.logger().Error("check channel feeds error: " + err.Error() + " channel name: " + c.Name + "id: " + e.ID)
+		yt.logger().Error("check channel feeds error: " + err.Error() + " channel name: " + e.YoutubeChannelName + "id: " + e.YoutubeChannelID)
 		return e
 	}
 
@@ -823,7 +807,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 		videoId := feed.ContentDetails.Upload.VideoId
 
 		// check if the video is already posted
-		if yt.isPosted(videoId, c.PostedVideos) {
+		if yt.isPosted(videoId, e.YoutubePostedVideos) {
 			alreadyPostedVideos = append(alreadyPostedVideos, videoId)
 			continue
 		}
@@ -861,15 +845,14 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 
 	if err == nil {
 		e.LastSuccessfulCheckTime = e.NextCheckTime
-		c.PostedVideos = alreadyPostedVideos
+		e.YoutubePostedVideos = alreadyPostedVideos
 	}
-	c.PostedVideos = append(c.PostedVideos, newPostedVideos...)
-	e.Content = c
+	e.YoutubePostedVideos = append(e.YoutubePostedVideos, newPostedVideos...)
 
 	return e
 }
 
-func (yt *YouTube) setNextCheckTime(e DB_Youtube_Entry) DB_Youtube_Entry {
+func (yt *YouTube) setNextCheckTime(e DB_Youtube_Channel_Entry) DB_Youtube_Channel_Entry {
 	e.NextCheckTime = time.Now().
 		Add(time.Duration(yt.quota.GetInterval()) * time.Second).
 		Unix()
@@ -1010,9 +993,7 @@ func (yq *youtubeQuota) DailyLimitExceeded() {
 
 // Set entries count which will use in quota calculation.
 func (yq *youtubeQuota) readEntryCount() (int64, error) {
-	entries, err := yq.yt.readEntries(map[string]interface{}{
-		"content_type": "channel",
-	})
+	entries, err := yq.yt.readEntries(map[string]interface{}{})
 	if err != nil {
 		return -1, err
 	}
@@ -1095,88 +1076,4 @@ func (yq *youtubeQuota) calcCheckingTimeInterval() int64 {
 	}
 
 	return calcTimeInterval
-}
-
-type DB_Youtube_Entry struct {
-	// Common fields.
-	ID                      string `gorethink:"id,omitempty"`
-	ServerID                string `gorethink:"server_id"`
-	ChannelID               string `gorethink:"channel_id"`
-	NextCheckTime           int64  `gorethink:"next_check_time"`
-	LastSuccessfulCheckTime int64  `gorethink:"last_successful_check_time"`
-
-	// Contents specific data fields.
-	// Contents can be channel or video or quota.
-	ContentType string      `gorethink:"content_type"`
-	Content     interface{} `gorethink:"content"`
-}
-
-type DB_Youtube_Content_Channel struct {
-	ID           string   `gorethink:"content_channel_id"`
-	Name         string   `gorethink:"content_channel_name"`
-	PostedVideos []string `gorethink:"content_channel_posted_videos"`
-}
-
-type DB_Youtube_Content_Video struct {
-	ID                 string `gorethink:"content_video_id"`
-	ViewCountsPrevious uint64 `gorethink:"content_video_view_counts_previous"`
-	ViewCountsInterval uint64 `gorethink:"content_video_view_counts_interval"`
-	ViewCountsFinal    uint64 `gorethink:"content_video_view_counts_final"`
-}
-
-func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, err error) {
-	if ye.ContentType != "channel" {
-		return c, fmt.Errorf("request content channel but the content type is %s", ye.ContentType)
-	}
-
-	// get content
-	m, ok := ye.Content.(map[string]interface{})
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Content], [type: %s]", reflect.ValueOf(ye.Content).String())
-	}
-
-	// get channel id
-	contentChannelId, ok := m["content_channel_id"]
-	if ok == false {
-		return c, fmt.Errorf("field not exist. [field name: ID]")
-	}
-
-	id, ok := contentChannelId.(string)
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: ID], [type: %s]", reflect.ValueOf(m["content_channel_id"]).String())
-	}
-	c.ID = id
-
-	// get channel name
-	contentChannelName, ok := m["content_channel_name"]
-	if ok == false {
-		return c, fmt.Errorf("field not exist. [field name: Name]")
-	}
-
-	name, ok := contentChannelName.(string)
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Name], [type: %s]", reflect.ValueOf(m["content_channel_name"]).String())
-	}
-	c.Name = name
-
-	// get posted Videos
-	contentChannelPostedVideos, ok := m["content_channel_posted_videos"]
-	if ok == false {
-		return c, fmt.Errorf("field not exist. [field name: PostedVideos]")
-	}
-
-	s := reflect.ValueOf(contentChannelPostedVideos)
-	if s.Kind() != reflect.Slice {
-		return c, fmt.Errorf("type assertion failed. [field name: PostedVideo], [type: %s]", reflect.ValueOf(m["content_channel_posted_videos"]).String())
-	}
-
-	c.PostedVideos = make([]string, s.Len())
-	for i := 0; i < s.Len(); i++ {
-		v, ok := s.Index(i).Interface().(string)
-		if ok {
-			c.PostedVideos = append(c.PostedVideos, v)
-		}
-	}
-
-	return
 }

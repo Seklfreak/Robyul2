@@ -42,7 +42,7 @@ var migrations = []helpers.Callback{
 	m30_create_table_autoleaver_whitelist,
 	m31_create_table_names,
 	m32_create_table_reddit_subreddits,
-	m33_create_table_youtube,
+	m33_create_table_youtube_channels,
 }
 
 // Run executes all registered migrations
