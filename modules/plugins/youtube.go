@@ -127,11 +127,11 @@ func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **disco
 
 	c := yt.quota.GetContent()
 
-	msg := fmt.Sprintf("left time to reset: `%d`, left quota: `%d`, channel count: `%d`, time interval: `%d`",
-		c.ResetTime-time.Now().Unix(),
-		c.Left,
-		yt.quota.GetCount(),
-		yt.quota.GetInterval())
+	msg := fmt.Sprintf("next reset: `%s`, left quota: `%s`, channel count: `%s`, time interval: `%s`",
+		time.Unix(c.ResetTime, 0).Format(time.ANSIC),
+		humanize.Comma(c.Left),
+		humanize.Comma(yt.quota.GetCount()),
+		humanize.Comma(yt.quota.GetInterval()))
 
 	*out = yt.newMsg(msg)
 
@@ -299,7 +299,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 
 	yt.quota.IncEntryCount()
 
-	*out = yt.newMsg("Added youtube channel `" + yc.Snippet.ChannelTitle + "` to the discord channel <#" + dc.ID + ">")
+	*out = yt.newMsg("plugins.youtube.channel-added-success", yc.Snippet.ChannelTitle, dc.ID)
 	return yt.actionFinish
 }
 
@@ -357,10 +357,11 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 	}
 
 	if len(entries) < 1 {
-		*out = yt.newMsg("No entries")
+		*out = yt.newMsg("plugins.youtube.no-entry")
 		return yt.actionFinish
 	}
 
+	// TODO: pagify
 	msg := ""
 	for _, e := range entries {
 		c, err := e.getChannelContent()
@@ -370,7 +371,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 			}).Error(err)
 			continue
 		}
-		msg += fmt.Sprintf("`%s`: Youtube channel name `@%s` posting to <#%s>\n", e.ID, c.Name, e.ChannelID)
+		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", e.ID, c.Name, e.ChannelID)
 	}
 
 	for _, resultPage := range helpers.Pagify(msg, "\n") {
@@ -378,7 +379,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 		helpers.Relax(err)
 	}
 
-	msg = fmt.Sprintf("Found **%d** Youtube channel in total.", len(entries))
+	msg = helpers.GetTextF("plugins.youtube.channel-list-sum", len(entries))
 
 	*out = yt.newMsg(msg)
 	return yt.actionFinish
@@ -657,8 +658,16 @@ func (yt *YouTube) newYoutubeService() {
 	helpers.Relax(err)
 }
 
-func (yt *YouTube) newMsg(content string) *discordgo.MessageSend {
-	return &discordgo.MessageSend{Content: helpers.GetText(content)}
+func (yt *YouTube) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
+	var c string
+
+	if len(replacements) < 1 {
+		c = helpers.GetText(content)
+	} else {
+		c = helpers.GetTextF(content, replacements...)
+	}
+
+	return &discordgo.MessageSend{Content: c}
 }
 
 func (yt *YouTube) logger() *logrus.Entry {
@@ -818,8 +827,21 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 		}
 
 		// make a message and send to discord channel
-		videoUrl := fmt.Sprintf(youtubeVideoBaseUrl, videoId)
-		msg := yt.newMsg(videoUrl)
+		msg := &discordgo.MessageSend{
+			Content: fmt.Sprintf(youtubeVideoBaseUrl, videoId),
+			Embed: &discordgo.MessageEmbed{
+				Author: &discordgo.MessageEmbedAuthor{
+					Name: feed.Snippet.ChannelTitle,
+					URL:  fmt.Sprintf(youtubeChannelBaseUrl, feed.Snippet.ChannelId),
+				},
+				Title:       helpers.GetTextF("plugins.youtube.channel-embed-title-vod", feed.Snippet.ChannelTitle),
+				URL:         fmt.Sprintf(youtubeVideoBaseUrl, videoId),
+				Description: fmt.Sprintf("**%s**", feed.Snippet.Description),
+				Image:       &discordgo.MessageEmbedImage{URL: feed.Snippet.Thumbnails.High.Url},
+				Footer:      &discordgo.MessageEmbedFooter{Text: "YouTube"},
+				Color:       helpers.GetDiscordColorFromHex(youtubeColor),
+			},
+		}
 
 		_, err = cache.GetSession().ChannelMessageSendComplex(e.ChannelID, msg)
 		if err != nil {
@@ -829,7 +851,10 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Entry) DB_Youtube_Entry
 
 		newPostedVideos = append(newPostedVideos, videoId)
 
-		yt.logger().Info("Posting youtube video: " + feed.Snippet.Title)
+		yt.logger().WithFields(logrus.Fields{
+			"title":   feed.Snippet.Title,
+			"channel": e.ChannelID,
+		}).Info("posting video")
 	}
 
 	if err == nil {
@@ -982,7 +1007,9 @@ func (yq *youtubeQuota) DailyLimitExceeded() {
 
 // Set entries count which will use in quota calculation.
 func (yq *youtubeQuota) readEntryCount() (int64, error) {
-	entries, err := yq.yt.readEntries(map[string]interface{}{})
+	entries, err := yq.yt.readEntries(map[string]interface{}{
+		"content_type": "channel",
+	})
 	if err != nil {
 		return -1, err
 	}

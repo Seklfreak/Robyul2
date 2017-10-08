@@ -761,7 +761,12 @@
       "service-not-available": "Youtube service is not available right now, please contact the bot owner...",
       "service-restart": "Restart youtube service.",
       "channel-delete-not-found-error": "Unable to find Youtube channel in the Database!",
-      "daily-limit-exceeded": "Youtube API daily limit exceeded, Try again later!"
+      "daily-limit-exceeded": "Youtube API daily limit exceeded, Try again later!",
+      "channel-added-success": "Added youtube channel `%s` to the discord channel <#%s>!",
+      "channel-list-entry": "`%s`: Youtube channel `@%s` posting to <#%s>\n",
+      "channel-list-sum": "Found **%d** Youtube channel(s) in total.",
+      "channel-embed-title-vod": "🎞 %s uploaded a new video!",
+      "no-entry": "No entries."
     },
     "nuke": {
       "participation-disabled": "This server is no longer participating in the nuke feature. <:blobugh:317047327443517442>",
