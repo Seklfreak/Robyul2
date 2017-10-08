@@ -822,7 +822,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Channel_Entry) DB_Youtu
 				},
 				Title:       helpers.GetTextF("plugins.youtube.channel-embed-title-vod", feed.Snippet.ChannelTitle),
 				URL:         fmt.Sprintf(youtubeVideoBaseUrl, videoId),
-				Description: fmt.Sprintf("**%s**", feed.Snippet.Description),
+				Description: fmt.Sprintf("**%s**", feed.Snippet.Title),
 				Image:       &discordgo.MessageEmbedImage{URL: feed.Snippet.Thumbnails.High.Url},
 				Footer:      &discordgo.MessageEmbedFooter{Text: "YouTube"},
 				Color:       helpers.GetDiscordColorFromHex(youtubeColor),
