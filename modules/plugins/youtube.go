@@ -15,6 +15,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
+	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
@@ -49,11 +50,12 @@ const (
 	channelIdUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
 	channelUserUrl string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 
-	dailyQuotaLimit   int64 = 1000000
-	activityQuotaCost int64 = 5
-	searchQuotaCost   int64 = 100
-	videosQuotaCost   int64 = 7
-	channelsQuotaCost int64 = 7
+	youtubeQuotaRedisKey string = "robyul2-discord:youtube:quota"
+	dailyQuotaLimit      int64  = 1000000
+	activityQuotaCost    int64  = 5
+	searchQuotaCost      int64  = 100
+	videosQuotaCost      int64  = 7
+	channelsQuotaCost    int64  = 7
 )
 
 func (yt *YouTube) Commands() []string {
@@ -125,11 +127,11 @@ func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **disco
 		return yt.actionFinish
 	}
 
-	c := yt.quota.GetContent()
+	q := yt.quota.GetQuota()
 
 	msg := fmt.Sprintf("next reset: `%s`, left quota: `%s`, channel count: `%s`, time interval: `%s`",
-		time.Unix(c.ResetTime, 0).Format(time.ANSIC),
-		humanize.Comma(c.Left),
+		time.Unix(q.ResetTime, 0).Format(time.ANSIC),
+		humanize.Comma(q.Left),
 		humanize.Comma(yt.quota.GetCount()),
 		humanize.Comma(yt.quota.GetInterval()))
 
@@ -904,12 +906,17 @@ func (yt *YouTube) handleGoogleAPIError(err error) error {
 
 type youtubeQuota struct {
 	yt       *YouTube // For db call
-	entry    DB_Youtube_Entry
-	content  DB_Youtube_Content_Quota
+	data     quota
 	count    int64
 	interval int64
 
 	sync.Mutex
+}
+
+type quota struct {
+	Daily     int64
+	Left      int64
+	ResetTime int64
 }
 
 func (yq *youtubeQuota) Init(yt *YouTube) (err error) {
@@ -921,24 +928,20 @@ func (yq *youtubeQuota) Init(yt *YouTube) (err error) {
 		return
 	}
 
-	yq.content.Daily = dailyQuotaLimit
-	yq.content.Left = dailyQuotaLimit
-	yq.content.ResetTime = yq.calcResetTime().Unix()
+	yq.data.Daily = dailyQuotaLimit
+	yq.data.Left = dailyQuotaLimit
+	yq.data.ResetTime = yq.calcResetTime().Unix()
 
-	oldQuota, err := yq.read()
+	oldQuota, err := yq.get()
 	if err != nil {
 		return err
 	}
 
-	if yq.content.ResetTime <= oldQuota.ResetTime {
-		yq.content.Left = oldQuota.Left
+	if yq.data.ResetTime <= oldQuota.ResetTime {
+		yq.data.Left = oldQuota.Left
 	}
 
-	yq.entry = DB_Youtube_Entry{
-		ContentType: "quota",
-		Content:     yq.content,
-	}
-	return yq.create()
+	return yq.set()
 }
 
 func (yq *youtubeQuota) GetInterval() int64 {
@@ -955,23 +958,23 @@ func (yq *youtubeQuota) GetCount() int64 {
 	return yq.count
 }
 
-func (yq *youtubeQuota) GetContent() DB_Youtube_Content_Quota {
+func (yq *youtubeQuota) GetQuota() quota {
 	yq.Lock()
 	defer yq.Unlock()
 
-	return yq.content
+	return yq.data
 }
 
 func (yq *youtubeQuota) Sub(i int64) int64 {
 	yq.Lock()
 	defer yq.Unlock()
 
-	if yq.content.Left < i {
+	if yq.data.Left < i {
 		return -1
 	}
 
-	yq.content.Left -= i
-	return yq.content.Left
+	yq.data.Left -= i
+	return yq.data.Left
 }
 
 func (yq *youtubeQuota) IncEntryCount() {
@@ -995,14 +998,14 @@ func (yq *youtubeQuota) UpdateCheckingInterval() error {
 	defer yq.Unlock()
 
 	yq.interval = yq.calcCheckingTimeInterval()
-	return yq.update()
+	return yq.set()
 }
 
 func (yq *youtubeQuota) DailyLimitExceeded() {
 	yq.Lock()
 	defer yq.Unlock()
 
-	yq.content.Left = 0
+	yq.data.Left = 0
 }
 
 // Set entries count which will use in quota calculation.
@@ -1018,51 +1021,29 @@ func (yq *youtubeQuota) readEntryCount() (int64, error) {
 
 // readOldQuota reads previous quota information from database.
 // If failed, return zero filled quota.
-func (yq *youtubeQuota) read() (DB_Youtube_Content_Quota, error) {
-	q := DB_Youtube_Content_Quota{
+func (yq *youtubeQuota) get() (quota, error) {
+	q := quota{
 		Daily:     0,
 		Left:      0,
 		ResetTime: 0,
 	}
 
-	entries, err := yq.yt.readEntries(map[string]interface{}{
-		"content_type": "quota",
-	})
-	if err != nil || len(entries) < 1 {
-		return q, err
-	}
+	codec := cache.GetRedisCacheCodec()
 
-	for _, e := range entries {
-		yq.yt.deleteEntry(e.ID)
-	}
-
-	oldQuota, err := entries[0].getQuotaContent()
-	if err != nil {
-		yq.yt.logger().WithFields(logrus.Fields{
-			"id": entries[0].ID,
-		}).Error(err)
+	var savedQuota quota
+	if err := codec.Get(youtubeQuotaRedisKey, &savedQuota); err != nil {
 		return q, nil
 	}
 
-	return oldQuota, nil
+	return savedQuota, nil
 }
 
-func (yq *youtubeQuota) create() error {
-	id, err := yq.yt.createEntry(yq.entry)
-	if err == nil {
-		yq.entry.ID = id
-	}
-
-	return err
-}
-
-func (yq *youtubeQuota) update() error {
-	if yq.entry.ID == "" {
-		return fmt.Errorf("no quota entry id")
-	}
-
-	yq.entry.Content = yq.content
-	return yq.yt.updateEntry(yq.entry)
+func (yq *youtubeQuota) set() error {
+	return cache.GetRedisCacheCodec().Set(&redisCache.Item{
+		Key:        youtubeQuotaRedisKey,
+		Object:     yq.data,
+		Expiration: time.Hour * 24,
+	})
 }
 
 func (yq *youtubeQuota) calcResetTime() time.Time {
@@ -1088,17 +1069,17 @@ func (yq *youtubeQuota) calcCheckingTimeInterval() int64 {
 
 	now := time.Now().Unix()
 
-	if now > yq.content.ResetTime {
-		yq.content.ResetTime = yq.calcResetTime().Unix()
-		yq.content.Left = dailyQuotaLimit
+	if now > yq.data.ResetTime {
+		yq.data.ResetTime = yq.calcResetTime().Unix()
+		yq.data.Left = dailyQuotaLimit
 	}
 
-	delta := yq.content.ResetTime - now
+	delta := yq.data.ResetTime - now
 	if delta < 1 {
 		return defaultTimeInterval
 	}
 
-	quotaPerSec := yq.content.Left / delta
+	quotaPerSec := yq.data.Left / delta
 	if quotaPerSec < 1 {
 		// Adds 300 seconds for reducing "API limit exceed" error message.
 		//
@@ -1141,12 +1122,6 @@ type DB_Youtube_Content_Video struct {
 	ViewCountsPrevious uint64 `gorethink:"content_video_view_counts_previous"`
 	ViewCountsInterval uint64 `gorethink:"content_video_view_counts_interval"`
 	ViewCountsFinal    uint64 `gorethink:"content_video_view_counts_final"`
-}
-
-type DB_Youtube_Content_Quota struct {
-	Daily     int64 `gorethink:"content_quota_daily"`
-	Left      int64 `gorethink:"content_quota_left"`
-	ResetTime int64 `gorethink:"content_quota_reset_time"`
 }
 
 func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, err error) {
@@ -1202,56 +1177,6 @@ func (ye *DB_Youtube_Entry) getChannelContent() (c DB_Youtube_Content_Channel, e
 			c.PostedVideos = append(c.PostedVideos, v)
 		}
 	}
-
-	return
-}
-
-func (ye *DB_Youtube_Entry) getQuotaContent() (c DB_Youtube_Content_Quota, err error) {
-	if ye.ContentType != "quota" {
-		return c, fmt.Errorf("request content quota but the content type is %s", ye.ContentType)
-	}
-
-	// get content
-	m, ok := ye.Content.(map[string]interface{})
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Content], [type: %s]", reflect.ValueOf(ye.Content).String())
-	}
-
-	// get daily quota
-	contentQuotaDaily, ok := m["content_quota_daily"]
-	if ok == false {
-		return c, fmt.Errorf("field not exist. [field name: Daily]")
-	}
-
-	daily, ok := contentQuotaDaily.(float64)
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Daily], [type: %s]", reflect.ValueOf(m["content_quota_id"]).String())
-	}
-	c.Daily = int64(daily)
-
-	// get left quota
-	contentQuotaLeft, ok := m["content_quota_left"]
-	if ok == false {
-		return c, fmt.Errorf("field not exist. [field name: Left]")
-	}
-
-	left, ok := contentQuotaLeft.(float64)
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: Left], [type: %s]", reflect.ValueOf(m["content_quota_name"]).String())
-	}
-	c.Left = int64(left)
-
-	// get reset time
-	contentQuotaResetTime, ok := m["content_quota_reset_time"]
-	if ok == false {
-		return c, fmt.Errorf("field not exist. [field name: ResetTime]")
-	}
-
-	rt, ok := contentQuotaResetTime.(float64)
-	if ok == false {
-		return c, fmt.Errorf("type assertion failed. [field name: ResetTime], [type: %s]", reflect.ValueOf(m["content_quota_name"]).String())
-	}
-	c.ResetTime = int64(rt)
 
 	return
 }
