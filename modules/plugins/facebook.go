@@ -27,7 +27,7 @@ type DB_Facebook_Page struct {
 
 type DB_Facebook_Post struct {
 	ID        string `gorethink:"id,omitempty"`
-	CreatedAt string `gorethink:"createdat`
+	CreatedAt string `gorethink:"CreatedAt"`
 }
 
 type Facebook_Page struct {
@@ -244,7 +244,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			facebookPage, err := m.lookupFacebookPage(args[0])
 			if err != nil {
 				if e, ok := err.(*fb.Error); ok {
-					if e.Code == 803 {
+					if e.Code == 803 || e.Code == 100 {
 						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
 						return
 					}
@@ -348,6 +348,10 @@ func (m *Facebook) lookupFacebookPage(siteName string) (Facebook_Page, error) {
 	}
 
 	for _, facebookPostResult := range facebookPostsResult {
+		if _, ok := facebookPostResult["permalink_url"]; !ok {
+			continue
+		}
+
 		var facebookPost Facebook_Post
 		facebookPost.ID = facebookPostResult["id"].(string)
 		if _, ok := facebookPostResult["message"]; ok {
