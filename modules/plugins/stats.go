@@ -13,6 +13,8 @@ import (
 
 	"reflect"
 
+	"encoding/json"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
@@ -1212,11 +1214,29 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		inviteCode = strings.Replace(inviteCode, "discord.gg/", "", -1)
 		inviteCode = strings.Replace(inviteCode, "invite/", "", -1)
 
-		invite, err := session.Invite(inviteCode)
-		if err != nil {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-			return
+		type InviteWithCounts struct {
+			Guild                    *discordgo.Guild    `json:"guild"`
+			Channel                  *discordgo.Channel  `json:"channel"`
+			Inviter                  *discordgo.User     `json:"inviter"`
+			Code                     string              `json:"code"`
+			CreatedAt                discordgo.Timestamp `json:"created_at"`
+			MaxAge                   int                 `json:"max_age"`
+			Uses                     int                 `json:"uses"`
+			MaxUses                  int                 `json:"max_uses"`
+			XkcdPass                 string              `json:"xkcdpass"`
+			Revoked                  bool                `json:"revoked"`
+			Temporary                bool                `json:"temporary"`
+			ApproximateMemberCount   int                 `json:"approximate_member_count"`
+			ApproximatePresenceCount int                 `json:"approximate_presence_count"`
 		}
+
+		respBody, err := session.RequestWithBucketID("GET", discordgo.EndpointInvite(inviteCode)+"?with_counts=true", nil, discordgo.EndpointInvite(""))
+		helpers.Relax(err)
+
+		var invite InviteWithCounts
+
+		err = json.Unmarshal(respBody, &invite)
+		helpers.Relax(err)
 
 		guild, err := helpers.GetGuild(invite.Guild.ID)
 		if err == nil {
@@ -1250,15 +1270,37 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 		createdAt, _ := invite.CreatedAt.Parse()
 
-		result := fmt.Sprintf("Invite for\nChannel `%s (#%s)`\non Server `%s (#%s)` with %d Channels and %d Members\nUsed %d times, Expires %s, Max Uses %s, %s\nCreated By `%s (#%s)` %s",
-			invite.Channel.Name, invite.Channel.ID,
-			invite.Guild.Name, invite.Guild.ID, len(invite.Guild.Channels), len(invite.Guild.Members),
-			invite.Uses, maxAgeText, maxUsesText, revokedText,
-			invite.Inviter.Username, invite.Inviter.ID, humanize.Time(createdAt),
-		)
+		numberOfMembers := len(invite.Guild.Members)
+		if numberOfMembers <= 0 {
+			numberOfMembers = invite.ApproximateMemberCount
+		}
 
-		_, err = session.ChannelMessageSend(msg.ChannelID, result)
-		helpers.Relax(err)
+		inviteEmbed := &discordgo.MessageEmbed{
+			Title:     "Invite for " + invite.Guild.Name,
+			URL:       "https://discord.go/" + invite.Code,
+			Thumbnail: &discordgo.MessageEmbedThumbnail{URL: invite.Guild.Icon},
+			Footer:    &discordgo.MessageEmbedFooter{Text: "Server #" + invite.Guild.ID},
+
+			Fields: []*discordgo.MessageEmbedField{
+				{Name: "Channel", Value: fmt.Sprintf("#%s (`#%s`)", invite.Channel.Name, invite.Channel.ID), Inline: true},
+				{Name: "Members", Value: humanize.Comma(int64(numberOfMembers)), Inline: true},
+				{Name: "Times Used", Value: strconv.Itoa(invite.Uses), Inline: true},
+				{Name: "Usage Limit", Value: maxUsesText, Inline: true},
+				{Name: "Expires", Value: maxAgeText, Inline: true},
+				{Name: "Revoked", Value: revokedText, Inline: true},
+				{Name: "Inviter", Value: fmt.Sprintf("%s#%s (`#%s`)", invite.Inviter.Username, invite.Inviter.Discriminator, invite.Inviter.ID), Inline: true},
+				{Name: "Created At", Value: humanize.Time(createdAt), Inline: true},
+			},
+		}
+
+		if invite.Guild.Icon != "" {
+			inviteEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{
+				URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", invite.Guild.ID, invite.Guild.Icon),
+			}
+		}
+
+		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, inviteEmbed)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 		return
 	case "serverindex": // [p]serverindex [<excluded channel> <excluded channel ...>]
 		session.ChannelTyping(msg.ChannelID)
