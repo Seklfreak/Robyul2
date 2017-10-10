@@ -29,13 +29,13 @@
   branch = "master"
   name = "github.com/RichardKnop/logging"
   packages = ["."]
-  revision = "0745ebe7cc826d7d0453c7c9f08ea75a7fe86f7b"
+  revision = "c29d67bd732ba53b98680ceacd5131d8ec3bd285"
 
 [[projects]]
   name = "github.com/RichardKnop/machinery"
   packages = ["v1","v1/backends","v1/brokers","v1/common","v1/config","v1/log","v1/retry","v1/tasks"]
-  revision = "0601e258f06e604ad366da879427eb75ff25a51e"
-  version = "v1.0.3"
+  revision = "68f4317d72d399650e9297fca69a297fcb1ba73b"
+  version = "v1.0.4"
 
 [[projects]]
   name = "github.com/Sirupsen/logrus"
@@ -77,7 +77,7 @@
   branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
-  revision = "7b6a91ac0457d16474690189ee030e2fc252dddd"
+  revision = "28dc6f6f338f2345b4534dbb2225f0955a4bdebc"
 
 [[projects]]
   name = "github.com/cenkalti/backoff"
@@ -136,14 +136,14 @@
 [[projects]]
   name = "github.com/go-redis/cache"
   packages = [".","internal/lrucache","internal/singleflight"]
-  revision = "63f853b559db40747c867aefa93826331f996d31"
-  version = "v6.3.1"
+  revision = "b68067d78498568593602bc54229e68b54b50ca4"
+  version = "v6.3.2"
 
 [[projects]]
   name = "github.com/go-redis/redis"
   packages = [".","internal","internal/consistenthash","internal/hashtag","internal/pool","internal/proto"]
-  revision = "975882d73d21759d45a4eb49652064083bc23e61"
-  version = "v6.7.0"
+  revision = "8e6b51ec3a92ec095dcbd2439c7a3eec6b6cb586"
+  version = "v6.7.1"
 
 [[projects]]
   branch = "master"
@@ -202,8 +202,8 @@
 [[projects]]
   name = "github.com/kennygrant/sanitize"
   packages = ["."]
-  revision = "6a0bfdde8629a3a3a7418a7eae45c54154692514"
-  version = "v1.2"
+  revision = "2e6820834a1f36c626bf19a253b7d3cc060e9b8b"
+  version = "v1.2.3"
 
 [[projects]]
   branch = "master"
@@ -220,8 +220,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
-  packages = ["."]
-  revision = "689d334b0197696eac0afdaa67224aca9ce93eff"
+  packages = [".","internal/socket"]
+  revision = "946bd9fbed05568b0f3cd188353d8aa28f38b688"
 
 [[projects]]
   branch = "master"
@@ -263,7 +263,7 @@
   branch = "master"
   name = "github.com/streadway/amqp"
   packages = ["."]
-  revision = "cefed15a0bd808d13947f228770a81b06ebe8e45"
+  revision = "7db842394ca79f338f781d47bc59115f44adb20b"
 
 [[projects]]
   branch = "master"
@@ -293,37 +293,37 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["nacl/secretbox","pbkdf2","poly1305","salsa20/salsa","ssh/terminal"]
-  revision = "7d9177d70076375b9a59c8fde23d52d9c4a7ecd5"
+  revision = "9419663f5a44be8b34ca85f08abc5fe1be11f8a3"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","context/ctxhttp","html","html/atom","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "0744d001aa8470aaa53df28d32e5ceeb8af9bd70"
+  revision = "a04bdaca5b32abe1c069418fb7088ae607de5bd0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/oauth2"
   packages = [".","google","internal","jws","jwt"]
-  revision = "13449ad91cb26cb47661c1b080790392170385fd"
+  revision = "bb50c06baba3d0c76f9d125c0719093e315b5b44"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "429f518978ab01db8bb6f44b66785088e7fba58b"
+  revision = "ebfc5b4631820b793c9010c87fd8fef0f39eb082"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "1cbadb444a806fd9430d14ad08967ed91da4fa0a"
+  revision = "825fc78a2fd6fa0a5447e300189e3219e05e1f25"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport","transport/grpc","transport/http","youtube/v3"]
-  revision = "513727a0f0db0404fd7639c243a29e466bed6ca4"
+  revision = "f4e479843e4b5935c598bdbe5b45ce49b4e5242d"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -335,7 +335,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "1e559d0a00eef8a9a43151db4665280bd8dd5886"
+  revision = "f676e0f3ac6395ff1a529ae59a6670878a8371a6"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -347,13 +347,13 @@
   branch = "v2.0.0"
   name = "gopkg.in/fatih/pool.v2"
   packages = ["."]
-  revision = "6e328e67893eb46323ad06f0e92cb9536babbabc"
+  revision = "010e0b745d12eaf8426c95f9c3924d81dd0b668f"
 
 [[projects]]
   name = "gopkg.in/gorethink/gorethink.v3"
   packages = ["encoding","ql2","types"]
-  revision = "a5695d4a5584f7c195cb3b9d26db024badb21d8c"
-  version = "v3.0.4"
+  revision = "7f5bdfd858bb064d80559b2a32b86669c5de5d3b"
+  version = "v3.0.5"
 
 [[projects]]
   branch = "v0"
@@ -376,8 +376,8 @@
 [[projects]]
   name = "gopkg.in/olivere/elastic.v5"
   packages = [".","config","uritemplates"]
-  revision = "575dcf5070608328cb017251b40a8f06c5fa99b7"
-  version = "v5.0.47"
+  revision = "2a08d39723b7f4df92b96e2dff891a60952714d6"
+  version = "v5.0.48"
 
 [[projects]]
   name = "gopkg.in/redsync.v1"

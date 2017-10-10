@@ -31,6 +31,9 @@ func m29_create_elastic_presence_update_index() {
 			"GameType": map[string]interface{}{
 				"type": "long",
 			},
+			"GameTypeV2": map[string]interface{}{
+				"type": "string",
+			},
 			"GameName": map[string]interface{}{
 				"type": "string",
 			},

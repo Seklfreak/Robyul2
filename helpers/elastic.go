@@ -71,13 +71,18 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 		return nil
 	}
 
-	gameType := -1
-	var gameName, gameURL, Status string
+	var gameName, gameType, gameURL, Status string
 
 	if presence.Game != nil && presence.Game.Name != "" {
 		gameName = presence.Game.Name
-		gameType = presence.Game.Type
 		gameURL = presence.Game.URL
+		switch presence.Game.Type {
+		case discordgo.GameTypeGame:
+			gameType = "game"
+			break
+		case discordgo.GameTypeStreaming:
+			gameType = "streaming"
+		}
 	}
 
 	if presence.Status != "" {
@@ -98,12 +103,12 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 	}
 
 	elasticPresenceUpdate := models.ElasticPresenceUpdate{
-		CreatedAt: time.Now(),
-		UserID:    presence.User.ID,
-		GameType:  gameType,
-		GameURL:   gameName,
-		GameName:  gameURL,
-		Status:    Status,
+		CreatedAt:  time.Now(),
+		UserID:     presence.User.ID,
+		GameTypeV2: gameType,
+		GameURL:    gameURL,
+		GameName:   gameName,
+		Status:     Status,
 	}
 
 	updatePresence := true

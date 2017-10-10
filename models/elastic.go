@@ -46,10 +46,11 @@ type ElasticReaction struct {
 }
 
 type ElasticPresenceUpdate struct {
-	CreatedAt time.Time
-	UserID    string
-	GameType  int
-	GameName  string
-	GameURL   string
-	Status    string
+	CreatedAt  time.Time
+	UserID     string
+	GameType   int
+	GameTypeV2 string
+	GameName   string
+	GameURL    string
+	Status     string
 }
