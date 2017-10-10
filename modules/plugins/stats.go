@@ -180,7 +180,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			activeWorkersText = "N/A"
 		}
 
-		var redisVersion, redisUptimeSecondsText, redisConnectedClients, redisUsedMemoryHuman string
+		var redisUptimeSecondsText, redisConnectedClients, redisUsedMemoryHuman string
 
 		redisInfoText, err := cache.GetRedisClient().Info().Result()
 		helpers.Relax(err)
@@ -191,8 +191,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 
 			switch args[0] {
-			case "redis_version":
-				redisVersion = args[1]
 			case "uptime_in_seconds":
 				redisUptimeSecondsText = args[1]
 			case "connected_clients":
@@ -213,6 +211,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		pendingTasks, err := cache.GetMachineryServer().GetBroker().GetPendingTasks("robyul_tasks")
 		helpers.Relax(err)
 
+		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
+		helpers.Relax(err)
+
 		session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{
@@ -225,7 +226,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Fields: []*discordgo.MessageEmbedField{
 				// Build
 				{Name: "Build Time", Value: version.BUILD_TIME, Inline: true},
-				{Name: "Build System", Value: version.BUILD_USER + "@" + version.BUILD_HOST, Inline: false},
+				{Name: "Build System", Value: version.BUILD_HOST, Inline: true},
+				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
 				// System
 				{Name: "Bot Uptime", Value: uptime, Inline: true},
@@ -244,10 +246,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 				// Machinery
 				{Name: "Pending / Delayed Tasks", Value: strconv.Itoa(len(pendingTasks)) + " / " + strconv.Itoa(int(metrics.MachineryDelayedTasksCount.Value())), Inline: true},
-				{Name: "Active Workers", Value: activeWorkersText, Inline: false},
+				{Name: "Active Workers", Value: activeWorkersText, Inline: true},
+				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
 				// Redis
-				{Name: "Redis", Value: "v" + redisVersion + " Uptime: " + redisUptime + " Clients: " + redisConnectedClients + " Memory: " + redisUsedMemoryHuman, Inline: false},
+				{Name: "Redis Uptime", Value: redisUptime, Inline: true},
+				{Name: "Redis Clients", Value: redisConnectedClients, Inline: true},
+				{Name: "Redis Memory", Value: redisUsedMemoryHuman, Inline: true},
 
 				// Link
 				{Name: "Want more stats and awesome graphs?", Value: "Visit my [stats dashboard](https://robyul.chat/statistics)", Inline: false},
