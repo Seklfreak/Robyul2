@@ -13,9 +13,11 @@ import (
 
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	redisCache "github.com/go-redis/cache"
+	rethink "github.com/gorethink/gorethink"
 )
 
 const (
@@ -733,4 +735,25 @@ func WebhookExecuteWithResult(webhookID, token string, data *discordgo.WebhookPa
 
 	err = json.Unmarshal(result, &message)
 	return message, err
+}
+func GuildIsOnWhitelist(GuildID string) (whitelisted bool) {
+	var entryBucket []models.AutoleaverWhitelistEntry
+	listCursor, err := rethink.Table(models.AutoleaverWhitelistTable).Run(GetDB())
+	if err != nil {
+		return false
+	}
+
+	defer listCursor.Close()
+	err = listCursor.All(&entryBucket)
+	if err != nil {
+		return false
+	}
+
+	for _, whitelistEntry := range entryBucket {
+		if whitelistEntry.GuildID == GuildID {
+			return true
+		}
+	}
+
+	return false
 }
