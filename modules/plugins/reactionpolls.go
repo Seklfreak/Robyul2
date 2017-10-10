@@ -85,19 +85,19 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 		session.ChannelTyping(msg.ChannelID)
 		if len(args) < 4 {
 			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		pollText := strings.TrimSuffix(strings.TrimPrefix(args[1], "\""), "\"")
 		if pollText == "" {
 			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		pollMaxVotes, err := strconv.Atoi(args[2])
 		if err != nil {
 			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		channel, err := helpers.GetChannel(msg.ChannelID)
@@ -112,7 +112,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 		}
 		if len(allowedEmotes) > 20 {
 			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.create-too-many-reactions"))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		for _, allowedEmote := range allowedEmotes {
@@ -122,7 +122,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 					_, err = session.State.Emoji(guild.ID, emoteParts[1])
 					if err != nil {
 						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.create-external-emote"))
-						helpers.Relax(err)
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
 				}
@@ -145,7 +145,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 			Description: "**Poll is being created...** :construction_site:",
 		}
 		pollPostedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, pollEmbed)
-		helpers.Relax(err)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 
 		newReactionPoll.MessageID = pollPostedMessage.ID
 		rp.setReactionPoll(newReactionPoll)
@@ -166,7 +166,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 			session.ChannelTyping(msg.ChannelID)
 			reactionPollsCache = rp.getAllReactionPolls()
 			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.refreshed-polls"))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		})
 		return
 	}
