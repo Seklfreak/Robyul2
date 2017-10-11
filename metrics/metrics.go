@@ -100,6 +100,9 @@ var (
 
 	// MachineryDelayedTasksCount counts all delayed machinery tasks
 	MachineryDelayedTasksCount = expvar.NewInt("machinery_delayedtasks_count")
+
+	// YoutubeChannelCount counts all connected youtube channels
+	YoutubeChannelCount = expvar.NewInt("youtube_channel_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -200,6 +203,12 @@ func CollectRuntimeMetrics() {
 		cursor.One(&cnt)
 		cursor.Close()
 		RedditSubredditsCount.Set(int64(cnt))
+
+		cursor, err = rethink.Table("youtube_channels").Count().Run(helpers.GetDB())
+		helpers.Relax(err)
+		cursor.One(&cnt)
+		cursor.Close()
+		YoutubeChannelCount.Set(int64(cnt))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
