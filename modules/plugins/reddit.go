@@ -10,6 +10,8 @@ import (
 
 	"strconv"
 
+	"html"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -178,7 +180,7 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 		data.Embed.Title = submission.Title[0:127] + "…"
 	}
 	if submission.Selftext != "" {
-		data.Embed.Description = submission.Selftext
+		data.Embed.Description = html.UnescapeString(submission.Selftext)
 		if len(data.Embed.Description) > 500 {
 			data.Embed.Description = data.Embed.Description[0:499] + "…"
 		}
@@ -353,7 +355,7 @@ func (r *Reddit) getSubredditInfo(subreddit string) (data *discordgo.MessageSend
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: helpers.GetText("plugins.reddit.embed-footer") + " | reddit #" + subredditData.ID},
 		Title:       titleText,
-		Description: subredditData.PublicDesc,
+		Description: html.UnescapeString(subredditData.PublicDesc),
 		URL:         RedditBaseUrl + subredditData.URL,
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Subscribers", Value: humanize.Comma(int64(subredditData.NumSubs)), Inline: true},
