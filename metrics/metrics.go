@@ -102,7 +102,7 @@ var (
 	MachineryDelayedTasksCount = expvar.NewInt("machinery_delayedtasks_count")
 
 	// YoutubeChannelCount counts all connected youtube channels
-	YoutubeChannelCount = expvar.NewInt("youtube_channel_count")
+	YoutubeChannelsCount = expvar.NewInt("youtube_channel_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -154,65 +154,35 @@ func CollectRuntimeMetrics() {
 
 		CoroutineCount.Set(int64(runtime.NumGoroutine()))
 
-		var cnt int
+		VliveChannelsCount.Set(entriesCount("vlive"))
 
-		cursor, err := rethink.Table("vlive").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		VliveChannelsCount.Set(int64(cnt))
+		InstagramAccountsCount.Set(entriesCount("instagram"))
 
-		cursor, err = rethink.Table("instagram").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		InstagramAccountsCount.Set(int64(cnt))
+		TwitterAccountsCount.Set(entriesCount("twitter"))
 
-		cursor, err = rethink.Table("twitter").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		TwitterAccountsCount.Set(int64(cnt))
+		FacebookPagesCount.Set(entriesCount("facebook"))
 
-		cursor, err = rethink.Table("facebook").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		FacebookPagesCount.Set(int64(cnt))
+		GalleriesCount.Set(entriesCount("galleries"))
 
-		cursor, err = rethink.Table("galleries").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		GalleriesCount.Set(int64(cnt))
+		MirrorsCount.Set(entriesCount("mirrors"))
 
-		cursor, err = rethink.Table("mirrors").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		MirrorsCount.Set(int64(cnt))
+		RandomPictureSourcesCount.Set(entriesCount("randompictures_sources"))
 
-		cursor, err = rethink.Table("randompictures_sources").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		RandomPictureSourcesCount.Set(int64(cnt))
+		RedditSubredditsCount.Set(entriesCount(models.RedditSubredditsTable))
 
-		cursor, err = rethink.Table(models.RedditSubredditsTable).Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		RedditSubredditsCount.Set(int64(cnt))
-
-		cursor, err = rethink.Table("youtube_channels").Count().Run(helpers.GetDB())
-		helpers.Relax(err)
-		cursor.One(&cnt)
-		cursor.Close()
-		YoutubeChannelCount.Set(int64(cnt))
+		YoutubeChannelsCount.Set(entriesCount("youtube_channels"))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
 		helpers.Relax(err)
 		MachineryDelayedTasksCount.Set(delayedTasks)
 	}
+}
+
+func entriesCount(table string) (cnt int64) {
+	cursor, err := rethink.Table(table).Count().Run(helpers.GetDB())
+	helpers.Relax(err)
+	cursor.One(&cnt)
+	cursor.Close()
+	return
 }
