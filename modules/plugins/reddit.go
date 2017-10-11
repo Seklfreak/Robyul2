@@ -14,11 +14,11 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/version"
+	"github.com/Seklfreak/geddit"
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
-	"github.com/jzelinskie/geddit"
 )
 
 type redditAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next redditAction)
@@ -164,13 +164,16 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 
 	data.Embed = &discordgo.MessageEmbed{
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: helpers.GetText("plugins.reddit.embed-footer") + " | r/" + submission.Subreddit + " | reddit #" + submission.ID},
+			Text: helpers.GetText("plugins.reddit.embed-footer") + " | /r/" + submission.Subreddit + " | reddit #" + submission.ID},
 		URL:    RedditBaseUrl + submission.Permalink,
-		Author: &discordgo.MessageEmbedAuthor{Name: submission.Author, URL: RedditBaseUrl + "/u/" + submission.Author},
+		Author: &discordgo.MessageEmbedAuthor{Name: "/u/" + submission.Author, URL: RedditBaseUrl + "/u/" + submission.Author},
 		Color:  helpers.GetDiscordColorFromHex(RedditColor),
 	}
 
 	data.Embed.Title = submission.Title
+	if submission.LinkFlairText != "" {
+		data.Embed.Title = "`" + submission.LinkFlairText + "` " + data.Embed.Title
+	}
 	if len(data.Embed.Title) > 128 {
 		data.Embed.Title = submission.Title[0:127] + "…"
 	}

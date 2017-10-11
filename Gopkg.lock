@@ -38,6 +38,12 @@
   version = "v1.0.4"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Seklfreak/geddit"
+  packages = ["."]
+  revision = "3450e0b5564b79b1fed40b169296a698ceea12c5"
+
+[[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
   revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
@@ -186,12 +192,6 @@
   packages = ["."]
   revision = "efe962f32209aa6e7430fb779bdf29bbcdb716e1"
   version = "v1.8.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/jzelinskie/geddit"
-  packages = ["."]
-  revision = "45ce9276f237de3e26c16a1d129171a187b32a0a"
 
 [[projects]]
   name = "github.com/kelseyhightower/envconfig"
@@ -400,6 +400,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0ce5007ea5e59fcf804b1ef03961908391ccee451fca20ce748e109f72a2c52d"
+  inputs-digest = "97227117ebe5be820bf6e452a66530f70edb6545f9506b95ac53b8a5eaa17ef1"
   solver-name = "gps-cdcl"
   solver-version = 1
