@@ -268,7 +268,7 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 
 	// TODO: Post preview post
 
-	*out = r.newMsg(helpers.GetTextF("plugins.reddit.add-subreddit-success", subredditData.Name, targetChannel.ID))
+	*out = r.newMsg("plugins.reddit.add-subreddit-success", subredditData.Name, targetChannel.ID)
 	return r.actionFinish
 }
 
@@ -316,7 +316,7 @@ func (r *Reddit) actionRemove(args []string, in *discordgo.Message, out **discor
 	err = r.removeSubredditEntry(subredditEntry)
 	helpers.Relax(err)
 
-	*out = r.newMsg(helpers.GetTextF("plugins.reddit.remove-subreddit-success", subredditEntry.SubredditName))
+	*out = r.newMsg("plugins.reddit.remove-subreddit-success", subredditEntry.SubredditName)
 	return r.actionFinish
 }
 
@@ -452,8 +452,11 @@ func (r *Reddit) actionFinish(args []string, in *discordgo.Message, out **discor
 	return nil
 }
 
-func (r *Reddit) newMsg(content string) *discordgo.MessageSend {
-	return &discordgo.MessageSend{Content: helpers.GetText(content)}
+func (r *Reddit) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
+	if len(replacements) < 1 {
+		return &discordgo.MessageSend{Content: helpers.GetText(content)}
+	}
+	return &discordgo.MessageSend{Content: helpers.GetTextF(content, replacements...)}
 }
 
 func (r *Reddit) Relax(err error) {

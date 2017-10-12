@@ -365,9 +365,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 		helpers.Relax(err)
 	}
 
-	msg = helpers.GetTextF("plugins.youtube.channel-list-sum", len(entries))
-
-	*out = yt.newMsg(msg)
+	*out = yt.newMsg("plugins.youtube.channel-list-sum", len(entries))
 	return yt.actionFinish
 }
 
@@ -645,15 +643,10 @@ func (yt *YouTube) newYoutubeService() {
 }
 
 func (yt *YouTube) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
-	var c string
-
 	if len(replacements) < 1 {
-		c = helpers.GetText(content)
-	} else {
-		c = helpers.GetTextF(content, replacements...)
+		return &discordgo.MessageSend{Content: helpers.GetText(content)}
 	}
-
-	return &discordgo.MessageSend{Content: c}
+	return &discordgo.MessageSend{Content: helpers.GetTextF(content, replacements...)}
 }
 
 func (yt *YouTube) logger() *logrus.Entry {
