@@ -11,6 +11,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
@@ -33,20 +34,6 @@ type YouTube struct {
 	sync.RWMutex
 }
 
-type DB_Youtube_Channel_Entry struct {
-	// Discord related fields.
-	ID                      string `gorethink:"id,omitempty"`
-	ServerID                string `gorethink:"server_id"`
-	ChannelID               string `gorethink:"channel_id"`
-	NextCheckTime           int64  `gorethink:"next_check_time"`
-	LastSuccessfulCheckTime int64  `gorethink:"last_successful_check_time"`
-
-	// Youtube channel specific fields.
-	YoutubeChannelID    string   `gorethink:"youtube_channel_id"`
-	YoutubeChannelName  string   `gorethink:"youtube_channel_name"`
-	YoutubePostedVideos []string `gorethink:"youtube_posted_videos"`
-}
-
 type youtubeAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next youtubeAction)
 
 const (
@@ -54,8 +41,7 @@ const (
 	youtubeVideoBaseUrl   string = "https://youtu.be/%s"
 	youtubeColor          string = "cd201f"
 
-	youtubeConfigFileName     string = "google.client_credentials_json_location"
-	youtubeDbChannelTableName string = "youtube_channels"
+	youtubeConfigFileName string = "google.client_credentials_json_location"
 
 	// for yt.regexpSet
 	videoLongUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9_]*)`
@@ -63,12 +49,11 @@ const (
 	channelIdUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
 	channelUserUrl string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 
-	youtubeQuotaRedisKey string = "robyul2-discord:youtube:quota"
-	dailyQuotaLimit      int64  = 1000000
-	activityQuotaCost    int64  = 5
-	searchQuotaCost      int64  = 100
-	videosQuotaCost      int64  = 7
-	channelsQuotaCost    int64  = 7
+	dailyQuotaLimit   int64 = 1000000
+	activityQuotaCost int64 = 5
+	searchQuotaCost   int64 = 100
+	videosQuotaCost   int64 = 7
+	channelsQuotaCost int64 = 7
 )
 
 func (yt *YouTube) Commands() []string {
@@ -277,7 +262,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 		return yt.actionFinish
 	}
 
-	entry := DB_Youtube_Channel_Entry{
+	entry := models.YoutubeChannelEntry{
 		ServerID:                dc.GuildID,
 		ChannelID:               dc.ID,
 		NextCheckTime:           time.Now().Unix(),
@@ -677,8 +662,8 @@ func (yt *YouTube) logger() *logrus.Entry {
 
 // RethinkDB CRUD wrapper functions.
 
-func (yt *YouTube) createEntry(entry DB_Youtube_Channel_Entry) (id string, err error) {
-	query := rethink.Table(youtubeDbChannelTableName).Insert(entry)
+func (yt *YouTube) createEntry(entry models.YoutubeChannelEntry) (id string, err error) {
+	query := rethink.Table(models.YoutubeChannelTable).Insert(entry)
 
 	res, err := query.RunWrite(helpers.GetDB())
 	if err != nil {
@@ -688,8 +673,8 @@ func (yt *YouTube) createEntry(entry DB_Youtube_Channel_Entry) (id string, err e
 	return res.GeneratedKeys[0], nil
 }
 
-func (yt *YouTube) readEntries(filter interface{}) (entry []DB_Youtube_Channel_Entry, err error) {
-	query := rethink.Table(youtubeDbChannelTableName).Filter(filter)
+func (yt *YouTube) readEntries(filter interface{}) (entry []models.YoutubeChannelEntry, err error) {
+	query := rethink.Table(models.YoutubeChannelTable).Filter(filter)
 
 	cursor, err := query.Run(helpers.GetDB())
 	if err != nil {
@@ -701,15 +686,15 @@ func (yt *YouTube) readEntries(filter interface{}) (entry []DB_Youtube_Channel_E
 	return
 }
 
-func (yt *YouTube) updateEntry(entry DB_Youtube_Channel_Entry) (err error) {
-	query := rethink.Table(youtubeDbChannelTableName).Update(entry)
+func (yt *YouTube) updateEntry(entry models.YoutubeChannelEntry) (err error) {
+	query := rethink.Table(models.YoutubeChannelTable).Update(entry)
 
 	_, err = query.Run(helpers.GetDB())
 	return
 }
 
 func (yt *YouTube) deleteEntry(id string) (n int, err error) {
-	query := rethink.Table(youtubeDbChannelTableName).Filter(rethink.Row.Field("id").Eq(id)).Delete()
+	query := rethink.Table(models.YoutubeChannelTable).Filter(rethink.Row.Field("id").Eq(id)).Delete()
 
 	r, err := query.RunWrite(helpers.GetDB())
 	if err == nil {
@@ -779,7 +764,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	}
 }
 
-func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Channel_Entry) DB_Youtube_Channel_Entry {
+func (yt *YouTube) checkYoutubeChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeChannelEntry {
 	// set iso8601 time which will be used search query filter "published after"
 	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
 	publishedAfter := lastSuccessfulCheckTime.
@@ -852,7 +837,7 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e DB_Youtube_Channel_Entry) DB_Youtu
 	return e
 }
 
-func (yt *YouTube) setNextCheckTime(e DB_Youtube_Channel_Entry) DB_Youtube_Channel_Entry {
+func (yt *YouTube) setNextCheckTime(e models.YoutubeChannelEntry) models.YoutubeChannelEntry {
 	e.NextCheckTime = time.Now().
 		Add(time.Duration(yt.quota.GetInterval()) * time.Second).
 		Unix()
@@ -889,17 +874,11 @@ func (yt *YouTube) handleGoogleAPIError(err error) error {
 
 type youtubeQuota struct {
 	yt       *YouTube // For db call
-	data     quota
+	data     models.YoutubeQuota
 	count    int64
 	interval int64
 
 	sync.Mutex
-}
-
-type quota struct {
-	Daily     int64
-	Left      int64
-	ResetTime int64
 }
 
 func (yq *youtubeQuota) Init(yt *YouTube) (err error) {
@@ -941,7 +920,7 @@ func (yq *youtubeQuota) GetCount() int64 {
 	return yq.count
 }
 
-func (yq *youtubeQuota) GetQuota() quota {
+func (yq *youtubeQuota) GetQuota() models.YoutubeQuota {
 	yq.Lock()
 	defer yq.Unlock()
 
@@ -1002,8 +981,8 @@ func (yq *youtubeQuota) readEntryCount() (int64, error) {
 
 // readOldQuota reads previous quota information from database.
 // If failed, return zero filled quota.
-func (yq *youtubeQuota) get() (quota, error) {
-	q := quota{
+func (yq *youtubeQuota) get() (models.YoutubeQuota, error) {
+	q := models.YoutubeQuota{
 		Daily:     0,
 		Left:      0,
 		ResetTime: 0,
@@ -1011,8 +990,8 @@ func (yq *youtubeQuota) get() (quota, error) {
 
 	codec := cache.GetRedisCacheCodec()
 
-	var savedQuota quota
-	if err := codec.Get(youtubeQuotaRedisKey, &savedQuota); err != nil {
+	var savedQuota models.YoutubeQuota
+	if err := codec.Get(models.YoutubeQuotaRedisKey, &savedQuota); err != nil {
 		return q, nil
 	}
 
@@ -1021,7 +1000,7 @@ func (yq *youtubeQuota) get() (quota, error) {
 
 func (yq *youtubeQuota) set() error {
 	return cache.GetRedisCacheCodec().Set(&redisCache.Item{
-		Key:        youtubeQuotaRedisKey,
+		Key:        models.YoutubeQuotaRedisKey,
 		Object:     yq.data,
 		Expiration: time.Hour * 24,
 	})
