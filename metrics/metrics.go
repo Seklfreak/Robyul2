@@ -103,6 +103,9 @@ var (
 
 	// YoutubeChannelCount counts all connected youtube channels
 	YoutubeChannelsCount = expvar.NewInt("youtube_channel_count")
+
+	// YoutubeLeftQuota counts how many left youtube quotas
+	YoutubeLeftQuota = expvar.NewInt("youtube_left_quota")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -170,12 +173,21 @@ func CollectRuntimeMetrics() {
 
 		RedditSubredditsCount.Set(entriesCount(models.RedditSubredditsTable))
 
-		YoutubeChannelsCount.Set(entriesCount("youtube_channels"))
+		YoutubeChannelsCount.Set(entriesCount(models.YoutubeChannelTable))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
 		helpers.Relax(err)
 		MachineryDelayedTasksCount.Set(delayedTasks)
+
+		key = models.YoutubeQuotaRedisKey
+		codec := cache.GetRedisCacheCodec()
+		var q models.YoutubeQuota
+		if err := codec.Get(key, &q); err == nil {
+			YoutubeLeftQuota.Set(q.Left)
+		} else {
+			YoutubeLeftQuota.Set(0)
+		}
 	}
 }
 
