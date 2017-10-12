@@ -316,7 +316,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		if len(args) > 0 {
 			switch args[0] {
 			case "new-config": // [p]randompictures new-config
-				helpers.RequireBotAdmin(msg, func() {
+				helpers.RequireRobyulMod(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 
 					if len(args) <= 1 {
@@ -386,7 +386,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				})
 				return
 			case "list": // [p]randompictures list
-				helpers.RequireBotAdmin(msg, func() {
+				helpers.RequireRobyulMod(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 
 					channel, err := helpers.GetChannel(msg.ChannelID)
@@ -441,7 +441,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				})
 				return
 			case "refresh": // [p]randompictures refresh <source id>
-				helpers.RequireBotAdmin(msg, func() {
+				helpers.RequireRobyulMod(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 					if len(args) < 2 {
 						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
