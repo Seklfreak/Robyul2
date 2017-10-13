@@ -205,18 +205,14 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 		helpers.Relax(err)
 	}
 	allMembers := make([]*discordgo.Member, 0)
-	for _, botGuild := range cache.GetSession().State.Guilds {
-		if botGuild.ID == guild.ID {
-			for _, member := range guild.Members {
-				if member.JoinedAt == "" {
-					member, err := helpers.GetGuildMember(member.GuildID, member.User.ID)
-					if err == nil && member.JoinedAt != "" {
-						allMembers = append(allMembers, member)
-					}
-				} else {
-					allMembers = append(allMembers, member)
-				}
+	for _, guildMember := range guild.Members {
+		if guildMember.JoinedAt == "" {
+			guildMember, err = helpers.GetGuildMember(member.GuildID, member.User.ID)
+			if err == nil && guildMember.JoinedAt != "" {
+				allMembers = append(allMembers, guildMember)
 			}
+		} else {
+			allMembers = append(allMembers, guildMember)
 		}
 	}
 	slice.Sort(allMembers[:], func(i, j int) bool {
