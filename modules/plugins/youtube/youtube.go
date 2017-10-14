@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +22,7 @@ import (
 
 type YouTube struct {
 	service          *youtube.Service
-	regexpSet        []*regexp.Regexp
+	urlfilter        urlfilter
 	quota            quota
 	feedsLoopRunning bool
 
@@ -41,12 +40,6 @@ const (
 	youtubeColor          string = "cd201f"
 
 	youtubeConfigFileName string = "google.client_credentials_json_location"
-
-	// for yt.regexpSet
-	videoLongUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/watch\?v=(.[A-Za-z0-9_]*)`
-	videoShortUrl  string = `^(https?\:\/\/)?(youtu\.be)\/(.[A-Za-z0-9_]*)`
-	channelIdUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
-	channelUserUrl string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 )
 
 func (yt *YouTube) Commands() []string {
@@ -63,7 +56,7 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 
 	yt.service = nil
 
-	yt.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
+	yt.urlfilter.Init()
 	yt.newYoutubeService()
 	yt.runYoutubeFeedsLoop()
 }
@@ -444,7 +437,7 @@ func (yt *YouTube) searchQuerySingle(keywords []string, searchType string) (*you
 func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
 	// extract ID from valid youtube url
 	for i, w := range keywords {
-		keywords[i], _ = yt.getIdFromUrl(w)
+		keywords[i], _ = yt.urlfilter.GetId(w)
 	}
 
 	query := strings.Join(keywords, " ")
@@ -484,20 +477,6 @@ func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube
 	}
 
 	return response.Items, nil
-}
-
-// getIdFromUrl extracts channel id, channel name, video id from given url.
-func (yt *YouTube) getIdFromUrl(url string) (id string, ok bool) {
-	// TODO: it failed to retrieve exact information from user name.
-	// example) https://www.youtube.com/user/bruno
-	for i := range yt.regexpSet {
-		if yt.regexpSet[i].MatchString(url) {
-			match := yt.regexpSet[i].FindStringSubmatch(url)
-			return match[len(match)-1], true
-		}
-	}
-
-	return url, false
 }
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
@@ -607,17 +586,6 @@ func (yt *YouTube) humanizeTime(t string) string {
 
 	year, month, day := parsedTime.Date()
 	return fmt.Sprintf("%d-%d-%d", year, month, day)
-}
-
-func (yt *YouTube) compileRegexpSet(regexps ...string) {
-	for i := range yt.regexpSet {
-		yt.regexpSet[i] = nil
-	}
-	yt.regexpSet = yt.regexpSet[:0]
-
-	for i := range regexps {
-		yt.regexpSet = append(yt.regexpSet, regexp.MustCompile(regexps[i]))
-	}
 }
 
 func (yt *YouTube) newYoutubeService() {
