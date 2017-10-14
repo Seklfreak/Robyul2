@@ -3,17 +3,20 @@ package youtube
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/youtube/v3"
 )
 
 type service struct {
 	service *youtube.Service
+	quota   quota
 	filter  urlfilter
 
 	sync.RWMutex
@@ -29,6 +32,9 @@ func (s *service) Init(configFilePath string) {
 
 	s.filter.Init()
 	s.init(configFilePath)
+	if err := s.quota.Init(); err != nil {
+		logger().Fatal(err)
+	}
 }
 
 func (s *service) Stop() {
@@ -48,6 +54,8 @@ func (s *service) SearchQuerySingle(keywords []string, searchType string) (*yout
 		return nil, errors.New("plugins.youtube.service-not-available")
 	}
 
+	s.quota.Sub(searchQuotaCost)
+
 	// extract ID from valid youtube url
 	for i, w := range keywords {
 		keywords[i], _ = s.filter.GetId(w)
@@ -62,7 +70,7 @@ func (s *service) SearchQuerySingle(keywords []string, searchType string) (*yout
 
 	response, err := call.Do()
 	if err != nil {
-		return nil, err
+		return nil, s.handleGoogleAPIError(err)
 	}
 
 	if len(response.Items) < 1 {
@@ -80,6 +88,8 @@ func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtube.
 		return nil, errors.New("plugins.youtube.service-not-available")
 	}
 
+	s.quota.Sub(activityQuotaCost)
+
 	call := s.service.Activities.List("contentDetails, snippet").
 		ChannelId(channelId).
 		PublishedAfter(publishedAfter).
@@ -87,7 +97,7 @@ func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtube.
 
 	response, err := call.Do()
 	if err != nil {
-		return nil, err
+		return nil, s.handleGoogleAPIError(err)
 	}
 
 	return response.Items, nil
@@ -101,13 +111,15 @@ func (s *service) GetVideoSingle(videoId string) (*youtube.Video, error) {
 		return nil, errors.New("plugins.youtube.service-not-available")
 	}
 
+	s.quota.Sub(videosQuotaCost)
+
 	call := s.service.Videos.List("statistics, snippet").
 		Id(videoId).
 		MaxResults(1)
 
 	response, err := call.Do()
 	if err != nil {
-		return nil, err
+		return nil, s.handleGoogleAPIError(err)
 	}
 
 	if len(response.Items) < 1 {
@@ -125,13 +137,15 @@ func (s *service) GetChannelSingle(channelId string) (*youtube.Channel, error) {
 		return nil, errors.New("plugins.youtube.service-not-available")
 	}
 
+	s.quota.Sub(channelsQuotaCost)
+
 	call := s.service.Channels.List("statistics, snippet").
 		Id(channelId).
 		MaxResults(1)
 
 	response, err := call.Do()
 	if err != nil {
-		return nil, err
+		return nil, s.handleGoogleAPIError(err)
 	}
 
 	if len(response.Items) < 1 {
@@ -139,6 +153,26 @@ func (s *service) GetChannelSingle(channelId string) (*youtube.Channel, error) {
 	}
 
 	return response.Items[0], nil
+}
+
+func (s *service) GetQuotaInfo() (quota models.YoutubeQuota, entriesCount, interval int64) {
+	return s.quota.GetQuota(), s.quota.GetCount(), s.quota.GetInterval()
+}
+
+func (s *service) IncQuotaEntryCount() {
+	s.quota.IncEntryCount()
+}
+
+func (s *service) DecQuotaEntryCount() {
+	s.quota.DecEntryCount()
+}
+
+func (s *service) UpdateCheckingInterval() error {
+	return s.quota.UpdateCheckingInterval()
+}
+
+func (s *service) GetCheckingInterval() int64 {
+	return s.quota.GetInterval()
 }
 
 func (s *service) init(configFilePath string) {
@@ -158,4 +192,22 @@ func (s *service) init(configFilePath string) {
 
 func (s *service) stop() {
 	s.service = nil
+}
+
+func (s *service) handleGoogleAPIError(err error) error {
+	var errCode int
+	var errMsg string
+	_, scanErr := fmt.Sscanf(err.Error(), "googleapi: Error %d: %s", &errCode, &errMsg)
+	if scanErr != nil {
+		return err
+	}
+
+	// Handle google API error by code
+	switch errCode {
+	case 403:
+		s.quota.DailyLimitExceeded()
+		return fmt.Errorf("plugins.youtube.daily-limit-exceeded")
+	default:
+		return err
+	}
 }

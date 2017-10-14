@@ -3,27 +3,18 @@ package youtube
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
 )
 
 type YouTube struct {
-	service          service
-	quota            quota
-	feedsLoopRunning bool
-
-	// 1) Every jobs which use youtube API calls, must hold read lock.
-	// 2) Change YouTube struct fields(except quota: quota has an own lock)
-	//    must hold write lock.
-	sync.RWMutex
+	service   service
+	feedsLoop feeds
 }
 
 type youtubeAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next youtubeAction)
@@ -44,17 +35,13 @@ func (yt *YouTube) Commands() []string {
 }
 
 func (yt *YouTube) Init(session *discordgo.Session) {
-	yt.Lock()
-	defer yt.Unlock()
 	defer helpers.Recover()
 
 	yt.service.Init(youtubeConfigFileName)
-	yt.runYoutubeFeedsLoop()
+	yt.feedsLoop.Init(&yt.service)
 }
 
 func (yt *YouTube) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	yt.RLock()
-	defer yt.RUnlock()
 	defer helpers.Recover()
 
 	session.ChannelTyping(msg.ChannelID)
@@ -102,13 +89,12 @@ func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **disco
 		return yt.actionFinish
 	}
 
-	q := yt.quota.GetQuota()
-
+	q, c, i := yt.service.GetQuotaInfo()
 	msg := fmt.Sprintf("next reset: `%s`, left quota: `%s`, channel count: `%s`, time interval: `%s`",
 		time.Unix(q.ResetTime, 0).Format(time.ANSIC),
 		humanize.Comma(q.Left),
-		humanize.Comma(yt.quota.GetCount()),
-		humanize.Comma(yt.quota.GetInterval()))
+		humanize.Comma(c),
+		humanize.Comma(i))
 
 	*out = yt.newMsg(msg)
 
@@ -133,11 +119,9 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 	}
 	*/
 
-	yt.quota.Sub(searchQuotaCost)
 	item, err := yt.service.SearchQuerySingle(args[1:], "video")
 	if err != nil {
-		yt.logger().Error(err)
-		err = yt.handleGoogleAPIError(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -185,11 +169,9 @@ func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **dis
 		return yt.actionListChannel
 	}
 
-	yt.quota.Sub(searchQuotaCost)
 	item, err := yt.service.SearchQuerySingle(args[1:], "channel")
 	if err != nil {
-		yt.logger().Error(err)
-		err = yt.handleGoogleAPIError(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -231,11 +213,9 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	}
 
 	// search channel
-	yt.quota.Sub(searchQuotaCost)
 	yc, err := yt.service.SearchQuerySingle(args[2:len(args)-1], "channel")
 	if err != nil {
-		yt.logger().Error(err)
-		err = yt.handleGoogleAPIError(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -269,12 +249,12 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	// insert entry into the db
 	_, err = createEntry(entry)
 	if err != nil {
-		yt.logger().Error(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
 
-	yt.quota.IncEntryCount()
+	yt.service.IncQuotaEntryCount()
 
 	*out = yt.newMsg("plugins.youtube.channel-added-success", yc.Snippet.ChannelTitle, dc.ID)
 	return yt.actionFinish
@@ -294,7 +274,7 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 
 	n, err := deleteEntry(args[2])
 	if err != nil {
-		yt.logger().Error(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -304,7 +284,7 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 		return yt.actionFinish
 	}
 
-	yt.quota.DecEntryCount()
+	yt.service.DecQuotaEntryCount()
 
 	*out = yt.newMsg("Delete channel, ID: " + args[2])
 	return yt.actionFinish
@@ -327,7 +307,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 		"server_id": ch.GuildID,
 	})
 	if err != nil {
-		yt.logger().Error(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -377,12 +357,10 @@ func (yt *YouTube) actionSystem(args []string, in *discordgo.Message, out **disc
 
 // _yt <video or channel search by keywords...>
 func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	yt.quota.Sub(searchQuotaCost)
 	item, err := yt.service.SearchQuerySingle(args[0:], "channel, video")
 	if err != nil {
-		yt.logger().Error(err)
+		logger().Error(err)
 		*out = yt.newMsg(err.Error())
-		err = yt.handleGoogleAPIError(err)
 		return yt.actionFinish
 	}
 
@@ -411,11 +389,9 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
-	yt.quota.Sub(videosQuotaCost)
 	video, err := yt.service.GetVideoSingle(videoId)
 	if err != nil {
-		yt.logger().Error(err)
-		err = yt.handleGoogleAPIError(err)
+		logger().Error(err)
 		return yt.newMsg(err.Error())
 	}
 
@@ -438,23 +414,21 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 			{Name: "Views", Value: humanize.Comma(int64(video.Statistics.ViewCount)), Inline: true},
 			{Name: "Likes", Value: humanize.Comma(int64(video.Statistics.LikeCount)), Inline: true},
 			{Name: "Comments", Value: humanize.Comma(int64(video.Statistics.CommentCount)), Inline: true},
-			{Name: "Published at", Value: yt.humanizeTime(video.Snippet.PublishedAt), Inline: true},
+			{Name: "Published at", Value: humanizeTime(video.Snippet.PublishedAt), Inline: true},
 		},
 		Color: helpers.GetDiscordColorFromHex(youtubeColor),
 	}
 
-	data.Embed.Fields = yt.verifyEmbedFields(data.Embed.Fields)
+	data.Embed.Fields = verifyEmbedFields(data.Embed.Fields)
 
 	return
 }
 
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
-	yt.quota.Sub(channelsQuotaCost)
 	channel, err := yt.service.GetChannelSingle(channelId)
 	if err != nil {
-		yt.logger().Error(err)
-		err = yt.handleGoogleAPIError(err)
+		logger().Error(err)
 		return yt.newMsg(err.Error())
 	}
 
@@ -475,37 +449,14 @@ func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend
 			{Name: "Videos", Value: humanize.Comma(int64(channel.Statistics.VideoCount)), Inline: true},
 			{Name: "Subscribers", Value: humanize.Comma(int64(channel.Statistics.SubscriberCount)), Inline: true},
 			{Name: "Comments", Value: humanize.Comma(int64(channel.Statistics.CommentCount)), Inline: true},
-			{Name: "Published at", Value: yt.humanizeTime(channel.Snippet.PublishedAt), Inline: true},
+			{Name: "Published at", Value: humanizeTime(channel.Snippet.PublishedAt), Inline: true},
 		},
 		Color: helpers.GetDiscordColorFromHex(youtubeColor),
 	}
 
-	data.Embed.Fields = yt.verifyEmbedFields(data.Embed.Fields)
+	data.Embed.Fields = verifyEmbedFields(data.Embed.Fields)
 
 	return
-}
-
-// Youtube channel/video can hide their subscribers or comments and just return 0 to API calls.
-// verifyEmbedFields trim hided statistic information field and invalid field with empty string.
-func (yt *YouTube) verifyEmbedFields(fields []*discordgo.MessageEmbedField) []*discordgo.MessageEmbedField {
-	for i := len(fields) - 1; i >= 0; i-- {
-		if fields[i].Value == "0" || fields[i].Value == "" || fields[i].Name == "" {
-			fields = append(fields[:i], fields[i+1:]...)
-		}
-	}
-
-	return fields
-}
-
-func (yt *YouTube) humanizeTime(t string) string {
-	parsedTime, err := time.Parse(time.RFC3339, t)
-	if err != nil {
-		yt.logger().Error(err)
-		return t
-	}
-
-	year, month, day := parsedTime.Date()
-	return fmt.Sprintf("%d-%d-%d", year, month, day)
 }
 
 func (yt *YouTube) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
@@ -513,178 +464,4 @@ func (yt *YouTube) newMsg(content string, replacements ...interface{}) *discordg
 		return &discordgo.MessageSend{Content: helpers.GetText(content)}
 	}
 	return &discordgo.MessageSend{Content: helpers.GetTextF(content, replacements...)}
-}
-
-func (yt *YouTube) logger() *logrus.Entry {
-	return cache.GetLogger().WithField("module", "youtube")
-}
-
-// yt.lock must held.
-func (yt *YouTube) runYoutubeFeedsLoop() {
-	if yt.feedsLoopRunning {
-		yt.logger().Error("youtube feeds loop already running")
-		return
-	}
-	yt.feedsLoopRunning = true
-
-	go yt.youtubeFeedsLoop()
-
-	return
-}
-
-func (yt *YouTube) youtubeFeedsLoop() {
-	defer helpers.Recover()
-	defer func() {
-		yt.Lock()
-		yt.feedsLoopRunning = false
-		yt.Unlock()
-
-		go func() {
-			yt.logger().Error("The checkYoutubeFeedsLoop died. Please investigate! Will be restarted in 60 seconds")
-			time.Sleep(60 * time.Second)
-
-			yt.Lock()
-			yt.runYoutubeFeedsLoop()
-			yt.Unlock()
-		}()
-	}()
-
-	if err := yt.quota.Init(); err != nil {
-		helpers.Relax(err)
-	}
-
-	for ; ; time.Sleep(10 * time.Second) {
-		err := yt.quota.UpdateCheckingInterval()
-		helpers.Relax(err)
-
-		yt.checkYoutubeFeeds()
-	}
-}
-
-func (yt *YouTube) checkYoutubeFeeds() {
-	yt.RLock()
-	defer yt.RUnlock()
-
-	t := time.Now().Unix()
-	entries, err := readEntries(rethink.Row.Field("next_check_time").Le(t))
-	helpers.Relax(err)
-
-	for _, e := range entries {
-		e = yt.checkYoutubeChannelFeeds(e)
-
-		// update next check time
-		e = yt.setNextCheckTime(e)
-		err := updateEntry(e)
-		helpers.Relax(err)
-	}
-}
-
-func (yt *YouTube) checkYoutubeChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeChannelEntry {
-	// set iso8601 time which will be used search query filter "published after"
-	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
-	publishedAfter := lastSuccessfulCheckTime.
-		Add(time.Duration(-1) * time.Hour).
-		Format("2006-01-02T15:04:05-0700")
-
-	// get updated feeds
-	yt.quota.Sub(activityQuotaCost)
-	feeds, err := yt.service.GetChannelFeeds(e.YoutubeChannelID, publishedAfter)
-	if err != nil {
-		yt.logger().Error("check channel feeds error: " + err.Error() + " channel name: " + e.YoutubeChannelName + "id: " + e.YoutubeChannelID)
-		err = yt.handleGoogleAPIError(err)
-		return e
-	}
-
-	newPostedVideos := make([]string, 0)
-	alreadyPostedVideos := make([]string, 0)
-
-	// check if posted videos and post new videos
-	for i := len(feeds) - 1; i >= 0; i-- {
-		feed := feeds[i]
-
-		// only 'upload' type video can be posted
-		if feed.Snippet.Type != "upload" {
-			continue
-		}
-		videoId := feed.ContentDetails.Upload.VideoId
-
-		// check if the video is already posted
-		if yt.isPosted(videoId, e.YoutubePostedVideos) {
-			alreadyPostedVideos = append(alreadyPostedVideos, videoId)
-			continue
-		}
-
-		// make a message and send to discord channel
-		msg := &discordgo.MessageSend{
-			Content: fmt.Sprintf(youtubeVideoBaseUrl, videoId),
-			Embed: &discordgo.MessageEmbed{
-				Author: &discordgo.MessageEmbedAuthor{
-					Name: feed.Snippet.ChannelTitle,
-					URL:  fmt.Sprintf(youtubeChannelBaseUrl, feed.Snippet.ChannelId),
-				},
-				Title:       helpers.GetTextF("plugins.youtube.channel-embed-title-vod", feed.Snippet.ChannelTitle),
-				URL:         fmt.Sprintf(youtubeVideoBaseUrl, videoId),
-				Description: fmt.Sprintf("**%s**", feed.Snippet.Title),
-				Image:       &discordgo.MessageEmbedImage{URL: feed.Snippet.Thumbnails.High.Url},
-				Footer:      &discordgo.MessageEmbedFooter{Text: "YouTube"},
-				Color:       helpers.GetDiscordColorFromHex(youtubeColor),
-			},
-		}
-
-		_, err = cache.GetSession().ChannelMessageSendComplex(e.ChannelID, msg)
-		if err != nil {
-			yt.logger().Error(err)
-			break
-		}
-
-		newPostedVideos = append(newPostedVideos, videoId)
-
-		yt.logger().WithFields(logrus.Fields{
-			"title":   feed.Snippet.Title,
-			"channel": e.ChannelID,
-		}).Info("posting video")
-	}
-
-	if err == nil {
-		e.LastSuccessfulCheckTime = e.NextCheckTime
-		e.YoutubePostedVideos = alreadyPostedVideos
-	}
-	e.YoutubePostedVideos = append(e.YoutubePostedVideos, newPostedVideos...)
-
-	return e
-}
-
-func (yt *YouTube) setNextCheckTime(e models.YoutubeChannelEntry) models.YoutubeChannelEntry {
-	e.NextCheckTime = time.Now().
-		Add(time.Duration(yt.quota.GetInterval()) * time.Second).
-		Unix()
-
-	return e
-}
-
-func (yt *YouTube) isPosted(id string, postedIds []string) bool {
-	for _, posted := range postedIds {
-		if id == posted {
-			return true
-		}
-	}
-	return false
-}
-
-func (yt *YouTube) handleGoogleAPIError(err error) error {
-	var errCode int
-	var errMsg string
-	_, scanErr := fmt.Sscanf(err.Error(), "googleapi: Error %d: %s", &errCode, &errMsg)
-	if scanErr != nil {
-		return err
-	}
-
-	// Handle google API error by code
-	switch errCode {
-	case 403:
-		yt.quota.DailyLimitExceeded()
-		return fmt.Errorf("plugins.youtube.daily-limit-exceeded")
-	default:
-		return err
-	}
 }
