@@ -15,7 +15,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
-	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
@@ -25,7 +24,7 @@ import (
 type YouTube struct {
 	service          *youtube.Service
 	regexpSet        []*regexp.Regexp
-	quota            youtubeQuota
+	quota            quota
 	feedsLoopRunning bool
 
 	// 1) Every jobs which use youtube API calls, must hold read lock.
@@ -48,12 +47,6 @@ const (
 	videoShortUrl  string = `^(https?\:\/\/)?(youtu\.be)\/(.[A-Za-z0-9_]*)`
 	channelIdUrl   string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/channel\/(.[A-Za-z0-9_]*)`
 	channelUserUrl string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
-
-	dailyQuotaLimit   int64 = 1000000
-	activityQuotaCost int64 = 5
-	searchQuotaCost   int64 = 100
-	videosQuotaCost   int64 = 7
-	channelsQuotaCost int64 = 7
 )
 
 func (yt *YouTube) Commands() []string {
@@ -683,7 +676,7 @@ func (yt *YouTube) youtubeFeedsLoop() {
 		}()
 	}()
 
-	if err := yt.quota.Init(yt); err != nil {
+	if err := yt.quota.Init(); err != nil {
 		helpers.Relax(err)
 	}
 
@@ -819,187 +812,4 @@ func (yt *YouTube) handleGoogleAPIError(err error) error {
 	default:
 		return err
 	}
-}
-
-type youtubeQuota struct {
-	data     models.YoutubeQuota
-	count    int64
-	interval int64
-
-	sync.Mutex
-}
-
-func (yq *youtubeQuota) Init(yt *YouTube) (err error) {
-	yq.Lock()
-	defer yq.Unlock()
-
-	if yq.count, err = yq.readEntryCount(); err != nil {
-		return
-	}
-
-	yq.data.Daily = dailyQuotaLimit
-	yq.data.Left = dailyQuotaLimit
-	yq.data.ResetTime = yq.calcResetTime().Unix()
-
-	oldQuota, err := yq.get()
-	if err != nil {
-		return err
-	}
-
-	if yq.data.ResetTime <= oldQuota.ResetTime {
-		yq.data.Left = oldQuota.Left
-	}
-
-	return yq.set()
-}
-
-func (yq *youtubeQuota) GetInterval() int64 {
-	yq.Lock()
-	defer yq.Unlock()
-
-	return yq.interval
-}
-
-func (yq *youtubeQuota) GetCount() int64 {
-	yq.Lock()
-	defer yq.Unlock()
-
-	return yq.count
-}
-
-func (yq *youtubeQuota) GetQuota() models.YoutubeQuota {
-	yq.Lock()
-	defer yq.Unlock()
-
-	return yq.data
-}
-
-func (yq *youtubeQuota) Sub(i int64) int64 {
-	yq.Lock()
-	defer yq.Unlock()
-
-	if yq.data.Left < i {
-		return -1
-	}
-
-	yq.data.Left -= i
-	return yq.data.Left
-}
-
-func (yq *youtubeQuota) IncEntryCount() {
-	yq.Lock()
-	defer yq.Unlock()
-
-	yq.count++
-}
-
-func (yq *youtubeQuota) DecEntryCount() {
-	yq.Lock()
-	defer yq.Unlock()
-
-	if yq.count > 0 {
-		yq.count--
-	}
-}
-
-func (yq *youtubeQuota) UpdateCheckingInterval() error {
-	yq.Lock()
-	defer yq.Unlock()
-
-	yq.interval = yq.calcCheckingTimeInterval()
-	return yq.set()
-}
-
-func (yq *youtubeQuota) DailyLimitExceeded() {
-	yq.Lock()
-	defer yq.Unlock()
-
-	yq.data.Left = 0
-}
-
-// Set entries count which will use in quota calculation.
-func (yq *youtubeQuota) readEntryCount() (int64, error) {
-	entries, err := readEntries(map[string]interface{}{})
-	if err != nil {
-		return -1, err
-	}
-	return int64(len(entries)), nil
-}
-
-// readOldQuota reads previous quota information from database.
-// If failed, return zero filled quota.
-func (yq *youtubeQuota) get() (models.YoutubeQuota, error) {
-	q := models.YoutubeQuota{
-		Daily:     0,
-		Left:      0,
-		ResetTime: 0,
-	}
-
-	codec := cache.GetRedisCacheCodec()
-
-	var savedQuota models.YoutubeQuota
-	if err := codec.Get(models.YoutubeQuotaRedisKey, &savedQuota); err != nil {
-		return q, nil
-	}
-
-	return savedQuota, nil
-}
-
-func (yq *youtubeQuota) set() error {
-	return cache.GetRedisCacheCodec().Set(&redisCache.Item{
-		Key:        models.YoutubeQuotaRedisKey,
-		Object:     yq.data,
-		Expiration: time.Hour * 24,
-	})
-}
-
-func (yq *youtubeQuota) calcResetTime() time.Time {
-	now := time.Now()
-	localZone := now.Location()
-
-	// Youtube quota is reset when every midnight in pacific time
-	pacific, err := time.LoadLocation("America/Los_Angeles")
-	if err == nil {
-		now = now.In(pacific)
-	} else {
-		cache.GetLogger().Error(err)
-	}
-
-	y, m, d := now.Date()
-	resetTime := time.Date(y, m, d+1, 0, 0, 0, 0, now.Location())
-
-	return resetTime.In(localZone)
-}
-
-func (yq *youtubeQuota) calcCheckingTimeInterval() int64 {
-	defaultTimeInterval := int64(5)
-
-	now := time.Now().Unix()
-
-	if now > yq.data.ResetTime {
-		yq.data.ResetTime = yq.calcResetTime().Unix()
-		yq.data.Left = dailyQuotaLimit
-	}
-
-	delta := yq.data.ResetTime - now
-	if delta < 1 {
-		return defaultTimeInterval
-	}
-
-	quotaPerSec := yq.data.Left / delta
-	if quotaPerSec < 1 {
-		// Adds 300 seconds for reducing "API limit exceed" error message.
-		//
-		// Just after reset time, youtube API server's quota isn't synchronized correctly for few minutes.
-		// It occurs some responses are OK, others are ERR(API limit exceed).
-		// Hence schedule to reset time + 300 seconds.
-		return delta + 300
-	}
-
-	calcTimeInterval := (channelsQuotaCost * yq.count / quotaPerSec)
-	if calcTimeInterval < defaultTimeInterval {
-		return defaultTimeInterval
-	}
-
-	return calcTimeInterval
 }
