@@ -1,9 +1,7 @@
 package youtube
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
@@ -15,14 +13,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/youtube/v3"
 )
 
 type YouTube struct {
-	service          *youtube.Service
-	urlfilter        urlfilter
+	service          service
 	quota            quota
 	feedsLoopRunning bool
 
@@ -54,10 +48,7 @@ func (yt *YouTube) Init(session *discordgo.Session) {
 	defer yt.Unlock()
 	defer helpers.Recover()
 
-	yt.service = nil
-
-	yt.urlfilter.Init()
-	yt.newYoutubeService()
+	yt.service.Init(youtubeConfigFileName)
 	yt.runYoutubeFeedsLoop()
 }
 
@@ -142,9 +133,11 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 	}
 	*/
 
-	item, err := yt.searchQuerySingle(args[1:], "video")
+	yt.quota.Sub(searchQuotaCost)
+	item, err := yt.service.SearchQuerySingle(args[1:], "video")
 	if err != nil {
 		yt.logger().Error(err)
+		err = yt.handleGoogleAPIError(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -192,9 +185,11 @@ func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **dis
 		return yt.actionListChannel
 	}
 
-	item, err := yt.searchQuerySingle(args[1:], "channel")
+	yt.quota.Sub(searchQuotaCost)
+	item, err := yt.service.SearchQuerySingle(args[1:], "channel")
 	if err != nil {
 		yt.logger().Error(err)
+		err = yt.handleGoogleAPIError(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -236,9 +231,11 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	}
 
 	// search channel
-	yc, err := yt.searchQuerySingle(args[2:len(args)-1], "channel")
+	yt.quota.Sub(searchQuotaCost)
+	yc, err := yt.service.SearchQuerySingle(args[2:len(args)-1], "channel")
 	if err != nil {
 		yt.logger().Error(err)
+		err = yt.handleGoogleAPIError(err)
 		*out = yt.newMsg(err.Error())
 		return yt.actionFinish
 	}
@@ -380,10 +377,12 @@ func (yt *YouTube) actionSystem(args []string, in *discordgo.Message, out **disc
 
 // _yt <video or channel search by keywords...>
 func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	item, err := yt.searchQuerySingle(args[0:], "channel, video")
+	yt.quota.Sub(searchQuotaCost)
+	item, err := yt.service.SearchQuerySingle(args[0:], "channel, video")
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
+		err = yt.handleGoogleAPIError(err)
 		return yt.actionFinish
 	}
 
@@ -410,93 +409,19 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 	return yt.actionFinish
 }
 
-// searchQuerySingle retuns single search result with given type @searchType.
-// returns (nil, nil) when there is no matching results.
-func (yt *YouTube) searchQuerySingle(keywords []string, searchType string) (*youtube.SearchResult, error) {
-	if yt.service == nil {
-		return nil, errors.New("plugins.youtube.service-not-available")
-	}
-
-	call := yt.service.Search.List("id, snippet").
-		Type(searchType).
-		MaxResults(1)
-
-	items, err := yt.searchQuery(keywords, call)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(items) < 1 {
-		return nil, nil
-	}
-
-	return items[0], nil
-}
-
-// search returns searchQuery results with given keywords and searchListCall.
-func (yt *YouTube) searchQuery(keywords []string, call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
-	// extract ID from valid youtube url
-	for i, w := range keywords {
-		keywords[i], _ = yt.urlfilter.GetId(w)
-	}
-
-	query := strings.Join(keywords, " ")
-
-	call = call.Q(query)
-
-	return yt.search(call)
-}
-
-// search returns search results with given searchListCall.
-func (yt *YouTube) search(call *youtube.SearchListCall) ([]*youtube.SearchResult, error) {
-	yt.quota.Sub(searchQuotaCost)
-	response, err := call.Do()
-	if err != nil {
-		err = yt.handleGoogleAPIError(err)
-		return nil, err
-	}
-
-	return response.Items, nil
-}
-
-func (yt *YouTube) getChannelFeeds(channelId, publishedAfter string) ([]*youtube.Activity, error) {
-	if yt.service == nil {
-		return nil, errors.New("plugins.youtube.service-not-available")
-	}
-
-	call := yt.service.Activities.List("contentDetails, snippet").
-		ChannelId(channelId).
-		PublishedAfter(publishedAfter).
-		MaxResults(50)
-
-	yt.quota.Sub(activityQuotaCost)
-	response, err := call.Do()
-	if err != nil {
-		err = yt.handleGoogleAPIError(err)
-		return nil, err
-	}
-
-	return response.Items, nil
-}
-
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
 func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 	yt.quota.Sub(videosQuotaCost)
-	call := yt.service.Videos.List("statistics, snippet").
-		Id(videoId).
-		MaxResults(1)
-
-	response, err := call.Do()
+	video, err := yt.service.GetVideoSingle(videoId)
 	if err != nil {
 		yt.logger().Error(err)
 		err = yt.handleGoogleAPIError(err)
 		return yt.newMsg(err.Error())
 	}
 
-	if len(response.Items) < 1 {
+	if video == nil {
 		return yt.newMsg("plugins.youtube.video-not-found")
 	}
-	video := response.Items[0]
 
 	data = &discordgo.MessageSend{}
 
@@ -526,21 +451,16 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
 func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
 	yt.quota.Sub(channelsQuotaCost)
-	call := yt.service.Channels.List("statistics, snippet").
-		Id(channelId).
-		MaxResults(1)
-
-	response, err := call.Do()
+	channel, err := yt.service.GetChannelSingle(channelId)
 	if err != nil {
 		yt.logger().Error(err)
 		err = yt.handleGoogleAPIError(err)
 		return yt.newMsg(err.Error())
 	}
 
-	if len(response.Items) < 1 {
+	if channel == nil {
 		return yt.newMsg("plugins.youtube.channel-not-found")
 	}
-	channel := response.Items[0]
 
 	data = &discordgo.MessageSend{}
 
@@ -586,21 +506,6 @@ func (yt *YouTube) humanizeTime(t string) string {
 
 	year, month, day := parsedTime.Date()
 	return fmt.Sprintf("%d-%d-%d", year, month, day)
-}
-
-func (yt *YouTube) newYoutubeService() {
-	configFile := helpers.GetConfig().Path(youtubeConfigFileName).Data().(string)
-
-	authJSON, err := ioutil.ReadFile(configFile)
-	helpers.Relax(err)
-
-	config, err := google.JWTConfigFromJSON(authJSON, youtube.YoutubeReadonlyScope)
-	helpers.Relax(err)
-
-	client := config.Client(context.Background())
-
-	yt.service, err = youtube.New(client)
-	helpers.Relax(err)
 }
 
 func (yt *YouTube) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
@@ -682,9 +587,11 @@ func (yt *YouTube) checkYoutubeChannelFeeds(e models.YoutubeChannelEntry) models
 		Format("2006-01-02T15:04:05-0700")
 
 	// get updated feeds
-	feeds, err := yt.getChannelFeeds(e.YoutubeChannelID, publishedAfter)
+	yt.quota.Sub(activityQuotaCost)
+	feeds, err := yt.service.GetChannelFeeds(e.YoutubeChannelID, publishedAfter)
 	if err != nil {
 		yt.logger().Error("check channel feeds error: " + err.Error() + " channel name: " + e.YoutubeChannelName + "id: " + e.YoutubeChannelID)
+		err = yt.handleGoogleAPIError(err)
 		return e
 	}
 
