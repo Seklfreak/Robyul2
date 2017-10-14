@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"html"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -264,7 +266,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			createdAtTime, err := time.Parse(rfc2822, twitterUser.CreatedAt)
 			helpers.Relax(err)
 
-			twitterUserDescription := twitterUser.Description
+			twitterUserDescription := html.UnescapeString(twitterUser.Description)
 			if twitterUser.Entities != nil {
 				if len(twitterUser.Entities.Description.Urls) > 0 {
 					for _, urlEntity := range twitterUser.Entities.Description.Urls {
@@ -336,7 +338,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
 	//	}
 	//	mediaModifier += ")"
 	//}
-	tweetText := tweet.Text
+	tweetText := html.UnescapeString(tweet.Text)
 
 	if tweet.ExtendedEntities != nil {
 		if len(tweet.ExtendedEntities.Media) > 0 {
