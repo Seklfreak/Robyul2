@@ -78,6 +78,7 @@ var (
 		&plugins.AutoRoles{},
 		&plugins.Starboard{},
 		&plugins.Autoleaver{},
+		&plugins.Persistency{},
 	}
 
 	// TriggerPluginList is the list of plugins that activate on normal chat

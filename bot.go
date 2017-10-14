@@ -64,18 +64,18 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		time.Sleep(5 * time.Second)
 
 		for _, guild := range session.State.Guilds {
-			if guild.Large {
-				err := session.RequestGuildMembers(guild.ID, "", 0)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-
-				cache.GetLogger().WithField("module", "bot").Debug(
-					fmt.Sprintf("requesting guild member chunks for guild: %s",
-						guild.ID))
-
-				time.Sleep(1 * time.Second)
+			//if guild.Large {
+			err := session.RequestGuildMembers(guild.ID, "", 0)
+			if err != nil {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
+
+			cache.GetLogger().WithField("module", "bot").Debug(
+				fmt.Sprintf("requesting guild member chunks for guild: %s",
+					guild.ID))
+
+			time.Sleep(1 * time.Second)
+			//}
 		}
 	}()
 
@@ -127,18 +127,18 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 		}
 
 		for _, guild := range cache.GetSession().State.Guilds {
-			if guild.Large {
-				err := session.RequestGuildMembers(guild.ID, "", 0)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-
-				cache.GetLogger().WithField("module", "bot").Debug(
-					fmt.Sprintf("requesting guild member chunks for guild: %s",
-						guild.ID))
-
-				time.Sleep(1 * time.Second)
+			//if guild.Large {
+			err := session.RequestGuildMembers(guild.ID, "", 0)
+			if err != nil {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
+
+			cache.GetLogger().WithField("module", "bot").Debug(
+				fmt.Sprintf("requesting guild member chunks for guild: %s",
+					guild.ID))
+
+			time.Sleep(1 * time.Second)
+			//}
 		}
 	}()
 }

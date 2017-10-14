@@ -472,20 +472,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 
-				settings := helpers.GuildSettingsGetCached(channel.GuildID)
-
-				alreadyMutedInSettings := false
-				for _, mutedMember := range settings.MutedMembers {
-					if mutedMember == targetUser.ID {
-						alreadyMutedInSettings = true
-					}
-				}
-				if alreadyMutedInSettings == false {
-					settings.MutedMembers = append(settings.MutedMembers, targetUser.ID)
-					err = helpers.GuildSettingsSet(channel.GuildID, settings)
-					helpers.Relax(err)
-				}
-
 				successText := helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID)
 
 				if time.Now().Before(timeToUnmuteAt) {

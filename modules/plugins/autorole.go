@@ -140,7 +140,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				return
 			}
 
-			result := "AutoRoles on this server: "
+			result := "AutoRoles on this server:\n"
 
 			for _, roleID := range settings.AutoRoleIDs {
 				role, err := session.State.Role(channel.GuildID, roleID)
@@ -160,7 +160,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				}
 			}
 
-			result += fmt.Sprintf("(%d role(s))", len(settings.AutoRoleIDs))
+			result += fmt.Sprintf("_found %d role(s) in total_", len(settings.AutoRoleIDs))
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, result)
 			helpers.Relax(err)

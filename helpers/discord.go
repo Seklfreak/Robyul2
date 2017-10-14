@@ -393,15 +393,11 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
 			return muteRole, err
 		}
 		for _, channel := range guild.Channels {
-			err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionSendMessages)
+			err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0,
+				discordgo.PermissionSendMessages+discordgo.PermissionAddReactions)
 			if err != nil {
-				cache.GetLogger().WithField("module", "discord").Error("Error disabling send messages on mute Role: " + err.Error())
+				cache.GetLogger().WithField("module", "discord").Error("Error disabling send messages and add reactions on mute Role: " + err.Error())
 			}
-			// TODO: update discordgo
-			//err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0, discordgo.PermissionAddReactions)
-			//if err != nil {
-			//    logger.ERROR.L("discord", "Error disabling add reactions on mute Role: " + err.Error())
-			//}
 		}
 	}
 	return muteRole, nil
@@ -428,7 +424,6 @@ func RemoveMuteRole(guildID string, userID string) (err error) {
 }
 
 func RemoveMuteDatabase(guildID string, userID string) (err error) {
-	// TODO: lock guild mute settings
 	settings := GuildSettingsGetCached(guildID)
 
 	removedFromDb := false
@@ -451,7 +446,7 @@ func RemoveMuteDatabase(guildID string, userID string) (err error) {
 
 func UnmuteUser(guildID string, userID string) (err error) {
 	errRole := RemoveMuteRole(guildID, userID)
-	errDatabase := RemoveMuteRole(guildID, userID)
+	errDatabase := RemoveMuteDatabase(guildID, userID)
 
 	if errRole != nil {
 		return errRole
