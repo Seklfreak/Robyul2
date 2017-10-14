@@ -1,4 +1,4 @@
-package plugins
+package youtube
 
 import "testing"
 import "github.com/bwmarrin/discordgo"
