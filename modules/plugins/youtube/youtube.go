@@ -284,7 +284,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 	}
 
 	// insert entry into the db
-	_, err = yt.createEntry(entry)
+	_, err = createEntry(entry)
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
@@ -309,7 +309,7 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 		return yt.actionFinish
 	}
 
-	n, err := yt.deleteEntry(args[2])
+	n, err := deleteEntry(args[2])
 	if err != nil {
 		yt.logger().Error(err)
 		*out = yt.newMsg(err.Error())
@@ -340,7 +340,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 		return yt.actionFinish
 	}
 
-	entries, err := yt.readEntries(map[string]interface{}{
+	entries, err := readEntries(map[string]interface{}{
 		"server_id": ch.GuildID,
 	})
 	if err != nil {
@@ -653,50 +653,6 @@ func (yt *YouTube) logger() *logrus.Entry {
 	return cache.GetLogger().WithField("module", "youtube")
 }
 
-// RethinkDB CRUD wrapper functions.
-
-func (yt *YouTube) createEntry(entry models.YoutubeChannelEntry) (id string, err error) {
-	query := rethink.Table(models.YoutubeChannelTable).Insert(entry)
-
-	res, err := query.RunWrite(helpers.GetDB())
-	if err != nil {
-		return "", err
-	}
-
-	return res.GeneratedKeys[0], nil
-}
-
-func (yt *YouTube) readEntries(filter interface{}) (entry []models.YoutubeChannelEntry, err error) {
-	query := rethink.Table(models.YoutubeChannelTable).Filter(filter)
-
-	cursor, err := query.Run(helpers.GetDB())
-	if err != nil {
-		return entry, err
-	}
-	defer cursor.Close()
-
-	err = cursor.All(&entry)
-	return
-}
-
-func (yt *YouTube) updateEntry(entry models.YoutubeChannelEntry) (err error) {
-	query := rethink.Table(models.YoutubeChannelTable).Update(entry)
-
-	_, err = query.Run(helpers.GetDB())
-	return
-}
-
-func (yt *YouTube) deleteEntry(id string) (n int, err error) {
-	query := rethink.Table(models.YoutubeChannelTable).Filter(rethink.Row.Field("id").Eq(id)).Delete()
-
-	r, err := query.RunWrite(helpers.GetDB())
-	if err == nil {
-		n = r.Deleted
-	}
-
-	return
-}
-
 // yt.lock must held.
 func (yt *YouTube) runYoutubeFeedsLoop() {
 	if yt.feedsLoopRunning {
@@ -744,7 +700,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 	defer yt.RUnlock()
 
 	t := time.Now().Unix()
-	entries, err := yt.readEntries(rethink.Row.Field("next_check_time").Le(t))
+	entries, err := readEntries(rethink.Row.Field("next_check_time").Le(t))
 	helpers.Relax(err)
 
 	for _, e := range entries {
@@ -752,7 +708,7 @@ func (yt *YouTube) checkYoutubeFeeds() {
 
 		// update next check time
 		e = yt.setNextCheckTime(e)
-		err := yt.updateEntry(e)
+		err := updateEntry(e)
 		helpers.Relax(err)
 	}
 }
@@ -866,7 +822,6 @@ func (yt *YouTube) handleGoogleAPIError(err error) error {
 }
 
 type youtubeQuota struct {
-	yt       *YouTube // For db call
 	data     models.YoutubeQuota
 	count    int64
 	interval int64
@@ -878,7 +833,6 @@ func (yq *youtubeQuota) Init(yt *YouTube) (err error) {
 	yq.Lock()
 	defer yq.Unlock()
 
-	yq.yt = yt
 	if yq.count, err = yq.readEntryCount(); err != nil {
 		return
 	}
@@ -965,7 +919,7 @@ func (yq *youtubeQuota) DailyLimitExceeded() {
 
 // Set entries count which will use in quota calculation.
 func (yq *youtubeQuota) readEntryCount() (int64, error) {
-	entries, err := yq.yt.readEntries(map[string]interface{}{})
+	entries, err := readEntries(map[string]interface{}{})
 	if err != nil {
 		return -1, err
 	}
