@@ -385,8 +385,20 @@ func (m *Levels) processExpStackLoop() {
 		if !expStack.Empty() {
 			expItem := expStack.Pop().(ProcessExpInfo)
 			levelsServerUser := m.getLevelsServerUserOrCreateNew(expItem.GuildID, expItem.UserID)
+
+			expBefore := levelsServerUser.Exp
+			levelBefore := m.getLevelFromExp(levelsServerUser.Exp)
+
 			levelsServerUser.Exp += m.getRandomExpForMessage()
+
+			levelAfter := m.getLevelFromExp(levelsServerUser.Exp)
+
 			m.setLevelsServerUser(levelsServerUser)
+
+			if expBefore <= 0 || levelBefore != levelAfter {
+				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
+				helpers.RelaxLog(err)
+			}
 		} else {
 			time.Sleep(1 * time.Second)
 		}
@@ -1374,7 +1386,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 		if len(args) >= 1 && args[0] != "" {
 			switch args[0] {
-			case "leaderboard", "top": // [p]level top
+			case "leaderboard", "top":
+				// [p]level top
 				// TODO: use cached top list
 				var levelsServersUsers []DB_Levels_ServerUser
 				listCursor, err := rethink.Table("levels_serverusers").Filter(
@@ -1639,7 +1652,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					}
 				}
 				return
-			case "process-history": // [p]level process-history
+				// [p]level process-history
+			case "process-history":
 				helpers.RequireBotAdmin(msg, func() {
 					dmChannel, err := session.UserChannelCreate(msg.Author.ID)
 					helpers.Relax(err)
@@ -1748,6 +1762,182 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
+				return
+			case "role", "roles":
+				if len(args) < 2 {
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				}
+
+				switch args[1] {
+				case "add":
+					helpers.RequireMod(msg, func() {
+						// [p]levels role add <role name or id> <start level> [<last level>]
+						if len(args) < 4 {
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+						if _, err = strconv.Atoi(args[len(args)-1]); err != nil {
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						serverRoles, err := session.GuildRoles(channel.GuildID)
+						helpers.Relax(err)
+
+						var targetRole *discordgo.Role
+
+						roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+
+						var startLevel int
+						lastLevel := -1
+						if _, err = strconv.Atoi(args[len(args)-2]); len(args) > 4 && err == nil {
+							startLevel, err = strconv.Atoi(args[len(args)-2])
+							helpers.Relax(err)
+							lastLevel, err = strconv.Atoi(args[len(args)-1])
+							helpers.Relax(err)
+
+							roleNameToMatch = strings.TrimSpace(strings.Replace(roleNameToMatch, " "+strings.Join(args[len(args)-2:], " "), "", 1))
+						} else {
+							startLevel, err = strconv.Atoi(args[len(args)-1])
+							helpers.Relax(err)
+
+							roleNameToMatch = strings.TrimSpace(strings.Replace(roleNameToMatch, " "+strings.Join(args[len(args)-1:], " "), "", 1))
+						}
+
+						for _, role := range serverRoles {
+							if strings.ToLower(role.Name) == strings.ToLower(roleNameToMatch) || role.ID == roleNameToMatch {
+								targetRole = role
+							}
+						}
+
+						if targetRole == nil || targetRole.ID == "" || startLevel < 0 || (lastLevel < 0 && lastLevel != -1) || (lastLevel != -1 && startLevel > lastLevel) {
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						_, err = m.createLevelsRoleEntry(channel.GuildID, targetRole.ID, startLevel, lastLevel)
+						helpers.Relax(err)
+
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-add-success", targetRole.Name))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					})
+					return
+				case "apply":
+					// [p]levels role apply
+					helpers.RequireMod(msg, func() {
+						if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetText("plugins.levels.levels-role-apply-confirm"), "✅", "🚫") {
+							errors := make([]error, 0)
+							var success int
+
+							guild, err := helpers.GetGuild(channel.GuildID)
+							helpers.Relax(err)
+
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.levels-role-apply-start"))
+
+							for _, member := range guild.Members {
+								if member.User.Bot == true {
+									continue
+								}
+
+								errRole := m.applyLevelsRoles(guild.ID, member.User.ID, m.GetLevelForUser(member.User.ID, guild.ID))
+								if errRole == nil {
+									success++
+								} else {
+									errors = append(errors, errRole)
+								}
+							}
+
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-apply-result", msg.Author.ID, success, len(errors)))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+						return
+					})
+					return
+				case "list":
+					// [p]levels role list
+					helpers.RequireMod(msg, func() {
+						entries, err := m.getLevelsRoleEntriesBy("guild_id", channel.GuildID)
+						if err != nil {
+							if !strings.Contains(err.Error(), "no levels role entries") {
+								helpers.Relax(err)
+							}
+						}
+
+						if len(entries) <= 0 {
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.levels-role-list-empty"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						}
+
+						var message string
+						for _, entry := range entries {
+							role, err := session.State.Role(entry.GuildID, entry.RoleID)
+							if err != nil {
+								role = new(discordgo.Role)
+								role.ID = "N/A"
+								role.Name = "N/A"
+							}
+
+							lastLevelText := strconv.Itoa(entry.LastLevel)
+							if lastLevelText == "-1" {
+								lastLevelText = "∞"
+							}
+
+							message += fmt.Sprintf("`%s`: Role `%s` (`#%s`) from level %d to level %s\n",
+								entry.ID, role.Name, role.ID, entry.StartLevel, lastLevelText)
+						}
+						message += fmt.Sprintf("_found %d role(s) in total_", len(entries))
+
+						for _, page := range helpers.Pagify(message, "\n") {
+							_, err = session.ChannelMessageSend(msg.ChannelID, page)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						}
+						return
+					})
+					return
+				case "remove", "delete":
+					// levels role remove <connection id>
+					helpers.RequireMod(msg, func() {
+						if len(args) < 3 {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						entry, err := m.getLevelsRoleEntryBy("id", args[2])
+						if err != nil {
+							if !strings.Contains(err.Error(), "no levels role entry") {
+								helpers.Relax(err)
+							}
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						err = m.deleteLevelsRoleEntry(entry)
+						helpers.Relax(err)
+
+						role, err := session.State.Role(channel.GuildID, entry.RoleID)
+						if err != nil {
+							role = new(discordgo.Role)
+							role.Name = "N/A"
+						}
+
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-delete-success",
+							role.Name, entry.RoleID))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					})
+					return
+				}
+
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 			targetUser, err = helpers.GetUserFromMention(args[0])
@@ -1858,7 +2048,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
-
 }
 
 func (l *Levels) DeleteMessages(channelID string, messages []string) {
@@ -3149,4 +3338,148 @@ func (l *Levels) uploadToImgur(picData []byte) (string, error) {
 		cache.GetLogger().WithField("module", "levels").Info("uploaded a picture to imgur: " + imgurResponse.Data.Link)
 		return imgurResponse.Data.Link, nil
 	}
+}
+
+func (l *Levels) createLevelsRoleEntry(
+	guildID string,
+	roleID string,
+	startLevel int,
+	lastLevel int,
+) (result models.LevelsRoleEntry, err error) {
+	insert := rethink.Table(models.LevelsRolesTable).Insert(models.LevelsRoleEntry{
+		GuildID:    guildID,
+		RoleID:     roleID,
+		StartLevel: startLevel,
+		LastLevel:  lastLevel,
+	})
+	inserted, err := insert.RunWrite(helpers.GetDB())
+	if err != nil {
+		return models.LevelsRoleEntry{}, err
+	} else {
+		return l.getLevelsRoleEntryBy("id", inserted.GeneratedKeys[0])
+	}
+}
+
+func (l *Levels) getLevelsRoles(guildID string, currentLevel int) (apply []*discordgo.Role, remove []*discordgo.Role) {
+	apply = make([]*discordgo.Role, 0)
+	remove = make([]*discordgo.Role, 0)
+
+	var entryBucket []models.LevelsRoleEntry
+	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
+		rethink.Row.Field("guild_id").Eq(guildID),
+	).Run(helpers.GetDB())
+	if err != nil {
+		helpers.RelaxLog(err)
+		return
+	}
+	defer listCursor.Close()
+	err = listCursor.All(&entryBucket)
+
+	if err == rethink.ErrEmptyResult {
+		return
+	}
+
+	for _, entry := range entryBucket {
+		role, err := cache.GetSession().State.Role(guildID, entry.RoleID)
+		if err != nil {
+			continue
+		}
+
+		if currentLevel >= entry.StartLevel && (entry.LastLevel < 0 || currentLevel <= entry.LastLevel) {
+			apply = append(apply, role)
+		} else {
+			remove = append(remove, role)
+		}
+	}
+
+	return
+}
+
+func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err error) {
+	apply, remove := l.getLevelsRoles(guildID, level)
+	member, err := helpers.GetGuildMember(guildID, userID)
+	if err != nil {
+		return err
+	}
+
+	toRemove := make([]*discordgo.Role, 0)
+	toApply := make([]*discordgo.Role, 0)
+
+	for _, removeRole := range remove {
+		for _, memberRole := range member.Roles {
+			if removeRole.ID == memberRole {
+				toRemove = append(toRemove, removeRole)
+			}
+		}
+	}
+	for _, applyRole := range apply {
+		hasRoleAlready := false
+		for _, memberRole := range member.Roles {
+			if applyRole.ID == memberRole {
+				hasRoleAlready = true
+			}
+		}
+		if !hasRoleAlready {
+			toApply = append(toApply, applyRole)
+		}
+	}
+
+	session := cache.GetSession()
+
+	for _, toRemoveRole := range toRemove {
+		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
+		if errRole != nil {
+			err = errRole
+		}
+	}
+	for _, toApplyRole := range toApply {
+		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
+		if errRole != nil {
+			err = errRole
+		}
+	}
+
+	return
+}
+
+func (l *Levels) getLevelsRoleEntryBy(key string, value string) (result models.LevelsRoleEntry, err error) {
+	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
+		rethink.Row.Field(key).Eq(value),
+	).Run(helpers.GetDB())
+	if err != nil {
+		return result, err
+	}
+	defer listCursor.Close()
+	err = listCursor.One(&result)
+
+	if err == rethink.ErrEmptyResult {
+		return result, errors.New("no levels role entry")
+	}
+
+	return result, err
+}
+
+func (l *Levels) getLevelsRoleEntriesBy(key string, value string) (result []models.LevelsRoleEntry, err error) {
+	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
+		rethink.Row.Field(key).Eq(value),
+	).Run(helpers.GetDB())
+	if err != nil {
+		return result, err
+	}
+	defer listCursor.Close()
+	err = listCursor.All(&result)
+
+	if err == rethink.ErrEmptyResult {
+		return result, errors.New("no levels role entries")
+	}
+
+	return result, err
+}
+
+func (l *Levels) deleteLevelsRoleEntry(levelsRoleEntry models.LevelsRoleEntry) (err error) {
+	if levelsRoleEntry.ID != "" {
+		_, err := rethink.Table(models.LevelsRolesTable).Get(levelsRoleEntry.ID).Delete().RunWrite(helpers.GetDB())
+		return err
+	}
+	return errors.New("empty levelsRoleEntry submitted")
 }

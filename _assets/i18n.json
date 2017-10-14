@@ -717,7 +717,13 @@
       "rep-target": "Please tell me who to rep! <:blobthinking:317028940885524490>",
       "profile-timezone-reset-success": "I resetted your timezone. <:blobokhand:317032017164238848>",
       "profile-error-exit1": "Something went wrong during your profile generation. Please try again. <:notlikeblob:349342777978519562>",
-      "profile-error-sending": "Something went wrong sending your profile. Please try again. <:notlikeblob:349342777978519562>"
+      "profile-error-sending": "Something went wrong sending your profile. Please try again. <:notlikeblob:349342777978519562>",
+      "levels-role-add-success": "The role `%s` for the specified level range has been saved. <:blobokhand:317032017164238848>",
+      "levels-role-list-empty": "There are no roles tied to levels on this server. <:blobthinking:317028940885524490>",
+      "levels-role-delete-success": "I deleted the role connection for `%s` (`#%s`). <:blobokhand:317032017164238848>",
+      "levels-role-apply-confirm": "Do you want to apply level roles to all members meeting the level conditions now?",
+      "levels-role-apply-start": "I'm applying the roles now. This will take a while. I will tell you when I'm done.",
+      "levels-role-apply-result": "<@%s> I applied the roles to %d member(s). I failed to apply the roles to %d member(s)."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

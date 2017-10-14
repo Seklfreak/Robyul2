@@ -43,6 +43,7 @@ var migrations = []helpers.Callback{
 	m31_create_table_names,
 	m32_create_table_reddit_subreddits,
 	m33_create_table_youtube_channels,
+	m34_create_table_levels_roles,
 }
 
 // Run executes all registered migrations
