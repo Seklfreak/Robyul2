@@ -20,14 +20,14 @@ type feeds struct {
 	sync.Mutex
 }
 
-func (f *feeds) Init(s *service) {
+func (f *feeds) Init(e *service) {
 	f.Lock()
 	defer f.Unlock()
 
-	if s == nil {
+	if e == nil {
 		helpers.Relax(fmt.Errorf("feeds loop initialize failed"))
 	}
-	f.service = s
+	f.service = e
 
 	if f.running {
 		logger().Error("feeds loop already running")

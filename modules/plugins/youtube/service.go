@@ -51,7 +51,7 @@ func (s *service) SearchQuerySingle(keywords []string, searchType string) (*yout
 	defer s.RUnlock()
 
 	if s.service == nil {
-		return nil, errors.New("plugins.youtube.service-not-available")
+		return nil, errors.New("plugins.youtubs.service-not-available")
 	}
 
 	s.quota.Sub(searchQuotaCost)
@@ -85,7 +85,7 @@ func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtubeA
 	defer s.RUnlock()
 
 	if s.service == nil {
-		return nil, errors.New("plugins.youtube.service-not-available")
+		return nil, errors.New("plugins.youtubs.service-not-available")
 	}
 
 	s.quota.Sub(activityQuotaCost)
@@ -108,7 +108,7 @@ func (s *service) GetVideoSingle(videoId string) (*youtubeAPI.Video, error) {
 	defer s.RUnlock()
 
 	if s.service == nil {
-		return nil, errors.New("plugins.youtube.service-not-available")
+		return nil, errors.New("plugins.youtubs.service-not-available")
 	}
 
 	s.quota.Sub(videosQuotaCost)
@@ -134,7 +134,7 @@ func (s *service) GetChannelSingle(channelId string) (*youtubeAPI.Channel, error
 	defer s.RUnlock()
 
 	if s.service == nil {
-		return nil, errors.New("plugins.youtube.service-not-available")
+		return nil, errors.New("plugins.youtubs.service-not-available")
 	}
 
 	s.quota.Sub(channelsQuotaCost)
