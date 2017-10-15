@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/Seklfreak/Robyul2/models"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/youtube/v3"
 )
@@ -153,10 +152,6 @@ func (s *service) GetChannelSingle(channelId string) (*youtube.Channel, error) {
 	}
 
 	return response.Items[0], nil
-}
-
-func (s *service) GetQuotaInfo() (quota models.YoutubeQuota, entriesCount, interval int64) {
-	return s.quota.GetQuota(), s.quota.GetCount(), s.quota.GetInterval()
 }
 
 func (s *service) IncQuotaEntryCount() {

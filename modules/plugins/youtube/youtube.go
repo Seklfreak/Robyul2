@@ -68,8 +68,6 @@ func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **disco
 		return yt.actionChannel
 	case "service":
 		return yt.actionSystem
-	case "quota":
-		return yt.actionQuota
 	default:
 		return yt.actionSearch
 	}
@@ -80,25 +78,6 @@ func (yt *YouTube) actionFinish(args []string, in *discordgo.Message, out **disc
 	helpers.Relax(err)
 
 	return nil
-}
-
-// DEBUG PURPOSE
-func (yt *YouTube) actionQuota(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
-	if helpers.IsBotAdmin(in.Author.ID) == false {
-		*out = yt.newMsg("botadmin.no_permission")
-		return yt.actionFinish
-	}
-
-	q, c, i := yt.service.GetQuotaInfo()
-	msg := fmt.Sprintf("next reset: `%s`, left quota: `%s`, channel count: `%s`, time interval: `%s`",
-		time.Unix(q.ResetTime, 0).Format(time.ANSIC),
-		humanize.Comma(q.Left),
-		humanize.Comma(c),
-		humanize.Comma(i))
-
-	*out = yt.newMsg(msg)
-
-	return yt.actionFinish
 }
 
 // _yt video <search by keywords...>
