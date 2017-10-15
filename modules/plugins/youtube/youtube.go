@@ -12,7 +12,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 )
 
-type YouTube struct {
+type youtube struct {
 	service   service
 	feedsLoop feeds
 }
@@ -27,21 +27,25 @@ const (
 	youtubeConfigFileName string = "google.client_credentials_json_location"
 )
 
-func (yt *YouTube) Commands() []string {
+func New() *youtube {
+	return &youtube{}
+}
+
+func (yt *youtube) Commands() []string {
 	return []string{
 		"youtube",
 		"yt",
 	}
 }
 
-func (yt *YouTube) Init(session *discordgo.Session) {
+func (yt *youtube) Init(session *discordgo.Session) {
 	defer helpers.Recover()
 
 	yt.service.Init(youtubeConfigFileName)
 	yt.feedsLoop.Init(&yt.service)
 }
 
-func (yt *YouTube) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (yt *youtube) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	defer helpers.Recover()
 
 	session.ChannelTyping(msg.ChannelID)
@@ -55,7 +59,7 @@ func (yt *YouTube) Action(command string, content string, msg *discordgo.Message
 	}
 }
 
-func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 1 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
@@ -73,7 +77,7 @@ func (yt *YouTube) actionStart(args []string, in *discordgo.Message, out **disco
 	}
 }
 
-func (yt *YouTube) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
@@ -81,7 +85,7 @@ func (yt *YouTube) actionFinish(args []string, in *discordgo.Message, out **disc
 }
 
 // _yt video <search by keywords...>
-func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 2 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
@@ -115,25 +119,25 @@ func (yt *YouTube) actionVideo(args []string, in *discordgo.Message, out **disco
 }
 
 // _yt video add <video id/link/search keywords> <discord channel>
-func (yt *YouTube) actionAddVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionAddVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	*out = yt.newMsg("bot.arguments.invalid")
 	return yt.actionFinish
 }
 
 // _yt video delete <video id> <discord channel>
-func (yt *YouTube) actionDeleteVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionDeleteVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	*out = yt.newMsg("bot.arguments.invalid")
 	return yt.actionFinish
 }
 
 // _yt video list
-func (yt *YouTube) actionListVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionListVideo(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	*out = yt.newMsg("bot.arguments.invalid")
 	return yt.actionFinish
 }
 
 // _yt channel <search by keywords...>
-func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 2 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
@@ -172,7 +176,7 @@ func (yt *YouTube) actionChannel(args []string, in *discordgo.Message, out **dis
 }
 
 // _yt channel add <channel id/link/search keywords> <discord channel>
-func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionAddChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 4 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
@@ -240,7 +244,7 @@ func (yt *YouTube) actionAddChannel(args []string, in *discordgo.Message, out **
 }
 
 // _yt channel delete <channel id> <discord channel>
-func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionDeleteChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 3 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
@@ -270,7 +274,7 @@ func (yt *YouTube) actionDeleteChannel(args []string, in *discordgo.Message, out
 }
 
 // _yt channel list
-func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionListChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if helpers.IsMod(in) == false {
 		*out = yt.newMsg("mod.no_permission")
 		return yt.actionFinish
@@ -312,7 +316,7 @@ func (yt *YouTube) actionListChannel(args []string, in *discordgo.Message, out *
 }
 
 // _yt system restart
-func (yt *YouTube) actionSystem(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionSystem(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	if len(args) < 2 {
 		*out = yt.newMsg("bot.arguments.too-few")
 		return yt.actionFinish
@@ -335,7 +339,7 @@ func (yt *YouTube) actionSystem(args []string, in *discordgo.Message, out **disc
 }
 
 // _yt <video or channel search by keywords...>
-func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
+func (yt *youtube) actionSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) youtubeAction {
 	item, err := yt.service.SearchQuerySingle(args[0:], "channel, video")
 	if err != nil {
 		logger().Error(err)
@@ -367,7 +371,7 @@ func (yt *YouTube) actionSearch(args []string, in *discordgo.Message, out **disc
 }
 
 // getVideoInfo returns information of given video id through *discordgo.MessageSend.
-func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
+func (yt *youtube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 	video, err := yt.service.GetVideoSingle(videoId)
 	if err != nil {
 		logger().Error(err)
@@ -404,7 +408,7 @@ func (yt *YouTube) getVideoInfo(videoId string) (data *discordgo.MessageSend) {
 }
 
 // getChannelInfo returns information of given channel id through *discordgo.MessageSend.
-func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
+func (yt *youtube) getChannelInfo(channelId string) (data *discordgo.MessageSend) {
 	channel, err := yt.service.GetChannelSingle(channelId)
 	if err != nil {
 		logger().Error(err)
@@ -438,7 +442,7 @@ func (yt *YouTube) getChannelInfo(channelId string) (data *discordgo.MessageSend
 	return
 }
 
-func (yt *YouTube) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
+func (yt *youtube) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
 	if len(replacements) < 1 {
 		return &discordgo.MessageSend{Content: helpers.GetText(content)}
 	}

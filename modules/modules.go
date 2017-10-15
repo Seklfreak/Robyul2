@@ -51,7 +51,7 @@ var (
 		&plugins.Ratelimit{},
 		&plugins.Gfycat{},
 		&plugins.RandomPictures{},
-		&youtube.YouTube{},
+		youtube.New(),
 		// &plugins.YouTube{},
 		&plugins.Spoiler{},
 		&plugins.RandomCat{},

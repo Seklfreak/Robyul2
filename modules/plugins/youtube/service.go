@@ -10,11 +10,11 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/youtube/v3"
+	youtubeAPI "google.golang.org/api/youtube/v3"
 )
 
 type service struct {
-	service *youtube.Service
+	service *youtubeAPI.Service
 	quota   quota
 	filter  urlfilter
 
@@ -29,11 +29,12 @@ func (s *service) Init(configFilePath string) {
 		s.stop()
 	}
 
-	s.filter.Init()
 	s.init(configFilePath)
-	if err := s.quota.Init(); err != nil {
-		logger().Fatal(err)
-	}
+
+	err := s.quota.Init()
+	helpers.Relax(err)
+
+	s.filter.Init()
 }
 
 func (s *service) Stop() {
@@ -45,7 +46,7 @@ func (s *service) Stop() {
 
 // searchQuerySingle retuns single search result with given type @searchType.
 // returns (nil, nil) when there is no matching results.
-func (s *service) SearchQuerySingle(keywords []string, searchType string) (*youtube.SearchResult, error) {
+func (s *service) SearchQuerySingle(keywords []string, searchType string) (*youtubeAPI.SearchResult, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -79,7 +80,7 @@ func (s *service) SearchQuerySingle(keywords []string, searchType string) (*yout
 	return response.Items[0], nil
 }
 
-func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtube.Activity, error) {
+func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtubeAPI.Activity, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -102,7 +103,7 @@ func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtube.
 	return response.Items, nil
 }
 
-func (s *service) GetVideoSingle(videoId string) (*youtube.Video, error) {
+func (s *service) GetVideoSingle(videoId string) (*youtubeAPI.Video, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -128,7 +129,7 @@ func (s *service) GetVideoSingle(videoId string) (*youtube.Video, error) {
 	return response.Items[0], nil
 }
 
-func (s *service) GetChannelSingle(channelId string) (*youtube.Channel, error) {
+func (s *service) GetChannelSingle(channelId string) (*youtubeAPI.Channel, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -176,12 +177,12 @@ func (s *service) init(configFilePath string) {
 	authJSON, err := ioutil.ReadFile(configFile)
 	helpers.Relax(err)
 
-	config, err := google.JWTConfigFromJSON(authJSON, youtube.YoutubeReadonlyScope)
+	config, err := google.JWTConfigFromJSON(authJSON, youtubeAPI.YoutubeReadonlyScope)
 	helpers.Relax(err)
 
 	client := config.Client(context.Background())
 
-	s.service, err = youtube.New(client)
+	s.service, err = youtubeAPI.New(client)
 	helpers.Relax(err)
 }
 
