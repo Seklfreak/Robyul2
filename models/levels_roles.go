@@ -1,7 +1,7 @@
 package models
 
 const (
-	LevelsRolesTable = "levels_roles"
+	LevelsRolesTable          = "levels_roles"
 	LevelsRoleOverwritesTable = "levels_roles_overwrites"
 )
 

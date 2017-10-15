@@ -1959,7 +1959,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				case "grant":
 					// TODO: apply roles on join, show overwrites in list
-					// [p]levels roles grant <@user or user id> <role name or id>
 					helpers.RequireMod(msg, func() {
 						if len(args) < 4 {
 							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
