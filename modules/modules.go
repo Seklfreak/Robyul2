@@ -2,6 +2,7 @@ package modules
 
 import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
+	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 	//"github.com/Seklfreak/Robyul2/modules/triggers"
 	"github.com/Seklfreak/Robyul2/modules/triggers"
 )
@@ -50,7 +51,8 @@ var (
 		&plugins.Ratelimit{},
 		&plugins.Gfycat{},
 		&plugins.RandomPictures{},
-		&plugins.YouTube{},
+		&youtube.Handler{},
+		// &plugins.YouTube{},
 		&plugins.Spoiler{},
 		&plugins.RandomCat{},
 		&plugins.RPS{},
