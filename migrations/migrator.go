@@ -45,6 +45,7 @@ var migrations = []helpers.Callback{
 	m33_create_table_youtube_channels,
 	m34_create_table_levels_roles,
 	m35_create_table_persistency_roles,
+	m36_create_table_levels_roles_overwrites,
 }
 
 // Run executes all registered migrations

@@ -1893,6 +1893,29 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 						message += fmt.Sprintf("_found %d role(s) in total_", len(entries))
 
+						overwrites := m.getLevelsRolesGuildOverwrites(channel.GuildID)
+
+						if len(overwrites) > 0 {
+							message += "\n**Overwrites:**\n"
+
+							for _, overwrite := range overwrites {
+								overwriteRole, err := session.State.Role(channel.GuildID, overwrite.RoleID)
+								if err != nil {
+									continue
+								}
+								overwriteUser, err := helpers.GetUser(overwrite.UserID)
+								if err != nil {
+									overwriteUser = new(discordgo.User)
+									overwriteUser.Username = "N/A"
+									overwriteUser.ID = overwrite.UserID
+								}
+
+								message += fmt.Sprintf("%s user `%s` (`#%s`) role `%s` (`#%s`)\n",
+									strings.Title(overwrite.Type), overwriteUser.Username, overwriteUser.ID, overwriteRole.Name, overwriteRole.ID)
+							}
+							message += fmt.Sprintf("_found %d overwrite(s) in total_", len(overwrites))
+						}
+
 						for _, page := range helpers.Pagify(message, "\n") {
 							_, err = session.ChannelMessageSend(msg.ChannelID, page)
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1930,6 +1953,139 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-delete-success",
 							role.Name, entry.RoleID))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					})
+					return
+				case "grant":
+					// TODO: apply roles on join, show overwrites in list
+					// [p]levels roles grant <@user or user id> <role name or id>
+					helpers.RequireMod(msg, func() {
+						if len(args) < 4 {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						guild, err := helpers.GetGuild(channel.GuildID)
+						helpers.Relax(err)
+
+						targetUser, err := helpers.GetUserFromMention(args[2])
+						if err != nil || targetUser == nil || targetUser.ID == "" {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						var targetRole *discordgo.Role
+
+						roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:3], " "), "", 1))
+						for _, guildRole := range guild.Roles {
+							if strings.ToLower(guildRole.Name) == strings.ToLower(roleNameToMatch) || guildRole.ID == roleNameToMatch {
+								targetRole = guildRole
+							}
+						}
+
+						if targetRole == nil || targetRole.ID == "" {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						previousGrant, previousDeny, grant := m.getLevelsRolesUserRoleOverwrite(guild.ID, targetRole.ID, targetUser.ID)
+
+						if previousDeny {
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.roles-grant-error-denying"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						if previousGrant {
+							err = m.deleteLevelsRolesOverwriteEntry(grant)
+
+							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+							helpers.Relax(err)
+
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-remove-success",
+								targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, "grant")
+						helpers.Relax(err)
+
+						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+						helpers.Relax(err)
+
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-create-success",
+							targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					})
+					return
+				case "deny":
+					// [p]levels roles deny <@user or user id> <role name or id>
+					helpers.RequireMod(msg, func() {
+						if len(args) < 4 {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						guild, err := helpers.GetGuild(channel.GuildID)
+						helpers.Relax(err)
+
+						targetUser, err := helpers.GetUserFromMention(args[2])
+						if err != nil || targetUser == nil || targetUser.ID == "" {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						var targetRole *discordgo.Role
+
+						roleNameToMatch := strings.TrimSpace(strings.Replace(content, strings.Join(args[:3], " "), "", 1))
+						for _, guildRole := range guild.Roles {
+							if strings.ToLower(guildRole.Name) == strings.ToLower(roleNameToMatch) || guildRole.ID == roleNameToMatch {
+								targetRole = guildRole
+							}
+						}
+
+						if targetRole == nil || targetRole.ID == "" {
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						previousGrant, previousDeny, grant := m.getLevelsRolesUserRoleOverwrite(guild.ID, targetRole.ID, targetUser.ID)
+
+						if previousGrant {
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.roles-deny-error-granting"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						if previousDeny {
+							err = m.deleteLevelsRolesOverwriteEntry(grant)
+
+							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+							helpers.Relax(err)
+
+							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-remove-success",
+								targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, "deny")
+						helpers.Relax(err)
+
+						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+						helpers.Relax(err)
+
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-create-success",
+							targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					})
@@ -3426,14 +3582,78 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 
 	session := cache.GetSession()
 
-	for _, toRemoveRole := range toRemove {
-		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
+	overwrites := l.getLevelsRolesUserOverwrites(guildID, userID)
+	for _, overwrite := range overwrites {
+		switch overwrite.Type {
+		case "grant":
+			hasRoleAlready := false
+			for _, memberRole := range member.Roles {
+				if overwrite.RoleID == memberRole {
+					hasRoleAlready = true
+				}
+			}
+			if !hasRoleAlready {
+				applyingAlready := false
+				for _, applyingRole := range toApply {
+					if applyingRole.ID == overwrite.RoleID {
+						applyingAlready = true
+					}
+				}
+
+				if !applyingAlready {
+					applyRole, err := session.State.Role(guildID, overwrite.RoleID)
+
+					if err == nil {
+						toApply = append(toApply, applyRole)
+					}
+				}
+			}
+
+			newToRemove := make([]*discordgo.Role, 0)
+			for _, role := range toRemove {
+				if role.ID != overwrite.RoleID {
+					newToRemove = append(newToRemove, role)
+				}
+			}
+			toRemove = newToRemove
+
+			break
+		case "deny":
+			hasRole := false
+			for _, memberRole := range member.Roles {
+				if overwrite.RoleID == memberRole {
+					hasRole = true
+				}
+			}
+
+			if hasRole {
+				removeRole, err := session.State.Role(guildID, overwrite.RoleID)
+				if err == nil {
+					toRemove = append(toRemove, removeRole)
+				}
+			}
+
+			newToApply := make([]*discordgo.Role, 0)
+			for _, role := range toApply {
+				if role.ID != overwrite.RoleID {
+					newToApply = append(newToApply, role)
+				}
+			}
+			toApply = newToApply
+
+			break
+		}
+	}
+
+	for _, toApplyRole := range toApply {
+		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
 		if errRole != nil {
 			err = errRole
 		}
 	}
-	for _, toApplyRole := range toApply {
-		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
+
+	for _, toRemoveRole := range toRemove {
+		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
 		if errRole != nil {
 			err = errRole
 		}
@@ -3482,4 +3702,123 @@ func (l *Levels) deleteLevelsRoleEntry(levelsRoleEntry models.LevelsRoleEntry) (
 		return err
 	}
 	return errors.New("empty levelsRoleEntry submitted")
+}
+
+func (l *Levels) createLevelsRolesOverwriteEntry(
+	guildID string,
+	roleID string,
+	userID string,
+	overwriteType string,
+) (result models.LevelsRoleOverwriteEntry, err error) {
+	if overwriteType != "grant" && overwriteType != "deny" {
+		return models.LevelsRoleOverwriteEntry{}, errors.New("invalid overwrite type")
+	}
+
+	insert := rethink.Table(models.LevelsRoleOverwritesTable).Insert(models.LevelsRoleOverwriteEntry{
+		GuildID: guildID,
+		RoleID:  roleID,
+		UserID:  userID,
+		Type:    overwriteType,
+	})
+	inserted, err := insert.RunWrite(helpers.GetDB())
+	if err != nil {
+		return models.LevelsRoleOverwriteEntry{}, err
+	} else {
+		return l.getLevelsRoleOverwriteEntryBy("id", inserted.GeneratedKeys[0])
+	}
+}
+
+func (l *Levels) getLevelsRoleOverwriteEntryBy(key string, value string) (result models.LevelsRoleOverwriteEntry, err error) {
+	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
+		rethink.Row.Field(key).Eq(value),
+	).Run(helpers.GetDB())
+	if err != nil {
+		return result, err
+	}
+	defer listCursor.Close()
+	err = listCursor.One(&result)
+
+	if err == rethink.ErrEmptyResult {
+		return result, errors.New("no levels role overwrite entry")
+	}
+
+	return result, err
+}
+
+func (l *Levels) getLevelsRolesUserRoleOverwrite(guildID string, roleID string, userID string) (grant bool, deny bool, overwrite models.LevelsRoleOverwriteEntry) {
+	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
+		rethink.And(
+			rethink.Row.Field("guild_id").Eq(guildID),
+			rethink.Row.Field("user_id").Eq(userID),
+			rethink.Row.Field("role_id").Eq(roleID),
+		),
+	).Run(helpers.GetDB())
+	if err != nil {
+		helpers.RelaxLog(err)
+		return false, false, models.LevelsRoleOverwriteEntry{}
+	}
+	defer listCursor.Close()
+	err = listCursor.One(&overwrite)
+
+	if err == rethink.ErrEmptyResult {
+		return false, false, models.LevelsRoleOverwriteEntry{}
+	}
+
+	switch overwrite.Type {
+	case "grant":
+		return true, false, overwrite
+	case "deny":
+		return false, true, overwrite
+	}
+
+	return false, false, overwrite
+}
+
+func (l *Levels) getLevelsRolesUserOverwrites(guildID string, userID string) (overwrites []models.LevelsRoleOverwriteEntry) {
+	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
+		rethink.And(
+			rethink.Row.Field("guild_id").Eq(guildID),
+			rethink.Row.Field("user_id").Eq(userID),
+		),
+	).Run(helpers.GetDB())
+	if err != nil {
+		helpers.RelaxLog(err)
+		return make([]models.LevelsRoleOverwriteEntry, 0)
+	}
+	defer listCursor.Close()
+	err = listCursor.All(&overwrites)
+
+	if err == rethink.ErrEmptyResult {
+		return make([]models.LevelsRoleOverwriteEntry, 0)
+	}
+
+	return
+}
+
+func (l *Levels) getLevelsRolesGuildOverwrites(guildID string) (overwrites []models.LevelsRoleOverwriteEntry) {
+	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
+		rethink.And(
+			rethink.Row.Field("guild_id").Eq(guildID),
+		),
+	).Run(helpers.GetDB())
+	if err != nil {
+		helpers.RelaxLog(err)
+		return make([]models.LevelsRoleOverwriteEntry, 0)
+	}
+	defer listCursor.Close()
+	err = listCursor.All(&overwrites)
+
+	if err == rethink.ErrEmptyResult {
+		return make([]models.LevelsRoleOverwriteEntry, 0)
+	}
+
+	return
+}
+
+func (l *Levels) deleteLevelsRolesOverwriteEntry(levelsRolesOverwriteEntry models.LevelsRoleOverwriteEntry) (err error) {
+	if levelsRolesOverwriteEntry.ID != "" {
+		_, err = rethink.Table(models.LevelsRoleOverwritesTable).Get(levelsRolesOverwriteEntry.ID).Delete().RunWrite(helpers.GetDB())
+		return err
+	}
+	return errors.New("empty levelsRoleOverwriteEntry submitted")
 }

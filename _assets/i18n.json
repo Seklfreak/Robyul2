@@ -723,7 +723,13 @@
       "levels-role-delete-success": "I deleted the role connection for `%s` (`#%s`). <:blobokhand:317032017164238848>",
       "levels-role-apply-confirm": "Do you want to apply level roles to all members meeting the level conditions now?",
       "levels-role-apply-start": "I'm applying the roles now. This will take a while. I will tell you when I'm done.",
-      "levels-role-apply-result": "<@%s> I applied the roles to %d member(s). I failed to apply the roles to %d member(s)."
+      "levels-role-apply-result": "<@%s> I applied the roles to %d member(s). I failed to apply the roles to %d member(s).",
+      "roles-grant-error-denying": "You are already denying this user this role.",
+      "roles-grant-remove-success": "I removed the role grant for the user `%s` (`#%s`) for the role `%s` (`#%s`).",
+      "roles-grant-create-success": "I granted the user the user `%s` (`#%s`) the role `%s` (`#%s`).",
+      "roles-deny-error-denying": "You are already granting this user this role.",
+      "roles-deny-remove-success": "I removed the role deny for the user `%s` (`#%s`) for the role `%s` (`#%s`).",
+      "roles-deny-create-success": "I denied the user the user `%s` (`#%s`) the role `%s` (`#%s`)."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
