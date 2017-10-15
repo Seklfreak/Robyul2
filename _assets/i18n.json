@@ -868,7 +868,11 @@
     "persistency": {
       "bias-persistency-enabled": "I will restore Bias Roles on rejoin now! <:blobokhand:317032017164238848>",
       "bias-persistency-disabled": "I won't restore Bias Roles on rejoin anymore! <:blobokhand:317032017164238848>",
-      "status-roles-none": "_No persistent roles_"
+      "status-roles-none": "_No persistent roles_",
+      "role-add-error-duplicate": "This role is already getting restored on rejoin! <:blobeyes:317029938568101890>",
+      "role-add-success": "I will restore the role `%s` on rejoin! <:blobsalute:317043033004703744>",
+      "role-remove-error-not-found": "I wasn't able to find the role in the list of roles I restore. <:blobthinking:317028940885524490>",
+      "role-remove-success": "I won't restore this role on rejoin anymore! <:googlenerd:317030369205682186>"
     }
   }
 }

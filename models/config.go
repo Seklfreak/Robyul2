@@ -56,7 +56,8 @@ type Config struct {
 
 	ChatlogDisabled bool `rethink:"chatlog_disabled"`
 
-	PersistencyBiasEnabled bool `rethink:"persistency_bias_enabled"`
+	PersistencyBiasEnabled bool     `rethink:"persistency_bias_enabled"`
+	PersistencyRoleIDs     []string `rethink:"persistency_roleids"`
 }
 
 type DelayedAutoRole struct {

@@ -54,9 +54,11 @@ func (p *Persistency) actionStart(args []string, in *discordgo.Message, out **di
 	}
 
 	switch args[0] {
+	case "roles", "role":
+		return p.roleAction
 	case "toggle":
 		return p.toggleAction
-	case "status":
+	case "status", "list":
 		return p.statusAction
 	}
 
@@ -64,24 +66,171 @@ func (p *Persistency) actionStart(args []string, in *discordgo.Message, out **di
 	return p.actionFinish
 }
 
+func (p *Persistency) roleAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
+	if len(args) < 2 {
+		*out = p.newMsg("bot.arguments.too-few")
+		return p.actionFinish
+	}
+
+	switch args[1] {
+	case "add":
+		return p.roleAddAction
+	case "remove", "delete":
+		return p.roleRemoveAction
+	}
+
+	*out = p.newMsg(helpers.GetText("bot.arguments.invalid"))
+	return p.actionFinish
+}
+
+// [p]persistency roles add <role name or id>
+func (p *Persistency) roleAddAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
+	if len(args) < 3 {
+		*out = p.newMsg("bot.arguments.too-few")
+		return p.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+	guild, err := helpers.GetGuild(channel.GuildID)
+	helpers.Relax(err)
+
+	roleNameToMatch := strings.Join(args[2:], " ")
+
+	var roleToAdd *discordgo.Role
+
+	for _, guildRole := range guild.Roles {
+		if strings.ToLower(guildRole.Name) == strings.ToLower(roleNameToMatch) || guildRole.ID == roleNameToMatch {
+			roleToAdd = guildRole
+		}
+	}
+
+	if roleToAdd.ID == "" {
+		*out = p.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return p.actionFinish
+	}
+
+	guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+
+	var alreadyAdded bool
+	for _, settingsRoleID := range guildSettings.PersistencyRoleIDs {
+		if settingsRoleID == roleToAdd.ID {
+			alreadyAdded = true
+		}
+	}
+
+	if alreadyAdded {
+		*out = p.newMsg("plugins.persistency.role-add-error-duplicate")
+		return p.actionFinish
+	}
+
+	guildSettings.PersistencyRoleIDs = append(guildSettings.PersistencyRoleIDs, roleToAdd.ID)
+
+	err = helpers.GuildSettingsSet(guild.ID, guildSettings)
+	helpers.Relax(err)
+
+	*out = p.newMsg("plugins.persistency.role-add-success", roleToAdd.Name)
+	return p.actionFinish
+}
+
+// [p]persistency roles remove <role name or id>
+func (p *Persistency) roleRemoveAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
+	if len(args) < 3 {
+		*out = p.newMsg("bot.arguments.too-few")
+		return p.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+	guild, err := helpers.GetGuild(channel.GuildID)
+	helpers.Relax(err)
+
+	roleNameToMatch := strings.Join(args[2:], " ")
+
+	var roleToRemove *discordgo.Role
+
+	for _, guildRole := range guild.Roles {
+		if strings.ToLower(guildRole.Name) == strings.ToLower(roleNameToMatch) || guildRole.ID == roleNameToMatch {
+			roleToRemove = guildRole
+		}
+	}
+
+	if roleToRemove.ID == "" {
+		*out = p.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return p.actionFinish
+	}
+
+	guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+
+	var removed bool
+	newPersistentRoles := make([]string, 0)
+
+	for _, settingsRoleID := range guildSettings.PersistencyRoleIDs {
+		if settingsRoleID == roleToRemove.ID {
+			removed = true
+			continue
+		}
+		newPersistentRoles = append(newPersistentRoles, settingsRoleID)
+	}
+
+	if !removed {
+		*out = p.newMsg("plugins.persistency.role-remove-error-not-found")
+		return p.actionFinish
+	}
+
+	guildSettings.PersistencyRoleIDs = newPersistentRoles
+
+	err = helpers.GuildSettingsSet(guild.ID, guildSettings)
+	helpers.Relax(err)
+
+	*out = p.newMsg("plugins.persistency.role-remove-success")
+	return p.actionFinish
+}
+
 func (p *Persistency) statusAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
 
-	persistentRoles := p.GetPersistentRoles(channel.GuildID)
-
 	var message string
 	message += "__**Persistent Roles:**__\n"
 
-	if len(persistentRoles) <= 0 {
+	message += "**Custom Roles:** "
+	customRoles := p.GetPersistentCustomRoles(channel.GuildID)
+	if len(customRoles) <= 0 {
 		message += helpers.GetText("plugins.persistency.status-roles-none")
 	} else {
-		for _, persistentRole := range persistentRoles {
+		for _, persistentRole := range customRoles {
 			message += "`" + persistentRole.Name + "`, "
 		}
-		message = strings.TrimRight(message, ",")
-		message += fmt.Sprintf("\n_found %d role(s) in total_", len(persistentRoles))
+		message = strings.TrimRight(message, ", ")
 	}
+	message += "\n"
+
+	message += "**Managed Roles:** "
+	managedRoles := p.GetPersistentManagedRoles(channel.GuildID)
+	if len(managedRoles) <= 0 {
+		message += helpers.GetText("plugins.persistency.status-roles-none")
+	} else {
+		for _, persistentRole := range managedRoles {
+			message += "`" + persistentRole.Name + "`, "
+		}
+		message = strings.TrimRight(message, ", ")
+	}
+	message += "\n"
+
+	message += "**Bias Roles:** "
+	biasRoles := p.GetPersistentBiasRoles(channel.GuildID)
+	if len(biasRoles) <= 0 {
+		message += helpers.GetText("plugins.persistency.status-roles-none")
+	} else {
+		for _, persistentRole := range biasRoles {
+			message += "`" + persistentRole.Name + "`, "
+		}
+		message = strings.TrimRight(message, ", ")
+	}
+	message += "\n"
+
+	message += fmt.Sprintf("_found %d role(s) in total_", len(customRoles)+len(managedRoles)+len(biasRoles))
 
 	for _, page := range helpers.Pagify(message, ",") {
 		_, err = cache.GetSession().ChannelMessageSend(in.ChannelID, page)
@@ -140,8 +289,11 @@ func (p *Persistency) actionFinish(args []string, in *discordgo.Message, out **d
 	return nil
 }
 
-func (p *Persistency) newMsg(content string) *discordgo.MessageSend {
-	return &discordgo.MessageSend{Content: helpers.GetText(content)}
+func (p *Persistency) newMsg(content string, replacements ...interface{}) *discordgo.MessageSend {
+	if len(replacements) < 1 {
+		return &discordgo.MessageSend{Content: helpers.GetText(content)}
+	}
+	return &discordgo.MessageSend{Content: helpers.GetTextF(content, replacements...)}
 }
 
 func (p *Persistency) Relax(err error) {
@@ -283,6 +435,34 @@ func (p *Persistency) getRoleDBCache(GuildID string, UserID string) (roleIDs []s
 
 func (p *Persistency) GetPersistentRoles(guildID string) (persistentRoles []discordgo.Role) {
 	persistentRoles = make([]discordgo.Role, 0)
+	persistentRoles = append(persistentRoles, p.GetPersistentManagedRoles(guildID)...)
+	persistentRoles = append(persistentRoles, p.GetPersistentBiasRoles(guildID)...)
+	persistentRoles = append(persistentRoles, p.GetPersistentCustomRoles(guildID)...)
+
+	return
+}
+
+func (p *Persistency) GetPersistentManagedRoles(guildID string) (managedRoles []discordgo.Role) {
+	managedRoles = make([]discordgo.Role, 0)
+	guildSettings := helpers.GuildSettingsGetCached(guildID)
+	guild, err := helpers.GetGuild(guildID)
+	if err != nil {
+		helpers.RelaxLog(err)
+		return
+	}
+
+	for _, guildRole := range guild.Roles {
+		// Look for mute role
+		if guildRole.Name == guildSettings.MutedRoleName {
+			managedRoles = append(managedRoles, *guildRole)
+			continue
+		}
+	}
+	return
+}
+
+func (p *Persistency) GetPersistentBiasRoles(guildID string) (biasRoles []discordgo.Role) {
+	biasRoles = make([]discordgo.Role, 0)
 	guildSettings := helpers.GuildSettingsGetCached(guildID)
 	guild, err := helpers.GetGuild(guildID)
 	if err != nil {
@@ -292,19 +472,14 @@ func (p *Persistency) GetPersistentRoles(guildID string) (persistentRoles []disc
 
 NextGuildRole:
 	for _, guildRole := range guild.Roles {
-		// Look for mute role
-		if guildRole.Name == guildSettings.MutedRoleName {
-			persistentRoles = append(persistentRoles, *guildRole)
-			continue NextGuildRole
-		}
 		// Look for bias roles (if enabled)
 		if guildSettings.PersistencyBiasEnabled {
-			for _, biasChannel := range biasChannels {
+			for _, biasChannel := range biasChannels { // TODO: better access (through cache)
 				if biasChannel.ServerID == guildID {
 					for _, category := range biasChannel.Categories {
 						for _, biasRole := range category.Roles {
 							if strings.ToLower(biasRole.Name) == strings.ToLower(guildRole.Name) || biasRole.Name == guildRole.ID {
-								persistentRoles = append(persistentRoles, *guildRole)
+								biasRoles = append(biasRoles, *guildRole)
 								continue NextGuildRole
 							}
 						}
@@ -313,7 +488,26 @@ NextGuildRole:
 			}
 		}
 	}
+	return
+}
 
+func (p *Persistency) GetPersistentCustomRoles(guildID string) (customRoles []discordgo.Role) {
+	customRoles = make([]discordgo.Role, 0)
+	guildSettings := helpers.GuildSettingsGetCached(guildID)
+	guild, err := helpers.GetGuild(guildID)
+	if err != nil {
+		helpers.RelaxLog(err)
+		return
+	}
+
+	for _, guildRole := range guild.Roles {
+		// Look for custom roles
+		for _, customRoleID := range guildSettings.PersistencyRoleIDs {
+			if customRoleID == guildRole.ID {
+				customRoles = append(customRoles, *guildRole)
+			}
+		}
+	}
 	return
 }
 
