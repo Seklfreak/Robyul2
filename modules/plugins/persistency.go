@@ -29,6 +29,8 @@ func (p *Persistency) Init(session *discordgo.Session) {
 	session.AddHandler(p.OnGuildMemberUpdate)
 }
 
+// TODO: Store Nicknames, VC Mute and Deafen state
+
 func (p *Persistency) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	defer helpers.Recover()
 
@@ -51,7 +53,83 @@ func (p *Persistency) actionStart(args []string, in *discordgo.Message, out **di
 		return p.actionFinish
 	}
 
+	switch args[0] {
+	case "toggle":
+		return p.toggleAction
+	case "status":
+		return p.statusAction
+	}
+
 	*out = p.newMsg(helpers.GetText("bot.arguments.invalid"))
+	return p.actionFinish
+}
+
+func (p *Persistency) statusAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	persistentRoles := p.GetPersistentRoles(channel.GuildID)
+
+	var message string
+	message += "__**Persistent Roles:**__\n"
+
+	if len(persistentRoles) <= 0 {
+		message += helpers.GetText("plugins.persistency.status-roles-none")
+	} else {
+		for _, persistentRole := range persistentRoles {
+			message += "`" + persistentRole.Name + "`, "
+		}
+		message = strings.TrimRight(message, ",")
+		message += fmt.Sprintf("\n_found %d role(s) in total_", len(persistentRoles))
+	}
+
+	for _, page := range helpers.Pagify(message, ",") {
+		_, err = cache.GetSession().ChannelMessageSend(in.ChannelID, page)
+		helpers.RelaxMessage(err, in.ChannelID, in.ID)
+	}
+
+	return nil
+}
+
+func (p *Persistency) toggleAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
+	if len(args) < 2 {
+		*out = p.newMsg("bot.arguments.too-few")
+		return p.actionFinish
+	}
+
+	switch args[1] {
+	case "bias-roles":
+		return p.toggleBiasAction
+	}
+
+	*out = p.newMsg(helpers.GetText("bot.arguments.invalid"))
+	return p.actionFinish
+}
+
+func (p *Persistency) toggleBiasAction(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
+	if !helpers.IsMod(in) {
+		*out = p.newMsg("mod.no_permission")
+		return p.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	config := helpers.GuildSettingsGetCached(channel.GuildID)
+
+	if config.PersistencyBiasEnabled {
+		config.PersistencyBiasEnabled = false
+
+		*out = p.newMsg(helpers.GetText("plugins.persistency.bias-persistency-disabled"))
+	} else {
+		config.PersistencyBiasEnabled = true
+
+		*out = p.newMsg(helpers.GetText("plugins.persistency.bias-persistency-enabled"))
+	}
+
+	err = helpers.GuildSettingsSet(channel.GuildID, config)
+	helpers.Relax(err)
+
 	return p.actionFinish
 }
 
@@ -212,9 +290,27 @@ func (p *Persistency) GetPersistentRoles(guildID string) (persistentRoles []disc
 		return
 	}
 
+NextGuildRole:
 	for _, guildRole := range guild.Roles {
+		// Look for mute role
 		if guildRole.Name == guildSettings.MutedRoleName {
 			persistentRoles = append(persistentRoles, *guildRole)
+			continue NextGuildRole
+		}
+		// Look for bias roles (if enabled)
+		if guildSettings.PersistencyBiasEnabled {
+			for _, biasChannel := range biasChannels {
+				if biasChannel.ServerID == guildID {
+					for _, category := range biasChannel.Categories {
+						for _, biasRole := range category.Roles {
+							if strings.ToLower(biasRole.Name) == strings.ToLower(guildRole.Name) || biasRole.Name == guildRole.ID {
+								persistentRoles = append(persistentRoles, *guildRole)
+								continue NextGuildRole
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 

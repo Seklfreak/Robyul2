@@ -41,7 +41,7 @@ type Config struct {
 	LevelsIgnoredUserIDs    []string `rethink:"levels_ignored_user_ids"`
 	LevelsIgnoredChannelIDs []string `rethink:"levels_ignored_channel_ids"`
 
-	MutedMembers []string `rethink:"muted_member_ids"`
+	MutedMembers []string `rethink:"muted_member_ids"` // deprecated
 
 	TroublemakerIsParticipating bool   `rethink:"troublemaker_participation"`
 	TroublemakerLogChannel      string `rethink:"troublemaker_channel"`
@@ -55,6 +55,8 @@ type Config struct {
 	StarboardMinimum   int    `rethink:"starboard_minimum"`
 
 	ChatlogDisabled bool `rethink:"chatlog_disabled"`
+
+	PersistencyBiasEnabled bool `rethink:"persistency_bias_enabled"`
 }
 
 type DelayedAutoRole struct {
