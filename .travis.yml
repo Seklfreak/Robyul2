@@ -27,3 +27,7 @@ deploy:
     repo: Seklfreak/Robyul2
     tags: true
     go: tip
+after_failure:
+  - curl -v -H User-Agent:bot -H Content-Type:application/json -d '{"content":"Build has failed!"}' https://discordapp.com/api/webhooks/$DISCORD_WEBHOOK_CHANNEL_ID/$DISCORD_WEBHOOK_TOKEN
+after_success:
+  - curl -v -H User-Agent:bot -H Content-Type:application/json -d '{"content":"Build successfully built!"}' https://discordapp.com/api/webhooks/$DISCORD_WEBHOOK_CHANNEL_ID/$DISCORD_WEBHOOK_TOKEN
