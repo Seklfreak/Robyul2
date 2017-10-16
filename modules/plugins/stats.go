@@ -1045,7 +1045,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						helpers.Relax(err)
 					}
 				}
-				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+					helpers.RelaxLog(err)
+				}
 			}
 		})
 		time.Sleep(3 * time.Minute)
@@ -1053,7 +1056,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		reactionsRemoved := 0
 		if numberOfPages > 1 {
 			for {
-				session.MessageReactionRemove(msg.ChannelID, reactionEmbedMessage.ID, emojis.From(strconv.Itoa(reactionsRemoved+1)), session.State.User.ID)
+				err = session.MessageReactionRemove(msg.ChannelID, reactionEmbedMessage.ID, emojis.From(strconv.Itoa(reactionsRemoved+1)), session.State.User.ID)
+				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+					helpers.RelaxLog(err)
+				}
 				reactionsRemoved++
 				if reactionsRemoved >= numberOfPages {
 					break
@@ -1187,7 +1193,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						}
 					}
 				}
-				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+					helpers.RelaxLog(err)
+				}
 			}
 		})
 		time.Sleep(3 * time.Minute)
@@ -1452,16 +1461,23 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						}
 					}
 				}
-				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+					helpers.RelaxLog(err)
+				}
 			}
 		})
 		time.Sleep(3 * time.Minute)
 		closeHandler()
 		if numberOfPages > 1 {
 			err = session.MessageReactionRemove(msg.ChannelID, rolelistEmbedMessage.ID, "⬅", session.State.User.ID)
-			helpers.Relax(err)
+			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				helpers.RelaxLog(err)
+			}
 			err = session.MessageReactionRemove(msg.ChannelID, rolelistEmbedMessage.ID, "➡", session.State.User.ID)
-			helpers.Relax(err)
+			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				helpers.RelaxLog(err)
+			}
 		}
 
 		return
