@@ -227,10 +227,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							if err != nil {
 								if errD, ok := err.(*discordgo.RESTError); ok {
 									if errD.Message.Code == 50034 {
-										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									} else if errD.Message.Code == 50013 {
-										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									} else {
 										helpers.Relax(errD)
@@ -249,10 +251,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 									if err != nil {
 										if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
 											if errD.Message.Code == 50034 {
-												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 												return
 											} else if errD.Message.Code == 50013 {
-												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 												return
 											} else {
 												helpers.Relax(errD)
@@ -321,10 +325,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							if err != nil {
 								if errD, ok := err.(*discordgo.RESTError); ok {
 									if errD.Message.Code == 50034 {
-										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									} else if errD.Message.Code == 50013 {
-										session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									} else {
 										helpers.Relax(errD)
@@ -343,10 +349,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 									if err != nil {
 										if errD, ok := err.(*discordgo.RESTError); ok {
 											if errD.Message.Code == 50034 {
-												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 												return
 											} else if errD.Message.Code == 50013 {
-												session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+												helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 												return
 											} else {
 												helpers.Relax(errD)
@@ -485,7 +493,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 
 				_, err = session.ChannelMessageSend(msg.ChannelID, successText)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
@@ -510,7 +518,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				err = helpers.UnmuteUser(channel.GuildID, targetUser.ID)
 				helpers.Relax(err)
 
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
@@ -531,7 +540,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						return
 					}
 					if days > 7 {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-error-too-many-days"))
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-error-too-many-days"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
 				}
@@ -558,7 +568,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 
 				if botCanBan == false {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				// User can ban?
@@ -576,7 +587,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					userCanBan = true
 				}
 				if userCanBan == false {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				// Get Reason
@@ -597,7 +609,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 						if err.Message.Code == 0 {
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-failed-too-low"))
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-failed-too-low"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -607,7 +620,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
@@ -639,7 +653,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 				if botCanKick == false {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				// User can kick?
@@ -657,7 +672,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					userCanKick = true
 				}
 				if userCanKick == false {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				// Get Reason
@@ -672,7 +688,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 						if err.Message.Code == 0 {
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-failed-too-low"))
+							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-failed-too-low"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -682,7 +699,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
@@ -710,7 +728,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 			for _, resultPage := range helpers.Pagify(resultText, "\n") {
 				_, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
 		})
 		return
@@ -726,12 +744,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					return
 				}
 				if sourceChannel.GuildID != targetChannel.GuildID {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 
 				newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-				session.ChannelMessageSend(targetChannel.ID, newText)
+				_, err = session.ChannelMessageSend(targetChannel.ID, newText)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return
@@ -750,7 +770,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					return
 				}
 				if sourceChannel.GuildID != targetChannel.GuildID {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
@@ -758,7 +779,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					if errD, ok := err.(*discordgo.RESTError); ok {
 						if errD.Message.Code == 10008 || strings.Contains(err.Error(), "is not snowflake") {
 							_, err = session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
-							helpers.Relax(err)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -788,7 +809,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					return
 				}
 				if sourceChannel.GuildID != targetChannel.GuildID {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
@@ -810,14 +832,16 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					return
 				}
 				if sourceChannel.GuildID != targetChannel.GuildID {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok {
 						if err.Message.Code == 10008 || err.Message.Code == 50001 {
-							session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+							_, err := session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -828,7 +852,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 				newMessage := fmt.Sprintf("```%s```", targetMessage.Content)
 				_, err = session.ChannelMessageSend(msg.ChannelID, newMessage)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
@@ -847,7 +871,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					return
 				}
 				if sourceChannel.GuildID != targetChannel.GuildID {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
@@ -855,7 +880,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					if errD, ok := err.(*discordgo.RESTError); ok {
 						if errD.Message.Code == 10008 || strings.Contains(err.Error(), "is not snowflake") {
 							_, err = session.ChannelMessageSend(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
-							helpers.Relax(err)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
 						helpers.Relax(err)
@@ -875,8 +900,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		isAllowedToInspectExtended := helpers.CanInspectExtended(msg)
 
 		if isMod == false && isAllowedToInspectExtended == false {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("mod.no_permission"))
-			helpers.Relax(err)
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("mod.no_permission"))
 			return
 		}
 
@@ -884,7 +908,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		if command == "inspect-extended" {
 			if isAllowedToInspectExtended == false {
 				_, err := session.ChannelMessageSend(msg.ChannelID, "You aren't allowed to do this!")
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 			isExtendedInspect = true
@@ -898,7 +922,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			if err != nil {
 				if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
 					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				} else {
 					helpers.Relax(err)
@@ -906,13 +930,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 			helpers.Relax(err)
 			if targetUser.ID == "" {
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-				helpers.Relax(err)
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				return
 			}
 		} else {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-			helpers.Relax(err)
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 			return
 		}
 		textVersion := false
@@ -933,11 +955,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		resultMessage := new(discordgo.Message)
 		if textVersion == false {
 			resultMessage, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
-			helpers.Relax(err)
+			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 		} else {
 			resultMessage, err = session.ChannelMessageSend(msg.ChannelID,
 				helpers.GetText("plugins.mod.inspect-in-progress"))
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		}
 
 		bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, channel.GuildID)
@@ -1087,7 +1109,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				session.ChannelMessageDelete(msg.ChannelID, resultMessage.ID)
 				for _, page := range pages {
 					_, err = session.ChannelMessageSend(msg.ChannelID, page)
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				}
 			}
 		}
@@ -1114,7 +1136,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					Color:       0x0FADED,
 				}
 				chooseMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, chooseEmbed)
-				helpers.Relax(err)
+				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 
 				allowedEmotes := []string{emojis.From("1"), emojis.From("2"), emojis.From("3"), emojis.From("4"), emojis.From("5"), "💾"}
 				for _, allowedEmote := range allowedEmotes {
@@ -1284,7 +1306,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			err = helpers.GuildSettingsSet(channel.GuildID, settings)
 			helpers.Relax(err)
 			_, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		})
 		return
 	case "search-user": // [p]search-user <name>
@@ -1332,7 +1354,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 				if len(usersMatched) <= 0 {
 					_, err := session.ChannelMessageSend(msg.ChannelID, "Found no user who matches your search text. 🕵")
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				} else {
 					resultText := fmt.Sprintf("Found %d users which matches your search text:\n", len(usersMatched))
@@ -1341,7 +1363,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 					for _, page := range helpers.Pagify(resultText, "\n") {
 						_, err := session.ChannelMessageSend(msg.ChannelID, page)
-						helpers.Relax(err)
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					}
 					return
 				}
@@ -1392,7 +1414,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 			for _, page := range helpers.Pagify(logMessage, "\n") {
 				_, err := session.ChannelMessageSend(msg.ChannelID, page)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
 		})
 		return
@@ -1421,7 +1443,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 			if len(invites) <= 0 {
 				_, err := session.ChannelMessageSend(msg.ChannelID, "No invites found on this server. <:blobscream:317043778823389184>")
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 
@@ -1442,7 +1464,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 			for _, page := range helpers.Pagify(inviteMessage, "\n") {
 				_, err := session.ChannelMessageSend(msg.ChannelID, page)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
 		})
 		return
@@ -1473,8 +1495,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 			args := strings.Fields(content)
 			if len(args) < 1 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-				helpers.Relax(err)
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				return
 			}
 			guild, err := helpers.GetGuild(args[0])
@@ -1489,17 +1510,17 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				if err != nil {
 					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Unable to create an invite in: `#%s (#%s)`",
 						channel.Name, channel.ID))
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				} else {
 					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Created invite: `https://discord.gg/%s` for: `#%s (#%s)`",
 						invite.Code, channel.Name, channel.ID))
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 			}
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, "No channels left to try. <:blobugh:317047327443517442>")
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		})
 		return
@@ -1573,7 +1594,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				if errD := err.(*discordgo.RESTError); errD != nil {
 					if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						_, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
-						helpers.Relax(err)
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					} else {
 						helpers.Relax(err)
