@@ -3558,6 +3558,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	apply, remove := l.getLevelsRoles(guildID, level)
 	member, err := helpers.GetGuildMember(guildID, userID)
 	if err != nil {
+		cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("failed to get guild member to apply level roles: %s", err.Error()))
 		return err
 	}
 
@@ -3651,6 +3652,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	for _, toApplyRole := range toApply {
 		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
 		if errRole != nil {
+			cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("failed to add role applying level roles: %s", err.Error()))
 			err = errRole
 		}
 	}
@@ -3658,6 +3660,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	for _, toRemoveRole := range toRemove {
 		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
 		if errRole != nil {
+			cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("failed to remove role applying level roles: %s", err.Error()))
 			err = errRole
 		}
 	}
