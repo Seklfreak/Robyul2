@@ -2241,7 +2241,9 @@ func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID strin
 	for _, page := range helpers.Pagify(resultText, "\n") {
 		message, err := session.ChannelMessageSend(channeID, page)
 		helpers.RelaxMessage(err, channeID, "")
-		messageIDs = append(messageIDs, message.ID)
+		if message != nil {
+			messageIDs = append(messageIDs, message.ID)
+		}
 	}
 	return messageIDs
 }
@@ -2273,7 +2275,9 @@ func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, a
 	for _, page := range helpers.Pagify(resultText, "\n") {
 		message, err := session.ChannelMessageSend(channeID, page)
 		helpers.RelaxMessage(err, channeID, "")
-		messageIDs = append(messageIDs, message.ID)
+		if message != nil {
+			messageIDs = append(messageIDs, message.ID)
+		}
 	}
 	return messageIDs
 }
