@@ -496,7 +496,7 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 				// Delete messages after ten seconds
 				time.Sleep(10 * time.Second)
 				for _, messageToDelete := range messagesToDelete {
-					if messagesToDelete != nil {
+					if messageToDelete != nil {
 						session.ChannelMessageDelete(msg.ChannelID, messageToDelete.ID)
 					}
 				}
