@@ -3269,6 +3269,12 @@ func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Sessi
 }
 
 func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+
+		err := m.applyLevelsRoles(member.GuildID, member.User.ID, m.GetLevelForUser(member.User.ID, member.GuildID))
+		helpers.RelaxLog(err)
+	}()
 
 }
 
