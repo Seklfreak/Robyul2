@@ -583,7 +583,7 @@ func GetUser(userID string) (*discordgo.User, error) {
 	var err error
 	var targetUser discordgo.User
 	cacheCodec := cache.GetRedisCacheCodec()
-	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID) // TOOD: Should we cache this?
+	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID) // TODO: Should we cache this?
 
 	for _, guild := range cache.GetSession().State.Guilds {
 		member, err := GetGuildMemberWithoutApi(guild.ID, userID)
