@@ -176,6 +176,7 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 	if submission.LinkFlairText != "" {
 		data.Embed.Title = "`" + submission.LinkFlairText + "` " + data.Embed.Title
 	}
+	data.Embed.Title = html.UnescapeString(data.Embed.Title)
 	if len(data.Embed.Title) > 128 {
 		data.Embed.Title = submission.Title[0:127] + "…"
 	}
@@ -354,7 +355,7 @@ func (r *Reddit) getSubredditInfo(subreddit string) (data *discordgo.MessageSend
 	data.Embed = &discordgo.MessageEmbed{
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: helpers.GetText("plugins.reddit.embed-footer") + " | reddit #" + subredditData.ID},
-		Title:       titleText,
+		Title:       html.UnescapeString(titleText),
 		Description: html.UnescapeString(subredditData.PublicDesc),
 		URL:         RedditBaseUrl + subredditData.URL,
 		Fields: []*discordgo.MessageEmbedField{
