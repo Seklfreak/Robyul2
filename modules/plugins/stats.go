@@ -48,6 +48,8 @@ func (s *Stats) Commands() []string {
 		"serverindex",
 		"roles",
 		"rolelist",
+		"channels",
+		"channellist",
 	}
 }
 
@@ -1395,7 +1397,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		allRoles := guild.Roles
 
 		if len(allRoles) <= 0 {
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.rolelist-none"))
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.rolelist-none"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -1475,6 +1477,163 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				helpers.RelaxLog(err)
 			}
 			err = session.MessageReactionRemove(msg.ChannelID, rolelistEmbedMessage.ID, "➡", session.State.User.ID)
+			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				helpers.RelaxLog(err)
+			}
+		}
+
+		return
+	case "channels", "channellist":
+		session.ChannelTyping(msg.ChannelID)
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
+
+		guild, err := helpers.GetGuild(channel.GuildID)
+		helpers.Relax(err)
+
+		args := strings.Fields(content)
+		if len(args) >= 1 {
+			if helpers.IsBotAdmin(msg.Author.ID) {
+				otherGuild, err := helpers.GetGuild(args[len(args)-1])
+				if err == nil && otherGuild != nil && otherGuild.ID != "" {
+					guild = otherGuild
+				}
+			}
+		}
+
+		allChannels := guild.Channels
+
+		if len(allChannels) <= 0 {
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.channellist-none"))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		}
+
+		allChannelsByCategory := make(map[*discordgo.Channel][]*discordgo.Channel, 0)
+		allChannelCategories := make([]*discordgo.Channel, 0)
+
+		for _, foundChannel := range allChannels {
+			if foundChannel.Type == discordgo.ChannelTypeGuildCategory {
+				allChannelCategories = append(allChannelCategories, foundChannel)
+			}
+
+			if foundChannel.ParentID == "" {
+				if foundChannel.Type != discordgo.ChannelTypeGuildCategory {
+					if _, ok := allChannelsByCategory[nil]; !ok {
+						allChannelsByCategory[nil] = make([]*discordgo.Channel, 0)
+					}
+					allChannelsByCategory[nil] = append(allChannelsByCategory[nil], foundChannel)
+				}
+			} else {
+				parentChannel, err := helpers.GetChannel(foundChannel.ParentID)
+				if err != nil {
+					parentChannel = &discordgo.Channel{ID: foundChannel.ParentID, Name: "N/A"}
+				}
+
+				if _, ok := allChannelsByCategory[parentChannel]; !ok {
+					allChannelsByCategory[parentChannel] = make([]*discordgo.Channel, 0)
+				}
+				allChannelsByCategory[parentChannel] = append(allChannelsByCategory[parentChannel], foundChannel)
+			}
+		}
+
+		slice.Sort(allChannelCategories, func(i, j int) bool {
+			return allChannelCategories[i].Position < allChannelCategories[j].Position
+		})
+		allChannelCategories = append([]*discordgo.Channel{nil}, allChannelCategories...)
+
+		allChannels = make([]*discordgo.Channel, 0)
+
+		var foundChannels []*discordgo.Channel
+		var ok bool
+		for _, foundCategory := range allChannelCategories {
+			if foundChannels, ok = allChannelsByCategory[foundCategory]; !ok {
+				continue
+			}
+
+			if foundCategory != nil {
+				allChannels = append(allChannels, foundCategory)
+			}
+
+			slice.Sort(foundChannels, func(i, j int) bool {
+				return foundChannels[i].Position < foundChannels[j].Position
+			})
+			for _, foundChannel := range foundChannels {
+				allChannels = append(allChannels, foundChannel)
+			}
+		}
+
+		numberOfPages := int(math.Ceil(float64(len(allChannels)) / float64(10)))
+		footerAdditionalText := ""
+		if numberOfPages > 1 {
+			footerAdditionalText += " Click on the arrows below to change the page."
+		}
+
+		currentPage := 1
+		if len(args) > 0 {
+			currentPage, err = strconv.Atoi(args[0])
+			if err != nil {
+				currentPage = 1
+			}
+		}
+		if currentPage > numberOfPages {
+			currentPage = 1
+		}
+
+		channellistEmbed := &discordgo.MessageEmbed{
+			Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.stats.channellist-embed-footer", humanize.Comma(int64(len(allChannels)))) + footerAdditionalText},
+		}
+
+		s.setEmbedChannellistPage(channellistEmbed, msg.Author, guild, allChannels, currentPage, numberOfPages)
+		channellistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, channellistEmbed)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if numberOfPages > 1 {
+			err = session.MessageReactionAdd(msg.ChannelID, channellistEmbedMessage.ID, "⬅")
+			helpers.Relax(err)
+			err = session.MessageReactionAdd(msg.ChannelID, channellistEmbedMessage.ID, "➡")
+			helpers.Relax(err)
+		}
+
+		closeHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+			defer helpers.Recover()
+
+			if reaction.MessageID == channellistEmbedMessage.ID {
+				if reaction.UserID == session.State.User.ID {
+					return
+				}
+
+				if reaction.UserID == msg.Author.ID {
+					if reaction.Emoji.Name == "➡" {
+						if currentPage+1 <= numberOfPages {
+							currentPage += 1
+							s.setEmbedChannellistPage(channellistEmbed, msg.Author, guild, allChannels, currentPage, numberOfPages)
+							channellistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, channellistEmbedMessage.ID, channellistEmbed)
+							helpers.Relax(err)
+						}
+					} else if reaction.Emoji.Name == "⬅" {
+						if currentPage-1 >= 1 {
+							currentPage -= 1
+							s.setEmbedChannellistPage(channellistEmbed, msg.Author, guild, allChannels, currentPage, numberOfPages)
+							channellistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, channellistEmbedMessage.ID, channellistEmbed)
+							helpers.Relax(err)
+						}
+					}
+				}
+				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+					helpers.RelaxLog(err)
+				}
+			}
+		})
+		time.Sleep(3 * time.Minute)
+		closeHandler()
+		if numberOfPages > 1 {
+			err = session.MessageReactionRemove(msg.ChannelID, channellistEmbedMessage.ID, "⬅", session.State.User.ID)
+			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				helpers.RelaxLog(err)
+			}
+			err = session.MessageReactionRemove(msg.ChannelID, channellistEmbedMessage.ID, "➡", session.State.User.ID)
 			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
 				helpers.RelaxLog(err)
 			}
@@ -1576,6 +1735,58 @@ func (r *Stats) setEmbedRolelistPage(memberlistEmbed *discordgo.MessageEmbed, au
 
 			memberlistEmbed.Description += fmt.Sprintf(
 				"%d: %s (#%s%s)\n", i+1, allRoles[i].Name, allRoles[i].ID, informationText)
+		}
+		i++
+		if i >= startMemberN+10 {
+			break
+		}
+	}
+	return
+}
+
+func (r *Stats) setEmbedChannellistPage(memberlistEmbed *discordgo.MessageEmbed, author *discordgo.User, guild *discordgo.Guild, allChannels []*discordgo.Channel, pageN int, maxPagesN int) {
+	memberlistEmbed.Fields = []*discordgo.MessageEmbedField{}
+	pageText := ""
+	if maxPagesN > 1 {
+		pageText = fmt.Sprintf(" | Page %s of %s", humanize.Comma(int64(pageN)), humanize.Comma(int64(maxPagesN)))
+	}
+	memberlistEmbed.Title = helpers.GetTextF("plugins.stats.channellist-embed-title", author.Username, guild.Name) + pageText
+	memberlistEmbed.Description = ""
+	startMemberN := (pageN - 1) * 10
+	i := startMemberN
+	for {
+		if i < len(allChannels) {
+			var information []string
+			var informationText, prefixText string
+			switch allChannels[i].Type {
+			case discordgo.ChannelTypeGuildCategory:
+				information = append(information, "category")
+				break
+			case discordgo.ChannelTypeGuildVoice:
+				information = append(information, "voice")
+				break
+			case discordgo.ChannelTypeGuildText:
+				information = append(information, "text")
+				break
+			}
+
+			if allChannels[i].NSFW {
+				information = append(information, "NSFW")
+			}
+			if allChannels[i].Bitrate > 0 {
+				information = append(information, humanize.Comma(int64(allChannels[i].Bitrate))+"kbps")
+			}
+
+			if len(information) > 0 {
+				informationText = ", " + strings.Join(information, ", ")
+			}
+
+			if allChannels[i].Type == discordgo.ChannelTypeGuildCategory {
+				prefixText += ":arrow_down: "
+			}
+
+			memberlistEmbed.Description += fmt.Sprintf(
+				"%d: %s (#%s%s)\n", i+1, prefixText+allChannels[i].Name, allChannels[i].ID, informationText)
 		}
 		i++
 		if i >= startMemberN+10 {

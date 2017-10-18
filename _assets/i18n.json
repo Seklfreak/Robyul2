@@ -659,7 +659,10 @@
       "memberlist-none": "No members found.",
       "rolelist-none": "No roles found.",
       "rolelist-embed-footer": "There are %s roles on this server.",
-      "rolelist-embed-title": "@%s: Roles on %s"
+      "rolelist-embed-title": "@%s: Roles on %s",
+      "channellist-none": "No channels found.",
+      "channellist-embed-footer": "There are %s channels on this server.",
+      "channellist-embed-title": "@%s: Channels on %s"
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! <:googlenerd:317030369205682186>",
