@@ -44,7 +44,7 @@ func (s *service) Stop() {
 	s.stop()
 }
 
-// searchQuerySingle retuns single search result with given type @searchType.
+// searchQuerySingle returns single search result with given type @searchType.
 // returns (nil, nil) when there is no matching results.
 func (s *service) SearchQuerySingle(keywords []string, searchType string) (*youtubeAPI.SearchResult, error) {
 	s.RLock()
