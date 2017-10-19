@@ -8,19 +8,20 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 )
 
 type feeds struct {
-	service *service
+	service *service.Service
 	running bool
 
 	sync.Mutex
 }
 
-func (f *feeds) Init(e *service) {
+func (f *feeds) Init(e *service.Service) {
 	f.Lock()
 	defer f.Unlock()
 

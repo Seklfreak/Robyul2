@@ -1,12 +1,14 @@
-package youtube
+package service
 
 import (
 	"sync"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	redisCache "github.com/go-redis/cache"
+	rethink "github.com/gorethink/gorethink"
 )
 
 type quota struct {
@@ -115,11 +117,18 @@ func (q *quota) DailyLimitExceeded() {
 
 // Set entries count which will use in quota calculation.
 func (q *quota) readEntryCount() (int64, error) {
-	entries, err := readEntries(map[string]interface{}{})
+	query := rethink.Table(models.YoutubeChannelTable).Count()
+
+	cursor, err := query.Run(helpers.GetDB())
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
-	return int64(len(entries)), nil
+	defer cursor.Close()
+
+	cnt := int64(0)
+	cursor.One(&cnt)
+
+	return cnt, nil
 }
 
 // readOldQuota reads previous quota information from database.

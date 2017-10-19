@@ -1,4 +1,4 @@
-package youtube
+package service
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	youtubeAPI "google.golang.org/api/youtube/v3"
 )
 
-type service struct {
+type Service struct {
 	service *youtubeAPI.Service
 	quota   quota
 	filter  urlfilter
@@ -21,7 +21,7 @@ type service struct {
 	sync.RWMutex
 }
 
-func (s *service) Init(configFilePath string) {
+func (s *Service) Init(configFilePath string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -37,7 +37,7 @@ func (s *service) Init(configFilePath string) {
 	s.filter.Init()
 }
 
-func (s *service) Stop() {
+func (s *Service) Stop() {
 	s.Lock()
 	defer s.Unlock()
 
@@ -46,7 +46,7 @@ func (s *service) Stop() {
 
 // searchQuerySingle returns single search result with given type @searchType.
 // returns (nil, nil) when there is no matching results.
-func (s *service) SearchQuerySingle(keywords []string, searchType string) (*youtubeAPI.SearchResult, error) {
+func (s *Service) SearchQuerySingle(keywords []string, searchType string) (*youtubeAPI.SearchResult, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -80,7 +80,7 @@ func (s *service) SearchQuerySingle(keywords []string, searchType string) (*yout
 	return response.Items[0], nil
 }
 
-func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtubeAPI.Activity, error) {
+func (s *Service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtubeAPI.Activity, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -103,7 +103,7 @@ func (s *service) GetChannelFeeds(channelId, publishedAfter string) ([]*youtubeA
 	return response.Items, nil
 }
 
-func (s *service) GetVideoSingle(videoId string) (*youtubeAPI.Video, error) {
+func (s *Service) GetVideoSingle(videoId string) (*youtubeAPI.Video, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -129,7 +129,7 @@ func (s *service) GetVideoSingle(videoId string) (*youtubeAPI.Video, error) {
 	return response.Items[0], nil
 }
 
-func (s *service) GetChannelSingle(channelId string) (*youtubeAPI.Channel, error) {
+func (s *Service) GetChannelSingle(channelId string) (*youtubeAPI.Channel, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -155,23 +155,23 @@ func (s *service) GetChannelSingle(channelId string) (*youtubeAPI.Channel, error
 	return response.Items[0], nil
 }
 
-func (s *service) IncQuotaEntryCount() {
+func (s *Service) IncQuotaEntryCount() {
 	s.quota.IncEntryCount()
 }
 
-func (s *service) DecQuotaEntryCount() {
+func (s *Service) DecQuotaEntryCount() {
 	s.quota.DecEntryCount()
 }
 
-func (s *service) UpdateCheckingInterval() error {
+func (s *Service) UpdateCheckingInterval() error {
 	return s.quota.UpdateCheckingInterval()
 }
 
-func (s *service) GetCheckingInterval() int64 {
+func (s *Service) GetCheckingInterval() int64 {
 	return s.quota.GetInterval()
 }
 
-func (s *service) init(configFilePath string) {
+func (s *Service) init(configFilePath string) {
 	configFile := helpers.GetConfig().Path(configFilePath).Data().(string)
 
 	authJSON, err := ioutil.ReadFile(configFile)
@@ -186,11 +186,11 @@ func (s *service) init(configFilePath string) {
 	helpers.Relax(err)
 }
 
-func (s *service) stop() {
+func (s *Service) stop() {
 	s.service = nil
 }
 
-func (s *service) handleGoogleAPIError(err error) error {
+func (s *Service) handleGoogleAPIError(err error) error {
 	var errCode int
 	var errMsg string
 	_, scanErr := fmt.Sscanf(err.Error(), "googleapi: Error %d: %s", &errCode, &errMsg)
