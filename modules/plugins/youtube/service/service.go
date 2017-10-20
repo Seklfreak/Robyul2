@@ -16,7 +16,7 @@ import (
 type Service struct {
 	service *youtubeAPI.Service
 	quota   quota
-	filter  urlfilter
+	filter  *urlfilter
 
 	sync.RWMutex
 }
@@ -34,7 +34,7 @@ func (s *Service) Init(configFilePath string) {
 	err := s.quota.Init()
 	helpers.Relax(err)
 
-	s.filter.Init()
+	s.filter = newUrlFilter()
 }
 
 func (s *Service) Stop() {

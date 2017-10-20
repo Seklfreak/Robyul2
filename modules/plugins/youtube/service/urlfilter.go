@@ -13,8 +13,11 @@ const (
 	channelUserUrl string = `^(https?\:\/\/)?(www\.|m\.)?(youtube\.com)\/user\/(.[A-Za-z0-9_]*)`
 )
 
-func (f *urlfilter) Init() {
+func newUrlFilter() *urlfilter {
+	f := &urlfilter{}
 	f.compileRegexpSet(videoLongUrl, videoShortUrl, channelIdUrl, channelUserUrl)
+
+	return f
 }
 
 // GetId extracts channel id, channel name, video id from given url.
@@ -32,11 +35,6 @@ func (f *urlfilter) GetId(url string) (id string, ok bool) {
 }
 
 func (f *urlfilter) compileRegexpSet(regexps ...string) {
-	for i := range f.regexpSet {
-		f.regexpSet[i] = nil
-	}
-	f.regexpSet = f.regexpSet[:0]
-
 	for i := range regexps {
 		f.regexpSet = append(f.regexpSet, regexp.MustCompile(regexps[i]))
 	}
