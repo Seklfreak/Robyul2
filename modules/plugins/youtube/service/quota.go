@@ -11,12 +11,16 @@ import (
 	rethink "github.com/gorethink/gorethink"
 )
 
+// quota contains information for calculating
+// checking time of feeds as fast as possible.
 type quota struct {
-	data     models.YoutubeQuota
-	count    int64
-	interval int64
+	// Contains daily limit, left quota, reset time.
+	data models.YoutubeQuota
 
-	sync.Mutex
+	entriesCount  int64 // Number of feed entries count.
+	checkInterval int64 // Calculated checking time interval.
+
+	sync.Mutex // Embedded lock for changing quota fields.
 }
 
 const (
@@ -27,27 +31,34 @@ const (
 	channelsQuotaCost int64 = 7
 )
 
+// Init fills quota information with default setting value and
+// previous saved information from redis.
 func (q *quota) Init() (err error) {
 	q.Lock()
 	defer q.Unlock()
 
-	if q.count, err = q.readEntryCount(); err != nil {
+	// Read the count of youtube feed entries.
+	if q.entriesCount, err = q.readEntryCount(); err != nil {
 		return
 	}
 
+	// Set default information.
 	q.data.Daily = dailyQuotaLimit
 	q.data.Left = dailyQuotaLimit
 	q.data.ResetTime = q.calcResetTime().Unix()
 
-	oldQuota, err := q.get()
+	// Get saved quota information from redis.
+	s, err := q.get()
 	if err != nil {
 		return err
 	}
 
-	if q.data.ResetTime <= oldQuota.ResetTime {
-		q.data.Left = oldQuota.Left
+	// If reset time was over, then refresh the quota left.
+	if q.data.ResetTime <= s.ResetTime {
+		q.data.Left = s.Left
 	}
 
+	// Set new quota into redis.
 	return q.set()
 }
 
@@ -55,14 +66,14 @@ func (q *quota) GetInterval() int64 {
 	q.Lock()
 	defer q.Unlock()
 
-	return q.interval
+	return q.checkInterval
 }
 
 func (q *quota) GetCount() int64 {
 	q.Lock()
 	defer q.Unlock()
 
-	return q.count
+	return q.entriesCount
 }
 
 func (q *quota) GetQuota() models.YoutubeQuota {
@@ -88,15 +99,15 @@ func (q *quota) IncEntryCount() {
 	q.Lock()
 	defer q.Unlock()
 
-	q.count++
+	q.entriesCount++
 }
 
 func (q *quota) DecEntryCount() {
 	q.Lock()
 	defer q.Unlock()
 
-	if q.count > 0 {
-		q.count--
+	if q.entriesCount > 0 {
+		q.entriesCount--
 	}
 }
 
@@ -104,7 +115,7 @@ func (q *quota) UpdateCheckingInterval() error {
 	q.Lock()
 	defer q.Unlock()
 
-	q.interval = q.calcCheckingTimeInterval()
+	q.checkInterval = q.calcCheckingTimeInterval()
 	return q.set()
 }
 
@@ -115,29 +126,30 @@ func (q *quota) DailyLimitExceeded() {
 	q.data.Left = 0
 }
 
-// Set entries count which will use in quota calculation.
+// readEntryCount reads how many entries in database
+// and this will use in check time calculation.
 func (q *quota) readEntryCount() (int64, error) {
 	query := rethink.Table(models.YoutubeChannelTable).Count()
 
-	cursor, err := query.Run(helpers.GetDB())
+	c, err := query.Run(helpers.GetDB())
 	if err != nil {
 		return 0, err
 	}
-	defer cursor.Close()
+	defer c.Close()
 
 	cnt := int64(0)
-	cursor.One(&cnt)
+	c.One(&cnt)
 
 	return cnt, nil
 }
 
-// readOldQuota reads previous quota information from database.
+// get previous quota information from redis.
 // If failed, return zero filled quota.
 func (q *quota) get() (models.YoutubeQuota, error) {
-	codec := cache.GetRedisCacheCodec()
+	c := cache.GetRedisCacheCodec()
 
-	var savedQuota models.YoutubeQuota
-	if err := codec.Get(models.YoutubeQuotaRedisKey, &savedQuota); err != nil {
+	var s models.YoutubeQuota
+	if err := c.Get(models.YoutubeQuotaRedisKey, &s); err != nil {
 		return models.YoutubeQuota{
 			Daily:     0,
 			Left:      0,
@@ -145,7 +157,7 @@ func (q *quota) get() (models.YoutubeQuota, error) {
 		}, nil
 	}
 
-	return savedQuota, nil
+	return s, nil
 }
 
 func (q *quota) set() error {
@@ -156,11 +168,12 @@ func (q *quota) set() error {
 	})
 }
 
+// calcResetTime calculates the upcoming youtube quota reset time.
 func (q *quota) calcResetTime() time.Time {
 	now := time.Now()
 	localZone := now.Location()
 
-	// Youtube quota is reset when every midnight in pacific time
+	// Youtube quota is reset when every midnight in pacific time.
 	pacific, err := time.LoadLocation("America/Los_Angeles")
 	if err == nil {
 		now = now.In(pacific)
@@ -171,24 +184,31 @@ func (q *quota) calcResetTime() time.Time {
 	y, m, d := now.Date()
 	resetTime := time.Date(y, m, d+1, 0, 0, 0, 0, now.Location())
 
+	// Returns in local zone format for convenient comparing.
 	return resetTime.In(localZone)
 }
 
+// calcCheckingTimeInterval calculates checking time interval with
+// current quota information.
 func (q *quota) calcCheckingTimeInterval() int64 {
 	defaultTimeInterval := int64(5)
 
 	now := time.Now().Unix()
 
+	// If now is later than reset time, then update reset time
+	// and left quota information.
 	if now > q.data.ResetTime {
 		q.data.ResetTime = q.calcResetTime().Unix()
 		q.data.Left = dailyQuotaLimit
 	}
 
+	// How much times do we have until quota will be reset.
 	delta := q.data.ResetTime - now
 	if delta < 1 {
 		return defaultTimeInterval
 	}
 
+	// quotaPerSec means how many quota we can use in every seconds.
 	quotaPerSec := q.data.Left / delta
 	if quotaPerSec < 1 {
 		// Adds 300 seconds for reducing "API limit exceed" error message.
@@ -199,7 +219,7 @@ func (q *quota) calcCheckingTimeInterval() int64 {
 		return delta + 300
 	}
 
-	calcTimeInterval := (channelsQuotaCost * q.count / quotaPerSec)
+	calcTimeInterval := (channelsQuotaCost * q.entriesCount / quotaPerSec)
 	if calcTimeInterval < defaultTimeInterval {
 		return defaultTimeInterval
 	}
