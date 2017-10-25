@@ -248,6 +248,11 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 			statsPrinted := 0
 			for _, biasChannel := range biasChannels {
 				if biasChannel.ServerID == channel.GuildID {
+					biasDiscordChannel, err := helpers.GetChannel(biasChannel.ChannelID)
+					if err != nil || biasDiscordChannel == nil {
+						continue
+					}
+
 					for _, biasCategory := range biasChannel.Categories {
 						categoryNumbers := make(BiasRoleStatList, 0)
 						if biasCategory.Hidden == true && biasCategory.Pool == "" {
@@ -287,11 +292,11 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 			}
 
 			if statsPrinted <= 0 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-stats"))
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-stats"))
 				helpers.Relax(err)
 			} else {
 				for _, page := range helpers.Pagify(statsText, "\n") {
-					_, err := session.ChannelMessageSend(msg.ChannelID, page)
+					_, err = session.ChannelMessageSend(msg.ChannelID, page)
 					helpers.Relax(err)
 				}
 			}
