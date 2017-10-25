@@ -100,5 +100,6 @@ var (
 		//&triggers.Shrug{},
 		//&triggers.TableFlip{},
 		//&triggers.Triggered{},
+		&triggers.Dog{},
 	}
 )
