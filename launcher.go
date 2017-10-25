@@ -13,6 +13,8 @@ import (
 
 	"strings"
 
+	"runtime"
+
 	"github.com/RichardKnop/machinery/v1"
 	marchineryConfig "github.com/RichardKnop/machinery/v1/config"
 	marchineryLog "github.com/RichardKnop/machinery/v1/log"
@@ -116,6 +118,32 @@ func main() {
 	cache.SetRedisClient(redisClient)
 
 	// Connect and add event handlers
+	discordgo.Logger = func(msgL, caller int, format string, a ...interface{}) {
+		pc, file, line, _ := runtime.Caller(caller)
+
+		files := strings.Split(file, "/")
+		file = files[len(files)-1]
+
+		name := runtime.FuncForPC(pc).Name()
+		fns := strings.Split(name, ".")
+		name = fns[len(fns)-1]
+
+		msg := format
+		if strings.Contains(msg, "%") {
+			msg = fmt.Sprintf(format, a...)
+		}
+
+		switch msgL {
+		case discordgo.LogError:
+			log.WithField("module", "discordgo").Errorf("%s:%d:%s() %s", file, line, name, msg)
+		case discordgo.LogWarning:
+			log.WithField("module", "discordgo").Warnf("%s:%d:%s() %s", file, line, name, msg)
+		case discordgo.LogInformational:
+			log.WithField("module", "discordgo").Infof("%s:%d:%s() %s", file, line, name, msg)
+		case discordgo.LogDebug:
+			log.WithField("module", "discordgo").Debugf("%s:%d:%s() %s", file, line, name, msg)
+		}
+	}
 	log.WithField("module", "launcher").Info("Connecting bot to discord...")
 	discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
 	if err != nil {
