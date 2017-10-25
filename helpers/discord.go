@@ -18,6 +18,7 @@ import (
 	"github.com/getsentry/raven-go"
 	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/vmihailenco/msgpack"
 )
 
 const (
@@ -412,15 +413,14 @@ func RemoveMuteRole(guildID string, userID string) (err error) {
 	err = cache.GetSession().GuildMemberRoleRemove(guildID, userID, muteRole.ID)
 	if err != nil {
 		if errD, ok := err.(*discordgo.RESTError); ok {
-			if errD.Message.Code != discordgo.ErrCodeUnknownMember &&
-				errD.Message.Code != discordgo.ErrCodeUnknownUser {
-				return err
+			if errD.Message.Code == discordgo.ErrCodeUnknownMember ||
+				errD.Message.Code == discordgo.ErrCodeUnknownUser ||
+				errD.Response.StatusCode == 404 {
+				return nil
 			}
-		} else {
-			return err
 		}
 	}
-	return nil
+	return err
 }
 
 func RemoveMuteDatabase(guildID string, userID string) (err error) {
@@ -444,15 +444,28 @@ func RemoveMuteDatabase(guildID string, userID string) (err error) {
 	return nil
 }
 
+func RemoveMutePersistency(guildID string, userID string) (err error) {
+	muteRole, err := GetMuteRole(guildID)
+	if err != nil {
+		return err
+	}
+
+	return persistencyRemoveCachedRole(guildID, userID, muteRole.ID)
+}
+
 func UnmuteUser(guildID string, userID string) (err error) {
 	errRole := RemoveMuteRole(guildID, userID)
 	errDatabase := RemoveMuteDatabase(guildID, userID)
+	errPersistency := RemoveMutePersistency(guildID, userID)
 
 	if errRole != nil {
 		return errRole
 	}
 	if errDatabase != nil {
 		return errDatabase
+	}
+	if errPersistency != nil {
+		return errPersistency
 	}
 	return nil
 }
@@ -473,6 +486,62 @@ func UnmuteUserSignature(guildID string, userID string) (signature *tasks.Signat
 	signature.RetryCount = 3
 	signature.OnError = []*tasks.Signature{{Name: "log_error"}}
 	return signature
+}
+
+func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (err error) {
+	key := "robyul2-discord:persistency:" + GuildID + ":" + UserID + ":roles"
+	var redisRoleIDs []string
+	var dbRoles models.PersistencyRolesEntry
+
+	// remove from db
+	listCursor, _ := rethink.Table(models.PersistencyRolesTable).Filter(
+		rethink.And(
+			rethink.Row.Field("guild_id").Eq(GuildID),
+			rethink.Row.Field("user_id").Eq(UserID),
+		),
+	).Run(GetDB())
+	defer listCursor.Close()
+	listCursor.One(&dbRoles)
+
+	newDbRoles := dbRoles
+	newDbRoles.Roles = make([]string, 0)
+	for _, dbRoleID := range dbRoles.Roles {
+		if dbRoleID != roleID {
+			newDbRoles.Roles = append(newDbRoles.Roles, dbRoleID)
+		}
+	}
+
+	_, err = rethink.Table(models.PersistencyRolesTable).Update(newDbRoles).Run(GetDB())
+	if err != nil {
+		return err
+	}
+
+	// remove from redis
+	marshalled, err := cache.GetRedisClient().Get(key).Bytes()
+	if err != nil {
+		return err
+	}
+
+	err = msgpack.Unmarshal(marshalled, &redisRoleIDs)
+	if err != nil {
+		return err
+	}
+
+	newRedisRoleIDs := make([]string, 0)
+	for _, redisRoleID := range redisRoleIDs {
+		if redisRoleID != roleID {
+			newRedisRoleIDs = append(newRedisRoleIDs, redisRoleID)
+		}
+	}
+
+	marshalled, err = msgpack.Marshal(newRedisRoleIDs)
+	if err != nil {
+		return
+	}
+
+	err = cache.GetRedisClient().Set(key, marshalled, 0).Err()
+
+	return err
 }
 
 func LogMachineryError(errorMessage string) (err error) {
