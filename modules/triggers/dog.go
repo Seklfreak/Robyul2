@@ -17,5 +17,5 @@ func (d *Dog) Triggers() []string {
 func (d *Dog) Response(trigger string, content string) string {
 	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	return fmt.Sprintf("WOOF! :dog: \n https://robyul.chat/bundles/robyulweb/images/dog/%d.jpg", randGen.Intn(3)+1)
+	return fmt.Sprintf("WOOF! :dog: \n https://robyul.chat/bundles/robyulweb/images/dog/%d.jpg", randGen.Intn(5)+1)
 }
