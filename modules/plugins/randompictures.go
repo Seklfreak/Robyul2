@@ -271,11 +271,12 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 		helpers.Relax(err)
 		err = cursor.All(&rpSources)
-		// TODO: Need to handling this correctly.
-		helpers.Relax(err)
-		if err != nil && err != rethink.ErrEmptyResult {
-			helpers.Relax(err)
+		if (err != nil && err != rethink.ErrEmptyResult) || len(rpSources) <= 0 {
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
 		}
+		helpers.Relax(err)
 
 		initialMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
