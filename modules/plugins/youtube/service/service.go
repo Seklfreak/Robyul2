@@ -25,23 +25,12 @@ func (s *Service) Init(configFilePath string) {
 	s.Lock()
 	defer s.Unlock()
 
-	if s.service != nil {
-		s.stop()
-	}
-
 	s.init(configFilePath)
 
 	err := s.quota.Init()
 	helpers.Relax(err)
 
 	s.filter = newUrlFilter()
-}
-
-func (s *Service) Stop() {
-	s.Lock()
-	defer s.Unlock()
-
-	s.stop()
 }
 
 // searchQuerySingle returns single search result with given type @searchType.
@@ -184,10 +173,6 @@ func (s *Service) init(configFilePath string) {
 
 	s.service, err = youtubeAPI.New(client)
 	helpers.Relax(err)
-}
-
-func (s *Service) stop() {
-	s.service = nil
 }
 
 func (s *Service) handleGoogleAPIError(err error) error {
