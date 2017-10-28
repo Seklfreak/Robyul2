@@ -85,11 +85,11 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 			helpers.Relax(err)
 			err = cursor.All(&rpSources)
-			helpers.Relax(err)
-			if err != nil && err != rethink.ErrEmptyResult {
+			if err == rethink.ErrEmptyResult {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 				continue
 			}
+			helpers.Relax(err)
 
 			log.WithField("module", "randompictures").Info("gathering google drive picture cache")
 			for _, sourceEntry := range rpSources {
@@ -144,10 +144,11 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 			helpers.Relax(err)
 			err = cursor.All(&rpSources)
-			helpers.Relax(err)
-			if err != nil && err != rethink.ErrEmptyResult {
-				helpers.Relax(err)
+			if err == rethink.ErrEmptyResult {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				continue
 			}
+			helpers.Relax(err)
 
 			var fileHash string
 			var key string
@@ -270,6 +271,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 		helpers.Relax(err)
 		err = cursor.All(&rpSources)
+		// TODO: Need to handling this correctly.
 		helpers.Relax(err)
 		if err != nil && err != rethink.ErrEmptyResult {
 			helpers.Relax(err)
@@ -676,11 +678,11 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 	cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 	helpers.Relax(err)
 	err = cursor.All(&rpSources)
-	helpers.Relax(err)
-	if err != nil && err != rethink.ErrEmptyResult {
+	if err == rethink.ErrEmptyResult {
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 		return
 	}
+	helpers.Relax(err)
 
 	var key string
 	var items int64
