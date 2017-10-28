@@ -1,17 +1,15 @@
-package youtube
+package service
 
 import "testing"
 
 func TestGetId(t *testing.T) {
-	f := urlfilter{}
+	f := newUrlFilter()
 
 	defer func() {
 		if err := recover(); err != nil {
 			t.Fatalf("youtube.compileRegexpSet() got panic while compiling regular expressions")
 		}
 	}()
-
-	f.Init()
 
 	id, ok := f.GetId("https://www.youtube.com/watch?v=BMQdZRLi_WM&list=PLywiNEAPE4I9mIv_edkzGeyJkeJmB9b8J")
 	if ok == false || id != "BMQdZRLi_WM" {

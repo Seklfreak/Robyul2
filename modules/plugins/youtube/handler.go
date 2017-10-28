@@ -8,12 +8,13 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 )
 
 type Handler struct {
-	service   service
+	service   service.Service
 	feedsLoop feeds
 }
 
