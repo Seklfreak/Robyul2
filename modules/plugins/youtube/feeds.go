@@ -2,7 +2,7 @@ package youtube
 
 import (
 	"fmt"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -16,25 +16,24 @@ import (
 
 type feeds struct {
 	service *service.Service
-	running bool
-
-	sync.Mutex
+	running uint32
 }
 
 func (f *feeds) Init(e *service.Service) {
-	f.Lock()
-	defer f.Unlock()
-
 	if e == nil {
 		helpers.Relax(fmt.Errorf("feeds loop initialize failed"))
 	}
 	f.service = e
 
-	if f.running {
+	f.start()
+}
+
+func (f *feeds) start() {
+	// Checks if feeds loop is already running
+	if atomic.SwapUint32(&f.running, uint32(1)) == 1 {
 		logger().Error("feeds loop already running")
 		return
 	}
-	f.running = true
 
 	go f.run()
 }
@@ -42,16 +41,13 @@ func (f *feeds) Init(e *service.Service) {
 func (f *feeds) run() {
 	defer helpers.Recover()
 	defer func() {
-		f.Lock()
-		f.running = false
-		f.Unlock()
+		// Atomically set 'running' variable to 0(false)
+		atomic.StoreUint32(&f.running, uint32(0))
 
-		go func() {
-			logger().Error("The feeds loop died. Please investigate! Will be restarted in 60 seconds")
-			time.Sleep(60 * time.Second)
+		logger().Error("The feeds loop died. Please investigate! Will be restarted in 60 seconds")
+		time.Sleep(60 * time.Second)
 
-			f.Init(f.service)
-		}()
+		f.start()
 	}()
 
 	for ; ; time.Sleep(10 * time.Second) {
