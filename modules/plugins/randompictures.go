@@ -85,11 +85,11 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 			helpers.Relax(err)
 			err = cursor.All(&rpSources)
-			helpers.Relax(err)
-			if err != nil && err != rethink.ErrEmptyResult {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			if err == rethink.ErrEmptyResult {
+				time.Sleep(30 * time.Second)
 				continue
 			}
+			helpers.Relax(err)
 
 			log.WithField("module", "randompictures").Info("gathering google drive picture cache")
 			for _, sourceEntry := range rpSources {
@@ -144,10 +144,11 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 			helpers.Relax(err)
 			err = cursor.All(&rpSources)
-			helpers.Relax(err)
-			if err != nil && err != rethink.ErrEmptyResult {
-				helpers.Relax(err)
+			if err == rethink.ErrEmptyResult {
+				time.Sleep(30 * time.Second)
+				continue
 			}
+			helpers.Relax(err)
 
 			var fileHash string
 			var key string
@@ -270,10 +271,12 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 		helpers.Relax(err)
 		err = cursor.All(&rpSources)
-		helpers.Relax(err)
-		if err != nil && err != rethink.ErrEmptyResult {
-			helpers.Relax(err)
+		if (err != nil && err != rethink.ErrEmptyResult) || len(rpSources) <= 0 {
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
 		}
+		helpers.Relax(err)
 
 		initialMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -676,11 +679,11 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 	cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
 	helpers.Relax(err)
 	err = cursor.All(&rpSources)
-	helpers.Relax(err)
-	if err != nil && err != rethink.ErrEmptyResult {
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+	if err == rethink.ErrEmptyResult {
+		time.Sleep(30 * time.Second)
 		return
 	}
+	helpers.Relax(err)
 
 	var key string
 	var items int64
