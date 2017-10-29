@@ -86,7 +86,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			helpers.Relax(err)
 			err = cursor.All(&rpSources)
 			if err == rethink.ErrEmptyResult {
-				time.Sleep(30 * time.Seconds)
+				time.Sleep(30 * time.Second)
 				continue
 			}
 			helpers.Relax(err)
@@ -145,7 +145,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			helpers.Relax(err)
 			err = cursor.All(&rpSources)
 			if err == rethink.ErrEmptyResult {
-				time.Sleep(30 * time.Seconds)
+				time.Sleep(30 * time.Second)
 				continue
 			}
 			helpers.Relax(err)
@@ -680,7 +680,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 	helpers.Relax(err)
 	err = cursor.All(&rpSources)
 	if err == rethink.ErrEmptyResult {
-		time.Sleep(30 * time.Seconds)
+		time.Sleep(30 * time.Second)
 		return
 	}
 	helpers.Relax(err)
