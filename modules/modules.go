@@ -64,6 +64,7 @@ var (
 		&plugins.Friend{},
 		&plugins.Names{},
 		&plugins.Reddit{},
+		&plugins.Color{},
 	}
 
 	// PluginList is the list of active plugins
