@@ -8,16 +8,16 @@
 The multi-purpose Discord Bot for KPop Servers originating from the I.O.I Discord.
 
 Robyul provides various features with the needs of KPop Servers in mind, some examples:
-- Mod features (ban, kick, optional warning and ban system across servers, chatlog)
+- Mod features (ban, kick, optional warning and ban system across servers, chatlog, role persistency, autoroles)
 - Server Statistics
 - Translation (using enhanced translation for korean powered by naver openAPI)
-- Social Media notification (VLive, Instagram (including Instagram live), Twitter, Facebook, Reddit)
+- Social Media notification (VLive, Instagram (including Instagram live), Twitter, Facebook, Reddit, YouTube)
 - LastFM (including summary of the lastFM usage on a whole discord)
 - Advanced Bias Role assignment (Multiple Levels of Roles and more)
 - Music Charts (iChart, Melon, Gaon)
 - Keyword Notifications
 - osu!
-- Level System (Including customizable profiles, leaderboards, reputation system
+- Level System (Including customizable profiles, leaderboards, tying roles to levels, reputation system)
 - Gfycat and Streamable
 - Gallery Mode for channels
 - Mirroring of Channels across servers
@@ -25,7 +25,9 @@ Robyul provides various features with the needs of KPop Servers in mind, some ex
 - Custom Commands
 - Spoilers
 - Reaction Polls
-- and much more...
+- Starboards
+- Cats, Dogs and Idols
+- [and much more...](https://robyul.chat/commands)
 
 If you want Robyul on your Discord Server please ask on the Discord for Robyul: https://discord.gg/s5qZvUV.
 
