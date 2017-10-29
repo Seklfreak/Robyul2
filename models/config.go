@@ -58,6 +58,8 @@ type Config struct {
 
 	PersistencyBiasEnabled bool     `rethink:"persistency_bias_enabled"`
 	PersistencyRoleIDs     []string `rethink:"persistency_roleids"`
+
+	RandomPicturesPicDelay int `rethink:"randompictures_pic_delay"`
 }
 
 type DelayedAutoRole struct {

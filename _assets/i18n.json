@@ -757,7 +757,9 @@
       "refresh-success": "Source successfully refreshed! <:blobokhand:317032017164238848>",
       "refresh-not-found-error": "I wasn't able to find this source. <:blobnomouth:317045295286583296>",
       "refresh-started": "Refreshing started, this may take a while! <:blobsleeping:317047101534109696>",
-      "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you."
+      "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you.",
+      "pic-delay-set-success": "I set the picture command delay to %d minutes.",
+      "pic-delay-dm": "Please wait a while until you can use this command again! <:blobshh:317044272161357824>"
     },
     "customcommands": {
       "add-keyword-already-exists": "There is already a custom command with this keyword. <:blobweary:317036265071575050>",

@@ -262,9 +262,19 @@ func (rp *RandomPictures) setServerFeaturesLoop() {
 func (rp *RandomPictures) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	switch command {
 	case "pic": // [p]pic [<name>]
-		session.ChannelTyping(msg.ChannelID)
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
+
+		if !rp.tryPicCommand(channel.GuildID, msg.Author.ID) {
+			session.ChannelMessageDelete(msg.ChannelID, msg.ID)
+			dmChannel, err := session.UserChannelCreate(msg.Author.ID)
+			helpers.Relax(err)
+			_, err = session.ChannelMessageSend(dmChannel.ID, helpers.GetText("plugins.randompictures.pic-delay-dm"))
+			helpers.RelaxMessage(err, "", "")
+			return
+		}
+
+		session.ChannelTyping(msg.ChannelID)
 		postedPic := false
 
 		var rpSources []DB_RandomPictures_Source
@@ -512,6 +522,32 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 
 					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-not-found-error"))
 					helpers.Relax(err)
+					return
+				})
+			case "pic-delay":
+				// [p]rapi pic-delay <n in minutes>
+				helpers.RequireMod(msg, func() {
+					if len(args) <= 1 {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
+					n, err := strconv.Atoi(args[1])
+					if err != nil {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+
+					targetGuildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+					targetGuildSettings.RandomPicturesPicDelay = n
+					err = helpers.GuildSettingsSet(channel.GuildID, targetGuildSettings)
+					helpers.Relax(err)
+
+					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-set-success", n))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
 			}
@@ -791,6 +827,42 @@ func (rp *RandomPictures) appendLinkToServerHistory(link string, sourceID string
 	_, err = redis.LTrim(key, 0, 99).Result()
 
 	return err
+}
+
+func (rp *RandomPictures) picDelayKey(guildID string, userID string) (key string) {
+	return "robyul2-discord:randompictures:last-pic-usage:" + guildID + ":" + userID
+}
+
+func (rp *RandomPictures) tryPicCommand(guildID string, userID string) (free bool) {
+	targetGuildSettings := helpers.GuildSettingsGetCached(guildID)
+
+	if targetGuildSettings.RandomPicturesPicDelay <= 0 {
+		return true
+	}
+
+	key := rp.picDelayKey(guildID, userID)
+
+	timestamp, err := cache.GetRedisClient().Get(key).Result()
+	if err != nil || timestamp == "" {
+		err := cache.GetRedisClient().Set(key, time.Now().Format(time.RFC3339), 0).Err()
+		helpers.RelaxLog(err)
+		return true
+	}
+
+	timeLastUsed, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		err := cache.GetRedisClient().Set(key, time.Now().Format(time.RFC3339), 0).Err()
+		helpers.RelaxLog(err)
+		return true
+	}
+
+	if timeLastUsed.Before(time.Now().Add(-1 * time.Duration(targetGuildSettings.RandomPicturesPicDelay) * time.Minute)) {
+		err := cache.GetRedisClient().Set(key, time.Now().Format(time.RFC3339), 0).Err()
+		helpers.RelaxLog(err)
+		return true
+	}
+
+	return false
 }
 
 type RandomPictures_HistoryItem struct {
