@@ -1,7 +1,7 @@
 {
   "admin": {
     "no_permission": [
-      "Uhm I'm sorry but only guild admins may do that <:blobfrowningbig:317028438693117962>",
+      "Uhm I'm sorry but only server admins may do that <:blobfrowningbig:317028438693117962>",
       "Don't tell anyone but that command - totally dangerous!\nOnly admins are brave enough to use it.",
       "These are not the druids you're looking for <:googleseenoevil:317027974622740490>",
       "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
@@ -10,7 +10,7 @@
   },
   "mod": {
     "no_permission": [
-      "Uhm I'm sorry but only guild mods may do that <:blobfrowningbig:317028438693117962>",
+      "Uhm I'm sorry but only server mods may do that <:blobfrowningbig:317028438693117962>",
       "Don't tell anyone but that command - totally dangerous!\nOnly mods are brave enough to use it.",
       "These are not the druids you're looking for <:googleseenoevil:317027974622740490>",
       "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
@@ -482,7 +482,9 @@
       "user-kicked-failed-too-low": "I wasn't able to kick the user. Please make sure Robyul is above the user you want to kick.",
       "prefix-info": "The Robyul prefix for this server is `%s`. Example: `%shelp`.",
       "prefix-set-success": "The new Robyul prefix for this server is `%s`.",
-      "user-banned-error-too-many-days": "The maximum of days to delete is 7 days. <:blobweary:317036265071575050>"
+      "user-banned-error-too-many-days": "The maximum of days to delete is 7 days. <:blobweary:317036265071575050>",
+      "set-bot-dp-success": "I successfully changed my DP.",
+      "set-bot-dp-error-not-png": "Please upload a `.png` file!"
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",

@@ -25,6 +25,8 @@ func (d *Dog) Init(session *discordgo.Session) {
 }
 
 func (d *Dog) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	session.ChannelTyping(msg.ChannelID)
+
 	args := strings.Fields(content)
 	if len(args) > 0 {
 		switch args[0] {

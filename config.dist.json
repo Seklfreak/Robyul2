@@ -29,8 +29,7 @@
     "address": "YOUR_REDIS_ADDRESS"
   },
   "bot": {
-    "name": "YOUR_BOT_NAME",
-    "avatar": "YOUR_BASE64_AVATAR"
+    "name": "YOUR_BOT_NAME"
   },
   "metrics_ip": "127.0.0.1",
   "debug": false,

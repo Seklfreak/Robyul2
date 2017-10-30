@@ -86,18 +86,6 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		time.Sleep(3 * time.Second)
 
 		configName := helpers.GetConfig().Path("bot.name").Data().(string)
-		configAvatar := helpers.GetConfig().Path("bot.avatar").Data().(string)
-
-		// Change avatar if desired
-		if configAvatar != "" && configAvatar != session.State.User.Avatar {
-			session.UserUpdate(
-				"",
-				"",
-				session.State.User.Username,
-				configAvatar,
-				"",
-			)
-		}
 
 		// Change name if desired
 		if configName != "" && configName != session.State.User.Username {

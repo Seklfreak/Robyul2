@@ -2,12 +2,15 @@ package plugins
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"image/png"
 
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
@@ -57,6 +60,7 @@ func (m *Mod) Commands() []string {
 		"pending-unmutes",
 		"pending-mutes",
 		"batch-roles",
+		"set-bot-dp",
 	}
 }
 
@@ -1751,6 +1755,44 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 
 			_, err = session.ChannelMessageSend(msg.ChannelID, resultText)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		})
+		return
+	case "set-bot-dp":
+		helpers.RequireRobyulMod(msg, func() {
+			if len(msg.Attachments) <= 0 {
+				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+
+			imageData := helpers.NetGet(msg.Attachments[0].URL)
+
+			image, err := png.Decode(bytes.NewReader(imageData))
+			if err != nil {
+				if strings.Contains(err.Error(), "not a PNG file") {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.set-bot-dp-error-not-png"))
+					return
+				}
+			}
+			helpers.Relax(err)
+
+			var buff bytes.Buffer
+
+			png.Encode(&buff, image)
+
+			encodedString := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buff.Bytes())
+
+			_, err = session.UserUpdate(
+				"",
+				"",
+				"",
+				encodedString,
+				"",
+			)
+			helpers.Relax(err)
+
+			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.set-bot-dp-success"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		})
