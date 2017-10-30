@@ -171,3 +171,7 @@
 [[constraint]]
   name = "github.com/jzelinskie/geddit"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/360EntSecGroup-Skylar/excelize"
+  branch = "1.1"

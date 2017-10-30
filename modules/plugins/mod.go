@@ -23,6 +23,7 @@ import (
 	"github.com/olebedev/when/rules/common"
 	"github.com/olebedev/when/rules/en"
 	"github.com/renstrom/fuzzysearch/fuzzy"
+	"github.com/xuri/excelize"
 )
 
 type Mod struct {
@@ -708,8 +709,63 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		})
 		return
 	case "serverlist": // [p]serverlist
-		helpers.RequireBotAdmin(msg, func() {
+		helpers.RequireRobyulMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
+
+			if strings.Contains(content, "xlsx") {
+				sheetname := "Serverlist"
+
+				xlsx := excelize.NewFile()
+				index := xlsx.NewSheet(sheetname)
+				xlsx.SetActiveSheet(index)
+				xlsx.SetCellValue(sheetname, "A1", "Server Name")
+				xlsx.SetCellValue(sheetname, "B1", "Server ID")
+				xlsx.SetCellValue(sheetname, "C1", "Users")
+				xlsx.SetCellValue(sheetname, "D1", "Channels")
+				xlsx.SetCellValue(sheetname, "E1", "Serverregion")
+				xlsx.SetCellValue(sheetname, "F1", "Serverowner Username")
+				xlsx.SetCellValue(sheetname, "G1", "Serverowner ID")
+
+				var row string
+				for i, guild := range session.State.Guilds {
+					users := make(map[string]string)
+					for _, u := range guild.Members {
+						users[u.User.ID] = u.User.Username
+					}
+					owner, err := helpers.GetUser(guild.OwnerID)
+					if err != nil || owner == nil {
+						owner = new(discordgo.User)
+						owner.Username = "N/A"
+					}
+
+					row = strconv.Itoa(i + 2)
+
+					xlsx.SetCellValue(sheetname, "A"+row, guild.Name)
+					xlsx.SetCellValue(sheetname, "B"+row, "#"+guild.ID)
+					xlsx.SetCellValue(sheetname, "C"+row, len(users))
+					xlsx.SetCellValue(sheetname, "D"+row, len(guild.Channels))
+					xlsx.SetCellValue(sheetname, "E"+row, guild.Region)
+					xlsx.SetCellValue(sheetname, "F"+row, "@"+owner.Username)
+					xlsx.SetCellValue(sheetname, "G"+row, "#"+guild.OwnerID)
+				}
+				buf := new(bytes.Buffer)
+				err := xlsx.Write(buf)
+				helpers.Relax(err)
+
+				_, err = session.ChannelMessageSendComplex(
+					msg.ChannelID, &discordgo.MessageSend{
+						Content: fmt.Sprintf("<@%s> Your serverlist is ready:", msg.Author.ID),
+						Files: []*discordgo.File{
+							{
+								Name:   "robyul-serverlist.xlsx",
+								Reader: bytes.NewReader(buf.Bytes()),
+							},
+						},
+					})
+				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+				return
+			}
+
 			resultText := ""
 			totalMembers := 0
 			totalChannels := 0
