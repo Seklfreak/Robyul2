@@ -128,9 +128,12 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 				m.setEntry(entry)
 			}
 			safeEntries.mux.Unlock()
+			time.Sleep(1 * time.Second)
 		}
 
-		time.Sleep(1 * time.Minute)
+		if len(safeEntries.entries) <= 10 {
+			time.Sleep(1 * time.Minute)
+		}
 	}
 }
 
