@@ -884,6 +884,16 @@
       "role-add-success": "I will restore the role `%s` on rejoin! <:blobsalute:317043033004703744>",
       "role-remove-error-not-found": "I wasn't able to find the role in the list of roles I restore. <:blobthinking:317028940885524490>",
       "role-remove-success": "I won't restore this role on rejoin anymore! <:googlenerd:317030369205682186>"
+    },
+    "dog": {
+      "none": "I wasn't able to find a pic. <:blobweary:317036265071575050>",
+      "add-success": "Added the link `%s` to the database! <:doggoblob:374630377043787786>",
+      "result": [
+        "WOOF! :dog:\n%s",
+        "WOOF! :dog2:\n%s",
+        "WOOF! <:googledog:374630377056108544>\n%s",
+        "WOOF! <:doggoblob:374630377043787786>\n%s"
+      ]
     }
   }
 }

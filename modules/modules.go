@@ -65,6 +65,7 @@ var (
 		&plugins.Names{},
 		&plugins.Reddit{},
 		&plugins.Color{},
+		&plugins.Dog{},
 	}
 
 	// PluginList is the list of active plugins
@@ -101,6 +102,5 @@ var (
 		//&triggers.Shrug{},
 		//&triggers.TableFlip{},
 		//&triggers.Triggered{},
-		&triggers.Dog{},
 	}
 )
