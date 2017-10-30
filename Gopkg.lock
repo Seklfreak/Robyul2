@@ -191,7 +191,7 @@
   branch = "master"
   name = "github.com/jzelinskie/geddit"
   packages = ["."]
-  revision = "202f8af8543ad5a11d6243e60b838771a6bda0f9"
+  revision = "f75101e39ffed7ec9596d6929a8d85bb86223339"
 
 [[projects]]
   name = "github.com/kelseyhightower/envconfig"
@@ -221,7 +221,7 @@
   branch = "master"
   name = "github.com/miekg/dns"
   packages = [".","internal/socket"]
-  revision = "822ae18e7187e1bbde923a37081f6c1b8e9ba68a"
+  revision = "a5852667e3c36e2e0b0a69ab43869e00e95aacdf"
 
 [[projects]]
   branch = "master"
@@ -280,14 +280,14 @@
 [[projects]]
   name = "github.com/vmihailenco/msgpack"
   packages = [".","codes"]
-  revision = "3cf0238243b4db3d003c2c61ceda5df15ad9906f"
-  version = "v3.1.3"
+  revision = "df5e5d20905d833657b92cafe6f6341ca1378083"
+  version = "v3.2.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/xuri/excelize"
   packages = ["."]
-  revision = "1ec2661dda1ef16f58b2a3d614b11a2bcd0a2f2f"
-  version = "1.1"
+  revision = "ebafbdde73e3e0498e547a2bd862552d9e304701"
 
 [[projects]]
   branch = "master"
@@ -305,7 +305,7 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","context/ctxhttp","html","html/atom","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "4b14673ba32bee7f5ac0f990a48f033919fd418b"
+  revision = "c73622c77280266305273cb545f54516ced95b93"
 
 [[projects]]
   branch = "master"
@@ -317,7 +317,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "f0d39a4bd5f1a0a15ef46503d12cffc780be4b9b"
+  revision = "661970f62f5897bc0cd5fdca7e087ba8a98a8fa1"
 
 [[projects]]
   branch = "master"
@@ -329,7 +329,7 @@
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport","transport/grpc","transport/http","youtube/v3"]
-  revision = "52fedcc3d56e51c5f1a571d48092238ab2746c73"
+  revision = "672d215daf0631fcae4c08c2a4324a763aaaf789"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -346,8 +346,8 @@
 [[projects]]
   name = "google.golang.org/grpc"
   packages = [".","balancer","codes","connectivity","credentials","credentials/oauth","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","stats","status","tap","transport"]
-  revision = "f7bf885db0b7479a537ec317c6e48ce53145f3db"
-  version = "v1.7.0"
+  revision = "61d37c5d657a47e4404fd6823bd598341a2595de"
+  version = "v1.7.1"
 
 [[projects]]
   branch = "v2.0.0"
@@ -382,8 +382,8 @@
 [[projects]]
   name = "gopkg.in/olivere/elastic.v5"
   packages = [".","config","uritemplates"]
-  revision = "3f891f0d04aba0bba9a8bd365a9d3846efcb3527"
-  version = "v5.0.52"
+  revision = "171ce647da4acfb30ffc99981d66d80bdea6bcee"
+  version = "v5.0.53"
 
 [[projects]]
   name = "gopkg.in/redsync.v1"
@@ -406,6 +406,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4959d8b20ad265d633f59c8e08f1f3d7f16c7c12be915f00cfac0e83dec07254"
+  inputs-digest = "1b702cf89fee56a94f6173fdedb6a92d07915a10c5f849f8bff2f4959cfb32e0"
   solver-name = "gps-cdcl"
   solver-version = 1
