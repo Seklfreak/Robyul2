@@ -335,7 +335,7 @@ func (m *Facebook) lookupFacebookPage(siteName string) (Facebook_Page, error) {
 	if _, ok := facebookPageResult["username"]; ok && facebookPageResult["username"] != "" {
 		facebookPage.Username = facebookPageResult["username"].(string)
 	} else {
-		return facebookPage, errors.New("Unable to find facebook page Username")
+		facebookPage.Username = facebookPage.ID
 	}
 	if _, ok := facebookPageResult["about"]; ok && facebookPageResult["about"] != "" {
 		facebookPage.About = facebookPageResult["about"].(string)

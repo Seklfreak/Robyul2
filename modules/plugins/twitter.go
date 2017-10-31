@@ -106,7 +106,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 		}
 
-		cache.GetLogger().WithField("module", "instagram").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(entries))
+		cache.GetLogger().WithField("module", "twitter").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(entries))
 
 		// TODO: Check multiple entries at once
 		for twitterAccoutnScreenName, entries := range bundledEntries {
