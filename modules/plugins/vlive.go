@@ -155,10 +155,12 @@ func (r *VLive) checkVliveFeedsLoop() {
 			safeEntries.mux.Unlock()
 		}
 
+		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking %d channels for %d feeds", len(bundledSafeEntries.entries), len(safeEntries.entries)))
+
 		for channelCode, entries := range bundledSafeEntries.entries {
 			bundledSafeEntries.mux.Lock()
 
-			cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
+			//cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
 			updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(channelCode)
 			if err != nil {
 				cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))

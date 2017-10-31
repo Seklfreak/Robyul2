@@ -99,9 +99,11 @@ func (r *Reddit) checkSubredditLoop() {
 			}
 		}
 
+		r.logger().Infof("checking %d subreddits for %d feeds", len(bundledEntries), len(entries))
+
 		for subredditName, entries := range bundledEntries {
 		BundleStart:
-			r.logger().Info(fmt.Sprintf("checking subreddit r/%s for %d channels", subredditName, len(entries)))
+			// r.logger().Info(fmt.Sprintf("checking subreddit r/%s for %d channels", subredditName, len(entries)))
 			newSubmissions, err := redditSession.SubredditSubmissions(subredditName, geddit.NewSubmissions, geddit.ListingOptions{
 				Limit: 30,
 			})
