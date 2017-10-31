@@ -48,10 +48,11 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 
 	createStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("import?url=%s", url.QueryEscape(sourceUrl)))
 	request, err := http.NewRequest("GET", createStreamableEndpoint, nil)
+	helpers.Relax(err)
 	request.Header.Add("user-agent", helpers.DEFAULT_UA)
 	request.SetBasicAuth(helpers.GetConfig().Path("streamable.username").Data().(string),
 		helpers.GetConfig().Path("streamable.password").Data().(string))
-	helpers.Relax(err)
+	httpClient = &http.Client{}
 	response, err := httpClient.Do(request)
 	helpers.Relax(err)
 	defer response.Body.Close()
