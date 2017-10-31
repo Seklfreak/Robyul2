@@ -85,7 +85,7 @@ func (r *Reddit) checkSubredditLoop() {
 		bundledEntries = make(map[string][]models.RedditSubredditEntry, 0)
 
 		for _, entry := range entries {
-			channel, err := helpers.GetChannel(entry.ChannelID)
+			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 			if err != nil || channel == nil || channel.ID == "" {
 				r.logger().Warn(fmt.Sprintf("skipped subreddit r/%s for Channel #%s on Guild #%s: channel not found!",
 					entry.SubredditName, entry.ChannelID, entry.GuildID))

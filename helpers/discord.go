@@ -593,6 +593,11 @@ func GetChannel(channelID string) (*discordgo.Channel, error) {
 	return targetChannel, err
 }
 
+func GetChannelWithoutApi(channelID string) (*discordgo.Channel, error) {
+	targetChannel, err := cache.GetSession().State.Channel(channelID)
+	return targetChannel, err
+}
+
 func GetMessage(channelID string, messageID string) (*discordgo.Message, error) {
 	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
 	if targetMessage == nil || targetMessage.ID == "" {

@@ -276,7 +276,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 		bundledEntries = make(map[string][]DB_Instagram_Entry, 0)
 
 		for _, entry := range entries {
-			channel, err := helpers.GetChannel(entry.ChannelID)
+			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 			if err != nil || channel == nil || channel.ID == "" {
 				cache.GetLogger().WithField("module", "instagram").Warn(fmt.Sprintf("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
 					entry.Username, entry.ChannelID, entry.ServerID))
