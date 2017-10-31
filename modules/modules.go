@@ -66,6 +66,7 @@ var (
 		&plugins.Reddit{},
 		&plugins.Color{},
 		&plugins.Dog{},
+		&plugins.Debug{},
 	}
 
 	// PluginList is the list of active plugins
