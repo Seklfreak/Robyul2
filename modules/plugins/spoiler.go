@@ -128,7 +128,7 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 				},
 			},
 		})
-	helpers.Relax(err)
+	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 }
 
 func (s *Spoiler) breakIntoLines(text string) []string {
