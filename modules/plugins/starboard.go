@@ -316,6 +316,13 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 		}
 
 		err = s.AddStar(channel.GuildID, message, reaction.UserID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok {
+				if errD.Message.Code == discordgo.ErrCodeUnknownMessage {
+					return
+				}
+			}
+		}
 		helpers.Relax(err)
 	}()
 }
@@ -366,6 +373,13 @@ func (s *Starboard) OnReactionRemove(reaction *discordgo.MessageReactionRemove, 
 		}
 
 		err = s.RemoveStar(channel.GuildID, message, reaction.UserID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok {
+				if errD.Message.Code == discordgo.ErrCodeUnknownMessage {
+					return
+				}
+			}
+		}
 		helpers.Relax(err)
 	}()
 }
