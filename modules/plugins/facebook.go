@@ -71,7 +71,6 @@ func (m *Facebook) Init(session *discordgo.Session) {
 	cache.GetLogger().WithField("module", "facebook").Info("Started Facebook loop (10m)")
 }
 func (m *Facebook) checkFacebookFeedsLoop() {
-	var safeEntries Facebook_Safe_Entries
 	log := cache.GetLogger()
 
 	defer helpers.Recover()
@@ -83,23 +82,43 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 		}()
 	}()
 
+	var entries []DB_Facebook_Page
+	var bundledEntries map[string][]DB_Facebook_Page
+
 	for {
+
 		cursor, err := rethink.Table("facebook").Run(helpers.GetDB())
 		helpers.Relax(err)
 
-		err = cursor.All(&safeEntries.entries)
+		err = cursor.All(&entries)
 		helpers.Relax(err)
 
-		// TODO: Check multiple entries at once
-		for _, entry := range safeEntries.entries {
-			safeEntries.mux.Lock()
-			changes := false
-			log.WithField("module", "facebook").Debug(fmt.Sprintf("checking Facebook Page %s", entry.Username))
+		bundledEntries = make(map[string][]DB_Facebook_Page, 0)
 
-			facebookPage, err := m.lookupFacebookPage(entry.Username)
+		for _, entry := range entries {
+			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
+			if err != nil || channel == nil || channel.ID == "" {
+				cache.GetLogger().WithField("module", "facebook").Warn(fmt.Sprintf("skipped facebook @%s for Channel #%s on Guild #%s: channel not found!",
+					entry.Username, entry.ChannelID, entry.ServerID))
+				continue
+			}
+
+			if _, ok := bundledEntries[entry.Username]; ok {
+				bundledEntries[entry.Username] = append(bundledEntries[entry.Username], entry)
+			} else {
+				bundledEntries[entry.Username] = []DB_Facebook_Page{entry}
+			}
+		}
+
+		cache.GetLogger().WithField("module", "facebook").Infof("checking %d pages for %d feeds", len(bundledEntries), len(entries))
+
+		// TODO: Check multiple entries at once
+		for facebookUsername, entries := range bundledEntries {
+			//log.WithField("module", "facebook").Debug(fmt.Sprintf("checking Facebook Page %s", facebookUsername))
+
+			facebookPage, err := m.lookupFacebookPage(facebookUsername)
 			if err != nil {
-				log.WithField("module", "facebook").Error(fmt.Sprintf("updating facebook account %s failed: %s", entry.Username, err.Error()))
-				safeEntries.mux.Unlock()
+				log.WithField("module", "facebook").Error(fmt.Sprintf("updating facebook account %s failed: %s", facebookUsername, err.Error()))
 				continue
 			}
 
@@ -109,29 +128,32 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 				facebookPage.Posts[i], facebookPage.Posts[opp] = facebookPage.Posts[opp], facebookPage.Posts[i]
 			}
 
-			for _, post := range facebookPage.Posts {
-				postAlreadyPosted := false
-				for _, postedPost := range entry.PostedPosts {
-					if postedPost.ID == post.ID {
-						postAlreadyPosted = true
-					}
-				}
-				if postAlreadyPosted == false {
-					log.WithField("module", "facebook").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
-					entry.PostedPosts = append(entry.PostedPosts, DB_Facebook_Post{ID: post.ID, CreatedAt: post.CreatedAt})
-					changes = true
-					go m.postPostToChannel(entry.ChannelID, post, facebookPage)
-				}
+			for _, entry := range entries {
+				changes := false
 
+				for _, post := range facebookPage.Posts {
+					postAlreadyPosted := false
+					for _, postedPost := range entry.PostedPosts {
+						if postedPost.ID == post.ID {
+							postAlreadyPosted = true
+						}
+					}
+					if postAlreadyPosted == false {
+						log.WithField("module", "facebook").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
+						entry.PostedPosts = append(entry.PostedPosts, DB_Facebook_Post{ID: post.ID, CreatedAt: post.CreatedAt})
+						changes = true
+						go m.postPostToChannel(entry.ChannelID, post, facebookPage)
+					}
+
+				}
+				if changes == true {
+					m.setEntry(entry)
+				}
 			}
-			if changes == true {
-				m.setEntry(entry)
-			}
-			safeEntries.mux.Unlock()
 			time.Sleep(1 * time.Second)
 		}
 
-		if len(safeEntries.entries) <= 10 {
+		if len(entries) <= 10 {
 			time.Sleep(1 * time.Minute)
 		}
 	}

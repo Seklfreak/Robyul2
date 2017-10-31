@@ -116,36 +116,60 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 		}()
 	}()
 
+	var entries []DB_TwitchChannel
+	var bundledEntries map[string][]DB_TwitchChannel
+
 	for {
-		var entryBucket []DB_TwitchChannel
 		cursor, err := rethink.Table("twitch").Run(helpers.GetDB())
 		helpers.Relax(err)
 
-		err = cursor.All(&entryBucket)
+		err = cursor.All(&entries)
 		helpers.Relax(err)
 
-		// TODO: Check multiple entries at once
-		for _, entry := range entryBucket {
-			changes := false
-			cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", entry.TwitchChannelName))
-			twitchStatus := m.getTwitchStatus(entry.TwitchChannelName)
-			if twitchStatus.Links.Channel != "" {
-				if entry.IsLive == false {
-					if twitchStatus.Stream.ID != 0 {
-						go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
-						entry.IsLive = true
-						changes = true
-					}
-				} else {
-					if twitchStatus.Stream.ID == 0 {
-						entry.IsLive = false
-						changes = true
-					}
-				}
+		bundledEntries = make(map[string][]DB_TwitchChannel, 0)
+
+		for _, entry := range entries {
+			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
+			if err != nil || channel == nil || channel.ID == "" {
+				cache.GetLogger().WithField("module", "twitch").Warn(fmt.Sprintf("skipped twitch @%s for Channel #%s on Guild #%s: channel not found!",
+					entry.TwitchChannelName, entry.ChannelID, entry.ServerID))
+				continue
 			}
 
-			if changes == true {
-				m.setEntry(entry)
+			if _, ok := bundledEntries[entry.TwitchChannelName]; ok {
+				bundledEntries[entry.TwitchChannelName] = append(bundledEntries[entry.TwitchChannelName], entry)
+			} else {
+				bundledEntries[entry.TwitchChannelName] = []DB_TwitchChannel{entry}
+			}
+		}
+
+		cache.GetLogger().WithField("module", "twitch").Infof("checking %d channels for %d feeds", len(bundledEntries), len(entries))
+
+		// TODO: Check multiple entries at once
+		for twitchChannelName, entries := range bundledEntries {
+			//cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", twitchChannelName))
+			twitchStatus := m.getTwitchStatus(twitchChannelName)
+
+			for _, entry := range entries {
+				changes := false
+				if twitchStatus.Links.Channel != "" {
+					if entry.IsLive == false {
+						if twitchStatus.Stream.ID != 0 {
+							go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
+							entry.IsLive = true
+							changes = true
+						}
+					} else {
+						if twitchStatus.Stream.ID == 0 {
+							entry.IsLive = false
+							changes = true
+						}
+					}
+				}
+
+				if changes == true {
+					m.setEntry(entry)
+				}
 			}
 		}
 
