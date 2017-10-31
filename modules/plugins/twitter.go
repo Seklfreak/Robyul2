@@ -69,7 +69,6 @@ func (m *Twitter) Init(session *discordgo.Session) {
 	cache.GetLogger().WithField("module", "twitter").Info("Started Twitter loop (10m)")
 }
 func (m *Twitter) checkTwitterFeedsLoop() {
-	var safeEntries Twitter_Safe_Entries
 
 	defer helpers.Recover()
 	defer func() {
@@ -80,37 +79,55 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		}()
 	}()
 
+	var entries []DB_Twitter_Entry
+	var bundledEntries map[string][]DB_Twitter_Entry
+
 	for {
 		cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
 		helpers.Relax(err)
 
-		err = cursor.All(&safeEntries.entries)
+		err = cursor.All(&entries)
 		helpers.Relax(err)
 
+		bundledEntries = make(map[string][]DB_Twitter_Entry, 0)
+
+		for _, entry := range entries {
+			channel, err := helpers.GetChannel(entry.ChannelID)
+			if err != nil || channel == nil || channel.ID == "" {
+				cache.GetLogger().WithField("module", "twitter").Warn(fmt.Sprintf("skipped twitter @%s for Channel #%s on Guild #%s: channel not found!",
+					entry.AccountScreenName, entry.ChannelID, entry.ServerID))
+				continue
+			}
+
+			if _, ok := bundledEntries[entry.AccountScreenName]; ok {
+				bundledEntries[entry.AccountScreenName] = append(bundledEntries[entry.AccountScreenName], entry)
+			} else {
+				bundledEntries[entry.AccountScreenName] = []DB_Twitter_Entry{entry}
+			}
+		}
+
+		cache.GetLogger().WithField("module", "instagram").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(entries))
+
 		// TODO: Check multiple entries at once
-		for _, entry := range safeEntries.entries {
-			safeEntries.mux.Lock()
-			changes := false
-			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account @%s", entry.AccountScreenName))
+		for twitterAccoutnScreenName, entries := range bundledEntries {
+			// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account @%s", twitterAccoutnScreenName))
 
 			twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
-				ScreenName: entry.AccountScreenName,
+				ScreenName: twitterAccoutnScreenName,
 			})
 			if err != nil {
-				cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("updating twitter account @%s failed: %s", entry.AccountScreenName, err.Error()))
-				safeEntries.mux.Unlock()
+				cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("updating twitter account @%s failed: %s", twitterAccoutnScreenName, err.Error()))
 				continue
 			}
 
 			twitterUserTweets, _, err := twitterClient.Timelines.UserTimeline(&twitter.UserTimelineParams{
-				ScreenName:      entry.AccountScreenName,
+				ScreenName:      twitterAccoutnScreenName,
 				Count:           10,
 				ExcludeReplies:  twitter.Bool(true),
 				IncludeRetweets: twitter.Bool(true),
 			})
 			if err != nil {
-				cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("getting tweets of @%s failed: %s", entry.AccountScreenName, err.Error()))
-				safeEntries.mux.Unlock()
+				cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("getting tweets of @%s failed: %s", twitterAccoutnScreenName, err.Error()))
 				continue
 			}
 
@@ -120,25 +137,28 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				twitterUserTweets[i], twitterUserTweets[opp] = twitterUserTweets[opp], twitterUserTweets[i]
 			}
 
-			for _, tweet := range twitterUserTweets {
-				tweetAlreadyPosted := false
-				for _, postedTweet := range entry.PostedTweets {
-					if postedTweet.ID == tweet.IDStr {
-						tweetAlreadyPosted = true
-					}
-				}
-				if tweetAlreadyPosted == false {
-					cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
-					entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
-					changes = true
-					go m.postTweetToChannel(entry.ChannelID, tweet, twitterUser)
-				}
+			for _, entry := range entries {
+				changes := false
 
+				for _, tweet := range twitterUserTweets {
+					tweetAlreadyPosted := false
+					for _, postedTweet := range entry.PostedTweets {
+						if postedTweet.ID == tweet.IDStr {
+							tweetAlreadyPosted = true
+						}
+					}
+					if tweetAlreadyPosted == false {
+						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
+						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
+						changes = true
+						go m.postTweetToChannel(entry.ChannelID, tweet, twitterUser)
+					}
+
+				}
+				if changes == true {
+					m.setEntry(entry)
+				}
 			}
-			if changes == true {
-				m.setEntry(entry)
-			}
-			safeEntries.mux.Unlock()
 		}
 
 		time.Sleep(10 * time.Minute)
