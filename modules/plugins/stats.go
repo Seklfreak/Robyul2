@@ -220,13 +220,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 			Color: 0x0FADED,
-			Thumbnail: &discordgo.MessageEmbedThumbnail{
-				URL: fmt.Sprintf(
-					"https://cdn.discordapp.com/avatars/%s/%s.jpg",
-					session.State.User.ID,
-					session.State.User.Avatar,
-				),
-			},
 			Fields: []*discordgo.MessageEmbedField{
 				// Build
 				{Name: "Build Time", Value: version.BUILD_TIME, Inline: true},
