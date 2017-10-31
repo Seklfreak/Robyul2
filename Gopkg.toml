@@ -175,3 +175,7 @@
 [[constraint]]
   name = "github.com/xuri/excelize"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/ahmdrz/goinsta"
+  branch = "master"

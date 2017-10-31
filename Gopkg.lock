@@ -45,6 +45,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ahmdrz/goinsta"
+  packages = [".","response","store","uuid"]
+  revision = "901651b133b295c55b07071987f9045b02fd6cdb"
+
+[[projects]]
+  branch = "master"
   name = "github.com/andybalholm/cascadia"
   packages = ["."]
   revision = "349dd0209470eabd9514242c688c403c0926d266"
@@ -406,6 +412,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1b702cf89fee56a94f6173fdedb6a92d07915a10c5f849f8bff2f4959cfb32e0"
+  inputs-digest = "4458e665eac440209f6441cc486ff0d0c3d37356aef833032706de5ffe417550"
   solver-name = "gps-cdcl"
   solver-version = 1

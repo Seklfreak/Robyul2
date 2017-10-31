@@ -1,30 +1,23 @@
 package plugins
 
 import (
-	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/ahmdrz/goinsta"
+	goinstaResponse "github.com/ahmdrz/goinsta/response"
+	goinstaStore "github.com/ahmdrz/goinsta/store"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
-	"github.com/satori/go.uuid"
 )
 
 type Instagram struct{}
@@ -47,7 +40,7 @@ type DB_Instagram_Post struct {
 
 type DB_Instagram_ReelMedia struct {
 	ID        string `gorethink:"id,omitempty"`
-	CreatedAt int    `gorethink:"createdat"`
+	CreatedAt int64  `gorethink:"createdat"`
 }
 
 type Instagram_User struct {
@@ -198,22 +191,17 @@ type Instagram_Safe_Entries struct {
 }
 
 var (
-	usedUuid             string
-	sessionId            string
-	rankToken            string
+	instagramClient      *goinsta.Instagram
 	httpClient           *http.Client
 	instagramPicUrlRegex *regexp.Regexp
 )
 
 const (
 	hexColor                 string = "#fcaf45"
-	apiBaseUrl               string = "https://i.instagram.com/api/v1/%s"
-	apiUserAgent             string = "Instagram 10.8.0 Android (18/4.3; 320dpi; 720x1280; Xiaomi; HM 1SW; armani; qcom; en_US)"
-	instagramSignKey         string = "68a04945eb02970e2e8d15266fc256f7295da123e123f44b88f09d594a5902df"
-	deviceId                 string = "android-3deeb2d04b2ab0ee" // TODO: generate a random device id
 	instagramFriendlyUser    string = "https://www.instagram.com/%s/"
 	instagramFriendlyPost    string = "https://www.instagram.com/p/%s/"
 	instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
+	instagramSessionKey      string = "robyul2-discord:instagram:session"
 )
 
 func (m *Instagram) Commands() []string {
@@ -223,8 +211,38 @@ func (m *Instagram) Commands() []string {
 }
 
 func (m *Instagram) Init(session *discordgo.Session) {
-	m.login()
 	var err error
+
+	storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
+	if err == nil {
+		instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
+		helpers.Relax(err)
+		cache.GetLogger().WithField("module", "instagram").Infof(
+			"restoring instagram session from redis",
+		)
+	} else {
+		instagramClient = goinsta.New(
+			helpers.GetConfig().Path("instagram.username").Data().(string),
+			helpers.GetConfig().Path("instagram.password").Data().(string),
+		)
+		cache.GetLogger().WithField("module", "instagram").Infof(
+			"starting new instagram session",
+		)
+	}
+	err = instagramClient.Login() // TODO: login required when restoring session?
+	helpers.Relax(err)
+	cache.GetLogger().WithField("module", "instagram").Infof(
+		"logged in to instagram as @%s",
+		instagramClient.Informations.Username,
+	)
+	// defer instagramClient.Logout() TODO
+	storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
+	helpers.Relax(err)
+	err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
+	helpers.Relax(err)
+	cache.GetLogger().WithField("module", "instagram").Infof(
+		"stored instagram session in redis",
+	)
 
 	instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
 	helpers.Relax(err)
@@ -256,27 +274,55 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 		// TODO: Check multiple entries at once
 		for _, entry := range safeEntries.entries {
 			safeEntries.mux.Lock()
+		RetryAccount:
 			changes := false
 			log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", entry.Username))
 
-			instagramUser, err := m.lookupInstagramUser(entry.Username)
-			if err != nil || instagramUser.Username == "" {
+			instagramUser, err := instagramClient.GetUserByUsername(entry.Username)
+			if err != nil || instagramUser.User.Username == "" {
+				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					time.Sleep(20 * time.Second)
+					goto RetryAccount
+				}
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
+				safeEntries.mux.Unlock()
+				continue
+			}
+			posts, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
+			if err != nil || instagramUser.User.Username == "" {
+				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					time.Sleep(20 * time.Second)
+					goto RetryAccount
+				}
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
+				safeEntries.mux.Unlock()
+				continue
+			}
+			story, err := instagramClient.GetUserStories(instagramUser.User.ID)
+			if err != nil || instagramUser.User.Username == "" {
+				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					time.Sleep(20 * time.Second)
+					goto RetryAccount
+				}
 				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
 				safeEntries.mux.Unlock()
 				continue
 			}
 
 			// https://github.com/golang/go/wiki/SliceTricks#reversing
-			for i := len(instagramUser.Posts)/2 - 1; i >= 0; i-- {
-				opp := len(instagramUser.Posts) - 1 - i
-				instagramUser.Posts[i], instagramUser.Posts[opp] = instagramUser.Posts[opp], instagramUser.Posts[i]
+			for i := len(posts.Items)/2 - 1; i >= 0; i-- {
+				opp := len(posts.Items) - 1 - i
+				posts.Items[i], posts.Items[opp] = posts.Items[opp], posts.Items[i]
 			}
-			for i := len(instagramUser.ReelMedias)/2 - 1; i >= 0; i-- {
-				opp := len(instagramUser.ReelMedias) - 1 - i
-				instagramUser.ReelMedias[i], instagramUser.ReelMedias[opp] = instagramUser.ReelMedias[opp], instagramUser.ReelMedias[i]
+			for i := len(story.Reel.Items)/2 - 1; i >= 0; i-- {
+				opp := len(story.Reel.Items) - 1 - i
+				story.Reel.Items[i], story.Reel.Items[opp] = story.Reel.Items[opp], story.Reel.Items[i]
 			}
 
-			for _, post := range instagramUser.Posts {
+			for _, post := range posts.Items {
 				postAlreadyPosted := false
 				for _, postedPosts := range entry.PostedPosts {
 					if postedPosts.ID == post.ID {
@@ -292,7 +338,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 
 			}
 
-			for _, reelMedia := range instagramUser.ReelMedias {
+			for n, reelMedia := range story.Reel.Items {
 				reelMediaAlreadyPosted := false
 				for _, reelMediaPostPosted := range entry.PostedReelMedias {
 					if reelMediaPostPosted.ID == reelMedia.ID {
@@ -301,26 +347,28 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 				}
 				if reelMediaAlreadyPosted == false {
 					log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
-					entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: reelMedia.DeviceTimestamp})
+					entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
 					changes = true
-					go m.postReelMediaToChannel(entry.ChannelID, reelMedia, instagramUser)
+					go m.postReelMediaToChannel(entry.ChannelID, story, n, instagramUser)
 				}
 
 			}
 
-			if entry.IsLive == false {
-				if instagramUser.Broadcast.ID != 0 {
-					log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live: #%s", instagramUser.Broadcast.ID))
-					go m.postLiveToChannel(entry.ChannelID, instagramUser)
-					entry.IsLive = true
-					changes = true
-				}
-			} else {
-				if instagramUser.Broadcast.ID == 0 {
-					entry.IsLive = false
-					changes = true
-				}
-			}
+			// TODO: no broadcast information received from story anymore?
+			/*
+				if entry.IsLive == false {
+					if story.Broadcast != 0 {
+						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live: #%s", instagramUser.User.Broadcast.ID))
+						go m.postLiveToChannel(entry.ChannelID, instagramUser)
+						entry.IsLive = true
+						changes = true
+					}
+				} else {
+					if instagramUser.User.Broadcast.ID == 0 {
+						entry.IsLive = false
+						changes = true
+					}
+				}*/
 
 			if changes == true {
 				m.setEntry(entry)
@@ -328,7 +376,9 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 			safeEntries.mux.Unlock()
 		}
 
-		time.Sleep(1 * time.Minute)
+		if len(safeEntries.entries) <= 10 {
+			//time.Sleep(1 * time.Minute)
+		}
 	}
 }
 
@@ -357,20 +407,24 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				helpers.Relax(err)
 				// get instagram account
 				instagramUsername := strings.Replace(args[1], "@", "", 1)
-				instagramUser, err := m.lookupInstagramUser(instagramUsername)
-				if err != nil || instagramUser.Username == "" {
+				instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
+				if err != nil || instagramUser.User.Username == "" {
 					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 					return
 				}
+				feed, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
+				helpers.Relax(err)
+				story, err := instagramClient.GetUserStories(instagramUser.User.ID)
+				helpers.Relax(err)
 				// Create DB Entries
 				var dbPosts []DB_Instagram_Post
-				for _, post := range instagramUser.Posts {
+				for _, post := range feed.Items {
 					postEntry := DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt}
 					dbPosts = append(dbPosts, postEntry)
 
 				}
 				var dbRealMedias []DB_Instagram_ReelMedia
-				for _, reelMedia := range instagramUser.ReelMedias {
+				for _, reelMedia := range story.Reel.Items {
 					reelMediaEntry := DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: reelMedia.DeviceTimestamp}
 					dbRealMedias = append(dbRealMedias, reelMediaEntry)
 
@@ -379,7 +433,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				entry := m.getEntryByOrCreateEmpty("id", "")
 				entry.ServerID = targetChannel.GuildID
 				entry.ChannelID = targetChannel.ID
-				entry.Username = instagramUser.Username
+				entry.Username = instagramUser.User.Username
 				entry.PostedPosts = dbPosts
 				entry.PostedReelMedias = dbRealMedias
 				m.setEntry(entry)
@@ -462,51 +516,53 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 		default:
 			session.ChannelTyping(msg.ChannelID)
 			instagramUsername := strings.Replace(args[0], "@", "", 1)
-			instagramUser, err := m.lookupInstagramUser(instagramUsername)
+			instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
+			helpers.Relax(err)
 
-			if err != nil || instagramUser.Username == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
+			if err != nil || instagramUser.User.Username == "" {
+				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 
 			instagramNameModifier := ""
-			if instagramUser.IsVerified {
+			if instagramUser.User.IsVerified {
 				instagramNameModifier += " ☑"
 			}
-			if instagramUser.IsPrivate {
+			if instagramUser.User.IsPrivate {
 				instagramNameModifier += " 🔒"
 			}
-			if instagramUser.IsBusiness {
+			if instagramUser.User.IsBusiness {
 				instagramNameModifier += " 🏢"
 			}
-			if instagramUser.IsFavorite {
+			if instagramUser.User.IsFavorite {
 				instagramNameModifier += " ⭐"
 			}
 			accountEmbed := &discordgo.MessageEmbed{
-				Title:       helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
-				URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
-				Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
+				Title:       helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier),
+				URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
+				Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
 				Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
-				Description: instagramUser.Biography,
+				Description: instagramUser.User.Biography,
 				Fields: []*discordgo.MessageEmbedField{
-					{Name: "Followers", Value: humanize.Comma(int64(instagramUser.FollowerCount)), Inline: true},
-					{Name: "Following", Value: humanize.Comma(int64(instagramUser.FollowingCount)), Inline: true},
-					{Name: "Posts", Value: humanize.Comma(int64(instagramUser.MediaCount)), Inline: true}},
+					{Name: "Followers", Value: humanize.Comma(int64(instagramUser.User.FollowerCount)), Inline: true},
+					{Name: "Following", Value: humanize.Comma(int64(instagramUser.User.FollowingCount)), Inline: true},
+					{Name: "Posts", Value: humanize.Comma(int64(instagramUser.User.MediaCount)), Inline: true}},
 				Color: helpers.GetDiscordColorFromHex(hexColor),
 			}
-			if instagramUser.ExternalURL != "" {
+			if instagramUser.User.ExternalURL != "" {
 				accountEmbed.Fields = append(accountEmbed.Fields, &discordgo.MessageEmbedField{
 					Name:   "Website",
-					Value:  instagramUser.ExternalURL,
+					Value:  instagramUser.User.ExternalURL,
 					Inline: true,
 				})
 			}
 			_, err = session.ChannelMessageSendComplex(
 				msg.ChannelID, &discordgo.MessageSend{
-					Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)),
+					Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username)),
 					Embed:   accountEmbed,
 				})
-			helpers.Relax(err)
+			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			return
 		}
 	} else {
@@ -538,13 +594,7 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 		Color:     helpers.GetDiscordColorFromHex(hexColor),
 	}
 
-	mediaUrl := ""
-
-	if mediaUrl != "" {
-		channelEmbed.URL = mediaUrl
-	} else {
-		mediaUrl = channelEmbed.URL
-	}
+	mediaUrl := channelEmbed.URL
 
 	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", mediaUrl),
@@ -555,32 +605,39 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 	}
 }
 
-func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram_ReelMedia, instagramUser Instagram_User) {
+func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, instagramUser goinstaResponse.GetUsernameResponse) {
 	instagramNameModifier := ""
-	if instagramUser.IsVerified {
+	if instagramUser.User.IsVerified {
 		instagramNameModifier += " ☑"
 	}
-	if instagramUser.IsPrivate {
+	if instagramUser.User.IsPrivate {
 		instagramNameModifier += " 🔒"
 	}
-	if instagramUser.IsBusiness {
+	if instagramUser.User.IsBusiness {
 		instagramNameModifier += " 🏢"
 	}
-	if instagramUser.IsFavorite {
+	if instagramUser.User.IsFavorite {
 		instagramNameModifier += " ⭐"
 	}
+
+	reelMedia := story.Reel.Items[number]
 
 	mediaModifier := "Picture"
 	if reelMedia.MediaType == 2 {
 		mediaModifier = "Video"
 	}
 
+	caption := ""
+	if captionData, ok := reelMedia.Caption.(map[string]interface{}); ok {
+		caption, _ = captionData["text"].(string)
+	}
+
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier),
-		URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
+		Title:       helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
+		URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
-		Description: reelMedia.Caption,
+		Description: caption,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 
@@ -611,18 +668,18 @@ func (m *Instagram) postReelMediaToChannel(channelID string, reelMedia Instagram
 	}
 }
 
-func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, instagramUser Instagram_User, postDirectLinks bool) {
+func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Item, instagramUser goinstaResponse.GetUsernameResponse, postDirectLinks bool) {
 	instagramNameModifier := ""
-	if instagramUser.IsVerified {
+	if instagramUser.User.IsVerified {
 		instagramNameModifier += " ☑"
 	}
-	if instagramUser.IsPrivate {
+	if instagramUser.User.IsPrivate {
 		instagramNameModifier += " 🔒"
 	}
-	if instagramUser.IsBusiness {
+	if instagramUser.User.IsBusiness {
 		instagramNameModifier += " 🏢"
 	}
-	if instagramUser.IsFavorite {
+	if instagramUser.User.IsFavorite {
 		instagramNameModifier += " ⭐"
 	}
 
@@ -639,15 +696,15 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 
 	var content string
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier),
+		Title:       helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
 		URL:         fmt.Sprintf(instagramFriendlyPost, post.Code),
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
 		Description: post.Caption.Text,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 	if postDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier, mediaModifier) + "**\n"
+		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "**\n"
 		if post.Caption.Text != "" {
 			content += post.Caption.Text + "\n"
 		}
@@ -656,8 +713,8 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 	if len(post.ImageVersions2.Candidates) > 0 {
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.ImageVersions2.Candidates[0].URL)}
 	}
-	if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions2.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.CarouselMedia[0].ImageVersions2.Candidates[0].URL)}
+	if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions.Candidates) > 0 {
+		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.CarouselMedia[0].ImageVersions.Candidates[0].URL)}
 	}
 
 	mediaUrls := make([]string, 0)
@@ -665,7 +722,11 @@ func (m *Instagram) postPostToChannel(channelID string, post Instagram_Post, ins
 		mediaUrls = append(mediaUrls, getFullResUrl(post.ImageVersions2.Candidates[0].URL))
 	} else {
 		for _, carouselMedia := range post.CarouselMedia {
-			mediaUrls = append(mediaUrls, getFullResUrl(carouselMedia.ImageVersions2.Candidates[0].URL))
+			if len(carouselMedia.VideoVersions) > 0 {
+				mediaUrls = append(mediaUrls, getFullResUrl(carouselMedia.VideoVersions[0].URL))
+			} else {
+				mediaUrls = append(mediaUrls, getFullResUrl(carouselMedia.ImageVersions.Candidates[0].URL))
+			}
 		}
 	}
 
@@ -700,232 +761,6 @@ func getFullResUrl(url string) string {
 		return result[1] + result[5]
 	}
 	return url
-}
-
-func (m *Instagram) signDataValue(data string) string {
-	key := hmac.New(sha256.New, []byte(instagramSignKey))
-	key.Write([]byte(data))
-	return fmt.Sprintf("ig_sig_key_version=%s&signed_body=%s.%s", "4", hex.EncodeToString(key.Sum(nil)), url.QueryEscape(data))
-}
-
-func (m *Instagram) applyHeaders(request *http.Request) {
-	request.Header.Add("Connection", "close")
-	request.Header.Add("Accept", "*/*")
-	request.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-	request.Header.Add("Cookie2", "$Version=1")
-	request.Header.Add("Accept-Language", "en-US")
-	request.Header.Add("User-Agent", apiUserAgent)
-	if sessionId != "" {
-		request.Header.Add("Cookie", fmt.Sprintf("sessionid=%s", sessionId))
-	}
-}
-
-// quick port of https://github.com/LevPasha/Instagram-API-python
-func (m *Instagram) login() {
-	usedUuid = uuid.NewV4().String()
-	// get csrf token
-	signupEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("si/fetch_headers/?challenge_type=signup&guid=%s", usedUuid))
-	httpClient = &http.Client{}
-	request, err := http.NewRequest("GET", signupEndpoint, nil)
-	helpers.Relax(err)
-	m.applyHeaders(request)
-	response, err := httpClient.Do(request)
-	helpers.Relax(err)
-	defer response.Body.Close()
-	csrfToken := ""
-	for _, cookie := range response.Cookies() {
-		if cookie.Name == "csrftoken" {
-			csrfToken = cookie.Value
-		}
-	}
-	if csrfToken == "" {
-		helpers.Relax(errors.New("Unable to get CSRF Token while trying to authenticate to instagram."))
-	}
-	// login
-	loginEndpoint := fmt.Sprintf(apiBaseUrl, "accounts/login/")
-	jsonParsed, err := gabs.ParseJSON([]byte(fmt.Sprintf(
-		`{"phone_id": "%s",
-    "_csrftoken": "%s",
-    "username": "%s",
-    "guid": "%s",
-    "device_id": "%s",
-    "password": "%s",
-    "login_attempt_count": "0"}`, uuid.NewV4().String(), csrfToken, helpers.GetConfig().Path("instagram.username").Data().(string), usedUuid, deviceId, helpers.GetConfig().Path("instagram.password").Data().(string))))
-	helpers.Relax(err)
-	request, err = http.NewRequest("POST", loginEndpoint, strings.NewReader(m.signDataValue(jsonParsed.String())))
-	helpers.Relax(err)
-	m.applyHeaders(request)
-	response, err = httpClient.Do(request)
-	helpers.Relax(err)
-	defer response.Body.Close()
-	csrfToken = ""
-	sessionId = ""
-	for _, cookie := range response.Cookies() {
-		if cookie.Name == "csrftoken" {
-			csrfToken = cookie.Value
-		}
-		if cookie.Name == "sessionid" {
-			sessionId = cookie.Value
-		}
-	}
-	if csrfToken == "" {
-		helpers.Relax(errors.New("Unable to get CSRF Token while trying to authenticate to instagram."))
-	}
-	if sessionId == "" {
-		helpers.Relax(errors.New("Unable to get Session ID while trying to authenticate to instagram."))
-	}
-	if response.StatusCode != 200 {
-		helpers.Relax(errors.New(fmt.Sprintf("Instagram login failed, unexpected status code: %d", response.StatusCode)))
-	}
-	buf := bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, response.Body)
-	helpers.Relax(err)
-	jsonResult, err := gabs.ParseJSON(buf.Bytes())
-	helpers.Relax(err)
-	usernameIdFloat, ok := jsonResult.Path("logged_in_user.pk").Data().(float64)
-	if ok == false {
-		helpers.Relax(errors.New("Unable to get username id from instagram login reply"))
-	}
-	usernameId := strconv.FormatFloat(usernameIdFloat, 'f', 0, 64)
-	usernameLoggedIn, ok := jsonResult.Path("logged_in_user.username").Data().(string)
-	if ok == false {
-		helpers.Relax(errors.New("Unable to get username from instagram login reply"))
-	}
-	cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("logged in as @%s", usernameLoggedIn))
-	rankToken = fmt.Sprintf("%s_%s", usernameId, usedUuid)
-}
-
-func (m *Instagram) lookupInstagramUser(username string) (Instagram_User, error) {
-	var instagramUser Instagram_User
-
-	userEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("users/%s/usernameinfo/", username))
-	request, err := http.NewRequest("GET", userEndpoint, nil)
-	if err != nil {
-		return instagramUser, err
-	}
-	m.applyHeaders(request)
-	response, err := httpClient.Do(request)
-	if err != nil {
-		return instagramUser, err
-	}
-	buf := bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, response.Body)
-	if err != nil {
-		return instagramUser, err
-	}
-	jsonResult, err := gabs.ParseJSON(buf.Bytes())
-	if err != nil {
-		return instagramUser, err
-	}
-	retry, errorMessage := m.checkInstagramResult(jsonResult)
-	if retry == true {
-		cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
-		time.Sleep(20 * time.Second)
-		return m.lookupInstagramUser(username)
-	} else if errorMessage != "" {
-		return instagramUser, errors.New(fmt.Sprintf("Instagram API Error: %s", errorMessage))
-	}
-	json.Unmarshal([]byte(jsonResult.Path("user").String()), &instagramUser)
-
-	userFeedEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/?max_id=%s&min_timestamp=%s&rank_token=%s&ranked_content=true", strconv.Itoa(instagramUser.Pk), "", "", rankToken))
-	request, err = http.NewRequest("GET", userFeedEndpoint, nil)
-	if err != nil {
-		return instagramUser, err
-	}
-	m.applyHeaders(request)
-	response, err = httpClient.Do(request)
-	if err != nil {
-		return instagramUser, err
-	}
-	buf = bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, response.Body)
-	if err != nil {
-		return instagramUser, err
-	}
-	jsonResult, err = gabs.ParseJSON(buf.Bytes())
-	if err != nil {
-		return instagramUser, err
-	}
-	retry, errorMessage = m.checkInstagramResult(jsonResult)
-	if retry == true {
-		cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
-		time.Sleep(20 * time.Second)
-		return m.lookupInstagramUser(username)
-	} else if errorMessage != "" {
-		return instagramUser, errors.New(fmt.Sprintf("Instagram API Error: %s", errorMessage))
-	}
-
-	var instagramPosts []Instagram_Post
-	instagramPostsJsons, err := jsonResult.Path("items").Children()
-	if err != nil {
-		return instagramUser, err
-	}
-	for _, instagramPostJson := range instagramPostsJsons {
-		var instagramPost Instagram_Post
-		json.Unmarshal([]byte(instagramPostJson.String()), &instagramPost)
-		instagramPosts = append(instagramPosts, instagramPost)
-	}
-	instagramUser.Posts = instagramPosts
-
-	userReelEndpoint := fmt.Sprintf(apiBaseUrl, fmt.Sprintf("feed/user/%s/story/", strconv.Itoa(instagramUser.Pk)))
-	request, err = http.NewRequest("GET", userReelEndpoint, nil)
-	if err != nil {
-		return instagramUser, err
-	}
-	m.applyHeaders(request)
-	response, err = httpClient.Do(request)
-	if err != nil {
-		return instagramUser, err
-	}
-	buf = bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, response.Body)
-	if err != nil {
-		return instagramUser, err
-	}
-	jsonResult, err = gabs.ParseJSON(buf.Bytes())
-	if err != nil {
-		return instagramUser, err
-	}
-	retry, errorMessage = m.checkInstagramResult(jsonResult)
-	if retry == true {
-		cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", username))
-		time.Sleep(20 * time.Second)
-		return m.lookupInstagramUser(username)
-	} else if errorMessage != "" {
-		return instagramUser, errors.New(fmt.Sprintf("Instagram API Error: %s", errorMessage))
-	}
-
-	if jsonResult.ExistsP("reel.items") {
-		var instagramReelMedias []Instagram_ReelMedia
-		instagramReelMediasJsons, err := jsonResult.Path("reel.items").Children()
-		if err != nil {
-			return instagramUser, err
-		}
-		for _, instagramReelMediaJson := range instagramReelMediasJsons {
-			var instagramReelMedia Instagram_ReelMedia
-			json.Unmarshal([]byte(instagramReelMediaJson.String()), &instagramReelMedia)
-			instagramReelMedias = append(instagramReelMedias, instagramReelMedia)
-		}
-		instagramUser.ReelMedias = instagramReelMedias
-	}
-
-	if jsonResult.ExistsP("broadcast.id") {
-		json.Unmarshal([]byte(jsonResult.Path("broadcast").String()), &instagramUser.Broadcast)
-	}
-
-	return instagramUser, nil
-}
-
-func (m *Instagram) checkInstagramResult(jsonResult *gabs.Container) (bool, string) {
-	if jsonResult.Path("status").Data().(string) == "fail" {
-		errorMessage := jsonResult.Path("message").Data().(string)
-		if errorMessage == "Please wait a few minutes before you try again." {
-			return true, errorMessage
-		} else {
-			return false, errorMessage
-		}
-	}
-	return false, ""
 }
 
 func (m *Instagram) getEntryBy(key string, id string) DB_Instagram_Entry {

@@ -1761,6 +1761,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		return
 	case "set-bot-dp":
 		helpers.RequireRobyulMod(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+
 			if len(msg.Attachments) <= 0 {
 				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
