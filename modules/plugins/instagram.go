@@ -252,7 +252,6 @@ func (m *Instagram) Init(session *discordgo.Session) {
 }
 
 func (m *Instagram) checkInstagramFeedsLoop() {
-	var safeEntries Instagram_Safe_Entries
 	log := cache.GetLogger()
 
 	defer helpers.Recover()
@@ -264,51 +263,68 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 		}()
 	}()
 
+	var entries []DB_Instagram_Entry
+	var bundledEntries map[string][]DB_Instagram_Entry
+
 	for {
 		cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
 		helpers.Relax(err)
 
-		err = cursor.All(&safeEntries.entries)
+		err = cursor.All(&entries)
 		helpers.Relax(err)
 
-		// TODO: Check multiple entries at once
-		for _, entry := range safeEntries.entries {
-			safeEntries.mux.Lock()
-		RetryAccount:
-			changes := false
-			log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", entry.Username))
+		bundledEntries = make(map[string][]DB_Instagram_Entry, 0)
 
-			instagramUser, err := instagramClient.GetUserByUsername(entry.Username)
+		for _, entry := range entries {
+			channel, err := helpers.GetChannel(entry.ChannelID)
+			if err != nil || channel == nil || channel.ID == "" {
+				cache.GetLogger().WithField("module", "instagram").Warn(fmt.Sprintf("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
+					entry.Username, entry.ChannelID, entry.ServerID))
+				continue
+			}
+
+			if _, ok := bundledEntries[entry.Username]; ok {
+				bundledEntries[entry.Username] = append(bundledEntries[entry.Username], entry)
+			} else {
+				bundledEntries[entry.Username] = []DB_Instagram_Entry{entry}
+			}
+		}
+
+		cache.GetLogger().WithField("module", "instagram").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(entries))
+
+		// TODO: Check multiple entries at once
+		for instagramUsername, entries := range bundledEntries {
+		RetryAccount:
+			// log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", instagramUsername))
+
+			instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
 			if err != nil || instagramUser.User.Username == "" {
 				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", instagramUsername))
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
-				safeEntries.mux.Unlock()
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", instagramUsername, err))
 				continue
 			}
 			posts, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
 			if err != nil || instagramUser.User.Username == "" {
 				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", instagramUsername))
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
-				safeEntries.mux.Unlock()
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", instagramUsername, err))
 				continue
 			}
 			story, err := instagramClient.GetUserStories(instagramUser.User.ID)
 			if err != nil || instagramUser.User.Username == "" {
 				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", instagramUsername))
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", entry.Username, err))
-				safeEntries.mux.Unlock()
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", instagramUsername, err))
 				continue
 			}
 
@@ -322,62 +338,64 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 				story.Reel.Items[i], story.Reel.Items[opp] = story.Reel.Items[opp], story.Reel.Items[i]
 			}
 
-			for _, post := range posts.Items {
-				postAlreadyPosted := false
-				for _, postedPosts := range entry.PostedPosts {
-					if postedPosts.ID == post.ID {
-						postAlreadyPosted = true
+			for _, entry := range entries {
+				changes := false
+				for _, post := range posts.Items {
+					postAlreadyPosted := false
+					for _, postedPosts := range entry.PostedPosts {
+						if postedPosts.ID == post.ID {
+							postAlreadyPosted = true
+						}
 					}
-				}
-				if postAlreadyPosted == false {
-					log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
-					entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
-					changes = true
-					go m.postPostToChannel(entry.ChannelID, post, instagramUser, entry.PostDirectLinks)
-				}
-
-			}
-
-			for n, reelMedia := range story.Reel.Items {
-				reelMediaAlreadyPosted := false
-				for _, reelMediaPostPosted := range entry.PostedReelMedias {
-					if reelMediaPostPosted.ID == reelMedia.ID {
-						reelMediaAlreadyPosted = true
-					}
-				}
-				if reelMediaAlreadyPosted == false {
-					log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
-					entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
-					changes = true
-					go m.postReelMediaToChannel(entry.ChannelID, story, n, instagramUser)
-				}
-
-			}
-
-			// TODO: no broadcast information received from story anymore?
-			/*
-				if entry.IsLive == false {
-					if story.Broadcast != 0 {
-						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live: #%s", instagramUser.User.Broadcast.ID))
-						go m.postLiveToChannel(entry.ChannelID, instagramUser)
-						entry.IsLive = true
+					if postAlreadyPosted == false {
+						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
+						entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
 						changes = true
+						go m.postPostToChannel(entry.ChannelID, post, instagramUser, entry.PostDirectLinks)
 					}
-				} else {
-					if instagramUser.User.Broadcast.ID == 0 {
-						entry.IsLive = false
-						changes = true
-					}
-				}*/
 
-			if changes == true {
-				m.setEntry(entry)
+				}
+
+				for n, reelMedia := range story.Reel.Items {
+					reelMediaAlreadyPosted := false
+					for _, reelMediaPostPosted := range entry.PostedReelMedias {
+						if reelMediaPostPosted.ID == reelMedia.ID {
+							reelMediaAlreadyPosted = true
+						}
+					}
+					if reelMediaAlreadyPosted == false {
+						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
+						entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
+						changes = true
+						go m.postReelMediaToChannel(entry.ChannelID, story, n, instagramUser)
+					}
+
+				}
+
+				// TODO: no broadcast information received from story anymore?
+				/*
+				   if entry.IsLive == false {
+				       if story.Broadcast != 0 {
+				           log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live: #%s", instagramUser.User.Broadcast.ID))
+				           go m.postLiveToChannel(entry.ChannelID, instagramUser)
+				           entry.IsLive = true
+				           changes = true
+				       }
+				   } else {
+				       if instagramUser.User.Broadcast.ID == 0 {
+				           entry.IsLive = false
+				           changes = true
+				       }
+				   }*/
+
+				if changes == true {
+					m.setEntry(entry)
+				}
 			}
-			safeEntries.mux.Unlock()
 		}
 
-		if len(safeEntries.entries) <= 10 {
-			//time.Sleep(1 * time.Minute)
+		if len(entries) <= 10 {
+			time.Sleep(1 * time.Minute)
 		}
 	}
 }
