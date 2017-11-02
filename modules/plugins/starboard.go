@@ -497,7 +497,9 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 	}
 
 	starboardPostEmbed := &discordgo.MessageEmbed{
-		Title: fmt.Sprintf("@%s in #%s:", authorName, channelName),
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: fmt.Sprintf("@%s in #%s:", authorName, channelName),
+		},
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: fmt.Sprintf("⭐ %s | Message #%s | First starred at %s",
 				humanize.Comma(int64(starEntry.Stars)),
@@ -528,7 +530,7 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 		}
 	}
 	if authorDP != "" {
-		starboardPostEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: authorDP}
+		starboardPostEmbed.Author.IconURL = authorDP
 	}
 	if starEntry.StarboardMessageChannelID != "" &&
 		starEntry.StarboardMessageID != "" &&
