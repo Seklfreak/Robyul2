@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	elastic "gopkg.in/olivere/elastic.v5"
+	"gopkg.in/olivere/elastic.v5"
 
 	"fmt"
 
@@ -34,7 +34,8 @@ import (
 )
 
 var (
-	keenClient *keen.Client
+	keenClient        *keen.Client
+	BotRuntimeChannel chan os.Signal
 )
 
 // Entrypoint
@@ -144,7 +145,7 @@ func main() {
 			log.WithField("module", "discordgo").Debugf("%s:%d:%s() %s", file, line, name, msg)
 		}
 	}
-	log.WithField("module", "launcher").Info("Connecting bot to discord...")
+	log.WithField("module", "launcher").Info("Connecting Robyul to discord...")
 	discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
 	if err != nil {
 		panic(err)
@@ -193,7 +194,7 @@ func main() {
 	}
 	for _, friendConfig := range friendsConfigs {
 		if friendConfig.Path("token").Data().(string) != "" {
-			log.WithField("module", "launcher").Info("Connecting helper to discord...")
+			log.WithField("module", "launcher").Infof("Connecting friend to discord...")
 			discordFriend, err := discordgo.New(
 				friendConfig.Path("token").Data().(string),
 			)
@@ -304,15 +305,19 @@ func main() {
 	cache.SetMachineryRedisClient(machineryRedisClient)
 
 	// Make a channel that waits for a os signal
-	channel := make(chan os.Signal, 1)
-	signal.Notify(channel, os.Interrupt, os.Kill)
+	BotRuntimeChannel = make(chan os.Signal, 1)
+	signal.Notify(BotRuntimeChannel, os.Interrupt, os.Kill)
 
 	// Wait until the os wants us to shutdown
-	<-channel
+	<-BotRuntimeChannel
 
-	log.WithField("module", "launcher").Info("The OS is killing me :c")
-	log.WithField("module", "launcher").Info("Disconnecting...")
+	log.WithField("module", "launcher").Info("Robyul is stopping")
+	log.WithField("module", "launcher").Info("Disconnecting bot discord session...")
 	discord.Close()
+	log.WithField("module", "launcher").Info("Disconnecting friend discord sessions...")
+	for _, friendSession := range cache.GetFriends() {
+		friendSession.Close()
+	}
 }
 
 type KeenRestEvent struct {

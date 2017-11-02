@@ -8,6 +8,8 @@ import (
 
 	"math/rand"
 
+	"os"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -66,9 +68,12 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		for _, guild := range session.State.Guilds {
 			//if guild.Large {
 			err := session.RequestGuildMembers(guild.ID, "", 0)
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			if err != nil && strings.Contains(err.Error(), "no websocket connection exists") {
+				cache.GetLogger().WithField("module", "bot").Warn("OnFirstReady: no websocket connection exists, stopping Robyul")
+				BotRuntimeChannel <- os.Interrupt
+				return
 			}
+			helpers.RelaxLog(err)
 
 			cache.GetLogger().WithField("module", "bot").Debug(
 				fmt.Sprintf("requesting guild member chunks for guild: %s",
@@ -117,9 +122,12 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 		for _, guild := range cache.GetSession().State.Guilds {
 			//if guild.Large {
 			err := session.RequestGuildMembers(guild.ID, "", 0)
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			if err != nil && strings.Contains(err.Error(), "no websocket connection exists") {
+				cache.GetLogger().WithField("module", "bot").Warn("OnReconnect: no websocket connection exists, stopping Robyul")
+				BotRuntimeChannel <- os.Interrupt
+				return
 			}
+			helpers.RelaxLog(err)
 
 			cache.GetLogger().WithField("module", "bot").Debug(
 				fmt.Sprintf("requesting guild member chunks for guild: %s",
@@ -329,6 +337,18 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 				}
 			})
 			return
+
+		case regexp.MustCompile("(?i)^SHUTDOWN.*").Match(bmsg):
+			helpers.RequireBotAdmin(message.Message, func() {
+				session.ChannelTyping(message.ChannelID)
+
+				if helpers.ConfirmEmbed(message.ChannelID, message.Author,
+					"Are you sure you want me to shutdown Robyul?", "✅", "🚫") {
+					cache.GetLogger().WithField("module", "debug").Warnf("shutting down Robuyul on request by %s#%s (%s)",
+						message.Author.Username, message.Author.Discriminator, message.Author.ID)
+					BotRuntimeChannel <- os.Interrupt
+				}
+			})
 
 			/*
 				default:
