@@ -25,8 +25,8 @@ type Translator struct {
 }
 
 const (
-	googleTranslateHexColor string = "#4285f4"
-	naverTranslateEndpoint  string = "https://papago.naver.com/apis/n2mt/translate"
+	googleTranslateHexColor = "#4285f4"
+	naverTranslateEndpoint  = "https://papago.naver.com/apis/n2mt/translate"
 )
 
 func (t *Translator) Commands() []string {
@@ -60,13 +60,13 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 
 	source, err := language.Parse(parts[0])
 	if err != nil {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[0]))
+		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang_specific", parts[0]))
 		return
 	}
 
 	target, err := language.Parse(parts[1])
 	if err != nil {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang", parts[1]))
+		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang_specific", parts[1]))
 		return
 	}
 
