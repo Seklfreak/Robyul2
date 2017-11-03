@@ -47,6 +47,7 @@ var migrations = []helpers.Callback{
 	m35_create_table_persistency_roles,
 	m36_create_table_levels_roles_overwrites,
 	m37_create_table_dog_links,
+	m38_create_table_weather_last_locations,
 }
 
 // Run executes all registered migrations

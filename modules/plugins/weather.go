@@ -2,22 +2,25 @@ package plugins
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	rethink "github.com/gorethink/gorethink"
 )
 
 type Weather struct{}
 
 const (
-	googleMapsGeocodingEndpoint string = "https://maps.googleapis.com/maps/api/geocode/json?language=en&key=%s&address=%s"
-	darkSkyForecastRequest      string = "https://api.darksky.net/forecast/%s/%s,%s?exclude=minutely,hourly&lang=en&units=si"
-	darkSkyFriendlyForecast     string = "https://darksky.net/forecast/%s,%s/si24"
-	darkSkyHexColor             string = "#2B86F3"
+	googleMapsGeocodingEndpoint = "https://maps.googleapis.com/maps/api/geocode/json?language=en&key=%s&address=%s"
+	darkSkyForecastRequest      = "https://api.darksky.net/forecast/%s/%s,%s?exclude=minutely,hourly&lang=en&units=si"
+	darkSkyFriendlyForecast     = "https://darksky.net/forecast/%s,%s/si24"
+	darkSkyHexColor             = "#2B86F3"
 )
 
 type DarkSkyForecast struct {
@@ -97,35 +100,41 @@ func (w *Weather) Init(session *discordgo.Session) {
 func (w *Weather) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	session.ChannelTyping(msg.ChannelID)
 
-	if content == "" {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-		return
-	}
-
-	geocodingUrl := fmt.Sprintf(googleMapsGeocodingEndpoint,
-		helpers.GetConfig().Path("google.api_key").Data().(string),
-		url.QueryEscape(content),
-	)
-	geocodingResult := helpers.GetJSON(geocodingUrl)
-	locationChildren, err := geocodingResult.Path("results").Children()
-	helpers.Relax(err)
-	if geocodingResult.Path("status").Data().(string) != "OK" || len(locationChildren) <= 0 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
-		return
-	}
-
-	var addressResult string
 	var latResult float64
 	var lngResult float64
-	for _, location := range locationChildren {
-		latResult = location.Path("geometry.location.lat").Data().(float64)
-		lngResult = location.Path("geometry.location.lng").Data().(float64)
-		addressResult = location.Path("formatted_address").Data().(string)
+	var addressResult string
+
+	if content == "" {
+		latResult, lngResult, addressResult = w.getLastLocation(msg.Author.ID)
+		if latResult == 0 && lngResult == 0 {
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			return
+		}
 	}
 
-	if addressResult == "" {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
-		return
+	if content != "" {
+		geocodingUrl := fmt.Sprintf(googleMapsGeocodingEndpoint,
+			helpers.GetConfig().Path("google.api_key").Data().(string),
+			url.QueryEscape(content),
+		)
+		geocodingResult := helpers.GetJSON(geocodingUrl)
+		locationChildren, err := geocodingResult.Path("results").Children()
+		helpers.Relax(err)
+		if geocodingResult.Path("status").Data().(string) != "OK" || len(locationChildren) <= 0 {
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
+			return
+		}
+
+		for _, location := range locationChildren {
+			latResult = location.Path("geometry.location.lat").Data().(float64)
+			lngResult = location.Path("geometry.location.lng").Data().(float64)
+			addressResult = location.Path("formatted_address").Data().(string)
+		}
+
+		if addressResult == "" {
+			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
+			return
+		}
 	}
 
 	darkSkyUrl := fmt.Sprintf(darkSkyForecastRequest,
@@ -135,13 +144,17 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	forecastResult := helpers.NetGet(darkSkyUrl)
 	metrics.DarkSkyRequests.Add(1)
 	var darkSkyForecast DarkSkyForecast
-	err = json.Unmarshal(forecastResult, &darkSkyForecast)
+	err := json.Unmarshal(forecastResult, &darkSkyForecast)
 	helpers.Relax(err)
 
 	if darkSkyForecast.Currently.Summary == "" {
 		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.no-weather"))
 		return
 	}
+
+	go func() {
+		w.setLastLocation(msg.Author.ID, latResult, lngResult, addressResult)
+	}()
 
 	weatherEmbed := &discordgo.MessageEmbed{
 		Title: helpers.GetTextF("plugins.weather.weather-embed-title", addressResult),
@@ -166,5 +179,47 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	}
 
 	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, weatherEmbed)
-	helpers.Relax(err)
+	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+}
+
+func (w *Weather) setLastLocation(userID string, lat float64, lng float64, text string) (err error) {
+	entry, err := w.getLastLocationEntry(userID)
+	if err != nil || entry.ID == "" {
+		_, err = rethink.Table(models.WeatherLastLocationsTable).Insert(models.WeatherLastLocation{
+			UserID: userID,
+			Lat:    lat,
+			Lng:    lng,
+			Text:   text,
+		}).RunWrite(helpers.GetDB())
+		return err
+	}
+	entry.Lat = lat
+	entry.Lng = lng
+	entry.Text = text
+	_, err = rethink.Table(models.WeatherLastLocationsTable).Get(entry.ID).Update(entry).RunWrite(helpers.GetDB())
+	return err
+}
+
+func (w *Weather) getLastLocation(userID string) (lat float64, lng float64, text string) {
+	entry, err := w.getLastLocationEntry(userID)
+	if err != nil {
+		return 0, 0, ""
+	}
+	return entry.Lat, entry.Lng, entry.Text
+}
+
+func (w *Weather) getLastLocationEntry(userID string) (entry models.WeatherLastLocation, err error) {
+	listCursor, err := rethink.Table(models.WeatherLastLocationsTable).Filter(
+		rethink.Row.Field("user_id").Eq(userID),
+	).Run(helpers.GetDB())
+	if err != nil {
+		return entry, err
+	}
+	defer listCursor.Close()
+	err = listCursor.One(&entry)
+
+	if err == rethink.ErrEmptyResult {
+		return entry, errors.New("no weather last location entry")
+	}
+	return entry, err
 }
