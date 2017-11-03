@@ -12,6 +12,8 @@ import (
 
 	"strconv"
 
+	"sync"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -31,6 +33,11 @@ func (s *Starboard) Commands() []string {
 		"sb",
 	}
 }
+
+var (
+	// one look for every guild ID
+	starboardStarLocks = make(map[string]*sync.Mutex, 0)
+)
 
 func (s *Starboard) Init(session *discordgo.Session) {
 
@@ -459,6 +466,8 @@ func (s *Starboard) OnReactionRemove(reaction *discordgo.MessageReactionRemove, 
 }
 
 func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID string) error {
+	s.lockGuild(guildID)
+	defer s.unlockGuild(guildID)
 	starboardEntry, err := s.getStarboardEntry(guildID, msg.ID)
 	if err != nil {
 		urls := make([]string, 0)
@@ -508,6 +517,8 @@ func (s *Starboard) AddStar(guildID string, msg *discordgo.Message, starUserID s
 }
 
 func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserID string) error {
+	s.lockGuild(guildID)
+	defer s.unlockGuild(guildID)
 	starboardEntry, err := s.getStarboardEntry(guildID, msg.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "no starboard entry") {
@@ -898,6 +909,21 @@ func (s *Starboard) getEmoji(guildID string) (emojis []string) {
 		return guildSettings.StarboardEmoji
 	} else {
 		return []string{"⭐", "🌟"} // :star:, :star2:
+	}
+}
+
+func (s *Starboard) lockGuild(guildID string) {
+	if _, ok := starboardStarLocks[guildID]; ok {
+		starboardStarLocks[guildID].Lock()
+		return
+	}
+	starboardStarLocks[guildID] = new(sync.Mutex)
+	starboardStarLocks[guildID].Lock()
+}
+
+func (s *Starboard) unlockGuild(guildID string) {
+	if _, ok := starboardStarLocks[guildID]; ok {
+		starboardStarLocks[guildID].Unlock()
 	}
 }
 
