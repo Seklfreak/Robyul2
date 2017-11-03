@@ -51,8 +51,9 @@ type Config struct {
 	AutoRoleIDs      []string          `rethink:"autorole_roleids"`
 	DelayedAutoRoles []DelayedAutoRole `rethink:"delayed_autoroles"`
 
-	StarboardChannelID string `rethink:"starboard_channel_id"`
-	StarboardMinimum   int    `rethink:"starboard_minimum"`
+	StarboardChannelID string   `rethink:"starboard_channel_id"`
+	StarboardMinimum   int      `rethink:"starboard_minimum"`
+	StarboardEmoji     []string `rethink:"starboard_emoji"`
 
 	ChatlogDisabled bool `rethink:"chatlog_disabled"`
 

@@ -847,11 +847,13 @@
     },
     "starboard": {
       "status-none": "There is no starboard set on this server. <:blobweary:317036265071575050>",
-      "status-set": "The starboard on this server is set to <#%s>. :star:\nPlease make sure I can write messages, manage messages and embed links in that channel.",
+      "status-set": "The starboard on this server is set to <#%s>. :star:\nPlease make sure I can write messages, manage messages and embed links in that channel.\nThe followings emoji are accepted: %s",
       "set-success": "I successfully set the starboard channel to <#%s>. :star:",
       "minimum-success": "I successfully set the minimum stars required to %d stars. :star2:",
       "reset-success": "I disabled the starboard for this server. <:blobshh:317044272161357824>",
-      "top-no-entries": "Nothing starred on this server. <:blobweary:317036265071575050>"
+      "top-no-entries": "Nothing starred on this server. <:blobweary:317036265071575050>",
+      "emoji-add-success": "I added the emoji %s to the list of accepted emojis.",
+      "emoji-remove-success": "I removed the emoji %s from the list of accepted emojis."
     },
     "autoleaver": {
       "check-no-entries": ":question: The whitelist is currently empty.",

@@ -25,10 +25,6 @@ type starboardAction func(args []string, in *discordgo.Message, out **discordgo.
 
 type Starboard struct{}
 
-var (
-	StarboardEmojis = [...]string{"⭐"}
-)
-
 func (s *Starboard) Commands() []string {
 	return []string{
 		"starboard",
@@ -73,6 +69,8 @@ func (s *Starboard) actionStart(args []string, in *discordgo.Message, out **disc
 		return s.actionSet
 	case "minimum":
 		return s.actionMinimum
+	case "emoji", "emojis":
+		return s.actionEmoji
 	}
 
 	*out = s.newMsg("bot.arguments.invalid")
@@ -128,8 +126,20 @@ func (s *Starboard) actionStatus(args []string, in *discordgo.Message, out **dis
 
 	guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
 
+	var emojiText string
+	for _, emoji := range s.getEmoji(channel.GuildID) {
+		discordEmoji, err := helpers.GetDiscordEmojiFromName(channel.GuildID, emoji)
+		if err == nil && discordEmoji != nil && discordEmoji.ID != "" {
+			emojiText += "<:" + discordEmoji.APIName() + ">"
+		} else {
+			emojiText += emoji
+		}
+		emojiText += ", "
+	}
+	emojiText = strings.TrimRight(emojiText, ", ")
+
 	if guildSettings.StarboardChannelID != "" {
-		*out = s.newMsg(helpers.GetTextF("plugins.starboard.status-set", guildSettings.StarboardChannelID))
+		*out = s.newMsg(helpers.GetTextF("plugins.starboard.status-set", guildSettings.StarboardChannelID, emojiText))
 	} else {
 		*out = s.newMsg(helpers.GetText("plugins.starboard.status-none"))
 	}
@@ -212,6 +222,66 @@ func (s *Starboard) actionMinimum(args []string, in *discordgo.Message, out **di
 	return s.actionFinish
 }
 
+func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
+	if !helpers.IsMod(in) {
+		*out = s.newMsg(helpers.GetText("mod.no_permission"))
+		return s.actionFinish
+	}
+
+	if len(args) < 2 {
+		*out = s.newMsg(helpers.GetText("bot.arguments.too-few"))
+		return s.actionFinish
+	}
+
+	newEmoji := args[1]
+
+	if !helpers.IsEmoji(newEmoji) {
+		*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+		return s.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	if helpers.IsDiscordEmoji(newEmoji) {
+		discordEmoji, err := helpers.GetDiscordEmojiFromText(channel.GuildID, newEmoji)
+		if err != nil || discordEmoji == nil || discordEmoji.Name == "" {
+			fmt.Println(err.Error())
+			*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
+			return s.actionFinish
+		}
+		newEmoji = discordEmoji.Name
+	}
+
+	guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+	removed := false
+	newEmojiList := make([]string, 0)
+	for _, emoji := range guildSettings.StarboardEmoji {
+		if emoji == newEmoji {
+			removed = true
+		} else {
+			newEmojiList = append(newEmojiList, emoji)
+		}
+	}
+
+	if !removed {
+		newEmojiList = append(newEmojiList, newEmoji)
+	}
+
+	guildSettings.StarboardEmoji = newEmojiList
+
+	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
+	helpers.Relax(err)
+
+	if !removed {
+		*out = s.newMsg(helpers.GetTextF("plugins.starboard.emoji-add-success", newEmoji))
+	} else {
+		*out = s.newMsg(helpers.GetTextF("plugins.starboard.emoji-remove-success", newEmoji))
+	}
+	return s.actionFinish
+}
+
 func (s *Starboard) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
 	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
@@ -269,8 +339,11 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 	go func() {
 		defer helpers.Recover()
 
+		channel, err := helpers.GetChannel(reaction.ChannelID)
+		helpers.Relax(err)
+
 		isStarboardEmoji := false
-		for _, starboardEmoji := range StarboardEmojis {
+		for _, starboardEmoji := range s.getEmoji(channel.GuildID) {
 			if reaction.MessageReaction.Emoji.Name == starboardEmoji {
 				isStarboardEmoji = true
 			}
@@ -288,10 +361,6 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 		if user.Bot {
 			return
 		}
-
-		channel, err := helpers.GetChannel(reaction.ChannelID)
-		helpers.Relax(err)
-
 		settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
 		// stop if no starboard channel set
@@ -331,8 +400,11 @@ func (s *Starboard) OnReactionRemove(reaction *discordgo.MessageReactionRemove, 
 	go func() {
 		defer helpers.Recover()
 
+		channel, err := helpers.GetChannel(reaction.ChannelID)
+		helpers.Relax(err)
+
 		isStarboardEmoji := false
-		for _, starboardEmoji := range StarboardEmojis {
+		for _, starboardEmoji := range s.getEmoji(channel.GuildID) {
 			if reaction.MessageReaction.Emoji.Name == starboardEmoji {
 				isStarboardEmoji = true
 			}
@@ -350,9 +422,6 @@ func (s *Starboard) OnReactionRemove(reaction *discordgo.MessageReactionRemove, 
 		if user.Bot {
 			return
 		}
-
-		channel, err := helpers.GetChannel(reaction.ChannelID)
-		helpers.Relax(err)
 
 		settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
@@ -491,9 +560,18 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 		channelName = channel.Name
 	}
 
+	emoji := s.getEmoji(channel.GuildID)
+
 	content := starEntry.MessageContent
 	for _, url := range starEntry.MessageAttachmentURLs {
 		content += "\n" + url
+	}
+
+	firstEmoji := emoji[0]
+	firstDiscordEmoji, err := helpers.GetDiscordEmojiFromName(channel.GuildID, firstEmoji)
+	if err == nil && firstDiscordEmoji != nil && firstDiscordEmoji.ID != "" {
+		//firstEmoji = "<:" + firstDiscordEmoji.APIName() + ">"
+		firstEmoji = "⭐" // no custom emoji in embed footer?
 	}
 
 	starboardPostEmbed := &discordgo.MessageEmbed{
@@ -501,7 +579,8 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 			Name: fmt.Sprintf("@%s in #%s:", authorName, channelName),
 		},
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("⭐ %s | Message #%s | First starred at %s",
+			Text: fmt.Sprintf("%s %s | Message #%s | First starred at %s",
+				firstEmoji,
 				humanize.Comma(int64(starEntry.Stars)),
 				starEntry.MessageID,
 				starEntry.FirstStarred.Format(time.ANSIC),
@@ -560,6 +639,8 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 		}
 	}
 
+	emoji := s.getEmoji(starEntry.GuildID)
+
 	var starrersText string
 	var userName string
 	for i, starrerUserID := range starEntry.StarUserIDs {
@@ -581,7 +662,13 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 
 	starrersText = strings.TrimRight(starrersText, ", ")
 
-	starrersText += fmt.Sprintf(" (%s ⭐)", humanize.Comma(int64(starEntry.Stars)))
+	firstEmoji := emoji[0]
+	firstDiscordEmoji, err := helpers.GetDiscordEmojiFromName(starEntry.GuildID, firstEmoji)
+	if err == nil && firstDiscordEmoji != nil && firstDiscordEmoji.ID != "" {
+		firstEmoji = "<:" + firstDiscordEmoji.APIName() + ">"
+	}
+
+	starrersText += fmt.Sprintf(" (%s %s)", humanize.Comma(int64(starEntry.Stars)), firstEmoji)
 
 	if starrersText == "" {
 		starrersText = "N/A"
@@ -619,6 +706,8 @@ func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discor
 		return &discordgo.MessageEmbed{}, err
 	}
 
+	emoji := s.getEmoji(guild.ID)
+
 	var content string
 	var authorName string
 	topText := ""
@@ -655,8 +744,14 @@ func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discor
 			}
 		}
 
-		topText += fmt.Sprintf("#%d by %s (%s ⭐): %s\n",
-			i, authorName, humanize.Comma(int64(starMessage.Stars)), content)
+		firstEmoji := emoji[0]
+		firstDiscordEmoji, err := helpers.GetDiscordEmojiFromName(starMessage.GuildID, firstEmoji)
+		if err == nil && firstDiscordEmoji != nil && firstDiscordEmoji.ID != "" {
+			firstEmoji = "<:" + firstDiscordEmoji.APIName() + ">"
+		}
+
+		topText += fmt.Sprintf("#%d by %s (%s %s): %s\n",
+			i, authorName, humanize.Comma(int64(starMessage.Stars)), firstEmoji, content)
 		i++
 	}
 
@@ -791,6 +886,15 @@ func (s *Starboard) getMinimum(guildID string) int {
 		return guildSettings.StarboardMinimum
 	}
 	return 1
+}
+
+func (s *Starboard) getEmoji(guildID string) (emojis []string) {
+	guildSettings := helpers.GuildSettingsGetCached(guildID)
+	if len(guildSettings.StarboardEmoji) > 0 {
+		return guildSettings.StarboardEmoji
+	} else {
+		return []string{"⭐", "🌟"} // :star:, :star2:
+	}
 }
 
 func (s *Starboard) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
