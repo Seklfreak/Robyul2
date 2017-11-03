@@ -902,6 +902,11 @@
         "WOOF! <:googledog:374630377056108544>\n%s",
         "WOOF! <:doggoblob:374630377043787786>\n%s"
       ]
+    },
+    "donators": {
+      "none": "No donators yet. <:blobweary:317036265071575050>\n_You want to be in this list? <https://www.patreon.com/sekl>!_",
+      "list": "<:robyulblush:327206930437373952> **These awesome people support me:**\n%sThank you so much!\n_You want to be in this list? <https://www.patreon.com/sekl>!_",
+      "add-success": "I added the donator `%s` to the list. :clap:"
     }
   }
 }

@@ -67,6 +67,7 @@ var (
 		&plugins.Color{},
 		&plugins.Dog{},
 		&plugins.Debug{},
+		&plugins.Donators{},
 	}
 
 	// PluginList is the list of active plugins
@@ -88,7 +89,6 @@ var (
 
 	// TriggerPluginList is the list of plugins that activate on normal chat
 	TriggerPluginList = []TriggerPlugin{
-		&triggers.Donators{},
 		//&triggers.CSS{},
 		//&triggers.Donate{},
 		//&triggers.Git{},
