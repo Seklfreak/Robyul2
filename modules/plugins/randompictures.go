@@ -265,7 +265,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
 
-		if !rp.tryPicCommand(channel.GuildID, msg.Author.ID) {
+		if !rp.tryPicCommand(channel.GuildID, channel.ID, msg.Author.ID) {
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 			dmChannel, err := session.UserChannelCreate(msg.Author.ID)
 			helpers.Relax(err)
@@ -547,6 +547,61 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					helpers.Relax(err)
 
 					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-set-success", n))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				})
+			case "pic-delay-ignore-channel", "pic-delay-ignore-channels":
+				// [p]rapi pic-delay-ignore-channel [<#channel or channel id>]
+				helpers.RequireMod(msg, func() {
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
+					guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+					if len(args) <= 1 {
+						channelText := strings.Join(guildSettings.RandomPicturesPicDelayIgnoredChannelIDs, ">, <#")
+						if channelText != "" {
+							channelText = "<#" + channelText + ">"
+						} else {
+							channelText = "`no channels selected`"
+						}
+
+						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-ignore-channels-status", channelText))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+					targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+					if err != nil || targetChannel == nil || targetChannel.ID == "" {
+						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+
+					removed := false
+					newChannelList := make([]string, 0)
+					for _, listChannel := range guildSettings.RandomPicturesPicDelayIgnoredChannelIDs {
+						if listChannel == targetChannel.ID {
+							removed = true
+						} else {
+							newChannelList = append(newChannelList, listChannel)
+						}
+					}
+
+					if !removed {
+						newChannelList = append(newChannelList, targetChannel.ID)
+					}
+
+					guildSettings.RandomPicturesPicDelayIgnoredChannelIDs = newChannelList
+					err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
+					helpers.Relax(err)
+
+					message := ""
+					if removed {
+						message = helpers.GetText("plugins.randompictures.pic-delay-ignore-channels-removed")
+					} else {
+						message = helpers.GetText("plugins.randompictures.pic-delay-ignore-channels-added")
+					}
+
+					_, err = session.ChannelMessageSend(msg.ChannelID, message)
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
@@ -832,11 +887,17 @@ func (rp *RandomPictures) picDelayKey(guildID string, userID string) (key string
 	return "robyul2-discord:randompictures:last-pic-usage:" + guildID + ":" + userID
 }
 
-func (rp *RandomPictures) tryPicCommand(guildID string, userID string) (free bool) {
+func (rp *RandomPictures) tryPicCommand(guildID string, channelID string, userID string) (free bool) {
 	targetGuildSettings := helpers.GuildSettingsGetCached(guildID)
 
 	if targetGuildSettings.RandomPicturesPicDelay <= 0 {
 		return true
+	}
+
+	for _, ignoredChannelID := range targetGuildSettings.RandomPicturesPicDelayIgnoredChannelIDs {
+		if ignoredChannelID == channelID {
+			return true
+		}
 	}
 
 	key := rp.picDelayKey(guildID, userID)
