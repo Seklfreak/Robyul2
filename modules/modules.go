@@ -21,7 +21,6 @@ var (
 		//&plugins.Translator{},
 		&plugins.Uptime{},
 		&plugins.Translator{},
-		&plugins.Ping{},
 		&plugins.UrbanDict{},
 		&plugins.Weather{},
 		&plugins.VLive{},
@@ -68,6 +67,7 @@ var (
 		&plugins.Dog{},
 		&plugins.Debug{},
 		&plugins.Donators{},
+		&plugins.Ping{},
 	}
 
 	// PluginList is the list of active plugins
