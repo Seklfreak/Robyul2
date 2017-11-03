@@ -44,10 +44,10 @@ var (
 )
 
 const (
-	driveSearchText       string = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
-	driveFieldsText       string = "nextPageToken, files(id, size, mimeType)"
-	driveFieldsSingleText string = "id, name, size, modifiedTime, imageMediaMetadata, webContentLink"
-	imgurApiUploadBaseUrl string = "https://api.imgur.com/3/image"
+	driveSearchText       = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
+	driveFieldsText       = "nextPageToken, files(id, size, mimeType)"
+	driveFieldsSingleText = "id, name, size, modifiedTime, imageMediaMetadata, webContentLink"
+	imgurApiUploadBaseUrl = "https://api.imgur.com/3/image"
 )
 
 func (rp *RandomPictures) Commands() []string {
@@ -728,7 +728,6 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 		key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
 		items, err = redisClient.Get(key).Int64()
 		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			continue
 		}
 		totalImages += items

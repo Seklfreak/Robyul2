@@ -69,7 +69,7 @@ var (
 
 	temporaryIgnoredGuilds []string
 
-	expStack *lane.Stack = lane.NewStack()
+	expStack = lane.NewStack()
 )
 
 func (m *Levels) Commands() []string {
@@ -148,16 +148,16 @@ var (
 	cachePath                string
 	assetsPath               string
 	htmlTemplateString       string
-	levelsEnv                []string = os.Environ()
+	levelsEnv                = os.Environ()
 	webshotBinary            string
 	topCache                 []Cache_Levels_top
 	activeBadgePickerUserIDs map[string]string
 )
 
 const (
-	BadgeLimt          int    = 12
-	TimeAtUserFormat   string = "Mon, 15:04"
-	TimeBirthdayFormat string = "01/02"
+	BadgeLimt          = 12
+	TimeAtUserFormat   = "Mon, 15:04"
+	TimeBirthdayFormat = "01/02"
 )
 
 func (m *Levels) Init(session *discordgo.Session) {
@@ -397,7 +397,9 @@ func (m *Levels) processExpStackLoop() {
 
 			if expBefore <= 0 || levelBefore != levelAfter {
 				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
-				helpers.RelaxLog(err)
+				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Message != "404: Not Found" {
+					helpers.RelaxLog(err)
+				}
 			}
 		} else {
 			time.Sleep(1 * time.Second)

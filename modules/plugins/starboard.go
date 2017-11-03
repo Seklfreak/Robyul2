@@ -323,6 +323,11 @@ func (s *Starboard) OnMessageDelete(msg *discordgo.MessageDelete, session *disco
 
 		err = cache.GetSession().ChannelMessageDelete(
 			starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
+		if errD, ok := err.(*discordgo.RESTError); ok {
+			if errD.Message.Message == "404: Not Found" {
+				return
+			}
+		}
 		helpers.Relax(err)
 	}()
 }
@@ -387,7 +392,7 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 		err = s.AddStar(channel.GuildID, message, reaction.UserID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok {
-				if errD.Message.Code == discordgo.ErrCodeUnknownMessage {
+				if errD.Message.Code == discordgo.ErrCodeUnknownMessage || errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 					return
 				}
 			}
@@ -519,18 +524,17 @@ func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserI
 		if deleted {
 			err = cache.GetSession().ChannelMessageDelete(
 				starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
-			helpers.Relax(err)
+			return err
 		} else {
 			if starboardEntry.Stars >= s.getMinimum(guildID) {
 				return s.PostOrUpdateDiscordMessage(starboardEntry)
 			} else {
 				err = cache.GetSession().ChannelMessageDelete(
 					starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
-				helpers.Relax(err)
 				starboardEntry.StarboardMessageID = ""
 				starboardEntry.StarboardMessageChannelID = ""
 				err = s.setStarboardEntry(starboardEntry)
-				helpers.Relax(err)
+				return err
 			}
 		}
 	}
