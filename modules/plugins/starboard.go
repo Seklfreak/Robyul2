@@ -35,7 +35,7 @@ func (s *Starboard) Commands() []string {
 }
 
 var (
-	// one look for every guild ID
+	// one lock for every guild ID
 	starboardStarLocks = make(map[string]*sync.Mutex, 0)
 )
 
