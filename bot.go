@@ -443,6 +443,10 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
 		return
 	}
 
+	if helpers.IsBlacklisted(reaction.UserID) {
+		return
+	}
+
 	channel, err := helpers.GetChannel(reaction.ChannelID)
 	if err != nil {
 		return
