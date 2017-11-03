@@ -84,9 +84,9 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				),
 			).Filter(
 				rethink.Row.Field("userid").Eq(msg.Author.ID),
-			).Filter(
-				rethink.Row.Field("keyword").Eq(keywords),
-			).Run(helpers.GetDB())
+			).Filter(func(keywordTerm rethink.Term) rethink.Term {
+				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + keywords + "$"))
+			}).Run(helpers.GetDB())
 			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.One(&entryBucket)
@@ -156,9 +156,9 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				),
 			).Filter(
 				rethink.Row.Field("userid").Eq(msg.Author.ID),
-			).Filter(
-				rethink.Row.Field("keyword").Eq(keywords),
-			).Run(helpers.GetDB())
+			).Filter(func(keywordTerm rethink.Term) rethink.Term {
+				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + keywords + "$"))
+			}).Run(helpers.GetDB())
 			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.One(&entryBucket)
