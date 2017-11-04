@@ -25,6 +25,12 @@ type Mirror_Channel struct {
 	ChannelWebhookID    string
 	ChannelWebhookToken string
 	GuildID             string
+	ChannelWebhooks     []Mirror_Channel_Webhook
+}
+
+type Mirror_Channel_Webhook struct {
+	WebhookID    string `gorethink:"webhook_id"`
+	WebhookToken string `gorethink:"webhook_token"`
 }
 
 func (m *Mirror) Commands() []string {
@@ -104,14 +110,14 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				return
 			})
 			return
-		case "add-channel": // [p]mirror add-channel <mirror id> <channel> <webhook id> <webhook token>
+		case "add-channel": // [p]mirror add-channel <mirror id> <channel> [<webhook id> <webhook token>]
 			session.ChannelTyping(msg.ChannelID)
 			// @TODO: more secure way to exchange token: create own webhook if no arguments passed
 			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
 				progressMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-progress"))
-				helpers.Relax(err)
-				if len(args) < 5 {
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				if len(args) < 3 {
 					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
@@ -136,31 +142,63 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				targetChannelWebhookId := args[3]
-				targetChannelWebhookToken := args[4]
-
-				webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
-				if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
-					return
+				newMirrorChannel := Mirror_Channel{
+					ChannelID: targetChannel.ID,
+					GuildID:   targetChannel.GuildID,
 				}
 
-				mirrorEntry.ConnectedChannels = append(mirrorEntry.ConnectedChannels, Mirror_Channel{
-					ChannelID:           targetChannel.ID,
-					GuildID:             targetChannel.GuildID,
-					ChannelWebhookID:    targetChannelWebhookId,
-					ChannelWebhookToken: targetChannelWebhookToken,
-				})
+				if len(args) >= 5 {
+					targetChannelWebhookId := args[3]
+					targetChannelWebhookToken := args[4]
+
+					webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
+					if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
+						_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+						helpers.Relax(err)
+						return
+					}
+
+					newMirrorChannel.ChannelWebhookID = targetChannelWebhookId
+					newMirrorChannel.ChannelWebhookToken = targetChannelWebhookToken
+				} else {
+					firstWebhook, err := session.WebhookCreate(targetChannel.ID, "Robyul Mirror Webhook 1", "")
+					if err != nil {
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+								_, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
+								helpers.Relax(err)
+								return
+							}
+						}
+					}
+					helpers.Relax(err)
+
+					newMirrorChannel.ChannelWebhooks = append(newMirrorChannel.ChannelWebhooks, Mirror_Channel_Webhook{
+						WebhookID:    firstWebhook.ID,
+						WebhookToken: firstWebhook.Token,
+					})
+
+					secondWebhook, err := session.WebhookCreate(targetChannel.ID, "Robyul Mirror Webhook 2", "")
+					helpers.Relax(err)
+
+					newMirrorChannel.ChannelWebhooks = append(newMirrorChannel.ChannelWebhooks, Mirror_Channel_Webhook{
+						WebhookID:    secondWebhook.ID,
+						WebhookToken: secondWebhook.Token,
+					})
+				}
+
+				mirrorEntry.ConnectedChannels = append(mirrorEntry.ConnectedChannels, newMirrorChannel)
 
 				m.setEntry(mirrorEntry)
+
+				go func() {
+					mirrors = m.GetMirrors()
+				}()
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Added Channel %s (#%s) on Server %s (#%s) to Mirror %s by %s (#%s)",
 					targetChannel.Name, targetChannel.ID, guild.Name, guild.ID, mirrorEntry.ID, msg.Author.Username, msg.Author.ID))
 				_, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-success"))
 				helpers.Relax(err)
-
-				mirrors = m.GetMirrors()
 				return
 			})
 			return
@@ -182,25 +220,35 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 
 				resultMessage := ":fax: Mirrors:\n"
 				for _, entry := range entryBucket {
-					resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (%d channels):\n", entry.ID, len(entry.ConnectedChannels))
+					entryType := entry.Type
+					if entryType == "" {
+						entryType = "link"
+					}
+					resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (Mode: `%s`, %d channels):\n", entry.ID, entryType, len(entry.ConnectedChannels))
 					for _, mirroredChannelEntry := range entry.ConnectedChannels {
+						if mirroredChannelEntry.ChannelWebhookID != "" && mirroredChannelEntry.ChannelWebhookToken != "" {
+							mirroredChannelEntry.ChannelWebhooks = append(mirroredChannelEntry.ChannelWebhooks, Mirror_Channel_Webhook{
+								WebhookID:    mirroredChannelEntry.ChannelWebhookID,
+								WebhookToken: mirroredChannelEntry.ChannelWebhookToken,
+							})
+						}
 						mirroredChannel, err := helpers.GetChannel(mirroredChannelEntry.ChannelID)
 						if err != nil {
-							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` `(#%s)` on `N/A` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
+							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` (`#%s`) on `N/A` `(#%s)`: <#%s> (Webhooks: `%d`)\n",
 								mirroredChannelEntry.ChannelID,
 								mirroredChannelEntry.GuildID,
 								mirroredChannelEntry.ChannelID,
-								mirroredChannelEntry.ChannelWebhookID,
+								len(mirroredChannelEntry.ChannelWebhooks),
 							)
 							continue
 						}
 						mirroredChannelGuild, err := helpers.GetGuild(mirroredChannelEntry.GuildID)
 						helpers.Relax(err)
-						resultMessage += fmt.Sprintf(":arrow_forward: `#%s` `(#%s)` on `%s` `(#%s)`: <#%s> (Webhook ID: `%s`)\n",
+						resultMessage += fmt.Sprintf(":arrow_forward: `#%s` (`#%s`) on `%s` `(#%s)`: <#%s> (Webhooks: `%d`)\n",
 							mirroredChannel.Name, mirroredChannel.ID,
 							mirroredChannelGuild.Name, mirroredChannelGuild.ID,
 							mirroredChannel.ID,
-							mirroredChannelEntry.ChannelWebhookID,
+							len(mirroredChannelEntry.ChannelWebhooks),
 						)
 					}
 				}
@@ -330,7 +378,19 @@ func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID 
 				}
 			}
 			if robyulIsOnTargetGuild {
-				err := cache.GetSession().WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
+				var webhookID, webhookToken string
+				if channelToMirrorToEntry.ChannelWebhookID != "" && channelToMirrorToEntry.ChannelWebhookToken != "" {
+					channelToMirrorToEntry.ChannelWebhooks = append(channelToMirrorToEntry.ChannelWebhooks, Mirror_Channel_Webhook{
+						WebhookID:    channelToMirrorToEntry.ChannelWebhookID,
+						WebhookToken: channelToMirrorToEntry.ChannelWebhookToken,
+					})
+				}
+				for _, channelWebhook := range channelToMirrorToEntry.ChannelWebhooks {
+					webhookID = channelWebhook.WebhookID
+					webhookToken = channelWebhook.WebhookToken
+				}
+
+				err := cache.GetSession().WebhookExecute(webhookID, webhookToken,
 					false, &discordgo.WebhookParams{
 						Content:   message,
 						Username:  author.Username,

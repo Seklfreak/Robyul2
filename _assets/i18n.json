@@ -746,7 +746,8 @@
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>"
     },
     "mirror": {
-      "create-success": "Created successfully an empty Mirror. <:blobokhand:317032017164238848>\nUse `%smirror add-channel %s <channel> <webhook id> <webhook token>` to add a channel to this mirror.",
+      "create-success": "Created successfully an empty Mirror. <:blobokhand:317032017164238848>\nUse `%smirror add-channel %s <channel> [<webhook id> <webhook token>]` to add a channel to this mirror.",
+      "add-channel-error-permissions": "I wasn't able to create a webhook!\nPlease give me permissions to create a webhook or pass a webhook id and token as arguments.",
       "add-channel-progress": "I'm on it! <:blobpopcorn:317046791478575111>",
       "add-channel-success": "Channel successfully added to Mirror. <:blobokhand:317032017164238848>",
       "list-empty": "No mirrors set up on this server yet! <:blobdetective:317045632856489985>",
