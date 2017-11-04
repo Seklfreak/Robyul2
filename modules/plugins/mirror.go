@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	"sync"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -47,6 +49,8 @@ const (
 var (
 	mirrorUrlRegex *regexp.Regexp
 	mirrors        []DB_Mirror_Entry
+	// one lock for every channel ID
+	mirrorChannelLocks = make(map[string]*sync.Mutex, 0)
 )
 
 func (m *Mirror) Init(session *discordgo.Session) {
@@ -385,21 +389,73 @@ func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID 
 						WebhookToken: channelToMirrorToEntry.ChannelWebhookToken,
 					})
 				}
-				for _, channelWebhook := range channelToMirrorToEntry.ChannelWebhooks {
-					webhookID = channelWebhook.WebhookID
-					webhookToken = channelWebhook.WebhookToken
+				if len(channelToMirrorToEntry.ChannelWebhooks) == 1 {
+					err := cache.GetSession().WebhookExecute(
+						channelToMirrorToEntry.ChannelWebhooks[0].WebhookID, channelToMirrorToEntry.ChannelWebhooks[0].WebhookToken,
+						false, &discordgo.WebhookParams{
+							Content:   message,
+							Username:  author.Username,
+							AvatarURL: helpers.GetAvatarUrl(author),
+						})
+					helpers.RelaxLog(err)
+					metrics.MirrorsPostsSent.Add(1)
+				} else if len(channelToMirrorToEntry.ChannelWebhooks) > 1 {
+					m.lockWebhookChannel(channelToMirrorToEntry.ChannelID)
+					lastWebhookID := m.getLastWebhookID(channelToMirrorToEntry.ChannelID)
+					for _, channelWebhook := range channelToMirrorToEntry.ChannelWebhooks {
+						webhookID = channelWebhook.WebhookID
+						webhookToken = channelWebhook.WebhookToken
+						if lastWebhookID != webhookID {
+							break
+						}
+					}
+					err := m.setLastWebhookID(channelToMirrorToEntry.ChannelID, webhookID)
+					helpers.RelaxLog(err)
+					err = cache.GetSession().WebhookExecute(webhookID, webhookToken,
+						false, &discordgo.WebhookParams{
+							Content:   message,
+							Username:  author.Username,
+							AvatarURL: helpers.GetAvatarUrl(author),
+						})
+					helpers.RelaxLog(err)
+					metrics.MirrorsPostsSent.Add(1)
+					m.unlockWebhookChannel(channelToMirrorToEntry.ChannelID)
 				}
-
-				err := cache.GetSession().WebhookExecute(webhookID, webhookToken,
-					false, &discordgo.WebhookParams{
-						Content:   message,
-						Username:  author.Username,
-						AvatarURL: helpers.GetAvatarUrl(author),
-					})
-				helpers.RelaxLog(err)
-				metrics.MirrorsPostsSent.Add(1)
 			}
 		}
+	}
+}
+
+func (m *Mirror) getLastWebhookKey(channelID string) (key string) {
+	return "robyul2-discord:mirror:last-webhook:" + channelID
+}
+
+func (m *Mirror) setLastWebhookID(channelID string, webhookID string) (err error) {
+	key := m.getLastWebhookKey(channelID)
+
+	redisClient := cache.GetRedisClient()
+	return redisClient.Set(key, webhookID, 0).Err()
+}
+
+func (m *Mirror) getLastWebhookID(channelID string) (webhookID string) {
+	key := m.getLastWebhookKey(channelID)
+
+	redisClient := cache.GetRedisClient()
+	return redisClient.Get(key).Val()
+}
+
+func (m *Mirror) lockWebhookChannel(channelID string) {
+	if _, ok := mirrorChannelLocks[channelID]; ok {
+		mirrorChannelLocks[channelID].Lock()
+		return
+	}
+	mirrorChannelLocks[channelID] = new(sync.Mutex)
+	mirrorChannelLocks[channelID].Lock()
+}
+
+func (m *Mirror) unlockWebhookChannel(channelID string) {
+	if _, ok := mirrorChannelLocks[channelID]; ok {
+		mirrorChannelLocks[channelID].Unlock()
 	}
 }
 
