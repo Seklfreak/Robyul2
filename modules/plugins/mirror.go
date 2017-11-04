@@ -16,6 +16,7 @@ type Mirror struct{}
 
 type DB_Mirror_Entry struct {
 	ID                string `gorethink:"id,omitempty"`
+	Type              string `gorethink:"type"`
 	ConnectedChannels []Mirror_Channel
 }
 
@@ -29,11 +30,12 @@ type Mirror_Channel struct {
 func (m *Mirror) Commands() []string {
 	return []string{
 		"mirror",
+		"mirrors",
 	}
 }
 
 const (
-	mirrorUrlRegexText string = `(<?https?:\/\/[^\s]+>?)`
+	mirrorUrlRegexText = `(<?https?:\/\/[^\s]+>?)`
 )
 
 var (
@@ -51,7 +53,8 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 	if len(args) >= 1 {
 		switch args[0] {
 		case "create": // [p]mirror create
-			helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			helpers.RequireRobyulMod(msg, func() {
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 				newMirrorEntry := m.getEntryByOrCreateEmpty("id", "")
@@ -66,9 +69,45 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				mirrors = m.GetMirrors()
 				return
 			})
+			return
+		case "toggle": // [p]mirror toggle <mirror id>
+			session.ChannelTyping(msg.ChannelID)
+			helpers.RequireRobyulMod(msg, func() {
+				if len(args) < 2 {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					return
+				}
+
+				mirrorID := args[1]
+				mirrorEntry := m.getEntryBy("id", mirrorID)
+				if mirrorEntry.ID == "" {
+					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+
+				switch mirrorEntry.Type {
+				case "text":
+					mirrorEntry.Type = "link"
+					break
+				default:
+					mirrorEntry.Type = "text"
+					break
+				}
+				m.setEntry(mirrorEntry)
+
+				go func() {
+					mirrors = m.GetMirrors()
+				}()
+
+				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", mirrorEntry.Type))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
+			})
+			return
 		case "add-channel": // [p]mirror add-channel <mirror id> <channel> <webhook id> <webhook token>
+			session.ChannelTyping(msg.ChannelID)
 			// @TODO: more secure way to exchange token: create own webhook if no arguments passed
-			helpers.RequireBotAdmin(msg, func() {
+			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
 				progressMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-progress"))
 				helpers.Relax(err)
@@ -124,8 +163,10 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				mirrors = m.GetMirrors()
 				return
 			})
+			return
 		case "list": // [p]mirror list
-			helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				var entryBucket []DB_Mirror_Entry
 				listCursor, err := rethink.Table("mirrors").Run(helpers.GetDB())
@@ -170,8 +211,10 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				}
 				return
 			})
+			return
 		case "delete", "del": // [p]mirror delete <mirror id>
-			helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
 					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
@@ -194,13 +237,17 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				mirrors = m.GetMirrors()
 				return
 			})
+			return
 		case "refresh": // [p]mirror refresh
-			helpers.RequireBotAdmin(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				mirrors = m.GetMirrors()
 				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.refreshed-config"))
 				helpers.Relax(err)
+				return
 			})
+			return
 		}
 	}
 }
@@ -241,39 +288,59 @@ TryNextMirror:
 						}
 					}
 				}
-				// post mirror links
-				if len(linksToRepost) > 0 {
-					sourceGuild, err := helpers.GetGuild(sourceChannel.GuildID)
-					helpers.Relax(err)
-					for _, linkToRepost := range linksToRepost {
-						for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
-							if channelToMirrorToEntry.ChannelID != msg.ChannelID {
-								robyulIsOnTargetGuild := false
-								for _, guild := range cache.GetSession().State.Guilds {
-									if guild.ID == channelToMirrorToEntry.GuildID {
-										robyulIsOnTargetGuild = true
-									}
-								}
-								if robyulIsOnTargetGuild {
-									err := session.WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
-										false, &discordgo.WebhookParams{
-											Content: fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
-												linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
-											),
-											Username:  msg.Author.Username,
-											AvatarURL: helpers.GetAvatarUrl(msg.Author),
-										})
-									helpers.Relax(err)
-									metrics.MirrorsPostsSent.Add(1)
-								}
-							}
+				// get full content message
+				newContent := msg.Content
+				if len(msg.Attachments) > 0 {
+					for _, attachement := range msg.Attachments {
+						newContent += "\n" + attachement.URL
+					}
+				}
+				switch mirrorEntry.Type {
+				case "text":
+					m.postMirrorMessage(mirrorEntry, msg.ChannelID, msg.Author, newContent)
+					break
+				default:
+					// post mirror links
+					if len(linksToRepost) > 0 {
+						sourceGuild, err := helpers.GetGuild(sourceChannel.GuildID)
+						helpers.Relax(err)
+						for _, linkToRepost := range linksToRepost {
+							m.postMirrorMessage(mirrorEntry, msg.ChannelID, msg.Author,
+								fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
+									linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
+								),
+							)
 						}
 					}
+					break
 				}
 			}
 		}
 	}
 
+}
+
+func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID string, author *discordgo.User, message string) {
+	for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
+		if channelToMirrorToEntry.ChannelID != sourceChannelID {
+			robyulIsOnTargetGuild := false
+			for _, guild := range cache.GetSession().State.Guilds {
+				if guild.ID == channelToMirrorToEntry.GuildID {
+					robyulIsOnTargetGuild = true
+				}
+			}
+			if robyulIsOnTargetGuild {
+				err := cache.GetSession().WebhookExecute(channelToMirrorToEntry.ChannelWebhookID, channelToMirrorToEntry.ChannelWebhookToken,
+					false, &discordgo.WebhookParams{
+						Content:   message,
+						Username:  author.Username,
+						AvatarURL: helpers.GetAvatarUrl(author),
+					})
+				helpers.RelaxLog(err)
+				metrics.MirrorsPostsSent.Add(1)
+			}
+		}
+	}
 }
 
 func (m *Mirror) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {

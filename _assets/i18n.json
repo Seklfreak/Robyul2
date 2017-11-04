@@ -752,7 +752,8 @@
       "list-empty": "No mirrors set up on this server yet! <:blobdetective:317045632856489985>",
       "delete-not-found": "I wasn't able to find this mirror. <:blobthinking:317028940885524490>",
       "delete-success": "I successfully removed the mirror from the database.",
-      "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>"
+      "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
+      "toggle-success": "I set the mirror mode to `%s`! <:blobokhand:317032017164238848>"
     },
     "randompictures": {
       "pic-no-picture": "I wasn't able to find a picture for you. <:blobweary:317036265071575050>",
