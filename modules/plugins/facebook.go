@@ -56,8 +56,8 @@ type Facebook_Safe_Entries struct {
 }
 
 const (
-	facebookHexColor     string = "#3b5998"
-	FacebookFriendlyPage string = "https://facebook.com/%s/"
+	facebookHexColor     = "#3b5998"
+	FacebookFriendlyPage = "https://facebook.com/%s/"
 )
 
 func (m *Facebook) Commands() []string {
@@ -419,7 +419,7 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "facebook").Error(fmt.Sprintf("posting post: #%d to channel: #%s failed: %s", post.ID, channelID, err))
+		cache.GetLogger().WithField("module", "facebook").Error(fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
 	}
 }
 

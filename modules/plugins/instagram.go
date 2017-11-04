@@ -197,11 +197,11 @@ var (
 )
 
 const (
-	hexColor                 string = "#fcaf45"
-	instagramFriendlyUser    string = "https://www.instagram.com/%s/"
-	instagramFriendlyPost    string = "https://www.instagram.com/p/%s/"
-	instagramPicUrlRegexText string = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
-	instagramSessionKey      string = "robyul2-discord:instagram:session"
+	hexColor                 = "#fcaf45"
+	instagramFriendlyUser    = "https://www.instagram.com/%s/"
+	instagramFriendlyPost    = "https://www.instagram.com/p/%s/"
+	instagramPicUrlRegexText = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
+	instagramSessionKey      = "robyul2-discord:instagram:session"
 )
 
 func (m *Instagram) Commands() []string {
@@ -619,7 +619,7 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting broadcast: #%s to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err))
+		cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting broadcast: #%s to channel: #%d failed: %s", instagramUser.Broadcast.ID, channelID, err))
 	}
 }
 
@@ -682,7 +682,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Error("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err)
+		cache.GetLogger().WithField("module", "instagram").Error("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
 	}
 }
 

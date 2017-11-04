@@ -6,8 +6,6 @@ import (
 
 	"strings"
 
-	"fmt"
-
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
@@ -35,7 +33,6 @@ func (p *Ping) Action(command string, content string, msg *discordgo.Message, se
 }
 
 func (p *Ping) OnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
-	fmt.Println("received message:", message.Content)
 	if message.Author.ID != session.State.User.ID {
 		return
 	}
@@ -53,13 +50,13 @@ func (p *Ping) OnMessage(session *discordgo.Session, message *discordgo.MessageC
 
 	gatewayTaken := time.Duration(time.Now().UnixNano() - parsedUnixNano)
 
-	text := strings.Replace(message.Content, " ~ "+textUnixNano, "", 1) + fmt.Sprintf("\nGateway Time: %s ms", gatewayTaken.String())
+	text := strings.Replace(message.Content, " ~ "+textUnixNano, "", 1) + "\nGateway Time: %s" + gatewayTaken.String()
 
 	started := time.Now()
 	session.ChannelMessageEdit(message.ChannelID, message.ID, text)
 	apiTaken := time.Since(started)
 
-	text = text + fmt.Sprintf("\nHTTP API Time (edit message): %s ms", apiTaken.String())
+	text = text + "\nHTTP API Time (edit message): " + apiTaken.String()
 	session.ChannelMessageEdit(message.ChannelID, message.ID, text)
 
 }

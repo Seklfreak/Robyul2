@@ -28,7 +28,7 @@ func (d *Donators) Commands() []string {
 }
 
 var (
-	hearts = []string{"💕", "💞", "💗", "💝", "💘", "❣", "💖", "💓", "💕"}
+	hearts = []string{"💕", "💞", "💗", "💝", "💘", "💖", "💓", "💕"}
 )
 
 func (d *Donators) Init(session *discordgo.Session) {

@@ -36,7 +36,7 @@ func (g *Gallery) Commands() []string {
 }
 
 const (
-	galleryUrlRegexText string = `(<?https?:\/\/[^\s]+>?)`
+	galleryUrlRegexText = `(<?https?:\/\/[^\s]+>?)`
 )
 
 var (
@@ -238,7 +238,7 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 						if err != nil {
 							if errD, ok := err.(*discordgo.RESTError); ok {
 								if errD.Message.Code == 10015 {
-									cache.GetLogger().WithField("module", "gallery").Error(fmt.Sprintf("Webhook for gallery #%d not found", gallery.ID))
+									cache.GetLogger().WithField("module", "gallery").Error(fmt.Sprintf("Webhook for gallery #%s not found", gallery.ID))
 									continue
 								}
 							}
