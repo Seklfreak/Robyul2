@@ -11,7 +11,6 @@ import (
 	"os"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/modules"
@@ -296,47 +295,38 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			metrics.CommandsExecuted.Add(1)
 			prefix := helpers.GetPrefixForServer(channel.GuildID)
 			if prefix == "" {
-				cache.GetSession().ChannelMessageSend(
+				helpers.SendMessage(
 					channel.ID,
 					helpers.GetText("bot.prefix.not-set"),
 				)
 			}
 
-			cache.GetSession().ChannelMessageSend(
+			helpers.SendMessage(
 				channel.ID,
 				helpers.GetTextF("bot.prefix.is", prefix),
 			)
 			return
 
 			/*
-				case regexp.MustCompile("(?i)^REFRESH CHAT SESSION$").Match(bmsg):
+				case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
 					metrics.CommandsExecuted.Add(1)
 					helpers.RequireAdmin(message.Message, func() {
-						// Refresh cleverbot session
-						helpers.CleverbotRefreshSession(channel.ID)
-						cache.GetSession().ChannelMessageSend(channel.ID, helpers.GetText("bot.cleverbot.refreshed"))
+						// Extract prefix
+						prefix := strings.Fields(regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""))[0]
+
+						// Set new prefix
+						err := helpers.SetPrefixForServer(
+							channel.GuildID,
+							prefix,
+						)
+
+						if err != nil {
+							helpers.SendError(message.Message, err)
+						} else {
+							helpers.SendMessage(channel.ID, helpers.GetTextF("bot.prefix.saved", prefix))
+						}
 					})
 					return*/
-
-		case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
-			metrics.CommandsExecuted.Add(1)
-			helpers.RequireAdmin(message.Message, func() {
-				// Extract prefix
-				prefix := strings.Fields(regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""))[0]
-
-				// Set new prefix
-				err := helpers.SetPrefixForServer(
-					channel.GuildID,
-					prefix,
-				)
-
-				if err != nil {
-					helpers.SendError(message.Message, err)
-				} else {
-					cache.GetSession().ChannelMessageSend(channel.ID, helpers.GetTextF("bot.prefix.saved", prefix))
-				}
-			})
-			return
 
 		case regexp.MustCompile("(?i)^SHUTDOWN.*").Match(bmsg):
 			helpers.RequireBotAdmin(message.Message, func() {
@@ -391,7 +381,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Check if the user is allowed to request commands
 	if !ratelimits.Container.HasKeys(message.Author.ID) && !helpers.IsBotAdmin(message.Author.ID) {
-		session.ChannelMessageSend(message.ChannelID, helpers.GetTextF("bot.ratelimit.hit", message.Author.ID))
+		helpers.SendMessage(message.ChannelID, helpers.GetTextF("bot.ratelimit.hit", message.Author.ID))
 
 		ratelimits.Container.Set(message.Author.ID, -1)
 		return
@@ -437,8 +427,6 @@ func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDe
 // should die as soon as possible or spawn costly work inside of coroutines.
 // This is currently used for the *poll* plugin.
 func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
-	modules.CallExtendedPluginOnReactionAdd(reaction)
-
 	if reaction.UserID == session.State.User.ID {
 		return
 	}
@@ -447,18 +435,7 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
 		return
 	}
 
-	channel, err := helpers.GetChannel(reaction.ChannelID)
-	if err != nil {
-		return
-	}
-	if emojis.ToNumber(reaction.Emoji.Name) == -1 {
-		//session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-		return
-	}
-	if helpers.VotePollIfItsOne(channel.GuildID, reaction.MessageReaction) {
-		helpers.UpdatePollMsg(channel.GuildID, reaction.MessageID)
-	}
-
+	modules.CallExtendedPluginOnReactionAdd(reaction)
 }
 
 func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.MessageReactionRemove) {
@@ -471,7 +448,7 @@ func sendHelp(message *discordgo.MessageCreate) {
 		channel.GuildID = ""
 	}
 
-	cache.GetSession().ChannelMessageSend(
+	helpers.SendMessage(
 		message.ChannelID,
 		helpers.GetTextF("bot.help", message.Author.ID, channel.GuildID),
 	)

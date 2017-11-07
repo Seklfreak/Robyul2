@@ -32,7 +32,7 @@ func CleverbotSend(session *discordgo.Session, channel string, message string) {
 		msg = response
 	}
 
-	session.ChannelMessageSend(channel, msg)
+	SendMessage(channel, msg)
 }
 
 // CleverbotRefreshSession refreshes the cleverbot session for said channel

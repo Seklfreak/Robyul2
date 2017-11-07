@@ -290,7 +290,7 @@ func IsModByID(guildID string, userID string) bool {
 // RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireAdmin(msg *discordgo.Message, cb Callback) {
 	if !IsAdmin(msg) {
-		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("admin.no_permission"))
+		SendMessage(msg.ChannelID, GetText("admin.no_permission"))
 		return
 	}
 
@@ -300,7 +300,7 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
 // RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireMod(msg *discordgo.Message, cb Callback) {
 	if !IsMod(msg) {
-		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("mod.no_permission"))
+		SendMessage(msg.ChannelID, GetText("mod.no_permission"))
 		return
 	}
 
@@ -310,7 +310,7 @@ func RequireMod(msg *discordgo.Message, cb Callback) {
 // RequireBotAdmin only calls $cb if the author is a bot admin
 func RequireBotAdmin(msg *discordgo.Message, cb Callback) {
 	if !IsBotAdmin(msg.Author.ID) {
-		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("botadmin.no_permission"))
+		SendMessage(msg.ChannelID, GetText("botadmin.no_permission"))
 		return
 	}
 
@@ -320,7 +320,7 @@ func RequireBotAdmin(msg *discordgo.Message, cb Callback) {
 // RequireSupportMod only calls $cb if the author is a support mod
 func RequireRobyulMod(msg *discordgo.Message, cb Callback) {
 	if !IsRobyulMod(msg.Author.ID) {
-		cache.GetSession().ChannelMessageSend(msg.ChannelID, GetText("robyulmod.no_permission"))
+		SendMessage(msg.ChannelID, GetText("robyulmod.no_permission"))
 		return
 	}
 
@@ -329,7 +329,7 @@ func RequireRobyulMod(msg *discordgo.Message, cb Callback) {
 
 func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText string, confirmEmojiID string, abortEmojiID string) bool {
 	// send embed asking the user to confirm
-	confirmMessage, err := cache.GetSession().ChannelMessageSendComplex(channelID,
+	confirmMessages, err := SendComplex(channelID,
 		&discordgo.MessageSend{
 			Content: "<@" + author.ID + ">",
 			Embed: &discordgo.MessageEmbed{
@@ -338,11 +338,16 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 			},
 		})
 	if err != nil {
-		cache.GetSession().ChannelMessageSend(channelID, GetTextF("bot.errors.general", err.Error()))
+		SendMessage(channelID, GetTextF("bot.errors.general", err.Error()))
 		return false
 	}
+	if len(confirmMessages) <= 0 {
+		SendMessage(channelID, GetText("bot.errors.generic-nomessage"))
+		return false
+	}
+	confirmMessage := confirmMessages[0]
 	if len(confirmMessage.Embeds) <= 0 {
-		cache.GetSession().ChannelMessageSend(channelID, GetText("bot.errors.no-embed"))
+		SendMessage(channelID, GetText("bot.errors.no-embed"))
 		return false
 	}
 

@@ -62,7 +62,7 @@
       "generic-nomessage": "Something went terribly wrong. <:blobweary:317036265071575050>"
     },
     "prefix": {
-      "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Karen set prefix ?`",
+      "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Robyul set prefix ?`",
       "is": [
         "The prefix is `%s` <:googlesmile:317031693951434752>",
         "Last time I checked it was `%s` <:blobwink:317030948577476608>",

@@ -70,7 +70,7 @@ func RelaxEmbed(err error, channelID string, commandMessageID string) {
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code == 50013 {
 				if channelID != "" {
-					_, err = cache.GetSession().ChannelMessageSend(channelID, GetText("bot.errors.no-embed"))
+					_, err = SendMessage(channelID, GetText("bot.errors.no-embed"))
 					RelaxMessage(err, channelID, commandMessageID)
 				}
 				return
@@ -131,21 +131,21 @@ func SendError(msg *discordgo.Message, err interface{}) {
 		buf := make([]byte, 1<<16)
 		stackSize := runtime.Stack(buf, false)
 
-		cache.GetSession().ChannelMessageSend(
+		SendMessage(
 			msg.ChannelID,
 			"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v\n", err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
 		)
 	} else {
 		if errR, ok := err.(*discordgo.RESTError); ok && errR != nil && errR.Message != nil {
 			if msg != nil {
-				cache.GetSession().ChannelMessageSend(
+				SendMessage(
 					msg.ChannelID,
 					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v", errR.Message.Message)+"\n```",
 				)
 			}
 		} else {
 			if msg != nil {
-				cache.GetSession().ChannelMessageSend(
+				SendMessage(
 					msg.ChannelID,
 					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v", err)+"\n```",
 				)
