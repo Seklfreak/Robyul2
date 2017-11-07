@@ -146,7 +146,8 @@ func (s *Starboard) actionStatus(args []string, in *discordgo.Message, out **dis
 	emojiText = strings.TrimRight(emojiText, ", ")
 
 	if guildSettings.StarboardChannelID != "" {
-		*out = s.newMsg(helpers.GetTextF("plugins.starboard.status-set", guildSettings.StarboardChannelID, emojiText))
+		*out = s.newMsg(helpers.GetTextF("plugins.starboard.status-set",
+			guildSettings.StarboardChannelID, s.getMinimum(channel.GuildID), emojiText))
 	} else {
 		*out = s.newMsg(helpers.GetText("plugins.starboard.status-none"))
 	}
