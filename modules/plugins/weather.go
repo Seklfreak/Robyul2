@@ -107,7 +107,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	if content == "" {
 		latResult, lngResult, addressResult = w.getLastLocation(msg.Author.ID)
 		if latResult == 0 && lngResult == 0 {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			return
 		}
 	}
@@ -121,7 +121,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 		locationChildren, err := geocodingResult.Path("results").Children()
 		helpers.Relax(err)
 		if geocodingResult.Path("status").Data().(string) != "OK" || len(locationChildren) <= 0 {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
 			return
 		}
 
@@ -132,7 +132,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 		}
 
 		if addressResult == "" {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.weather.address-not-found"))
 			return
 		}
 	}
@@ -148,7 +148,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	helpers.Relax(err)
 
 	if darkSkyForecast.Currently.Summary == "" {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.weather.no-weather"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.weather.no-weather"))
 		return
 	}
 
@@ -178,7 +178,7 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 		Color: helpers.GetDiscordColorFromHex(darkSkyHexColor),
 	}
 
-	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, weatherEmbed)
+	_, err = helpers.SendEmbed(msg.ChannelID, weatherEmbed)
 	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 }
 

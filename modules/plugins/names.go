@@ -136,7 +136,7 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	resultText := helpers.GetTextF("plugins.names.list-result",
 		user.Username, user.Discriminator, user.ID, pastUsernamesText, pastNicknamesText)
 	for _, page := range helpers.Pagify(resultText, ",") {
-		_, err := cache.GetSession().ChannelMessageSend(in.ChannelID, page)
+		_, err := helpers.SendMessage(in.ChannelID, page)
 		helpers.RelaxMessage(err, in.ChannelID, in.ID)
 	}
 
@@ -364,7 +364,7 @@ func (n *Names) OnGuildMemberListChunk(session *discordgo.Session, members *disc
 }
 
 func (n *Names) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) namesAction {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil

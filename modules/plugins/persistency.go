@@ -233,7 +233,7 @@ func (p *Persistency) statusAction(args []string, in *discordgo.Message, out **d
 	message += fmt.Sprintf("_found %d role(s) in total_", len(customRoles)+len(managedRoles)+len(biasRoles))
 
 	for _, page := range helpers.Pagify(message, ",") {
-		_, err = cache.GetSession().ChannelMessageSend(in.ChannelID, page)
+		_, err = helpers.SendMessage(in.ChannelID, page)
 		helpers.RelaxMessage(err, in.ChannelID, in.ID)
 	}
 
@@ -283,7 +283,7 @@ func (p *Persistency) toggleBiasAction(args []string, in *discordgo.Message, out
 }
 
 func (p *Persistency) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil

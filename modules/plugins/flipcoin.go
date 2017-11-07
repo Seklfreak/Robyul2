@@ -3,6 +3,7 @@ package plugins
 import (
 	"math/rand"
 
+	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -24,7 +25,7 @@ func (f *FlipCoin) Init(session *discordgo.Session) {
 }
 
 func (f *FlipCoin) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	session.ChannelMessageSend(
+	helpers.SendMessage(
 		msg.ChannelID,
 		f.choices[rand.Intn(len(f.choices))],
 	)

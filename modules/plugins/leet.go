@@ -3,6 +3,7 @@ package plugins
 import (
 	"strings"
 
+	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -38,5 +39,5 @@ func (l *Leet) Action(command string, content string, msg *discordgo.Message, se
 		content = strings.Replace(content, ascii, leet, -1)
 	}
 
-	session.ChannelMessageSend(msg.ChannelID, "```\n"+content+"\n```")
+	helpers.SendMessage(msg.ChannelID, "```\n"+content+"\n```")
 }

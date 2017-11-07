@@ -173,7 +173,7 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 	resultText += helpers.GetTextF("plugins.autoleaver.bulk-footer", guildsAdded) + "\n"
 
 	for _, page := range helpers.Pagify(resultText, "\n") {
-		_, err = cache.GetSession().ChannelMessageSend(in.ChannelID, page)
+		_, err = helpers.SendMessage(in.ChannelID, page)
 		helpers.RelaxMessage(err, in.ChannelID, in.ID)
 	}
 
@@ -340,7 +340,7 @@ func (a *Autoleaver) removeFromServerWhitelist(whitelistEntry models.AutoleaverW
 }
 
 func (a *Autoleaver) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil
@@ -374,7 +374,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 
 		joinText := helpers.GetTextF("plugins.autoleaver.noti-join", guild.Name, guild.ID)
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
-			_, err = cache.GetSession().ChannelMessageSend(notificationChannelID, joinText)
+			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
 				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Join Notification failed, Error: %s", err.Error()))
 			}
@@ -386,7 +386,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 
 		notWhitelistedJoinText := helpers.GetTextF("plugins.autoleaver.noti-join-not-whitelisted", guild.Name, guild.ID)
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
-			_, err = cache.GetSession().ChannelMessageSend(notificationChannelID, notWhitelistedJoinText)
+			_, err = helpers.SendMessage(notificationChannelID, notWhitelistedJoinText)
 			if err != nil {
 				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Not Whitelisted Join Notification failed, Error: %s", err.Error()))
 			}
@@ -404,7 +404,7 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 		var err error
 		joinText := helpers.GetTextF("plugins.autoleaver.noti-leave", guild.Name, guild.ID)
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
-			_, err = cache.GetSession().ChannelMessageSend(notificationChannelID, joinText)
+			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
 				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Leave Notification failed, Error: %s", err.Error()))
 			}

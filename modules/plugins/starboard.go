@@ -290,7 +290,7 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 }
 
 func (s *Starboard) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil
@@ -629,17 +629,20 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 	if starEntry.StarboardMessageChannelID != "" &&
 		starEntry.StarboardMessageID != "" &&
 		starEntry.StarboardMessageChannelID == settings.StarboardChannelID {
-		_, err := cache.GetSession().ChannelMessageEditEmbed(
+		_, err := helpers.EditEmbed(
 			settings.StarboardChannelID, starEntry.StarboardMessageID, starboardPostEmbed)
 		return err
 	} else {
-		starboardPostMessage, err := cache.GetSession().ChannelMessageSendEmbed(
+		starboardPostMessages, err := helpers.SendEmbed(
 			settings.StarboardChannelID, starboardPostEmbed)
 		if err != nil {
 			return err
 		}
-		starEntry.StarboardMessageID = starboardPostMessage.ID
-		starEntry.StarboardMessageChannelID = starboardPostMessage.ChannelID
+		if len(starboardPostMessages) <= 0 {
+			return errors.New("sending message failed")
+		}
+		starEntry.StarboardMessageID = starboardPostMessages[0].ID
+		starEntry.StarboardMessageChannelID = starboardPostMessages[0].ChannelID
 		return s.setStarboardEntry(starEntry)
 	}
 }

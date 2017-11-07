@@ -18,22 +18,22 @@ import (
 )
 
 var (
-	VliveAppId string = "8c6cc7b45d2568fb668be6e05b6e5a3b"
+	VliveAppId = "8c6cc7b45d2568fb668be6e05b6e5a3b"
 )
 
 const (
-	VliveEndpointDecodeChannelCode string = "http://api.vfan.vlive.tv/vproxy/channelplus/decodeChannelCode?app_id=%s&channelCode=%s"
-	VliveEndpointChannel           string = "http://api.vfan.vlive.tv/channel.%d?app_id=%s&fields=channel_seq,channel_code,type,channel_name,fan_count,channel_cover_img,channel_profile_img,representative_color,celeb_board"
-	VliveEndpointChannelVideoList  string = "http://api.vfan.vlive.tv/vproxy/channelplus/getChannelVideoList?app_id=%s&channelSeq=%d&maxNumOfRows=%d"
-	VliveEndpointUpcomingVideoList string = "http://api.vfan.vlive.tv/vproxy/channelplus/getUpcomingVideoList?app_id=%s&channelSeq=%d&maxNumOfRows=%d"
-	VliveEndpointNotices           string = "http://notice.vlive.tv/notice/list.json?channel_seq=%d"
-	VliveEndpointCeleb             string = "http://api.vfan.vlive.tv/board.%d/posts?app_id=%s"
-	VliveFriendlyChannel           string = "http://channels.vlive.tv/%s"
-	VliveFriendlyVideo             string = "http://www.vlive.tv/video/%d"
-	VliveFriendlyNotice            string = "http://channels.vlive.tv/%s/notice/%d"
-	VliveFriendlyCeleb             string = "http://channels.vlive.tv/%s/celeb/%s"
-	VliveFriendlySearch            string = "http://www.vlive.tv/search/all?query=%s"
-	ChannelIdRegex                 string = "(http(s)?://channels.vlive.tv)?(/)?(channels/)?([A-Z0-9]+)(/video)?"
+	VliveEndpointDecodeChannelCode = "http://api.vfan.vlive.tv/vproxy/channelplus/decodeChannelCode?app_id=%s&channelCode=%s"
+	VliveEndpointChannel           = "http://api.vfan.vlive.tv/channel.%d?app_id=%s&fields=channel_seq,channel_code,type,channel_name,fan_count,channel_cover_img,channel_profile_img,representative_color,celeb_board"
+	VliveEndpointChannelVideoList  = "http://api.vfan.vlive.tv/vproxy/channelplus/getChannelVideoList?app_id=%s&channelSeq=%d&maxNumOfRows=%d"
+	VliveEndpointUpcomingVideoList = "http://api.vfan.vlive.tv/vproxy/channelplus/getUpcomingVideoList?app_id=%s&channelSeq=%d&maxNumOfRows=%d"
+	VliveEndpointNotices           = "http://notice.vlive.tv/notice/list.json?channel_seq=%d"
+	VliveEndpointCeleb             = "http://api.vfan.vlive.tv/board.%d/posts?app_id=%s"
+	VliveFriendlyChannel           = "http://channels.vlive.tv/%s"
+	VliveFriendlyVideo             = "http://www.vlive.tv/video/%d"
+	VliveFriendlyNotice            = "http://channels.vlive.tv/%s/notice/%d"
+	VliveFriendlyCeleb             = "http://channels.vlive.tv/%s/celeb/%s"
+	VliveFriendlySearch            = "http://www.vlive.tv/search/all?query=%s"
+	ChannelIdRegex                 = "(http(s)?://channels.vlive.tv)?(/)?(channels/)?([A-Z0-9]+)(/video)?"
 )
 
 type VLive struct{}
@@ -266,11 +266,11 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				if len(args) >= 3 {
 					targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
@@ -283,7 +283,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					if err != nil {
 						if errD, ok := err.(*discordgo.RESTError); ok {
 							if errD.Message.Code == 50013 {
-								_, err = session.ChannelMessageSend(msg.ChannelID, "Please give me the `Manage Roles` permission.")
+								_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission.")
 								helpers.Relax(err)
 								return
 							} else {
@@ -299,7 +299,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 						}
 					}
 					if mentionRole.ID == "" {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 				}
@@ -314,7 +314,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				// use input as id instead or use the id from above (if channel found)
 				vliveChannel, err := r.getVLiveChannelByVliveChannelId(vliveChannelId)
 				if err != nil {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
 					return
 				}
 				// create new entry in db
@@ -334,7 +334,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				if mentionRole.ID != "" {
 					successMessage += helpers.GetTextF("plugins.vlive.channel-added-success-additional-role", mentionRole.Name)
 				}
-				session.ChannelMessageSend(msg.ChannelID, successMessage)
+				helpers.SendMessage(msg.ChannelID, successMessage)
 				cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s) Mention @%s (#%s)",
 					entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID,
 					mentionRole.Name, mentionRole.ID))
@@ -348,15 +348,15 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					if entryBucket.ID != "" {
 						r.deleteEntryById(entryBucket.ID)
 
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
 						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))
 					} else {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.vlive.channel-delete-not-found-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.vlive.channel-delete-not-found-error"))
 						return
 					}
 
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 			})
@@ -372,7 +372,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-list-no-channels-error"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-list-no-channels-error"))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
@@ -390,7 +390,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			}
 			resultMessage += fmt.Sprintf("Found **%d** V Live Channels in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+				_, err := helpers.SendMessage(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
 		default:
@@ -407,7 +407,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			// use input as id instead or use the id from above (if channel found)
 			vliveChannel, err := r.getVLiveChannelByVliveChannelId(vliveChannelId)
 			if err != nil || vliveChannel.Name == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-not-found"))
 				return
 			}
 			channelEmbed := &discordgo.MessageEmbed{
@@ -442,7 +442,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					Inline: false,
 				})
 			}
-			_, err = session.ChannelMessageSendComplex(msg.ChannelID,
+			_, err = helpers.SendComplex(msg.ChannelID,
 				&discordgo.MessageSend{
 					Content: fmt.Sprintf("<%s>", vliveChannel.Url),
 					Embed:   channelEmbed,
@@ -451,7 +451,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 	} else {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 	}
 }
 
@@ -595,7 +595,7 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", vod.Url),
 		Embed:   channelEmbed,
 	})
@@ -619,7 +619,7 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
 	postText := fmt.Sprintf("<%s>", vliveChannel.Url)
-	_, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + postText,
 		Embed:   channelEmbed,
 	})
@@ -642,7 +642,7 @@ func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliv
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", vod.Url),
 		Embed:   channelEmbed,
 	})
@@ -665,7 +665,7 @@ func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", notice.Url),
 		Embed:   channelEmbed,
 	})
@@ -687,7 +687,7 @@ func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, v
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := cache.GetSession().ChannelMessageSendComplex(entry.ChannelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", celeb.Url),
 		Embed:   channelEmbed,
 	})

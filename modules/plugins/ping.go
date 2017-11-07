@@ -28,7 +28,7 @@ func (p *Ping) Init(session *discordgo.Session) {
 }
 
 func (p *Ping) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	_, err := session.ChannelMessageSend(msg.ChannelID, pingMessage+" ~ "+strconv.FormatInt(time.Now().UnixNano(), 10))
+	_, err := helpers.SendMessage(msg.ChannelID, pingMessage+" ~ "+strconv.FormatInt(time.Now().UnixNano(), 10))
 	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 }
 
@@ -50,13 +50,13 @@ func (p *Ping) OnMessage(session *discordgo.Session, message *discordgo.MessageC
 
 	gatewayTaken := time.Duration(time.Now().UnixNano() - parsedUnixNano)
 
-	text := strings.Replace(message.Content, " ~ "+textUnixNano, "", 1) + "\nGateway Time: %s" + gatewayTaken.String()
+	text := strings.Replace(message.Content, " ~ "+textUnixNano, "", 1) + "\nGateway Time: " + gatewayTaken.String()
 
 	started := time.Now()
-	session.ChannelMessageEdit(message.ChannelID, message.ID, text)
+	helpers.EditMessage(message.ChannelID, message.ID, text)
 	apiTaken := time.Since(started)
 
 	text = text + "\nHTTP API Time (edit message): " + apiTaken.String()
-	session.ChannelMessageEdit(message.ChannelID, message.ID, text)
+	helpers.EditMessage(message.ChannelID, message.ID, text)
 
 }

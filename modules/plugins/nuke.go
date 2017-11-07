@@ -38,7 +38,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 		switch args[0] {
 		case "user": // [p]nuke user <user id/mention> "<reason>"
 			if !helpers.IsNukeMod(msg.Author.ID) {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.no-nukemod-permissions"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.no-nukemod-permissions"))
 				helpers.Relax(err)
 				return
 			} else {
@@ -46,7 +46,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 				safeArgs := splitChooseRegex.FindAllString(content, -1)
 				if len(safeArgs) < 3 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 					return
 				} else {
 					var err error
@@ -54,7 +54,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 					targetUser, err = helpers.GetUserFromMention(strings.Trim(safeArgs[1], "\""))
 					if err != nil {
 						if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.user-not-found"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.user-not-found"))
 							helpers.Relax(err)
 							return
 						} else {
@@ -75,7 +75,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						defer listCursor.Close()
 						err = listCursor.One(&entryBucket)
 						if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.already-nuked"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.already-nuked"))
 							helpers.Relax(err)
 							return
 						}
@@ -88,7 +88,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						nukeLogEntry.Reason = reason
 						n.setEntry(nukeLogEntry)
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.nuke-saved-in-db"))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.nuke-saved-in-db"))
 						helpers.Relax(err)
 
 						bannedOnN := 0
@@ -103,10 +103,10 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 								err = session.GuildBanCreateWithReason(targetGuild.ID, targetUser.ID, reasonText, 1)
 								if err != nil {
 									if err, ok := err.(*discordgo.RESTError); ok {
-										session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
+										helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
 											targetGuild.Name, targetGuild.ID, err.Message.Message))
 										if targetGuildSettings.NukeLogChannel != "" {
-											session.ChannelMessageSend(targetGuildSettings.NukeLogChannel,
+											helpers.SendMessage(targetGuildSettings.NukeLogChannel,
 												helpers.GetTextF("plugins.nuke.onserver-banned-error",
 													targetUser.Username, targetUser.ID,
 													err.Message.Message,
@@ -114,10 +114,10 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 													reason))
 										}
 									} else {
-										session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
+										helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
 											targetGuild.Name, targetGuild.ID, err.Error()))
 										if targetGuildSettings.NukeLogChannel != "" {
-											session.ChannelMessageSend(targetGuildSettings.NukeLogChannel,
+											helpers.SendMessage(targetGuildSettings.NukeLogChannel,
 												helpers.GetTextF("plugins.nuke.onserver-banned-error",
 													targetUser.Username, targetUser.ID,
 													err.Error(),
@@ -126,10 +126,10 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 										}
 									}
 								} else {
-									session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.nuke.banned-on-server",
+									helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.banned-on-server",
 										targetGuild.Name, targetGuild.ID))
 									if targetGuildSettings.NukeLogChannel != "" {
-										session.ChannelMessageSend(targetGuildSettings.NukeLogChannel,
+										helpers.SendMessage(targetGuildSettings.NukeLogChannel,
 											helpers.GetTextF("plugins.nuke.onserver-banned-success",
 												targetUser.Username, targetUser.ID,
 												msg.Author.Username, msg.Author.ID,
@@ -140,7 +140,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 							}
 						}
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.nuke.nuke-completed", bannedOnN))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.nuke-completed", bannedOnN))
 						helpers.Relax(err)
 					}
 				}
@@ -158,7 +158,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 				if len(args) >= 2 {
 					targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 
@@ -173,7 +173,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						err = helpers.GuildSettingsSet(channel.GuildID, settings)
 						helpers.Relax(err)
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.participation-enabled"))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.participation-enabled"))
 						helpers.Relax(err)
 						// TODO: ask to ban people already nuked?
 					}
@@ -182,7 +182,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 					err = helpers.GuildSettingsSet(channel.GuildID, settings)
 					helpers.Relax(err)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.nuke.participation-disabled"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.participation-disabled"))
 					helpers.Relax(err)
 				}
 			})
@@ -205,7 +205,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 				logMessage += "All usernames are from the time they got nuked."
 
 				for _, page := range helpers.Pagify(logMessage, "\n") {
-					_, err := session.ChannelMessageSend(msg.ChannelID, page)
+					_, err := helpers.SendMessage(msg.ChannelID, page)
 					helpers.Relax(err)
 				}
 			})

@@ -36,7 +36,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	session.ChannelTyping(msg.ChannelID)
 
 	if len(content) <= 0 && len(msg.Attachments) <= 0 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		helpers.Relax(err)
 		return
 	}
@@ -63,14 +63,14 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	jsonResult, err := gabs.ParseJSON(buf.Bytes())
 
 	if err != nil || jsonResult.ExistsP("status") == false || jsonResult.Path("status").Data().(float64) >= 3 {
-		_, err = session.ChannelMessageSend(msg.ChannelID,
+		_, err = helpers.SendMessage(msg.ChannelID,
 			fmt.Sprintf("<@%s> Something went wrong while creating your streamable. <:blobscream:317043778823389184>",
 				msg.Author.ID))
 		helpers.Relax(err)
 		return
 	}
 
-	session.ChannelMessageSend(msg.ChannelID, "Your streamable is processing, this may take a while. <:blobsleeping:317047101534109696>")
+	helpers.SendMessage(msg.ChannelID, "Your streamable is processing, this may take a while. <:blobsleeping:317047101534109696>")
 	session.ChannelTyping(msg.ChannelID)
 
 	streamableShortcode := jsonResult.Path("shortcode").Data().(string)
@@ -81,7 +81,7 @@ CheckStreamableStatusLoop:
 		result, err := gabs.ParseJSON(helpers.NetGet(statusStreamableEndpoint))
 		if err != nil {
 			if strings.Contains(err.Error(), "Expected status 200; Got 429") {
-				_, err = session.ChannelMessageSend(msg.ChannelID,
+				_, err = helpers.SendMessage(msg.ChannelID,
 					fmt.Sprintf("<@%s> Too many requests, please try again later. <:blobscream:317043778823389184>",
 						msg.Author.ID))
 				helpers.Relax(err)
@@ -103,7 +103,7 @@ CheckStreamableStatusLoop:
 			}
 			break CheckStreamableStatusLoop
 		default:
-			_, err = session.ChannelMessageSend(msg.ChannelID,
+			_, err = helpers.SendMessage(msg.ChannelID,
 				fmt.Sprintf("<@%s> Something went wrong while creating your streamable. <:blobscream:317043778823389184>",
 					msg.Author.ID))
 			helpers.Relax(err)
@@ -111,6 +111,6 @@ CheckStreamableStatusLoop:
 		}
 	}
 
-	_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Your streamable is done: %s .", msg.Author.ID, streamableUrl))
+	_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> Your streamable is done: %s .", msg.Author.ID, streamableUrl))
 	helpers.Relax(err)
 }

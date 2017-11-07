@@ -72,7 +72,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				m.setEntry(newMirrorEntry)
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Created new Mirror by %s (#%s)", msg.Author.Username, msg.Author.ID))
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mirror.create-success",
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.create-success",
 					helpers.GetPrefixForServer(channel.GuildID), newMirrorEntry.ID))
 				helpers.Relax(err)
 
@@ -84,14 +84,14 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			session.ChannelTyping(msg.ChannelID)
 			helpers.RequireRobyulMod(msg, func() {
 				if len(args) < 2 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 
 				mirrorID := args[1]
 				mirrorEntry := m.getEntryBy("id", mirrorID)
 				if mirrorEntry.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
@@ -109,7 +109,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					mirrors = m.GetMirrors()
 				}()
 
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", mirrorEntry.Type))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", mirrorEntry.Type))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
@@ -119,10 +119,15 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			// @TODO: more secure way to exchange token: create own webhook if no arguments passed
 			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
-				progressMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-progress"))
+				progressMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-progress"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				if len(progressMessages) <= 0 {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+					return
+				}
+				progressMessage := progressMessages[0]
 				if len(args) < 3 {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
@@ -134,14 +139,14 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				mirrorID := args[1]
 				mirrorEntry := m.getEntryBy("id", mirrorID)
 				if mirrorEntry.ID == "" {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
 
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 				if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
@@ -157,7 +162,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 
 					webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
 					if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
-						_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+						_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 						helpers.Relax(err)
 						return
 					}
@@ -169,7 +174,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					if err != nil {
 						if errD, ok := err.(*discordgo.RESTError); ok {
 							if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
-								_, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
+								_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
 								helpers.Relax(err)
 								return
 							}
@@ -201,7 +206,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Added Channel %s (#%s) on Server %s (#%s) to Mirror %s by %s (#%s)",
 					targetChannel.Name, targetChannel.ID, guild.Name, guild.ID, mirrorEntry.ID, msg.Author.Username, msg.Author.ID))
-				_, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-success"))
+				_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-success"))
 				helpers.Relax(err)
 				return
 			})
@@ -217,7 +222,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				err = listCursor.All(&entryBucket)
 
 				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.list-empty"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.list-empty"))
 					return
 				}
 				helpers.Relax(err)
@@ -258,7 +263,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				}
 				resultMessage += fmt.Sprintf("Found **%d** Mirrors in total.", len(entryBucket))
 				for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-					_, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+					_, err = helpers.SendMessage(msg.ChannelID, resultPage)
 					helpers.Relax(err)
 				}
 				return
@@ -269,21 +274,21 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
 				entryId := args[1]
 				entryBucket := m.getEntryBy("id", entryId)
 				if entryBucket.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.delete-not-found"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.delete-not-found"))
 					return
 				}
 				m.deleteEntryById(entryBucket.ID)
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Deleted Mirror %s by %s (#%s)",
 					entryBucket.ID, msg.Author.Username, msg.Author.ID))
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.delete-success"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.delete-success"))
 				helpers.Relax(err)
 
 				mirrors = m.GetMirrors()
@@ -295,7 +300,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				mirrors = m.GetMirrors()
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mirror.refreshed-config"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.refreshed-config"))
 				helpers.Relax(err)
 				return
 			})

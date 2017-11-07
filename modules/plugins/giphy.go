@@ -45,7 +45,7 @@ func (g *Giphy) Action(command string, content string, msg *discordgo.Message, s
 	// Get gifs
 	gifs, err := json.Path("data").Children()
 	if err != nil {
-		session.ChannelMessageSend(msg.ChannelID, "Error parsing Giphy's response <:blobfrowningbig:317028438693117962>")
+		helpers.SendMessage(msg.ChannelID, "Error parsing Giphy's response <:blobfrowningbig:317028438693117962>")
 		return
 	}
 
@@ -58,5 +58,5 @@ func (g *Giphy) Action(command string, content string, msg *discordgo.Message, s
 	}
 
 	// Send the result
-	session.ChannelMessageSend(msg.ChannelID, m)
+	helpers.SendMessage(msg.ChannelID, m)
 }

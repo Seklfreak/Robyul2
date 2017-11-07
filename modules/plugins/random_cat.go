@@ -23,7 +23,7 @@ func (rc RandomCat) Action(command string, content string, msg *discordgo.Messag
 	session.ChannelTyping(msg.ChannelID)
 
 	json := helpers.GetJSON(ENDPOINT)
-	session.ChannelMessageSend(
+	helpers.SendMessage(
 		msg.ChannelID,
 		"MEOW! :smiley_cat:\n"+json.Path("file").Data().(string),
 	)

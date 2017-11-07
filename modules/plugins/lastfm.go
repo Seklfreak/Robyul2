@@ -20,8 +20,8 @@ import (
 type LastFm struct{}
 
 const (
-	lastfmHexColor     string = "#d51007"
-	lastfmFriendlyUser string = "https://www.last.fm/user/%s"
+	lastfmHexColor     = "#d51007"
+	lastfmFriendlyUser = "https://www.last.fm/user/%s"
 )
 
 var (
@@ -323,9 +323,9 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastFmAccount.LastFmUsername = lastfmUsername
 				m.setLastFmAccount(lastFmAccount)
 
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.set-username-success", lastfmUsername))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.set-username-success", lastfmUsername))
 			} else {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return
 			}
 		case "np", "nowplaying":
@@ -337,7 +337,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				}
 			}
 			if lastfmUsername == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -348,7 +348,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			if err != nil {
 				if e, ok := err.(*lastfm.LastfmError); ok {
-					session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
 					return
 				}
 			}
@@ -376,10 +376,10 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						}
 					}
 				}
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, lastTrackEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, lastTrackEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			} else {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
 		case "topalbums", "topalbum":
@@ -418,7 +418,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				}
 			}
 			if lastfmUsername == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -430,7 +430,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			if err != nil {
 				if e, ok := err.(*lastfm.LastfmError); ok {
-					session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
 					return
 				}
 			}
@@ -449,10 +449,10 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						Value:  fmt.Sprintf("**%s** by **%s**", topAlbum.Name, topAlbum.Artist.Name),
 						Inline: false})
 				}
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, topAlbumsEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, topAlbumsEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			} else {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
 		case "topartists", "topartist":
@@ -491,7 +491,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				}
 			}
 			if lastfmUsername == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -504,7 +504,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			if err != nil {
 				if e, ok := err.(*lastfm.LastfmError); ok {
-					session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
 					return
 				}
 			}
@@ -523,10 +523,10 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						Value:  fmt.Sprintf("**%s**", topArtist.Name),
 						Inline: false})
 				}
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, topArtistsEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, topArtistsEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			} else {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
 		case "toptracks", "topsongs", "toptrack", "topsong":
@@ -565,7 +565,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				}
 			}
 			if lastfmUsername == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -578,7 +578,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			if err != nil {
 				if e, ok := err.(*lastfm.LastfmError); ok {
-					session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
 					return
 				}
 			}
@@ -597,15 +597,15 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						Value:  fmt.Sprintf("**%s** by **%s**", topTrack.Name, topTrack.Artist.Name),
 						Inline: false})
 				}
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, topTracksEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, topTracksEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			} else {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
 		case "discord-top", "server-top":
 			if len(args) < 1 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return
 			}
 			channel, err := helpers.GetChannel(msg.ChannelID)
@@ -621,7 +621,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 
 			if combinedStats.GuildID == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lastfm.no-stats-available"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-stats-available"))
 				return
 			}
 
@@ -674,7 +674,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					break
 				}
 			}
-			_, err = session.ChannelMessageSendEmbed(msg.ChannelID, topTracksEmbed)
+			_, err = helpers.SendEmbed(msg.ChannelID, topTracksEmbed)
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			break
 		default:
@@ -689,7 +689,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{"user": lastfmUsername})
 			if err != nil {
 				if e, ok := err.(*lastfm.LastfmError); ok {
-					session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
 					return
 				}
 			}
@@ -742,11 +742,11 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					helpers.SendError(msg, err)
 				}
 			}
-			_, err = session.ChannelMessageSendEmbed(msg.ChannelID, accountEmbed)
+			_, err = helpers.SendEmbed(msg.ChannelID, accountEmbed)
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 		}
 	} else {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
 		return
 	}
 

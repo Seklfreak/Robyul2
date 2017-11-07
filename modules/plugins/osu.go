@@ -60,7 +60,7 @@ func (o *Osu) Action(command string, content string, msg *discordgo.Message, ses
 	helpers.Relax(err)
 
 	if len(jsonc) == 0 {
-		session.ChannelMessageSend(msg.ChannelID, "User not found <:blobfrowningbig:317028438693117962>")
+		helpers.SendMessage(msg.ChannelID, "User not found <:blobfrowningbig:317028438693117962>")
 		return
 	}
 
@@ -79,11 +79,11 @@ func (o *Osu) Action(command string, content string, msg *discordgo.Message, ses
 	avatar = strings.Replace(avatar, `"`, "", -1)
 
 	if (!json.ExistsP("level")) || json.Path("level").Data() == nil {
-		session.ChannelMessageSend(msg.ChannelID, "Seems like "+user+" didn't play this mode yet <:blobthinking:317028940885524490>")
+		helpers.SendMessage(msg.ChannelID, "Seems like "+user+" didn't play this mode yet <:blobthinking:317028940885524490>")
 		return
 	}
 
-	session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+	helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 		Color:       0xEF77AF,
 		Description: "Showing stats for " + user,
 		Thumbnail: &discordgo.MessageEmbedThumbnail{

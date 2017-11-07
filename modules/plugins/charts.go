@@ -17,25 +17,25 @@ import (
 type Charts struct{}
 
 const (
-	melonEndpointCharts         string = "http://apis.skplanetx.com/melon/charts/%s?version=1&page=1&count=10"
-	melonEndpointSongSearch     string = "http://apis.skplanetx.com/melon/songs?version=1&page=1&count=2&searchKeyword=%s"
-	melonEndpointArtistSearch   string = "http://apis.skplanetx.com/melon/artists?version=1&page=1&count=2&searchKeyword=%s"
-	melonEndpointAlbumSearch    string = "http://apis.skplanetx.com/melon/albums?version=1&page=1&count=2&searchKeyword=%s"
-	melonFriendlyRealtimeStats  string = "http://www.melon.com/chart/index.htm"
-	melonFriendlyDailyStats     string = "http://www.melon.com/chart/day/index.htm"
-	melonFriendlySongDetails    string = "http://www.melon.com/song/detail.htm?songId=%s"
-	melonFriendlyArtistDetails  string = "http://www.melon.com/artist/detail.htm?artistId=%d"
-	melonFriendlyAlbumDetails   string = "http://www.melon.com/album/detail.htm?albumId=%d"
-	ichartPageRealtimeCharts    string = "http://www.instiz.net/iframe_ichart_score.htm?real=1"
-	ichartPageWeeklyCharts      string = "http://www.instiz.net/iframe_ichart_score.htm?week=1"
-	ichartFriendlyRealtimeStats string = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
-	ichartFriendlyWeeklyStats   string = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
-	gaonPageWeeklyCharts        string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=week"
-	gaonPageMonthlyCharts       string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=month"
-	gaonPageYearlyCharts        string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=year"
-	gaonFriendlyWeeklyCharts    string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=week"
-	gaonFriendlyMonthlyCharts   string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=month"
-	gaonFriendlyYearlyCharts    string = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=year"
+	melonEndpointCharts         = "http://apis.skplanetx.com/melon/charts/%s?version=1&page=1&count=10"
+	melonEndpointSongSearch     = "http://apis.skplanetx.com/melon/songs?version=1&page=1&count=2&searchKeyword=%s"
+	melonEndpointArtistSearch   = "http://apis.skplanetx.com/melon/artists?version=1&page=1&count=2&searchKeyword=%s"
+	melonEndpointAlbumSearch    = "http://apis.skplanetx.com/melon/albums?version=1&page=1&count=2&searchKeyword=%s"
+	melonFriendlyRealtimeStats  = "http://www.melon.com/chart/index.htm"
+	melonFriendlyDailyStats     = "http://www.melon.com/chart/day/index.htm"
+	melonFriendlySongDetails    = "http://www.melon.com/song/detail.htm?songId=%s"
+	melonFriendlyArtistDetails  = "http://www.melon.com/artist/detail.htm?artistId=%d"
+	melonFriendlyAlbumDetails   = "http://www.melon.com/album/detail.htm?albumId=%d"
+	ichartPageRealtimeCharts    = "http://www.instiz.net/iframe_ichart_score.htm?real=1"
+	ichartPageWeeklyCharts      = "http://www.instiz.net/iframe_ichart_score.htm?week=1"
+	ichartFriendlyRealtimeStats = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
+	ichartFriendlyWeeklyStats   = "http://www.instiz.net/bbs/list.php?id=spage&no=8"
+	gaonPageWeeklyCharts        = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=week"
+	gaonPageMonthlyCharts       = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=month"
+	gaonPageYearlyCharts        = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=year"
+	gaonFriendlyWeeklyCharts    = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=week"
+	gaonFriendlyMonthlyCharts   = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=month"
+	gaonFriendlyYearlyCharts    = "http://gaonchart.co.kr/main/section/chart/album.gaon?nationGbn=T&serviceGbn=&termGbn=year"
 )
 
 func (m *Charts) Commands() []string {
@@ -248,7 +248,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 							song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 				return
 			case "daily":
@@ -288,7 +288,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 							song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 				return
 			case "song":
@@ -302,7 +302,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 				json.Unmarshal(result, &searchResult)
 
 				if searchResult.Melon.Count <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
 					helpers.Relax(err)
 					return
 				}
@@ -340,7 +340,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 					Color: helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
 				}
 
-				_, err = session.ChannelMessageSendComplex(msg.ChannelID,
+				_, err = helpers.SendComplex(msg.ChannelID,
 					&discordgo.MessageSend{
 						Content: "<" + fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID) + ">",
 						Embed:   songEmbed,
@@ -358,7 +358,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 				json.Unmarshal(result, &searchResult)
 
 				if searchResult.Melon.Count <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
 					helpers.Relax(err)
 					return
 				}
@@ -391,7 +391,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 					Color: helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
 				}
 
-				_, err = session.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{
+				_, err = helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
 					Content: "<" + fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID) + ">",
 					Embed:   artistEmbed,
 				})
@@ -408,7 +408,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 				json.Unmarshal(result, &searchResult)
 
 				if searchResult.Melon.Count <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
 					helpers.Relax(err)
 					return
 				}
@@ -438,7 +438,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 					Color: helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
 				}
 
-				_, err = session.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{
+				_, err = helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
 					Content: "<" + fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID) + ">",
 					Embed:   artistEmbed,
 				})
@@ -454,12 +454,12 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 				time, songRanks, maintenance, overloaded := m.GetIChartRealtimeStats()
 
 				if maintenance == true {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
 					helpers.Relax(err)
 					return
 				}
 				if overloaded == true {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-overloaded"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.ichart-overloaded"))
 					helpers.Relax(err)
 					return
 				}
@@ -493,19 +493,19 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 						Value: chartsFieldValue,
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 			case "week", "weekly":
 				session.ChannelTyping(msg.ChannelID)
 				time, songRanks, maintenance, overloaded := m.GetIChartWeekStats()
 
 				if maintenance == true {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.ichart-maintenance"))
 					helpers.Relax(err)
 					return
 				}
 				if overloaded == true {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.charts.ichart-overloaded"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.ichart-overloaded"))
 					helpers.Relax(err)
 					return
 				}
@@ -538,7 +538,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 						Value: chartsFieldValue,
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 			}
 		}
@@ -572,7 +572,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 						Value: fmt.Sprintf("**%s** by **%s**", album.Album, album.Artist),
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 			case "month", "monthly":
 				session.ChannelTyping(msg.ChannelID)
@@ -601,7 +601,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 						Value: fmt.Sprintf("**%s** by **%s**", album.Album, album.Artist),
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 			case "year", "yearly":
 				session.ChannelTyping(msg.ChannelID)
@@ -630,7 +630,7 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 						Value: fmt.Sprintf("**%s** by **%s**", album.Album, album.Artist),
 					})
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, chartsEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
 				helpers.Relax(err)
 			}
 		}

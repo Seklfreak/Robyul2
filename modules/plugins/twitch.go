@@ -23,8 +23,8 @@ import (
 type Twitch struct{}
 
 const (
-	twitchStatsEndpoint string = "https://api.twitch.tv/kraken/streams/%s"
-	twitchHexColor      string = "#6441a5"
+	twitchStatsEndpoint = "https://api.twitch.tv/kraken/streams/%s"
+	twitchHexColor      = "#6441a5"
 )
 
 type DB_TwitchChannel struct {
@@ -192,12 +192,12 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				if len(args) >= 3 {
 					targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 					targetTwitchChannelName = args[1]
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
@@ -209,7 +209,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				entry.TwitchChannelName = targetTwitchChannelName
 				m.setEntry(entry)
 
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
 				cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del": // [p]twitch delete <id>
@@ -221,15 +221,15 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
 
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-delete-success", entryBucket.TwitchChannelName))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-delete-success", entryBucket.TwitchChannelName))
 						cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Deleted Twitch Channel %s", entryBucket.TwitchChannelName))
 					} else {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.twitch.channel-delete-not-found-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.channel-delete-not-found-error"))
 						return
 					}
 
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 			})
@@ -245,7 +245,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-list-no-channels-error"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-list-no-channels-error"))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
@@ -257,19 +257,19 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitch Channels in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+				_, err := helpers.SendMessage(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
 		default:
 			if args[0] == "" {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.Relax(err)
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
 			twitchStatus := m.getTwitchStatus(args[0])
 			if twitchStatus.Stream.ID == 0 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
 				helpers.Relax(err)
 				return
 			} else {
@@ -292,7 +292,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				if twitchStatus.Stream.Game != "" {
 					twitchChannelEmbed.Description = fmt.Sprintf("playing **%s**", twitchStatus.Stream.Game)
 				}
-				_, err := session.ChannelMessageSendEmbed(msg.ChannelID, twitchChannelEmbed)
+				_, err := helpers.SendEmbed(msg.ChannelID, twitchChannelEmbed)
 				helpers.Relax(err)
 				return
 			}
@@ -421,7 +421,7 @@ func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchSt
 	if twitchStatus.Stream.Game != "" {
 		twitchChannelEmbed.Description = fmt.Sprintf("playing **%s**", twitchStatus.Stream.Game)
 	}
-	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", twitchStatus.Stream.Channel.URL),
 		Embed:   twitchChannelEmbed,
 	})

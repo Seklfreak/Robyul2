@@ -218,7 +218,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
 		helpers.Relax(err)
 
-		session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+		helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Fields: []*discordgo.MessageEmbedField{
 				// Build
@@ -266,7 +266,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == 50001 {
-						_, err = session.ChannelMessageSend(msg.ChannelID, "Unable to get information for this Server.")
+						_, err = helpers.SendMessage(msg.ChannelID, "Unable to get information for this Server.")
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
@@ -384,7 +384,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			serverinfoEmbed.Fields = append(serverinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
 		}
 
-		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, serverinfoEmbed)
+		_, err = helpers.SendEmbed(msg.ChannelID, serverinfoEmbed)
 		helpers.Relax(err)
 	case "userinfo":
 		session.ChannelTyping(msg.ChannelID)
@@ -395,7 +395,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); (ok && errD.Message.Code == 10013) || strings.Contains(err.Error(), "User not found.") {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
 					helpers.Relax(err)
 					return
 				}
@@ -410,7 +410,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		targetMember, err := helpers.GetGuildMember(currentGuild.ID, targetUser.ID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10007 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
 				helpers.Relax(err)
 				return
 			} else {
@@ -670,7 +670,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: true})
 		}
 
-		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userinfoEmbed)
+		_, err = helpers.SendEmbed(msg.ChannelID, userinfoEmbed)
 		helpers.Relax(err)
 	case "channelinfo":
 		session.ChannelTyping(msg.ChannelID)
@@ -685,7 +685,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == 50001 {
-						_, err = session.ChannelMessageSend(msg.ChannelID, "Unable to get information for this Channel.")
+						_, err = helpers.SendMessage(msg.ChannelID, "Unable to get information for this Channel.")
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
@@ -694,7 +694,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			channel, err = helpers.GetChannel(channel.ID)
 			helpers.Relax(err)
 			if channel.GuildID != sourceChannel.GuildID && !helpers.IsRobyulMod(msg.Author.ID) {
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
@@ -789,7 +789,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			channelinfoEmbed.Fields = append(channelinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Total Messages", Value: totalMessagesText, Inline: false})
 		}
 
-		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, channelinfoEmbed)
+		_, err = helpers.SendEmbed(msg.ChannelID, channelinfoEmbed)
 		helpers.Relax(err)
 	case "voicestats": // [p]voicestats <user> or [p]voicestats top // @TODO: sort by time connected
 		session.ChannelTyping(msg.ChannelID)
@@ -813,7 +813,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 				if err != nil {
 					if err == rethink.ErrEmptyResult {
-						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
 						helpers.Relax(err)
 					} else {
 						helpers.Relax(err)
@@ -821,7 +821,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					return
 				}
 				if len(entryBucket) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
 					helpers.Relax(err)
 					return
 				}
@@ -849,7 +849,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				}
 
 				if totalDuration <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
 					helpers.Relax(err)
 					return
 				}
@@ -900,13 +900,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					})
 				}
 
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, totalVoiceStatsEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, totalVoiceStatsEmbed)
 				helpers.Relax(err)
 				return
 			}
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if err != nil || targetUser.ID == "" {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.Relax(err)
 				return
 			}
@@ -982,7 +982,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, voicestatsEmbed)
+		_, err = helpers.SendEmbed(msg.ChannelID, voicestatsEmbed)
 		helpers.Relax(err)
 	case "emotes", "emojis", "emoji": // [p]emotes
 		session.ChannelTyping(msg.ChannelID)
@@ -992,7 +992,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 
 		if len(guild.Emojis) <= 0 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.no-emotes"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.no-emotes"))
 			helpers.Relax(err)
 			return
 		}
@@ -1008,8 +1008,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		s.setEmbedEmojiPage(reactionEmbed, msg.Author, guild, 1, numberOfPages)
-		reactionEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, reactionEmbed)
+		reactionEmbedMessages, err := helpers.SendEmbed(msg.ChannelID, reactionEmbed)
 		helpers.Relax(err)
+
+		if len(reactionEmbedMessages) <= 0 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+			return
+		}
+		reactionEmbedMessage := reactionEmbedMessages[0]
 
 		reactionsAdded := 0
 		if numberOfPages > 1 {
@@ -1036,7 +1042,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					newPageN := emojis.ToNumber(reaction.Emoji.Name)
 					if newPageN >= 1 && newPageN <= numberOfPages {
 						s.setEmbedEmojiPage(reactionEmbed, msg.Author, guild, newPageN, numberOfPages)
-						reactionEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, reactionEmbedMessage.ID, reactionEmbed)
+						reactionEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, reactionEmbedMessage.ID, reactionEmbed)
 						helpers.Relax(err)
 					}
 				}
@@ -1114,7 +1120,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		if len(allMembers) <= 0 {
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.mod.memberlist-none"))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.memberlist-none"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -1153,8 +1159,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages, kind, kindTitle)
-		memberlistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, memberlistEmbed)
+		memberlistEmbedMessages, err := helpers.SendEmbed(msg.ChannelID, memberlistEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if len(memberlistEmbedMessages) <= 0 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+			return
+		}
+		memberlistEmbedMessage := memberlistEmbedMessages[0]
 
 		if numberOfPages > 1 {
 			err = session.MessageReactionAdd(msg.ChannelID, memberlistEmbedMessage.ID, "⬅")
@@ -1176,14 +1188,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						if currentPage+1 <= numberOfPages {
 							currentPage += 1
 							s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages, kind, kindTitle)
-							memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
+							memberlistEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
 							helpers.Relax(err)
 						}
 					} else if reaction.Emoji.Name == "⬅" {
 						if currentPage-1 >= 1 {
 							currentPage -= 1
 							s.setEmbedMemberlistPage(memberlistEmbed, msg.Author, guild, allMembers, currentPage, numberOfPages, kind, kindTitle)
-							memberlistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
+							memberlistEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, memberlistEmbedMessage.ID, memberlistEmbed)
 							helpers.Relax(err)
 						}
 					}
@@ -1209,7 +1221,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		args := strings.Fields(content)
 
 		if len(args) < 1 {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			return
 		}
 
@@ -1308,7 +1320,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			inviteEmbed.Fields = append(inviteEmbed.Fields, &discordgo.MessageEmbedField{Name: "Whitelisted", Value: "⚠ Guild is not whitelisted!", Inline: false})
 		}
 
-		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, inviteEmbed)
+		_, err = helpers.SendEmbed(msg.ChannelID, inviteEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 		return
 	case "serverindex": // [p]serverindex [<excluded channel> <excluded channel ...>]
@@ -1365,7 +1377,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		resultText += fmt.Sprintf("_Found **%d invites** in total._", totalLinks)
 
 		for _, page := range helpers.Pagify(resultText, "\n") {
-			_, err := session.ChannelMessageSend(msg.ChannelID, page)
+			_, err := helpers.SendMessage(msg.ChannelID, page)
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		}
 		return
@@ -1390,7 +1402,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		allRoles := guild.Roles
 
 		if len(allRoles) <= 0 {
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.rolelist-none"))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.rolelist-none"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -1421,8 +1433,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		s.setEmbedRolelistPage(rolelistEmbed, msg.Author, guild, allRoles, currentPage, numberOfPages)
-		rolelistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, rolelistEmbed)
+		rolelistEmbedMessages, err := helpers.SendEmbed(msg.ChannelID, rolelistEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if len(rolelistEmbedMessages) <= 0 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+			return
+		}
+		rolelistEmbedMessage := rolelistEmbedMessages[0]
 
 		if numberOfPages > 1 {
 			err = session.MessageReactionAdd(msg.ChannelID, rolelistEmbedMessage.ID, "⬅")
@@ -1444,14 +1462,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						if currentPage+1 <= numberOfPages {
 							currentPage += 1
 							s.setEmbedRolelistPage(rolelistEmbed, msg.Author, guild, allRoles, currentPage, numberOfPages)
-							rolelistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, rolelistEmbedMessage.ID, rolelistEmbed)
+							rolelistEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, rolelistEmbedMessage.ID, rolelistEmbed)
 							helpers.Relax(err)
 						}
 					} else if reaction.Emoji.Name == "⬅" {
 						if currentPage-1 >= 1 {
 							currentPage -= 1
 							s.setEmbedRolelistPage(rolelistEmbed, msg.Author, guild, allRoles, currentPage, numberOfPages)
-							rolelistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, rolelistEmbedMessage.ID, rolelistEmbed)
+							rolelistEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, rolelistEmbedMessage.ID, rolelistEmbed)
 							helpers.Relax(err)
 						}
 					}
@@ -1497,7 +1515,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		allChannels := guild.Channels
 
 		if len(allChannels) <= 0 {
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.stats.channellist-none"))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.channellist-none"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -1578,8 +1596,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		s.setEmbedChannellistPage(channellistEmbed, msg.Author, guild, allChannels, currentPage, numberOfPages)
-		channellistEmbedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, channellistEmbed)
+		channellistEmbedMessages, err := helpers.SendEmbed(msg.ChannelID, channellistEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if len(channellistEmbedMessages) <= 0 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+			return
+		}
+		channellistEmbedMessage := channellistEmbedMessages[0]
 
 		if numberOfPages > 1 {
 			err = session.MessageReactionAdd(msg.ChannelID, channellistEmbedMessage.ID, "⬅")
@@ -1601,14 +1625,14 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						if currentPage+1 <= numberOfPages {
 							currentPage += 1
 							s.setEmbedChannellistPage(channellistEmbed, msg.Author, guild, allChannels, currentPage, numberOfPages)
-							channellistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, channellistEmbedMessage.ID, channellistEmbed)
+							channellistEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, channellistEmbedMessage.ID, channellistEmbed)
 							helpers.Relax(err)
 						}
 					} else if reaction.Emoji.Name == "⬅" {
 						if currentPage-1 >= 1 {
 							currentPage -= 1
 							s.setEmbedChannellistPage(channellistEmbed, msg.Author, guild, allChannels, currentPage, numberOfPages)
-							channellistEmbedMessage, err = session.ChannelMessageEditEmbed(msg.ChannelID, channellistEmbedMessage.ID, channellistEmbed)
+							channellistEmbedMessage, err = helpers.EditEmbed(msg.ChannelID, channellistEmbedMessage.ID, channellistEmbed)
 							helpers.Relax(err)
 						}
 					}

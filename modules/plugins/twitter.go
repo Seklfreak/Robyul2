@@ -43,10 +43,10 @@ var (
 )
 
 const (
-	TwitterFriendlyUser   string = "https://twitter.com/%s"
-	TwitterFriendlyStatus string = "https://twitter.com/%s/status/%s"
-	TwitterFooterIconUrl  string = "https://abs.twimg.com/favicons/favicon.ico"
-	rfc2822               string = "Mon Jan 02 15:04:05 -0700 2006"
+	TwitterFriendlyUser   = "https://twitter.com/%s"
+	TwitterFriendlyStatus = "https://twitter.com/%s/status/%s"
+	TwitterFooterIconUrl  = "https://abs.twimg.com/favicons/favicon.ico"
+	rfc2822               = "Mon Jan 02 15:04:05 -0700 2006"
 )
 
 func (m *Twitter) Commands() []string {
@@ -179,11 +179,11 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				if len(args) >= 3 {
 					targetChannel, err = helpers.GetChannelFromMention(msg, args[len(args)-1])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
@@ -195,7 +195,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				})
 				if err != nil {
 					errText := m.handleError(err)
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF(errText))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF(errText))
 					return
 				}
 
@@ -221,7 +221,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				entry.PostedTweets = dbTweets
 				m.setEntry(entry)
 
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
 				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]twitter delete <id>
@@ -233,14 +233,14 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
 
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
 						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
 					} else {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 			})
@@ -256,7 +256,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-list-no-accounts-error"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-list-no-accounts-error"))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
@@ -268,7 +268,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitter Accounts in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err := session.ChannelMessageSend(msg.ChannelID, resultPage)
+				_, err := helpers.SendMessage(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
 		default:
@@ -279,7 +279,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			})
 			if err != nil {
 				errText := m.handleError(err)
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF(errText))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF(errText))
 				return
 			}
 
@@ -327,7 +327,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					Inline: true,
 				})
 			}
-			_, err = session.ChannelMessageSendComplex(msg.ChannelID,
+			_, err = helpers.SendComplex(msg.ChannelID,
 				&discordgo.MessageSend{
 					Content: fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName)),
 					Embed:   accountEmbed,
@@ -336,7 +336,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			return
 		}
 	} else {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 	}
 }
 
@@ -397,7 +397,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: tweet.Entities.Media[0].MediaURLHttps}
 	}
 
-	_, err := cache.GetSession().ChannelMessageSendComplex(
+	_, err := helpers.SendComplex(
 		channelID, &discordgo.MessageSend{
 			Content: fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr)),
 			Embed:   channelEmbed,

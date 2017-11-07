@@ -28,7 +28,7 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 	session.ChannelTyping(msg.ChannelID)
 
 	if content == "" {
-		session.ChannelMessageSend(msg.ChannelID, "You should pass a word to define <:blobthinking:317028940885524490>")
+		helpers.SendMessage(msg.ChannelID, "You should pass a word to define <:blobthinking:317028940885524490>")
 		return
 	}
 
@@ -43,7 +43,7 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 	helpers.Relax(err)
 
 	if len(res) == 0 {
-		_, err = session.ChannelMessageSend(msg.ChannelID, "No results <:blobneutral:317029459720929281>")
+		_, err = helpers.SendMessage(msg.ChannelID, "No results <:blobneutral:317029459720929281>")
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
@@ -96,6 +96,6 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 		})
 	}
 
-	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, definitionEmbed)
+	_, err = helpers.SendEmbed(msg.ChannelID, definitionEmbed)
 	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 }

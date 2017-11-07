@@ -53,7 +53,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 					if len(args) >= 4 {
 						targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 						if err != nil || targetChannel.ID == "" {
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							return
 						}
 
@@ -68,7 +68,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 						successMessage = helpers.GetText("plugins.guildannouncements.message-disabled")
 					}
 					m.setEntry(guildAnnouncementSetting)
-					_, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
+					_, err = helpers.SendMessage(msg.ChannelID, successMessage)
 					helpers.Relax(err)
 				})
 			case "guild_leave":
@@ -83,7 +83,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 					if len(args) >= 4 {
 						targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 						if err != nil || targetChannel.ID == "" {
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							return
 						}
 
@@ -98,7 +98,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 						successMessage = helpers.GetText("plugins.guildannouncements.message-disabled")
 					}
 					m.setEntry(guildAnnouncementSetting)
-					_, err = session.ChannelMessageSend(msg.ChannelID, successMessage)
+					_, err = helpers.SendMessage(msg.ChannelID, successMessage)
 					helpers.Relax(err)
 				})
 			}
@@ -127,7 +127,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 				guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member)
 				if guildJoinText != "" {
 					go func() {
-						_, err := session.ChannelMessageSend(guildJoinChannelID, guildJoinText)
+						_, err := helpers.SendMessage(guildJoinChannelID, guildJoinText)
 						if err != nil {
 							cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
 								guild.Name, guild.ID, err.Error()))
@@ -156,7 +156,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 				guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member)
 				if guildLeaveText != "" {
 					go func() {
-						_, err := session.ChannelMessageSend(guildLeaveChannelID, guildLeaveText)
+						_, err := helpers.SendMessage(guildLeaveChannelID, guildLeaveText)
 						if err != nil {
 							cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
 								guild.Name, guild.ID, err.Error()))

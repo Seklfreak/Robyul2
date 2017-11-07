@@ -36,7 +36,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	session.ChannelTyping(msg.ChannelID)
 
 	if len(content) <= 0 && len(msg.Attachments) <= 0 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		helpers.Relax(err)
 		return
 	}
@@ -85,7 +85,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	jsonResult, err := gabs.ParseJSON(buf.Bytes())
 	helpers.Relax(err)
 
-	session.ChannelMessageSend(msg.ChannelID, "Your gfycat is processing, this may take a while. <:blobsleeping:317047101534109696>")
+	helpers.SendMessage(msg.ChannelID, "Your gfycat is processing, this may take a while. <:blobsleeping:317047101534109696>")
 	session.ChannelTyping(msg.ChannelID)
 
 	if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {
@@ -98,10 +98,10 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 			}
 		}
 		if errorMessage == "" {
-			_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease check the link or try again later.")
+			_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease check the link or try again later.")
 			cache.GetLogger().WithField("module", "gfycat").Error(fmt.Sprintf("Gfycat Error: %s", jsonResult.String()))
 		} else {
-			_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+fmt.Sprintf("Error: `%s`.", errorMessage))
+			_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+fmt.Sprintf("Error: `%s`.", errorMessage))
 		}
 		helpers.Relax(err)
 		return
@@ -114,7 +114,7 @@ CheckGfycatStatusLoop:
 		result, err := gabs.ParseJSON(helpers.NetGet(statusGfycatEndpoint))
 		if err != nil {
 			if strings.Contains(err.Error(), "Expected status 200; Got 504") {
-				_, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
+				_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
 				helpers.Relax(err)
 				return
 			}
@@ -130,7 +130,7 @@ CheckGfycatStatusLoop:
 			break CheckGfycatStatusLoop
 		default:
 			cache.GetLogger().WithField("module", "gfycat").Error(fmt.Sprintf("Gfycat Status Error: %s (ID: %s)", result.String(), gfyName))
-			_, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
+			_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
 			helpers.Relax(err)
 			return
 		}
@@ -138,7 +138,7 @@ CheckGfycatStatusLoop:
 
 	gfycatUrl := fmt.Sprintf(gfycatFriendlyUrl, gfyName)
 
-	_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Your gfycat is done: %s .", msg.Author.ID, gfycatUrl))
+	_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> Your gfycat is done: %s .", msg.Author.ID, gfycatUrl))
 	helpers.Relax(err)
 }
 

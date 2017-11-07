@@ -9,7 +9,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/lucasb-eyer/go-colorful"
-	cairo "github.com/ungerik/go-cairo"
+	"github.com/ungerik/go-cairo"
 )
 
 type Color struct{}
@@ -22,7 +22,7 @@ func (c *Color) Commands() []string {
 }
 
 const (
-	PicSize int = 200
+	PicSize = 200
 )
 
 func (c *Color) Init(session *discordgo.Session) {
@@ -34,7 +34,7 @@ func (c *Color) Action(command string, content string, msg *discordgo.Message, s
 
 	args := strings.Fields(content)
 	if len(args) <= 0 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 		return
 	}
 
@@ -45,7 +45,7 @@ func (c *Color) Action(command string, content string, msg *discordgo.Message, s
 
 	color, err := colorful.Hex(colorText)
 	if err != nil {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		return
 	}
 
@@ -55,7 +55,7 @@ func (c *Color) Action(command string, content string, msg *discordgo.Message, s
 	surface.Fill()
 	pngBytes, _ := surface.WriteToPNGStream()
 
-	_, err = session.ChannelMessageSendComplex(
+	_, err = helpers.SendComplex(
 		msg.ChannelID, &discordgo.MessageSend{
 			Content: fmt.Sprintf("<@%s> Color `%s`", msg.Author.ID, color.Hex()),
 			Files: []*discordgo.File{

@@ -48,7 +48,7 @@ func (x *XKCD) Action(command string, content string, msg *discordgo.Message, se
 
 		max, err := strconv.ParseInt(num, 10, 32)
 		if err != nil {
-			session.ChannelMessageSend(msg.ChannelID, "Error getting latest comic. Try again later <:blobfrowningbig:317028438693117962>")
+			helpers.SendMessage(msg.ChannelID, "Error getting latest comic. Try again later <:blobfrowningbig:317028438693117962>")
 			return
 		}
 
@@ -58,7 +58,7 @@ func (x *XKCD) Action(command string, content string, msg *discordgo.Message, se
 	}
 
 	json := helpers.GetJSON(link)
-	session.ChannelMessageSend(
+	helpers.SendMessage(
 		msg.ChannelID,
 		fmt.Sprintf(
 			"#%d from %s/%s/%s\n%s\n%s",
@@ -70,5 +70,5 @@ func (x *XKCD) Action(command string, content string, msg *discordgo.Message, se
 			json.Path("img").Data().(string),
 		),
 	)
-	session.ChannelMessageSend(msg.ChannelID, json.Path("alt").Data().(string))
+	helpers.SendMessage(msg.ChannelID, json.Path("alt").Data().(string))
 }

@@ -57,10 +57,15 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 			// @TODO: more secure way to exchange token: create own webhook if no arguments passed
 			helpers.RequireAdmin(msg, func() {
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
-				progressMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.add-progress"))
+				progressMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.add-progress"))
 				helpers.Relax(err)
+				if len(progressMessages) <= 0 {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+					return
+				}
+				progressMessage := progressMessages[0]
 				if len(args) < 5 {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
@@ -70,13 +75,13 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 				helpers.Relax(err)
 				sourceChannel, err := helpers.GetChannelFromMention(msg, args[1])
 				if err != nil || sourceChannel.ID == "" || sourceChannel.GuildID != channel.GuildID {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 				if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
@@ -86,7 +91,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 
 				webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
 				if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
-					_, err := session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
@@ -102,7 +107,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 
 				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Added Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
 					guild.Name, guild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
-				_, err = session.ChannelMessageEdit(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.gallery.add-success"))
+				_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.gallery.add-success"))
 				helpers.Relax(err)
 
 				galleries = g.GetGalleries()
@@ -121,7 +126,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.list-empty"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.list-empty"))
 				return
 			}
 			helpers.Relax(err)
@@ -134,7 +139,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 			resultMessage += fmt.Sprintf("Found **%d** Galleries in total.", len(entryBucket))
 
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+				_, err = helpers.SendMessage(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
 			return
@@ -142,14 +147,14 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 			helpers.RequireAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
 				entryId := args[1]
 				entryBucket := g.getEntryBy("id", entryId)
 				if entryBucket.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.delete-not-found"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.delete-not-found"))
 					return
 				}
 				galleryGuild, _ := helpers.GetGuild(entryBucket.GuildID)
@@ -169,7 +174,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 
 				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Deleted Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
 					galleryGuild.Name, galleryGuild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.delete-success"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.delete-success"))
 				helpers.Relax(err)
 
 				galleries = g.GetGalleries()
@@ -179,7 +184,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				galleries = g.GetGalleries()
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.gallery.refreshed-config"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.refreshed-config"))
 				helpers.Relax(err)
 			})
 		}

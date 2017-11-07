@@ -23,16 +23,16 @@ func (a *Avatar) Action(command string, content string, msg *discordgo.Message, 
 	mentionCount := len(msg.Mentions)
 
 	if mentionCount == 0 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.mentions.too-few"))
 		return
 	}
 
 	if mentionCount > 1 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.too-many"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.mentions.too-many"))
 		return
 	}
 
-	session.ChannelMessageSend(msg.ChannelID, "Here you go <:googlesmile:317031693951434752> \n "+fmt.Sprintf(
+	helpers.SendMessage(msg.ChannelID, "Here you go <:googlesmile:317031693951434752> \n "+fmt.Sprintf(
 		"https://cdn.discordapp.com/avatars/%s/%s.jpg",
 		msg.Mentions[0].ID,
 		msg.Mentions[0].Avatar,

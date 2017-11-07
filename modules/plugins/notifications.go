@@ -61,7 +61,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 		switch args[0] {
 		case "add": // [p]notifications add <keyword(s)>
 			if len(args) < 2 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
 			}
 			channel, err := helpers.GetChannel(msg.ChannelID)
@@ -92,7 +92,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			err = listCursor.One(&entryBucket)
 
 			if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-error-duplicate", msg.Author.ID))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-error-duplicate", msg.Author.ID))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 				return
@@ -114,7 +114,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				err = listCursor.All(&globalEntryBucket)
 
 				if len(globalEntryBucket) >= GlobalKeywordsLimit {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-global-too-many", msg.Author.ID, GlobalKeywordsLimit))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-global-too-many", msg.Author.ID, GlobalKeywordsLimit))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 					return
@@ -127,7 +127,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			entry.UserID = msg.Author.ID
 			m.setNotificationSetting(entry)
 
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-added-success", msg.Author.ID))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-added-success", msg.Author.ID))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", entry.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
@@ -138,7 +138,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			guild, err := helpers.GetGuild(channel.GuildID)
 			helpers.Relax(err)
 			if len(args) < 2 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -164,14 +164,14 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			err = listCursor.One(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-not-found-error", msg.Author.ID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-not-found-error", msg.Author.ID))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
 			}
 			m.deleteNotificationSettingByID(entryBucket.ID)
 
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notification Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
@@ -195,7 +195,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-list-no-keywords-error", msg.Author.ID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-list-no-keywords-error", msg.Author.ID))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
@@ -215,15 +215,15 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			helpers.Relax(err)
 
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
+				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 				helpers.RelaxMessage(err, "", "")
 			}
 
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		case "ignore-channel":
 			if len(args) < 2 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
 			}
 			commandIssueChannel, err := helpers.GetChannel(msg.ChannelID)
@@ -241,7 +241,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				err = listCursor.All(&entryBucket)
 
 				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.notifications.ignoredchannels-list-no-keywords-error"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.notifications.ignoredchannels-list-no-keywords-error"))
 					return
 				} else if err != nil {
 					helpers.Relax(err)
@@ -253,7 +253,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				}
 				resultMessage += fmt.Sprintf("Found **%d** Ignored Channels in total.", len(entryBucket))
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, resultMessage)
+				_, err = helpers.SendMessage(msg.ChannelID, resultMessage)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			default: // [p]notifications ignore-channel <channel>
 				helpers.RequireAdmin(msg, func() {
@@ -261,7 +261,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 					helpers.Relax(err)
 
 					if targetChannel.GuildID != commandIssueChannel.GuildID {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-addorremove-error-server"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-addorremove-error-server"))
 						return
 					}
 
@@ -272,11 +272,11 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						ignoredChannel.ChannelID = targetChannel.ID
 						ignoredChannel.GuildID = targetChannel.GuildID
 						m.setIgnoredChannel(ignoredChannel)
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-add-success", targetChannel.ID))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-add-success", targetChannel.ID))
 					} else {
 						// Remove from list
 						m.deleteIgnoredChannel(ignoredChannel.ID)
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
 					}
 					go m.refreshNotificationSettingsCache()
 				})
@@ -555,7 +555,7 @@ NextKeyword:
 			guild.Name,
 			content,
 		), "\n") {
-			_, err := session.ChannelMessageSend(dmChannel.ID, resultPage)
+			_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 			if err != nil {
 				cache.GetLogger().WithField("module", "notifications").Error("error sending DM: " + err.Error())
 				continue

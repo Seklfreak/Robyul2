@@ -33,7 +33,7 @@ func (d *Dog) Action(command string, content string, msg *discordgo.Message, ses
 		case "add":
 			helpers.RequireRobyulMod(msg, func() {
 				if len(args) < 2 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 
@@ -42,7 +42,7 @@ func (d *Dog) Action(command string, content string, msg *discordgo.Message, ses
 				err := d.InsertLink(url, msg.Author.ID)
 				helpers.Relax(err)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.dog.add-success", url))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.dog.add-success", url))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
@@ -58,7 +58,7 @@ func (d *Dog) Action(command string, content string, msg *discordgo.Message, ses
 	helpers.Relax(err)
 
 	if len(entryBucket) <= 0 {
-		session.ChannelMessageSend(
+		helpers.SendMessage(
 			msg.ChannelID,
 			helpers.GetText("plugins.dog.none"),
 		)
@@ -67,7 +67,7 @@ func (d *Dog) Action(command string, content string, msg *discordgo.Message, ses
 
 	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	_, err = session.ChannelMessageSend(
+	_, err = helpers.SendMessage(
 		msg.ChannelID,
 		helpers.GetTextF("plugins.dog.result", entryBucket[randGen.Intn(len(entryBucket))].URL),
 	)

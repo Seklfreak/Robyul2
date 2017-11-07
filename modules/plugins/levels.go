@@ -417,13 +417,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		if len(args) <= 0 {
 			if time.Since(userData.LastRepped).Hours() < 12 {
 				timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
-				_, err := session.ChannelMessageSend(msg.ChannelID,
+				_, err := helpers.SendMessage(msg.ChannelID,
 					helpers.GetTextF("plugins.levels.rep-next-rep",
 						int(math.Floor(timeUntil.Hours())),
 						int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-target"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.rep-target"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
 			return
@@ -431,7 +431,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 		if time.Since(userData.LastRepped).Hours() < 12 {
 			timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
-			_, err := session.ChannelMessageSend(msg.ChannelID,
+			_, err := helpers.SendMessage(msg.ChannelID,
 				helpers.GetTextF("plugins.levels.rep-error-timelimit",
 					int(math.Floor(timeUntil.Hours())),
 					int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
@@ -441,24 +441,24 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 		targetUser, err := helpers.GetUserFromMention(args[0])
 		if err != nil || targetUser == nil || targetUser.ID == "" {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 
 		// Don't rep this bot account, other bots, or oneself
 		if targetUser.ID == session.State.User.ID {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-session"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-session"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		if targetUser.ID == msg.Author.ID {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-self"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-self"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		if targetUser.Bot == true {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-bot"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.rep-error-bot"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -470,14 +470,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		userData.LastRepped = time.Now()
 		m.setUserUserdata(userData)
 
-		_, err = session.ChannelMessageSend(msg.ChannelID,
+		_, err = helpers.SendMessage(msg.ChannelID,
 			helpers.GetTextF("plugins.levels.rep-success", targetUser.Username))
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	case "profile", "gif-profile": // [p]profile
 		if _, ok := activeBadgePickerUserIDs[msg.Author.ID]; ok {
 			if activeBadgePickerUserIDs[msg.Author.ID] != msg.ChannelID {
-				_, err := session.ChannelMessageSend(
+				_, err := helpers.SendMessage(
 					msg.ChannelID, helpers.GetText("plugins.levels.badge-picker-session-duplicate"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
@@ -503,7 +503,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				userUserdata.Title = titleText
 				m.setUserUserdata(userUserdata)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-title-set-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-title-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "bio":
@@ -516,12 +516,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				userUserdata.Bio = bioText
 				m.setUserUserdata(userUserdata)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "background":
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -529,7 +529,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				case "add":
 					helpers.RequireRobyulMod(msg, func() {
 						if len(args) < 5 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -553,7 +553,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if len(tags) <= 0 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -561,7 +561,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						picData, err := helpers.NetGetUAWithError(backgroundUrl, helpers.DEFAULT_UA)
 						if err != nil {
 							if _, ok := err.(*url.Error); ok {
-								_, err = session.ChannelMessageSend(msg.ChannelID, "Invalid url.")
+								_, err = helpers.SendMessage(msg.ChannelID, "Invalid url.")
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							} else {
 								helpers.Relax(err)
@@ -571,7 +571,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						backgroundUrl, err = m.uploadToImgur(picData)
 						if err != nil {
 							if strings.Contains(err.Error(), "Invalid URL") {
-								_, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
+								_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							} else {
 								helpers.Relax(err)
@@ -580,7 +580,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if m.ProfileBackgroundNameExists(backgroundName) == true {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
 							return
 						}
 
@@ -588,7 +588,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						if err != nil {
 							helpers.Relax(err)
 						}
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success",
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success",
 							backgroundName, strings.Join(tags, ", ")))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
@@ -597,14 +597,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				case "delete":
 					helpers.RequireRobyulMod(msg, func() {
 						if len(args) < 3 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
 						backgroundName := strings.ToLower(args[2])
 
 						if m.ProfileBackgroundNameExists(backgroundName) == false {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-error-not-found"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-error-not-found"))
 							return
 						}
 						backgroundUrl := m.GetProfileBackgroundUrl(backgroundName)
@@ -616,7 +616,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = m.DeleteProfileBackground(backgroundName)
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-success"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						}
 						return
@@ -627,7 +627,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						searchResult := m.ProfileBackgroundSearch(args[1])
 
 						if len(searchResult) <= 0 {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-error-not-found"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-error-not-found"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						} else {
 							backgroundNamesText := ""
@@ -638,7 +638,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							resultText := helpers.GetText("plugins.levels.profile-background-set-error-not-found") + "\n"
 							resultText += fmt.Sprintf("Maybe I can interest you in one of these backgrounds: %s", backgroundNamesText)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, resultText)
+							_, err = helpers.SendMessage(msg.ChannelID, resultText)
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						}
 						return
@@ -648,7 +648,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					userUserdata.Background = args[1]
 					m.setUserUserdata(userUserdata)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-success"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-success"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -659,7 +659,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireAdmin(msg, func() {
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 7 {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -677,7 +677,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
 							newBadge.LevelRequirement, err = strconv.Atoi(args[6])
 							if err != nil {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -687,7 +687,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									if helpers.IsBotAdmin(msg.Author.ID) {
 										newBadge.GuildID = "global"
 									} else {
-										_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+										_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									}
@@ -696,7 +696,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							picData, err := helpers.NetGetUAWithError(newBadge.URL, helpers.DEFAULT_UA)
 							if err != nil {
 								if _, ok := err.(*url.Error); ok {
-									_, err = session.ChannelMessageSend(msg.ChannelID, "Invalid url.")
+									_, err = helpers.SendMessage(msg.ChannelID, "Invalid url.")
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								} else {
 									helpers.Relax(err)
@@ -706,7 +706,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadge.URL, err = m.uploadToImgur(picData)
 							if err != nil {
 								if strings.Contains(err.Error(), "Invalid URL") {
-									_, err = session.ChannelMessageSend(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
+									_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								} else {
 									helpers.Relax(err)
@@ -716,7 +716,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 							badgeFound := m.GetBadge(newBadge.Category, newBadge.Name, channel.GuildID)
 							if badgeFound.ID != "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-duplicate"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-duplicate"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -727,14 +727,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								badgeLimit = 20
 							}
 							if len(serverBadges) >= badgeLimit {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-too-many"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-too-many"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
 							m.InsertBadge(*newBadge)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-success"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						})
@@ -743,7 +743,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireAdmin(msg, func() {
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 4 {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -752,19 +752,19 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 							badgeFound := m.GetBadge(args[2], args[3], channel.GuildID)
 							if badgeFound.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 							if badgeFound.GuildID == "global" && !helpers.IsBotAdmin(msg.Author.ID) {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-error-not-allowed"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-error-not-allowed"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
 							m.DeleteBadge(badgeFound.ID)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-success"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						})
@@ -780,7 +780,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							categoryBadges := m.GetCategoryBadges(categoryName, channel.GuildID)
 
 							if len(categoryBadges) <= 0 {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.list-category-badge-error-none"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.list-category-badge-error-none"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -803,7 +803,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								len(categoryBadges))
 
 							for _, page := range helpers.Pagify(resultText, "\n") {
-								_, err = session.ChannelMessageSend(msg.ChannelID, page)
+								_, err = helpers.SendMessage(msg.ChannelID, page)
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							}
 							return
@@ -815,7 +815,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						serverBadges := m.GetServerBadges(channel.GuildID)
 
 						if len(serverBadges) <= 0 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.list-badge-error-none"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.list-badge-error-none"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -845,7 +845,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							len(categoriesCount))
 
 						for _, page := range helpers.Pagify(resultText, "\n") {
-							_, err = session.ChannelMessageSend(msg.ChannelID, page)
+							_, err = helpers.SendMessage(msg.ChannelID, page)
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						}
 						return
@@ -853,14 +853,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireMod(msg, func() {
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 5 {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
 							targetUser, err := helpers.GetUserFromMention(args[2])
 							if err != nil || targetUser.ID == "" {
-								session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+								helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 								return
 							}
 
@@ -869,13 +869,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 							badgeToAllow := m.GetBadge(args[3], args[4], channel.GuildID)
 							if badgeToAllow.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
 							if badgeToAllow.GuildID == "global" && !helpers.IsBotAdmin(msg.Author.ID) {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.edit-badge-error-not-allowed"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.edit-badge-error-not-allowed"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -891,7 +891,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								badgeToAllow.AllowedUserIDs = append(badgeToAllow.AllowedUserIDs, targetUser.ID)
 								m.UpdateBadge(badgeToAllow)
 
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-allowed",
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-allowed",
 									targetUser.Username, badgeToAllow.Name, badgeToAllow.Category))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
@@ -905,7 +905,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								badgeToAllow.AllowedUserIDs = allowedUserIDsWithout
 								m.UpdateBadge(badgeToAllow)
 
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-not-allowed",
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-not-allowed",
 									targetUser.Username, badgeToAllow.Name, badgeToAllow.Category))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
@@ -916,14 +916,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireMod(msg, func() {
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 5 {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
 							targetUser, err := helpers.GetUserFromMention(args[2])
 							if err != nil || targetUser.ID == "" {
-								session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+								helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 								return
 							}
 
@@ -932,13 +932,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 							badgeToDeny := m.GetBadge(args[3], args[4], channel.GuildID)
 							if badgeToDeny.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
 							if badgeToDeny.GuildID == "global" && !helpers.IsBotAdmin(msg.Author.ID) {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.edit-badge-error-not-allowed"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.edit-badge-error-not-allowed"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -954,7 +954,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								badgeToDeny.DeniedUserIDs = append(badgeToDeny.DeniedUserIDs, targetUser.ID)
 								m.UpdateBadge(badgeToDeny)
 
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-denied",
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-denied",
 									targetUser.Username, badgeToDeny.Name, badgeToDeny.Category))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
@@ -968,7 +968,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								badgeToDeny.DeniedUserIDs = deniedUserIDsWithout
 								m.UpdateBadge(badgeToDeny)
 
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-not-denied",
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-not-denied",
 									targetUser.Username, badgeToDeny.Name, badgeToDeny.Category))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
@@ -978,7 +978,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					case "move": // [p]profile badge move <category name> <badge name> <#>
 						session.ChannelTyping(msg.ChannelID)
 						if len(args) < 5 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -986,7 +986,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						badgeName := args[3]
 						newSpot, err := strconv.Atoi(args[4])
 						if err != nil {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1002,7 +1002,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if idToMove == "" {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1024,7 +1024,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						userData.ActiveBadgeIDs = newBadgeList
 						m.setUserUserdata(userData)
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.move-badge-success"))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.move-badge-success"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
 						return
@@ -1035,7 +1035,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				availableBadges := m.GetBadgesAvailable(msg.Author, channel.GuildID)
 
 				if len(availableBadges) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -1074,7 +1074,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								case "stop", "exit":
 									m.setUserUserdata(userData)
 									m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-									_, err := session.ChannelMessageSend(msg.ChannelID,
+									_, err := helpers.SendMessage(msg.ChannelID,
 										fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.Username))
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 									stoppedLoop = true
@@ -1107,10 +1107,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											}
 										}
 										m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-										message, err := session.ChannelMessageSend(msg.ChannelID,
+										messages, err := helpers.SendMessage(msg.ChannelID,
 											fmt.Sprintf("**@%s** I wasn't able to find a category with that name.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-										lastBotMessageID = []string{message.ID}
+										lastBotMessageID = []string{}
+										for _, message := range messages {
+											lastBotMessageID = append(lastBotMessageID, message.ID)
+										}
 										return
 									} else {
 										for _, badge := range shownBadges {
@@ -1130,10 +1133,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												}
 												if len(userData.ActiveBadgeIDs) >= BadgeLimt {
 													m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-													message, err := session.ChannelMessageSend(msg.ChannelID,
+													messages, err := helpers.SendMessage(msg.ChannelID,
 														fmt.Sprintf("**@%s** You are already got enough emotes.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
 													helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-													lastBotMessageID = []string{message.ID}
+													lastBotMessageID = []string{}
+													for _, message := range messages {
+														lastBotMessageID = append(lastBotMessageID, message.ID)
+													}
 													return
 												}
 
@@ -1142,7 +1148,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												if len(userData.ActiveBadgeIDs) >= BadgeLimt {
 													m.setUserUserdata(userData)
 													m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-													_, err := session.ChannelMessageSend(msg.ChannelID,
+													_, err := helpers.SendMessage(msg.ChannelID,
 														fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n",
 															msg.Author.Username))
 													helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1160,10 +1166,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											}
 										}
 										m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-										message, err := session.ChannelMessageSend(msg.ChannelID,
+										messages, err := helpers.SendMessage(msg.ChannelID,
 											fmt.Sprintf("**@%s** I wasn't able to find a badge with that name.\n%s", msg.Author.Username, m.BadgePickerHelpText()))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-										lastBotMessageID = []string{message.ID}
+										lastBotMessageID = []string{}
+										for _, message := range messages {
+											lastBotMessageID = append(lastBotMessageID, message.ID)
+										}
 										return
 									}
 								}
@@ -1187,7 +1196,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
 
 					m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-					_, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("**@%s** I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
+					_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("**@%s** I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
 						msg.Author.Username))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				}
@@ -1195,7 +1204,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			case "color", "colour":
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -1222,19 +1231,19 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						userUserdata.TextColor = ""
 					}
 				default:
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				m.setUserUserdata(userUserdata)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-color-set-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-color-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "opacity":
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -1245,7 +1254,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				if len(args) >= 3 {
 					opacity, err := strconv.ParseFloat(args[2], 64)
 					if err != nil {
-						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
@@ -1258,14 +1267,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				case "details", "detail":
 					userUserdata.DetailOpacity = opacityText
 				default:
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 
 				m.setUserUserdata(userUserdata)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "timezone":
@@ -1275,14 +1284,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				timeInTimezone := ""
 				if len(args) < 2 {
 					if userUserdata.Timezone == "" {
-						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-list"))
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-list"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
 				} else {
 					loc, err := time.LoadLocation(args[1])
 					if err != nil {
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error")+"\n"+helpers.GetText("plugins.levels.profile-timezone-list"))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-timezone-set-error")+"\n"+helpers.GetText("plugins.levels.profile-timezone-list"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
@@ -1293,10 +1302,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				m.setUserUserdata(userUserdata)
 
 				if timeInTimezone != "" {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
 						newTimezoneString, timeInTimezone))
 				} else {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-reset-success"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-reset-success"))
 				}
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
@@ -1307,7 +1316,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				if len(args) >= 2 {
 					_, err = time.Parse(TimeBirthdayFormat, args[1])
 					if err != nil {
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-error-format"))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-error-format"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
@@ -1318,14 +1327,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				userUserdata.Birthday = newBirthday
 				m.setUserUserdata(userUserdata)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if targetUser == nil || targetUser.ID == "" {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
@@ -1334,7 +1343,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		targetMember, err := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code == 10007 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			} else {
@@ -1352,13 +1361,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		jpgBytes, ext, err := m.GetProfile(targetMember, guild, gifP)
 		if err != nil && strings.Contains(err.Error(), "exit status 1") {
 			cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("Profile generation failed: %#v", err))
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-error-exit1"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-error-exit1"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		helpers.Relax(err)
 
-		_, err = session.ChannelMessageSendComplex(
+		_, err = helpers.SendComplex(
 			msg.ChannelID, &discordgo.MessageSend{
 				Content: fmt.Sprintf("<@%s> Profile for %s", msg.Author.ID, targetUser.Username),
 				Files: []*discordgo.File{
@@ -1370,7 +1379,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			})
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 20009 {
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.profile-error-sending"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-error-sending"))
 				return
 			}
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1400,7 +1409,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				err = listCursor.All(&levelsServersUsers)
 
 				if err == rethink.ErrEmptyResult || len(levelsServersUsers) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				} else if err != nil {
@@ -1452,7 +1461,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					displayRanking++
 				}
 
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, topLevelEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, topLevelEmbed)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "global-leaderboard", "global-top", "globaltop":
@@ -1464,7 +1473,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 
 				if len(rankedTotalExpMap) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.no-stats-available-yet"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.no-stats-available-yet"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -1498,7 +1507,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					}
 				}
 
-				_, err = session.ChannelMessageSendEmbed(msg.ChannelID, globalTopLevelEmbed)
+				_, err = helpers.SendEmbed(msg.ChannelID, globalTopLevelEmbed)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "reset":
@@ -1506,7 +1515,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					switch args[1] {
 					case "user": // [p]levels reset user <user>
 						if len(args) < 3 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1514,7 +1523,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireAdmin(msg, func() {
 							targetUser, err = helpers.GetUserFromMention(args[2])
 							if targetUser == nil || targetUser.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -1523,7 +1532,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							levelsServerUser.Exp = 0
 							m.setLevelsServerUser(levelsServerUser)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.user-resetted"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-resetted"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						})
@@ -1568,7 +1577,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 
 							for _, page := range helpers.Pagify(ignoredMessage, " ") {
-								_, err = session.ChannelMessageSend(msg.ChannelID, page)
+								_, err = helpers.SendMessage(msg.ChannelID, page)
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							}
 							return
@@ -1576,7 +1585,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						return
 					case "user": // [p]levels ignore user <user>
 						if len(args) < 3 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1584,7 +1593,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireAdmin(msg, func() {
 							targetUser, err = helpers.GetUserFromMention(args[2])
 							if targetUser == nil || targetUser.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -1597,7 +1606,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									err = helpers.GuildSettingsSet(channel.GuildID, settings)
 									helpers.Relax(err)
 
-									_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-removed"))
+									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-removed"))
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 									return
 								}
@@ -1607,14 +1616,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = helpers.GuildSettingsSet(channel.GuildID, settings)
 							helpers.Relax(err)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-added"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-added"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						})
 						return
 					case "channel": // [p]levels ignore channel <channel>
 						if len(args) < 3 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1623,7 +1632,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 							helpers.Relax(err)
 							if targetChannel == nil || targetChannel.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -1636,7 +1645,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									err = helpers.GuildSettingsSet(channel.GuildID, settings)
 									helpers.Relax(err)
 
-									_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-removed"))
+									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-removed"))
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 									return
 								}
@@ -1646,7 +1655,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = helpers.GuildSettingsSet(channel.GuildID, settings)
 							helpers.Relax(err)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-added"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-added"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						})
@@ -1664,11 +1673,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.Relax(err)
 					guild, err := helpers.GetGuild(channel.GuildID)
 					helpers.Relax(err)
-					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> Check your DMs.", msg.Author.ID))
+					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> Check your DMs.", msg.Author.ID))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					// pause new message processing for that guild
 					temporaryIgnoredGuilds = append(temporaryIgnoredGuilds, channel.GuildID)
-					_, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Temporary disabled EXP Processing for `%s` while processing the Message History.", guild.Name))
+					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Temporary disabled EXP Processing for `%s` while processing the Message History.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					// reset accounts on this server
 					var levelsServersUsers []DB_Levels_ServerUser
@@ -1683,7 +1692,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						levelsServerUser.Exp = 0
 						m.setLevelsServerUser(levelsServerUser)
 					}
-					_, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Resetted the EXP for every User on `%s`.", guild.Name))
+					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Resetted the EXP for every User on `%s`.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					// process history
 					//var wg sync.WaitGroup
@@ -1701,7 +1710,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("Started processing of Channel #%s (#%s) on Guild %s (#%s)",
 							guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
 						// (asynchronous)
-						_, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Started processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
+						_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Started processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						lastBefore := ""
 						for {
@@ -1744,7 +1753,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("Completed processing of Channel #%s (#%s) on Guild %s (#%s)",
 							guildChannelCurrent.Name, guildChannelCurrent.ID, guild.Name, guild.ID))
-						_, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Completed processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
+						_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Completed processing Messages for Channel <#%s>.", guildChannelCurrent.ID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						//}()
 					}
@@ -1758,16 +1767,16 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 					}
 					temporaryIgnoredGuilds = newTemporaryIgnoredGuilds
-					_, err = session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Enabled EXP Processing for `%s` again.", guild.Name))
+					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Enabled EXP Processing for `%s` again.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					_, err = session.ChannelMessageSend(dmChannel.ID, "Done!")
+					_, err = helpers.SendMessage(dmChannel.ID, "Done!")
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
 				return
 			case "role", "roles":
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
@@ -1777,12 +1786,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.RequireMod(msg, func() {
 						// [p]levels role add <role name or id> <start level> [<last level>]
 						if len(args) < 4 {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
 						if _, err = strconv.Atoi(args[len(args)-1]); err != nil {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1817,7 +1826,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if targetRole == nil || targetRole.ID == "" || startLevel < 0 || (lastLevel < 0 && lastLevel != -1) || (lastLevel != -1 && startLevel > lastLevel) {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1825,7 +1834,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						_, err = m.createLevelsRoleEntry(channel.GuildID, targetRole.ID, startLevel, lastLevel)
 						helpers.Relax(err)
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-add-success", targetRole.Name))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-add-success", targetRole.Name))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					})
 					return
@@ -1839,7 +1848,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							guild, err := helpers.GetGuild(channel.GuildID)
 							helpers.Relax(err)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.levels-role-apply-start"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.levels-role-apply-start"))
 
 							for _, member := range guild.Members {
 								if member.User.Bot == true {
@@ -1854,7 +1863,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 							}
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-apply-result", msg.Author.ID, success, len(errors)))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-apply-result", msg.Author.ID, success, len(errors)))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1872,7 +1881,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if len(entries) <= 0 {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.levels-role-list-empty"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.levels-role-list-empty"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						}
 
@@ -1919,7 +1928,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						for _, page := range helpers.Pagify(message, "\n") {
-							_, err = session.ChannelMessageSend(msg.ChannelID, page)
+							_, err = helpers.SendMessage(msg.ChannelID, page)
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						}
 						return
@@ -1929,7 +1938,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					// levels role remove <connection id>
 					helpers.RequireMod(msg, func() {
 						if len(args) < 3 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1939,7 +1948,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							if !strings.Contains(err.Error(), "no levels role entry") {
 								helpers.Relax(err)
 							}
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1953,7 +1962,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							role.Name = "N/A"
 						}
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-delete-success",
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-delete-success",
 							role.Name, entry.RoleID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
@@ -1963,7 +1972,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					// TODO: apply roles on join, show overwrites in list
 					helpers.RequireMod(msg, func() {
 						if len(args) < 4 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1973,7 +1982,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						targetUser, err := helpers.GetUserFromMention(args[2])
 						if err != nil || targetUser == nil || targetUser.ID == "" {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1988,7 +1997,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if targetRole == nil || targetRole.ID == "" {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -1996,7 +2005,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						previousGrant, previousDeny, grant := m.getLevelsRolesUserRoleOverwrite(guild.ID, targetRole.ID, targetUser.ID)
 
 						if previousDeny {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.roles-grant-error-denying"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.roles-grant-error-denying"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -2007,7 +2016,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 							helpers.Relax(err)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-remove-success",
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-remove-success",
 								targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
@@ -2019,7 +2028,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 						helpers.Relax(err)
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-create-success",
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-create-success",
 							targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
@@ -2029,7 +2038,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					// [p]levels roles deny <@user or user id> <role name or id>
 					helpers.RequireMod(msg, func() {
 						if len(args) < 4 {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -2039,7 +2048,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						targetUser, err := helpers.GetUserFromMention(args[2])
 						if err != nil || targetUser == nil || targetUser.ID == "" {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -2054,7 +2063,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						if targetRole == nil || targetRole.ID == "" {
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -2062,7 +2071,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						previousGrant, previousDeny, grant := m.getLevelsRolesUserRoleOverwrite(guild.ID, targetRole.ID, targetUser.ID)
 
 						if previousGrant {
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.roles-deny-error-granting"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.roles-deny-error-granting"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
@@ -2073,7 +2082,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 							helpers.Relax(err)
 
-							_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-remove-success",
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-remove-success",
 								targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
@@ -2085,7 +2094,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 						helpers.Relax(err)
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-create-success",
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-create-success",
 							targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
@@ -2093,13 +2102,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if targetUser == nil || targetUser.ID == "" {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
@@ -2114,7 +2123,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		err = listCursor.All(&levelsServersUser)
 
 		if err == rethink.ErrEmptyResult {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		} else if err != nil {
@@ -2131,14 +2140,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		}
 
 		if totalExp <= 0 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 
 		currentMember, _ := helpers.GetGuildMember(channel.GuildID, levelThisServerUser.UserID)
 		if currentMember == nil || currentMember.User == nil || currentMember.User.ID == "" {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -2192,7 +2201,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			},
 		}
 
-		_, err = session.ChannelMessageSendEmbed(msg.ChannelID, userLevelEmbed)
+		_, err = helpers.SendEmbed(msg.ChannelID, userLevelEmbed)
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	case "leaderboard", "leaderboards", "ranking", "rankings":
@@ -2201,7 +2210,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 		link := helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID
 
-		_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.levels.ranking-text", link))
+		_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.ranking-text", link))
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
@@ -2238,12 +2247,11 @@ func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID strin
 	}
 	resultText += l.BadgePickerHelpText()
 
-	session := cache.GetSession()
 	messageIDs := make([]string, 0)
 	for _, page := range helpers.Pagify(resultText, "\n") {
-		message, err := session.ChannelMessageSend(channeID, page)
+		messages, err := helpers.SendMessage(channeID, page)
 		helpers.RelaxMessage(err, channeID, "")
-		if message != nil {
+		for _, message := range messages {
 			messageIDs = append(messageIDs, message.ID)
 		}
 	}
@@ -2272,12 +2280,11 @@ func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, a
 	}
 	resultText += l.BadgePickerHelpText()
 
-	session := cache.GetSession()
 	messageIDs := make([]string, 0)
 	for _, page := range helpers.Pagify(resultText, "\n") {
-		message, err := session.ChannelMessageSend(channeID, page)
+		messages, err := helpers.SendMessage(channeID, page)
 		helpers.RelaxMessage(err, channeID, "")
-		if message != nil {
+		for _, message := range messages {
 			messageIDs = append(messageIDs, message.ID)
 		}
 	}

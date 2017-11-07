@@ -44,7 +44,7 @@ func (d *Debug) Action(command string, content string, msg *discordgo.Message, s
 			err = writer.Flush()
 			helpers.Relax(err)
 
-			_, err = session.ChannelMessageSendComplex(
+			_, err = helpers.SendComplex(
 				msg.ChannelID, &discordgo.MessageSend{
 					Content: fmt.Sprintf("<@%s> Your request is ready:", msg.Author.ID),
 					Files: []*discordgo.File{

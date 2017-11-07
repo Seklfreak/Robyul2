@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
 )
@@ -29,5 +30,5 @@ func (u *Uptime) Action(command string, content string, msg *discordgo.Message, 
 
 	uptime := time.Now().Sub(time.Unix(bootTime, 0)).String()
 
-	session.ChannelMessageSend(msg.ChannelID, ":hourglass_flowing_sand: "+uptime)
+	helpers.SendMessage(msg.ChannelID, ":hourglass_flowing_sand: "+uptime)
 }

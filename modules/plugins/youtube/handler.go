@@ -5,12 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
 	"github.com/bwmarrin/discordgo"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 )
 
 type Handler struct {
@@ -21,11 +20,11 @@ type Handler struct {
 type action func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next action)
 
 const (
-	youtubeChannelBaseUrl string = "https://www.youtube.com/channel/%s"
-	youtubeVideoBaseUrl   string = "https://youtu.be/%s"
-	youtubeColor          string = "cd201f"
+	youtubeChannelBaseUrl = "https://www.youtube.com/channel/%s"
+	youtubeVideoBaseUrl   = "https://youtu.be/%s"
+	youtubeColor          = "cd201f"
 
-	youtubeConfigFileName string = "google.client_credentials_json_location"
+	youtubeConfigFileName = "google.client_credentials_json_location"
 )
 
 func (h *Handler) Commands() []string {
@@ -75,7 +74,7 @@ func (h *Handler) actionStart(args []string, in *discordgo.Message, out **discor
 }
 
 func (h *Handler) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil
@@ -304,7 +303,7 @@ func (h *Handler) actionListChannel(args []string, in *discordgo.Message, out **
 	}
 
 	for _, resultPage := range helpers.Pagify(msg, "\n") {
-		_, err := cache.GetSession().ChannelMessageSend(in.ChannelID, resultPage)
+		_, err := helpers.SendMessage(in.ChannelID, resultPage)
 		helpers.Relax(err)
 	}
 

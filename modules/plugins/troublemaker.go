@@ -51,7 +51,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 					// Set new log channel
 					targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 					if err != nil || targetChannel.ID == "" {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 						return
 					}
 
@@ -60,7 +60,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 					err = helpers.GuildSettingsSet(channel.GuildID, settings)
 					helpers.Relax(err)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.troublemaker.participation-enabled"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.troublemaker.participation-enabled"))
 					helpers.Relax(err)
 
 					return
@@ -70,7 +70,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 					err = helpers.GuildSettingsSet(channel.GuildID, settings)
 					helpers.Relax(err)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.troublemaker.participation-disabled"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.troublemaker.participation-disabled"))
 					helpers.Relax(err)
 
 					return
@@ -83,20 +83,20 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
 				targetUser, err := helpers.GetUserFromMention(args[1])
 				if err != nil || targetUser.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
 				troublemakerReports := t.getTroublemakerReports(targetUser)
 
 				if len(troublemakerReports) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.list-no-reports", targetUser.Username))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.list-no-reports", targetUser.Username))
 					helpers.Relax(err)
 					return
 				} else {
@@ -124,7 +124,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 					}
 
 					for _, page := range helpers.Pagify(troublemakerText, "\n") {
-						_, err := session.ChannelMessageSend(msg.ChannelID, page)
+						_, err := helpers.SendMessage(msg.ChannelID, page)
 						helpers.Relax(err)
 					}
 				}
@@ -139,13 +139,13 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 				helpers.Relax(err)
 
 				if len(args) < 2 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
 				targetUser, err := helpers.GetUserFromMention(args[0])
 				if err != nil || targetUser.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
@@ -181,7 +181,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 						}
 					}
 
-					successMessage, _ := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.report-successful", len(guildsToNotify)))
+					successMessages, _ := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.report-successful", len(guildsToNotify)))
 
 					// Send notifications out
 					go func() {
@@ -222,7 +222,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 										msg.Author.Username, msg.Author.ID, msg.Author.ID, guild.Name, guild.ID,
 									), Inline: false})
 
-								_, err = session.ChannelMessageSendEmbed(guildToNotifySettings.TroublemakerLogChannel, reportEmbed)
+								_, err = helpers.SendEmbed(guildToNotifySettings.TroublemakerLogChannel, reportEmbed)
 								if err != nil {
 									cache.GetLogger().WithField("module", "troublemaker").Error(fmt.Sprintf("Failed to send troublemaker report to channel #%s on guild #%s: %s"+
 										guildToNotifySettings.TroublemakerLogChannel, guildToNotifySettings.Guild, err.Error()))
@@ -230,8 +230,8 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 							}
 						}
 
-						if successMessage.ID != "" {
-							session.MessageReactionAdd(msg.ChannelID, successMessage.ID, "👌")
+						if len(successMessages) > 0 {
+							session.MessageReactionAdd(msg.ChannelID, successMessages[0].ID, "👌")
 						}
 						return
 					}()

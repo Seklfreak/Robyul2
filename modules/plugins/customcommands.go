@@ -55,7 +55,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 3 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
@@ -63,7 +63,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.Relax(err)
 
 				if helpers.CommandExists(args[1]) {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
 					helpers.Relax(err)
 					return
 				}
@@ -78,7 +78,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				defer listCursor.Close()
 				err = listCursor.One(&entryBucket)
 				if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-keyword-already-exists"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-keyword-already-exists"))
 					helpers.Relax(err)
 					return
 				}
@@ -92,7 +92,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				newCommand.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(newCommand)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
 			})
@@ -124,7 +124,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			defer listCursor.Close()
 			err = listCursor.All(&entryBucket)
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 				helpers.Relax(err)
 				return
 			} else if err != nil {
@@ -141,10 +141,10 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			}
 			commandListText += fmt.Sprintf("There are **%s** custom commands on this server.", humanize.Comma(int64(len(entryBucket))))
 
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
+			helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
 
 			for _, page := range helpers.Pagify(commandListText, "\n") {
-				_, err = session.ChannelMessageSend(dmChannel.ID, page)
+				_, err = helpers.SendMessage(dmChannel.ID, page)
 				helpers.Relax(err)
 			}
 			return
@@ -152,7 +152,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
@@ -169,7 +169,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				defer listCursor.Close()
 				err = listCursor.One(&entryBucket)
 				if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-not-found"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-not-found"))
 					helpers.Relax(err)
 					return
 				} else if err != nil {
@@ -177,7 +177,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				}
 
 				cc.deleteEntryById(entryBucket.ID)
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
 			})
@@ -186,7 +186,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 3 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
@@ -204,7 +204,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				err = listCursor.One(&entryBucket)
 
 				if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
 					return
 				} else if err != nil {
 					helpers.Relax(err)
@@ -216,7 +216,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(entryBucket)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
 			})
@@ -225,14 +225,14 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				customCommandsCache = cc.getAllCustomCommands()
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.refreshed-commands"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.refreshed-commands"))
 				helpers.Relax(err)
 			})
 			return
 		case "search": // [p]commands search <text>
 			session.ChannelTyping(msg.ChannelID)
 			if len(args) < 2 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				helpers.Relax(err)
 				return
 			}
@@ -249,7 +249,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			defer listCursor.Close()
 			err = listCursor.All(&entryBucket)
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.customcommands.search-empty", args[1]))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.customcommands.search-empty", args[1]))
 				helpers.Relax(err)
 				return
 			} else if err != nil {
@@ -268,14 +268,14 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			}
 
 			for _, page := range helpers.Pagify(commandListText, "\n") {
-				_, err = session.ChannelMessageSend(msg.ChannelID, page)
+				_, err = helpers.SendMessage(msg.ChannelID, page)
 				helpers.Relax(err)
 			}
 			return
 		case "info": // [p]commands info <command name>
 			session.ChannelTyping(msg.ChannelID)
 			if len(args) < 2 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				helpers.Relax(err)
 				return
 			}
@@ -293,7 +293,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			defer listCursor.Close()
 			err = listCursor.One(&entryBucket)
 			if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.info-not-found"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.info-not-found"))
 				helpers.Relax(err)
 				return
 			} else if err != nil {
@@ -313,7 +313,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				},
 			}
 
-			_, err = session.ChannelMessageSendEmbed(msg.ChannelID, infoEmbed)
+			_, err = helpers.SendEmbed(msg.ChannelID, infoEmbed)
 			helpers.Relax(err)
 			return
 		case "import-json": // [p]command import-json (with json file attached)
@@ -321,7 +321,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(msg.Attachments) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
@@ -334,7 +334,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 					if err != nil {
 						if err, ok := err.(*json.SyntaxError); ok {
-							_, errNew := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("JSON Error: `%s` (Offset %d)", err.Error(), err.Offset))
+							_, errNew := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("JSON Error: `%s` (Offset %d)", err.Error(), err.Offset))
 							helpers.Relax(errNew)
 							return
 						}
@@ -367,7 +367,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						}
 					}
 					if commandExists {
-						session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Command with the name `%s` already exists.", newCustomCommandName))
+						helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Command with the name `%s` already exists.", newCustomCommandName))
 						continue
 					}
 
@@ -380,11 +380,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					newCommand.Keyword = newCustomCommandName
 					newCommand.Content = newCustomCommandContentText
 					cc.setEntry(newCommand)
-					session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Imported custom command `%s`", newCustomCommandName))
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Imported custom command `%s`", newCustomCommandName))
 					i++
 				}
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commnands.", msg.Author.ID, humanize.Comma(int64(i))))
+				_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commnands.", msg.Author.ID, humanize.Comma(int64(i))))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
 			})
@@ -405,7 +405,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				defer listCursor.Close()
 				err = listCursor.All(&entryBucket)
 				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 					helpers.Relax(err)
 					return
 				} else if err != nil {
@@ -440,7 +440,7 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 
 	for i, customCommand := range customCommandsCache {
 		if customCommand.GuildID == channel.GuildID && prefix+customCommand.Keyword == content {
-			_, err := session.ChannelMessageSend(msg.ChannelID, customCommand.Content)
+			_, err := helpers.SendMessage(msg.ChannelID, customCommand.Content)
 			if err != nil {
 				go raven.CaptureError(err, map[string]string{})
 				return

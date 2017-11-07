@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -28,31 +29,31 @@ func (r *Roll) Action(command string, content string, msg *discordgo.Message, se
 	if len(args) == 2 {
 		min, e := strconv.ParseInt(regex.ReplaceAllString(args[0], ""), 10, 64)
 		if e != nil {
-			session.ChannelMessageSend(msg.ChannelID, ":x: Please check your format")
+			helpers.SendMessage(msg.ChannelID, ":x: Please check your format")
 			return
 		}
 
 		max, e := strconv.ParseInt(regex.ReplaceAllString(args[1], ""), 10, 64)
 		if e != nil {
-			session.ChannelMessageSend(msg.ChannelID, ":x: Please check your format")
+			helpers.SendMessage(msg.ChannelID, ":x: Please check your format")
 			return
 		}
 
 		if min <= 0 || max <= 0 {
-			session.ChannelMessageSend(msg.ChannelID, ":x: Only positive numbers are allowed")
+			helpers.SendMessage(msg.ChannelID, ":x: Only positive numbers are allowed")
 			return
 		}
 
 		if min >= max {
-			session.ChannelMessageSend(msg.ChannelID, ":x: Number ranges don't work like that. (`min >= max`)")
+			helpers.SendMessage(msg.ChannelID, ":x: Number ranges don't work like that. (`min >= max`)")
 			return
 		}
 
-		session.ChannelMessageSend(
+		helpers.SendMessage(
 			msg.ChannelID,
 			":crystal_ball: "+strconv.Itoa(rand.Intn(int(max-min))+int(min)),
 		)
 	} else {
-		session.ChannelMessageSend(msg.ChannelID, ":x: You need to pass two numbers")
+		helpers.SendMessage(msg.ChannelID, ":x: You need to pass two numbers")
 	}
 }

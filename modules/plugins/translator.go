@@ -54,19 +54,19 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 	parts := strings.Fields(content)
 
 	if len(parts) < 3 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.check_format"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.translator.check_format"))
 		return
 	}
 
 	source, err := language.Parse(parts[0])
 	if err != nil {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang_specific", parts[0]))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang_specific", parts[0]))
 		return
 	}
 
 	target, err := language.Parse(parts[1])
 	if err != nil {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang_specific", parts[1]))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.translator.unknown_lang_specific", parts[1]))
 		return
 	}
 
@@ -83,11 +83,11 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 	if err != nil {
 		if err, ok := err.(*googleapi.Error); ok {
 			if err.Code == 400 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.translator.unknown_lang"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.translator.unknown_lang"))
 				return
 			}
 		}
-		//session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.translator.error"))
+		//helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.translator.error"))
 		helpers.SendError(msg, err)
 		return
 	}
@@ -172,6 +172,6 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 		translateEmbed.Footer = &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.translator.embed-footer-plus-naver")}
 	}
 
-	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, translateEmbed)
+	_, err = helpers.SendEmbed(msg.ChannelID, translateEmbed)
 	helpers.Relax(err)
 }

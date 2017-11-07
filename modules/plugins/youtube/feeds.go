@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
@@ -123,7 +122,7 @@ func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeCh
 			},
 		}
 
-		_, err = cache.GetSession().ChannelMessageSendComplex(e.ChannelID, msg)
+		_, err = helpers.SendComplex(e.ChannelID, msg)
 		if err != nil {
 			logger().Error(err)
 			break

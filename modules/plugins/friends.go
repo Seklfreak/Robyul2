@@ -133,7 +133,7 @@ func (f *Friend) actionList(args []string, in *discordgo.Message, out **discordg
 }
 
 func (f *Friend) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) friendAction {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.Relax(err)
 
 	return nil

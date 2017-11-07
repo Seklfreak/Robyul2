@@ -29,7 +29,7 @@ func (h *Headpat) Action(command string, content string, msg *discordgo.Message,
 
 	// Case 1: pat yourself
 	if params == "me" || mentionUsers == 1 && (msg.Author.ID == msg.Mentions[0].ID) {
-		session.ChannelMessageSend(msg.ChannelID,
+		helpers.SendMessage(msg.ChannelID,
 			helpers.GetText("bot.mentions.pat-yourself")+"\n"+"https://media.giphy.com/media/wUArrd4mE3pyU/giphy.gif",
 		)
 		return
@@ -37,7 +37,7 @@ func (h *Headpat) Action(command string, content string, msg *discordgo.Message,
 
 	// Case 2: pat @User#1234
 	if mentionUsers == 1 {
-		session.ChannelMessageSend(msg.ChannelID,
+		helpers.SendMessage(msg.ChannelID,
 			helpers.GetTextF(
 				"triggers.headpat.msg",
 				msg.Author.ID,
@@ -49,10 +49,10 @@ func (h *Headpat) Action(command string, content string, msg *discordgo.Message,
 
 	// Case 3: pat multiple users
 	if msg.MentionEveryone || mentionUsers > 1 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.pat-group"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.mentions.pat-group"))
 		return
 	}
 
 	// Case 4: no params || wrong params
-	session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.who-to-pat"))
+	helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.mentions.who-to-pat"))
 }

@@ -173,11 +173,11 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 				if len(args) >= 3 {
 					targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
@@ -187,7 +187,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 				if err != nil {
 					if e, ok := err.(*fb.Error); ok {
 						if e.Code == 803 || e.Code == 100 {
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
+							helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
 							return
 						}
 					}
@@ -208,7 +208,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 				entry.PostedPosts = dbPosts
 				m.setEntry(entry)
 
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", entry.Username, entry.ChannelID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", entry.Username, entry.ChannelID))
 				cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]facebook delete <id>
@@ -220,14 +220,14 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
 
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-delete-success", entryBucket.Username))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-delete-success", entryBucket.Username))
 						cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Deleted Facebook Page `%s`", entryBucket.Username))
 					} else {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.facebook.account-delete-not-found-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.facebook.account-delete-not-found-error"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 			})
@@ -243,7 +243,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-list-no-accounts-error"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-list-no-accounts-error"))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
@@ -255,14 +255,14 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Facebook Pages in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+				_, err = helpers.SendMessage(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
 		default:
 			session.ChannelTyping(msg.ChannelID)
 
 			if args[0] == "" {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
 				return
 			}
 
@@ -270,7 +270,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			if err != nil {
 				if e, ok := err.(*fb.Error); ok {
 					if e.Code == 803 || e.Code == 100 {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
 						return
 					}
 				}
@@ -299,7 +299,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 					Inline: true,
 				})
 			}
-			_, err = session.ChannelMessageSendComplex(
+			_, err = helpers.SendComplex(
 				msg.ChannelID, &discordgo.MessageSend{
 					Content: fmt.Sprintf("<%s>", fmt.Sprintf(FacebookFriendlyPage, facebookPage.Username)),
 					Embed:   accountEmbed,
@@ -308,7 +308,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			return
 		}
 	} else {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 	}
 }
 
@@ -414,7 +414,7 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: post.PictureUrl}
 	}
 
-	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", post.Url),
 		Embed:   channelEmbed,
 	})

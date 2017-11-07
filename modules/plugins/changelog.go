@@ -63,7 +63,7 @@ func (c *Changelog) Init(session *discordgo.Session) {
 }
 
 func (c *Changelog) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+	helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 		Color: 0x0FADED,
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Version", Value: c.log["number"], Inline: true},

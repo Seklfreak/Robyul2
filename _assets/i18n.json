@@ -58,7 +58,8 @@
     },
     "errors": {
       "general": "Unexpected error: `%s`",
-      "no-embed": "Please give me the `Embed Links` permission in this channel. <:googlenerd:317030369205682186>"
+      "no-embed": "Please give me the `Embed Links` permission in this channel. <:googlenerd:317030369205682186>",
+      "generic-nomessage": "Something went terribly wrong. <:blobweary:317036265071575050>"
     },
     "prefix": {
       "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Karen set prefix ?`",

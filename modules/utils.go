@@ -145,7 +145,7 @@ func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
 
 	// Redirect trigger
 	if ref, ok := triggerCache[trigger]; ok {
-		cache.GetSession().ChannelMessageSend(
+		helpers.SendMessage(
 			msg.ChannelID,
 			(*ref).Response(trigger, content),
 		)

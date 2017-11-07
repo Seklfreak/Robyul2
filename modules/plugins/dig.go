@@ -27,7 +27,7 @@ func (d *Dig) Action(command string, content string, msg *discordgo.Message, ses
 	args := strings.Fields(content)
 
 	if len(args) < 2 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 		return
 	}
 	dnsIp := "8.8.8.8"
@@ -52,7 +52,7 @@ func (d *Dig) Action(command string, content string, msg *discordgo.Message, ses
 	in, err := dns.Exchange(m, dnsIp+":53")
 	if err != nil {
 		if err, ok := err.(*net.OpError); ok {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.errors.general", err.Err.Error()))
+			helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.errors.general", err.Err.Error()))
 			return
 		} else {
 			helpers.Relax(err)
@@ -81,6 +81,6 @@ func (d *Dig) Action(command string, content string, msg *discordgo.Message, ses
 		Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server: %s", dnsIp)},
 	}
 
-	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+	_, err = helpers.SendEmbed(msg.ChannelID, resultEmbed)
 	helpers.Relax(err)
 }

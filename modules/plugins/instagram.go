@@ -414,11 +414,11 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				if len(args) >= 3 {
 					targetChannel, err = helpers.GetChannelFromMention(msg, args[len(args)-1])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
@@ -427,7 +427,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				instagramUsername := strings.Replace(args[1], "@", "", 1)
 				instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
 				if err != nil || instagramUser.User.Username == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 					return
 				}
 				feed, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
@@ -456,7 +456,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				entry.PostedReelMedias = dbRealMedias
 				m.setEntry(entry)
 
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID))
 				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]instagram delete <id>
@@ -468,14 +468,14 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
 
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-delete-success", entryBucket.Username))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-delete-success", entryBucket.Username))
 						cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Deleted Instagram Account @%s", entryBucket.Username))
 					} else {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.instagram.account-delete-not-found-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.instagram.account-delete-not-found-error"))
 						return
 					}
 				} else {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 			})
@@ -491,7 +491,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-				session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-list-no-accounts-error"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-list-no-accounts-error"))
 				return
 			} else if err != nil {
 				helpers.Relax(err)
@@ -503,20 +503,20 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Instagram Accounts in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err = session.ChannelMessageSend(msg.ChannelID, resultPage)
+				_, err = helpers.SendMessage(msg.ChannelID, resultPage)
 				helpers.Relax(err)
 			}
 		case "toggle-direct-link", "toggle-direct-links": // [p]instagram toggle-direct-links <id>
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 2 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 				entryId := args[1]
 				entryBucket := m.getEntryBy("id", entryId)
 				if entryBucket.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 				var messageText string
@@ -528,7 +528,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 					messageText = helpers.GetText("plugins.instagram.post-direct-links-enabled")
 				}
 				m.setEntry(entryBucket)
-				session.ChannelMessageSend(msg.ChannelID, messageText)
+				helpers.SendMessage(msg.ChannelID, messageText)
 				return
 			})
 		default:
@@ -538,7 +538,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 			helpers.Relax(err)
 
 			if err != nil || instagramUser.User.Username == "" {
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
@@ -575,7 +575,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 					Inline: true,
 				})
 			}
-			_, err = session.ChannelMessageSendComplex(
+			_, err = helpers.SendComplex(
 				msg.ChannelID, &discordgo.MessageSend{
 					Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username)),
 					Embed:   accountEmbed,
@@ -584,7 +584,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 			return
 		}
 	} else {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 	}
 }
 
@@ -614,12 +614,12 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 
 	mediaUrl := channelEmbed.URL
 
-	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", mediaUrl),
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting broadcast: #%s to channel: #%d failed: %s", instagramUser.Broadcast.ID, channelID, err))
+		cache.GetLogger().WithField("module", "instagram").Errorf("posting broadcast: #%d to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err.Error())
 	}
 }
 
@@ -677,12 +677,12 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		mediaUrl = channelEmbed.URL
 	}
 
-	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", mediaUrl),
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Error("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
+		cache.GetLogger().WithField("module", "instagram").Errorf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
 	}
 }
 
@@ -767,7 +767,7 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 		messageSend.Embed = channelEmbed
 	}
 
-	_, err := cache.GetSession().ChannelMessageSendComplex(channelID, messageSend)
+	_, err := helpers.SendComplex(channelID, messageSend)
 	if err != nil {
 		cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
 	}

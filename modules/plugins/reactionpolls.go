@@ -84,19 +84,19 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 	case "create": // [p]reactionpolls create "<poll text>" <max number of votes> <allowed emotes>
 		session.ChannelTyping(msg.ChannelID)
 		if len(args) < 4 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		pollText := strings.TrimSuffix(strings.TrimPrefix(args[1], "\""), "\"")
 		if pollText == "" {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		pollMaxVotes, err := strconv.Atoi(args[2])
 		if err != nil {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -111,7 +111,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 			)
 		}
 		if len(allowedEmotes) > 20 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.create-too-many-reactions"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.reactionpolls.create-too-many-reactions"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
@@ -121,7 +121,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 				if len(emoteParts) >= 2 {
 					_, err = session.State.Emoji(guild.ID, emoteParts[1])
 					if err != nil {
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.create-external-emote"))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.reactionpolls.create-external-emote"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
@@ -144,8 +144,14 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 			Color:       0x0FADED,
 			Description: "**Poll is being created...** :construction_site:",
 		}
-		pollPostedMessage, err := session.ChannelMessageSendEmbed(msg.ChannelID, pollEmbed)
+		pollPostedMessages, err := helpers.SendEmbed(msg.ChannelID, pollEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if len(pollPostedMessages) <= 0 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+			return
+		}
+		pollPostedMessage := pollPostedMessages[0]
 
 		newReactionPoll.MessageID = pollPostedMessage.ID
 		rp.setReactionPoll(newReactionPoll)
@@ -158,14 +164,14 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 		reactionPollsCache = rp.getAllReactionPolls()
 
 		pollEmbed = rp.getEmbedForPoll(newReactionPoll, 0)
-		_, err = session.ChannelMessageEditEmbed(pollPostedMessage.ChannelID, pollPostedMessage.ID, pollEmbed)
+		_, err = helpers.EditEmbed(pollPostedMessage.ChannelID, pollPostedMessage.ID, pollEmbed)
 		helpers.Relax(err)
 		return
 	case "refresh": // [p]reactionpolls refresh
 		helpers.RequireBotAdmin(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
 			reactionPollsCache = rp.getAllReactionPolls()
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reactionpolls.refreshed-polls"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.reactionpolls.refreshed-polls"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		})
 		return
@@ -257,7 +263,7 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
 				totalVotes -= len(reactionPoll.AllowedEmotes)
 				// update embed
 				pollEmbed := rp.getEmbedForPoll(reactionPoll, totalVotes)
-				_, err = session.ChannelMessageEditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
+				_, err = helpers.EditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 				}
@@ -297,7 +303,7 @@ func (rp *ReactionPolls) OnReactionRemove(reaction *discordgo.MessageReactionRem
 				totalVotes -= len(reactionPoll.AllowedEmotes)
 				// update embed
 				pollEmbed := rp.getEmbedForPoll(reactionPoll, totalVotes)
-				_, err = session.ChannelMessageEditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
+				_, err = helpers.EditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 				}

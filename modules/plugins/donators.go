@@ -43,7 +43,7 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 		case "add":
 			helpers.RequireRobyulMod(msg, func() {
 				if len(args) < 2 {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 
@@ -52,7 +52,7 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 				err := d.InsertDonator(name, "")
 				helpers.Relax(err)
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.donators.add-success", name))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.donators.add-success", name))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
@@ -64,7 +64,7 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 	helpers.Relax(err)
 
 	if len(donators) <= 0 {
-		session.ChannelMessageSend(
+		helpers.SendMessage(
 			msg.ChannelID,
 			helpers.GetText("plugins.donators.none"),
 		)
@@ -87,7 +87,7 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 	donatorsText := helpers.GetTextF("plugins.donators.list", donatorsListText)
 
 	for _, page := range helpers.Pagify(donatorsText, "\n") {
-		session.ChannelMessageSend(msg.ChannelID, page)
+		helpers.SendMessage(msg.ChannelID, page)
 	}
 }
 

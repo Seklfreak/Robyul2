@@ -805,6 +805,7 @@ func WebhookExecuteWithResult(webhookID, token string, data *discordgo.WebhookPa
 	err = json.Unmarshal(result, &message)
 	return message, err
 }
+
 func GuildIsOnWhitelist(GuildID string) (whitelisted bool) {
 	var entryBucket []models.AutoleaverWhitelistEntry
 	listCursor, err := rethink.Table(models.AutoleaverWhitelistTable).Run(GetDB())
@@ -826,3 +827,101 @@ func GuildIsOnWhitelist(GuildID string) (whitelisted bool) {
 
 	return false
 }
+
+func AutoPagify(text string) (pages []string) {
+	for _, page := range Pagify(text, "\n") {
+		if len(page) <= 1992 {
+			pages = append(pages, page)
+		} else {
+			for _, page := range Pagify(page, ",") {
+				if len(page) <= 1992 {
+					pages = append(pages, page)
+				} else {
+					for _, page := range Pagify(page, "-") {
+						if len(page) <= 1992 {
+							pages = append(pages, page)
+						} else {
+							for _, page := range Pagify(page, " ") {
+								if len(page) <= 1992 {
+									pages = append(pages, page)
+								} else {
+									panic("unable to pagify text")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return pages
+}
+
+func SendMessage(channelID, content string) (messages []*discordgo.Message, err error) {
+	var message *discordgo.Message
+	for _, page := range AutoPagify(content) {
+		message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+		if err != nil {
+			return messages, err
+		}
+		messages = append(messages, message)
+	}
+	return messages, nil
+}
+
+func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*discordgo.Message, err error) {
+	var message *discordgo.Message
+	message, err = cache.GetSession().ChannelMessageSendEmbed(channelID, embed)
+	if err != nil {
+		return messages, err
+	}
+	messages = append(messages, message)
+	return messages, nil
+}
+
+func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*discordgo.Message, err error) {
+	var message *discordgo.Message
+	pages := AutoPagify(data.Content)
+	for i, page := range pages {
+		if i+1 < len(pages) {
+			message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+		} else {
+			data.Content = page
+			message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+		}
+		if err != nil {
+			return messages, err
+		}
+		messages = append(messages, message)
+	}
+	return messages, nil
+}
+
+func EditMessage(channelID, messageID, content string) (message *discordgo.Message, err error) {
+	message, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, content)
+	if err != nil {
+		return nil, err
+	} else {
+		return message, err
+	}
+}
+
+func EditEmbed(channelID, messageID string, embed *discordgo.MessageEmbed) (message *discordgo.Message, err error) {
+	message, err = cache.GetSession().ChannelMessageEditEmbed(channelID, messageID, embed)
+	if err != nil {
+		return nil, err
+	} else {
+		return message, err
+	}
+}
+
+func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err error) {
+	message, err = cache.GetSession().ChannelMessageEditComplex(data)
+	if err != nil {
+		return nil, err
+	} else {
+		return message, err
+	}
+}
+
+// TODO: Webhook

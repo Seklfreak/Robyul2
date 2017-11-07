@@ -46,7 +46,7 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 	content = strings.TrimSpace(content)
 
 	if len(content) <= 0 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		helpers.Relax(err)
 		return
 	}
@@ -118,7 +118,7 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 	err = gif.EncodeAll(&buf, outGif)
 	helpers.Relax(err)
 
-	_, err = session.ChannelMessageSendComplex(
+	_, err = helpers.SendComplex(
 		msg.ChannelID, &discordgo.MessageSend{
 			Content: fmt.Sprintf("<@%s> said:", msg.Author.ID),
 			Files: []*discordgo.File{

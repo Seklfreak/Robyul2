@@ -269,7 +269,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 			dmChannel, err := session.UserChannelCreate(msg.Author.ID)
 			helpers.Relax(err)
-			_, err = session.ChannelMessageSend(dmChannel.ID, helpers.GetText("plugins.randompictures.pic-delay-dm"))
+			_, err = helpers.SendMessage(dmChannel.ID, helpers.GetText("plugins.randompictures.pic-delay-dm"))
 			helpers.RelaxMessage(err, "", "")
 			return
 		}
@@ -282,18 +282,23 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		helpers.Relax(err)
 		err = cursor.All(&rpSources)
 		if (err != nil && err != rethink.ErrEmptyResult) || len(rpSources) <= 0 {
-			_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.pic-no-picture"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
 		helpers.Relax(err)
 
-		initialMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
+		initialMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.waiting-for-picture"))
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		if len(initialMessages) <= 0 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
+			return
+		}
+		initialMessage := initialMessages[0]
 
 		postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
 		if err != nil || postedPic == false {
-			session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+			helpers.EditMessage(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -312,7 +317,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						if reaction.UserID == msg.Author.ID && reaction.Emoji.Name == "🎲" && isPostingNewPic == false {
 							postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
 							if err != nil || postedPic == false {
-								session.ChannelMessageEdit(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
+								helpers.EditMessage(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
 							}
 							session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 						}
@@ -333,7 +338,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					session.ChannelTyping(msg.ChannelID)
 
 					if len(args) <= 1 {
-						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 						helpers.Relax(err)
 						return
 					}
@@ -352,7 +357,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						for _, parsedID := range postToChannelIDsParsed {
 							channelParsed, err := helpers.GetChannelFromMention(msg, parsedID)
 							if err != nil || channelParsed == nil || channelParsed.ID == "" {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.Relax(err)
 								return
 							}
@@ -364,7 +369,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						for _, parsedID := range folderIDsParsed {
 							result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, parsedID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1).Do()
 							if err != nil || len(result.Files) <= 0 {
-								_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 								helpers.Relax(err)
 								return
 							}
@@ -380,7 +385,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					}
 
 					if len(aliases) <= 0 || len(driveFolderIDs) <= 0 {
-						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 						helpers.Relax(err)
 						return
 					}
@@ -394,7 +399,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					inserted, err := insert.RunWrite(helpers.GetDB())
 					helpers.Relax(err)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("Created a new entry in the Database: `%s`.", inserted.GeneratedKeys[0]))
+					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Created a new entry in the Database: `%s`.", inserted.GeneratedKeys[0]))
 					helpers.Relax(err)
 				})
 				return
@@ -412,7 +417,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					helpers.Relax(err)
 
 					if err == rethink.ErrEmptyResult || len(rpSources) <= 0 {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
 						return
 					} else if err != nil {
 						helpers.Relax(err)
@@ -441,14 +446,14 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					}
 
 					if totalSources <= 0 {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
 						return
 					}
 
 					listText += fmt.Sprintf("Found **%d** Sources in total and **%s** Cached Images.", totalSources, humanize.Comma(int64(totalCachedImages)))
 
 					for _, page := range helpers.Pagify(listText, "\n") {
-						_, err = session.ChannelMessageSend(msg.ChannelID, page)
+						_, err = helpers.SendMessage(msg.ChannelID, page)
 						helpers.Relax(err)
 					}
 				})
@@ -457,7 +462,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				helpers.RequireRobyulMod(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 					if len(args) < 2 {
-						_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 						helpers.Relax(err)
 						return
 					}
@@ -469,7 +474,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					helpers.Relax(err)
 
 					if err == rethink.ErrEmptyResult || len(rpSources) <= 0 {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
 						return
 					} else if err != nil {
 						helpers.Relax(err)
@@ -483,7 +488,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							var entry *drive.File
 							var marshalled []byte
 							redisClient := cache.GetRedisClient()
-							session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-started"))
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-started"))
 							for i, entry = range rp.getFileCache(rpSource) {
 								key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", rpSource.ID, i+1)
 								fileHash = rp.GetFileHash(rpSource.ID, entry.Id)
@@ -514,13 +519,13 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 								continue
 							}
 							rp.updateImagesCachedMetric()
-							_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-success"))
+							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-success"))
 							helpers.Relax(err)
 							return
 						}
 					}
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-not-found-error"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-not-found-error"))
 					helpers.Relax(err)
 					return
 				})
@@ -528,7 +533,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				// [p]rapi pic-delay <n in minutes>
 				helpers.RequireMod(msg, func() {
 					if len(args) <= 1 {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 
@@ -537,7 +542,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 
 					n, err := strconv.Atoi(args[1])
 					if err != nil {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 
@@ -546,7 +551,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					err = helpers.GuildSettingsSet(channel.GuildID, targetGuildSettings)
 					helpers.Relax(err)
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-set-success", n))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-set-success", n))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
@@ -566,13 +571,13 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							channelText = "`no channels selected`"
 						}
 
-						_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-ignore-channels-status", channelText))
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-ignore-channels-status", channelText))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
 					targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 					if err != nil || targetChannel == nil || targetChannel.ID == "" {
-						session.ChannelMessageSend(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
 
@@ -601,7 +606,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						message = helpers.GetText("plugins.randompictures.pic-delay-ignore-channels-added")
 					}
 
-					_, err = session.ChannelMessageSend(msg.ChannelID, message)
+					_, err = helpers.SendMessage(msg.ChannelID, message)
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
@@ -839,12 +844,12 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 	}
 
 	if messageID == "" {
-		_, err = cache.GetSession().ChannelMessageSend(channelID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
+		_, err = helpers.SendMessage(channelID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s\nCheck out a gallery of recent pictures here: <%s>", file.Name, camerModelText, linkToPost, linkToHistory))
+		_, err = helpers.EditMessage(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s\nCheck out a gallery of recent pictures here: <%s>", file.Name, camerModelText, linkToPost, linkToHistory))
 		if err != nil {
 			return err
 		}

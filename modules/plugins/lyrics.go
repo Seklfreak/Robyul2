@@ -92,13 +92,13 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 	helpers.Relax(err)
 
 	if searchResult.Meta.Status != 200 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-api-error"))
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-api-error"))
 		helpers.Relax(err)
 		return
 	}
 
 	if len(searchResult.Response.Hits) <= 0 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-no-results"))
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-no-results"))
 		helpers.Relax(err)
 		return
 	}
@@ -112,7 +112,7 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 	}
 
 	if hitI == -1 {
-		_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-no-results"))
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lyrics.genius-no-results"))
 		helpers.Relax(err)
 		return
 	}
@@ -133,7 +133,7 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 			Description: songList,
 		}
 
-		_, err := session.ChannelMessageSendEmbed(msg.ChannelID, songListEmbed)
+		_, err := helpers.SendEmbed(msg.ChannelID, songListEmbed)
 		helpers.Relax(err)
 		return
 	}
@@ -147,11 +147,11 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 
 	for i, page := range helpers.Pagify(result, "\n") {
 		if i >= 2 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("More on <%s>", hit.Result.URL))
+			_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("More on <%s>", hit.Result.URL))
 			helpers.Relax(err)
 			break
 		}
-		_, err := session.ChannelMessageSend(msg.ChannelID, page)
+		_, err := helpers.SendMessage(msg.ChannelID, page)
 		helpers.Relax(err)
 	}
 }

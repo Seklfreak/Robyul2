@@ -23,16 +23,16 @@ func (s *Stone) Action(command string, content string, msg *discordgo.Message, s
 	mentionCount := len(msg.Mentions)
 
 	if mentionCount == 0 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.mentions.too-few"))
 		return
 	}
 
 	if mentionCount > 1 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.mentions.too-many"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.mentions.too-many"))
 		return
 	}
 
-	session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf(
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf(
 		"<@%s> IS GOING TO DIE!!!\n"+"COME ON GUYS! THROW SOME STONES WITH MEE!!!\n"+":grimacing: :wavy_dash::anger::dizzy_face:",
 		msg.Mentions[0].ID,
 	))

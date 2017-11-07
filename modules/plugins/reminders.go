@@ -67,7 +67,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 						dmChannel, err := session.UserChannelCreate(reminders.UserID)
 						helpers.Relax(err)
 
-						session.ChannelMessageSend(
+						helpers.SendMessage(
 							dmChannel.ID,
 							":alarm_clock: You wanted me to remind you about this:\n"+"```"+reminder.Message+"```",
 						)
@@ -98,14 +98,14 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		parts := strings.Fields(content)
 
 		if len(parts) < 3 {
-			session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")
+			helpers.SendMessage(msg.ChannelID, ":x: Please check if the format is correct")
 			return
 		}
 
 		r, err := r.parser.Parse(content, time.Now())
 		helpers.Relax(err)
 		if r == nil {
-			session.ChannelMessageSend(msg.ChannelID, ":x: Please check if the format is correct")
+			helpers.SendMessage(msg.ChannelID, ":x: Please check if the format is correct")
 			return
 		}
 
@@ -118,12 +118,12 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		})
 		setReminders(msg.Author.ID, reminders)
 
-		session.ChannelMessageSend(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
+		helpers.SendMessage(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
 		break
 
 	case "rms", "reminders": // TODO: better interface
 		reminders := getReminders(msg.Author.ID)
-		embedFields := []*discordgo.MessageEmbedField{}
+		var embedFields []*discordgo.MessageEmbedField
 
 		for _, reminder := range reminders.Reminders {
 			ts := time.Unix(reminder.Timestamp, 0)
@@ -148,11 +148,11 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		}
 
 		if len(embedFields) == 0 {
-			session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.reminders.empty"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.reminders.empty"))
 			return
 		}
 
-		session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+		helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 			Title:  "Pending reminders",
 			Fields: embedFields,
 			Color:  0x0FADED,

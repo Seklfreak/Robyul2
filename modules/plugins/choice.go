@@ -36,7 +36,7 @@ func (c *Choice) Action(command string, content string, msg *discordgo.Message, 
 		choices := splitChooseRegex.FindAllString(content, -1)
 
 		if len(choices) <= 1 {
-			_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 			helpers.Relax(err)
 			return
 		}
@@ -45,7 +45,7 @@ func (c *Choice) Action(command string, content string, msg *discordgo.Message, 
 		choice = strings.Trim(choice, "\"")
 		choice = strings.Trim(choice, "\"")
 
-		_, err := session.ChannelMessageSend(msg.ChannelID, "I've chosen `"+choice+"` <:googlesmile:317031693951434752>")
+		_, err := helpers.SendMessage(msg.ChannelID, "I've chosen `"+choice+"` <:googlesmile:317031693951434752>")
 		helpers.Relax(err)
 		return
 	case "roll": // [p]roll [<max numb, default: 100>]
@@ -54,13 +54,13 @@ func (c *Choice) Action(command string, content string, msg *discordgo.Message, 
 		if content != "" {
 			maxN, err = strconv.Atoi(content)
 			if err != nil || maxN < 1 {
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.Relax(err)
 				return
 			}
 		}
 		rand.Seed(time.Now().Unix())
-		_, err = session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> :game_die: %d :game_die:", msg.Author.ID, rand.Intn(maxN)+1))
+		_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> :game_die: %d :game_die:", msg.Author.ID, rand.Intn(maxN)+1))
 		helpers.Relax(err)
 		return
 	}

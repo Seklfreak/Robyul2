@@ -29,7 +29,7 @@ type Reddit struct{}
 
 var (
 	redditSession   *geddit.OAuthSession
-	RedditUserAgent string = "geddit:Robyul:" + version.BOT_VERSION + " by /u/Seklfreak"
+	RedditUserAgent = "geddit:Robyul:" + version.BOT_VERSION + " by /u/Seklfreak"
 )
 
 const (
@@ -192,7 +192,7 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 		data.Embed.Image = &discordgo.MessageEmbedImage{URL: submission.ThumbnailURL}
 	}
 
-	_, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+	_, err = helpers.SendComplex(channelID, data)
 	return err
 }
 
@@ -449,7 +449,7 @@ func (r *Reddit) removeSubredditEntry(subredditEntry models.RedditSubredditEntry
 }
 
 func (r *Reddit) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) redditAction {
-	_, err := cache.GetSession().ChannelMessageSendComplex(in.ChannelID, *out)
+	_, err := helpers.SendComplex(in.ChannelID, *out)
 	helpers.RelaxMessage(err, in.ChannelID, in.ID)
 
 	return nil

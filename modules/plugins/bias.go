@@ -103,20 +103,20 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 						}
 						for _, page := range helpers.Pagify(helpers.GetTextF("plugins.bias.bias-help-message",
 							biasListText, exampleRoleName, exampleRoleName), ",") {
-							session.ChannelMessageSend(msg.ChannelID, page)
+							helpers.SendMessage(msg.ChannelID, page)
 						}
 						return
 					}
 				}
 
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
 				helpers.Relax(err)
 			})
 		case "refresh":
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				biasChannels = m.GetBiasChannels()
-				_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
 				helpers.Relax(err)
 			})
 		case "set-config":
@@ -124,20 +124,20 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
 
 				if len(msg.Attachments) <= 0 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
 				}
 
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 				if err != nil || targetChannel.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
@@ -146,7 +146,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				channelConfigJson = bytes.TrimPrefix(channelConfigJson, []byte("\xef\xbb\xbf")) // removes BOM
 				err = json.Unmarshal(channelConfigJson, &channelConfig)
 				if err != nil {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.set-config-error-invalid"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.set-config-error-invalid"))
 					helpers.Relax(err)
 					return
 				}
@@ -158,7 +158,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				m.setChannelConfig(channelDb)
 
 				biasChannels = m.GetBiasChannels()
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.updated-config"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.updated-config"))
 				helpers.Relax(err)
 				return
 			})
@@ -167,14 +167,14 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
 
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 				if err != nil || targetChannel.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 				targetGuild, err := helpers.GetGuild(targetChannel.GuildID)
@@ -182,7 +182,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 
 				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
 				if channelDb.ChannelID == "" {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
 					helpers.Relax(err)
 					return
 				}
@@ -200,20 +200,20 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
-					_, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
 				}
 
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 				if err != nil || targetChannel.ID == "" {
-					session.ChannelMessageSend(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
 				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
 				if channelDb.ChannelID == "" {
-					_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
 					helpers.Relax(err)
 					return
 				}
@@ -222,7 +222,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				helpers.Relax(err)
 				biasChannels = m.GetBiasChannels()
 
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.delete-config-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.delete-config-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
@@ -292,11 +292,11 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 			}
 
 			if statsPrinted <= 0 {
-				_, err = session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.no-stats"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.no-stats"))
 				helpers.Relax(err)
 			} else {
 				for _, page := range helpers.Pagify(statsText, "\n") {
-					_, err = session.ChannelMessageSend(msg.ChannelID, page)
+					_, err = helpers.SendMessage(msg.ChannelID, page)
 					helpers.Relax(err)
 				}
 			}
@@ -319,11 +319,13 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 				guildRoles, err := session.GuildRoles(guild.ID)
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-						newMessage, err := session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+						newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.generic-error"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						// Delete messages after ten seconds
 						time.Sleep(10 * time.Second)
-						session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+						for _, newMessage := range newMessages {
+							session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+						}
 						session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 						return
 					} else {
@@ -471,30 +473,30 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 					//fmt.Printf("removed: %+v\n", rolesRemoved)
 					//fmt.Printf("errors: %+v\n", rolesErrors)
 					if len(rolesAdded) <= 0 && len(rolesRemoved) <= 0 && len(rolesErrors) <= 0 {
-						newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-not-found")))
+						newMessage, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-not-found")))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-						messagesToDelete = append(messagesToDelete, newMessage)
+						messagesToDelete = append(messagesToDelete, newMessage...)
 					} else {
 						if len(rolesAdded) == 1 && len(rolesRemoved) == 0 && len(rolesErrors) == 0 {
-							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-added")))
+							newMessage, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-added")))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							messagesToDelete = append(messagesToDelete, newMessage)
+							messagesToDelete = append(messagesToDelete, newMessage...)
 						} else if len(rolesAdded) == 0 && len(rolesRemoved) == 1 && len(rolesErrors) == 0 {
-							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-removed")))
+							newMessage, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, helpers.GetText("plugins.bias.role-removed")))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							messagesToDelete = append(messagesToDelete, newMessage)
+							messagesToDelete = append(messagesToDelete, newMessage...)
 						} else if len(rolesAdded) == 0 && len(rolesRemoved) == 0 && len(rolesErrors) == 1 {
-							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, rolesErrors[0]))
+							newMessage, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID, rolesErrors[0]))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							messagesToDelete = append(messagesToDelete, newMessage)
+							messagesToDelete = append(messagesToDelete, newMessage...)
 						} else {
-							newMessage, err := session.ChannelMessageSend(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID,
+							newMessage, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> %s", msg.Author.ID,
 								helpers.GetTextF(
 									"plugins.bias.roles-batch",
 									len(rolesAdded), len(rolesRemoved), len(rolesErrors),
 								)))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							messagesToDelete = append(messagesToDelete, newMessage)
+							messagesToDelete = append(messagesToDelete, newMessage...)
 						}
 					}
 				}
@@ -653,7 +655,7 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 				guildRoles, err := session.GuildRoles(guild.ID)
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-						newMessage, err := session.ChannelMessageSend(reaction.ChannelID, helpers.GetText("plugins.bias.generic-error"))
+						newMessages, err := helpers.SendMessage(reaction.ChannelID, helpers.GetText("plugins.bias.generic-error"))
 						if err != nil {
 							if errD, ok := err.(*discordgo.RESTError); ok {
 								if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
@@ -664,7 +666,9 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 						}
 						// Delete messages after ten seconds
 						time.Sleep(10 * time.Second)
-						session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+						for _, newMessage := range newMessages {
+							session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+						}
 						return
 					}
 					helpers.Relax(err)
@@ -727,19 +731,21 @@ func (m *Bias) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *di
 					}
 				}
 
-				var newMessage *discordgo.Message
+				var newMessages []*discordgo.Message
 
 				if roleAdded {
-					newMessage, err = session.ChannelMessageSend(reaction.ChannelID, fmt.Sprintf("<@%s> %s", reaction.UserID, helpers.GetText("plugins.bias.role-added")))
+					newMessages, err = helpers.SendMessage(reaction.ChannelID, fmt.Sprintf("<@%s> %s", reaction.UserID, helpers.GetText("plugins.bias.role-added")))
 					helpers.RelaxMessage(err, reaction.ChannelID, "")
 				} else if errorText != "" {
-					newMessage, err = session.ChannelMessageSend(reaction.ChannelID, fmt.Sprintf("<@%s> %s", reaction.UserID, errorText))
+					newMessages, err = helpers.SendMessage(reaction.ChannelID, fmt.Sprintf("<@%s> %s", reaction.UserID, errorText))
 					helpers.RelaxMessage(err, reaction.ChannelID, "")
 				}
 
-				if newMessage != nil && newMessage.ID != "" {
+				if len(newMessages) > 0 {
 					time.Sleep(10 * time.Second)
-					session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+					for _, newMessage := range newMessages {
+						session.ChannelMessageDelete(newMessage.ChannelID, newMessage.ID)
+					}
 				}
 			}
 		}

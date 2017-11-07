@@ -26,7 +26,7 @@ func (w *WhoIs) Init(s *discordgo.Session) {}
 func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	// Check if the msg contains at least 1 mention
 	if len(msg.Mentions) == 0 {
-		session.ChannelMessageSend(msg.ChannelID, "you need to @mention someone")
+		helpers.SendMessage(msg.ChannelID, "you need to @mention someone")
 		return
 	}
 
@@ -52,7 +52,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
 	}
 
 	// The roles name of the @user
-	roles := []string{}
+	var roles []string
 	for _, grole := range guild.Roles {
 		for _, urole := range target.Roles {
 			if urole == grole.ID {
@@ -63,7 +63,7 @@ func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, s
 
 	joined, _ := time.Parse(time.RFC3339, target.JoinedAt)
 
-	session.ChannelMessageSendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+	helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 		Title: "Information about " + target.User.Username + "#" + target.User.Discriminator,
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
 			URL: helpers.GetAvatarUrl(target.User),

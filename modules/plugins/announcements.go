@@ -46,7 +46,7 @@ func (a *Announcement) Action(command string, content string, msg *discordgo.Mes
 			// Get the announcement channel id
 			channelID := helpers.GuildSettingsGetCached(guild.ID).AnnouncementsChannel
 			// Send the announce to the channel
-			session.ChannelMessageSendEmbed(channelID, &discordgo.MessageEmbed{
+			helpers.SendEmbed(channelID, &discordgo.MessageEmbed{
 				Title:       title,
 				Description: text,
 				Color:       0x0FADED,

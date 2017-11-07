@@ -13,9 +13,9 @@ import (
 type WolframAlpha struct{}
 
 const (
-	wolframBaseUrl       string = "http://api.wolframalpha.com/v2/query?units=metric&output=json&appid=%s&input=%s"
-	wolframFriendlyUrl   string = "http://www.wolframalpha.com/input/?i=%s"
-	wolframalphaHexColor string = "#ff8737"
+	wolframBaseUrl       = "http://api.wolframalpha.com/v2/query?units=metric&output=json&appid=%s&input=%s"
+	wolframFriendlyUrl   = "http://www.wolframalpha.com/input/?i=%s"
+	wolframalphaHexColor = "#ff8737"
 )
 
 func (m *WolframAlpha) Commands() []string {
@@ -39,7 +39,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 
 	numPods := result.Path("queryresult.numpods").Data().(float64)
 	if numPods <= 0 {
-		session.ChannelMessageSend(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
 		return
 	}
 
@@ -80,7 +80,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 		}
 	}
 
-	_, err = session.ChannelMessageSendEmbed(msg.ChannelID, resultEmbed)
+	_, err = helpers.SendEmbed(msg.ChannelID, resultEmbed)
 	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	metrics.WolframAlphaRequests.Add(1)
 }
