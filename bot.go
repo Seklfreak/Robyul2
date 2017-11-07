@@ -307,26 +307,27 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			)
 			return
 
-			/*
-				case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
-					metrics.CommandsExecuted.Add(1)
-					helpers.RequireAdmin(message.Message, func() {
-						// Extract prefix
-						prefix := strings.Fields(regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""))[0]
+		case regexp.MustCompile("(?i)^SET PREFIX (.){1,25}$").Match(bmsg):
+			metrics.CommandsExecuted.Add(1)
+			helpers.RequireAdmin(message.Message, func() {
+				// Extract prefix
+				prefix := strings.Fields(regexp.MustCompile("(?i)^SET PREFIX\\s").ReplaceAllString(msg, ""))[0]
 
-						// Set new prefix
-						err := helpers.SetPrefixForServer(
-							channel.GuildID,
-							prefix,
-						)
+				// Set new prefix
+				settings := helpers.GuildSettingsGetCached(channel.GuildID)
+				settings.Prefix = prefix
+				err = helpers.GuildSettingsSet(channel.GuildID, settings)
+				helpers.Relax(err)
 
-						if err != nil {
-							helpers.SendError(message.Message, err)
-						} else {
-							helpers.SendMessage(channel.ID, helpers.GetTextF("bot.prefix.saved", prefix))
-						}
-					})
-					return*/
+				if err != nil {
+					helpers.SendError(message.Message, err)
+				} else {
+					helpers.SendMessage(channel.ID,
+						helpers.GetTextF("plugins.mod.prefix-set-success",
+							helpers.GetPrefixForServer(channel.GuildID)))
+				}
+			})
+			return
 
 		case regexp.MustCompile("(?i)^SHUTDOWN.*").Match(bmsg):
 			helpers.RequireBotAdmin(message.Message, func() {
