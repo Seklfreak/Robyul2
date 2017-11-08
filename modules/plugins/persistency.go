@@ -343,18 +343,25 @@ func (p *Persistency) OnGuildMemberAdd(member *discordgo.Member, session *discor
 		}
 
 		var successfullyApplied int
+		var failedApplied int
 
 		for _, roleToApply := range rolesToApply {
 			err := session.GuildMemberRoleAdd(member.GuildID, member.User.ID, roleToApply.ID)
 			if err != nil {
+				failedApplied++
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == discordgo.ErrCodeMissingAccess {
+						continue
+					}
+				}
 				helpers.RelaxLog(err)
 			} else {
 				successfullyApplied++
 			}
 		}
 
-		p.logger().WithField("UserID", member.User.ID).Debug(fmt.Sprintf("applied roles on join: %d/%d/%d (applied/found/cached)",
-			successfullyApplied, len(rolesToApply), len(cachedRoles)))
+		p.logger().WithField("UserID", member.User.ID).Debug(fmt.Sprintf("applied roles on join: %d/%d/%d/%d (applied/failed/found/cached)",
+			successfullyApplied, failedApplied, len(rolesToApply), len(cachedRoles)))
 	}()
 }
 
