@@ -7,11 +7,15 @@ import (
 
 	"sync"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/vmihailenco/msgpack"
 )
 
 type Mirror struct{}
@@ -354,7 +358,7 @@ TryNextMirror:
 				}
 				switch mirrorEntry.Type {
 				case "text":
-					m.postMirrorMessage(mirrorEntry, msg.ChannelID, msg.Author, newContent)
+					m.postMirrorMessage(mirrorEntry, msg, msg.Author, newContent)
 					break
 				default:
 					// post mirror links
@@ -362,7 +366,7 @@ TryNextMirror:
 						sourceGuild, err := helpers.GetGuild(sourceChannel.GuildID)
 						helpers.Relax(err)
 						for _, linkToRepost := range linksToRepost {
-							m.postMirrorMessage(mirrorEntry, msg.ChannelID, msg.Author,
+							m.postMirrorMessage(mirrorEntry, msg, msg.Author,
 								fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
 									linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
 								),
@@ -377,9 +381,9 @@ TryNextMirror:
 
 }
 
-func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID string, author *discordgo.User, message string) {
+func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceMessage *discordgo.Message, author *discordgo.User, message string) {
 	for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
-		if channelToMirrorToEntry.ChannelID != sourceChannelID {
+		if channelToMirrorToEntry.ChannelID != sourceMessage.ChannelID {
 			robyulIsOnTargetGuild := false
 			for _, guild := range cache.GetSession().State.Guilds {
 				if guild.ID == channelToMirrorToEntry.GuildID {
@@ -395,15 +399,17 @@ func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID 
 					})
 				}
 				if len(channelToMirrorToEntry.ChannelWebhooks) == 1 {
-					err := cache.GetSession().WebhookExecute(
+					result, err := helpers.WebhookExecuteWithResult(
 						channelToMirrorToEntry.ChannelWebhooks[0].WebhookID, channelToMirrorToEntry.ChannelWebhooks[0].WebhookToken,
-						false, &discordgo.WebhookParams{
+						&discordgo.WebhookParams{
 							Content:   message,
 							Username:  author.Username,
 							AvatarURL: helpers.GetAvatarUrl(author),
 						})
 					helpers.RelaxLog(err)
 					metrics.MirrorsPostsSent.Add(1)
+					err = m.rememberPostedMessage(sourceMessage, result)
+					helpers.RelaxLog(err)
 				} else if len(channelToMirrorToEntry.ChannelWebhooks) > 1 {
 					m.lockWebhookChannel(channelToMirrorToEntry.ChannelID)
 					lastWebhookID := m.getLastWebhookID(channelToMirrorToEntry.ChannelID)
@@ -416,8 +422,8 @@ func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID 
 					}
 					err := m.setLastWebhookID(channelToMirrorToEntry.ChannelID, webhookID)
 					helpers.RelaxLog(err)
-					err = cache.GetSession().WebhookExecute(webhookID, webhookToken,
-						false, &discordgo.WebhookParams{
+					result, err := helpers.WebhookExecuteWithResult(webhookID, webhookToken,
+						&discordgo.WebhookParams{
 							Content:   message,
 							Username:  author.Username,
 							AvatarURL: helpers.GetAvatarUrl(author),
@@ -425,6 +431,8 @@ func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceChannelID 
 					helpers.RelaxLog(err)
 					metrics.MirrorsPostsSent.Add(1)
 					m.unlockWebhookChannel(channelToMirrorToEntry.ChannelID)
+					err = m.rememberPostedMessage(sourceMessage, result)
+					helpers.RelaxLog(err)
 				}
 			}
 		}
@@ -539,6 +547,68 @@ func (m *Mirror) GetMirrors() []DB_Mirror_Entry {
 	return entryBucket
 }
 
+type Mirror_PostedMessage struct {
+	ChannelID string
+	MessageID string
+}
+
+func (m *Mirror) getRememberedMessageKey(sourceMessageID string) (key string) {
+	return fmt.Sprintf("robyul2-discord:mirror:postedmessage:%s", sourceMessageID)
+}
+
+func (m *Mirror) rememberPostedMessage(sourceMessage *discordgo.Message, mirroredMessage *discordgo.Message) error {
+	redis := cache.GetRedisClient()
+	key := m.getRememberedMessageKey(sourceMessage.ID)
+
+	item := new(Mirror_PostedMessage)
+	item.ChannelID = mirroredMessage.ChannelID
+	item.MessageID = mirroredMessage.ID
+
+	itemBytes, err := msgpack.Marshal(&item)
+	if err != nil {
+		return err
+	}
+
+	_, err = redis.LPush(key, itemBytes).Result()
+	if err != nil {
+		return err
+	}
+
+	_, err = redis.Expire(key, time.Hour*1).Result()
+	return err
+}
+
+func (m *Mirror) getRememberedMessages(sourceMessage *discordgo.Message) ([]Mirror_PostedMessage, error) {
+	redis := cache.GetRedisClient()
+	key := m.getRememberedMessageKey(sourceMessage.ID)
+
+	length, err := redis.LLen(key).Result()
+	if err != nil {
+		return []Mirror_PostedMessage{}, err
+	}
+
+	if length <= 0 {
+		return []Mirror_PostedMessage{}, err
+	}
+
+	result, err := redis.LRange(key, 0, length-1).Result()
+	if err != nil {
+		return []Mirror_PostedMessage{}, err
+	}
+
+	rememberedMessages := make([]Mirror_PostedMessage, 0)
+	for _, messageData := range result {
+		var message Mirror_PostedMessage
+		err = msgpack.Unmarshal([]byte(messageData), &message)
+		if err != nil {
+			continue
+		}
+		rememberedMessages = append(rememberedMessages, message)
+	}
+
+	return rememberedMessages, nil
+}
+
 func (m *Mirror) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
 
 }
@@ -552,5 +622,34 @@ func (m *Mirror) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *disco
 
 }
 func (m *Mirror) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+		var err error
+		var rememberedMessages []Mirror_PostedMessage
 
+		for _, mirror := range mirrors {
+			for _, mirrorChannel := range mirror.ConnectedChannels {
+				if mirrorChannel.ChannelID == msg.ChannelID {
+					rememberedMessages, err = m.getRememberedMessages(msg.Message)
+					helpers.Relax(err)
+
+					for _, messageData := range rememberedMessages {
+						err = session.ChannelMessageDelete(messageData.ChannelID, messageData.MessageID)
+						if err != nil {
+							cache.GetLogger().WithFields(logrus.Fields{
+								"module":            "mirror",
+								"sourceChannelID":   msg.ChannelID,
+								"sourceMessageID":   msg.ID,
+								"sourceAuthorID":    msg.Author.ID,
+								"mirroredChannelID": messageData.ChannelID,
+								"mirroredMessageID": messageData.MessageID,
+							}).Error(
+								"Deleting mirrored message failed:", err.Error(),
+							)
+						}
+					}
+				}
+			}
+		}
+	}()
 }
