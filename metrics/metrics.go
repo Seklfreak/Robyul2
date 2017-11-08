@@ -17,6 +17,9 @@ var (
 	// MessagesReceived counts all ever received messages
 	MessagesReceived = expvar.NewInt("messages_received")
 
+	// MessagesSent counts all ever sent messages
+	MessagesSent = expvar.NewInt("messages_sent")
+
 	// UserCount counts all logged-in users
 	UserCount = expvar.NewInt("user_count")
 
@@ -28,12 +31,6 @@ var (
 
 	// CommandsExecuted increases after each command execution
 	CommandsExecuted = expvar.NewInt("commands_executed")
-
-	// PollsCreated increases everytime a new pool is created
-	PollsCreated = expvar.NewInt("polls_created")
-
-	// CleverbotRequests increases after each request to cleverbot.com
-	CleverbotRequests = expvar.NewInt("cleverbot_requests")
 
 	// CoroutineCount counts all running coroutines
 	CoroutineCount = expvar.NewInt("coroutine_count")
@@ -124,6 +121,10 @@ func OnReady(session *discordgo.Session, event *discordgo.Ready) {
 // OnMessageCreate listens for said discord event
 func OnMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
 	MessagesReceived.Add(1)
+
+	if event.Author.ID == session.State.User.ID {
+		MessagesSent.Add(1)
+	}
 }
 
 // CollectDiscordMetrics counts Guilds, Channels and Users
