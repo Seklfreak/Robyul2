@@ -10,6 +10,8 @@ import (
 
 	"math/rand"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
@@ -19,6 +21,12 @@ import (
 func RecoverDiscord(msg *discordgo.Message) {
 	err := recover()
 	if err != nil {
+		if strings.Contains(fmt.Sprintf("%#v", err), "handled discord error") {
+			return
+		}
+
+		fmt.Printf("RecoverDiscord: %#v\n", err)
+
 		SendError(msg, err)
 	}
 }
@@ -27,7 +35,11 @@ func RecoverDiscord(msg *discordgo.Message) {
 func Recover() {
 	err := recover()
 	if err != nil {
-		fmt.Printf("%#v\n", err)
+		if strings.Contains(fmt.Sprintf("%#v", err), "handled discord error") {
+			return
+		}
+
+		fmt.Printf("Recover: %#v\n", err)
 
 		//raven.SetUserContext(&raven.User{})
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -73,6 +85,7 @@ func RelaxEmbed(err error, channelID string, commandMessageID string) {
 					_, err = SendMessage(channelID, GetText("bot.errors.no-embed"))
 					RelaxMessage(err, channelID, commandMessageID)
 				}
+				panic("handled discord error")
 				return
 			}
 		}
@@ -94,6 +107,8 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 					}
 					cache.GetSession().MessageReactionAdd(channelID, commandMessageID, reactions[rand.Intn(len(reactions))])
 				}
+				panic("handled discord error")
+				return
 			} else {
 				Relax(err)
 			}
