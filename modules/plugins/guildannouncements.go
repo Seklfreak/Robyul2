@@ -145,7 +145,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 
 		guild, err := helpers.GetGuild(member.GuildID)
 		if err != nil {
-			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code == discordgo.ErrCodeMissingAccess {
+			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingAccess {
 				helpers.RelaxLog(err)
 				return
 			}
