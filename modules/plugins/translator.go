@@ -173,5 +173,5 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 	}
 
 	_, err = helpers.SendEmbed(msg.ChannelID, translateEmbed)
-	helpers.Relax(err)
+	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 }

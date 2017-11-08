@@ -218,7 +218,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
 		helpers.Relax(err)
 
-		helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+		_, err = helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Fields: []*discordgo.MessageEmbedField{
 				// Build
@@ -255,6 +255,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Want more stats and awesome graphs?", Value: "Visit my [stats dashboard](https://robyul.chat/statistics)", Inline: false},
 			},
 		})
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "serverinfo":
 		session.ChannelTyping(msg.ChannelID)
 
@@ -385,7 +386,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		_, err = helpers.SendEmbed(msg.ChannelID, serverinfoEmbed)
-		helpers.Relax(err)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "userinfo":
 		session.ChannelTyping(msg.ChannelID)
 		targetUser, err := helpers.GetUser(msg.Author.ID)
@@ -671,7 +672,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		_, err = helpers.SendEmbed(msg.ChannelID, userinfoEmbed)
-		helpers.Relax(err)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "channelinfo":
 		session.ChannelTyping(msg.ChannelID)
 
@@ -790,7 +791,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		_, err = helpers.SendEmbed(msg.ChannelID, channelinfoEmbed)
-		helpers.Relax(err)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "voicestats": // [p]voicestats <user> or [p]voicestats top // @TODO: sort by time connected
 		session.ChannelTyping(msg.ChannelID)
 		targetUser, err := helpers.GetUser(msg.Author.ID)
@@ -901,7 +902,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				}
 
 				_, err = helpers.SendEmbed(msg.ChannelID, totalVoiceStatsEmbed)
-				helpers.Relax(err)
+				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 				return
 			}
 			targetUser, err = helpers.GetUserFromMention(args[0])
@@ -983,7 +984,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		_, err = helpers.SendEmbed(msg.ChannelID, voicestatsEmbed)
-		helpers.Relax(err)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "emotes", "emojis", "emoji": // [p]emotes
 		session.ChannelTyping(msg.ChannelID)
 		channel, err := helpers.GetChannel(msg.ChannelID)
@@ -1009,7 +1010,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		s.setEmbedEmojiPage(reactionEmbed, msg.Author, guild, 1, numberOfPages)
 		reactionEmbedMessages, err := helpers.SendEmbed(msg.ChannelID, reactionEmbed)
-		helpers.Relax(err)
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 
 		if len(reactionEmbedMessages) <= 0 {
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
