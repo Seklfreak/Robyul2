@@ -1083,7 +1083,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		args := strings.Fields(content)
 		if len(args) >= 1 {
 			if helpers.IsBotAdmin(msg.Author.ID) {
-				otherGuild, err := helpers.GetGuild(args[len(args)-1])
+				otherGuild, err := helpers.GetGuild(args[0])
 				if err == nil && otherGuild != nil && otherGuild.ID != "" {
 					guild = otherGuild
 				}
@@ -1121,9 +1121,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		if len(allMembers) <= 0 {
-			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.memberlist-none"))
-			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-			return
+			allMembers = guild.Members
+			kind = "guild"
+			kindTitle = ""
 		}
 
 		slice.Sort(allMembers[:], func(i, j int) bool {
