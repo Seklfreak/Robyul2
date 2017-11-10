@@ -174,7 +174,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			bootTime = 0
 		}
 
-		uptime := time.Now().Sub(time.Unix(bootTime, 0)).String()
+		uptime := helpers.HumanizeDuration(time.Now().Sub(time.Unix(bootTime, 0)))
 
 		var activeWorkersText string
 		for _, worker := range cache.GetMachineryActiveWorkers() {
@@ -208,7 +208,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 
 		redisLaunched := time.Now().Add(time.Duration(redisUptimeSeconds) * time.Second * -1)
-		redisUptime := time.Now().Sub(redisLaunched).String()
+		redisUptime := helpers.HumanizeDuration(time.Now().Sub(redisLaunched))
 
 		// TODO: RethinkDB stats
 

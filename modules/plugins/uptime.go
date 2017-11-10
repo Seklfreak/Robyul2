@@ -28,7 +28,7 @@ func (u *Uptime) Action(command string, content string, msg *discordgo.Message, 
 		bootTime = 0
 	}
 
-	uptime := time.Now().Sub(time.Unix(bootTime, 0)).String()
+	uptime := helpers.HumanizeDuration(time.Now().Sub(time.Unix(bootTime, 0)))
 
 	helpers.SendMessage(msg.ChannelID, ":hourglass_flowing_sand: "+uptime)
 }
