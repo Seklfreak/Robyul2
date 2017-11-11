@@ -456,6 +456,26 @@ func sendHelp(message *discordgo.MessageCreate) {
 }
 
 func changeGameInterval(session *discordgo.Session) {
+	/*err := session.UpdateStatusComplex(discordgo.UpdateStatusData{
+		Game: &discordgo.Game{
+			Type: 0,
+			Name: "Nayoung",
+			//URL:     "",
+			State:   "Is pretty cool!",
+			Details: "<3",
+			Assets: discordgo.Assets{
+				LargeImageID: "378562136353275904",
+				SmallImageID: "378562324195442698",
+				LargeText:    "Nayoung large",
+				SmallText:    "Nayoung small",
+			},
+			ApplicationID: "284003302629179392",
+		},
+		Status: "online",
+	})
+
+	helpers.RelaxLog(err)
+	return*/
 	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	var newStatus string

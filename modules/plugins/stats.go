@@ -229,7 +229,12 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				// System
 				{Name: "Bot Uptime", Value: uptime, Inline: true},
 				{Name: "Bot Version", Value: version.BOT_VERSION, Inline: true},
-				{Name: "GO Version", Value: runtime.Version(), Inline: true},
+				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
+
+				// Library
+				{Name: "Go Version", Value: runtime.Version(), Inline: true},
+				{Name: "discordgo Version", Value: discordgo.VERSION, Inline: true},
+				{Name: "API Version", Value: discordgo.APIVersion, Inline: true},
 
 				// Bot
 				{Name: "Heap /  Sys RAM", Value: humanize.Bytes(ram.Alloc) + "/" + humanize.Bytes(ram.Sys), Inline: true},
