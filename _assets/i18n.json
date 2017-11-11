@@ -913,6 +913,11 @@
     },
     "ping": {
       "message": ":ping_pong: Pong! <:blobhighfive:317043673047236609>"
+    },
+    "dm": {
+      "send-success": "I sent the DM to %s. :e_mail:",
+      "send-error-cannot-dm": "I can't send a DM message to this user. :warning:\n(Robyul is blocked or privacy settings)",
+      "receive-success": "Received DMs will now get posted to the given channel."
     }
   }
 }
