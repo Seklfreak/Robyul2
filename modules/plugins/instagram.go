@@ -367,7 +367,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
 						entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
 						changes = true
-						go m.postReelMediaToChannel(entry.ChannelID, story, n, instagramUser)
+						go m.postReelMediaToChannel(entry.ChannelID, story, n, instagramUser, entry.PostDirectLinks)
 					}
 
 				}
@@ -623,7 +623,7 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 	}
 }
 
-func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, instagramUser goinstaResponse.GetUsernameResponse) {
+func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, instagramUser goinstaResponse.GetUsernameResponse, postDirectLinks bool) {
 	instagramNameModifier := ""
 	if instagramUser.User.IsVerified {
 		instagramNameModifier += " ☑"
@@ -650,6 +650,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		caption, _ = captionData["text"].(string)
 	}
 
+	var content string
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:       helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
 		URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
@@ -657,6 +658,12 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
 		Description: caption,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
+	}
+	if postDirectLinks {
+		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "**\n"
+		if caption != "" {
+			content += caption + "\n"
+		}
 	}
 
 	mediaUrl := ""
@@ -677,10 +684,17 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		mediaUrl = channelEmbed.URL
 	}
 
-	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
-		Content: fmt.Sprintf("<%s>", mediaUrl),
-		Embed:   channelEmbed,
-	})
+	content += mediaUrl
+
+	messageSend := &discordgo.MessageSend{
+		Content: content,
+	}
+	if !postDirectLinks {
+		messageSend.Content = fmt.Sprintf("<%s>", mediaUrl)
+		messageSend.Embed = channelEmbed
+	}
+
+	_, err := helpers.SendComplex(channelID, messageSend)
 	if err != nil {
 		cache.GetLogger().WithField("module", "instagram").Errorf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
 	}
