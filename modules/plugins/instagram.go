@@ -660,13 +660,14 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 	if postDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "**\n"
+		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if caption != "" {
 			content += caption + "\n"
 		}
 	}
 
 	mediaUrl := ""
+	thumbnailUrl := ""
 
 	if len(reelMedia.ImageVersions2.Candidates) > 0 {
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: reelMedia.ImageVersions2.Candidates[0].URL}
@@ -675,6 +676,9 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 	if len(reelMedia.VideoVersions) > 0 {
 		channelEmbed.Video = &discordgo.MessageEmbedVideo{
 			URL: reelMedia.VideoVersions[0].URL, Height: reelMedia.VideoVersions[0].Height, Width: reelMedia.VideoVersions[0].Width}
+		if mediaUrl != "" {
+			thumbnailUrl = mediaUrl
+		}
 		mediaUrl = getFullResUrl(reelMedia.VideoVersions[0].URL)
 	}
 
@@ -684,7 +688,10 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		mediaUrl = channelEmbed.URL
 	}
 
-	content += mediaUrl
+	content += mediaUrl + "\n"
+	if mediaUrl != "" {
+		content += thumbnailUrl + "\n"
+	}
 
 	messageSend := &discordgo.MessageSend{
 		Content: content,
@@ -736,7 +743,7 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 	if postDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "**\n"
+		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if post.Caption.Text != "" {
 			content += post.Caption.Text + "\n"
 		}
