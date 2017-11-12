@@ -336,8 +336,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					lastfmUsername = m.getLastFmUsername(targetUser.ID)
 				}
 			}
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
 			if lastfmUsername == "" {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few", helpers.GetPrefixForServer(channel.GuildID)))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -417,8 +421,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					lastfmUsername = m.getLastFmUsername(targetUser.ID)
 				}
 			}
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
 			if lastfmUsername == "" {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few", helpers.GetPrefixForServer(channel.GuildID)))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -490,8 +498,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					lastfmUsername = m.getLastFmUsername(targetUser.ID)
 				}
 			}
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
 			if lastfmUsername == "" {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few", helpers.GetPrefixForServer(channel.GuildID)))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -564,8 +576,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					lastfmUsername = m.getLastFmUsername(targetUser.ID)
 				}
 			}
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
 			if lastfmUsername == "" {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few", helpers.GetPrefixForServer(channel.GuildID)))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -604,10 +620,6 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		case "discord-top", "server-top":
-			if len(args) < 1 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-				return
-			}
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 			guild, err := helpers.GetGuild(channel.GuildID)
@@ -746,7 +758,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 		}
 	} else {
-		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 		return
 	}
 

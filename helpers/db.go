@@ -120,8 +120,8 @@ func GuildSettingsGetCached(id string) models.Config {
 }
 
 // GetPrefixForServer gets the prefix for $guild
-func GetPrefixForServer(guild string) string {
-	return GuildSettingsGetCached(guild).Prefix
+func GetPrefixForServer(guildID string) string {
+	return GuildSettingsGetCached(guildID).Prefix
 }
 
 // SetPrefixForServer sets the prefix for $guild to $prefix

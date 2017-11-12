@@ -167,7 +167,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						nukeModMentions = append(nukeModMentions, "<@"+nukeMod+">")
 					}
 
-					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.participation-confirm", strings.Join(nukeModMentions, ", ")), "✅", "🚫") == true {
+					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.participation-confirm", strings.Join(nukeModMentions, ", "), helpers.GetPrefixForServer(channel.GuildID)), "✅", "🚫") == true {
 						settings.NukeIsParticipating = true
 						settings.NukeLogChannel = targetChannel.ID
 						err = helpers.GuildSettingsSet(channel.GuildID, settings)

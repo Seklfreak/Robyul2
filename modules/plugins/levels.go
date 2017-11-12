@@ -475,17 +475,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	case "profile", "gif-profile": // [p]profile
+		channel, err := helpers.GetChannel(msg.ChannelID)
+		helpers.Relax(err)
 		if _, ok := activeBadgePickerUserIDs[msg.Author.ID]; ok {
 			if activeBadgePickerUserIDs[msg.Author.ID] != msg.ChannelID {
 				_, err := helpers.SendMessage(
-					msg.ChannelID, helpers.GetText("plugins.levels.badge-picker-session-duplicate"))
+					msg.ChannelID, helpers.GetTextF("plugins.levels.badge-picker-session-duplicate", helpers.GetPrefixForServer(channel.GuildID)))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
 			return
 		}
 		session.ChannelTyping(msg.ChannelID)
-		channel, err := helpers.GetChannel(msg.ChannelID)
-		helpers.Relax(err)
 		guild, err := helpers.GetGuild(channel.GuildID)
 		helpers.Relax(err)
 		targetUser, err := helpers.GetUser(msg.Author.ID)
@@ -1616,7 +1616,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = helpers.GuildSettingsSet(channel.GuildID, settings)
 							helpers.Relax(err)
 
-							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-added"))
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.ignore-user-added", helpers.GetPrefixForServer(channel.GuildID)))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						})
