@@ -887,17 +887,25 @@ func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*dis
 func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
 	pages := AutoPagify(data.Content)
-	for i, page := range pages {
-		if i+1 < len(pages) {
-			message, err = cache.GetSession().ChannelMessageSend(channelID, page)
-		} else {
-			data.Content = page
-			message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+	if len(pages) > 0 {
+		for i, page := range pages {
+			if i+1 < len(pages) {
+				message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+			} else {
+				data.Content = page
+				message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+			}
+			if err != nil {
+				return messages, err
+			}
+			messages = append(messages, message)
 		}
+	} else {
+		message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+		messages = append(messages, message)
 		if err != nil {
 			return messages, err
 		}
-		messages = append(messages, message)
 	}
 	return messages, nil
 }
