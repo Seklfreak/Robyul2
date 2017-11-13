@@ -293,8 +293,6 @@ func (r *Reddit) actionList(args []string, in *discordgo.Message, out **discordg
 	}
 	subredditListText += fmt.Sprintf("Found **%d** Subreddits in total.", len(subredditEntries))
 
-	// TODO: pagify
-
 	*out = r.newMsg(subredditListText)
 	return r.actionFinish
 }

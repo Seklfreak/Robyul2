@@ -372,7 +372,19 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		onWhitelist, err := a.isOnWhitelist(guild.ID, nil)
 		helpers.Relax(err)
 
-		joinText := helpers.GetTextF("plugins.autoleaver.noti-join", guild.Name, guild.ID)
+		owner, err := helpers.GetUser(guild.OwnerID)
+		ownerName := "N/A"
+		if err != nil {
+			owner = new(discordgo.User)
+		} else {
+			ownerName = owner.Username + "#" + owner.Discriminator
+		}
+		membersCount := guild.MemberCount
+		if len(guild.Members) > membersCount {
+			membersCount = len(guild.Members)
+		}
+
+		joinText := helpers.GetTextF("plugins.autoleaver.noti-join", guild.Name, guild.ID, ownerName, guild.OwnerID, membersCount)
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
 			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
@@ -402,7 +414,16 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 		defer helpers.Recover()
 
 		var err error
-		joinText := helpers.GetTextF("plugins.autoleaver.noti-leave", guild.Name, guild.ID)
+
+		owner, err := helpers.GetUser(guild.OwnerID)
+		ownerName := "N/A"
+		if err != nil {
+			owner = new(discordgo.User)
+		} else {
+			ownerName = owner.Username + "#" + owner.Discriminator
+		}
+
+		joinText := helpers.GetTextF("plugins.autoleaver.noti-leave", guild.Name, guild.ID, ownerName, guild.OwnerID)
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
 			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
