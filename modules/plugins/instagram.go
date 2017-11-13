@@ -689,7 +689,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 	}
 
 	content += mediaUrl + "\n"
-	if mediaUrl != "" {
+	if thumbnailUrl != "" {
 		content += thumbnailUrl + "\n"
 	}
 

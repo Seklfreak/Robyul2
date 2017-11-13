@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"bytes"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Sirupsen/logrus"
@@ -69,7 +71,7 @@ func (dm *DM) actionSend(args []string, in *discordgo.Message, out **discordgo.M
 		return dm.actionFinish
 	}
 
-	if len(args) < 3 {
+	if !(len(args) >= 3 || (len(args) >= 2 && len(in.Attachments) > 0)) {
 		*out = dm.newMsg("bot.arguments.too-few")
 		return dm.actionFinish
 	}
@@ -90,7 +92,17 @@ func (dm *DM) actionSend(args []string, in *discordgo.Message, out **discordgo.M
 	}
 	dmMessage := strings.TrimSpace(strings.Join(parts[1:], args[1]))
 
-	_, err = helpers.SendMessage(dmChannel.ID, dmMessage)
+	dmMessageSend := &discordgo.MessageSend{
+		Content: dmMessage,
+	}
+	var dmAttachmentUrl string
+	if len(in.Attachments) > 0 {
+		dmAttachmentUrl = in.Attachments[0].URL
+		dmFile := helpers.NetGet(dmAttachmentUrl)
+		dmMessageSend.File = &discordgo.File{Name: in.Attachments[0].Filename, Reader: bytes.NewReader(dmFile)}
+	}
+
+	_, err = helpers.SendComplex(dmChannel.ID, dmMessageSend)
 	if err != nil {
 		if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeCannotSendMessagesToThisUser {
 			*out = dm.newMsg("plugins.dm.send-error-cannot-dm")
@@ -99,7 +111,7 @@ func (dm *DM) actionSend(args []string, in *discordgo.Message, out **discordgo.M
 	}
 	helpers.Relax(err)
 	dm.logger().WithField("RecipientUserID", args[1]).WithField("AuthorUserID", in.Author.ID).
-		Info("send a DM: " + dmMessage)
+		Info("send a DM: " + dmMessage + " Attachment: " + dmAttachmentUrl)
 
 	*out = dm.newMsg(helpers.GetTextF("plugins.dm.send-success", targetUser.Username))
 	return dm.actionFinish
@@ -173,11 +185,16 @@ func (dm *DM) repostDM(channelID string, message *discordgo.Message) (err error)
 		return err
 	}
 
+	content := message.Content
+	for _, attachment := range message.Attachments {
+		content += "\n" + attachment.URL
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
 			Name: fmt.Sprintf("@%s DM'd Robyul:", message.Author.Username),
 		},
-		Description: message.Content,
+		Description: content,
 		Color:       0x0FADED,
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: fmt.Sprintf("User ID: %s | Received at %s",
