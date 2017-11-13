@@ -918,6 +918,11 @@
       "send-success": "I sent the DM to %s. :e_mail:",
       "send-error-cannot-dm": "I can't send a DM message to this user. :warning:\n(Robyul is blocked or privacy settings)",
       "receive-success": "Received DMs will now get posted to the given channel."
+    },
+    "google": {
+      "search-no-results": "I wasn't able to find anything googling your query. <:blobweary:317036265071575050>",
+      "embed-footer": "powered by google.com",
+      "embed-footer-imageurl": "https://i.imgur.com/fjsXikJ.png"
     }
   }
 }

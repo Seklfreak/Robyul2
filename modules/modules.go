@@ -4,6 +4,7 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 	//"github.com/Seklfreak/Robyul2/modules/triggers"
+	"github.com/Seklfreak/Robyul2/modules/plugins/google"
 	"github.com/Seklfreak/Robyul2/modules/triggers"
 )
 
@@ -68,6 +69,7 @@ var (
 		&plugins.Debug{},
 		&plugins.Donators{},
 		&plugins.Ping{},
+		&google.Handler{},
 	}
 
 	// PluginList is the list of active plugins
