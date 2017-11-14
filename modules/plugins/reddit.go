@@ -188,7 +188,12 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 			data.Embed.Description = data.Embed.Description[0:498] + "…"
 		}
 	}
-	if submission.ThumbnailURL != "" && strings.HasPrefix(submission.ThumbnailURL, "http") {
+	if strings.HasSuffix(strings.ToLower(submission.URL), ".jpg") ||
+		strings.HasSuffix(strings.ToLower(submission.URL), ".jpeg") ||
+		strings.HasSuffix(strings.ToLower(submission.URL), ".gif") ||
+		strings.HasSuffix(strings.ToLower(submission.URL), ".png") {
+		data.Embed.Image = &discordgo.MessageEmbedImage{URL: submission.URL}
+	} else if submission.ThumbnailURL != "" && strings.HasPrefix(submission.ThumbnailURL, "http") {
 		data.Embed.Image = &discordgo.MessageEmbedImage{URL: submission.ThumbnailURL}
 	}
 
