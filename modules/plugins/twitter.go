@@ -45,6 +45,7 @@ var (
 	twitterDemux             twitter.SwitchDemux
 	twitterStreamNeedsUpdate bool
 	twitterEntriesCache      []DB_Twitter_Entry
+	twitterStreamIsStarting  sync.Mutex
 )
 
 const (
@@ -73,11 +74,11 @@ func (t *Twitter) Init(session *discordgo.Session) {
 	twitterDemux.Tweet = func(tweet *twitter.Tweet) {
 		//fmt.Println("received tweet:", tweet.Text, "by:", tweet.User.ScreenName)
 		for _, entry := range twitterEntriesCache {
-			entry = t.getEntryBy("id", entry.ID)
-
 			if entry.AccountID != tweet.User.IDStr {
 				continue
 			}
+
+			entry = t.getEntryBy("id", entry.ID)
 
 			changes := false
 			tweetAlreadyPosted := false
@@ -118,6 +119,9 @@ func (t *Twitter) Uninit(session *discordgo.Session) {
 
 func (t *Twitter) startTwitterStream() {
 	defer helpers.Recover()
+
+	twitterStreamIsStarting.Lock()
+	defer twitterStreamIsStarting.Unlock()
 
 	var err error
 	var accountIDs []string
@@ -192,7 +196,7 @@ func (t *Twitter) updateTwitterStreamLoop() {
 			twitterStreamNeedsUpdate = false
 		}
 
-		time.Sleep(15 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 }
 

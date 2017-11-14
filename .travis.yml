@@ -1,7 +1,6 @@
 language: go
 go:
   - master
-  - tip
   - 1.8
   - 1.9
 install:
