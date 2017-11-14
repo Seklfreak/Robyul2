@@ -200,7 +200,7 @@ const (
 	hexColor                 = "#fcaf45"
 	instagramFriendlyUser    = "https://www.instagram.com/%s/"
 	instagramFriendlyPost    = "https://www.instagram.com/p/%s/"
-	instagramPicUrlRegexText = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
+	instagramPicUrlRegexText = `(http(s)?\:\/\/[^\/]+\/[^\/]+\/)([a-z0-9\.]+\/)?([a-z0-9\.]+\/)?([a-z0-9]+x[a-z0-9]+\/)?([a-z0-9\.]+\/)?(([a-z0-9]+\/)?.+\.jpg)`
 	instagramSessionKey      = "robyul2-discord:instagram:session"
 )
 
@@ -796,8 +796,8 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 
 func getFullResUrl(url string) string {
 	result := instagramPicUrlRegex.FindStringSubmatch(url)
-	if result != nil && len(result) >= 6 {
-		return result[1] + result[5]
+	if result != nil && len(result) >= 8 {
+		return result[1] + result[7]
 	}
 	return url
 }
