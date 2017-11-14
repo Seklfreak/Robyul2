@@ -142,7 +142,7 @@ func (r *Reddit) checkSubredditLoop() {
 						r.logger().Info(fmt.Sprintf("posting submission: #%s (%s) on r/%s (%s) to #%s",
 							postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
 
-						err = r.postSubmission(postChannelID, postSubmission)
+						err = r.postSubmission(postChannelID, postSubmission, entry.PostDirectLinks)
 						if err != nil {
 							if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingPermissions {
 								helpers.Relax(err)
@@ -161,11 +161,12 @@ func (r *Reddit) checkSubredditLoop() {
 	}
 }
 
-func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission) (err error) {
+func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission, postDirectLinks bool) (err error) {
 	data := &discordgo.MessageSend{}
 
 	data.Content = "<" + RedditBaseUrl + submission.Permalink + ">"
 
+	var content string
 	data.Embed = &discordgo.MessageEmbed{
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    helpers.GetText("plugins.reddit.embed-footer") + " | /r/" + submission.Subreddit + " | reddit #" + submission.ID,
@@ -176,19 +177,30 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 		Color:  helpers.GetDiscordColorFromHex(RedditColor),
 	}
 
+	var textModeTitle, textModeSelftext string
+
 	data.Embed.Title = submission.Title
+	textModeTitle = "**" + submission.Title
 	if submission.LinkFlairText != "" {
+		textModeTitle = "`[" + submission.LinkFlairText + "]` **" + data.Embed.Title
 		data.Embed.Title = "`" + submission.LinkFlairText + "` " + data.Embed.Title
+
 	}
 	data.Embed.Title = html.UnescapeString(data.Embed.Title)
 	if len(data.Embed.Title) > 128 {
 		data.Embed.Title = submission.Title[0:126] + "…"
 	}
+	textModeTitle = html.UnescapeString(textModeTitle)
+	if len(textModeTitle) > 128 {
+		textModeTitle = textModeTitle[0:126] + "…"
+	}
+	textModeTitle += "**"
 	if submission.Selftext != "" {
 		data.Embed.Description = html.UnescapeString(submission.Selftext)
 		if len(data.Embed.Description) > 500 {
 			data.Embed.Description = data.Embed.Description[0:498] + "…"
 		}
+		textModeSelftext = data.Embed.Description
 	}
 	if strings.HasSuffix(strings.ToLower(submission.URL), ".jpg") ||
 		strings.HasSuffix(strings.ToLower(submission.URL), ".jpeg") ||
@@ -197,6 +209,19 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 		data.Embed.Image = &discordgo.MessageEmbedImage{URL: submission.URL}
 	} else if submission.ThumbnailURL != "" && strings.HasPrefix(submission.ThumbnailURL, "http") {
 		data.Embed.Image = &discordgo.MessageEmbedImage{URL: submission.ThumbnailURL}
+	}
+
+	if postDirectLinks {
+		content += textModeTitle + " _" + helpers.GetText("plugins.reddit.embed-footer") + "_\n"
+		content += "<" + RedditBaseUrl + submission.Permalink + "> by `/u/" + submission.Author + "`\n"
+		if textModeSelftext != "" {
+			content += textModeSelftext + "\n"
+		}
+		if submission.URL != RedditBaseUrl+submission.Permalink {
+			content += submission.URL
+		}
+		data.Content = content
+		data.Embed = nil
 	}
 
 	_, err = helpers.SendComplex(channelID, data)
@@ -230,6 +255,8 @@ func (r *Reddit) actionStart(args []string, in *discordgo.Message, out **discord
 		return r.actionRemove
 	case "list":
 		return r.actionList
+	case "toggle-direct-link", "toggle-direct-links":
+		return r.actionToggleDirectLinks
 	default:
 		return r.actionInfo
 	}
@@ -333,6 +360,37 @@ func (r *Reddit) actionInfo(args []string, in *discordgo.Message, out **discordg
 	subredditName = strings.Replace(subredditName, "r/", "", -1)
 
 	*out = r.getSubredditInfo(subredditName)
+	return r.actionFinish
+}
+
+func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, out **discordgo.MessageSend) redditAction {
+	if !helpers.IsMod(in) {
+		*out = r.newMsg(helpers.GetText("mod.no_permission"))
+		return r.actionFinish
+	}
+
+	if len(args) < 2 {
+		*out = r.newMsg("bot.arguments.too-few")
+		return r.actionFinish
+	}
+
+	subredditEntry, err := r.getSubredditEntryBy("id", args[1])
+	if err != nil || subredditEntry.ID == "" {
+		*out = r.newMsg("plugins.reddit.toggledirectlinks-error-subreddit-not-found")
+		return r.actionFinish
+	}
+
+	if subredditEntry.PostDirectLinks {
+		subredditEntry.PostDirectLinks = false
+		*out = r.newMsg("plugins.reddit.toggledirectlinks-disabled", subredditEntry.SubredditName)
+	} else {
+		subredditEntry.PostDirectLinks = true
+		*out = r.newMsg("plugins.reddit.toggledirectlinks-enabled", subredditEntry.SubredditName)
+	}
+
+	err = r.setSubredditEntry(subredditEntry)
+	helpers.Relax(err)
+
 	return r.actionFinish
 }
 

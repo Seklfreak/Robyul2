@@ -888,7 +888,10 @@
       "remove-subreddit-error-not-found": "I wasn't able to find a subreddit with that ID. <:blobthinking:317028940885524490>",
       "remove-subreddit-success": "I removed the subreddit `r/%s` from my database! <:blobokhand:317032017164238848>",
       "list-none": "There are no subreddits set up on this server yet! <:googlenerd:317030369205682186>",
-      "embed-footer-imageurl": "https://i.imgur.com/KQarWiQ.png"
+      "embed-footer-imageurl": "https://i.imgur.com/KQarWiQ.png",
+      "toggledirectlinks-error-subreddit-not-found": "I wasn't able to find a subreddit with that ID. <:blobthinking:317028940885524490>",
+      "toggledirectlinks-disabled": "I disabled direct links for `/r/%s`.",
+      "toggledirectlinks-enabled": "I enabled direct links for `/r/%s`."
     },
     "persistency": {
       "bias-persistency-enabled": "I will restore Bias Roles on rejoin now! <:blobokhand:317032017164238848>",
