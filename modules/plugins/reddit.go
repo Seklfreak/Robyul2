@@ -168,7 +168,9 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission)
 
 	data.Embed = &discordgo.MessageEmbed{
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: helpers.GetText("plugins.reddit.embed-footer") + " | /r/" + submission.Subreddit + " | reddit #" + submission.ID},
+			Text:    helpers.GetText("plugins.reddit.embed-footer") + " | /r/" + submission.Subreddit + " | reddit #" + submission.ID,
+			IconURL: helpers.GetText("plugins.reddit.embed-footer-imageurl"),
+		},
 		URL:    RedditBaseUrl + submission.Permalink,
 		Author: &discordgo.MessageEmbedAuthor{Name: "/u/" + submission.Author, URL: RedditBaseUrl + "/u/" + submission.Author},
 		Color:  helpers.GetDiscordColorFromHex(RedditColor),
@@ -359,7 +361,9 @@ func (r *Reddit) getSubredditInfo(subreddit string) (data *discordgo.MessageSend
 
 	data.Embed = &discordgo.MessageEmbed{
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: helpers.GetText("plugins.reddit.embed-footer") + " | reddit #" + subredditData.ID},
+			Text:    helpers.GetText("plugins.reddit.embed-footer") + " | reddit #" + subredditData.ID,
+			IconURL: helpers.GetText("plugins.reddit.embed-footer-imageurl"),
+		},
 		Title:       html.UnescapeString(titleText),
 		Description: html.UnescapeString(subredditData.PublicDesc),
 		URL:         RedditBaseUrl + subredditData.URL,

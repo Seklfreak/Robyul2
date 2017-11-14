@@ -557,10 +557,13 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				instagramNameModifier += " ⭐"
 			}
 			accountEmbed := &discordgo.MessageEmbed{
-				Title:       helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier),
-				URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
-				Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
-				Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
+				Title:     helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier),
+				URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
+				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
+				Footer: &discordgo.MessageEmbedFooter{
+					Text:    helpers.GetText("plugins.instagram.embed-footer"),
+					IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
+				},
 				Description: instagramUser.User.Biography,
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Followers", Value: humanize.Comma(int64(instagramUser.User.FollowerCount)), Inline: true},
@@ -607,9 +610,12 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 		Title:     helpers.GetTextF("plugins.instagram.live-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
 		URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
 		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
-		Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
-		Image:     &discordgo.MessageEmbedImage{URL: instagramUser.Broadcast.CoverFrameURL},
-		Color:     helpers.GetDiscordColorFromHex(hexColor),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.instagram.embed-footer"),
+			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
+		},
+		Image: &discordgo.MessageEmbedImage{URL: instagramUser.Broadcast.CoverFrameURL},
+		Color: helpers.GetDiscordColorFromHex(hexColor),
 	}
 
 	mediaUrl := channelEmbed.URL
@@ -652,10 +658,13 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 
 	var content string
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
-		URL:         fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
+		Title:     helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
+		URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.instagram.embed-footer"),
+			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
+		},
 		Description: caption,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
@@ -735,10 +744,13 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 
 	var content string
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
-		URL:         fmt.Sprintf(instagramFriendlyPost, post.Code),
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.instagram.embed-footer")},
+		Title:     helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
+		URL:       fmt.Sprintf(instagramFriendlyPost, post.Code),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.instagram.embed-footer"),
+			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
+		},
 		Description: post.Caption.Text,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
