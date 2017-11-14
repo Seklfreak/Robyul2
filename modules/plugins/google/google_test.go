@@ -136,7 +136,4 @@ func TestImageSearch(t *testing.T) {
 	if sfwResult[0].Link == nsfwResult[0].Link {
 		t.Fatalf("google.imageSearch() returned the same Link for a nsfw and sfw search, sfw: %s, nsfw: %s", sfwResult[0].Link, nsfwResult[0].Link)
 	}
-	if sfwResult[0].URL == nsfwResult[0].URL {
-		t.Fatalf("google.imageSearch() returned the same Text for a nsfw and sfw search, sfw: %s, nsfw: %s", sfwResult[0].URL, nsfwResult[0].URL)
-	}
 }
