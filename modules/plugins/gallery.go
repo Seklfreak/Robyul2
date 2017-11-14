@@ -49,6 +49,10 @@ func (g *Gallery) Init(session *discordgo.Session) {
 	galleries = g.GetGalleries()
 }
 
+func (g *Gallery) Uninit(session *discordgo.Session) {
+
+}
+
 func (g *Gallery) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Fields(content)
 	if len(args) >= 1 {

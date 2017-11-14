@@ -26,6 +26,7 @@ type DB_Twitter_Entry struct {
 	ChannelID         string             `gorethink:"channelid"`
 	AccountScreenName string             `gorethink:"account_screen_name"`
 	PostedTweets      []DB_Twitter_Tweet `gorethink:"posted_tweets"`
+	AccountID         string             `gorethink:"account_id"`
 }
 
 type DB_Twitter_Tweet struct {
@@ -39,13 +40,16 @@ type Twitter_Safe_Entries struct {
 }
 
 var (
-	twitterClient *twitter.Client
+	twitterClient            *twitter.Client
+	twitterStream            *twitter.Stream
+	twitterDemux             twitter.SwitchDemux
+	twitterStreamNeedsUpdate bool
+	twitterEntriesCache      []DB_Twitter_Entry
 )
 
 const (
 	TwitterFriendlyUser   = "https://twitter.com/%s"
 	TwitterFriendlyStatus = "https://twitter.com/%s/status/%s"
-	TwitterFooterIconUrl  = "https://abs.twimg.com/favicons/favicon.ico"
 	rfc2822               = "Mon Jan 02 15:04:05 -0700 2006"
 )
 
@@ -55,7 +59,7 @@ func (m *Twitter) Commands() []string {
 	}
 }
 
-func (m *Twitter) Init(session *discordgo.Session) {
+func (t *Twitter) Init(session *discordgo.Session) {
 	config := oauth1.NewConfig(
 		helpers.GetConfig().Path("twitter.consumer_key").Data().(string),
 		helpers.GetConfig().Path("twitter.consumer_secret").Data().(string))
@@ -65,11 +69,134 @@ func (m *Twitter) Init(session *discordgo.Session) {
 	httpClient := config.Client(oauth1.NoContext, token)
 	twitterClient = twitter.NewClient(httpClient)
 
-	go m.checkTwitterFeedsLoop()
-	cache.GetLogger().WithField("module", "twitter").Info("Started Twitter loop (10m)")
-}
-func (m *Twitter) checkTwitterFeedsLoop() {
+	twitterDemux = twitter.NewSwitchDemux()
+	twitterDemux.Tweet = func(tweet *twitter.Tweet) {
+		//fmt.Println("received tweet:", tweet.Text, "by:", tweet.User.ScreenName)
+		for _, entry := range twitterEntriesCache {
+			entry = t.getEntryBy("id", entry.ID)
 
+			if entry.AccountID != tweet.User.IDStr {
+				continue
+			}
+
+			changes := false
+			tweetAlreadyPosted := false
+
+			for _, postedTweet := range entry.PostedTweets {
+				if postedTweet.ID == tweet.IDStr {
+					tweetAlreadyPosted = true
+				}
+			}
+			if tweetAlreadyPosted == false {
+				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s", tweet.IDStr))
+				entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
+				changes = true
+				go t.postTweetToChannel(entry.ChannelID, tweet, tweet.User)
+			}
+
+			if changes == true {
+				t.setEntry(entry)
+			}
+		}
+	}
+
+	go t.startTwitterStream()
+	go t.updateTwitterStreamLoop()
+
+	go func() {
+		// wait for twitterEntriesCache to initialize
+		time.Sleep(30 * time.Second)
+		// TODO: only to REST API check on start or after stream restarts
+		go t.checkTwitterFeedsLoop()
+		cache.GetLogger().WithField("module", "twitter").Info("started twitter loop (10m)")
+	}()
+}
+
+func (t *Twitter) Uninit(session *discordgo.Session) {
+	t.stopTwitterStream()
+}
+
+func (t *Twitter) startTwitterStream() {
+	defer helpers.Recover()
+
+	var err error
+	var accountIDs []string
+
+	cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
+	helpers.Relax(err)
+	err = cursor.All(&twitterEntriesCache)
+	helpers.Relax(err)
+
+	for _, entry := range twitterEntriesCache {
+		idToAdd := entry.AccountID
+
+		if idToAdd == "" && entry.AccountScreenName != "" {
+			user, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
+				ScreenName: entry.AccountScreenName,
+			})
+			helpers.RelaxLog(err)
+			if err == nil {
+				idToAdd = user.IDStr
+				if idToAdd != "" && idToAdd != "0" {
+					entry.AccountID = idToAdd
+					t.setEntry(entry)
+				}
+			}
+			cache.GetLogger().WithField("module", "twitter").Infof("saved User ID %s for Twitter Account @%s", idToAdd, entry.AccountScreenName)
+		}
+
+		if idToAdd != "" {
+			idInSlice := false
+			for _, accountID := range accountIDs {
+				if idToAdd == accountID {
+					idInSlice = true
+				}
+			}
+			if idInSlice == false {
+				accountIDs = append(accountIDs, entry.AccountID)
+			}
+		}
+	}
+
+	twitterStream, err = twitterClient.Streams.Filter(&twitter.StreamFilterParams{
+		Follow:        accountIDs,
+		StallWarnings: twitter.Bool(true),
+	})
+	helpers.Relax(err)
+	go twitterDemux.HandleChan(twitterStream.Messages)
+	cache.GetLogger().WithField("module", "twitter").Infof("started Twitter stream for %d accounts", len(accountIDs))
+}
+
+func (t *Twitter) stopTwitterStream() {
+	if twitterStream != nil {
+		twitterStream.Stop()
+		cache.GetLogger().WithField("module", "twitter").Info("stopped stream")
+	}
+}
+
+func (t *Twitter) updateTwitterStreamLoop() {
+	defer helpers.Recover()
+	defer func() {
+		go func() {
+			cache.GetLogger().WithField("module", "twitter").Error("the updateTwitterStreamLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			t.updateTwitterStreamLoop()
+		}()
+	}()
+
+	for {
+		if twitterStreamNeedsUpdate {
+			cache.GetLogger().WithField("module", "twitter").Info("restarting stream since update is required")
+			t.stopTwitterStream()
+			t.startTwitterStream()
+			twitterStreamNeedsUpdate = false
+		}
+
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func (m *Twitter) checkTwitterFeedsLoop() {
 	defer helpers.Recover()
 	defer func() {
 		go func() {
@@ -79,19 +206,12 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		}()
 	}()
 
-	var entries []DB_Twitter_Entry
 	var bundledEntries map[string][]DB_Twitter_Entry
 
 	for {
-		cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
-		helpers.Relax(err)
-
-		err = cursor.All(&entries)
-		helpers.Relax(err)
-
 		bundledEntries = make(map[string][]DB_Twitter_Entry, 0)
 
-		for _, entry := range entries {
+		for _, entry := range twitterEntriesCache {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 			if err != nil || channel == nil || channel.ID == "" {
 				cache.GetLogger().WithField("module", "twitter").Warn(fmt.Sprintf("skipped twitter @%s for Channel #%s on Guild #%s: channel not found!",
@@ -106,9 +226,8 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 		}
 
-		cache.GetLogger().WithField("module", "twitter").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(entries))
+		cache.GetLogger().WithField("module", "twitter").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(twitterEntriesCache))
 
-		// TODO: Check multiple entries at once
 		for twitterAccoutnScreenName, entries := range bundledEntries {
 			// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account @%s", twitterAccoutnScreenName))
 
@@ -138,6 +257,8 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			for _, entry := range entries {
+				entry = m.getEntryBy("id", entry.ID)
+
 				changes := false
 
 				for _, tweet := range twitterUserTweets {
@@ -148,10 +269,11 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 						}
 					}
 					if tweetAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Posting Tweet: #%s", tweet.IDStr))
+						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s", tweet.IDStr))
 						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
-						go m.postTweetToChannel(entry.ChannelID, tweet, twitterUser)
+						tweetToPost := tweet
+						go m.postTweetToChannel(entry.ChannelID, &tweetToPost, twitterUser)
 					}
 
 				}
@@ -219,7 +341,10 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				entry.ChannelID = targetChannel.ID
 				entry.AccountScreenName = twitterUser.ScreenName
 				entry.PostedTweets = dbTweets
+				entry.AccountID = twitterUser.IDStr
 				m.setEntry(entry)
+
+				twitterStreamNeedsUpdate = true
 
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
 				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
@@ -232,6 +357,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					entryBucket := m.getEntryBy("id", entryId)
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
+
+						twitterStreamNeedsUpdate = true
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
 						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
@@ -310,7 +437,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: twitterUser.ProfileImageURLHttps},
 				Footer: &discordgo.MessageEmbedFooter{
 					Text:    helpers.GetText("plugins.twitter.embed-footer"),
-					IconURL: TwitterFooterIconUrl,
+					IconURL: helpers.GetText("plugins.twitter.embed-footer-imageurl"),
 				},
 				Description: twitterUserDescription,
 				Fields: []*discordgo.MessageEmbedField{
@@ -340,7 +467,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 	}
 }
 
-func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twitterUser *twitter.User) {
+func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User) {
 	twitterNameModifier := ""
 	if twitterUser.Verified {
 		twitterNameModifier += " ☑"
@@ -382,7 +509,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet twitter.Tweet, twit
 		URL:   fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr),
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    helpers.GetText("plugins.twitter.embed-footer"),
-			IconURL: TwitterFooterIconUrl,
+			IconURL: helpers.GetText("plugins.twitter.embed-footer-imageurl"),
 		},
 		Description: tweetText,
 		Color:       helpers.GetDiscordColorFromHex(twitterUser.ProfileLinkColor),
@@ -497,4 +624,36 @@ func (m *Twitter) handleError(err error) string {
 	// Unreachable
 	err = errors.Wrap(err, "reached to unreachable code")
 	panic(err)
+}
+
+func (t *Twitter) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+
+}
+
+func (t *Twitter) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
 }

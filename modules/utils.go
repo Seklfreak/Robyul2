@@ -106,7 +106,34 @@ func Init(session *discordgo.Session) {
 
 	cache.GetLogger().WithField("module", "modules").Info(
 		"modules",
-		"Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
+		"Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins, "+strconv.Itoa(len(PluginExtendedList))+" extended plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
+	)
+}
+
+// Uninit deintializes the plugins
+func Uninit(session *discordgo.Session) {
+	extendedPluginCount := len(PluginExtendedList)
+	extendedPluginCache = make(map[string]*ExtendedPlugin)
+
+	logTemplate := "[EXTENDED-PLUG] %s deintializing…"
+	for i := 0; i < extendedPluginCount; i++ {
+		ref := &PluginExtendedList[i]
+
+		for _, cmd := range (*ref).Commands() {
+			extendedPluginCache[cmd] = ref
+		}
+
+		cache.GetLogger().WithField("module", "modules").Info(fmt.Sprintf(
+			logTemplate,
+			helpers.Typeof(*ref),
+		))
+
+		(*ref).Uninit(session)
+	}
+
+	cache.GetLogger().WithField("module", "modules").Info(
+		"modules",
+		"Uninit finished. Unitialized "+strconv.Itoa(len(PluginExtendedList))+" extended plugins",
 	)
 }
 

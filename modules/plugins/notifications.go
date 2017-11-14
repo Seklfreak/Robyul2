@@ -53,6 +53,10 @@ func (m *Notifications) Init(session *discordgo.Session) {
 	go m.refreshNotificationSettingsCache()
 }
 
+func (m *Notifications) Uninit(session *discordgo.Session) {
+
+}
+
 // @TODO: add command to make a keyword global (owner only)
 
 func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

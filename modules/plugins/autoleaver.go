@@ -40,6 +40,10 @@ func (a *Autoleaver) Init(session *discordgo.Session) {
 	session.AddHandler(a.OnGuildDelete)
 }
 
+func (a *Autoleaver) Uninit(session *discordgo.Session) {
+
+}
+
 func (a *Autoleaver) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	defer helpers.Recover()
 

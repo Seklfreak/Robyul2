@@ -43,6 +43,10 @@ func (s *Starboard) Init(session *discordgo.Session) {
 
 }
 
+func (s *Starboard) Uninit(session *discordgo.Session) {
+
+}
+
 func (s *Starboard) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	defer helpers.Recover()
 

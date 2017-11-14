@@ -312,6 +312,8 @@ func main() {
 	<-BotRuntimeChannel
 
 	log.WithField("module", "launcher").Info("Robyul is stopping")
+	log.WithField("module", "launcher").Info("Uninitializing plugins...")
+	BotDestroy()
 	log.WithField("module", "launcher").Info("Disconnecting bot discord session...")
 	discord.Close()
 	log.WithField("module", "launcher").Info("Disconnecting friend discord sessions...")

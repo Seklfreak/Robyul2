@@ -130,6 +130,10 @@ func (m *Mod) Init(session *discordgo.Session) {
 	cache.GetLogger().WithField("module", "mod").Info("Started cacheBans")
 }
 
+func (m *Mod) Uninit(session *discordgo.Session) {
+
+}
+
 func (m *Mod) cacheBans() {
 	defer helpers.Recover()
 

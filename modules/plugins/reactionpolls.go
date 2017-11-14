@@ -59,6 +59,10 @@ func (rp *ReactionPolls) Init(session *discordgo.Session) {
 	}()
 }
 
+func (rp *ReactionPolls) Uninit(session *discordgo.Session) {
+
+}
+
 func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	lastQuote := rune(0)
 	f := func(c rune) bool {

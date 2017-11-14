@@ -184,6 +184,10 @@ func (m *Levels) Init(session *discordgo.Session) {
 	go m.setServerFeaturesLoop()
 }
 
+func (l *Levels) Uninit(session *discordgo.Session) {
+
+}
+
 func (l *Levels) setServerFeaturesLoop() {
 	log := cache.GetLogger()
 

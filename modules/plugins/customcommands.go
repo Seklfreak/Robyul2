@@ -47,6 +47,10 @@ func (cc *CustomCommands) Init(session *discordgo.Session) {
 	customCommandsCache = cc.getAllCustomCommands()
 }
 
+func (cc *CustomCommands) Uninit(session *discordgo.Session) {
+
+}
+
 func (cc *CustomCommands) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Fields(content)
 	if len(args) >= 1 {

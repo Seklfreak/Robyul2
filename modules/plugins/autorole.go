@@ -33,6 +33,10 @@ func (a *AutoRoles) Init(session *discordgo.Session) {
 	a.parser.Add(common.All...)
 }
 
+func (a *AutoRoles) Uninit(session *discordgo.Session) {
+
+}
+
 func (a *AutoRoles) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Fields(content)
 	if len(args) >= 1 {

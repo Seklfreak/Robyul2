@@ -36,6 +36,10 @@ func (m *GuildAnnouncements) Init(session *discordgo.Session) {
 
 }
 
+func (m *GuildAnnouncements) Uninit(session *discordgo.Session) {
+
+}
+
 func (m *GuildAnnouncements) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Fields(content)
 	if len(args) >= 2 {

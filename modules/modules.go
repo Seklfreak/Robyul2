@@ -25,7 +25,6 @@ var (
 		&plugins.UrbanDict{},
 		&plugins.Weather{},
 		&plugins.VLive{},
-		&plugins.Twitter{},
 		&plugins.Instagram{},
 		&plugins.Facebook{},
 		&plugins.WolframAlpha{},
@@ -88,6 +87,7 @@ var (
 		&plugins.Autoleaver{},
 		&plugins.Persistency{},
 		&plugins.DM{},
+		&plugins.Twitter{},
 	}
 
 	// TriggerPluginList is the list of plugins that activate on normal chat

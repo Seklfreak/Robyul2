@@ -104,6 +104,10 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 	}()
 }
 
+func BotDestroy() {
+	modules.Uninit(cache.GetSession())
+}
+
 func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 	cache.GetLogger().WithField("module", "bot").Info("Reconnected to discord!")
 

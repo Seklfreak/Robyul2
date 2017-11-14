@@ -62,6 +62,10 @@ func (m *Mirror) Init(session *discordgo.Session) {
 	mirrors = m.GetMirrors()
 }
 
+func (m *Mirror) Uninit(session *discordgo.Session) {
+
+}
+
 func (m *Mirror) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	args := strings.Fields(content)
 	if len(args) >= 1 {

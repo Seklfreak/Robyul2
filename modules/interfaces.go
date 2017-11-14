@@ -33,6 +33,8 @@ type ExtendedPlugin interface {
 
 	Init(session *discordgo.Session)
 
+	Uninit(session *discordgo.Session)
+
 	Action(
 		command string,
 		content string,

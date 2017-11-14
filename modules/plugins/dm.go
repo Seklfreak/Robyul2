@@ -30,6 +30,11 @@ func (dm *DM) Commands() []string {
 }
 
 func (dm *DM) Init(session *discordgo.Session) {
+
+}
+
+func (dm *DM) Uninit(session *discordgo.Session) {
+
 }
 
 func (dm *DM) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
