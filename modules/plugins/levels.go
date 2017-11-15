@@ -1801,6 +1801,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						serverRoles, err := session.GuildRoles(channel.GuildID)
+						if err != nil {
+							if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+								_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.permissions.required", "Manage Roles"))
+								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+								return
+							}
+						}
 						helpers.Relax(err)
 
 						var targetRole *discordgo.Role
