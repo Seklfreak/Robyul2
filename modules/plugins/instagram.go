@@ -680,7 +680,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 
 	if len(reelMedia.ImageVersions2.Candidates) > 0 {
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: reelMedia.ImageVersions2.Candidates[0].URL}
-		mediaUrl = getFullResUrl(reelMedia.ImageVersions2.Candidates[0].URL)
+		mediaUrl = reelMedia.ImageVersions2.Candidates[0].URL
 	}
 	if len(reelMedia.VideoVersions) > 0 {
 		channelEmbed.Video = &discordgo.MessageEmbedVideo{
@@ -688,7 +688,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		if mediaUrl != "" {
 			thumbnailUrl = mediaUrl
 		}
-		mediaUrl = getFullResUrl(reelMedia.VideoVersions[0].URL)
+		mediaUrl = reelMedia.VideoVersions[0].URL
 	}
 
 	if mediaUrl != "" {
@@ -806,6 +806,7 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 	}
 }
 
+// breaks reel media links!
 func getFullResUrl(url string) string {
 	result := instagramPicUrlRegex.FindStringSubmatch(url)
 	if result != nil && len(result) >= 8 {
