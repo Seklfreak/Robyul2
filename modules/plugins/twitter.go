@@ -78,7 +78,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				continue
 			}
 
-			entry = t.getEntryBy("id", entry.ID)
+			entry := t.getEntryBy("id", entry.ID)
 
 			changes := false
 			tweetAlreadyPosted := false
@@ -261,7 +261,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			for _, entry := range entries {
-				entry = m.getEntryBy("id", entry.ID)
+				entry := m.getEntryBy("id", entry.ID)
 
 				changes := false
 
