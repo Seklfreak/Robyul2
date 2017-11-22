@@ -265,7 +265,8 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			// Send to cleverbot
 			helpers.CleverbotSend(session, channel.ID, msg)
 			return
-		}*/
+		}
+	*/
 
 	// Check if the message contains @mentions for us
 	if strings.HasPrefix(message.Content, "<@") && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
@@ -345,25 +346,24 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 				}
 			})
 
-			/*
-				default:
-					// Track usage
-					metrics.CleverbotRequests.Add(1)
+		default:
+			// Track usage
+			metrics.ChatbotRequests.Add(1)
 
-					// Mark typing
-					session.ChannelTyping(message.ChannelID)
+			// Mark typing
+			session.ChannelTyping(message.ChannelID)
 
-					// Resolve other @mentions before sending the message
-					for _, user := range message.Mentions {
-						msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
-					}
+			// Resolve other @mentions before sending the message
+			for _, user := range message.Mentions {
+				msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
+			}
 
-					// Remove smileys
-					msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
+			// Remove smileys
+			msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
-					// Send to cleverbot
-					helpers.CleverbotSend(session, channel.ID, msg)
-					return*/
+			// Send to cleverbot
+			helpers.ChatbotSend(session, channel.ID, msg)
+			return
 		}
 	}
 

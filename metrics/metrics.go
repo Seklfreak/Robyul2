@@ -20,6 +20,9 @@ var (
 	// MessagesSent counts all ever sent messages
 	MessagesSent = expvar.NewInt("messages_sent")
 
+	// ChatbotRequests counts all chatbot requests made
+	ChatbotRequests = expvar.NewInt("chatbot_requests")
+
 	// UserCount counts all logged-in users
 	UserCount = expvar.NewInt("user_count")
 

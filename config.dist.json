@@ -96,5 +96,8 @@
     "secret": "",
     "username": "",
     "password": ""
+  },
+  "program-o": {
+    "api-url": "http://www.example.com/ProgramO/chatbot/conversation_start.php"
   }
 }
