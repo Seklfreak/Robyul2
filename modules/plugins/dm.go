@@ -194,6 +194,11 @@ func (dm *DM) repostDM(channelID string, message *discordgo.Message) (err error)
 	for _, attachment := range message.Attachments {
 		content += "\n" + attachment.URL
 	}
+	content = strings.TrimSpace(content)
+
+	if content == "" {
+		return nil
+	}
 
 	embed := &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
