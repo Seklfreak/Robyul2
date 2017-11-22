@@ -138,6 +138,11 @@ func (t *Twitter) startTwitterStream() {
 			user, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
 				ScreenName: entry.AccountScreenName,
 			})
+			if err != nil {
+				if strings.Contains(err.Error(), "User not found.") {
+					continue
+				}
+			}
 			helpers.RelaxLog(err)
 			if err == nil {
 				idToAdd = user.IDStr
@@ -331,6 +336,12 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					ExcludeReplies:  twitter.Bool(true),
 					IncludeRetweets: twitter.Bool(true),
 				})
+				if err != nil {
+					if strings.Contains(err.Error(), "invalid character 'x' looking for beginning of value") {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitter.rate-limit-exceed"))
+						return
+					}
+				}
 				helpers.Relax(err)
 				// Create DB Entries
 				var dbTweets []DB_Twitter_Tweet
@@ -605,8 +616,7 @@ func (m *Twitter) handleError(err error) string {
 	var errMsg string
 	_, scanErr := fmt.Sscanf(err.Error(), "twitter: %d %s", &errCode, &errMsg)
 	if scanErr != nil {
-		err = errors.Wrap(err, "parse twitter error message failed")
-		helpers.Relax(err)
+		return helpers.GetTextF("plugins.twitter.rate-limit-exceed")
 	}
 
 	// Handle twitter API error by code

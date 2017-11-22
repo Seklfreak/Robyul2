@@ -815,6 +815,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 				newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 				_, err = helpers.SendMessage(targetChannel.ID, newText)
+				if err != nil {
+					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingAccess {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-no-access"))
+						return
+					}
+				}
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
@@ -984,7 +990,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		if len(args) >= 1 && args[0] != "" {
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if err != nil {
-				if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10013 {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return

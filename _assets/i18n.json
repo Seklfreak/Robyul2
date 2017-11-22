@@ -489,7 +489,8 @@
       "prefix-set-success": "The new Robyul prefix for this server is `%s`.",
       "user-banned-error-too-many-days": "The maximum of days to delete is 7 days. <:blobweary:317036265071575050>",
       "set-bot-dp-success": "I successfully changed my DP.",
-      "set-bot-dp-error-not-png": "Please upload a `.png` file!"
+      "set-bot-dp-error-not-png": "Please upload a `.png` file!",
+      "echo-error-no-access": "I'm not allowed to chat in that channel. <:blobweary:317036265071575050>"
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
@@ -514,8 +515,8 @@
       "embed-footer": "powered by twitter.com",
       "account-not-found": "User not found!",
       "account-has-been-suspended": "User account has been suspended!",
-      "rate-limit-exceed": "Twitter API rate limit exceed, Try again later!",
-      "over-capacity": "Twitter servers are overloaded, Try again later!",
+      "rate-limit-exceed": "Twitter API rate limit exceeded, please try again later!",
+      "over-capacity": "Twitter servers are overloaded, please try again later!",
       "internal-error": "Unknown internal error occurred in Twitter servers!",
       "account-added-success": "Added Twitter Account `@%s` to the Channel <#%s>!",
       "account-delete-not-found-error": "Unable to find Twitter Account in the Database!",
@@ -537,7 +538,8 @@
       "live-embed-title": "📣 %s (@%s)%s just went live!",
       "post-direct-links-disabled": "I won't post direct links for this account anymore.",
       "post-direct-links-enabled": "I will now post direct links for this account.",
-      "embed-footer-imageurl": "https://i.imgur.com/DEiSLA6.png"
+      "embed-footer-imageurl": "https://i.imgur.com/DEiSLA6.png",
+      "ratelimited": "Robyul is currently rate limited by Instagram: Please try again in a few minutes!"
     },
     "facebook": {
       "page-not-found": "Page not found!",

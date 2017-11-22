@@ -431,8 +431,20 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 					return
 				}
 				feed, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
+				if err != nil {
+					if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
+						return
+					}
+				}
 				helpers.Relax(err)
 				story, err := instagramClient.GetUserStories(instagramUser.User.ID)
+				if err != nil {
+					if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
+						return
+					}
+				}
 				helpers.Relax(err)
 				// Create DB Entries
 				var dbPosts []DB_Instagram_Post

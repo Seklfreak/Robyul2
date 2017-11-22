@@ -1298,9 +1298,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			numberOfMembers = invite.ApproximateMemberCount
 		}
 
+		inviterUsername := "N/A"
+		inviterID := "N/A"
+		if invite.Inviter != nil {
+			inviterUsername = invite.Inviter.Username + "#" + invite.Inviter.Discriminator
+			inviterID = invite.Inviter.ID
+		}
+
 		inviteEmbed := &discordgo.MessageEmbed{
 			Title:     "Invite for " + invite.Guild.Name,
-			URL:       "https://discord.go/" + invite.Code,
+			URL:       "https://discord.gg/" + invite.Code,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{URL: invite.Guild.Icon},
 			Footer:    &discordgo.MessageEmbedFooter{Text: "Server #" + invite.Guild.ID},
 
@@ -1311,7 +1318,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Usage Limit", Value: maxUsesText, Inline: true},
 				{Name: "Expires", Value: maxAgeText, Inline: true},
 				{Name: "Revoked", Value: revokedText, Inline: true},
-				{Name: "Inviter", Value: fmt.Sprintf("%s#%s (`#%s`)", invite.Inviter.Username, invite.Inviter.Discriminator, invite.Inviter.ID), Inline: true},
+				{Name: "Inviter", Value: fmt.Sprintf("%s (`#%s`)", inviterUsername, inviterID), Inline: true},
 				{Name: "Created At", Value: humanize.Time(createdAt), Inline: true},
 			},
 		}
