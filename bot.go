@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"math/rand"
-
 	"os"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -56,9 +54,6 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 
 	// Run async worker for guild changes
 	go helpers.GuildSettingsUpdater()
-
-	// Run async game-changer
-	go changeGameInterval(session)
 
 	// request guild members from the gateway
 	go func() {
@@ -457,57 +452,4 @@ func sendHelp(message *discordgo.MessageCreate) {
 		message.ChannelID,
 		helpers.GetTextF("bot.help", message.Author.ID, channel.GuildID),
 	)
-}
-
-func changeGameInterval(session *discordgo.Session) {
-	/*err := session.UpdateStatusComplex(discordgo.UpdateStatusData{
-		Game: &discordgo.Game{
-			Type: 0,
-			Name: "Nayoung",
-			//URL:     "",
-			State:   "Is pretty cool!",
-			Details: "<3",
-			Assets: discordgo.Assets{
-				LargeImageID: "378562136353275904",
-				SmallImageID: "378562324195442698",
-				LargeText:    "Nayoung large",
-				SmallText:    "Nayoung small",
-			},
-			ApplicationID: "284003302629179392",
-		},
-		Status: "online",
-	})
-
-	helpers.RelaxLog(err)
-	return*/
-	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	var newStatus string
-	for {
-		randInt := randGen.Intn(2)
-		if firstGameChange {
-			randInt = 0
-		}
-		switch randInt {
-		case 0:
-			newStatus = fmt.Sprintf("on %d servers | robyul.chat | _help", len(session.State.Guilds))
-		case 1:
-			users := make(map[string]string)
-
-			for _, guild := range session.State.Guilds {
-				for _, u := range guild.Members {
-					users[u.User.ID] = u.User.Username
-				}
-			}
-
-			newStatus = fmt.Sprintf("with %d members | robyul.chat | _help", len(users))
-		}
-
-		err := session.UpdateStatus(0, newStatus)
-		helpers.RelaxLog(err)
-
-		firstGameChange = false
-
-		time.Sleep(1 * time.Hour)
-	}
 }

@@ -50,6 +50,7 @@ var migrations = []helpers.Callback{
 	m38_create_table_weather_last_locations,
 	m39_create_table_donators,
 	m40_create_table_bot_config,
+	m41_create_table_bot_status,
 }
 
 // Run executes all registered migrations

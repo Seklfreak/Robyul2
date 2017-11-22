@@ -69,6 +69,7 @@ var (
 		&plugins.Donators{},
 		&plugins.Ping{},
 		&google.Handler{},
+		&plugins.BotStatus{},
 	}
 
 	// PluginList is the list of active plugins

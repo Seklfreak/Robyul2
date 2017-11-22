@@ -934,6 +934,12 @@
       "search-no-results": "I wasn't able to find anything googling your query. <:blobweary:317036265071575050>",
       "embed-footer": "powered by google.com",
       "embed-footer-imageurl": "https://i.imgur.com/fjsXikJ.png"
+    },
+    "botstatus": {
+      "add-success": "I added the status `%s` to the Robyul game status rotation list.",
+      "list-empty": "There are currently no bot statuses saved.",
+      "remove-success": "I removed the status `%s` from the Robyul game status rotation list.",
+      "set-success": "I set the current game status to `%s`.\nThis status will get overwritten with the next game status rotation."
     }
   }
 }
