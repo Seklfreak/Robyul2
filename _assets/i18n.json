@@ -889,6 +889,7 @@
     "reddit": {
       "embed-footer": "powered by reddit.com",
       "subreddit-not-found": "I wasn't able to find a subreddit with that name. <:blobthinking:317028940885524490>",
+      "redditor-not-found": "I wasn't able to find a redditor with that name. <:blobthinking:317028940885524490>",
       "add-subreddit-success": "I will now post new submission on `r/%s` to <#%s>! <:blobokhand:317032017164238848>",
       "remove-subreddit-error-not-found": "I wasn't able to find a subreddit with that ID. <:blobthinking:317028940885524490>",
       "remove-subreddit-success": "I removed the subreddit `r/%s` from my database! <:blobokhand:317032017164238848>",

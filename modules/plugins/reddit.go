@@ -358,10 +358,18 @@ func (r *Reddit) actionRemove(args []string, in *discordgo.Message, out **discor
 }
 
 func (r *Reddit) actionInfo(args []string, in *discordgo.Message, out **discordgo.MessageSend) redditAction {
-	subredditName := strings.TrimLeft(args[0], "/")
-	subredditName = strings.Replace(subredditName, "r/", "", -1)
+	searchName := strings.TrimLeft(args[0], "/")
 
-	*out = r.getSubredditInfo(subredditName)
+	if strings.HasPrefix(searchName, "u/") {
+		searchName = strings.Replace(searchName, "u/", "", -1)
+
+		*out = r.getRedditorInfo(searchName)
+		return r.actionFinish
+	}
+
+	searchName = strings.Replace(searchName, "r/", "", -1)
+
+	*out = r.getSubredditInfo(searchName)
 	return r.actionFinish
 }
 
@@ -412,7 +420,7 @@ func (r *Reddit) getSubredditInfo(subreddit string) (data *discordgo.MessageSend
 	if subredditData.IsNSFW {
 		isNSFWText = "Yes"
 	}
-	titleText := "r/" + subredditData.Name
+	titleText := "/r/" + subredditData.Name
 	if subredditData.Title != "" {
 		titleText += " ~ " + subredditData.Title
 	}
@@ -438,6 +446,48 @@ func (r *Reddit) getSubredditInfo(subreddit string) (data *discordgo.MessageSend
 
 	if subredditData.HeaderImg != "" {
 		data.Embed.Image = &discordgo.MessageEmbedImage{URL: subredditData.HeaderImg}
+	}
+
+	return
+}
+
+func (r *Reddit) getRedditorInfo(username string) (data *discordgo.MessageSend) {
+	redditorData, err := redditSession.AboutRedditor(username)
+	if err != nil {
+		return r.newMsg(err.Error())
+	}
+
+	if redditorData.ID == "" {
+		return r.newMsg("plugins.reddit.redditor-not-found")
+	}
+
+	data = &discordgo.MessageSend{}
+
+	hasGold := "No"
+	if redditorData.Gold {
+		hasGold = "Yes"
+	}
+
+	titleText := "/u/" + redditorData.Name
+
+	creationTime := time.Unix(int64(redditorData.Created), 0)
+
+	data.Embed = &discordgo.MessageEmbed{
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.reddit.embed-footer") + " | reddit #" + redditorData.ID,
+			IconURL: helpers.GetText("plugins.reddit.embed-footer-imageurl"),
+		},
+		Title: html.UnescapeString(titleText),
+		URL:   RedditBaseUrl + "/u/" + redditorData.Name,
+		Fields: []*discordgo.MessageEmbedField{
+			{Name: "Karma (Post / Comment)",
+				Value:  humanize.Comma(int64(redditorData.LinkKarma)) + " / " + humanize.Comma(int64(redditorData.CommentKarma)),
+				Inline: true},
+			{Name: "Creation", Value: fmt.Sprintf("%s. That's %s.",
+				creationTime.Format(time.ANSIC), helpers.SinceInDaysText(creationTime)), Inline: true},
+			{Name: "Gold User?", Value: hasGold, Inline: true},
+		},
+		Color: helpers.GetDiscordColorFromHex(RedditColor),
 	}
 
 	return
