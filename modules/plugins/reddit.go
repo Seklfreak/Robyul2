@@ -190,17 +190,17 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission,
 	}
 	data.Embed.Title = html.UnescapeString(data.Embed.Title)
 	if len(data.Embed.Title) > 128 {
-		data.Embed.Title = submission.Title[0:126] + "…"
+		data.Embed.Title = data.Embed.Title[0:127] + "…"
 	}
 	textModeTitle = html.UnescapeString(textModeTitle)
 	if len(textModeTitle) > 128 {
-		textModeTitle = textModeTitle[0:126] + "…"
+		textModeTitle = textModeTitle[0:127] + "…"
 	}
 	textModeTitle += "**"
 	if submission.Selftext != "" {
 		data.Embed.Description = html.UnescapeString(submission.Selftext)
 		if len(data.Embed.Description) > 500 {
-			data.Embed.Description = data.Embed.Description[0:498] + "…"
+			data.Embed.Description = data.Embed.Description[0:499] + "…"
 		}
 		textModeSelftext = data.Embed.Description
 	}

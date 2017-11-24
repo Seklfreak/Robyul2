@@ -547,8 +547,6 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 			session.ChannelTyping(msg.ChannelID)
 			instagramUsername := strings.Replace(args[0], "@", "", 1)
 			instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
-			helpers.Relax(err)
-
 			if err != nil || instagramUser.User.Username == "" {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)

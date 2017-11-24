@@ -425,11 +425,16 @@ func (g *Gallery) OnMessageDelete(msg *discordgo.MessageDelete, session *discord
 				for _, messageData := range rememberedMessages {
 					err = session.ChannelMessageDelete(messageData.ChannelID, messageData.MessageID)
 					if err != nil {
+						msgAuthorID := "N/A"
+						if msg.Author != nil {
+							msgAuthorID = msg.Author.ID
+						}
+
 						cache.GetLogger().WithFields(logrus.Fields{
 							"module":            "gallery",
 							"sourceChannelID":   msg.ChannelID,
 							"sourceMessageID":   msg.ID,
-							"sourceAuthorID":    msg.Author.ID,
+							"sourceAuthorID":    msgAuthorID,
 							"mirroredChannelID": messageData.ChannelID,
 							"mirroredMessageID": messageData.MessageID,
 						}).Error(

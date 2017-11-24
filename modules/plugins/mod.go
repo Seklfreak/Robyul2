@@ -2133,7 +2133,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
 						helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error()))
 					if errD, ok := err.(*discordgo.RESTError); ok {
-						if errD.Message.Code != 50001 {
+						if errD.Message.Code != discordgo.ErrCodeMissingAccess && errD.Message.Code != discordgo.ErrCodeMissingPermissions {
 							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 						}
 					} else {
