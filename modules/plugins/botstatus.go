@@ -110,14 +110,19 @@ func (bs *BotStatus) actionStart(args []string, in *discordgo.Message, out **dis
 
 func (bs *BotStatus) replaceText(text string) (result string) {
 	users := make(map[string]string)
+	channels := make(map[string]string)
 	for _, guild := range cache.GetSession().State.Guilds {
 		for _, u := range guild.Members {
 			users[u.User.ID] = u.User.Username
+		}
+		for _, c := range guild.Channels {
+			channels[c.ID] = c.Name
 		}
 	}
 
 	text = strings.Replace(text, "{GUILD_COUNT}", strconv.Itoa(len(cache.GetSession().State.Guilds)), -1)
 	text = strings.Replace(text, "{MEMBER_COUNT}", strconv.Itoa(len(users)), -1)
+	text = strings.Replace(text, "{CHANNEL_COUNT}", strconv.Itoa(len(channels)), -1)
 
 	return text
 }
