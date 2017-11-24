@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -34,6 +33,7 @@ const (
 	VliveFriendlyCeleb             = "http://channels.vlive.tv/%s/celeb/%s"
 	VliveFriendlySearch            = "http://www.vlive.tv/search/all?query=%s"
 	ChannelIdRegex                 = "(http(s)?://channels.vlive.tv)?(/)?(channels/)?([A-Z0-9]+)(/video)?"
+	VLiveWorkers                   = 10
 )
 
 type VLive struct{}
@@ -99,16 +99,6 @@ type DB_VLive_Celeb struct {
 	Url     string `json:"-"`
 }
 
-type VLive_Safe_Entries struct {
-	entries []DB_VLive_Entry
-	mux     sync.Mutex
-}
-
-type VLive_Safe_Bundled_Entries struct {
-	entries map[string][]DB_VLive_Entry
-	mux     sync.Mutex
-}
-
 func (r *VLive) Commands() []string {
 	return []string{
 		"vlive",
@@ -120,8 +110,8 @@ func (r *VLive) Init(session *discordgo.Session) {
 	cache.GetLogger().WithField("module", "vlive").Info("Started vlive loop (0s)")
 }
 func (r *VLive) checkVliveFeedsLoop() {
-	var safeEntries VLive_Safe_Entries
-	var bundledSafeEntries VLive_Safe_Bundled_Entries
+	var entries []DB_VLive_Entry
+	var bundledEntries map[string][]DB_VLive_Entry
 
 	defer helpers.Recover()
 	defer func() {
@@ -133,38 +123,66 @@ func (r *VLive) checkVliveFeedsLoop() {
 	}()
 
 	for {
+		bundledEntries = make(map[string][]DB_VLive_Entry, 0)
+
 		cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
 		helpers.Relax(err)
 
-		err = cursor.All(&safeEntries.entries)
+		err = cursor.All(&entries)
 		helpers.Relax(err)
 
-		bundledSafeEntries.entries = make(map[string][]DB_VLive_Entry, 0)
-
-		for _, entry := range safeEntries.entries {
-			safeEntries.mux.Lock()
-			if _, ok := bundledSafeEntries.entries[entry.VLiveChannel.Code]; ok {
-				bundledSafeEntries.mux.Lock()
-				bundledSafeEntries.entries[entry.VLiveChannel.Code] = append(bundledSafeEntries.entries[entry.VLiveChannel.Code], entry)
-				bundledSafeEntries.mux.Unlock()
+		for _, entry := range entries {
+			if _, ok := bundledEntries[entry.VLiveChannel.Code]; ok {
+				bundledEntries[entry.VLiveChannel.Code] = append(bundledEntries[entry.VLiveChannel.Code], entry)
 			} else {
-				bundledSafeEntries.mux.Lock()
-				bundledSafeEntries.entries[entry.VLiveChannel.Code] = []DB_VLive_Entry{entry}
-				bundledSafeEntries.mux.Unlock()
+				bundledEntries[entry.VLiveChannel.Code] = []DB_VLive_Entry{entry}
 			}
-			safeEntries.mux.Unlock()
 		}
 
-		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking %d channels for %d feeds", len(bundledSafeEntries.entries), len(safeEntries.entries)))
+		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking %d channels for %d feeds with %d workers", len(bundledEntries), len(entries), VLiveWorkers))
+		start := time.Now()
 
-		for channelCode, entries := range bundledSafeEntries.entries {
-			bundledSafeEntries.mux.Lock()
+		jobs := make(chan map[string][]DB_VLive_Entry, 0)
+		results := make(chan int, 0)
 
-			//cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
+		workerEntries := make(map[int]map[string][]DB_VLive_Entry, 0)
+		for w := 1; w <= VLiveWorkers; w++ {
+			go r.feedWorker(w, jobs, results)
+			workerEntries[w] = make(map[string][]DB_VLive_Entry)
+		}
+
+		lastWorker := 1
+		for code, codeEntries := range bundledEntries {
+			workerEntries[lastWorker][code] = codeEntries
+			lastWorker++
+			if lastWorker > VLiveWorkers {
+				lastWorker = 1
+			}
+		}
+
+		for _, workerEntry := range workerEntries {
+			jobs <- workerEntry
+		}
+		close(jobs)
+
+		for a := 1; a <= VLiveWorkers; a++ {
+			<-results
+		}
+		elapsed := time.Since(start)
+		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checked %d channels for %d feeds with %d workers, took %s", len(bundledEntries), len(entries), VLiveWorkers, elapsed))
+
+		time.Sleep(0 * time.Second)
+	}
+}
+
+func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, results chan<- int) {
+	for job := range jobs {
+		cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Infof("worker %d started for %d channels", id, len(job))
+		for channelCode, entries := range job {
+			cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
 			updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(channelCode)
 			if err != nil {
-				cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))
-				safeEntries.mux.Unlock()
+				cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Error(fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))
 				continue
 			}
 			for _, entry := range entries {
@@ -178,7 +196,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 						}
 					}
 					if videoAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting VOD: #%d", vod.Seq))
+						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting VOD: #%d", vod.Seq))
 						entry.PostedVOD = append(entry.PostedVOD, vod)
 						changes = true
 						go r.postVodToChannel(entry, vod, updatedVliveChannel)
@@ -192,7 +210,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 						}
 					}
 					if videoAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
+						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
 						entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
 						changes = true
 						go r.postUpcomingToChannel(entry, upcoming, updatedVliveChannel)
@@ -206,7 +224,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 						}
 					}
 					if videoAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Live: #%d", live.Seq))
+						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Live: #%d", live.Seq))
 						entry.PostedLive = append(entry.PostedLive, live)
 						changes = true
 						go r.postLiveToChannel(entry, live, updatedVliveChannel)
@@ -220,7 +238,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 						}
 					}
 					if noticeAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Notice: #%d", notice.Number))
+						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Notice: #%d", notice.Number))
 						entry.PostedNotices = append(entry.PostedNotices, notice)
 						changes = true
 						go r.postNoticeToChannel(entry, notice, updatedVliveChannel)
@@ -234,7 +252,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 						}
 					}
 					if celebAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
+						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
 						entry.PostedCelebs = append(entry.PostedCelebs, celeb)
 						changes = true
 						go r.postCelebToChannel(entry, celeb, updatedVliveChannel)
@@ -244,12 +262,9 @@ func (r *VLive) checkVliveFeedsLoop() {
 					r.setEntry(entry)
 				}
 			}
-
-			bundledSafeEntries.mux.Unlock()
 		}
-
-		time.Sleep(0 * time.Second)
 	}
+	results <- len(jobs)
 }
 
 func (r *VLive) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
