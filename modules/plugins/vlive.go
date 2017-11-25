@@ -35,7 +35,7 @@ const (
 	VliveFriendlyCeleb             = "http://channels.vlive.tv/%s/celeb/%s"
 	VliveFriendlySearch            = "http://www.vlive.tv/search/all?query=%s"
 	ChannelIdRegex                 = "(http(s)?://channels.vlive.tv)?(/)?(channels/)?([A-Z0-9]+)(/video)?"
-	VLiveWorkers                   = 30
+	VLiveWorkers                   = 15
 )
 
 type VLive struct{}
