@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"time"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/version"
 )
@@ -21,7 +23,9 @@ func NetGet(url string) []byte {
 // NetGetUA performs a GET request with a custom user-agent
 func NetGetUA(url string, useragent string) []byte {
 	// Allocate client
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	// Prepare request
 	request, err := http.NewRequest("GET", url, nil)
@@ -53,7 +57,9 @@ func NetGetUA(url string, useragent string) []byte {
 
 func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 	// Allocate client
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	// Prepare request
 	request, err := http.NewRequest("GET", url, nil)
@@ -96,7 +102,9 @@ func NetPost(url string, data string) []byte {
 
 func NetPostUA(url string, data string, useragent string) []byte {
 	// Allocate client
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	// Prepare request
 	request, err := http.NewRequest("POST", url, bytes.NewBufferString(data))

@@ -55,7 +55,9 @@ func FriendRequest(friend *discordgo.Session, method string, endpoint string) (r
 		return result, err
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	request, err := http.NewRequest(method, discordgo.EndpointAPI+endpoint, nil)
 	if err != nil {

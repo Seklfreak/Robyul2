@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -654,7 +655,9 @@ func (m *Charts) GetMelonDailyStats() MelonDailyStats {
 }
 
 func (m *Charts) DoMelonRequest(url string) []byte {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

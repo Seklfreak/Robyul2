@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"time"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -158,7 +160,9 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 
 func (l *Lyrics) GeniusRequest(location string, object interface{}) error {
 	requestUrl := GeniusApiBaseUrl + location
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 	req, err := http.NewRequest("GET", requestUrl, nil)
 	if err != nil {
 		return err

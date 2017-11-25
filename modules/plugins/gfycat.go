@@ -62,7 +62,9 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 
 	accessToken := m.getAccessToken()
 
-	httpClient = &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	postGfycatEndpoint := fmt.Sprintf(gfycatApiBaseUrl, "gfycats")
 	postData, err := gabs.ParseJSON([]byte(fmt.Sprintf(
@@ -152,7 +154,9 @@ func (m *Gfycat) getAccessToken() string {
 		helpers.GetConfig().Path("gfycat.client_secret").Data().(string),
 	)))
 	helpers.Relax(err)
-	httpClient = &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 	request, err := http.NewRequest("POST", getTokenEndpoint, strings.NewReader(postData.String()))
 	request.Header.Add("user-agent", helpers.DEFAULT_UA)
 	helpers.Relax(err)

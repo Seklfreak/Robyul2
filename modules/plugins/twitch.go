@@ -303,7 +303,9 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 	var twitchStatus TwitchStatus
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	request, err := http.NewRequest("GET", fmt.Sprintf(twitchStatsEndpoint, name), nil)
 	if err != nil {

@@ -9,6 +9,8 @@ import (
 
 	"strings"
 
+	"time"
+
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -80,7 +82,9 @@ func getImageSearchQuries(queryText string, nsfw, friendly bool) (query string) 
 }
 
 func search(query string, nsfw bool) (results []linkResult, err error) {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	request, err := http.NewRequest("GET", SearchUrl+"?"+getSearchQueries(query, nsfw, false), nil)
 	if err != nil {
@@ -124,7 +128,9 @@ func search(query string, nsfw bool) (results []linkResult, err error) {
 }
 
 func imageSearch(query string, nsfw bool) (results []imageResult, err error) {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
 
 	request, err := http.NewRequest("GET", SearchUrl+"?"+getImageSearchQuries(query, nsfw, false), nil)
 	if err != nil {

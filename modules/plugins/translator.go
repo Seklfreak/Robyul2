@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/translate"
 	"github.com/Jeffail/gabs"
@@ -130,7 +131,9 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 			jsonData = strings.Replace(jsonData, "\"text\":\"AAAAAAAAAA\"", fmt.Sprintf("\"text\":\"%s\"", strings.Replace(partToTranslaste, "\"", "'", -1)), -1)
 			data.Set("data", base64.StdEncoding.EncodeToString([]byte(jsonData)))
 
-			client := &http.Client{}
+			client := &http.Client{
+				Timeout: time.Duration(10 * time.Second),
+			}
 			request, err := http.NewRequest("POST", naverTranslateEndpoint, bytes.NewBufferString(data.Encode()))
 			if err != nil {
 				helpers.SendError(msg, err)
