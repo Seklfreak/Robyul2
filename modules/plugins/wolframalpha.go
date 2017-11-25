@@ -7,6 +7,8 @@ import (
 
 	"time"
 
+	"bytes"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -80,12 +82,19 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 		image, _, err := wolframClient.GetSimpleQuery(content, urlValues)
 		helpers.Relax(err)
 
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(image)
+		if strings.Contains(buf.String(), "Wolfram|Alpha did not understand your input") {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
+			return
+		}
+
 		_, err = helpers.SendComplex(
 			msg.ChannelID, &discordgo.MessageSend{
 				Files: []*discordgo.File{
 					{
 						Name:   "wolframalpha-robyul.png",
-						Reader: image,
+						Reader: bytes.NewReader(buf.Bytes()),
 					},
 				},
 			})
