@@ -38,6 +38,12 @@
   version = "v1.0.7"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Seklfreak/go-wolfram"
+  packages = ["."]
+  revision = "271592d94f74ae277364f7c7168fcea99158dca8"
+
+[[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
   revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
@@ -273,12 +279,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/ugjka/cleverbot-go"
-  packages = ["."]
-  revision = "cea1c5a41b22c6d457c7dcee7ab095392ecb36fd"
-
-[[projects]]
-  branch = "master"
   name = "github.com/ungerik/go-cairo"
   packages = [".","extimage"]
   revision = "52550571917ffd0d6d857f28f45f5fe431bdadb6"
@@ -412,6 +412,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4458e665eac440209f6441cc486ff0d0c3d37356aef833032706de5ffe417550"
+  inputs-digest = "673c25795fd2d68956478276337b709c363fd62bbc1470f568be595d6cfa433a"
   solver-name = "gps-cdcl"
   solver-version = 1

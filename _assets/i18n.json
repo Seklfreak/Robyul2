@@ -552,9 +552,7 @@
       "post-embed-title": "%s (@%s)%s posted a new Update"
     },
     "wolframalpha": {
-      "error": "Sorry, I couldn't find an answer to that. <:blobweary:317036265071575050>",
-      "result-embed-title": "Results for \"%s\"",
-      "embed-footer": "via wolframalpha.com"
+      "error": "Sorry, I couldn't find an answer to that. <:blobweary:317036265071575050>"
     },
     "lastfm": {
       "profile-embed-title": "%s Last.FM Account",

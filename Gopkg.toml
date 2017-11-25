@@ -179,3 +179,7 @@
 [[constraint]]
   name = "github.com/ahmdrz/goinsta"
   branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/Seklfreak/go-wolfram"
