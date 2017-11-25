@@ -106,6 +106,9 @@ var (
 
 	// YoutubeLeftQuota counts how many left youtube quotas
 	YoutubeLeftQuota = expvar.NewInt("youtube_left_quota")
+
+	// VLiveRequests increases after each request to vlive.tv
+	VLiveRequests = expvar.NewInt("vlive_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337
