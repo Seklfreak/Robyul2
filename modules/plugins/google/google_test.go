@@ -83,16 +83,6 @@ func TestSearch(t *testing.T) {
 	if len(nsfwResult) <= 0 {
 		t.Fatal("google.search() returned less than one result")
 	}
-
-	if sfwResult[0].Title == nsfwResult[0].Title {
-		t.Fatalf("google.search() returned the same Title for a nsfw and sfw search, sfw: %s, nsfw: %s", sfwResult[0].Title, nsfwResult[0].Title)
-	}
-	if sfwResult[0].Link == nsfwResult[0].Link {
-		t.Fatalf("google.search() returned the same Link for a nsfw and sfw search, sfw: %s, nsfw: %s", sfwResult[0].Link, nsfwResult[0].Link)
-	}
-	if sfwResult[0].Text == nsfwResult[0].Text {
-		t.Fatalf("google.search() returned the same Text for a nsfw and sfw search, sfw: %s, nsfw: %s", sfwResult[0].Text, nsfwResult[0].Text)
-	}
 }
 
 func TestImageSearch(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 )
 
@@ -177,9 +178,9 @@ func (r *VLive) checkVliveFeedsLoop() {
 
 func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, results chan<- int) {
 	for job := range jobs {
-		cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Infof("worker %d started for %d channels", id, len(job))
+		//cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Infof("worker %d started for %d channels", id, len(job))
 		for channelCode, entries := range job {
-			cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
+			//cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
 			updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(channelCode)
 			if err != nil {
 				cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Error(fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))
@@ -496,6 +497,66 @@ func (r *VLive) getVliveChannelIdFromChannelName(channelSearchName string) (stri
 
 }
 
+func (r *VLive) getChannelSeqFromChannelID(channelID string) (channelSeq int, err error) {
+	cacheCodec := cache.GetRedisCacheCodec()
+	key := "robyul2-discord:vlive:channelseq-by-channelid:" + channelID
+
+	if err = cacheCodec.Get(key, &channelSeq); err == nil {
+		return channelSeq, nil
+	}
+
+	endpointDecodeChannelCode := fmt.Sprintf(VliveEndpointDecodeChannelCode, VliveAppId, channelID)
+	jsonGabs := helpers.GetJSON(endpointDecodeChannelCode)
+	resN, ok := jsonGabs.Path("result.channelSeq").Data().(float64)
+	if ok == false {
+		return -1, errors.New("unable to get channel sequence")
+	}
+
+	err = cacheCodec.Set(&redisCache.Item{
+		Key:        key,
+		Object:     int(resN),
+		Expiration: time.Hour * 24,
+	})
+	helpers.RelaxLog(err)
+
+	return int(resN), nil
+}
+
+func (r *VLive) getChannelFromChannelID(channelID string) (channel DB_VLive_Channel, err error) {
+	cacheCodec := cache.GetRedisCacheCodec()
+	key := "robyul2-discord:vlive:channel-by-channelid:" + channelID
+
+	if err = cacheCodec.Get(key, &channel); err == nil {
+		return channel, nil
+	}
+
+	var vliveChannel DB_VLive_Channel
+
+	channelSeq, err := r.getChannelSeqFromChannelID(channelID)
+	if err != nil {
+		return vliveChannel, err
+	}
+
+	endpointChannel := fmt.Sprintf(VliveEndpointChannel, channelSeq, VliveAppId)
+	resB := helpers.NetGet(endpointChannel)
+
+	err = json.Unmarshal(resB, &vliveChannel)
+	if err != nil {
+		return vliveChannel, err
+	}
+
+	vliveChannel.Url = fmt.Sprintf(VliveFriendlyChannel, channelID)
+
+	err = cacheCodec.Set(&redisCache.Item{
+		Key:        key,
+		Object:     vliveChannel,
+		Expiration: time.Minute * 30,
+	})
+	helpers.RelaxLog(err)
+
+	return vliveChannel, nil
+}
+
 func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Channel, error) {
 	var vliveChannel DB_VLive_Channel
 
@@ -507,26 +568,17 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 		}
 	}()
 
-	endpointDecodeChannelCode := fmt.Sprintf(VliveEndpointDecodeChannelCode, VliveAppId, channelId)
-	jsonGabs := helpers.GetJSON(endpointDecodeChannelCode)
-	resN, ok := jsonGabs.Path("result.channelSeq").Data().(float64)
-	if ok == false {
-		return vliveChannel, errors.New("Unable to get channel seq")
+	vliveChannel, err := r.getChannelFromChannelID(channelId)
+	if err != nil {
+		return vliveChannel, err
 	}
-	vliveChannelSeq := int(resN)
-
-	endpointChannel := fmt.Sprintf(VliveEndpointChannel, vliveChannelSeq, VliveAppId)
-	resB := helpers.NetGet(endpointChannel)
-
-	json.Unmarshal(resB, &vliveChannel)
-	vliveChannel.Url = fmt.Sprintf(VliveFriendlyChannel, channelId)
 
 	// Get VODs and LIVEs
 	var vliveVideo DB_VLive_Video
-	endpointChannelVideoList := fmt.Sprintf(VliveEndpointChannelVideoList, VliveAppId, vliveChannelSeq, 10)
-	jsonGabs = helpers.GetJSON(endpointChannelVideoList)
+	endpointChannelVideoList := fmt.Sprintf(VliveEndpointChannelVideoList, VliveAppId, vliveChannel.Seq, 10)
+	jsonGabs := helpers.GetJSON(endpointChannelVideoList)
 
-	resN, ok = jsonGabs.Path("result.totalVideoCount").Data().(float64)
+	resN, ok := jsonGabs.Path("result.totalVideoCount").Data().(float64)
 	if ok == true {
 		vliveChannel.TotalVideos = int64(resN)
 	}
@@ -547,7 +599,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 		}
 	}
 	// Get Upcomings
-	endpointUpcomingVideoList := fmt.Sprintf(VliveEndpointUpcomingVideoList, VliveAppId, vliveChannelSeq, 10)
+	endpointUpcomingVideoList := fmt.Sprintf(VliveEndpointUpcomingVideoList, VliveAppId, vliveChannel.Seq, 10)
 	jsonGabs = helpers.GetJSON(endpointUpcomingVideoList)
 	videoListChildren, err = jsonGabs.Path("result.videoList").Children()
 	if err == nil {
@@ -562,7 +614,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 	}
 	// Get Notices
 	var vliveNotice DB_VLive_Notice
-	endpointNotices := fmt.Sprintf(VliveEndpointNotices, vliveChannelSeq)
+	endpointNotices := fmt.Sprintf(VliveEndpointNotices, vliveChannel.Seq)
 	jsonGabs = helpers.GetJSON(endpointNotices)
 	noticesChildren, err := jsonGabs.Path("data").Children()
 	if err == nil {
