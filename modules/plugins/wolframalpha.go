@@ -9,6 +9,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/go-wolfram"
 	"github.com/bwmarrin/discordgo"
 )
@@ -47,6 +48,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 
 	wolframClient := &wolfram.Client{AppID: helpers.GetConfig().Path("wolframalpha.appid").Data().(string)}
 
+	var err error
 	var res string
 	var imageSearch bool
 	if strings.HasPrefix(content, "image ") || strings.HasPrefix(content, "img ") {
@@ -57,20 +59,24 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 		imageSearch = true
 	}
 
-	res, err := wolframClient.GetShortAnswerQuery(content, wolfram.Metric, 10)
-	helpers.Relax(err)
+	if !imageSearch {
+		metrics.WolframAlphaRequests.Add(1)
+		res, err = wolframClient.GetShortAnswerQuery(content, wolfram.Metric, 10)
+		helpers.Relax(err)
 
-	if res == "No short answer available" {
-		imageSearch = true
+		if res == "No short answer available" {
+			imageSearch = true
+		}
 	}
 
 	if imageSearch {
 		urlValues := url.Values{}
-		urlValues.Add("foreground", "white")
-		urlValues.Add("background", "35393E")
+		//urlValues.Add("foreground", "white")
+		//urlValues.Add("background", "35393E")
 		urlValues.Add("layout", "labelbar")
 		urlValues.Add("timeout", "30")
 
+		metrics.WolframAlphaRequests.Add(1)
 		image, _, err := wolframClient.GetSimpleQuery(content, urlValues)
 		helpers.Relax(err)
 
