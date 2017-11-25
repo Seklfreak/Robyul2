@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -192,7 +191,6 @@ type Instagram_Safe_Entries struct {
 
 var (
 	instagramClient      *goinsta.Instagram
-	httpClient           *http.Client
 	instagramPicUrlRegex *regexp.Regexp
 )
 

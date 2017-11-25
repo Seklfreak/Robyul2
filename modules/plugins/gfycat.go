@@ -62,7 +62,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 
 	accessToken := m.getAccessToken()
 
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
 
@@ -154,7 +154,7 @@ func (m *Gfycat) getAccessToken() string {
 		helpers.GetConfig().Path("gfycat.client_secret").Data().(string),
 	)))
 	helpers.Relax(err)
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
 	request, err := http.NewRequest("POST", getTokenEndpoint, strings.NewReader(postData.String()))

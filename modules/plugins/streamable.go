@@ -52,7 +52,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	request.Header.Add("user-agent", helpers.DEFAULT_UA)
 	request.SetBasicAuth(helpers.GetConfig().Path("streamable.username").Data().(string),
 		helpers.GetConfig().Path("streamable.password").Data().(string))
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
 	response, err := httpClient.Do(request)
