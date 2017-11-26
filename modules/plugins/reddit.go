@@ -280,8 +280,7 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 	if len(args) > 3 {
 		postDelay, err = strconv.Atoi(args[3])
 		if err != nil {
-			*out = r.newMsg("bot.arguments.invalid")
-			return r.actionFinish
+			postDelay = 0
 		}
 	}
 
@@ -294,6 +293,19 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 	subredditName := strings.TrimLeft(args[1], "/")
 	subredditName = strings.Replace(subredditName, "r/", "", -1)
 
+	var specialText string
+	if postDelay > 0 {
+		specialText += fmt.Sprintf(" with a %d seconds delay", postDelay)
+	}
+
+	var linkMode bool
+	if strings.HasSuffix(in.Content, " direct link mode") ||
+		strings.HasSuffix(in.Content, " link mode") ||
+		strings.HasSuffix(in.Content, " links") {
+		linkMode = true
+		specialText += " using direct links"
+	}
+
 	subredditData, err := redditSession.AboutSubreddit(subredditName)
 	helpers.Relax(err)
 
@@ -302,12 +314,12 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 		return r.actionFinish
 	}
 
-	_, err = r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID, postDelay)
+	_, err = r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID, postDelay, linkMode)
 	helpers.Relax(err)
 
 	// TODO: Post preview post
 
-	*out = r.newMsg("plugins.reddit.add-subreddit-success", subredditData.Name, targetChannel.ID)
+	*out = r.newMsg("plugins.reddit.add-subreddit-success", subredditData.Name, targetChannel.ID, specialText)
 	return r.actionFinish
 }
 
@@ -324,8 +336,14 @@ func (r *Reddit) actionList(args []string, in *discordgo.Message, out **discordg
 
 	subredditListText := ""
 	for _, subredditEntry := range subredditEntries {
-		subredditListText += fmt.Sprintf("`%s`: Subreddit `r/%s` posting to <#%s> (Delay: %d minutes)\n",
-			subredditEntry.ID, subredditEntry.SubredditName, subredditEntry.ChannelID, subredditEntry.PostDelay)
+		var directLinkModeText string
+		if subredditEntry.PostDirectLinks {
+			directLinkModeText = ", direct link mode"
+		}
+
+		subredditListText += fmt.Sprintf("`%s`: Subreddit `r/%s` posting to <#%s> (Delay: %d minutes%s)\n",
+			subredditEntry.ID, subredditEntry.SubredditName, subredditEntry.ChannelID,
+			subredditEntry.PostDelay, directLinkModeText)
 	}
 	subredditListText += fmt.Sprintf("Found **%d** Subreddits in total.", len(subredditEntries))
 
@@ -493,15 +511,16 @@ func (r *Reddit) getRedditorInfo(username string) (data *discordgo.MessageSend) 
 	return
 }
 
-func (r *Reddit) addSubredditEntry(subreddit string, guildID string, channelID string, userID string, postDelay int) (subredditEntry models.RedditSubredditEntry, err error) {
+func (r *Reddit) addSubredditEntry(subreddit string, guildID string, channelID string, userID string, postDelay int, linkMode bool) (subredditEntry models.RedditSubredditEntry, err error) {
 	insert := rethink.Table(models.RedditSubredditsTable).Insert(models.RedditSubredditEntry{
-		SubredditName: subreddit,
-		GuildID:       guildID,
-		ChannelID:     channelID,
-		AddedByUserID: userID,
-		AddedAt:       time.Now(),
-		LastChecked:   time.Now().Add(-(time.Duration(postDelay) * time.Minute)),
-		PostDelay:     postDelay,
+		SubredditName:   subreddit,
+		GuildID:         guildID,
+		ChannelID:       channelID,
+		AddedByUserID:   userID,
+		AddedAt:         time.Now(),
+		LastChecked:     time.Now().Add(-(time.Duration(postDelay) * time.Minute)),
+		PostDelay:       postDelay,
+		PostDirectLinks: linkMode,
 	})
 	res, err := insert.RunWrite(helpers.GetDB())
 	if err != nil {
