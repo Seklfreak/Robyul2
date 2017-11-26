@@ -1398,6 +1398,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
+		guild, err := helpers.GetGuild(channel.GuildID)
+		helpers.Relax(err)
 
 		if len(args) >= 1 && args[0] != "" {
 			switch args[0] {
@@ -1420,14 +1422,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.Relax(err)
 				}
 
+				rankingUrl := helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID
 				topLevelEmbed := &discordgo.MessageEmbed{
 					Color:       0x0FADED,
-					Title:       helpers.GetText("plugins.levels.top-server-embed-title"),
-					Description: "View the leaderboard for this server [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID + ").",
-					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
-						len(session.State.Guilds),
-					)},
-					Fields: []*discordgo.MessageEmbedField{},
+					Title:       helpers.GetTextF("plugins.levels.top-server-embed-title", guild.Name),
+					Description: "View the leaderboard for this server [here](" + rankingUrl + ").",
+					Fields:      []*discordgo.MessageEmbedField{},
+					URL:         rankingUrl,
 				}
 
 				displayRanking := 1
@@ -1457,12 +1458,44 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					if currentMember.Nick != "" {
 						fullUsername += " ~ " + currentMember.Nick
 					}
+
 					topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("#%d: %s", displayRanking, fullUsername),
-						Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUsers[i-offset].Exp)), // + fmt.Sprintf(", EXP: %d", levelsServersUsers[i-offset].Exp),
+						Name:   fmt.Sprintf("%d. %s", displayRanking, fullUsername),
+						Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUsers[i-offset].Exp)),
 						Inline: false,
 					})
 					displayRanking++
+				}
+
+				var thislevelUser DB_Levels_ServerUser
+				listCursor, err = rethink.Table("levels_serverusers").Filter(
+					rethink.Row.Field("userid").Eq(targetUser.ID),
+				).Filter(
+					rethink.Row.Field("guildid").Eq(channel.GuildID),
+				).Run(helpers.GetDB())
+				helpers.Relax(err)
+				defer listCursor.Close()
+				err = listCursor.One(&thislevelUser)
+
+				serverRank := "N/A"
+				for _, serverCache := range topCache {
+					if serverCache.GuildID == channel.GuildID {
+						for i, pair := range serverCache.Levels {
+							if pair.Key == targetUser.ID {
+								serverRank = strconv.Itoa(i + 1)
+							}
+						}
+					}
+				}
+
+				topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
+					Name:   "Your Rank: " + serverRank,
+					Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(thislevelUser.Exp)),
+					Inline: false,
+				})
+
+				if guild.Icon != "" {
+					topLevelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: discordgo.EndpointGuildIcon(guild.ID, guild.Icon)}
 				}
 
 				_, err = helpers.SendEmbed(msg.ChannelID, topLevelEmbed)
@@ -1482,14 +1515,16 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
+				rankingUrl := helpers.GetConfig().Path("website.ranking_base_url").Data().(string)
 				globalTopLevelEmbed := &discordgo.MessageEmbed{
 					Color:       0x0FADED,
 					Title:       helpers.GetText("plugins.levels.global-top-server-embed-title"),
-					Description: "View the global leaderboard [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + ").",
+					Description: "View the global leaderboard [here](" + rankingUrl + ").",
 					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
 						len(session.State.Guilds),
 					)},
 					Fields: []*discordgo.MessageEmbedField{},
+					URL:    rankingUrl,
 				}
 
 				i := 0
@@ -1501,7 +1536,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					}
 					fullUsername := currentUser.Username
 					globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("#%d: %s", i+1, fullUsername),
+						Name:   fmt.Sprintf("%d. %s", i+1, fullUsername),
 						Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(userRanked.Value)),
 						Inline: false,
 					})
@@ -1510,6 +1545,36 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						break
 					}
 				}
+
+				var thislevelServersUser []DB_Levels_ServerUser
+				listCursor, err := rethink.Table("levels_serverusers").Filter(
+					rethink.Row.Field("userid").Eq(targetUser.ID),
+				).Run(helpers.GetDB())
+				helpers.Relax(err)
+				defer listCursor.Close()
+				err = listCursor.All(&thislevelServersUser)
+
+				var totalExp int64
+				for _, levelServerUser := range thislevelServersUser {
+					totalExp += levelServerUser.Exp
+				}
+
+				globalRank := "N/A"
+				for _, serverCache := range topCache {
+					if serverCache.GuildID == "global" {
+						for i, pair := range serverCache.Levels {
+							if pair.Key == targetUser.ID {
+								globalRank = strconv.Itoa(i + 1)
+							}
+						}
+					}
+				}
+
+				globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
+					Name:   "Your Rank: " + globalRank,
+					Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(totalExp)),
+					Inline: false,
+				})
 
 				_, err = helpers.SendEmbed(msg.ChannelID, globalTopLevelEmbed)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)

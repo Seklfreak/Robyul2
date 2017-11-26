@@ -676,7 +676,7 @@
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! <:googlenerd:317030369205682186>",
       "top-server-no-stats": "No stats for this server yet. Chat more! <:googlenerd:317030369205682186>",
-      "top-server-embed-title": "Top #10",
+      "top-server-embed-title": "Top #10 on %s",
       "global-top-server-embed-title": "Global Top #10",
       "user-embed-title": "Stats for %s",
       "embed-footer": "Robyul is currently on %d servers.",
