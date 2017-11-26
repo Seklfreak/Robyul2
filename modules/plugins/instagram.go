@@ -410,7 +410,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				var targetChannel *discordgo.Channel
 				var targetGuild *discordgo.Guild
 				if len(args) >= 3 {
-					targetChannel, err = helpers.GetChannelFromMention(msg, args[len(args)-1])
+					targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
 					if err != nil {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
@@ -458,15 +458,25 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 
 				}
 				// create new entry in db
+				var specialText string
+				var linkMode bool
+				if strings.HasSuffix(content, " direct link mode") ||
+					strings.HasSuffix(content, " link mode") ||
+					strings.HasSuffix(content, " links") {
+					linkMode = true
+					specialText += " using direct links"
+				}
+
 				entry := m.getEntryByOrCreateEmpty("id", "")
 				entry.ServerID = targetChannel.GuildID
 				entry.ChannelID = targetChannel.ID
 				entry.Username = instagramUser.User.Username
 				entry.PostedPosts = dbPosts
 				entry.PostedReelMedias = dbRealMedias
+				entry.PostDirectLinks = linkMode
 				m.setEntry(entry)
 
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID, specialText))
 				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]instagram delete <id>
@@ -509,7 +519,13 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 
 			resultMessage := ""
 			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s`: Instagram Account `@%s` posting to <#%s>\n", entry.ID, entry.Username, entry.ChannelID)
+				var directLinkModeText string
+				if entry.PostDirectLinks {
+					directLinkModeText = " (direct link mode)"
+				}
+
+				resultMessage += fmt.Sprintf("`%s`: Instagram Account `@%s` posting to <#%s>%s\n",
+					entry.ID, entry.Username, entry.ChannelID, directLinkModeText)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Instagram Accounts in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {

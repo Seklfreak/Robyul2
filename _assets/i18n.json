@@ -529,7 +529,7 @@
       "account-embed-title": "%s (@%s)%s Instagram Account",
       "account-not-found": "User not found!",
       "embed-footer": "powered by instagram.com",
-      "account-added-success": "Added Instagram Account `@%s` to the Channel <#%s>!",
+      "account-added-success": "I will now post new stuff from the Instagram account `@%s` to the Channel <#%s>%s!",
       "account-delete-not-found-error": "Unable to find Instagram Account in the Database!",
       "account-delete-success": "Deleted Instagram Account `@%s` from the Database!",
       "account-list-no-accounts-error": "No Instagram Accounts found on this server!",

@@ -184,7 +184,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, resu
 			//cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
 			updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(channelCode)
 			if err != nil {
-				cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Error(fmt.Sprintf("updating vlive channel %s failed: %s", entries[0].VLiveChannel.Name, err.Error()))
+				cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Error(fmt.Sprintf("updating vlive channel %s failed: %s", channelCode, err.Error()))
 				continue
 			}
 			for _, entry := range entries {
