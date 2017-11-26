@@ -20,6 +20,12 @@
   version = "1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Krognol/go-wolfram"
+  packages = ["."]
+  revision = "0e6a42f7e2fe2c4fc9430a3300ff5eef4b372f0c"
+
+[[projects]]
   name = "github.com/PuerkitoBio/goquery"
   packages = ["."]
   revision = "e1271ee34c6a305e38566ecd27ae374944907ee9"
@@ -36,12 +42,6 @@
   packages = ["v1","v1/backends","v1/brokers","v1/common","v1/config","v1/log","v1/retry","v1/tasks"]
   revision = "8e759cb74fb15f05440f449a1a6b27bfed4f23b1"
   version = "v1.0.7"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/Seklfreak/go-wolfram"
-  packages = ["."]
-  revision = "271592d94f74ae277364f7c7168fcea99158dca8"
 
 [[projects]]
   name = "github.com/Sirupsen/logrus"
@@ -412,6 +412,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "673c25795fd2d68956478276337b709c363fd62bbc1470f568be595d6cfa433a"
+  inputs-digest = "18a40c6ade9745ed04a9dc748460fa5af9130f94d6130525a7bb51c3071f8e91"
   solver-name = "gps-cdcl"
   solver-version = 1

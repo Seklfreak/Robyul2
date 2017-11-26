@@ -12,7 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
-	"github.com/Seklfreak/go-wolfram"
+	"github.com/Krognol/go-wolfram"
 	"github.com/bwmarrin/discordgo"
 )
 

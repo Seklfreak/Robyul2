@@ -874,6 +874,7 @@ func SendMessage(channelID, content string) (messages []*discordgo.Message, err 
 	return messages, nil
 }
 
+// TODO: implement https://discordapp.com/developers/docs/resources/channel#embed-limits
 func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
 	message, err = cache.GetSession().ChannelMessageSendEmbed(channelID, embed)
@@ -884,6 +885,7 @@ func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*dis
 	return messages, nil
 }
 
+// TODO: implement https://discordapp.com/developers/docs/resources/channel#embed-limits
 func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
 	pages := AutoPagify(data.Content)

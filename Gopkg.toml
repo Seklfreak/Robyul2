@@ -182,4 +182,4 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/Seklfreak/go-wolfram"
+  name = "github.com/Krognol/go-wolfram"
