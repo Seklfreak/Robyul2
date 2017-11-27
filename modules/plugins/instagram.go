@@ -316,6 +316,13 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 				continue
 			}
 
+			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
+			if err != nil || channel == nil || channel.ID == "" {
+				cache.GetLogger().WithField("module", "instagram").Warn(fmt.Sprintf("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
+					entry.Username, entry.ChannelID, entry.ServerID))
+				continue
+			}
+
 			if _, ok := bundledEntries[entry.InstagramUserID]; ok {
 				bundledEntries[entry.InstagramUserID] = append(bundledEntries[entry.InstagramUserID], entry)
 			} else {

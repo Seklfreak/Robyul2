@@ -289,8 +289,17 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				if twitchStatus.Stream.Channel.VideoBanner != "" {
 					twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Channel.VideoBanner}
 				}
+				if twitchStatus.Stream.Preview.Medium != "" {
+					twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10)}
+				}
+				if twitchStatus.Stream.Channel.Status != "" {
+					twitchChannelEmbed.Description += fmt.Sprintf("**%s**\n", twitchStatus.Stream.Channel.Status)
+				}
 				if twitchStatus.Stream.Game != "" {
-					twitchChannelEmbed.Description = fmt.Sprintf("playing **%s**", twitchStatus.Stream.Game)
+					twitchChannelEmbed.Description += fmt.Sprintf("playing **%s**\n", twitchStatus.Stream.Game)
+				}
+				if twitchChannelEmbed.Description != "" {
+					twitchChannelEmbed.Description = strings.Trim(twitchChannelEmbed.Description, "\n")
 				}
 				_, err := helpers.SendEmbed(msg.ChannelID, twitchChannelEmbed)
 				helpers.Relax(err)
@@ -418,10 +427,15 @@ func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchSt
 	}
 	if twitchStatus.Stream.Preview.Medium != "" {
 		twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10)}
-		fmt.Println(twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10))
+	}
+	if twitchStatus.Stream.Channel.Status != "" {
+		twitchChannelEmbed.Description += fmt.Sprintf("**%s**\n", twitchStatus.Stream.Channel.Status)
 	}
 	if twitchStatus.Stream.Game != "" {
-		twitchChannelEmbed.Description = fmt.Sprintf("playing **%s**", twitchStatus.Stream.Game)
+		twitchChannelEmbed.Description += fmt.Sprintf("playing **%s**\n", twitchStatus.Stream.Game)
+	}
+	if twitchChannelEmbed.Description != "" {
+		twitchChannelEmbed.Description = strings.Trim(twitchChannelEmbed.Description, "\n")
 	}
 	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("<%s>", twitchStatus.Stream.Channel.URL),
