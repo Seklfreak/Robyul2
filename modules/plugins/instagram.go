@@ -11,6 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/ahmdrz/goinsta"
 	goinstaResponse "github.com/ahmdrz/goinsta/response"
 	goinstaStore "github.com/ahmdrz/goinsta/store"
@@ -26,6 +27,7 @@ type DB_Instagram_Entry struct {
 	ServerID         string                   `gorethink:"serverid"`
 	ChannelID        string                   `gorethink:"channelid"`
 	Username         string                   `gorethink:"username"`
+	InstagramUserID  int64                    `gorethink:"instagramuserid"`
 	PostedPosts      []DB_Instagram_Post      `gorethink:"posted_posts"`
 	PostedReelMedias []DB_Instagram_ReelMedia `gorethink:"posted_reelmedias"`
 	IsLive           bool                     `gorethink:"islive"`
@@ -246,7 +248,41 @@ func (m *Instagram) Init(session *discordgo.Session) {
 	helpers.Relax(err)
 
 	go m.checkInstagramFeedsLoop()
-	cache.GetLogger().WithField("module", "instagram").Info("Started Instagram loop (10m)")
+	cache.GetLogger().WithField("module", "instagram").Info("Started Instagram loop")
+}
+
+func (m *Instagram) fillUserIDs() {
+	var entries []DB_Instagram_Entry
+
+	cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
+	helpers.Relax(err)
+
+	err = cursor.All(&entries)
+	helpers.Relax(err)
+
+RetryAccount:
+	for _, entry := range entries {
+		if entry.Username == "" {
+			continue
+		}
+
+		if entry.InstagramUserID == 0 {
+			instagramUser, err := instagramClient.GetUserByUsername(entry.Username)
+			if err != nil || instagramUser.User.ID == 0 {
+				if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", entry.Username))
+					time.Sleep(20 * time.Second)
+					goto RetryAccount
+				}
+				cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("getting instagram account id for @%s failed: %s", entry.Username, err))
+				continue
+			}
+			cache.GetLogger().WithField("module", "instagram").Infof("saving user id %d for user @%s", instagramUser.User.ID, entry.Username)
+			entry = m.getEntryBy("id", entry.ID)
+			entry.InstagramUserID = instagramUser.User.ID
+			m.setEntry(entry)
+		}
+	}
 }
 
 func (m *Instagram) checkInstagramFeedsLoop() {
@@ -262,67 +298,56 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 	}()
 
 	var entries []DB_Instagram_Entry
-	var bundledEntries map[string][]DB_Instagram_Entry
+	var bundledEntries map[int64][]DB_Instagram_Entry
 
 	for {
+		m.fillUserIDs()
+
 		cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
 		helpers.Relax(err)
 
 		err = cursor.All(&entries)
 		helpers.Relax(err)
 
-		bundledEntries = make(map[string][]DB_Instagram_Entry, 0)
+		bundledEntries = make(map[int64][]DB_Instagram_Entry, 0)
 
 		for _, entry := range entries {
-			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
-			if err != nil || channel == nil || channel.ID == "" {
-				cache.GetLogger().WithField("module", "instagram").Warn(fmt.Sprintf("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
-					entry.Username, entry.ChannelID, entry.ServerID))
+			if entry.InstagramUserID == 0 {
 				continue
 			}
 
-			if _, ok := bundledEntries[entry.Username]; ok {
-				bundledEntries[entry.Username] = append(bundledEntries[entry.Username], entry)
+			if _, ok := bundledEntries[entry.InstagramUserID]; ok {
+				bundledEntries[entry.InstagramUserID] = append(bundledEntries[entry.InstagramUserID], entry)
 			} else {
-				bundledEntries[entry.Username] = []DB_Instagram_Entry{entry}
+				bundledEntries[entry.InstagramUserID] = []DB_Instagram_Entry{entry}
 			}
 		}
 
 		cache.GetLogger().WithField("module", "instagram").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(entries))
+		start := time.Now()
 
-		// TODO: Check multiple entries at once
-		for instagramUsername, entries := range bundledEntries {
+		for instagramAccountID, entries := range bundledEntries {
 		RetryAccount:
 			// log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", instagramUsername))
 
-			instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
-			if err != nil || instagramUser.User.Username == "" {
-				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", instagramUsername))
+			posts, err := instagramClient.LatestUserFeed(instagramAccountID)
+			if err != nil || posts.Status != "ok" {
+				if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account %d, sleeping for 20 seconds and then trying again", instagramAccountID))
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", instagramUsername, err))
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account %d failed: %s", instagramAccountID, err))
 				continue
 			}
-			posts, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
-			if err != nil || instagramUser.User.Username == "" {
-				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", instagramUsername))
+			story, err := instagramClient.GetUserStories(instagramAccountID)
+			if err != nil || story.Status != "ok" {
+				if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account %d, sleeping for 20 seconds and then trying again", instagramAccountID))
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", instagramUsername, err))
-				continue
-			}
-			story, err := instagramClient.GetUserStories(instagramUser.User.ID)
-			if err != nil || instagramUser.User.Username == "" {
-				if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("hit rate limit checking Instagram Account @%s, sleeping for 20 seconds and then trying again", instagramUsername))
-					time.Sleep(20 * time.Second)
-					goto RetryAccount
-				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account @%s failed: %s", instagramUsername, err))
+				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account %d failed: %s", instagramAccountID, err))
 				continue
 			}
 
@@ -349,7 +374,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
 						entry.PostedPosts = append(entry.PostedPosts, DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
 						changes = true
-						go m.postPostToChannel(entry.ChannelID, post, instagramUser, entry.PostDirectLinks)
+						go m.postPostToChannel(entry.ChannelID, post, entry.PostDirectLinks)
 					}
 
 				}
@@ -365,7 +390,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 						log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Reel Media: #%s", reelMedia.ID))
 						entry.PostedReelMedias = append(entry.PostedReelMedias, DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
 						changes = true
-						go m.postReelMediaToChannel(entry.ChannelID, story, n, instagramUser, entry.PostDirectLinks)
+						go m.postReelMediaToChannel(entry.ChannelID, story, n, entry.PostDirectLinks)
 					}
 
 				}
@@ -392,8 +417,12 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 			}
 		}
 
+		elapsed := time.Since(start)
+		cache.GetLogger().WithField("module", "instagram").Infof("checked %d accounts for %d feeds, took %s", len(bundledEntries), len(entries), elapsed)
+		metrics.InstagramRefreshTime.Set(elapsed.Seconds())
+
 		if len(entries) <= 10 {
-			time.Sleep(1 * time.Minute)
+			time.Sleep(30 * time.Second)
 		}
 	}
 }
@@ -430,7 +459,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				}
 				feed, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
 				if err != nil {
-					if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
 						return
 					}
@@ -438,7 +467,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				helpers.Relax(err)
 				story, err := instagramClient.GetUserStories(instagramUser.User.ID)
 				if err != nil {
-					if strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+					if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
 						return
 					}
@@ -474,6 +503,7 @@ func (m *Instagram) Action(command string, content string, msg *discordgo.Messag
 				entry.PostedPosts = dbPosts
 				entry.PostedReelMedias = dbRealMedias
 				entry.PostDirectLinks = linkMode
+				entry.InstagramUserID = instagramUser.User.ID
 				m.setEntry(entry)
 
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID, specialText))
@@ -653,20 +683,22 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 	}
 }
 
-func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, instagramUser goinstaResponse.GetUsernameResponse, postDirectLinks bool) {
+func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postDirectLinks bool) {
 	instagramNameModifier := ""
-	if instagramUser.User.IsVerified {
+	if story.Reel.User.IsVerified {
 		instagramNameModifier += " ☑"
 	}
-	if instagramUser.User.IsPrivate {
+	if story.Reel.User.IsPrivate {
 		instagramNameModifier += " 🔒"
 	}
-	if instagramUser.User.IsBusiness {
-		instagramNameModifier += " 🏢"
-	}
-	if instagramUser.User.IsFavorite {
-		instagramNameModifier += " ⭐"
-	}
+	/*
+		if story.Reel.User.IsBusiness {
+			instagramNameModifier += " 🏢"
+		}
+		if story.Reel.User.IsFavorite {
+			instagramNameModifier += " ⭐"
+		}
+	*/
 
 	reelMedia := story.Reel.Items[number]
 
@@ -682,9 +714,9 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 
 	var content string
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:     helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
-		URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
+		Title:     helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier),
+		URL:       fmt.Sprintf(instagramFriendlyUser, story.Reel.User.Username),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: story.Reel.User.ProfilePicURL},
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    helpers.GetText("plugins.instagram.embed-footer"),
 			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
@@ -693,7 +725,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 	if postDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
+		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if caption != "" {
 			content += caption + "\n"
 		}
@@ -740,18 +772,20 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 	}
 }
 
-func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Item, instagramUser goinstaResponse.GetUsernameResponse, postDirectLinks bool) {
+func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Item, postDirectLinks bool) {
 	instagramNameModifier := ""
-	if instagramUser.User.IsVerified {
+	if post.User.IsVerified {
 		instagramNameModifier += " ☑"
 	}
-	if instagramUser.User.IsPrivate {
+	if post.User.IsPrivate {
 		instagramNameModifier += " 🔒"
 	}
-	if instagramUser.User.IsBusiness {
-		instagramNameModifier += " 🏢"
-	}
-	if instagramUser.User.IsFavorite {
+	/*
+		if post.User.IsBusiness {
+			instagramNameModifier += " 🏢"
+		}
+	*/
+	if post.User.IsFavorite {
 		instagramNameModifier += " ⭐"
 	}
 
@@ -768,9 +802,9 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 
 	var content string
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:     helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier),
+		Title:     helpers.GetTextF("plugins.instagram.post-embed-title", post.User.FullName, post.User.Username, instagramNameModifier, mediaModifier),
 		URL:       fmt.Sprintf(instagramFriendlyPost, post.Code),
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: post.User.ProfilePicURL},
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    helpers.GetText("plugins.instagram.embed-footer"),
 			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
@@ -779,7 +813,7 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 	if postDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
+		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", post.User.FullName, post.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if post.Caption.Text != "" {
 			content += post.Caption.Text + "\n"
 		}
