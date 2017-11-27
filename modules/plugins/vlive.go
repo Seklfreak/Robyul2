@@ -172,6 +172,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 		}
 		elapsed := time.Since(start)
 		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checked %d channels for %d feeds with %d workers, took %s", len(bundledEntries), len(entries), VLiveWorkers, elapsed))
+		metrics.VliveRefreshTime.Set(elapsed.Seconds())
 
 		time.Sleep(0 * time.Second)
 	}

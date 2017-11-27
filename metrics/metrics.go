@@ -44,6 +44,12 @@ var (
 	// VliveChannelsCount counts all connected vlive channels
 	VliveChannelsCount = expvar.NewInt("vlive_channels_count")
 
+	// VLiveRequests increases after each request to vlive.tv
+	VLiveRequests = expvar.NewInt("vlive_requests")
+
+	// VliveRefreshTime is the latest refresh time
+	VliveRefreshTime = expvar.NewFloat("vlive_refresh_time")
+
 	// TwitterAccountsCount counts all connected twitter accounts
 	TwitterAccountsCount = expvar.NewInt("twitter_accounts_count")
 
@@ -109,9 +115,6 @@ var (
 
 	// YoutubeLeftQuota counts how many left youtube quotas
 	YoutubeLeftQuota = expvar.NewInt("youtube_left_quota")
-
-	// VLiveRequests increases after each request to vlive.tv
-	VLiveRequests = expvar.NewInt("vlive_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337
