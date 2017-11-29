@@ -10,6 +10,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
@@ -236,6 +237,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		}
 
 		cache.GetLogger().WithField("module", "twitter").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(twitterEntriesCache))
+		start := time.Now()
 
 		for twitterAccoutnScreenName, entries := range bundledEntries {
 			// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account @%s", twitterAccoutnScreenName))
@@ -291,6 +293,10 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				}
 			}
 		}
+
+		elapsed := time.Since(start)
+		cache.GetLogger().WithField("module", "twitter").Infof("checked %d accounts for %d feeds, took %s", len(bundledEntries), len(twitterEntriesCache), elapsed)
+		metrics.TwitterRefreshTime.Set(elapsed.Seconds())
 
 		time.Sleep(10 * time.Minute)
 	}
@@ -598,15 +604,19 @@ func (m *Twitter) getEntryByOrCreateEmpty(key string, id string) DB_Twitter_Entr
 }
 
 func (m *Twitter) setEntry(entry DB_Twitter_Entry) {
-	_, err := rethink.Table("twitter").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
+	if entry.ID != "" {
+		_, err := rethink.Table("twitter").Update(entry).Run(helpers.GetDB())
+		helpers.Relax(err)
+	}
 }
 
 func (m *Twitter) deleteEntryById(id string) {
-	_, err := rethink.Table("twitter").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
+	if id != "" {
+		_, err := rethink.Table("twitter").Filter(
+			rethink.Row.Field("id").Eq(id),
+		).Delete().RunWrite(helpers.GetDB())
+		helpers.Relax(err)
+	}
 }
 
 func (m *Twitter) handleError(err error) string {

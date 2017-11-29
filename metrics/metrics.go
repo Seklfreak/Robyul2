@@ -53,6 +53,9 @@ var (
 	// TwitterAccountsCount counts all connected twitter accounts
 	TwitterAccountsCount = expvar.NewInt("twitter_accounts_count")
 
+	// TwitterRefreshTime is the latest refresh time
+	TwitterRefreshTime = expvar.NewFloat("twitter_refresh_time")
+
 	// InstagramAccountsCount counts all connected instagram accounts
 	InstagramAccountsCount = expvar.NewInt("instagram_accounts_count")
 
