@@ -2,11 +2,15 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
 	"os"
+
+	"bytes"
+	"encoding/json"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -97,6 +101,12 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 			)
 		}
 	}()
+
+	go func() {
+		time.Sleep(60 * time.Second)
+
+		updateBotlists()
+	}()
 }
 
 func BotDestroy() {
@@ -134,6 +144,12 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 			time.Sleep(1 * time.Second)
 			//}
 		}
+	}()
+
+	go func() {
+		time.Sleep(60 * time.Second)
+
+		updateBotlists()
 	}()
 }
 
@@ -442,6 +458,14 @@ func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.Message
 	modules.CallExtendedPluginOnReactionRemove(reaction)
 }
 
+func BotOnGuildCreate(session *discordgo.Session, guild *discordgo.GuildCreate) {
+	go updateBotlists()
+}
+
+func BotOnGuildDelete(session *discordgo.Session, guild *discordgo.GuildDelete) {
+	go updateBotlists()
+}
+
 func sendHelp(message *discordgo.MessageCreate) {
 	channel, err := helpers.GetChannel(message.ChannelID)
 	if err != nil {
@@ -452,4 +476,54 @@ func sendHelp(message *discordgo.MessageCreate) {
 		message.ChannelID,
 		helpers.GetTextF("bot.help", message.Author.ID, channel.GuildID),
 	)
+}
+
+func updateBotlists() {
+	defer helpers.Recover()
+
+	numOfGuilds := len(cache.GetSession().State.Guilds)
+
+	err := updateDiscordBotsOrg(numOfGuilds)
+	if err != nil {
+		helpers.RelaxLog(err)
+	}
+}
+
+// https://discordbots.org/bot/283848369250500608
+func updateDiscordBotsOrg(numOfGuilds int) (err error) {
+	token := helpers.GetConfig().Path("botlists.discordbotsorg-token").Data().(string)
+
+	if token == "" {
+		return nil
+	}
+
+	url := fmt.Sprintf("https://discordbots.org/api/bots/%v/stats", cache.GetSession().State.User.ID)
+
+	payload := struct {
+		ServerCount int `json:"server_count"`
+	}{
+		ServerCount: numOfGuilds,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", token)
+
+	client := &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
+
+	_, err = client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	cache.GetLogger().WithField("module", "bot").Infof("Updated discordbots.org: %d servers", numOfGuilds)
+	return nil
 }

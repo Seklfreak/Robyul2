@@ -170,6 +170,8 @@ func main() {
 	discord.AddHandler(metrics.OnMessageCreate)
 	discord.AddHandler(BotOnMemberListChunk)
 	discord.AddHandler(BotGuildOnPresenceUpdate)
+	discord.AddHandler(BotOnGuildCreate)
+	discord.AddHandler(BotOnGuildDelete)
 
 	if cache.HasElastic() {
 		discord.AddHandler(helpers.ElasticOnMessageCreate)

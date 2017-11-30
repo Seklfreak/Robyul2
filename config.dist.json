@@ -99,5 +99,8 @@
   },
   "program-o": {
     "api-url": "http://www.example.com/ProgramO/chatbot/conversation_start.php"
+  },
+  "botlists": {
+    "discordbotsorg-token": ""
   }
 }
