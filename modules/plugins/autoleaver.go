@@ -373,6 +373,8 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 			return
 		}
 
+		go helpers.UpdateBotlists()
+
 		onWhitelist, err := a.isOnWhitelist(guild.ID, nil)
 		helpers.Relax(err)
 
@@ -416,6 +418,8 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.GuildDelete) {
 	go func() {
 		defer helpers.Recover()
+
+		go helpers.UpdateBotlists()
 
 		var err error
 
