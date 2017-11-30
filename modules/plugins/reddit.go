@@ -87,8 +87,8 @@ func (r *Reddit) checkSubredditLoop() {
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 			if err != nil || channel == nil || channel.ID == "" {
-				r.logger().Warn(fmt.Sprintf("skipped subreddit r/%s for Channel #%s on Guild #%s: channel not found!",
-					entry.SubredditName, entry.ChannelID, entry.GuildID))
+				//r.logger().Warn(fmt.Sprintf("skipped subreddit r/%s for Channel #%s on Guild #%s: channel not found!",
+				//	entry.SubredditName, entry.ChannelID, entry.GuildID))
 				continue
 			}
 
@@ -140,7 +140,8 @@ func (r *Reddit) checkSubredditLoop() {
 						defer helpers.Recover()
 
 						r.logger().Info(fmt.Sprintf("posting submission: #%s (%s) on r/%s (%s) to #%s",
-							postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName, RedditBaseUrl+postSubmission.Permalink, entry.ChannelID))
+							postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName,
+							RedditBaseUrl+"/r/"+subredditName+"/comments/"+postSubmission.ID+"/", entry.ChannelID))
 
 						err = r.postSubmission(postChannelID, postSubmission, entry.PostDirectLinks)
 						if err != nil {

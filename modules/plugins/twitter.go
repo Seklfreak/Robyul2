@@ -224,8 +224,8 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		for _, entry := range twitterEntriesCache {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 			if err != nil || channel == nil || channel.ID == "" {
-				cache.GetLogger().WithField("module", "twitter").Warn(fmt.Sprintf("skipped twitter @%s for Channel #%s on Guild #%s: channel not found!",
-					entry.AccountScreenName, entry.ChannelID, entry.ServerID))
+				//cache.GetLogger().WithField("module", "twitter").Warn(fmt.Sprintf("skipped twitter @%s for Channel #%s on Guild #%s: channel not found!",
+				//	entry.AccountScreenName, entry.ChannelID, entry.ServerID))
 				continue
 			}
 

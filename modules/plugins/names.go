@@ -189,15 +189,15 @@ func (n *Names) UpdateNickname(guildID string, userID string, newNick string) (e
 	if oldNick != "" && lastSavedNickname != oldNick {
 		err = n.SaveNickname(guildID, userID, oldNick)
 		helpers.RelaxLog(err)
-		n.logger().WithField("guildID", guildID).WithField("userID", userID).Debug(
-			"saved old nickname: ", oldNick) // TODO
+		//n.logger().WithField("guildID", guildID).WithField("userID", userID).Debug(
+		//	"saved old nickname: ", oldNick) // TODO
 		lastSavedNickname = oldNick
 	}
 
 	if lastSavedNickname != newNick {
 		err = n.SaveNickname(guildID, userID, newNick)
-		n.logger().WithField("guildID", guildID).WithField("userID", userID).Debug(
-			"saved new nickname: ", newNick) // TODO
+		//n.logger().WithField("guildID", guildID).WithField("userID", userID).Debug(
+		//	"saved new nickname: ", newNick) // TODO
 		previousNicknames[guildID][userID] = newNick
 		return err
 	}
@@ -218,15 +218,15 @@ func (n *Names) UpdateUsername(userID string, newUsername string) (err error) {
 	if oldUsername != "" && lastSavedUsername != oldUsername {
 		err = n.SaveUsername(userID, oldUsername)
 		helpers.RelaxLog(err)
-		n.logger().WithField("userID", userID).Debug(
-			"saved old username: ", oldUsername) // TODO
+		//n.logger().WithField("userID", userID).Debug(
+		//	"saved old username: ", oldUsername) // TODO
 		lastSavedUsername = oldUsername
 	}
 
 	if lastSavedUsername != newUsername {
 		err = n.SaveUsername(userID, newUsername)
-		n.logger().WithField("userID", userID).Debug(
-			"saved new username: ", newUsername) // TODO
+		//n.logger().WithField("userID", userID).Debug(
+		//	"saved new username: ", newUsername) // TODO
 		previousUsernames[userID] = newUsername
 		return err
 	}
