@@ -283,10 +283,13 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			}
 
 			accountEmbed := &discordgo.MessageEmbed{
-				Title:       helpers.GetTextF("plugins.facebook.page-embed-title", facebookPage.Name, facebookPage.Username, facebookNameModifier),
-				URL:         fmt.Sprintf(FacebookFriendlyPage, facebookPage.Username),
-				Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: facebookPage.ProfilePictureUrl},
-				Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.facebook.embed-footer")},
+				Title:     helpers.GetTextF("plugins.facebook.page-embed-title", facebookPage.Name, facebookPage.Username, facebookNameModifier),
+				URL:       fmt.Sprintf(FacebookFriendlyPage, facebookPage.Username),
+				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: facebookPage.ProfilePictureUrl},
+				Footer: &discordgo.MessageEmbedFooter{
+					Text:    helpers.GetText("plugins.facebook.embed-footer"),
+					IconURL: helpers.GetText("plugins.facebook.embed-footer-imageurl"),
+				},
 				Description: facebookPage.About,
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Likes", Value: humanize.Comma(facebookPage.Likes), Inline: true}},
@@ -402,10 +405,13 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
 	}
 
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.facebook.post-embed-title", facebookPage.Name, facebookPage.Username, facebookNameModifier),
-		URL:         post.Url,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: facebookPage.ProfilePictureUrl},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.facebook.embed-footer")},
+		Title:     helpers.GetTextF("plugins.facebook.post-embed-title", facebookPage.Name, facebookPage.Username, facebookNameModifier),
+		URL:       post.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: facebookPage.ProfilePictureUrl},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.facebook.embed-footer"),
+			IconURL: helpers.GetText("plugins.facebook.embed-footer-imageurl"),
+		},
 		Description: post.Message,
 		Color:       helpers.GetDiscordColorFromHex(facebookHexColor),
 	}

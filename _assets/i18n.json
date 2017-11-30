@@ -450,7 +450,7 @@
       "check_format": "Please check that your query is in the format `<language_in> <language_out> <text>`",
       "translation-embed-title": "Translation from **%s** to **%s**",
       "embed-footer": "via translate.google.com",
-      "embed-footer-plus-naver": "Powered by translate.google.com and papago.naver.com",
+      "embed-footer-plus-naver": "powered by translate.google.com and papago.naver.com",
       "embed-title-alternative-naver": "Alternative translation"
     },
     "reminders": {
@@ -543,13 +543,14 @@
     },
     "facebook": {
       "page-not-found": "Page not found!",
-      "embed-footer": "via facebook.com",
+      "embed-footer": "powered by facebook.com",
       "page-embed-title": "%s (%s)%s Facebook Page",
       "account-added-success": "Added Facebook Page `%s` to the Channel <#%s>!",
       "account-delete-not-found-error": "Unable to find Facebook Page in the Database!",
       "account-list-no-accounts-error": "No Facebook Page found on this server!",
       "account-delete-success": "Deleted Facebook Page `%s` from the Database!",
-      "post-embed-title": "%s (@%s)%s posted a new Update"
+      "post-embed-title": "%s (@%s)%s posted a new Update",
+      "embed-footer-imageurl": "https://i.imgur.com/PcGyex5.png"
     },
     "wolframalpha": {
       "error": "Sorry, I couldn't find an answer to that. <:blobweary:317036265071575050>"
@@ -572,7 +573,7 @@
       "address-not-found": "I can't find the location you are looking for. <:blobthinking:317028940885524490>",
       "no-weather": "I couldn't find any weather for the given location. <:googlespeaknoevil:317036753074651139>",
       "weather-embed-title": "Weather for %s",
-      "embed-footer": "Powered by Dark Sky",
+      "embed-footer": "powered by Dark Sky",
       "current-weather-description": "**Currently**\n**%s**\nTemperature: **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\nWind: **%s m/s** (%s mph)\nHumidity: **%s %%**",
       "week-title": "This week"
     },
@@ -847,7 +848,7 @@
       "genius-api-error": "Something went wrong talking to genius.com. <:blobweary:317036265071575050>",
       "genius-no-results": "I wasn't able to find anything with that name. <:blobweary:317036265071575050>",
       "song-list-embed-title": "Results for `%s`",
-      "powered-by": "Powered by genius.com"
+      "powered-by": "powered by genius.com"
     },
     "friends": {
       "invite-error-already-on-server": "There is already a Robyul Friend on this Server! <:blobsnuggle:333989876695302144>",
