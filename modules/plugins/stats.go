@@ -997,6 +997,21 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		guild, err := helpers.GetGuild(channel.GuildID)
 		helpers.Relax(err)
 
+		args := strings.Fields(content)
+		if len(args) > 0 && helpers.IsRobyulMod(msg.Author.ID) {
+			guild, err = helpers.GetGuild(args[0])
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == discordgo.ErrCodeMissingAccess {
+						_, err = helpers.SendMessage(msg.ChannelID, "Unable to get information for this Server.")
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+				}
+				helpers.Relax(err)
+			}
+		}
+
 		if len(guild.Emojis) <= 0 {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.no-emotes"))
 			helpers.Relax(err)
