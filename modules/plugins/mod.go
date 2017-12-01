@@ -98,8 +98,8 @@ func (m *Mod) Init(session *discordgo.Session) {
 		for _, guild := range session.State.Guilds {
 			invites, err := session.GuildInvites(guild.ID)
 			if err != nil {
-				log.WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild %s (#%s): %s",
-					guild.Name, guild.ID, err.Error()))
+				//log.WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild %s (#%s): %s",
+				//	guild.Name, guild.ID, err.Error()))
 				continue
 			}
 

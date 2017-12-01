@@ -384,8 +384,11 @@ NextKeyword:
 				doesMatch = true
 			}
 			if doesMatch == true {
-				memberToNotify, err := helpers.GetGuildMember(guild.ID, notificationSetting.UserID)
+				memberToNotify, err := helpers.GetGuildMemberWithoutApi(guild.ID, notificationSetting.UserID)
 				if err != nil {
+					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMember {
+						continue NextKeyword
+					}
 					cache.GetLogger().WithField("module", "notifications").Error("error getting member to notify: " + err.Error())
 					continue NextKeyword
 				}
