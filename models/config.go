@@ -33,6 +33,7 @@ type Config struct {
 		UserReported             bool
 		UserMultipleJoins        bool
 		UserBannedDiscordlistNet bool // https://bans.discordlist.net/
+		UserJoins                bool
 	} `rethink:"inspect_triggers_enabled"`
 	InspectsChannel string `rethink:"inspects_channel"`
 

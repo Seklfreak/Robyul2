@@ -1236,6 +1236,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					emojis.From("4"),
 					emojis.From("5"),
 					emojis.From("6"),
+					emojis.From("9"),
 					"💾"}
 				for _, allowedEmote := range allowedEmotes {
 					err = session.MessageReactionAdd(msg.ChannelID, chooseMessage.ID, allowedEmote)
@@ -1346,6 +1347,21 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							}
 						}
 					}
+					NumberNines, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("9"), 100)
+					for _, NumberNine := range NumberNines {
+						if NumberNine.ID == msg.Author.ID {
+							if settings.InspectTriggersEnabled.UserJoins && emotesLocked == false {
+								settings.InspectTriggersEnabled.UserJoins = false
+							} else {
+								settings.InspectTriggersEnabled.UserJoins = true
+							}
+							needEmbedUpdate = true
+							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("9"), msg.Author.ID)
+							if err != nil {
+								emotesLocked = true
+							}
+						}
+					}
 
 					if needEmbedUpdate == true {
 						chooseEmbed.Description = fmt.Sprintf(
@@ -1391,8 +1407,15 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						if settings.InspectTriggersEnabled.UserBannedDiscordlistNet {
 							enabledEmote = "✔"
 						}
-						chooseEmbed.Description += fmt.Sprintf("%s %s Account is banned on bans.discordlist.net, a global (unofficial) discord ban list.\n",
+						chooseEmbed.Description += fmt.Sprintf("%s %s Account is banned on bans.discordlist.net, a global (unofficial) discord ban list. Gets checked everytime an user joins.\n",
 							emojis.From("6"), enabledEmote)
+
+						enabledEmote = "🔲"
+						if settings.InspectTriggersEnabled.UserJoins {
+							enabledEmote = "✔"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s Account joins this sever. Triggers on every join.\n",
+							emojis.From("9"), enabledEmote)
 
 						if emotesLocked == true {
 							chooseEmbed.Description += fmt.Sprintf("⚠ Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
@@ -2049,7 +2072,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
 				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported ||
 				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet {
+				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet ||
+				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins {
 				guild, err := helpers.GetGuild(member.GuildID)
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -2070,13 +2094,15 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				oneWeekAgo := time.Now().AddDate(0, 0, -7)
 
 				isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(member.User.ID)
+				helpers.RelaxLog(err)
 
 				if !((helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
 					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
 					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
 					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported && len(troublemakerReports) > 0) ||
 					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins && len(joins) > 1) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet && isBannedOnBansdiscordlistNet)) {
+					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet && isBannedOnBansdiscordlistNet) ||
+					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins)) {
 					return
 				}
 
@@ -2157,7 +2183,6 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					}
 				}
 
-				helpers.RelaxLog(err)
 				isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
 				if isBannedOnBansdiscordlistNet {
 					isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
@@ -2375,9 +2400,17 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 						}
 					}
 
+					isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(user.User.ID)
+					helpers.RelaxLog(err)
+					isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
+					if isBannedOnBansdiscordlistNet {
+						isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
+					}
+
 					resultEmbed.Fields = []*discordgo.MessageEmbedField{
 						{Name: "Bans", Value: resultBansText, Inline: false},
 						{Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
+						{Name: "bans.discordlist.net", Value: isBannedOnBansdiscordlistNetText, Inline: false},
 						{Name: "Join History", Value: joinsText, Inline: false},
 						{Name: "Common Servers", Value: commonGuildsText, Inline: false},
 						{Name: "Account Age", Value: joinedTimeText, Inline: false},
