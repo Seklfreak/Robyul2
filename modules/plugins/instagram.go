@@ -301,7 +301,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 	var bundledEntries map[int64][]DB_Instagram_Entry
 
 	for {
-		m.fillUserIDs()
+		//m.fillUserIDs() (migration)
 
 		cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
 		helpers.Relax(err)

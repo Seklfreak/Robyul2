@@ -56,6 +56,6 @@ func updateDiscordBotsOrg(numOfGuilds int) (err error) {
 		return err
 	}
 
-	cache.GetLogger().WithField("module", "bot").Infof("Updated discordbots.org: %d servers", numOfGuilds)
+	cache.GetLogger().WithField("module", "botlists").Infof("Updated discordbots.org: %d servers", numOfGuilds)
 	return nil
 }

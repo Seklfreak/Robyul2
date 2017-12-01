@@ -296,7 +296,7 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 
 	var specialText string
 	if postDelay > 0 {
-		specialText += fmt.Sprintf(" with a %d seconds delay", postDelay)
+		specialText += fmt.Sprintf(" with a %d minutes delay", postDelay)
 	}
 
 	var linkMode bool

@@ -1327,6 +1327,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Footer:    &discordgo.MessageEmbedFooter{Text: "Server #" + invite.Guild.ID},
 
 			Fields: []*discordgo.MessageEmbedField{
+				{Name: "Link", Value: "https://discord.gg/" + invite.Code, Inline: true},
 				{Name: "Channel", Value: fmt.Sprintf("#%s (`#%s`)", invite.Channel.Name, invite.Channel.ID), Inline: true},
 				{Name: "Members", Value: humanize.Comma(int64(numberOfMembers)), Inline: true},
 				{Name: "Times Used", Value: humanize.Comma(int64(invite.Uses)), Inline: true},
