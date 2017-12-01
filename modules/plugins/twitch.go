@@ -14,6 +14,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
@@ -144,6 +145,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 		}
 
 		cache.GetLogger().WithField("module", "twitch").Infof("checking %d channels for %d feeds", len(bundledEntries), len(entries))
+		start := time.Now()
 
 		// TODO: Check multiple entries at once
 		for twitchChannelName, entries := range bundledEntries {
@@ -173,7 +175,11 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 			}
 		}
 
-		time.Sleep(60 * time.Second)
+		elapsed := time.Since(start)
+		cache.GetLogger().WithField("module", "twitch").Infof("checked %d channels for %d feeds, took %s", len(bundledEntries), len(entries), elapsed)
+		metrics.TwitchRefreshTime.Set(elapsed.Seconds())
+
+		time.Sleep(30 * time.Second)
 	}
 }
 

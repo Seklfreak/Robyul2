@@ -118,6 +118,12 @@ var (
 
 	// YoutubeLeftQuota counts how many left youtube quotas
 	YoutubeLeftQuota = expvar.NewInt("youtube_left_quota")
+
+	// TwitchRefreshTime counts all connected twitch channels
+	TwitchChannelsCount = expvar.NewInt("twitch_channels_count")
+
+	// TwitchRefreshTime is the latest refresh time
+	TwitchRefreshTime = expvar.NewFloat("twitch_refresh_time")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -190,6 +196,8 @@ func CollectRuntimeMetrics() {
 		RedditSubredditsCount.Set(entriesCount(models.RedditSubredditsTable))
 
 		YoutubeChannelsCount.Set(entriesCount(models.YoutubeChannelTable))
+
+		TwitchChannelsCount.Set(entriesCount("twitch"))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
