@@ -239,7 +239,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	// Ignore the event if we cannot resolve the channel
 	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)
 	if err != nil {
-		go raven.CaptureError(err, map[string]string{})
 		return
 	}
 
@@ -436,7 +435,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
 	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)
 	if err != nil {
-		go raven.CaptureError(err, map[string]string{})
 		return
 	}
 

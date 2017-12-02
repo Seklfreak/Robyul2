@@ -12,7 +12,6 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/getsentry/raven-go"
 )
 
 var lastPresenceUpdates map[string]models.ElasticPresenceUpdate
@@ -21,7 +20,6 @@ var lastPresenceUpdatesLock = sync.RWMutex{}
 func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	channel, err := GetChannelWithoutApi(message.ChannelID)
 	if err != nil {
-		go raven.CaptureError(err, map[string]string{})
 		return
 	}
 
@@ -49,7 +47,6 @@ func ElasticOnGuildMemberRemove(session *discordgo.Session, member *discordgo.Gu
 func ElasticOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
 	channel, err := GetChannelWithoutApi(reaction.ChannelID)
 	if err != nil {
-		go raven.CaptureError(err, map[string]string{})
 		return
 	}
 
