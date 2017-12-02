@@ -657,8 +657,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			userinfoEmbed.Description = description
 		}
 
-		if helpers.GetAvatarUrl(targetMember.User) != "" {
-			userinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetMember.User)}
+		if targetMember.User.Avatar != "" {
+			userinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: targetMember.User.AvatarURL("")}
 			userinfoEmbed.URL = helpers.GetAvatarUrl(targetMember.User)
 		}
 		if gameUrl != "" {

@@ -389,7 +389,7 @@ NextKeyword:
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMember {
 						continue NextKeyword
 					}
-					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).Error("error getting member to notify: " + err.Error())
+					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Error("error getting member to notify: " + err.Error())
 					continue NextKeyword
 				}
 				if memberToNotify == nil {
