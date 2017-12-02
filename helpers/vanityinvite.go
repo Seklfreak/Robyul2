@@ -44,16 +44,25 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 		return err
 	}
 
-	insert := gorethink.Table(models.VanityInvitesTable).Insert(models.VanityInviteEntry{
+	newVanityInvite := models.VanityInviteEntry{
 		GuildID:          guildID,
 		VanityName:       strings.ToLower(vanityName),
 		VanityNamePretty: vanityName,
 		SetByUserID:      userID,
 		SetAt:            time.Now(),
 		ChannelID:        channelID,
-	})
+	}
+
+	insert := gorethink.Table(models.VanityInvitesTable).Insert(newVanityInvite)
 	_, err = insert.RunWrite(GetDB())
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = ResetCachedDiscordInviteByVanityInvite(newVanityInvite)
+	RelaxLog(err)
+
+	return nil
 }
 
 func GetVanityUrlByID(id string) (entryBucket models.VanityInviteEntry, err error) {
