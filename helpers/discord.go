@@ -40,6 +40,9 @@ var RobyulMod = []string{
 var Blacklisted = []string{
 	"171883318386753536", // ForRyu
 }
+var BlacklistedGuildIDs = []string{
+	"264445053596991498", // Discord Bot List
+}
 var ExtendedInspectRoleIDs = []string{
 	"345209385821274113", // inspect extended (sekl's dev cord)
 	"345209098100277248", // inspect (Moderator Chat)
@@ -50,6 +53,16 @@ var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderato
 func IsBlacklisted(id string) bool {
 	for _, s := range Blacklisted {
 		if s == id {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsBlacklistedGuild(guildID string) bool {
+	for _, s := range BlacklistedGuildIDs {
+		if s == guildID {
 			return true
 		}
 	}
@@ -591,10 +604,9 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 func GetChannel(channelID string) (*discordgo.Channel, error) {
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {
-		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
-		//	fmt.Sprintf("discord api request: Channel: %s", channelID))
-		//targetChannel, err = cache.GetSession().Channel(channelID)
-		return targetChannel, errors.New("channel not found")
+		cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
+			fmt.Sprintf("discord api request: Channel: %s", channelID))
+		targetChannel, err = cache.GetSession().Channel(channelID)
 	}
 	return targetChannel, err
 }

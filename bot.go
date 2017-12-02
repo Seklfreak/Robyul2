@@ -237,9 +237,13 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Get the channel
 	// Ignore the event if we cannot resolve the channel
-	channel, err := helpers.GetChannel(message.ChannelID)
+	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)
 	if err != nil {
 		go raven.CaptureError(err, map[string]string{})
+		return
+	}
+
+	if helpers.IsBlacklistedGuild(channel.GuildID) {
 		return
 	}
 
@@ -430,6 +434,16 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 }
 
 func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
+	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)
+	if err != nil {
+		go raven.CaptureError(err, map[string]string{})
+		return
+	}
+
+	if helpers.IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
 	modules.CallExtendedPluginOnMessageDelete(message)
 }
 
