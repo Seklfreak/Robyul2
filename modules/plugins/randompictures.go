@@ -715,7 +715,7 @@ Loop:
 						continue CheckFoldersLoop
 					}
 				}
-				cache.GetLogger().WithField("module", "randompictures").Debug(fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
+				//cache.GetLogger().WithField("module", "randompictures").Debug(fmt.Sprintf("getting google drive picture cache Folder #%s for Entry #%s", driveFolderID, sourceEntry.ID))
 				result, err := driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).Do()
 				if err != nil {
 					cache.GetLogger().WithField("module", "randompictures").Error(fmt.Sprintf("google drive error: %s, retrying in 10 seconds", err.Error()))

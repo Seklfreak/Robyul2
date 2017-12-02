@@ -433,6 +433,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 }
 
 func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
+	if helpers.IsBlacklisted(message.Author.ID) {
+		return
+	}
+
 	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)
 	if err != nil {
 		return
@@ -458,10 +462,36 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
 		return
 	}
 
+	channel, err := helpers.GetChannelWithoutApi(reaction.ChannelID)
+	if err != nil {
+		return
+	}
+
+	if helpers.IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
 	modules.CallExtendedPluginOnReactionAdd(reaction)
 }
 
 func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.MessageReactionRemove) {
+	if reaction.UserID == session.State.User.ID {
+		return
+	}
+
+	if helpers.IsBlacklisted(reaction.UserID) {
+		return
+	}
+
+	channel, err := helpers.GetChannelWithoutApi(reaction.ChannelID)
+	if err != nil {
+		return
+	}
+
+	if helpers.IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
 	modules.CallExtendedPluginOnReactionRemove(reaction)
 }
 

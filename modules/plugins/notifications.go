@@ -297,7 +297,7 @@ type PendingNotification struct {
 }
 
 func (m *Notifications) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-	channel, err := helpers.GetChannel(msg.ChannelID)
+	channel, err := helpers.GetChannelWithoutApi(msg.ChannelID)
 	if err != nil {
 		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
 			"ChannelID":       msg.ChannelID,
@@ -389,7 +389,7 @@ NextKeyword:
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMember {
 						continue NextKeyword
 					}
-					cache.GetLogger().WithField("module", "notifications").Error("error getting member to notify: " + err.Error())
+					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).Error("error getting member to notify: " + err.Error())
 					continue NextKeyword
 				}
 				if memberToNotify == nil {
