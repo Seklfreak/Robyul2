@@ -6,6 +6,8 @@ const (
 	VanityInvitesTable = "vanity_invites"
 	// {guildID} resolves to VanityInviteRedisEntry
 	VanityInvitesInviteRedisKey = "robyul2-discord:vanityinvites:invite:%s"
+
+	VanityInviteLogChannelKey = "vanityinvite:log:channel-id"
 )
 
 type VanityInviteEntry struct {

@@ -202,7 +202,7 @@ func (dm *DM) repostDM(channelID string, message *discordgo.Message) (err error)
 
 	embed := &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: fmt.Sprintf("@%s DM'd Robyul:", message.Author.Username),
+			Name: fmt.Sprintf("@%s#%s DM'd Robyul:", message.Author.Username, message.Author.Discriminator),
 		},
 		Description: content,
 		Color:       0x0FADED,

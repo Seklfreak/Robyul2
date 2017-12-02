@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 )
@@ -49,6 +50,8 @@ func (vi VanityInvite) actionStart(args []string, in *discordgo.Message, out **d
 			return vi.actionSet
 		case "remove", "delete":
 			return vi.actionRemove
+		case "set-log":
+			return vi.actionSetLog
 		}
 	}
 
@@ -105,8 +108,6 @@ func (vi VanityInvite) actionSet(args []string, in *discordgo.Message, out **dis
 		}
 	}
 	helpers.Relax(err)
-
-	vi.logger().WithField("guildID", targetChannel.GuildID).Infof("set the vanity url to \"%s\"")
 
 	*out = vi.newMsg(helpers.GetTextF("plugins.vanityinvite.set-success",
 		args[1], targetChannel.ID,
@@ -167,9 +168,31 @@ func (vi VanityInvite) actionRemove(args []string, in *discordgo.Message, out **
 	err = helpers.RemoveVanityUrl(vanityInvite)
 	helpers.Relax(err)
 
-	vi.logger().WithField("guildID", channel.GuildID).Infof("removed the vanity url")
-
 	*out = vi.newMsg(helpers.GetTextF("plugins.vanityinvite.remove-success"))
+	return vi.actionFinish
+}
+
+// [p]custom-invite set-log <#channel or channel id>
+func (vi VanityInvite) actionSetLog(args []string, in *discordgo.Message, out **discordgo.MessageSend) vanityInviteAction {
+	if !helpers.IsRobyulMod(in.Author.ID) {
+		*out = vi.newMsg("robyulmod.no_permission")
+		return vi.actionFinish
+	}
+
+	var err error
+	var targetChannel *discordgo.Channel
+	if len(args) >= 2 {
+		targetChannel, err = helpers.GetChannelFromMention(in, args[1])
+		helpers.Relax(err)
+	}
+
+	if targetChannel != nil && targetChannel.ID != "" {
+		err = helpers.SetBotConfigString(models.VanityInviteLogChannelKey, targetChannel.ID)
+	} else {
+		err = helpers.SetBotConfigString(models.VanityInviteLogChannelKey, "")
+	}
+
+	*out = vi.newMsg("plugins.vanityinvite.setlog-success")
 	return vi.actionFinish
 }
 
