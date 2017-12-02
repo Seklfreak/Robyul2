@@ -322,3 +322,33 @@ func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry) error {
 		Do(context.Background())
 	return err
 }
+
+func GetMinTimeForInterval(interval string, count int) (minTime time.Time) {
+	switch interval {
+	case "second":
+		minTime = time.Now().Add(-1 * time.Duration(count) * time.Second)
+		break
+	case "minute":
+		minTime = time.Now().Add(-1 * time.Duration(count) * time.Minute)
+		break
+	case "hour":
+		minTime = time.Now().Add(-1 * time.Duration(count) * time.Hour)
+		break
+	case "day":
+		minTime = time.Now().Add(-1 * time.Duration(count) * (time.Hour * 24))
+		break
+	case "week":
+		minTime = time.Now().Add(-1 * time.Duration(count) * (time.Hour * 24 * 7))
+		break
+	case "month":
+		minTime = time.Now().Add(-1 * time.Duration(count) * (time.Hour * 24 * 7 * 31))
+		break
+	case "quarter":
+		minTime = time.Now().Add(-1 * time.Duration(count) * (time.Hour * 24 * 7 * 31 * 3))
+		break
+	case "year":
+		minTime = time.Now().Add(-1 * time.Duration(count) * (time.Hour * 24 * 7 * 365))
+		break
+	}
+	return minTime
+}

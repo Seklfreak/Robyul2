@@ -966,8 +966,11 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 
 	agg := elastic.NewDateHistogramAggregation().
 		Field("CreatedAt").
-		//Format("yyyy-MM-dd HH:mm:ss").
-		Interval(interval)
+		Interval(interval).
+		Order("_key", false).
+		MinDocCount(0).
+		ExtendedBoundsMin(helpers.GetMinTimeForInterval(interval, countNumber)).
+		ExtendedBoundsMax(time.Now())
 
 	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeVanityInviteClick + " AND GuildID:" + guildID)
 	searchResult, err := cache.GetElastic().Search().
