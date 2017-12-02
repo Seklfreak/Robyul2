@@ -22,7 +22,9 @@ func ConnectDB(url string, db string) {
 	log := cache.GetLogger()
 	log.WithField("module", "db").Info("Connecting to " + url)
 
+	rethink.Log = cache.GetLogger()
 	rethink.SetTags("rethink", "json")
+	rethink.SetVerbose(true)
 
 	session, err := rethink.Connect(rethink.ConnectOpts{
 		Address:  url,
