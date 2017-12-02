@@ -964,12 +964,14 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		return
 	}
 
+	minBound := helpers.GetMinTimeForInterval(interval, countNumber)
+
 	agg := elastic.NewDateHistogramAggregation().
 		Field("CreatedAt").
 		Interval(interval).
 		Order("_key", false).
 		MinDocCount(0).
-		ExtendedBoundsMin(helpers.GetMinTimeForInterval(interval, countNumber)).
+		ExtendedBoundsMin(minBound).
 		ExtendedBoundsMax(time.Now())
 
 	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeVanityInviteClick + " AND GuildID:" + guildID)
@@ -977,7 +979,7 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		Index(models.ElasticIndex).
 		Query(termQuery).
 		Aggregation("clicks", agg).
-		Size(countNumber).
+		Size(0).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
@@ -994,6 +996,7 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
 			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			//fmt.Println("clicks bucket", timeISO8601+":", bucket.DocCount)
 			result = append(result, models.Rest_Statistics_Histogram_Two{
 				Time:   timeISO8601,
 				Count1: bucket.DocCount,
@@ -1010,7 +1013,7 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		Index(models.ElasticIndex).
 		Query(termQuery).
 		Aggregation("joins", agg).
-		Size(countNumber).
+		Size(0).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
@@ -1022,13 +1025,12 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
 			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			//fmt.Println("joins bucket", timeISO8601+":", bucket.DocCount)
+			//result[n].Count2 = bucket.DocCount
 			for resultN := range result {
 				if result[resultN].Time == timeISO8601 {
 					result[resultN].Count2 = bucket.DocCount
 				}
-			}
-			if len(result) >= countNumber {
-				break
 			}
 		}
 	}
