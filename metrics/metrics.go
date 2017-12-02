@@ -124,6 +124,9 @@ var (
 
 	// TwitchRefreshTime is the latest refresh time
 	TwitchRefreshTime = expvar.NewFloat("twitch_refresh_time")
+
+	// VanityInvitesCount counts all vanity invites channels
+	VanityInvitesCount = expvar.NewInt("vanityinvites_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -198,6 +201,8 @@ func CollectRuntimeMetrics() {
 		YoutubeChannelsCount.Set(entriesCount(models.YoutubeChannelTable))
 
 		TwitchChannelsCount.Set(entriesCount("twitch"))
+
+		VanityInvitesCount.Set(entriesCount(models.VanityInvitesTable))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
