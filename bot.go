@@ -68,9 +68,9 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 			}
 			helpers.RelaxLog(err)
 
-			cache.GetLogger().WithField("module", "bot").Debug(
-				fmt.Sprintf("requesting guild member chunks for guild: %s",
-					guild.ID))
+			//cache.GetLogger().WithField("module", "bot").Debug(
+			//	fmt.Sprintf("requesting guild member chunks for guild: %s",
+			//		guild.ID))
 
 			time.Sleep(1 * time.Second)
 			//}
@@ -132,9 +132,9 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 			}
 			helpers.RelaxLog(err)
 
-			cache.GetLogger().WithField("module", "bot").Debug(
-				fmt.Sprintf("requesting guild member chunks for guild: %s",
-					guild.ID))
+			//cache.GetLogger().WithField("module", "bot").Debug(
+			//	fmt.Sprintf("requesting guild member chunks for guild: %s",
+			//		guild.ID))
 
 			time.Sleep(1 * time.Second)
 			//}
@@ -149,9 +149,9 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 }
 
 func BotOnMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {
-	cache.GetLogger().WithField("module", "bot").Debug(
-		fmt.Sprintf("received guild member chunk for guild: %s (%d received)",
-			members.GuildID, len(members.Members)))
+	//cache.GetLogger().WithField("module", "bot").Debug(
+	//	fmt.Sprintf("received guild member chunk for guild: %s (%d received)",
+	//	members.GuildID, len(members.Members)))
 }
 
 func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.PresenceUpdate) {
@@ -433,8 +433,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 }
 
 func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
-	if helpers.IsBlacklisted(message.Author.ID) {
-		return
+	if message.Author != nil {
+		if helpers.IsBlacklisted(message.Author.ID) {
+			return
+		}
 	}
 
 	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)
