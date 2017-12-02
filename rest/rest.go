@@ -105,6 +105,7 @@ func NewRestServices() []*restful.WebService {
 	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
 	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
 	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
+	service.Route(service.GET("/{guild-id}/vanityinvite/{interval}/histogram/{count}").Filter(sessionAndWebkeyAuthenticate).To(GetVanityInviteStatistics))
 	service.Route(service.GET("/bot").Filter(webkeyAuthenticate).To(GotBotStatistics))
 	services = append(services, service)
 
@@ -205,6 +206,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 	var key string
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var featureVanityInvite models.Rest_Feature_VanityInvite
 	var botPrefix string
 	var err error
 
@@ -233,6 +235,9 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 			featureChatlog.Enabled = false
 		}
 
+		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
+		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
+
 		returnGuilds = append(returnGuilds, models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -244,6 +249,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
 				Chatlog:        featureChatlog,
+				VanityInvite:   featureVanityInvite,
 			},
 		})
 	}
@@ -283,6 +289,7 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 	var key string
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var featureVanityInvite models.Rest_Feature_VanityInvite
 	var botPrefix string
 	var err error
 
@@ -339,6 +346,9 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 			returnStatus.HasGuildPermissionAdministrator = true
 		}
 
+		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
+		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
+
 		returnGuilds = append(returnGuilds, models.Rest_Member_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -350,6 +360,7 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
 				Chatlog:        featureChatlog,
+				VanityInvite:   featureVanityInvite,
 			},
 			Status: returnStatus,
 		})
@@ -674,6 +685,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 	var key string
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
+	var featureVanityInvite models.Rest_Feature_VanityInvite
 	var botPrefix string
 	guild, _ := helpers.GetGuild(guildID)
 	if guild != nil && guild.ID != "" {
@@ -722,6 +734,9 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			featureChatlog.Enabled = false
 		}
 
+		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
+		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
+
 		returnGuild := &models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -733,6 +748,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 				Levels_Badges:  featureLevels_Badges,
 				RandomPictures: featureRandomPictures,
 				Chatlog:        featureChatlog,
+				VanityInvite:   featureVanityInvite,
 			},
 			Channels: channels,
 		}
@@ -916,6 +932,99 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 				Count: bucket.DocCount,
 			})
 			if len(result) >= 24 {
+				break
+			}
+		}
+	}
+
+	response.WriteEntity(result)
+}
+
+func GetVanityInviteStatistics(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+	count := request.PathParameter("count")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	countNumber, err := strconv.Atoi(count)
+	if err != nil {
+		response.WriteError(http.StatusNoContent, errors.New("invalid count"))
+		return
+	}
+
+	vanityInvite, _ := helpers.GetVanityUrlByGuildID(guildID)
+	if vanityInvite.VanityName == "" {
+		response.WriteError(http.StatusNoContent, errors.New("vanity invite not found"))
+		return
+	}
+
+	agg := elastic.NewDateHistogramAggregation().
+		Field("CreatedAt").
+		//Format("yyyy-MM-dd HH:mm:ss").
+		Interval(interval)
+
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeVanityInviteClick + " AND GuildID:" + guildID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Aggregation("clicks", agg).
+		Size(countNumber).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	result := make([]models.Rest_Statistics_Histogram_Two, 0)
+
+	var timestamp int64
+	var timeConverted time.Time
+	var timeISO8601 string
+	if agg, found := searchResult.Aggregations.Terms("clicks"); found {
+		for _, bucket := range agg.Buckets {
+			timestamp = int64(bucket.Key.(float64) / 1000)
+			timeConverted = time.Unix(timestamp, 0)
+			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			result = append(result, models.Rest_Statistics_Histogram_Two{
+				Time:   timeISO8601,
+				Count1: bucket.DocCount,
+				Count2: 0,
+			})
+			if len(result) >= countNumber {
+				break
+			}
+		}
+	}
+
+	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeJoin + " AND GuildID:" + guildID + " AND VanityInvite:" + vanityInvite.VanityName)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Aggregation("joins", agg).
+		Size(countNumber).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if agg, found := searchResult.Aggregations.Terms("joins"); found {
+		for _, bucket := range agg.Buckets {
+			timestamp = int64(bucket.Key.(float64) / 1000)
+			timeConverted = time.Unix(timestamp, 0)
+			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			for resultN := range result {
+				if result[resultN].Time == timeISO8601 {
+					result[resultN].Count2 = bucket.DocCount
+				}
+			}
+			if len(result) >= countNumber {
 				break
 			}
 		}

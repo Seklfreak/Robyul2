@@ -31,6 +31,7 @@ type Rest_Guild_Features struct {
 	Levels_Badges  Rest_Feature_Levels_Badges
 	RandomPictures Rest_Feature_RandomPictures
 	Chatlog        Rest_Feature_Chatlog
+	VanityInvite   Rest_Feature_VanityInvite
 }
 
 type Rest_User struct {
@@ -101,6 +102,10 @@ type Rest_Feature_Chatlog struct {
 	Enabled bool
 }
 
+type Rest_Feature_VanityInvite struct {
+	VanityInviteName string
+}
+
 type Rest_RandomPictures_HistoryItem struct {
 	Link      string
 	SourceID  string
@@ -113,6 +118,12 @@ type Rest_RandomPictures_HistoryItem struct {
 type Rest_Statistics_Histogram struct {
 	Time  string // ISO 8601
 	Count int64
+}
+
+type Rest_Statistics_Histogram_Two struct {
+	Time   string // ISO 8601
+	Count1 int64
+	Count2 int64
 }
 
 type Rest_Statistics_Count struct {
