@@ -591,9 +591,10 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 func GetChannel(channelID string) (*discordgo.Channel, error) {
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
-			fmt.Sprintf("discord api request: Channel: %s", channelID))
-		targetChannel, err = cache.GetSession().Channel(channelID)
+		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
+		//	fmt.Sprintf("discord api request: Channel: %s", channelID))
+		//targetChannel, err = cache.GetSession().Channel(channelID)
+		return targetChannel, errors.New("channel not found")
 	}
 	return targetChannel, err
 }
