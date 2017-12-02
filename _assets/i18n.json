@@ -940,6 +940,18 @@
       "list-empty": "There are currently no bot statuses saved.",
       "remove-success": "I removed the status `%s` from the Robyul game status rotation list.",
       "set-success": "I set the current game status to `%s`.\nThis status will get overwritten with the next game status rotation."
+    },
+    "vanityinvite": {
+      "set-success": "The custom invite for this server has been set to `%s` pointing to <#%s>.\nUse <https://%s/%s> to invite people.\nGo to <%s> to view the statistics.",
+      "remove-none": "There is no custom invite set for this server.",
+      "remove-confirm": "Are you sure you want to remove the custom invite `%s` for this server? The custom invite will stop working.",
+      "remove-success": "The custom invite for this server has been removed.",
+      "status-none": "There is no custom invite set for this server.",
+      "status": "The custom invite for this server is `%s` pointing to <#%s>.\nUse <https://%s/%s> to invite people.\nGo to <%s> to view the statistics.",
+      "set-error-invalidname": "Invalid custom url name. The custom invite can only contain A-Z (upper and lowercase) and 0-9.",
+      "set-error-duplicate": "The given custom invite is already in use.",
+      "set-change-confirm": "Are you sure you want to change the custom invite for this server? The previous custom invite `%s` will stop working.",
+      "set-error-noinviteperm": "I'm not able to create invites to the given channel.\nCustom invite creation aborted."
     }
   }
 }

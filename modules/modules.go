@@ -70,6 +70,7 @@ var (
 		&plugins.Ping{},
 		&google.Handler{},
 		&plugins.BotStatus{},
+		&plugins.VanityInvite{},
 	}
 
 	// PluginList is the list of active plugins

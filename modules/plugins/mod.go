@@ -2219,6 +2219,25 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				}
 			}
 		}()
+		go func() {
+			defer helpers.Recover()
+
+			if !cache.HasElastic() {
+				return
+			}
+
+			var usedVanityInvite string
+			vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
+			if vanityInvite.VanityName != "" {
+				discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
+				if discordInviteCode == usedInvite.Code {
+					usedVanityInvite = vanityInvite.VanityName
+				}
+			}
+
+			err := helpers.ElasticAddJoin(member, usedInvite.Code, usedVanityInvite)
+			helpers.Relax(err)
+		}()
 	}()
 	go func() {
 		settings := helpers.GuildSettingsGetCached(member.GuildID)

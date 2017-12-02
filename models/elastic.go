@@ -3,12 +3,13 @@ package models
 import "time"
 
 const (
-	ElasticIndex              = "robyul"
-	ElasticTypeMessage        = "message"
-	ElasticTypeJoin           = "join"
-	ElasticTypeLeave          = "leave"
-	ElasticTypeReaction       = "reaction"
-	ElasticTypePresenceUpdate = "presence_update"
+	ElasticIndex                 = "robyul"
+	ElasticTypeMessage           = "message"
+	ElasticTypeJoin              = "join"
+	ElasticTypeLeave             = "leave"
+	ElasticTypeReaction          = "reaction"
+	ElasticTypePresenceUpdate    = "presence_update"
+	ElasticTypeVanityInviteClick = "vanity_invite_click"
 )
 
 type ElasticMessage struct {
@@ -24,9 +25,11 @@ type ElasticMessage struct {
 }
 
 type ElasticJoin struct {
-	CreatedAt time.Time
-	GuildID   string
-	UserID    string
+	CreatedAt      time.Time
+	GuildID        string
+	UserID         string
+	UsedInviteCode string
+	VanityInvite   string
 }
 
 type ElasticLeave struct {
@@ -53,4 +56,10 @@ type ElasticPresenceUpdate struct {
 	GameName   string
 	GameURL    string
 	Status     string
+}
+
+type ElasticVanityInviteClick struct {
+	CreatedAt        time.Time
+	VanityInviteName string
+	GuildID          string
 }

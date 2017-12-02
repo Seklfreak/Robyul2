@@ -26,15 +26,6 @@ func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.Messa
 	}()
 }
 
-func ElasticOnGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
-	go func() {
-		defer Recover()
-
-		err := ElasticAddJoin(member.Member)
-		Relax(err)
-	}()
-}
-
 func ElasticOnGuildMemberRemove(session *discordgo.Session, member *discordgo.GuildMemberRemove) {
 	go func() {
 		defer Recover()
@@ -187,7 +178,7 @@ func ElasticAddMessage(message *discordgo.Message) error {
 	return err
 }
 
-func ElasticAddJoin(member *discordgo.Member) error {
+func ElasticAddJoin(member *discordgo.Member, usedInvite, usedVanityName string) error {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -202,9 +193,11 @@ func ElasticAddJoin(member *discordgo.Member) error {
 	}
 
 	elasticJoinData := models.ElasticJoin{
-		CreatedAt: joinedAt,
-		GuildID:   member.GuildID,
-		UserID:    member.User.ID,
+		CreatedAt:      joinedAt,
+		GuildID:        member.GuildID,
+		UserID:         member.User.ID,
+		UsedInviteCode: usedInvite,
+		VanityInvite:   usedVanityName,
 	}
 
 	if GuildSettingsGetCached(member.GuildID).ChatlogDisabled {
@@ -283,6 +276,31 @@ func ElasticAddReaction(reaction *discordgo.MessageReaction) error {
 		Index(models.ElasticIndex).
 		Type(models.ElasticTypeReaction).
 		BodyJson(elasticLeaveData).
+		Do(context.Background())
+	return err
+}
+
+func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry) error {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	if vanityInvite.VanityName == "" || vanityInvite.GuildID == "" {
+		return errors.New("invalid vanityinvite entry submitted")
+	}
+
+	var err error
+
+	elasticVanityInviteClickData := models.ElasticVanityInviteClick{
+		CreatedAt:        time.Now(),
+		VanityInviteName: vanityInvite.VanityName,
+		GuildID:          vanityInvite.GuildID,
+	}
+
+	_, err = cache.GetElastic().Index().
+		Index(models.ElasticIndex).
+		Type(models.ElasticTypeVanityInviteClick).
+		BodyJson(elasticVanityInviteClickData).
 		Do(context.Background())
 	return err
 }

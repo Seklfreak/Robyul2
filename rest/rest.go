@@ -116,6 +116,15 @@ func NewRestServices() []*restful.WebService {
 
 	service.Route(service.GET("/{guild-id}/{channel-id}/around/{message-id}").Filter(sessionAndWebkeyAuthenticate).To(GetChatlogAroundMessageID))
 	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/vanityinvite").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{vanity-name}").Filter(webkeyAuthenticate).To(GetVanityInviteByName))
+	services = append(services, service)
 	return services
 }
 
@@ -1058,4 +1067,29 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 	}
 
 	response.WriteEntity(result)
+}
+
+func GetVanityInviteByName(request *restful.Request, response *restful.Response) {
+	vanityName := request.PathParameter("vanity-name")
+
+	vanityInvite, _ := helpers.GetVanityUrlByVanityName(vanityName)
+	if vanityInvite.GuildID == "" {
+		response.WriteError(http.StatusNoContent, errors.New("vanity invite not found"))
+		return
+	}
+
+	code, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
+	if code == "" {
+		response.WriteError(http.StatusNoContent, errors.New("unable to create invite"))
+		return
+	}
+
+	go func() {
+		helpers.ElasticAddVanityInviteClick(vanityInvite)
+	}()
+
+	response.WriteEntity(models.Rest_VanityInvite_Invite{
+		Code:    code,
+		GuildID: vanityInvite.GuildID,
+	})
 }

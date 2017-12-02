@@ -134,6 +134,11 @@ type Rest_Chatlog_Message struct {
 	Embeds         int
 }
 
+type Rest_VanityInvite_Invite struct {
+	Code    string
+	GuildID string
+}
+
 const (
 	Redis_Key_Feature_Levels_Badges  = "robyul2-discord:feature:levels-badges:server:%s"
 	Redis_Key_Feature_RandomPictures = "robyul2-discord:feature:randompictures:server:%s"

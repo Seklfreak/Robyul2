@@ -175,10 +175,10 @@ func main() {
 
 	if cache.HasElastic() {
 		discord.AddHandler(helpers.ElasticOnMessageCreate)
-		discord.AddHandler(helpers.ElasticOnGuildMemberAdd)
 		discord.AddHandler(helpers.ElasticOnGuildMemberRemove)
 		discord.AddHandler(helpers.ElasticOnReactionAdd)
 		discord.AddHandler(helpers.ElasticOnPresenceUpdate)
+		// Guild Member Add in modules/plugins/mod.go
 	}
 
 	// Connect to discord

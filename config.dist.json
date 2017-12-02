@@ -78,7 +78,9 @@
   "website": {
     "ranking_base_url": "https://robyul.chat/ranking",
     "randompictures_base_url": "https://robyul.chat/d/randompictures/",
-    "webkey": "your-secure-webkey"
+    "webkey": "your-secure-webkey",
+    "vanityurl_stats_base_url": "http://robyul.chat/d/vanityurl/%s",
+    "vanityurl_domain": "discord.is"
   },
   "streamable": {
     "username": "",
