@@ -361,6 +361,8 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 	var vanityInviteRedis models.VanityInviteRedisEntry
 	if err = cacheCodec.Get(key, &vanityInviteRedis); err == nil {
 		if time.Now().Before(vanityInviteRedis.ExpiresAt) {
+
+			fmt.Println(vanityInviteRedis.ExpiresAt)
 			return vanityInviteRedis.InviteCode, nil
 		}
 	}
@@ -370,20 +372,26 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 
 	invite, err := cache.GetSession().ChannelInviteCreate(vanityInviteEntry.ChannelID, discordgo.Invite{
 		MaxAge: 60 * 60 * 24, // 1 day
+		//Unique: true,
 	})
 	if err != nil {
 		return "", err
 	}
 
+	createdAtTime, err := invite.CreatedAt.Parse()
+	if err != nil {
+		createdAtTime = time.Now()
+	}
+
 	vanityInviteRedis = models.VanityInviteRedisEntry{
 		InviteCode: invite.Code,
-		ExpiresAt:  time.Now().Add(time.Hour * 23),
+		ExpiresAt:  createdAtTime.Add(time.Duration(invite.MaxAge) * time.Second).Add(-3 * time.Hour),
 	}
 
 	err = cacheCodec.Set(&redisCache.Item{
 		Key:        key,
 		Object:     vanityInviteRedis,
-		Expiration: time.Hour * 23,
+		Expiration: createdAtTime.Add(time.Duration(invite.MaxAge) * time.Second).Add(-3 * time.Hour).Sub(time.Now()),
 	})
 	RelaxLog(err)
 

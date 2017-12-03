@@ -58,7 +58,7 @@ func (vi VanityInvite) actionStart(args []string, in *discordgo.Message, out **d
 	return vi.actionStatus
 }
 
-// [p]custom-invite set <#channel or channel id> <vanity name>
+// [p]custom-invite set <vanity name> <#channel or channel id>
 func (vi VanityInvite) actionSet(args []string, in *discordgo.Message, out **discordgo.MessageSend) vanityInviteAction {
 	if !helpers.IsRobyulMod(in.Author.ID) { // TODO: Robyul Mod for now
 		*out = vi.newMsg("robyulmod.no_permission")
@@ -121,7 +121,7 @@ func (vi VanityInvite) actionSet(args []string, in *discordgo.Message, out **dis
 // [p]custom-invite
 func (vi VanityInvite) actionStatus(args []string, in *discordgo.Message, out **discordgo.MessageSend) vanityInviteAction {
 	if !helpers.IsMod(in) {
-		*out = vi.newMsg("robyulmod.no_permission")
+		*out = vi.newMsg("mod.no_permission")
 		return vi.actionFinish
 	}
 
@@ -146,7 +146,7 @@ func (vi VanityInvite) actionStatus(args []string, in *discordgo.Message, out **
 // [p]custom-invite remove
 func (vi VanityInvite) actionRemove(args []string, in *discordgo.Message, out **discordgo.MessageSend) vanityInviteAction {
 	if !helpers.IsAdmin(in) {
-		*out = vi.newMsg("robyulmod.no_permission")
+		*out = vi.newMsg("admin.no_permission")
 		return vi.actionFinish
 	}
 
