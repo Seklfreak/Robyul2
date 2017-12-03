@@ -126,6 +126,18 @@ type Rest_Statistics_Histogram_Two struct {
 	Count2 int64
 }
 
+type Rest_Statistics_Histogram_TwoSub struct {
+	Time     string // ISO 8601
+	Count1   int64
+	Count2   int64
+	SubItems []Rest_Statistics_Histogram_TwoSub_SubItem
+}
+
+type Rest_Statistics_Histogram_TwoSub_SubItem struct {
+	Key   string
+	Value int64
+}
+
 type Rest_Statistics_Count struct {
 	Count int64
 }

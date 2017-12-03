@@ -31,6 +31,14 @@ func m43_create_elastic_vanityinvite_click_index() {
 			"GuildID": map[string]interface{}{
 				"type": "string",
 			},
+			"Referer": map[string]interface{}{
+				"type": "text",
+				"fields": map[string]interface{}{
+					"keyword": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
 		},
 	}
 

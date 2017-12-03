@@ -966,6 +966,10 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 
 	minBound := helpers.GetMinTimeForInterval(interval, countNumber)
 
+	refererAgg := elastic.NewTermsAggregation().
+		Field("Referer.keyword").
+		Order("_count", false)
+
 	agg := elastic.NewDateHistogramAggregation().
 		Field("CreatedAt").
 		Interval(interval).
@@ -974,11 +978,13 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		ExtendedBoundsMin(minBound).
 		ExtendedBoundsMax(time.Now())
 
+	combinedAgg := agg.SubAggregation("referers", refererAgg)
+
 	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeVanityInviteClick + " AND GuildID:" + guildID)
 	searchResult, err := cache.GetElastic().Search().
 		Index(models.ElasticIndex).
 		Query(termQuery).
-		Aggregation("clicks", agg).
+		Aggregation("clicks", combinedAgg).
 		Size(0).
 		Do(context.Background())
 	if err != nil {
@@ -986,7 +992,7 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		return
 	}
 
-	result := make([]models.Rest_Statistics_Histogram_Two, 0)
+	result := make([]models.Rest_Statistics_Histogram_TwoSub, 0)
 
 	var timestamp int64
 	var timeConverted time.Time
@@ -996,11 +1002,26 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
 			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+
+			subItems := make([]models.Rest_Statistics_Histogram_TwoSub_SubItem, 0)
+
+			if subAgg, subFound := bucket.Aggregations.Terms("referers"); subFound {
+				for _, subBucket := range subAgg.Buckets {
+					referer := subBucket.Key.(string)
+					//fmt.Println("refers sub bucket", referer, subBucket.DocCount)
+					subItems = append(subItems, models.Rest_Statistics_Histogram_TwoSub_SubItem{
+						Key:   referer,
+						Value: subBucket.DocCount,
+					})
+				}
+			}
+
 			//fmt.Println("clicks bucket", timeISO8601+":", bucket.DocCount)
-			result = append(result, models.Rest_Statistics_Histogram_Two{
-				Time:   timeISO8601,
-				Count1: bucket.DocCount,
-				Count2: 0,
+			result = append(result, models.Rest_Statistics_Histogram_TwoSub{
+				Time:     timeISO8601,
+				Count1:   bucket.DocCount,
+				Count2:   0,
+				SubItems: subItems,
 			})
 			if len(result) >= countNumber {
 				break
