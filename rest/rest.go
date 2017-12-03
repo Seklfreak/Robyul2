@@ -1185,6 +1185,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 
 func GetVanityInviteByName(request *restful.Request, response *restful.Response) {
 	vanityName := request.PathParameter("vanity-name")
+	referer := request.QueryParameter("referer")
 
 	vanityInvite, _ := helpers.GetVanityUrlByVanityName(vanityName)
 	if vanityInvite.GuildID == "" {
@@ -1199,7 +1200,7 @@ func GetVanityInviteByName(request *restful.Request, response *restful.Response)
 	}
 
 	go func() {
-		helpers.ElasticAddVanityInviteClick(vanityInvite)
+		helpers.ElasticAddVanityInviteClick(vanityInvite, referer)
 	}()
 
 	response.WriteEntity(models.Rest_VanityInvite_Invite{

@@ -62,4 +62,5 @@ type ElasticVanityInviteClick struct {
 	CreatedAt        time.Time
 	VanityInviteName string
 	GuildID          string
+	Referer          string
 }

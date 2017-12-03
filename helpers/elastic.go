@@ -298,7 +298,7 @@ func ElasticAddReaction(reaction *discordgo.MessageReaction) error {
 	return err
 }
 
-func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry) error {
+func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry, referer string) error {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -313,6 +313,7 @@ func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry) error {
 		CreatedAt:        time.Now(),
 		VanityInviteName: vanityInvite.VanityName,
 		GuildID:          vanityInvite.GuildID,
+		Referer:          referer,
 	}
 
 	_, err = cache.GetElastic().Index().
