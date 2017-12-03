@@ -60,8 +60,8 @@ func (vi VanityInvite) actionStart(args []string, in *discordgo.Message, out **d
 
 // [p]custom-invite set <vanity name> <#channel or channel id>
 func (vi VanityInvite) actionSet(args []string, in *discordgo.Message, out **discordgo.MessageSend) vanityInviteAction {
-	if !helpers.IsRobyulMod(in.Author.ID) { // TODO: Robyul Mod for now
-		*out = vi.newMsg("robyulmod.no_permission")
+	if !helpers.IsAdmin(in) {
+		*out = vi.newMsg("admin.no_permission")
 		return vi.actionFinish
 	}
 
