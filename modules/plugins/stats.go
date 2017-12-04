@@ -479,10 +479,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				for _, userRole := range targetMember.Roles {
 					if guildRole.ID == userRole {
 						if isFirst == true {
-							rolesText = fmt.Sprintf("%s", guildRole.Name)
+							rolesText = fmt.Sprintf("<@&%s>", guildRole.ID)
 						} else {
-
-							rolesText += fmt.Sprintf(", %s", guildRole.Name)
+							rolesText += fmt.Sprintf(", <@&%s>", guildRole.ID)
 						}
 						isFirst = false
 					}
