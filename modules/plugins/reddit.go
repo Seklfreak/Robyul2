@@ -16,11 +16,11 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/version"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/jzelinskie/geddit"
+	"github.com/sirupsen/logrus"
 )
 
 type redditAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next redditAction)
@@ -115,10 +115,10 @@ func (r *Reddit) checkSubredditLoop() {
 						helpers.GetConfig().Path("reddit.password").Data().(string),
 					)
 					helpers.Relax(err)
-					r.logger().Error("logged in again after token expired")
+					r.logger().Warn("logged in again after token expired")
 					goto BundleStart
 				}
-				r.logger().Error(fmt.Sprintf("updating subreddit r/%s failed: %s", subredditName, err.Error()))
+				r.logger().Warnf("updating subreddit r/%s failed: %s", subredditName, err.Error())
 				time.Sleep(2 * time.Second)
 				continue
 			}

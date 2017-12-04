@@ -12,9 +12,9 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -647,7 +647,7 @@ func (m *Mirror) OnMessageDelete(msg *discordgo.MessageDelete, session *discordg
 								"sourceAuthorID":    msg.Author.ID,
 								"mirroredChannelID": messageData.ChannelID,
 								"mirroredMessageID": messageData.MessageID,
-							}).Error(
+							}).Warn(
 								"Deleting mirrored message failed:", err.Error(),
 							)
 						}

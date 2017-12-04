@@ -389,16 +389,16 @@ NextKeyword:
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMember {
 						continue NextKeyword
 					}
-					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Error("error getting member to notify: " + err.Error())
+					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
 					continue NextKeyword
 				}
 				if memberToNotify == nil {
-					cache.GetLogger().WithField("module", "notifications").Error("member to notify not found")
+					cache.GetLogger().WithField("module", "notifications").Warn("member to notify not found")
 					continue NextKeyword
 				}
 				messageAuthor, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
 				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").Error("error getting message author: " + err.Error())
+					cache.GetLogger().WithField("module", "notifications").Warn("error getting message author: " + err.Error())
 					continue NextKeyword
 				}
 				hasReadPermissions := false
@@ -419,7 +419,7 @@ NextKeyword:
 					if overwrite.Type == "role" {
 						roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
 						if err != nil {
-							cache.GetLogger().WithField("module", "notifications").Error("error getting role: " + err.Error())
+							cache.GetLogger().WithField("module", "notifications").Warn("error getting role: " + err.Error())
 							continue NextPermOverwriteEveryone
 						}
 						//fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
@@ -449,7 +449,7 @@ NextKeyword:
 					if overwrite.Type == "role" {
 						roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
 						if err != nil {
-							cache.GetLogger().WithField("module", "notifications").Error("error getting role: " + err.Error())
+							cache.GetLogger().WithField("module", "notifications").Warn("error getting role: " + err.Error())
 							continue NextPermOverwriteNotEveryone
 						}
 						//fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
@@ -537,7 +537,7 @@ NextKeyword:
 	for _, pendingNotification := range pendingNotifications {
 		dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
 		if err != nil {
-			cache.GetLogger().WithField("module", "notifications").Error("error creating DM channel: " + err.Error())
+			cache.GetLogger().WithField("module", "notifications").Warn("error creating DM channel: " + err.Error())
 			continue
 		}
 		keywordsTriggeredText := ""
@@ -551,7 +551,7 @@ NextKeyword:
 		}
 
 		if pendingNotification.Author == nil {
-			cache.GetLogger().WithField("module", "notifications").Error("notification source member is nil")
+			cache.GetLogger().WithField("module", "notifications").Warn("notification source member is nil")
 			continue
 		}
 
@@ -564,7 +564,7 @@ NextKeyword:
 		), "\n") {
 			_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 			if err != nil {
-				cache.GetLogger().WithField("module", "notifications").Error("error sending DM: " + err.Error())
+				cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
 				continue
 			}
 		}

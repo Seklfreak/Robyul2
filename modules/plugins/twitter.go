@@ -246,7 +246,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				ScreenName: twitterAccoutnScreenName,
 			})
 			if err != nil {
-				cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("updating twitter account @%s failed: %s", twitterAccoutnScreenName, err.Error()))
+				cache.GetLogger().WithField("module", "twitter").Warnf("updating twitter account @%s failed: %s", twitterAccoutnScreenName, err.Error())
 				continue
 			}
 
@@ -257,7 +257,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				IncludeRetweets: twitter.Bool(true),
 			})
 			if err != nil {
-				cache.GetLogger().WithField("module", "twitter").Error(fmt.Sprintf("getting tweets of @%s failed: %s", twitterAccoutnScreenName, err.Error()))
+				cache.GetLogger().WithField("module", "twitter").Warnf("getting tweets of @%s failed: %s", twitterAccoutnScreenName, err.Error())
 				continue
 			}
 

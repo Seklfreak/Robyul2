@@ -133,8 +133,8 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 					go func() {
 						_, err := helpers.SendMessage(guildJoinChannelID, guildJoinText)
 						if err != nil {
-							cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Join Message in %s #%s: %s",
-								guild.Name, guild.ID, err.Error()))
+							cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Join Message in %s #%s: %s",
+								guild.Name, guild.ID, err.Error())
 						}
 					}()
 				}
@@ -162,8 +162,8 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 					go func() {
 						_, err := helpers.SendMessage(guildLeaveChannelID, guildLeaveText)
 						if err != nil {
-							cache.GetLogger().WithField("module", "guildannouncements").Error(fmt.Sprintf("Error Sending Leave Message in %s #%s: %s",
-								guild.Name, guild.ID, err.Error()))
+							cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Leave Message in %s #%s: %s",
+								guild.Name, guild.ID, err.Error())
 						}
 					}()
 				}

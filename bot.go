@@ -13,9 +13,9 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/modules"
 	"github.com/Seklfreak/Robyul2/ratelimits"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
+	"github.com/sirupsen/logrus"
 )
 
 var (

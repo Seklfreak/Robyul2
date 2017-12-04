@@ -26,11 +26,12 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/rest"
 	"github.com/Seklfreak/Robyul2/version"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
 	"github.com/go-redis/redis"
+	"github.com/kz/discordrus"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/inconshreveable/go-keen.v0"
 )
 
@@ -59,14 +60,35 @@ func main() {
 		helpers.DEBUG_MODE = true
 	}
 
-	if !helpers.DEBUG_MODE {
-		fileHook, err := logging.NewLogrusFileHook("robyul2-json.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if config.Path("logging.jsonfile").Data().(string) != "" {
+		fileHook, err := logging.NewLogrusFileHook(config.Path("logging.jsonfile").Data().(string), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 		if err != nil {
 			log.WithField("module", "launcher").Error("logrus file hook failed, err:", err.Error())
 		} else {
 			log.Hooks.Add(fileHook)
 		}
 
+	}
+
+	if config.Path("logging.discord_webhook").Data().(string) != "" {
+		log.Hooks.Add(discordrus.NewHook(
+			config.Path("logging.discord_webhook").Data().(string),
+			logrus.ErrorLevel,
+			&discordrus.Opts{
+				Username:           "Logging",
+				DisableTimestamp:   false,
+				TimestampFormat:    "Jan 2 15:04:05.00000",
+				EnableCustomColors: true,
+				CustomLevelColors: &discordrus.LevelColors{
+					//Debug: 10170623,
+					//Info:  3581519,
+					//Warn:  14327864,
+					Error: 13631488,
+					Panic: 13631488,
+					Fatal: 13631488,
+				},
+			},
+		))
 	}
 
 	log.WithField("module", "launcher").Info("Booting Robyul...")

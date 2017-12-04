@@ -274,7 +274,7 @@ RetryAccount:
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("getting instagram account id for @%s failed: %s", entry.Username, err))
+				cache.GetLogger().WithField("module", "instagram").Warnf("getting instagram account id for @%s failed: %s", entry.Username, err)
 				continue
 			}
 			cache.GetLogger().WithField("module", "instagram").Infof("saving user id %d for user @%s", instagramUser.User.ID, entry.Username)
@@ -344,7 +344,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account %d failed: %s", instagramAccountID, err))
+				log.WithField("module", "instagram").Warnf("updating instagram account %d failed: %s", instagramAccountID, err)
 				continue
 			}
 			story, err := instagramClient.GetUserStories(instagramAccountID)
@@ -354,7 +354,7 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
 				}
-				log.WithField("module", "instagram").Error(fmt.Sprintf("updating instagram account %d failed: %s", instagramAccountID, err))
+				log.WithField("module", "instagram").Warnf("updating instagram account %d failed: %s", instagramAccountID, err)
 				continue
 			}
 
@@ -686,7 +686,7 @@ func (m *Instagram) postLiveToChannel(channelID string, instagramUser Instagram_
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Errorf("posting broadcast: #%d to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err.Error())
+		cache.GetLogger().WithField("module", "instagram").Warnf("posting broadcast: #%d to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err.Error())
 	}
 }
 
@@ -775,7 +775,7 @@ func (m *Instagram) postReelMediaToChannel(channelID string, story goinstaRespon
 
 	_, err := helpers.SendComplex(channelID, messageSend)
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Errorf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
+		cache.GetLogger().WithField("module", "instagram").Warnf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
 	}
 }
 
@@ -867,7 +867,7 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 
 	_, err := helpers.SendComplex(channelID, messageSend)
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Error(fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
+		cache.GetLogger().WithField("module", "instagram").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
 	}
 }
 

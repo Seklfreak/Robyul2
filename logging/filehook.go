@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-// https://github.com/Sirupsen/logrus/issues/230#issuecomment-323387380
+// https://github.com/sirupsen/logrus/issues/230#issuecomment-323387380
 
 type LogrusFileHook struct {
 	file      *os.File

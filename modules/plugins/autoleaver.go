@@ -13,9 +13,9 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/sirupsen/logrus"
 )
 
 type autoleaverAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next autoleaverAction)
@@ -394,7 +394,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
 			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
-				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Join Notification failed, Error: %s", err.Error()))
+				a.logger().WithField("GuildID", guild.ID).Errorf("Join Notification failed, Error: %s", err.Error())
 			}
 		}
 
@@ -406,7 +406,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
 			_, err = helpers.SendMessage(notificationChannelID, notWhitelistedJoinText)
 			if err != nil {
-				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Not Whitelisted Join Notification failed, Error: %s", err.Error()))
+				a.logger().WithField("GuildID", guild.ID).Errorf("Not Whitelisted Join Notification failed, Error: %s", err.Error())
 			}
 		}
 
@@ -435,7 +435,7 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 		for _, notificationChannelID := range AutoleaverNotificationChannels {
 			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
-				a.logger().WithField("GuildID", guild.ID).Error(fmt.Sprintf("Leave Notification failed, Error: %s", err.Error()))
+				a.logger().WithField("GuildID", guild.ID).Errorf("Leave Notification failed, Error: %s", err.Error())
 			}
 		}
 		cache.RemoveAutoleaverGuildID(guild.ID)

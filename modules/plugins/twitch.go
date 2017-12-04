@@ -333,7 +333,7 @@ func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 	response, err := client.Do(request)
 	if err != nil {
 		if errU, ok := err.(*url.Error); ok {
-			cache.GetLogger().WithField("module", "twitch").Error(fmt.Sprintf("twitch status request failed: %#v", errU.Err))
+			cache.GetLogger().WithField("module", "twitch").Warnf("twitch status request failed: %#v", errU.Err)
 			return twitchStatus
 		} else {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})

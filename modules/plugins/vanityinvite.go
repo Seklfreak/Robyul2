@@ -8,8 +8,8 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
+	"github.com/sirupsen/logrus"
 )
 
 type vanityInviteAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next vanityInviteAction)

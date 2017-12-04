@@ -10,10 +10,10 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -247,7 +247,7 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 						if err != nil {
 							if errD, ok := err.(*discordgo.RESTError); ok {
 								if errD.Message.Code == 10015 {
-									cache.GetLogger().WithField("module", "gallery").Error(fmt.Sprintf("Webhook for gallery #%s not found", gallery.ID))
+									cache.GetLogger().WithField("module", "gallery").Warnf("Webhook for gallery #%s not found", gallery.ID)
 									continue
 								}
 							}
@@ -437,7 +437,7 @@ func (g *Gallery) OnMessageDelete(msg *discordgo.MessageDelete, session *discord
 							"sourceAuthorID":    msgAuthorID,
 							"mirroredChannelID": messageData.ChannelID,
 							"mirroredMessageID": messageData.MessageID,
-						}).Error(
+						}).Warn(
 							"Deleting mirrored message failed:", err.Error(),
 						)
 					}

@@ -17,10 +17,10 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/sirupsen/logrus"
 )
 
 type starboardAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next starboardAction)

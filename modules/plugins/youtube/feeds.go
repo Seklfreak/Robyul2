@@ -8,9 +8,9 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/sirupsen/logrus"
 )
 
 type feeds struct {
@@ -82,7 +82,7 @@ func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeCh
 	// get updated feeds
 	feeds, err := f.service.GetChannelFeeds(e.YoutubeChannelID, publishedAfter)
 	if err != nil {
-		logger().Error("check channel feeds error: " + err.Error() + " channel name: " + e.YoutubeChannelName + "id: " + e.YoutubeChannelID)
+		logger().Warn("check channel feeds error: " + err.Error() + " channel name: " + e.YoutubeChannelName + "id: " + e.YoutubeChannelID)
 		return e
 	}
 
@@ -124,7 +124,7 @@ func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeCh
 
 		_, err = helpers.SendComplex(e.ChannelID, msg)
 		if err != nil {
-			logger().Error(err)
+			logger().Warn(err)
 			break
 		}
 

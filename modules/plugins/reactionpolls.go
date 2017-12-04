@@ -240,7 +240,7 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
 				if err != nil {
 					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 						if err.Message.Code == 50013 {
-							cache.GetLogger().WithField("module", "reactionpolls").Error(fmt.Sprintf("can not remove reaction from message #%s, missing permissions", reaction.MessageID))
+							cache.GetLogger().WithField("module", "reactionpolls").Warnf("can not remove reaction from message #%s, missing permissions", reaction.MessageID)
 						} else {
 							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 						}

@@ -11,9 +11,9 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Sirupsen/logrus"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/sirupsen/logrus"
 )
 
 type namesAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next namesAction)

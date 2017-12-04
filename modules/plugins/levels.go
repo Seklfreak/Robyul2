@@ -194,7 +194,7 @@ func (l *Levels) setServerFeaturesLoop() {
 	defer helpers.Recover()
 	defer func() {
 		go func() {
-			log.WithField("module", "levels").Error("The setServerFeaturesLooü died. Please investigate! Will be restarted in 60 seconds")
+			log.WithField("module", "levels").Error("The setServerFeaturesLoop died. Please investigate! Will be restarted in 60 seconds")
 			time.Sleep(60 * time.Second)
 			l.setServerFeaturesLoop()
 		}()
@@ -3653,7 +3653,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	apply, remove := l.getLevelsRoles(guildID, level)
 	member, err := helpers.GetGuildMember(guildID, userID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("failed to get guild member to apply level roles: %s", err.Error()))
+		cache.GetLogger().WithField("module", "levels").Warnf("failed to get guild member to apply level roles: %s", err.Error())
 		return err
 	}
 
@@ -3747,7 +3747,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	for _, toApplyRole := range toApply {
 		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
 		if errRole != nil {
-			cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("failed to add role applying level roles: %s", err.Error()))
+			cache.GetLogger().WithField("module", "levels").Warnf("failed to add role applying level roles: %s", err.Error())
 			err = errRole
 		}
 	}
@@ -3755,7 +3755,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	for _, toRemoveRole := range toRemove {
 		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
 		if errRole != nil {
-			cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("failed to remove role applying level roles: %s", err.Error()))
+			cache.GetLogger().WithField("module", "levels").Warnf("failed to remove role applying level roles: %s", err.Error())
 			err = errRole
 		}
 	}

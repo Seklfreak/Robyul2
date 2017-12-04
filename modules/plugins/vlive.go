@@ -185,7 +185,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, resu
 			//cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("checking V Live Channel %s for %d channels", entries[0].VLiveChannel.Name, len(entries)))
 			updatedVliveChannel, err := r.getVLiveChannelByVliveChannelId(channelCode)
 			if err != nil {
-				cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Error(fmt.Sprintf("updating vlive channel %s failed: %s", channelCode, err.Error()))
+				cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Warnf("updating vlive channel %s failed: %s", channelCode, err.Error())
 				continue
 			}
 			for _, entry := range entries {
@@ -575,7 +575,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 		err := recover()
 
 		if err != nil {
-			cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("updating vlive channel %s failed: %s", channelId, err))
+			cache.GetLogger().WithField("module", "vlive").Warnf("updating vlive channel %s failed: %s", channelId, err)
 		}
 	}()
 
@@ -682,7 +682,7 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
+		cache.GetLogger().WithField("module", "vlive").Warnf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
 	}
 }
 
@@ -706,7 +706,7 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
+		cache.GetLogger().WithField("module", "vlive").Warnf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
 	}
 }
 
@@ -729,7 +729,7 @@ func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliv
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err))
+		cache.GetLogger().WithField("module", "vlive").Warnf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
 	}
 }
 
@@ -752,7 +752,7 @@ func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err))
+		cache.GetLogger().WithField("module", "vlive").Warnf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err)
 	}
 }
 
@@ -774,7 +774,7 @@ func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, v
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Error(fmt.Sprintf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err))
+		cache.GetLogger().WithField("module", "vlive").Warnf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err)
 	}
 }
 

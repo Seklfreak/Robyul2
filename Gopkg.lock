@@ -44,12 +44,6 @@
   version = "v1.0.7"
 
 [[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
-
-[[projects]]
   branch = "master"
   name = "github.com/ahmdrz/goinsta"
   packages = [".","response","store","uuid"]
@@ -178,8 +172,8 @@
 [[projects]]
   name = "github.com/gorethink/gorethink"
   packages = ["."]
-  revision = "7ab832f7b65573104a555d84a27992ae9ea1f659"
-  version = "v3.0.2"
+  revision = "7f5bdfd858bb064d80559b2a32b86669c5de5d3b"
+  version = "v3.0.5"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -216,6 +210,12 @@
   packages = ["."]
   revision = "2e6820834a1f36c626bf19a253b7d3cc060e9b8b"
   version = "v1.2.3"
+
+[[projects]]
+  name = "github.com/kz/discordrus"
+  packages = ["."]
+  revision = "9552996f102c91e7712fee70bd6417be63cc04bd"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -270,6 +270,12 @@
   name = "github.com/shkh/lastfm-go"
   packages = ["lastfm"]
   revision = "125b747251b36e1e4a2f20391d674ff98a09a239"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
+  version = "v1.0.3"
 
 [[projects]]
   branch = "master"
@@ -412,6 +418,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "18a40c6ade9745ed04a9dc748460fa5af9130f94d6130525a7bb51c3071f8e91"
+  inputs-digest = "4382a411fb1f98c456757cf0c3925cab6838a97152c155deaf2720e2735b14c8"
   solver-name = "gps-cdcl"
   solver-version = 1

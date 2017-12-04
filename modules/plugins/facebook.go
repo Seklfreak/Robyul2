@@ -118,7 +118,7 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 
 			facebookPage, err := m.lookupFacebookPage(facebookUsername)
 			if err != nil {
-				log.WithField("module", "facebook").Error(fmt.Sprintf("updating facebook account %s failed: %s", facebookUsername, err.Error()))
+				log.WithField("module", "facebook").Warnf("updating facebook account %s failed: %s", facebookUsername, err.Error())
 				continue
 			}
 
@@ -425,7 +425,7 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
 		Embed:   channelEmbed,
 	})
 	if err != nil {
-		cache.GetLogger().WithField("module", "facebook").Error(fmt.Sprintf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err))
+		cache.GetLogger().WithField("module", "facebook").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
 	}
 }
 

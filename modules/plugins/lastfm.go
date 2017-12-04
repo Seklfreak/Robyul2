@@ -121,7 +121,7 @@ func (m *LastFm) generateDiscordStats() {
 				})
 				metrics.LastFmRequests.Add(1)
 				if err != nil {
-					log.WithField("module", "lastfm").Error(fmt.Sprintf("getting %s stats for last.fm user %s failed: %s", period, safeAccount.LastFmUsername, err.Error()))
+					log.WithField("module", "lastfm").Warnf("getting %s stats for last.fm user %s failed: %s", period, safeAccount.LastFmUsername, err.Error())
 					continue
 				}
 
