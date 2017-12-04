@@ -20,6 +20,7 @@ import (
 	marchineryLog "github.com/RichardKnop/machinery/v1/log"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/logging"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/migrations"
 	"github.com/Seklfreak/Robyul2/modules/plugins"
@@ -40,17 +41,35 @@ var (
 
 // Entrypoint
 func main() {
+	var err error
+
 	log := logrus.New()
 	log.Out = os.Stdout
 	log.Level = logrus.DebugLevel
 	log.Formatter = &logrus.TextFormatter{ForceColors: true, FullTimestamp: true, TimestampFormat: time.RFC3339}
+	log.Hooks = make(logrus.LevelHooks)
 	cache.SetLogger(log)
-
-	log.WithField("module", "launcher").Info("Booting Robyul...")
 
 	// Read config
 	helpers.LoadConfig("config.json")
 	config := helpers.GetConfig()
+
+	// Check if the bot is being debugged
+	if config.Path("debug").Data().(bool) {
+		helpers.DEBUG_MODE = true
+	}
+
+	if !helpers.DEBUG_MODE {
+		fileHook, err := logging.NewLogrusFileHook("robyul2-json.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+		if err != nil {
+			log.WithField("module", "launcher").Error("logrus file hook failed, err:", err.Error())
+		} else {
+			log.Hooks.Add(fileHook)
+		}
+
+	}
+
+	log.WithField("module", "launcher").Info("Booting Robyul...")
 
 	// Read i18n
 	helpers.LoadTranslations()
@@ -64,17 +83,12 @@ func main() {
 	// Make the randomness more random
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	// Check if the bot is being debugged
-	if config.Path("debug").Data().(bool) {
-		helpers.DEBUG_MODE = true
-	}
-
 	// Print UA
 	log.WithField("module", "launcher").Info("USERAGENT: '" + helpers.DEFAULT_UA + "'")
 
 	// Call home
 	log.WithField("module", "launcher").Info("[SENTRY] Calling home...")
-	err := raven.SetDSN(config.Path("sentry").Data().(string))
+	err = raven.SetDSN(config.Path("sentry").Data().(string))
 	if err != nil {
 		panic(err)
 	}
