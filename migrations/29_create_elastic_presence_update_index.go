@@ -26,22 +26,22 @@ func m29_create_elastic_presence_update_index() {
 				"type": "date",
 			},
 			"UserID": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 			"GameType": map[string]interface{}{
 				"type": "long",
 			},
 			"GameTypeV2": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 			"GameName": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 			"GameURL": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 			"Status": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 		},
 	}

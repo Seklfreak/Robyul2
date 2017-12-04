@@ -26,10 +26,10 @@ func m43_create_elastic_vanityinvite_click_index() {
 				"type": "date",
 			},
 			"VanityInviteName": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 			"GuildID": map[string]interface{}{
-				"type": "string",
+				"type": "text",
 			},
 			"Referer": map[string]interface{}{
 				"type": "text",

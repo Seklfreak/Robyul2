@@ -20,100 +20,128 @@ func m28_create_elastic_indexes() {
 		return
 	}
 
-	mapping := map[string]interface{}{
-		"mappings": map[string]interface{}{
-			models.ElasticTypeMessage: map[string]interface{}{
-				"properties": map[string]interface{}{
-					"CreatedAt": map[string]interface{}{
-						"type": "date",
-					},
-					"MessageID": map[string]interface{}{
-						"type": "string",
-					},
-					"Content": map[string]interface{}{
-						"type":  "string",
-						"index": "not_analyzed",
-					},
-					"ContentLength": map[string]interface{}{
-						"type": "long",
-					},
-					"Attachments": map[string]interface{}{
-						"type": "string",
-					},
-					"UserID": map[string]interface{}{
-						"type": "string",
-					},
-					"GuildID": map[string]interface{}{
-						"type": "string",
-					},
-					"ChannelID": map[string]interface{}{
-						"type": "string",
-					},
-					"Embeds": map[string]interface{}{
-						"type": "integer",
-					},
-				},
+	messageMapping := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"CreatedAt": map[string]interface{}{
+				"type": "date",
 			},
-			models.ElasticTypeJoin: map[string]interface{}{
-				"properties": map[string]interface{}{
-					"CreatedAt": map[string]interface{}{
-						"type": "date",
-					},
-					"GuildID": map[string]interface{}{
-						"type": "string",
-					},
-					"UserID": map[string]interface{}{
-						"type": "string",
-					},
-				},
+			"MessageID": map[string]interface{}{
+				"type": "text",
 			},
-			models.ElasticTypeLeave: map[string]interface{}{
-				"properties": map[string]interface{}{
-					"CreatedAt": map[string]interface{}{
-						"type": "date",
-					},
-					"GuildID": map[string]interface{}{
-						"type": "string",
-					},
-					"UserID": map[string]interface{}{
-						"type": "string",
-					},
-				},
+			"Content": map[string]interface{}{
+				"type":  "text",
+				"index": false,
 			},
-			models.ElasticTypeReaction: map[string]interface{}{
-				"properties": map[string]interface{}{
-					"CreatedAt": map[string]interface{}{
-						"type": "date",
-					},
-					"UserID": map[string]interface{}{
-						"type": "string",
-					},
-					"MessageID": map[string]interface{}{
-						"type": "string",
-					},
-					"ChannelID": map[string]interface{}{
-						"type": "string",
-					},
-					"GuildID": map[string]interface{}{
-						"type": "string",
-					},
-					"EmojiID": map[string]interface{}{
-						"type": "string",
-					},
-					"EmojiName": map[string]interface{}{
-						"type": "string",
-					},
-				},
+			"ContentLength": map[string]interface{}{
+				"type": "long",
+			},
+			"Attachments": map[string]interface{}{
+				"type": "text",
+			},
+			"UserID": map[string]interface{}{
+				"type": "text",
+			},
+			"GuildID": map[string]interface{}{
+				"type": "text",
+			},
+			"ChannelID": map[string]interface{}{
+				"type": "text",
+			},
+			"Embeds": map[string]interface{}{
+				"type": "integer",
+			},
+		},
+	}
+
+	joinMapping := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"CreatedAt": map[string]interface{}{
+				"type": "date",
+			},
+			"GuildID": map[string]interface{}{
+				"type": "text",
+			},
+			"UserID": map[string]interface{}{
+				"type": "text",
+			},
+		},
+	}
+
+	leaveMapping := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"CreatedAt": map[string]interface{}{
+				"type": "date",
+			},
+			"GuildID": map[string]interface{}{
+				"type": "text",
+			},
+			"UserID": map[string]interface{}{
+				"type": "text",
+			},
+		},
+	}
+
+	reactionMapping := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"CreatedAt": map[string]interface{}{
+				"type": "date",
+			},
+			"UserID": map[string]interface{}{
+				"type": "text",
+			},
+			"MessageID": map[string]interface{}{
+				"type": "text",
+			},
+			"ChannelID": map[string]interface{}{
+				"type": "text",
+			},
+			"GuildID": map[string]interface{}{
+				"type": "text",
+			},
+			"EmojiID": map[string]interface{}{
+				"type": "text",
+			},
+			"EmojiName": map[string]interface{}{
+				"type": "text",
 			},
 		},
 	}
 
 	elastic := cache.GetElastic()
-	createIndex, err := elastic.CreateIndex(models.ElasticIndex).BodyJson(mapping).Do(context.Background())
+	_, err = elastic.CreateIndex(models.ElasticIndex).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if !createIndex.Acknowledged {
+
+	createMapping, err := elastic.PutMapping().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).BodyJson(messageMapping).Do(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	if !createMapping.Acknowledged {
+		cache.GetLogger().WithField("module", "migrations").Error("ElasticSearch index not acknowledged")
+	}
+
+	createMapping, err = elastic.PutMapping().Index(models.ElasticIndex).Type(models.ElasticTypeJoin).BodyJson(joinMapping).Do(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	if !createMapping.Acknowledged {
+		cache.GetLogger().WithField("module", "migrations").Error("ElasticSearch index not acknowledged")
+	}
+
+	createMapping, err = elastic.PutMapping().Index(models.ElasticIndex).Type(models.ElasticTypeLeave).BodyJson(leaveMapping).Do(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	if !createMapping.Acknowledged {
+		cache.GetLogger().WithField("module", "migrations").Error("ElasticSearch index not acknowledged")
+	}
+
+	createMapping, err = elastic.PutMapping().Index(models.ElasticIndex).Type(models.ElasticTypeReaction).BodyJson(reactionMapping).Do(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	if !createMapping.Acknowledged {
 		cache.GetLogger().WithField("module", "migrations").Error("ElasticSearch index not acknowledged")
 	}
 }
