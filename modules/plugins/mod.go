@@ -235,12 +235,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
 							if err != nil {
 								if errD, ok := err.(*discordgo.RESTError); ok {
-									if errD.Message.Code == 50034 {
+									if errD.Message.Code == discordgo.ErrCodeMessageProvidedTooOldForBulkDelete {
 										_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
-									} else if errD.Message.Code == 50013 {
-										_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+									} else if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+										_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-no-permissions"))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									} else {
@@ -258,13 +258,13 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 									err := session.ChannelMessagesBulkDelete(msg.ChannelID, batch)
 									cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(batch), msg.Author.Username, msg.Author.ID))
 									if err != nil {
-										if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 50034 {
-											if errD.Message.Code == 50034 {
+										if errD, ok := err.(*discordgo.RESTError); ok {
+											if errD.Message.Code == discordgo.ErrCodeMessageProvidedTooOldForBulkDelete {
 												_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
 												helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 												return
-											} else if errD.Message.Code == 50013 {
-												_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+											} else if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+												_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-no-permissions"))
 												helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 												return
 											} else {
@@ -333,12 +333,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Deleted %d messages (command issued by %s (#%s))", len(messagesToDeleteIds), msg.Author.Username, msg.Author.ID))
 							if err != nil {
 								if errD, ok := err.(*discordgo.RESTError); ok {
-									if errD.Message.Code == 50034 {
+									if errD.Message.Code == discordgo.ErrCodeMessageProvidedTooOldForBulkDelete {
 										_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
-									} else if errD.Message.Code == 50013 {
-										_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-too-old"))
+									} else if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+										_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.deleting-messages-failed-no-permissions"))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
 									} else {
