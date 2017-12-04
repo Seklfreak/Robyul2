@@ -40,8 +40,8 @@
 [[projects]]
   name = "github.com/RichardKnop/machinery"
   packages = ["v1","v1/backends","v1/brokers","v1/common","v1/config","v1/log","v1/retry","v1/tasks"]
-  revision = "8e759cb74fb15f05440f449a1a6b27bfed4f23b1"
-  version = "v1.0.7"
+  revision = "60bc4ffeec852287112dbf4fb7047b2a6178a4bb"
+  version = "v1.0.13"
 
 [[projects]]
   branch = "master"
@@ -83,7 +83,7 @@
   branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
-  revision = "43bf6cf0d0aa67abd3479fcc066766f174245bb4"
+  revision = "0003ae7dd24ce942b66a436114e1bacb6246fcdc"
 
 [[projects]]
   name = "github.com/cenkalti/backoff"
@@ -119,7 +119,7 @@
   branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
-  revision = "6d15c0ae71e55ed645c21ac4945aaadbc0e9a590"
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
 
 [[projects]]
   name = "github.com/emicklei/go-restful"
@@ -137,7 +137,7 @@
   branch = "master"
   name = "github.com/getsentry/raven-go"
   packages = ["."]
-  revision = "d3909e6151a9d4ce1baed14ceb3ad7a835f7c91f"
+  revision = "c9de0b92586aaba092c2a231cb7384354b178544"
 
 [[projects]]
   name = "github.com/go-redis/cache"
@@ -148,14 +148,14 @@
 [[projects]]
   name = "github.com/go-redis/redis"
   packages = [".","internal","internal/consistenthash","internal/hashtag","internal/pool","internal/proto"]
-  revision = "d0f86971b5d61de9cebd2616b932acb7ba14d957"
-  version = "v6.7.3"
+  revision = "e5e021257bfc6d5fbf0beac33e30194311fb189f"
+  version = "v6.7.4"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
   packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
-  revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
+  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
 
 [[projects]]
   branch = "master"
@@ -232,8 +232,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
-  packages = [".","internal/socket"]
-  revision = "9fc4eb252eedf0ef8adc05169ce35da5e31beaba"
+  packages = ["."]
+  revision = "325e98bb8641b89fa2b1542149b09ec670953ac4"
 
 [[projects]]
   branch = "master"
@@ -292,14 +292,14 @@
 [[projects]]
   name = "github.com/vmihailenco/msgpack"
   packages = [".","codes"]
-  revision = "df5e5d20905d833657b92cafe6f6341ca1378083"
-  version = "v3.2.0"
+  revision = "2fd97bb3583931cdf0d123f255ceb6e58649279e"
+  version = "v3.2.2"
 
 [[projects]]
   branch = "master"
   name = "github.com/xuri/excelize"
   packages = ["."]
-  revision = "a4ffb4fbfc9048998345e979577dab2a81bf57ff"
+  revision = "749d12eecec96bd2bd7c4604a1f4ef36643306ce"
 
 [[projects]]
   branch = "master"
@@ -310,38 +310,38 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["nacl/secretbox","pbkdf2","poly1305","salsa20/salsa","ssh/terminal"]
-  revision = "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd"
+  packages = ["ed25519","ed25519/internal/edwards25519","nacl/secretbox","pbkdf2","poly1305","salsa20/salsa","ssh/terminal"]
+  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp","html","html/atom","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "a337091b0525af65de94df2eb7e98bd9962dcbe2"
+  packages = ["bpf","context","context/ctxhttp","html","html/atom","http2","http2/hpack","idna","internal/iana","internal/socket","internal/timeseries","ipv4","ipv6","lex/httplex","trace"]
+  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/oauth2"
   packages = [".","google","internal","jws","jwt"]
-  revision = "9ff8ebcc8e241d46f52ecc5bff0e5a2f2dbef402"
+  revision = "f95fa95eaa936d9d87489b15d1d18b97c1ba9c28"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "1e2299c37cc91a509f1b12369872d27be0ce98a6"
+  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "88f656faf3f37f690df1a32515b479415e1a6769"
+  revision = "57961680700a5336d15015c8c50686ca5ba362a4"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport","transport/grpc","transport/http","youtube/v3"]
-  revision = "34bc9e3ce3692fb01d22f685df28518773cbdae9"
+  revision = "8cfdc57a0663729cc2811afefb5b7cd3d901e97c"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -353,13 +353,13 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "11c7f9e547da6db876260ce49ea7536985904c9b"
+  revision = "7f0da29060c682909f650ad8ed4e515bd74fa12a"
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","balancer","codes","connectivity","credentials","credentials/oauth","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","stats","status","tap","transport"]
-  revision = "5ffe3083946d5603a0578721101dc8165b1d5b5f"
-  version = "v1.7.2"
+  packages = [".","balancer","balancer/roundrobin","codes","connectivity","credentials","credentials/oauth","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
+  revision = "5a9f7b402fe85096d2e1d0383435ee1876e863d0"
+  version = "v1.8.0"
 
 [[projects]]
   branch = "v2.0.0"
@@ -394,8 +394,8 @@
 [[projects]]
   name = "gopkg.in/olivere/elastic.v5"
   packages = [".","config","uritemplates"]
-  revision = "171ce647da4acfb30ffc99981d66d80bdea6bcee"
-  version = "v5.0.53"
+  revision = "79ff368708b3a2a9da641dc831d95fd0782bf4ef"
+  version = "v5.0.58"
 
 [[projects]]
   name = "gopkg.in/redsync.v1"
@@ -407,7 +407,7 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
+  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
 
 [[projects]]
   name = "mvdan.cc/xurls"
