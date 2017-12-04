@@ -4,6 +4,8 @@ import "time"
 
 const (
 	AutoleaverWhitelistTable = "autoleaver_whitelist"
+
+	AutoleaverLogChannelKey = "autoleaver:log:channel-id"
 )
 
 type AutoleaverWhitelistEntry struct {

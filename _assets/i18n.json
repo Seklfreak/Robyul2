@@ -880,7 +880,8 @@
       "remove-error-not-found": ":x: Guild %s `(#%s)` is not on the whitelist.",
       "remove-success": ":white_check_mark: Removes Guild %s `(#%s)` from the whitelist.",
       "bulk-title": "Added the following Guilds:",
-      "bulk-footer": "_added %d Guilds in total._"
+      "bulk-footer": "_added %d Guilds in total._",
+      "setlog-success": "Autoleaver notifications will get posted in the given channel."
     },
     "names": {
       "list-result": "**Name history for `%s#%s` (`#%s`)**\nUsernames: %s\nNicknames: %s"

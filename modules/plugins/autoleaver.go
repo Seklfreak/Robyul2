@@ -22,13 +22,6 @@ type autoleaverAction func(args []string, in *discordgo.Message, out **discordgo
 
 type Autoleaver struct{}
 
-var (
-	AutoleaverNotificationChannels = []string{
-		"271740860180201473", // sekl's dev cord / #test
-		"287175379423068160", // Robyul Cord / #private-noti
-	}
-)
-
 func (a *Autoleaver) Commands() []string {
 	return []string{
 		"autoleaver",
@@ -75,6 +68,8 @@ func (a *Autoleaver) actionStart(args []string, in *discordgo.Message, out **dis
 		return a.actionCheck
 	case "import":
 		return a.actionImport
+	case "set-log":
+		return a.actionSetLog
 	}
 
 	*out = a.newMsg(helpers.GetText("bot.arguments.invalid"))
@@ -267,6 +262,30 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 	return a.actionFinish
 }
 
+// [p]autoleaver set-log <#channel or channel id>
+func (a *Autoleaver) actionSetLog(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
+	if !helpers.IsRobyulMod(in.Author.ID) {
+		*out = a.newMsg("robyulmod.no_permission")
+		return a.actionFinish
+	}
+
+	var err error
+	var targetChannel *discordgo.Channel
+	if len(args) >= 2 {
+		targetChannel, err = helpers.GetChannelFromMention(in, args[1])
+		helpers.Relax(err)
+	}
+
+	if targetChannel != nil && targetChannel.ID != "" {
+		err = helpers.SetBotConfigString(models.AutoleaverLogChannelKey, targetChannel.ID)
+	} else {
+		err = helpers.SetBotConfigString(models.AutoleaverLogChannelKey, "")
+	}
+
+	*out = a.newMsg("plugins.autoleaver.setlog-success")
+	return a.actionFinish
+}
+
 func (a *Autoleaver) isOnWhitelist(GuildID string, whitelist []models.AutoleaverWhitelistEntry) (bool, error) {
 	var err error
 	if whitelist == nil {
@@ -391,7 +410,9 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		}
 
 		joinText := helpers.GetTextF("plugins.autoleaver.noti-join", guild.Name, guild.ID, ownerName, guild.OwnerID, membersCount)
-		for _, notificationChannelID := range AutoleaverNotificationChannels {
+
+		notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
+		if notificationChannelID != "" {
 			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
 				a.logger().WithField("GuildID", guild.ID).Errorf("Join Notification failed, Error: %s", err.Error())
@@ -403,7 +424,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		}
 
 		notWhitelistedJoinText := helpers.GetTextF("plugins.autoleaver.noti-join-not-whitelisted", guild.Name, guild.ID)
-		for _, notificationChannelID := range AutoleaverNotificationChannels {
+		if notificationChannelID != "" {
 			_, err = helpers.SendMessage(notificationChannelID, notWhitelistedJoinText)
 			if err != nil {
 				a.logger().WithField("GuildID", guild.ID).Errorf("Not Whitelisted Join Notification failed, Error: %s", err.Error())
@@ -432,7 +453,8 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 		}
 
 		joinText := helpers.GetTextF("plugins.autoleaver.noti-leave", guild.Name, guild.ID, ownerName, guild.OwnerID)
-		for _, notificationChannelID := range AutoleaverNotificationChannels {
+		notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
+		if notificationChannelID != "" {
 			_, err = helpers.SendMessage(notificationChannelID, joinText)
 			if err != nil {
 				a.logger().WithField("GuildID", guild.ID).Errorf("Leave Notification failed, Error: %s", err.Error())
