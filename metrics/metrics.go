@@ -127,6 +127,9 @@ var (
 
 	// VanityInvitesCount counts all vanity invites channels
 	VanityInvitesCount = expvar.NewInt("vanityinvites_count")
+
+	// DiscordRestApiRequests counts all discord rest requests made
+	DiscordRestApiRequests = expvar.NewInt("discord_rest_api_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -170,6 +173,7 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 		UserCount.Set(int64(len(users)))
 		ChannelCount.Set(int64(channels))
 		GuildCount.Set(int64(len(guilds)))
+		GuildCount.Set(discordgo.RequestsMade)
 	}
 }
 
