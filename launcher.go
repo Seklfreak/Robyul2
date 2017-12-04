@@ -26,6 +26,7 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/rest"
 	"github.com/Seklfreak/Robyul2/version"
+	"github.com/bshuster-repo/logruzio"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
@@ -68,6 +69,18 @@ func main() {
 			log.Hooks.Add(fileHook)
 		}
 
+	}
+
+	if config.Path("logging.logzio_token").Data().(string) != "" {
+		logruzioCtx := logrus.Fields{}
+		if version.BOT_VERSION != "UNSET" {
+			logruzioCtx["version"] = version.BOT_VERSION
+		}
+		hook, err := logruzio.New(config.Path("logging.logzio_token").Data().(string), "robyul-discord", logruzioCtx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Hooks.Add(hook)
 	}
 
 	if config.Path("logging.discord_webhook").Data().(string) != "" {

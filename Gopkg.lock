@@ -80,6 +80,12 @@
   revision = "d9036e2120b5ddfa53f3ebccd618c4af275f47da"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/bshuster-repo/logruzio"
+  packages = ["."]
+  revision = "b0b294934396cec7a3292f694193f73cb9ddd71f"
+
+[[projects]]
   branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
@@ -418,6 +424,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4382a411fb1f98c456757cf0c3925cab6838a97152c155deaf2720e2735b14c8"
+  inputs-digest = "73ca94d35266017a0ceab873740d4c2995efdd2bb2907c0a29f98fdec8602143"
   solver-name = "gps-cdcl"
   solver-version = 1

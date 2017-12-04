@@ -183,3 +183,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/Krognol/go-wolfram"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bshuster-repo/logruzio"

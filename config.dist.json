@@ -4,6 +4,7 @@
   "sentry": "https://YOU_SENTRY_TOKEN_1:YOUR_SENTRY_TOKEN_2@sentry.io/YOUR_SENTRY_TOKEN_3",
   "logging": {
     "jsonfile": "",
+    "logzio_token": "",
     "webhook": ""
   },
   "cache_folder": "",
