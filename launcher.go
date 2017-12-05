@@ -68,19 +68,6 @@ func main() {
 		} else {
 			log.Hooks.Add(fileHook)
 		}
-
-	}
-
-	if config.Path("logging.logzio_token").Data().(string) != "" {
-		logruzioCtx := logrus.Fields{}
-		if version.BOT_VERSION != "UNSET" {
-			logruzioCtx["version"] = version.BOT_VERSION
-		}
-		hook, err := logruzio.New(config.Path("logging.logzio_token").Data().(string), "robyul-discord", logruzioCtx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Hooks.Add(hook)
 	}
 
 	if config.Path("logging.discord_webhook").Data().(string) != "" {
@@ -102,6 +89,18 @@ func main() {
 				},
 			},
 		))
+	}
+
+	if config.Path("logging.logzio_token").Data().(string) != "" {
+		logruzioCtx := logrus.Fields{}
+		if version.BOT_VERSION != "UNSET" {
+			logruzioCtx["version"] = version.BOT_VERSION
+		}
+		hook, err := logruzio.New(config.Path("logging.logzio_token").Data().(string), "robyul-discord", logruzioCtx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Hooks.Add(hook)
 	}
 
 	log.WithField("module", "launcher").Info("Booting Robyul...")
