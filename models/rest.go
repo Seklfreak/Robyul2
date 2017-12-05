@@ -150,11 +150,12 @@ type Rest_Statitics_Bot struct {
 type Rest_Chatlog_Message struct {
 	CreatedAt      time.Time
 	ID             string
-	Content        string
+	Content        []string
 	Attachments    []string
 	AuthorID       string
 	AuthorUsername string
 	Embeds         int
+	Deleted        bool
 }
 
 type Rest_VanityInvite_Invite struct {

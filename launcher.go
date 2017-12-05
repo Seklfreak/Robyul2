@@ -223,6 +223,8 @@ func main() {
 
 	if cache.HasElastic() {
 		discord.AddHandler(helpers.ElasticOnMessageCreate)
+		discord.AddHandler(helpers.ElasticOnMessageUpdate)
+		discord.AddHandler(helpers.ElasticOnMessageDelete)
 		discord.AddHandler(helpers.ElasticOnGuildMemberRemove)
 		discord.AddHandler(helpers.ElasticOnReactionAdd)
 		discord.AddHandler(helpers.ElasticOnPresenceUpdate)

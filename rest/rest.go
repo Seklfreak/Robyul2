@@ -10,8 +10,6 @@ import (
 
 	"strings"
 
-	"reflect"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/generator"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -1124,12 +1122,16 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 
 	result := make([]models.Rest_Chatlog_Message, 0)
 	var sortValues []interface{}
-	var ttyp models.ElasticMessage
 	for _, item := range searchResult.Hits.Hits {
-		sortValues = item.Sort
-	}
-	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-		m := item.(models.ElasticMessage)
+		if item == nil {
+			continue
+		}
+
+		m := helpers.UnmarshalElasticMessage(item)
+
+		if m.MessageID == "" {
+			continue
+		}
 
 		author, _ := helpers.GetUser(m.UserID)
 		if author == nil || author.ID == "" {
@@ -1145,7 +1147,10 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			AuthorID:       m.UserID,
 			AuthorUsername: author.Username,
 			Embeds:         m.Embeds,
+			Deleted:        m.Deleted,
 		})
+
+		sortValues = item.Sort
 	}
 
 	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
@@ -1161,8 +1166,16 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		return
 	}
 
-	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-		m := item.(models.ElasticMessage)
+	for _, item := range searchResult.Hits.Hits {
+		if item == nil {
+			continue
+		}
+
+		m := helpers.UnmarshalElasticMessage(item)
+
+		if m.MessageID == "" {
+			continue
+		}
 
 		author, _ := helpers.GetUser(m.UserID)
 		if author == nil || author.ID == "" {
@@ -1178,7 +1191,10 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			AuthorID:       m.UserID,
 			AuthorUsername: author.Username,
 			Embeds:         m.Embeds,
+			Deleted:        m.Deleted,
 		})
+
+		sortValues = item.Sort
 	}
 
 	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
@@ -1194,8 +1210,16 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		return
 	}
 
-	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-		m := item.(models.ElasticMessage)
+	for _, item := range searchResult.Hits.Hits {
+		if item == nil {
+			continue
+		}
+
+		m := helpers.UnmarshalElasticMessage(item)
+
+		if m.MessageID == "" {
+			continue
+		}
 
 		author, _ := helpers.GetUser(m.UserID)
 		if author == nil || author.ID == "" {
@@ -1211,9 +1235,11 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			AuthorID:       m.UserID,
 			AuthorUsername: author.Username,
 			Embeds:         m.Embeds,
+			Deleted:        m.Deleted,
 		}}, result...)
-	}
 
+		sortValues = item.Sort
+	}
 	response.WriteEntity(result)
 }
 

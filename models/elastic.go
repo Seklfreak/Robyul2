@@ -12,7 +12,7 @@ const (
 	ElasticTypeVanityInviteClick = "vanity_invite_click"
 )
 
-type ElasticMessage struct {
+type ElasticLegacyMessage struct {
 	CreatedAt     time.Time
 	MessageID     string
 	Content       string
@@ -22,6 +22,19 @@ type ElasticMessage struct {
 	GuildID       string
 	ChannelID     string
 	Embeds        int
+}
+
+type ElasticMessage struct {
+	CreatedAt     time.Time
+	MessageID     string
+	Content       []string
+	ContentLength int
+	Attachments   []string
+	UserID        string
+	GuildID       string
+	ChannelID     string
+	Embeds        int
+	Deleted       bool
 }
 
 type ElasticJoin struct {

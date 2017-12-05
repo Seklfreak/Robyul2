@@ -9,9 +9,14 @@ import (
 
 	"sync"
 
+	"encoding/json"
+
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 var lastPresenceUpdates map[string]models.ElasticPresenceUpdate
@@ -32,6 +37,50 @@ func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.Messa
 
 		err := ElasticAddMessage(message.Message)
 		Relax(err)
+	}()
+}
+
+func ElasticOnMessageUpdate(session *discordgo.Session, message *discordgo.MessageUpdate) {
+	channel, err := GetChannelWithoutApi(message.ChannelID)
+	if err != nil {
+		return
+	}
+
+	if IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
+	go func() {
+		defer Recover()
+
+		err := ElasticUpdateMessage(message.Message)
+		if err != nil {
+			if !strings.Contains(err.Error(), "unable to find elastic message") {
+				Relax(err)
+			}
+		}
+	}()
+}
+
+func ElasticOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
+	channel, err := GetChannelWithoutApi(message.ChannelID)
+	if err != nil {
+		return
+	}
+
+	if IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
+	go func() {
+		defer Recover()
+
+		err := ElasticDeleteMessage(message.Message)
+		if err != nil {
+			if !strings.Contains(err.Error(), "unable to find elastic message") {
+				Relax(err)
+			}
+		}
 	}()
 }
 
@@ -170,7 +219,7 @@ func ElasticAddMessage(message *discordgo.Message) error {
 
 	elasticMessageData := models.ElasticMessage{
 		MessageID:     message.ID,
-		Content:       message.Content,
+		Content:       []string{message.Content},
 		ContentLength: len(message.Content),
 		Attachments:   attachments,
 		CreatedAt:     GetTimeFromSnowflake(message.ID),
@@ -181,7 +230,7 @@ func ElasticAddMessage(message *discordgo.Message) error {
 	}
 
 	if GuildSettingsGetCached(channel.GuildID).ChatlogDisabled {
-		elasticMessageData.Content = ""
+		elasticMessageData.Content = []string{}
 		elasticMessageData.Attachments = []string{}
 		elasticMessageData.ContentLength = 0
 		elasticMessageData.UserID = ""
@@ -194,6 +243,72 @@ func ElasticAddMessage(message *discordgo.Message) error {
 		BodyJson(elasticMessageData).
 		Do(context.Background())
 	return err
+}
+
+func ElasticUpdateMessage(message *discordgo.Message) error {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	channel, err := GetChannel(message.ChannelID)
+	if err != nil {
+		return err
+	}
+
+	if GuildSettingsGetCached(channel.GuildID).ChatlogDisabled {
+		return nil
+	}
+
+	elasticID, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
+		Script(elastic.
+			NewScript("ctx._source.Content.add(params.newContent)").
+			Param("newContent", message.Content).
+			Lang("painless")).
+		Upsert(map[string]interface{}{"newContent": 0}).
+		Do(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ElasticDeleteMessage(message *discordgo.Message) error {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	channel, err := GetChannel(message.ChannelID)
+	if err != nil {
+		return err
+	}
+
+	if GuildSettingsGetCached(channel.GuildID).ChatlogDisabled {
+		return nil
+	}
+
+	elasticID, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
+		Script(elastic.
+			NewScript("ctx._source.Deleted = params.deleted").
+			Param("deleted", true).
+			Lang("painless")).
+		Upsert(map[string]interface{}{"deleted": 0}).
+		Do(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ElasticAddJoin(member *discordgo.Member, usedInvite, usedVanityName string) error {
@@ -352,4 +467,71 @@ func GetMinTimeForInterval(interval string, count int) (minTime time.Time) {
 		break
 	}
 	return minTime
+}
+
+func getElasticMessage(messageID, channelID, guildID string) (elasticID string, err error) {
+	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndex).
+		Query(termQuery).
+		Size(1).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		return "", err
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	for _, item := range searchResult.Hits.Hits {
+		if item == nil {
+			continue
+		}
+
+		var messageToCheck models.ElasticMessage
+		err := json.Unmarshal(*item.Source, &messageToCheck)
+		if err != nil {
+			continue
+		}
+
+		if messageToCheck.MessageID == messageID {
+			return item.Id, nil
+		}
+	}
+
+	return "", errors.New("unable to find elastic message")
+}
+
+func UnmarshalElasticMessage(item *elastic.SearchHit) (result models.ElasticMessage) {
+	if item == nil {
+		return result
+	}
+
+	err := json.Unmarshal(*item.Source, &result)
+	if err != nil {
+		var legacyM models.ElasticLegacyMessage
+		err := json.Unmarshal(*item.Source, &legacyM)
+		if err != nil {
+			return result
+		}
+
+		result = models.ElasticMessage{
+			CreatedAt:     legacyM.CreatedAt,
+			MessageID:     legacyM.MessageID,
+			Content:       []string{legacyM.Content},
+			ContentLength: legacyM.ContentLength,
+			Attachments:   legacyM.Attachments,
+			UserID:        legacyM.UserID,
+			GuildID:       legacyM.GuildID,
+			ChannelID:     legacyM.ChannelID,
+			Embeds:        legacyM.Embeds,
+			Deleted:       false,
+		}
+
+		return result
+	}
+
+	return result
 }
