@@ -86,6 +86,13 @@
     ],
     "check-your-dms": "<@%s> Please check your DMs. <:blobeyes:317029938568101890>"
   },
+  "dm": {
+    "help": [
+      "Check out <https://robyul.chat/commands>",
+      "It's at <https://robyul.chat/commands> <:googlesmile:317031693951434752>"
+    ],
+    "invite": "To get Robyul for your server please join the Robyul Discord Server and contact Staff.\nhttps://discord.gg/s5qZvUV"
+  },
   "triggers": {
     "8ball": {
       "__": [

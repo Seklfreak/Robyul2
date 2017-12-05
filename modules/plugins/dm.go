@@ -8,6 +8,8 @@ import (
 
 	"bytes"
 
+	"regexp"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -172,14 +174,44 @@ func (dm *DM) OnMessage(content string, msg *discordgo.Message, session *discord
 		return
 	}
 
+	response := dm.DmResponse(msg)
+	if response != nil {
+		helpers.SendComplex(msg.ChannelID, response)
+	}
+
 	dmChannelID, _ := helpers.GetBotConfigString(DMReceiveChannelIDKey)
 	if dmChannelID != "" {
-		err = dm.repostDM(dmChannelID, msg)
+		err = dm.repostDM(dmChannelID, msg, response)
 		helpers.RelaxLog(err)
 	}
 }
 
-func (dm *DM) repostDM(channelID string, message *discordgo.Message) (err error) {
+func (dm *DM) DmResponse(msg *discordgo.Message) (response *discordgo.MessageSend) {
+	if msg == nil {
+		return
+	}
+
+	var content string
+
+	switch {
+	case regexp.MustCompile("(?i)^(.)?HELP.*").MatchString(msg.Content):
+		content = helpers.GetText("dm.help")
+		break
+	case regexp.MustCompile("(?i)^(.)?INVITE.*").MatchString(msg.Content):
+		content = helpers.GetText("dm.invite")
+		break
+	}
+
+	if content != "" {
+		return &discordgo.MessageSend{
+			Content: content,
+		}
+	}
+
+	return nil
+}
+
+func (dm *DM) repostDM(channelID string, message *discordgo.Message, response *discordgo.MessageSend) (err error) {
 	received, err := message.Timestamp.Parse()
 	if err != nil {
 		received = time.Now()
@@ -210,18 +242,30 @@ func (dm *DM) repostDM(channelID string, message *discordgo.Message) (err error)
 			Text: fmt.Sprintf("User ID: %s | Received at %s",
 				message.Author.ID, received.Format(time.ANSIC)),
 		},
-		Fields: []*discordgo.MessageEmbedField{
-			{
-				Name: "Reply:",
-				Value: fmt.Sprintf("`%sdm send %s <your message>`",
-					helpers.GetPrefixForServer(channel.GuildID), message.Author.ID),
-				Inline: false,
-			},
-		},
+		Fields: []*discordgo.MessageEmbedField{},
 	}
 	if message.Author.Avatar != "" {
 		embed.Author.IconURL = message.Author.AvatarURL("128")
 	}
+
+	if response != nil {
+		responseText := response.Content
+		for _, fileResp := range response.Files {
+			responseText += "\nAttachment: `" + fileResp.Name + "`"
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "Robyul responded:",
+			Value:  responseText,
+			Inline: false,
+		})
+	}
+
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+		Name: "Reply:",
+		Value: fmt.Sprintf("`%sdm send %s <your message>`",
+			helpers.GetPrefixForServer(channel.GuildID), message.Author.ID),
+		Inline: false,
+	})
 
 	_, err = helpers.SendEmbed(channel.ID, embed)
 	return err
