@@ -173,7 +173,7 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 		UserCount.Set(int64(len(users)))
 		ChannelCount.Set(int64(channels))
 		GuildCount.Set(int64(len(guilds)))
-		GuildCount.Set(discordgo.RequestsMade)
+		DiscordRestApiRequests.Set(discordgo.RequestsMade)
 	}
 }
 
