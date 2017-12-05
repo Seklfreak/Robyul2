@@ -72,6 +72,7 @@ type DB_Mod_JoinLog struct {
 	InviteCodeUsed            string    `gorethink:"invitecode"`
 	InviteCodeCreatedByUserID string    `gorethink:"invitecode_createdbyuserid"`
 	InviteCodeCreatedAt       time.Time `gorethink:"invitecode_createdat"`
+	VanityInviteUsedName      string    `gorethink:"vanityinvite_name"`
 }
 
 type CacheInviteInformation struct {
@@ -1125,8 +1126,13 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					createdByUser.Username = "N/A"
 				}
 
-				joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
-					joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+				var labelText string
+				if joins[0].VanityInviteUsedName != "" {
+					labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
+				}
+
+				joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s`%s created by `%s (#%s)` %s\n",
+					joins[0].InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 			} else {
 				joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
 			}
@@ -1142,9 +1148,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					createdByUser.Username = "N/A"
 				}
 
-				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
+				var labelText string
+				if lastJoin.VanityInviteUsedName != "" {
+					labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
+				}
+
+				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
 					len(joins),
-					lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+					lastJoin.InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 			} else {
 				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
 			}
@@ -2045,217 +2056,231 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 			}
 		}
 
-		joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
-		if err != nil {
-			joinedAt = time.Now()
-		}
-		// Save join in DB
-		newJoinLog := DB_Mod_JoinLog{
-			GuildID:                   member.GuildID,
-			UserID:                    member.User.ID,
-			JoinedAt:                  joinedAt,
-			InviteCodeUsed:            usedInvite.Code,
-			InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
-			InviteCodeCreatedAt:       usedInvite.CreatedAt,
-		}
-		err = m.InsertJoinLog(newJoinLog)
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
-		go func() {
-			if member.User.ID == session.State.User.ID { // Don't inspect Robyul
-				return
+		var usedVanityInvite string
+		vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
+
+		if vanityInvite.VanityName != "" {
+			discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
+			if discordInviteCode == usedInvite.Code {
+				usedVanityInvite = vanityInvite.VanityName
 			}
+		}
 
-			if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet ||
-				helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins {
-				guild, err := helpers.GetGuild(member.GuildID)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		go func() {
+			joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
+			if err != nil {
+				joinedAt = time.Now()
+			}
+			// Save join in DB
+			newJoinLog := DB_Mod_JoinLog{
+				GuildID:                   member.GuildID,
+				UserID:                    member.User.ID,
+				JoinedAt:                  joinedAt,
+				InviteCodeUsed:            usedInvite.Code,
+				InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
+				InviteCodeCreatedAt:       usedInvite.CreatedAt,
+				VanityInviteUsedName:      usedVanityInvite,
+			}
+			err = m.InsertJoinLog(newJoinLog)
+			if err != nil {
+				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			}
+			go func() {
+				if member.User.ID == session.State.User.ID { // Don't inspect Robyul
 					return
 				}
 
-				bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, guild.ID)
-				troublemakerReports := m.getTroublemakerReports(member.User)
-				joins, _ := m.GetJoins(member.User.ID, member.GuildID)
+				if helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers ||
+					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers ||
+					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount ||
+					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported ||
+					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins ||
+					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet ||
+					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins {
+					guild, err := helpers.GetGuild(member.GuildID)
+					if err != nil {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						return
+					}
 
-				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d, Joins: %d",
-					member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList), len(troublemakerReports), len(joins)))
+					bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, guild.ID)
+					troublemakerReports := m.getTroublemakerReports(member.User)
+					joins, _ := m.GetJoins(member.User.ID, member.GuildID)
 
-				isOnServerList := m.inspectCommonServers(member.User)
+					cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Reports: %d, Joins: %d",
+						member.User.Username, member.User.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList), len(troublemakerReports), len(joins)))
 
-				joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
-				oneDayAgo := time.Now().AddDate(0, 0, -1)
-				oneWeekAgo := time.Now().AddDate(0, 0, -7)
+					isOnServerList := m.inspectCommonServers(member.User)
 
-				isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(member.User.ID)
-				helpers.RelaxLog(err)
+					joinedTime := helpers.GetTimeFromSnowflake(member.User.ID)
+					oneDayAgo := time.Now().AddDate(0, 0, -1)
+					oneWeekAgo := time.Now().AddDate(0, 0, -7)
 
-				if !((helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported && len(troublemakerReports) > 0) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins && len(joins) > 1) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet && isBannedOnBansdiscordlistNet) ||
-					(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins)) {
-					return
-				}
+					isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(member.User.ID)
+					helpers.RelaxLog(err)
 
-				resultEmbed := &discordgo.MessageEmbed{
-					Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
-					Description: helpers.GetTextF("plugins.mod.inspect-description-done", member.User.ID) +
-						"\n_inspected because User joined this Server._",
-					URL:       helpers.GetAvatarUrl(member.User),
-					Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
-					Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
-					Color:     0x0FADED,
-				}
+					if !((helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
+						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
+						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
+						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserReported && len(troublemakerReports) > 0) ||
+						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins && len(joins) > 1) ||
+						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet && isBannedOnBansdiscordlistNet) ||
+						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins)) {
+						return
+					}
 
-				resultBansText := ""
-				if len(bannedOnServerList) <= 0 {
-					resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
-				} else {
-					resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
-				}
+					resultEmbed := &discordgo.MessageEmbed{
+						Title: helpers.GetTextF("plugins.mod.inspect-embed-title", member.User.Username, member.User.Discriminator),
+						Description: helpers.GetTextF("plugins.mod.inspect-description-done", member.User.ID) +
+							"\n_inspected because User joined this Server._",
+						URL:       helpers.GetAvatarUrl(member.User),
+						Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(member.User)},
+						Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", member.User.ID, len(session.State.Guilds))},
+						Color:     0x0FADED,
+					}
 
-				commonGuildsText := ""
-				if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-					commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
-				} else {
-					commonGuildsText += "❓ User is on **none** other servers with Robyul."
-				}
-				joinedTimeText := ""
-				if !joinedTime.After(oneWeekAgo) {
-					joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
-				} else if !joinedTime.After(oneDayAgo) {
-					joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
-				} else {
-					joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
-				}
-
-				var troublemakerReportsText string
-				if len(troublemakerReports) <= 0 {
-					troublemakerReportsText = "✅ User never got reported"
-				} else {
-					troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
-				}
-
-				joinsText := ""
-				if len(joins) == 0 {
-					joinsText = "✅ User never joined this server\n"
-				} else if len(joins) == 1 {
-					if joins[0].InviteCodeUsed != "" {
-						createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
-						if createdByUser == nil {
-							createdByUser = new(discordgo.User)
-							createdByUser.ID = joins[0].InviteCodeCreatedByUserID
-							createdByUser.Username = "N/A"
-						}
-
-						joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
-							joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+					resultBansText := ""
+					if len(bannedOnServerList) <= 0 {
+						resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
 					} else {
-						joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+						resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
 					}
-				} else if len(joins) > 1 {
-					sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
-					lastJoin := joins[0]
 
-					if lastJoin.InviteCodeUsed != "" {
-						createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
-						if createdByUser == nil {
-							createdByUser = new(discordgo.User)
-							createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
-							createdByUser.Username = "N/A"
-						}
-
-						joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
-							len(joins),
-							lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+					commonGuildsText := ""
+					if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+						commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
 					} else {
-
-						joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+						commonGuildsText += "❓ User is on **none** other servers with Robyul."
 					}
-				}
-
-				isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
-				if isBannedOnBansdiscordlistNet {
-					isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
-				}
-
-				resultEmbed.Fields = []*discordgo.MessageEmbedField{
-					{Name: "Bans", Value: resultBansText, Inline: false},
-					{Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
-					{Name: "bans.discordlist.net", Value: isBannedOnBansdiscordlistNetText, Inline: false},
-					{Name: "Join History", Value: joinsText, Inline: false},
-					{Name: "Common Servers", Value: commonGuildsText, Inline: false},
-					{Name: "Account Age", Value: joinedTimeText, Inline: false},
-				}
-
-				for _, failedServer := range checkFailedServerList {
-					if failedServer.ID == member.GuildID {
-						resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
-						break
+					joinedTimeText := ""
+					if !joinedTime.After(oneWeekAgo) {
+						joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+					} else if !joinedTime.After(oneDayAgo) {
+						joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+					} else {
+						joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
 					}
-				}
 
-				_, err = helpers.SendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
-				if err != nil {
-					cache.GetLogger().WithField("module", "mod").Warnf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
-						helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error())
-					if errD, ok := err.(*discordgo.RESTError); ok {
-						if errD.Message.Code != discordgo.ErrCodeMissingAccess && errD.Message.Code != discordgo.ErrCodeMissingPermissions {
+					var troublemakerReportsText string
+					if len(troublemakerReports) <= 0 {
+						troublemakerReportsText = "✅ User never got reported"
+					} else {
+						troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
+					}
+
+					joinsText := ""
+					if len(joins) == 0 {
+						joinsText = "✅ User never joined this server\n"
+					} else if len(joins) == 1 {
+						if joins[0].InviteCodeUsed != "" {
+							createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
+							if createdByUser == nil {
+								createdByUser = new(discordgo.User)
+								createdByUser.ID = joins[0].InviteCodeCreatedByUserID
+								createdByUser.Username = "N/A"
+							}
+
+							var labelText string
+							if joins[0].VanityInviteUsedName != "" {
+								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
+							}
+
+							joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s`%s created by `%s (#%s)` %s\n",
+								joins[0].InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+						} else {
+							joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+						}
+					} else if len(joins) > 1 {
+						sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
+						lastJoin := joins[0]
+
+						if lastJoin.InviteCodeUsed != "" {
+							createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
+							if createdByUser == nil {
+								createdByUser = new(discordgo.User)
+								createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
+								createdByUser.Username = "N/A"
+							}
+
+							var labelText string
+							if lastJoin.VanityInviteUsedName != "" {
+								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
+							}
+
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
+								len(joins),
+								lastJoin.InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+						} else {
+
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+						}
+					}
+
+					isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
+					if isBannedOnBansdiscordlistNet {
+						isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
+					}
+
+					resultEmbed.Fields = []*discordgo.MessageEmbedField{
+						{Name: "Bans", Value: resultBansText, Inline: false},
+						{Name: "Troublemaker Reports", Value: troublemakerReportsText, Inline: false},
+						{Name: "bans.discordlist.net", Value: isBannedOnBansdiscordlistNetText, Inline: false},
+						{Name: "Join History", Value: joinsText, Inline: false},
+						{Name: "Common Servers", Value: commonGuildsText, Inline: false},
+						{Name: "Account Age", Value: joinedTimeText, Inline: false},
+					}
+
+					for _, failedServer := range checkFailedServerList {
+						if failedServer.ID == member.GuildID {
+							resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+							break
+						}
+					}
+
+					_, err = helpers.SendEmbed(helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, resultEmbed)
+					if err != nil {
+						cache.GetLogger().WithField("module", "mod").Warnf("Failed to send guild join inspect to channel #%s on guild #%s: %s",
+							helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error())
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code != discordgo.ErrCodeMissingAccess && errD.Message.Code != discordgo.ErrCodeMissingPermissions {
+								raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+							}
+						} else {
 							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 						}
-					} else {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						return
 					}
+				}
+			}()
+			go func() {
+				defer helpers.Recover()
+
+				if !cache.HasElastic() {
 					return
 				}
-			}
+
+				err := helpers.ElasticAddJoin(member, usedInvite.Code, usedVanityInvite)
+				helpers.Relax(err)
+			}()
 		}()
 		go func() {
-			defer helpers.Recover()
+			settings := helpers.GuildSettingsGetCached(member.GuildID)
 
-			if !cache.HasElastic() {
-				return
-			}
-
-			var usedVanityInvite string
-			vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
-			if vanityInvite.VanityName != "" {
-				discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
-				if discordInviteCode == usedInvite.Code {
-					usedVanityInvite = vanityInvite.VanityName
+			for _, mutedMember := range settings.MutedMembers {
+				if mutedMember == member.User.ID {
+					muteRole, err := helpers.GetMuteRole(member.GuildID)
+					if err != nil {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						return
+					}
+					err = session.GuildMemberRoleAdd(member.GuildID, member.User.ID, muteRole.ID)
+					if err != nil {
+						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						return
+					}
 				}
 			}
-
-			err := helpers.ElasticAddJoin(member, usedInvite.Code, usedVanityInvite)
-			helpers.Relax(err)
 		}()
-	}()
-	go func() {
-		settings := helpers.GuildSettingsGetCached(member.GuildID)
-
-		for _, mutedMember := range settings.MutedMembers {
-			if mutedMember == member.User.ID {
-				muteRole, err := helpers.GetMuteRole(member.GuildID)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					return
-				}
-				err = session.GuildMemberRoleAdd(member.GuildID, member.User.ID, muteRole.ID)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					return
-				}
-			}
-		}
 	}()
 }
 
@@ -2393,8 +2418,13 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 								createdByUser.Username = "N/A"
 							}
 
-							joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s` created by `%s (#%s)` %s\n",
-								joins[0].InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+							var labelText string
+							if joins[0].VanityInviteUsedName != "" {
+								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
+							}
+
+							joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s`%s created by `%s (#%s)` %s\n",
+								joins[0].InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 						} else {
 							joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
 						}
@@ -2410,9 +2440,14 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 								createdByUser.Username = "N/A"
 							}
 
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s` created by `%s (#%s)` %s\n",
+							var labelText string
+							if lastJoin.VanityInviteUsedName != "" {
+								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
+							}
+
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
 								len(joins),
-								lastJoin.InviteCodeUsed, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+								lastJoin.InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 						} else {
 
 							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
