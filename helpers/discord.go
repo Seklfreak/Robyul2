@@ -594,8 +594,8 @@ func GetIsInGuild(guildID string, userID string) bool {
 func GetGuild(guildID string) (*discordgo.Guild, error) {
 	targetGuild, err := cache.GetSession().State.Guild(guildID)
 	if targetGuild == nil || targetGuild.ID == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
-			fmt.Sprintf("discord api request: Guild: %s", guildID))
+		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
+		//		fmt.Sprintf("discord api request: Guild: %s", guildID))
 		targetGuild, err = cache.GetSession().Guild(guildID)
 	}
 	return targetGuild, err
@@ -604,8 +604,8 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 func GetChannel(channelID string) (*discordgo.Channel, error) {
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
-			fmt.Sprintf("discord api request: Channel: %s", channelID))
+		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
+		//	fmt.Sprintf("discord api request: Channel: %s", channelID))
 		targetChannel, err = cache.GetSession().Channel(channelID)
 	}
 	return targetChannel, err
@@ -619,8 +619,8 @@ func GetChannelWithoutApi(channelID string) (*discordgo.Channel, error) {
 func GetMessage(channelID string, messageID string) (*discordgo.Message, error) {
 	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
 	if targetMessage == nil || targetMessage.ID == "" {
-		cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
-			fmt.Sprintf("discord api request: Message: %s in Channel: %s", messageID, channelID))
+		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
+		//	fmt.Sprintf("discord api request: Message: %s in Channel: %s", messageID, channelID))
 		targetMessage, err = cache.GetSession().ChannelMessage(channelID, messageID)
 		cache.GetSession().State.MessageAdd(targetMessage)
 		return targetMessage, err
