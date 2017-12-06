@@ -835,7 +835,11 @@ func (m *Instagram) postPostToChannel(channelID string, post goinstaResponse.Ite
 
 	mediaUrls := make([]string, 0)
 	if len(post.CarouselMedia) <= 0 {
-		mediaUrls = append(mediaUrls, getFullResUrl(post.ImageVersions2.Candidates[0].URL))
+		if len(post.VideoVersions) > 0 {
+			mediaUrls = append(mediaUrls, getFullResUrl(post.VideoVersions[0].URL))
+		} else {
+			mediaUrls = append(mediaUrls, getFullResUrl(post.ImageVersions2.Candidates[0].URL))
+		}
 	} else {
 		for _, carouselMedia := range post.CarouselMedia {
 			if len(carouselMedia.VideoVersions) > 0 {
