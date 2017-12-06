@@ -32,6 +32,10 @@ func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.Messa
 		return
 	}
 
+	if IsLimitedGuild(channel.GuildID) {
+		return
+	}
+
 	go func() {
 		defer Recover()
 
@@ -47,6 +51,10 @@ func ElasticOnMessageUpdate(session *discordgo.Session, message *discordgo.Messa
 	}
 
 	if IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
+	if IsLimitedGuild(channel.GuildID) {
 		return
 	}
 
@@ -69,6 +77,10 @@ func ElasticOnMessageDelete(session *discordgo.Session, message *discordgo.Messa
 	}
 
 	if IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
+	if IsLimitedGuild(channel.GuildID) {
 		return
 	}
 
@@ -100,6 +112,10 @@ func ElasticOnReactionAdd(session *discordgo.Session, reaction *discordgo.Messag
 	}
 
 	if IsBlacklistedGuild(channel.GuildID) {
+		return
+	}
+
+	if IsLimitedGuild(channel.GuildID) {
 		return
 	}
 

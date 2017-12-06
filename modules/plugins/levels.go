@@ -3305,6 +3305,10 @@ func (m *Levels) GetDetailOpacity(userUserdata DB_Profile_Userdata) string {
 }
 
 func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+	if IsLimitedGuild(channel.GuildID) {
+		return
+	}
+
 	go m.ProcessMessage(msg, session)
 }
 

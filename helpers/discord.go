@@ -40,7 +40,10 @@ var RobyulMod = []string{
 var Blacklisted = []string{
 	"171883318386753536", // ForRyu
 }
-var BlacklistedGuildIDs = []string{
+var BlacklistedGuildIDs []string
+
+// No Level gaining, No Elastic Search features
+var LimitedGuildIDs = []string{
 	"264445053596991498", // Discord Bot List
 }
 var ExtendedInspectRoleIDs = []string{
@@ -62,6 +65,16 @@ func IsBlacklisted(id string) bool {
 
 func IsBlacklistedGuild(guildID string) bool {
 	for _, s := range BlacklistedGuildIDs {
+		if s == guildID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsLimitedGuild(guildID string) bool {
+	for _, s := range LimitedGuildIDs {
 		if s == guildID {
 			return true
 		}
