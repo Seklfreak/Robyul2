@@ -401,7 +401,7 @@ func (m *Levels) processExpStackLoop() {
 
 			if expBefore <= 0 || levelBefore != levelAfter {
 				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
-				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Message != "404: Not Found" {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Message != "404: Not Found" && errD.Message.Code != discordgo.ErrCodeUnknownMember) {
 					helpers.RelaxLog(err)
 				}
 			}
@@ -3758,7 +3758,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	for _, toApplyRole := range toApply {
 		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
 		if errRole != nil {
-			cache.GetLogger().WithField("module", "levels").Warnf("failed to add role applying level roles: %s", err.Error())
+			cache.GetLogger().WithField("module", "levels").Warnf("failed to add role applying level roles: %s", errRole.Error())
 			err = errRole
 		}
 	}
@@ -3766,7 +3766,7 @@ func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err
 	for _, toRemoveRole := range toRemove {
 		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
 		if errRole != nil {
-			cache.GetLogger().WithField("module", "levels").Warnf("failed to remove role applying level roles: %s", err.Error())
+			cache.GetLogger().WithField("module", "levels").Warnf("failed to remove role applying level roles: %s", errRole.Error())
 			err = errRole
 		}
 	}

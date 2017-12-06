@@ -249,6 +249,14 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			).Filter(
 				rethink.Row.Field("keyword").Match(fmt.Sprintf("(?i)%s", args[1])),
 			).Run(helpers.GetDB())
+			if err != nil {
+				if errR, ok := err.(rethink.RQLQueryLogicError); ok {
+					if strings.Contains(errR.String(), "Error in regexp") {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						return
+					}
+				}
+			}
 			helpers.Relax(err)
 			defer listCursor.Close()
 			err = listCursor.All(&entryBucket)

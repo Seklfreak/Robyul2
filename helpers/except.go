@@ -14,18 +14,20 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/getsentry/raven-go"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 // RecoverDiscord recover()s and sends a message to discord
 func RecoverDiscord(msg *discordgo.Message) {
 	err := recover()
 	if err != nil {
-		if strings.Contains(fmt.Sprintf("%#v", err), "handled discord error") {
+		if strings.Contains(fmt.Sprintf("%+#v", err), "handled discord error") {
 			return
 		}
 
-		fmt.Printf("RecoverDiscord: %#v\n", err)
+		fmt.Printf("RecoverDiscord: %s\n", spew.Sdump(err))
 
 		SendError(msg, err)
 	}
@@ -35,14 +37,23 @@ func RecoverDiscord(msg *discordgo.Message) {
 func Recover() {
 	err := recover()
 	if err != nil {
-		if strings.Contains(fmt.Sprintf("%#v", err), "handled discord error") {
+		if strings.Contains(fmt.Sprintf("%+#v", err), "handled discord error") {
 			return
 		}
 
-		fmt.Printf("Recover: %#v\n", err)
+		fmt.Printf("Recover: %s\n", spew.Sdump(err))
 
 		//raven.SetUserContext(&raven.User{})
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		if errE, ok := err.(*elastic.Error); ok {
+			raven.CaptureError(fmt.Errorf(spew.Sdump(err)), map[string]string{
+				"Type":     errE.Details.Type,
+				"Reason":   errE.Details.Reason,
+				"Index":    errE.Details.Index,
+				"CausedBy": spew.Sdump(errE.Details.CausedBy),
+			})
+		} else {
+			raven.CaptureError(fmt.Errorf(spew.Sdump(err)), map[string]string{})
+		}
 	}
 }
 
@@ -59,7 +70,7 @@ func SoftRelax(err error, cb Callback) {
 func Relax(err error) {
 	if err != nil {
 		if DEBUG_MODE == true {
-			fmt.Printf("%#v:\n", err)
+			spew.Dump(err)
 
 			buf := make([]byte, 1<<16)
 			stackSize := runtime.Stack(buf, false)
@@ -120,9 +131,9 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 
 func RelaxLog(err error) {
 	if err != nil {
-		fmt.Printf("Error: %#v\n", err)
+		fmt.Printf("Error: %s\n", spew.Sdump(err))
 
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		raven.CaptureError(fmt.Errorf(spew.Sdump(err)), map[string]string{})
 	}
 }
 
@@ -148,21 +159,21 @@ func SendError(msg *discordgo.Message, err interface{}) {
 
 		SendMessage(
 			msg.ChannelID,
-			"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v\n", err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
+			"Error <:blobfrowningbig:317028438693117962>\n```\n"+spew.Sdump(err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
 		)
 	} else {
 		if errR, ok := err.(*discordgo.RESTError); ok && errR != nil && errR.Message != nil {
 			if msg != nil {
 				SendMessage(
 					msg.ChannelID,
-					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v", errR.Message.Message)+"\n```",
+					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%+#v", errR.Message.Message)+"\n```",
 				)
 			}
 		} else {
 			if msg != nil {
 				SendMessage(
 					msg.ChannelID,
-					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%#v", err)+"\n```",
+					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%+#v", err)+"\n```",
 				)
 			}
 		}
@@ -173,7 +184,7 @@ func SendError(msg *discordgo.Message, err interface{}) {
 		Username: msg.Author.Username + "#" + msg.Author.Discriminator,
 	})
 
-	raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+	raven.CaptureError(fmt.Errorf(spew.Sdump(err)), map[string]string{
 		"ChannelID":       msg.ChannelID,
 		"Content":         msg.Content,
 		"Timestamp":       string(msg.Timestamp),

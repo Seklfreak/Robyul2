@@ -151,8 +151,8 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingAccess {
 				helpers.RelaxLog(err)
-				return
 			}
+			return
 		}
 		for _, guildAnnouncementSetting := range m.GetAnnouncementSettingsFor("guildid", member.GuildID) {
 			if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
@@ -169,7 +169,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 				}
 			}
 		}
-		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
+		cache.GetLogger().WithField("module", "guildannouncements").Infof("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID)
 	}()
 }
 

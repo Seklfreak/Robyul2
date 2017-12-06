@@ -3,6 +3,8 @@ package helpers
 import (
 	"net/url"
 
+	"strings"
+
 	"github.com/Jeffail/gabs"
 	"github.com/bwmarrin/discordgo"
 )
@@ -34,7 +36,9 @@ func ChatbotSend(session *discordgo.Session, channel string, message string) {
 
 	result, err := gabs.ParseJSON(resultRaw)
 	if err != nil {
-		RelaxLog(err)
+		if !strings.Contains(err.Error(), "unexpected end of JSON input") {
+			RelaxLog(err)
+		}
 		return
 	}
 
