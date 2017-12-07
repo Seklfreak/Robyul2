@@ -903,7 +903,7 @@ func SendMessage(channelID, content string) (messages []*discordgo.Message, err 
 // TODO: implement https://discordapp.com/developers/docs/resources/channel#embed-limits
 func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
-	message, err = cache.GetSession().ChannelMessageSendEmbed(channelID, embed)
+	message, err = cache.GetSession().ChannelMessageSendEmbed(channelID, TruncateEmbed(embed))
 	if err != nil {
 		return messages, err
 	}
@@ -914,6 +914,7 @@ func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*dis
 // TODO: implement https://discordapp.com/developers/docs/resources/channel#embed-limits
 func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
+	data.Embed = TruncateEmbed(data.Embed)
 	pages := AutoPagify(data.Content)
 	if len(pages) > 0 {
 		for i, page := range pages {
@@ -948,7 +949,7 @@ func EditMessage(channelID, messageID, content string) (message *discordgo.Messa
 }
 
 func EditEmbed(channelID, messageID string, embed *discordgo.MessageEmbed) (message *discordgo.Message, err error) {
-	message, err = cache.GetSession().ChannelMessageEditEmbed(channelID, messageID, embed)
+	message, err = cache.GetSession().ChannelMessageEditEmbed(channelID, messageID, TruncateEmbed(embed))
 	if err != nil {
 		return nil, err
 	} else {
@@ -957,12 +958,77 @@ func EditEmbed(channelID, messageID string, embed *discordgo.MessageEmbed) (mess
 }
 
 func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err error) {
+	data.Embed = TruncateEmbed(data.Embed)
 	message, err = cache.GetSession().ChannelMessageEditComplex(data)
 	if err != nil {
 		return nil, err
 	} else {
 		return message, err
 	}
+}
+
+// Applies Embed Limits to the given Embed
+// Source: https://discordapp.com/developers/docs/resources/channel#embed-limits
+func TruncateEmbed(embed *discordgo.MessageEmbed) (result *discordgo.MessageEmbed) {
+	if len(embed.Title) > 256 {
+		embed.Title = embed.Title[0:255] + "…"
+	}
+	if len(embed.Description) > 2048 {
+		embed.Description = embed.Description[0:2047] + "…"
+	}
+	if embed.Footer != nil && len(embed.Footer.Text) > 2048 {
+		embed.Footer.Text = embed.Footer.Text[0:2047] + "…"
+	}
+	if embed.Author != nil && len(embed.Author.Name) > 256 {
+		embed.Author.Name = embed.Author.Name[0:255] + "…"
+	}
+	newFields := make([]*discordgo.MessageEmbedField, 0)
+	for i, field := range embed.Fields {
+		if len(field.Name) > 256 {
+			field.Name = field.Name[0:255] + "…"
+		}
+		if len(field.Value) > 2048 {
+			field.Value = field.Value[0:2048] + "…"
+		}
+		newFields = append(newFields, field)
+		if i >= 25-1 {
+			break
+		}
+	}
+	embed.Fields = newFields
+
+	if CalculateFullEmbedLength(embed) > 6000 {
+		if embed.Footer != nil {
+			embed.Footer.Text = ""
+		}
+		if CalculateFullEmbedLength(embed) > 6000 {
+			if embed.Author != nil {
+				embed.Author.Name = ""
+			}
+			if CalculateFullEmbedLength(embed) > 6000 {
+				embed.Fields = []*discordgo.MessageEmbedField{{}}
+			}
+		}
+	}
+
+	result = embed
+	return result
+}
+
+func CalculateFullEmbedLength(embed *discordgo.MessageEmbed) (count int) {
+	count += len(embed.Title)
+	count += len(embed.Description)
+	if embed.Footer != nil {
+		count += len(embed.Footer.Text)
+	}
+	if embed.Author != nil {
+		count += len(embed.Author.Name)
+	}
+	for _, field := range embed.Fields {
+		count += len(field.Name)
+		count += len(field.Value)
+	}
+	return count
 }
 
 // TODO: Webhook

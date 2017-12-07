@@ -1067,7 +1067,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMessage && errD.Message.Code != discordgo.ErrCodeMissingPermissions) {
 					helpers.RelaxLog(err)
 				}
 			}
@@ -1078,7 +1078,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		if numberOfPages > 1 {
 			for {
 				err = session.MessageReactionRemove(msg.ChannelID, reactionEmbedMessage.ID, emojis.From(strconv.Itoa(reactionsRemoved+1)), session.State.User.ID)
-				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMessage && errD.Message.Code != discordgo.ErrCodeMissingPermissions) {
 					helpers.RelaxLog(err)
 				}
 				reactionsRemoved++
@@ -1221,7 +1221,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMessage && errD.Message.Code != discordgo.ErrCodeMissingPermissions) {
 					helpers.RelaxLog(err)
 				}
 			}
@@ -1503,7 +1503,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMessage && errD.Message.Code != discordgo.ErrCodeMissingPermissions) {
 					helpers.RelaxLog(err)
 				}
 			}
@@ -1666,7 +1666,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMessage {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMessage && errD.Message.Code != discordgo.ErrCodeMissingPermissions) {
 					helpers.RelaxLog(err)
 				}
 			}
