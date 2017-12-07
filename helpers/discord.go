@@ -914,7 +914,9 @@ func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*dis
 // TODO: implement https://discordapp.com/developers/docs/resources/channel#embed-limits
 func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
-	data.Embed = TruncateEmbed(data.Embed)
+	if data.Embed != nil {
+		data.Embed = TruncateEmbed(data.Embed)
+	}
 	pages := AutoPagify(data.Content)
 	if len(pages) > 0 {
 		for i, page := range pages {
@@ -958,7 +960,9 @@ func EditEmbed(channelID, messageID string, embed *discordgo.MessageEmbed) (mess
 }
 
 func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err error) {
-	data.Embed = TruncateEmbed(data.Embed)
+	if data.Embed != nil {
+		data.Embed = TruncateEmbed(data.Embed)
+	}
 	message, err = cache.GetSession().ChannelMessageEditComplex(data)
 	if err != nil {
 		return nil, err
@@ -970,7 +974,10 @@ func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err e
 // Applies Embed Limits to the given Embed
 // Source: https://discordapp.com/developers/docs/resources/channel#embed-limits
 func TruncateEmbed(embed *discordgo.MessageEmbed) (result *discordgo.MessageEmbed) {
-	if len(embed.Title) > 256 {
+	if embed == nil || (&discordgo.MessageEmbed{}) == embed {
+		return nil
+	}
+	if embed.Title != "" && len(embed.Title) > 256 {
 		embed.Title = embed.Title[0:255] + "…"
 	}
 	if len(embed.Description) > 2048 {

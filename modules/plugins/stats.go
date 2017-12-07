@@ -689,7 +689,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			channel, err = helpers.GetGlobalChannelFromMention(args[0])
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
-					if errD.Message.Code == 50001 {
+					if errD.Message.Code == discordgo.ErrCodeMissingAccess {
 						_, err = helpers.SendMessage(msg.ChannelID, "Unable to get information for this Channel.")
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
