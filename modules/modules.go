@@ -71,6 +71,7 @@ var (
 		&google.Handler{},
 		&plugins.BotStatus{},
 		&plugins.VanityInvite{},
+		&plugins.DiscordMoney{},
 	}
 
 	// PluginList is the list of active plugins
