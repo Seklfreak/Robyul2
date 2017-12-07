@@ -23,7 +23,7 @@
   branch = "master"
   name = "github.com/Krognol/go-wolfram"
   packages = ["."]
-  revision = "0e6a42f7e2fe2c4fc9430a3300ff5eef4b372f0c"
+  revision = "b1692b9f2c39f4377d935e8d9e8b8b672e2d8387"
 
 [[projects]]
   name = "github.com/PuerkitoBio/goquery"
@@ -40,14 +40,14 @@
 [[projects]]
   name = "github.com/RichardKnop/machinery"
   packages = ["v1","v1/backends","v1/brokers","v1/common","v1/config","v1/log","v1/retry","v1/tasks"]
-  revision = "60bc4ffeec852287112dbf4fb7047b2a6178a4bb"
-  version = "v1.0.13"
+  revision = "d94e51516cb760758e09b14aba400ff83d0e4fcc"
+  version = "v1.0.14"
 
 [[projects]]
-  branch = "master"
   name = "github.com/ahmdrz/goinsta"
   packages = [".","response","store","uuid"]
   revision = "5f6c22a03adcc575b35f7579e16eb7cd68e25eed"
+  version = "1.1"
 
 [[projects]]
   branch = "master"
@@ -149,7 +149,7 @@
   branch = "master"
   name = "github.com/getsentry/raven-go"
   packages = ["."]
-  revision = "c9de0b92586aaba092c2a231cb7384354b178544"
+  revision = "32a13797442ccb601b11761d74232773c1402d14"
 
 [[projects]]
   name = "github.com/go-redis/cache"
@@ -245,7 +245,7 @@
   branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "325e98bb8641b89fa2b1542149b09ec670953ac4"
+  revision = "c438b740fe140d99264f3b1d8e2cac25697329f6"
 
 [[projects]]
   branch = "master"
@@ -286,8 +286,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
+  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
+  version = "v1.0.4"
 
 [[projects]]
   branch = "master"
@@ -329,31 +329,31 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf","context","context/ctxhttp","html","html/atom","http2","http2/hpack","idna","internal/iana","internal/socket","internal/timeseries","ipv4","ipv6","lex/httplex","trace"]
-  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
+  revision = "faacc1b5e36e3ff02cbec9661c69ac63dd5a83ad"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/oauth2"
   packages = [".","google","internal","jws","jwt"]
-  revision = "f95fa95eaa936d9d87489b15d1d18b97c1ba9c28"
+  revision = "6a2004c8907a86949d71c664c81574897a4e55a6"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
+  revision = "9167dbfd0f8e88b731dd88cbf73a270701a37bb4"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "57961680700a5336d15015c8c50686ca5ba362a4"
+  revision = "be25de41fadfae372d6470bda81ca6beb55ef551"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport","transport/grpc","transport/http","youtube/v3"]
-  revision = "8cfdc57a0663729cc2811afefb5b7cd3d901e97c"
+  revision = "9a048cac3675aa589c62a35d7d42b25451dd15f1"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -369,9 +369,9 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","balancer","balancer/roundrobin","codes","connectivity","credentials","credentials/oauth","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
-  revision = "5a9f7b402fe85096d2e1d0383435ee1876e863d0"
-  version = "v1.8.0"
+  packages = [".","balancer","balancer/roundrobin","codes","connectivity","credentials","credentials/oauth","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/manual","resolver/passthrough","stats","status","tap","transport"]
+  revision = "be077907e29fdb945d351e4284eb5361e7f8924e"
+  version = "v1.8.1"
 
 [[projects]]
   branch = "v2.0.0"
