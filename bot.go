@@ -59,6 +59,10 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		time.Sleep(5 * time.Second)
 
 		for _, guild := range session.State.Guilds {
+			if helpers.IsBlacklistedGuild(guild.ID) {
+				continue
+			}
+
 			//if guild.Large {
 			err := session.RequestGuildMembers(guild.ID, "", 0)
 			if err != nil && strings.Contains(err.Error(), "no websocket connection exists") {
@@ -123,6 +127,10 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 		}
 
 		for _, guild := range cache.GetSession().State.Guilds {
+			if helpers.IsBlacklistedGuild(guild.ID) {
+				continue
+			}
+
 			//if guild.Large {
 			err := session.RequestGuildMembers(guild.ID, "", 0)
 			if err != nil && strings.Contains(err.Error(), "no websocket connection exists") {
