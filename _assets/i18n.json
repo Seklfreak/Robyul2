@@ -502,7 +502,7 @@
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
       "channel-embed-title": "%s V LIVE CHANNEL",
-      "embed-footer": "via vlive.tv",
+      "embed-footer": "powered by vlive.tv",
       "channel-embed-name-live": "📣 Live since %s KST",
       "channel-embed-name-vod": "📣 Last video on %s KST",
       "channel-embed-name-upcoming": ":calendar: Next scheduled video on %s KST",
@@ -515,7 +515,8 @@
       "channel-embed-title-notice": "📝 %s posted a new notice!",
       "channel-embed-title-celeb": "🌟 %s posted a new celeb post!",
       "channel-delete-not-found-error": "Unable to find V Live Channel in the Database!",
-      "channel-delete-success": "Deleted V Live Channel `%s` from the Database!"
+      "channel-delete-success": "Deleted V Live Channel `%s` from the Database!",
+      "embed-footer-imageurl": "https://i.imgur.com/Tj7TUEK.png"
     },
     "twitter": {
       "account-embed-title": "%s (@%s)%s Twitter Account",

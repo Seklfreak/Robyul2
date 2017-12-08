@@ -432,7 +432,10 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				Title:     helpers.GetTextF("plugins.vlive.channel-embed-title", vliveChannel.Name),
 				URL:       vliveChannel.Url,
 				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
-				Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+				Footer: &discordgo.MessageEmbedFooter{
+					Text:    helpers.GetText("plugins.vlive.embed-footer"),
+					IconURL: helpers.GetText("plugins.vlive.embed-footer-imageurl"),
+				},
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Followers", Value: humanize.Comma(vliveChannel.Followers), Inline: true},
 					{Name: "Videos", Value: humanize.Comma(vliveChannel.TotalVideos), Inline: true}},
@@ -665,10 +668,13 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 
 func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-vod", vliveChannel.Name),
-		URL:         vod.Url,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-vod", vliveChannel.Name),
+		URL:       vod.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.vlive.embed-footer"),
+			IconURL: helpers.GetText("plugins.vlive.embed-footer-imageurl"),
+		},
 		Description: fmt.Sprintf("**%s**", vod.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
 		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
@@ -688,10 +694,13 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
 
 func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-upcoming", vliveChannel.Name, vod.Date),
-		URL:         vliveChannel.Url,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-upcoming", vliveChannel.Name, vod.Date),
+		URL:       vliveChannel.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.vlive.embed-footer"),
+			IconURL: helpers.GetText("plugins.vlive.embed-footer-imageurl"),
+		},
 		Description: fmt.Sprintf("**%s**", vod.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
 		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
@@ -712,10 +721,13 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
 
 func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-live", vliveChannel.Name),
-		URL:         vod.Url,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-live", vliveChannel.Name),
+		URL:       vod.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.vlive.embed-footer"),
+			IconURL: helpers.GetText("plugins.vlive.embed-footer-imageurl"),
+		},
 		Description: fmt.Sprintf("**%s**", vod.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: vod.Thumbnail},
 		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
@@ -735,10 +747,13 @@ func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliv
 
 func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice, vliveChannel DB_VLive_Channel) {
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-notice", vliveChannel.Name),
-		URL:         notice.Url,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-notice", vliveChannel.Name),
+		URL:       notice.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.vlive.embed-footer"),
+			IconURL: helpers.GetText("plugins.vlive.embed-footer-imageurl"),
+		},
 		Description: fmt.Sprintf("**%s**", notice.Title),
 		Image:       &discordgo.MessageEmbedImage{URL: notice.ImageUrl},
 		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
@@ -758,10 +773,13 @@ func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice
 
 func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, vliveChannel DB_VLive_Channel) {
 	channelEmbed := &discordgo.MessageEmbed{
-		Title:       helpers.GetTextF("plugins.vlive.channel-embed-title-celeb", vliveChannel.Name),
-		URL:         celeb.Url,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
-		Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.vlive.embed-footer")},
+		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-celeb", vliveChannel.Name),
+		URL:       celeb.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: vliveChannel.ProfileImgUrl},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.vlive.embed-footer"),
+			IconURL: helpers.GetText("plugins.vlive.embed-footer-imageurl"),
+		},
 		Description: fmt.Sprintf("%s ...", celeb.Summary),
 		Color:       helpers.GetDiscordColorFromHex(vliveChannel.Color),
 	}
