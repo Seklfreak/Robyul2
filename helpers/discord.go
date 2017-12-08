@@ -11,6 +11,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/Jeffail/gabs"
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
@@ -484,10 +485,52 @@ func RemoveMutePersistency(guildID string, userID string) (err error) {
 	return persistencyRemoveCachedRole(guildID, userID, muteRole.ID)
 }
 
+func RemovePendingUnmutes(guildID string, userID string) (err error) {
+	key := "delayed_tasks"
+	delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
+	if err != nil {
+		return err
+	}
+
+	tasksJson, err := cache.GetMachineryRedisClient().ZRange(key, 0, delayedTasks).Result()
+	if err != nil {
+		return err
+	}
+
+	for _, taskJson := range tasksJson {
+		task, err := gabs.ParseJSON([]byte(taskJson))
+		if err != nil {
+			return err
+		}
+
+		if task.Path("Name").Data().(string) != "unmute_user" {
+			continue
+		}
+
+		unmuteGuildID := task.Path("Args").Index(0).Path("Value").Data().(string)
+		unmuteUserID := task.Path("Args").Index(1).Path("Value").Data().(string)
+
+		if unmuteGuildID != guildID {
+			continue
+		}
+		if unmuteUserID != userID {
+			continue
+		}
+
+		_, err = cache.GetMachineryRedisClient().ZRem(key, taskJson).Result()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func UnmuteUser(guildID string, userID string) (err error) {
 	errRole := RemoveMuteRole(guildID, userID)
 	errDatabase := RemoveMuteDatabase(guildID, userID)
 	errPersistency := RemoveMutePersistency(guildID, userID)
+	errPendingUnmutes := RemovePendingUnmutes(guildID, userID)
 
 	if errRole != nil {
 		return errRole
@@ -497,6 +540,9 @@ func UnmuteUser(guildID string, userID string) (err error) {
 	}
 	if errPersistency != nil {
 		return errPersistency
+	}
+	if errPendingUnmutes != nil {
+		return errPendingUnmutes
 	}
 	return nil
 }
@@ -517,6 +563,57 @@ func UnmuteUserSignature(guildID string, userID string) (signature *tasks.Signat
 	signature.RetryCount = 3
 	signature.OnError = []*tasks.Signature{{Name: "log_error"}}
 	return signature
+}
+
+func AddMuteRole(guildID string, userID string) (err error) {
+	muteRole, err := GetMuteRole(guildID)
+	if err != nil {
+		return err
+	}
+
+	if GetIsInGuild(guildID, userID) {
+		err = cache.GetSession().GuildMemberRoleAdd(guildID, userID, muteRole.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func CreatePendingUnmute(guildID string, userID string, unmuteAt time.Time) (err error) {
+	if unmuteAt.IsZero() || !time.Now().Before(unmuteAt) {
+		return nil
+	}
+
+	timeToUnmuteAt := unmuteAt
+
+	signature := UnmuteUserSignature(guildID, userID)
+	signature.ETA = &timeToUnmuteAt
+
+	_, err = cache.GetMachineryServer().SendTask(signature)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MuteUser(guildID string, userID string, unmuteAt time.Time) (err error) {
+	errRole := AddMuteRole(guildID, userID)
+	errPendingUnmutes := RemovePendingUnmutes(guildID, userID)
+	errCreatePendingUnmute := CreatePendingUnmute(guildID, userID, unmuteAt)
+
+	if errRole != nil {
+		return errRole
+	}
+	if errPendingUnmutes != nil {
+		return errPendingUnmutes
+	}
+	if errCreatePendingUnmute != nil {
+		return errCreatePendingUnmute
+	}
+	return nil
 }
 
 func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (err error) {
