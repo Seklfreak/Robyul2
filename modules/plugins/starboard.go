@@ -302,7 +302,8 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 
 func (s *Starboard) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
 	_, err := helpers.SendComplex(in.ChannelID, *out)
-	helpers.Relax(err)
+	helpers.RelaxMessage(err, in.ChannelID, in.ID)
+	// TODO: handle embed
 
 	return nil
 }

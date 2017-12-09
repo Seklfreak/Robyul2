@@ -149,7 +149,7 @@ func (dm *DM) actionReceive(args []string, in *discordgo.Message, out **discordg
 
 func (dm *DM) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) dmAction {
 	_, err := helpers.SendComplex(in.ChannelID, *out)
-	helpers.Relax(err)
+	helpers.RelaxMessage(err, in.ChannelID, in.ID)
 
 	return nil
 }
