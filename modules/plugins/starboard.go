@@ -16,6 +16,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/helpers/dgwidgets"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
@@ -92,20 +93,25 @@ func (s *Starboard) actionTop(args []string, in *discordgo.Message, out **discor
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
 
-	topEntries, err := s.getTopStarboardEntries(channel.GuildID)
+	topEntries, err := s.getTopStarboardEntries(channel.GuildID, 100)
 	if err != nil {
 		if strings.Contains(err.Error(), "no starboard entries") {
-			*out = s.newMsg(helpers.GetText("plguins.starboard.top-no-entries"))
+			*out = s.newMsg(helpers.GetText("plugins.starboard.top-no-entries"))
 			return s.actionFinish
 		} else {
 			helpers.Relax(err)
 		}
 	}
 
-	embed, err := s.getTopMessagesEmbed(topEntries)
+	pages, err := s.getTopMessagesEmbeds(topEntries, 5, 400)
 	helpers.Relax(err)
-	*out = &discordgo.MessageSend{Embed: embed}
-	return s.actionFinish
+
+	p := dgwidgets.NewPaginator(in.ChannelID)
+	p.Add(pages...)
+	p.SetPageFooters()
+	p.Spawn()
+
+	return nil
 }
 
 func (s *Starboard) actionStarrers(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
@@ -719,22 +725,26 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 	return starrersEmbed
 }
 
-func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discordgo.MessageEmbed, error) {
+func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage, maxCharacters int) (pages []*discordgo.MessageEmbed, err error) {
 	if len(starEntries) <= 0 {
-		return &discordgo.MessageEmbed{}, errors.New("no star entries passed")
+		return pages, errors.New("no star entries passed")
 	}
 
 	guild, err := helpers.GetGuild(starEntries[0].GuildID)
 	if err != nil {
-		return &discordgo.MessageEmbed{}, err
+		return pages, err
 	}
 
 	emoji := s.getEmoji(guild.ID)
+
+	pages = make([]*discordgo.MessageEmbed, 0)
 
 	var content string
 	var authorName string
 	topText := ""
 	i := 1
+	var sinceLastPage int
+	var starrersEmbed *discordgo.MessageEmbed
 	for _, starMessage := range starEntries {
 		author, err := helpers.GetGuildMember(starMessage.GuildID, starMessage.AuthorID)
 		authorName = "N/A"
@@ -746,9 +756,6 @@ func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discor
 		}
 
 		content = starMessage.MessageContent
-		if len(content) > 100 {
-			content = content[0:99] + " ..."
-		}
 		if len(starMessage.MessageAttachmentURLs) > 0 {
 			if content == "" {
 				content = starMessage.MessageAttachmentURLs[0]
@@ -773,17 +780,37 @@ func (s *Starboard) getTopMessagesEmbed(starEntries []models.StarEntry) (*discor
 			firstEmoji = "<:" + firstDiscordEmoji.APIName() + ">"
 		}
 
-		topText += fmt.Sprintf("#%d by %s (%s %s): %s\n",
+		content = fmt.Sprintf("%d. by %s (%s %s): %s\n",
 			i, authorName, humanize.Comma(int64(starMessage.Stars)), firstEmoji, content)
+		if len(content) > maxCharacters {
+			content = content[0:maxCharacters-1] + " ..."
+		}
+		topText += content
 		i++
+		sinceLastPage++
+		if sinceLastPage >= perPage {
+			starrersEmbed = &discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("Top starred messages on %s:", guild.Name),
+				Description: topText,
+			}
+			pages = append(pages, starrersEmbed)
+			topText = ""
+			sinceLastPage = 0
+		}
+	}
+	if topText != "" {
+		starrersEmbed = &discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Top starred messages on %s:", guild.Name),
+			Description: topText,
+		}
+		pages = append(pages, starrersEmbed)
 	}
 
-	starrersEmbed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("Top starred messages on %s:", guild.Name),
-		Description: topText,
-		Color:       helpers.GetDiscordColorFromHex("ffd700"),
+	if len(pages) <= 0 {
+		return pages, errors.New("no star entries given")
 	}
-	return starrersEmbed, nil
+
+	return pages, nil
 }
 
 func (s *Starboard) getStarboardEntry(guildID string, messageID string) (models.StarEntry, error) {
@@ -808,11 +835,11 @@ func (s *Starboard) getStarboardEntry(guildID string, messageID string) (models.
 	return entryBucket, nil
 }
 
-func (s *Starboard) getTopStarboardEntries(guildID string) ([]models.StarEntry, error) {
+func (s *Starboard) getTopStarboardEntries(guildID string, limit int) ([]models.StarEntry, error) {
 	var entryBucket []models.StarEntry
 	listCursor, err := rethink.Table("starboard_entries").Filter(
 		rethink.Row.Field("guild_id").Eq(guildID),
-	).OrderBy(rethink.Desc("stars")).Limit(10).Run(helpers.GetDB())
+	).OrderBy(rethink.Desc("stars")).Limit(limit).Run(helpers.GetDB())
 	if err != nil {
 		return entryBucket, err
 	}
