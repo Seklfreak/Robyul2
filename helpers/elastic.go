@@ -275,9 +275,13 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 		return nil
 	}
 
-	elasticID, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
+	elasticID, oldElasticMessage, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
 	if err != nil {
 		return err
+	}
+
+	if oldElasticMessage.Content[len(oldElasticMessage.Content)-1] == message.Content {
+		return nil
 	}
 
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
@@ -308,7 +312,7 @@ func ElasticDeleteMessage(message *discordgo.Message) error {
 		return nil
 	}
 
-	elasticID, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
+	elasticID, _, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
 	if err != nil {
 		return err
 	}
@@ -485,7 +489,7 @@ func GetMinTimeForInterval(interval string, count int) (minTime time.Time) {
 	return minTime
 }
 
-func getElasticMessage(messageID, channelID, guildID string) (elasticID string, err error) {
+func getElasticMessage(messageID, channelID, guildID string) (elasticID string, message models.ElasticMessage, err error) {
 	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
 	searchResult, err := cache.GetElastic().Search().
 		Index(models.ElasticIndex).
@@ -494,11 +498,11 @@ func getElasticMessage(messageID, channelID, guildID string) (elasticID string, 
 		Sort("CreatedAt", true).
 		Do(context.Background())
 	if err != nil {
-		return "", err
+		return "", message, err
 	}
 
 	if err != nil {
-		return "", err
+		return "", message, err
 	}
 
 	for _, item := range searchResult.Hits.Hits {
@@ -506,18 +510,17 @@ func getElasticMessage(messageID, channelID, guildID string) (elasticID string, 
 			continue
 		}
 
-		var messageToCheck models.ElasticMessage
-		err := json.Unmarshal(*item.Source, &messageToCheck)
-		if err != nil {
-			continue
+		message = UnmarshalElasticMessage(item)
+		if message.MessageID == "" {
+			return "", message, errors.New("unable to get message")
 		}
 
-		if messageToCheck.MessageID == messageID {
-			return item.Id, nil
+		if message.MessageID == messageID {
+			return item.Id, message, nil
 		}
 	}
 
-	return "", errors.New("unable to find elastic message")
+	return "", message, errors.New("unable to find elastic message")
 }
 
 func UnmarshalElasticMessage(item *elastic.SearchHit) (result models.ElasticMessage) {
