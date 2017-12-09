@@ -191,3 +191,7 @@
 [[constraint]]
   name = "github.com/davecgh/go-spew"
   version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/domainr/whois"

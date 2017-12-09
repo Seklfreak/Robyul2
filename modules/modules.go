@@ -72,6 +72,7 @@ var (
 		&plugins.BotStatus{},
 		&plugins.VanityInvite{},
 		&plugins.DiscordMoney{},
+		&plugins.Whois{},
 	}
 
 	// PluginList is the list of active plugins

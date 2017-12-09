@@ -2,97 +2,47 @@ package plugins
 
 import (
 	"strings"
-	"time"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
+	"github.com/domainr/whois"
 )
 
-// WhoIs command
-type WhoIs struct{}
+type Whois struct{}
 
-// Commands for WhoIs
-func (w *WhoIs) Commands() []string {
+func (w *Whois) Commands() []string {
 	return []string{
 		"whois",
 	}
 }
 
-// Init func
-func (w *WhoIs) Init(s *discordgo.Session) {}
+func (w *Whois) Init(session *discordgo.Session) {
+}
 
-// Action will return info about the first @user
-func (w *WhoIs) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	// Check if the msg contains at least 1 mention
-	if len(msg.Mentions) == 0 {
-		helpers.SendMessage(msg.ChannelID, "you need to @mention someone")
+func (w *Whois) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	session.ChannelTyping(msg.ChannelID)
+
+	args := strings.Fields(content)
+
+	if len(args) < 1 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 		return
 	}
 
-	// Get channel info
-	channel, err := helpers.GetChannel(msg.ChannelID)
+	request, err := whois.NewRequest(args[0])
 	if err != nil {
-		cache.GetLogger().WithField("module", "whois").Error(err.Error())
-		return
-	}
-
-	// Guild info
-	guild, err := helpers.GetGuild(channel.GuildID)
-	if err != nil {
-		cache.GetLogger().WithField("module", "whois").Error(err.Error())
-		return
-	}
-
-	// Get the member object for the @user
-	target, err := helpers.GetGuildMember(guild.ID, msg.Mentions[0].ID)
-	if err != nil {
-		cache.GetLogger().WithField("module", "whois").Error(err.Error())
-		return
-	}
-
-	// The roles name of the @user
-	var roles []string
-	for _, grole := range guild.Roles {
-		for _, urole := range target.Roles {
-			if urole == grole.ID {
-				roles = append(roles, grole.Name)
-			}
+		if strings.Contains(err.Error(), "no public zone found for") {
+			helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+			return
 		}
 	}
+	helpers.Relax(err)
 
-	joined, _ := time.Parse(time.RFC3339, target.JoinedAt)
+	response, err := whois.DefaultClient.Fetch(request)
+	helpers.Relax(err)
 
-	helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
-		Title: "Information about " + target.User.Username + "#" + target.User.Discriminator,
-		Thumbnail: &discordgo.MessageEmbedThumbnail{
-			URL: helpers.GetAvatarUrl(target.User),
-		},
-		Color: 0x0FADED,
-		Fields: []*discordgo.MessageEmbedField{
-			{
-				Name:   "Joined server",
-				Value:  joined.Format(time.RFC1123),
-				Inline: true,
-			},
-			{
-				Name:   "Joined Discord",
-				Value:  helpers.GetTimeFromSnowflake(target.User.ID).Format(time.RFC1123),
-				Inline: true,
-			},
-			{
-				Name:   "Avatar link",
-				Value:  helpers.GetAvatarUrl(target.User),
-				Inline: false,
-			},
-			{
-				Name:   "Roles",
-				Value:  strings.Join(roles, ","),
-				Inline: true,
-			},
-		},
-		Footer: &discordgo.MessageEmbedFooter{
-			Text: "UserID: " + target.User.ID,
-		},
-	})
+	for _, page := range helpers.Pagify(string(response.Body), "\n") {
+		_, err = helpers.SendMessage(msg.ChannelID, "```"+page+"```")
+		helpers.Relax(err)
+	}
 }

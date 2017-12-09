@@ -27,7 +27,7 @@ func (d *Dig) Action(command string, content string, msg *discordgo.Message, ses
 	args := strings.Fields(content)
 
 	if len(args) < 2 {
-		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 		return
 	}
 	dnsIp := "8.8.8.8"

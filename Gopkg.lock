@@ -44,10 +44,10 @@
   version = "v1.0.14"
 
 [[projects]]
+  branch = "master"
   name = "github.com/ahmdrz/goinsta"
   packages = [".","response","store","uuid"]
-  revision = "5f6c22a03adcc575b35f7579e16eb7cd68e25eed"
-  version = "1.1"
+  revision = "a69948e67b11dbce9aa073ad3a00f40fbee799a8"
 
 [[projects]]
   branch = "master"
@@ -126,6 +126,12 @@
   packages = ["."]
   revision = "eb56e89ac5088bebb12eef3cb4b293300f43608b"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/domainr/whois"
+  packages = ["."]
+  revision = "d4b5cd0a66fb3d8152694a3c4928d936ce75154a"
 
 [[projects]]
   branch = "master"
@@ -272,6 +278,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/saintfish/chardet"
+  packages = ["."]
+  revision = "3af4cd4741ca4f3eb0c407c034571a6fb0ea529c"
+
+[[projects]]
   name = "github.com/satori/go.uuid"
   packages = ["."]
   revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
@@ -315,6 +327,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/zonedb/zonedb"
+  packages = ["."]
+  revision = "5a8b020be8ec28e8d5107df2396c9e4abecd5c57"
+
+[[projects]]
+  branch = "master"
   name = "go4.org"
   packages = ["reflectutil"]
   revision = "034d17a462f7b2dcd1a4a73553ec5357ff6e6c6e"
@@ -328,7 +346,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["bpf","context","context/ctxhttp","html","html/atom","http2","http2/hpack","idna","internal/iana","internal/socket","internal/timeseries","ipv4","ipv6","lex/httplex","trace"]
+  packages = ["bpf","context","context/ctxhttp","html","html/atom","html/charset","http2","http2/hpack","idna","internal/iana","internal/socket","internal/timeseries","ipv4","ipv6","lex/httplex","trace"]
   revision = "faacc1b5e36e3ff02cbec9661c69ac63dd5a83ad"
 
 [[projects]]
@@ -346,7 +364,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  packages = ["collate","collate/build","encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
   revision = "be25de41fadfae372d6470bda81ca6beb55ef551"
 
 [[projects]]
@@ -430,6 +448,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ce4d2bb007773304ed3170898abe2c108843b40faef0014b4e6cb4090f908913"
+  inputs-digest = "78222a09c926ee0922913f82aae1b93199222c7f9ac3531d2637e4080d7be16d"
   solver-name = "gps-cdcl"
   solver-version = 1
