@@ -21,6 +21,8 @@ type Paginator struct {
 	Loop   bool
 	Widget *Widget
 
+	FooterPrefix string
+
 	DeleteMessageWhenDone   bool
 	DeleteReactionsWhenDone bool
 	Colour                  int
@@ -72,7 +74,7 @@ func (p *Paginator) addHandlers() {
 		}
 	})
 	p.Widget.Handle(NavNumbers, func(w *Widget, r *discordgo.MessageReaction) {
-		if msg, err := w.QueryInput("enter the page number you would like to open", r.UserID, 10*time.Second); err == nil {
+		if msg, err := w.QueryInput("which page would you like to open? <:blobidea:317047867036663809>", r.UserID, 30*time.Second); err == nil {
 			if n, err := strconv.Atoi(msg.Content); err == nil {
 				p.Goto(n - 1)
 				p.Update()
@@ -98,11 +100,8 @@ func (p *Paginator) Spawn() error {
 		// Delete Message when done
 		if p.DeleteMessageWhenDone && p.Widget.Message != nil {
 			cache.GetSession().ChannelMessageDelete(p.Widget.Message.ChannelID, p.Widget.Message.ID)
-		} else if p.ColourWhenDone >= 0 {
-			if page, err := p.Page(); err == nil {
-				page.Color = p.ColourWhenDone
-				p.Update()
-			}
+		} else {
+			p.Update()
 		}
 
 		// Delete reactions when done
@@ -139,7 +138,49 @@ func (p *Paginator) Page() (*discordgo.MessageEmbed, error) {
 		p.Pages[p.Index].Color = p.Colour
 	}
 
-	return p.Pages[p.Index], nil
+	var newTitle, newFooterText, newFooterIconURL string
+	if p.Widget != nil && len(p.Widget.UserWhitelist) >= 1 {
+		author, err := helpers.GetUser(p.Widget.UserWhitelist[0])
+		if err == nil {
+			newTitle += "@" + author.Username
+			if p.Pages[p.Index].Title != "" {
+				newTitle += ": "
+			}
+		}
+	}
+	newTitle += p.Pages[p.Index].Title
+	if p.Pages[p.Index].Footer != nil {
+		if p.Pages[p.Index].Footer.Text != "" {
+			newFooterText += p.Pages[p.Index].Footer.Text + ""
+		}
+		if p.Pages[p.Index].Footer.IconURL != "" {
+			newFooterIconURL = p.Pages[p.Index].Footer.IconURL
+		}
+	}
+	newFooterText += fmt.Sprintf("Page %d out of %d.", p.Index+1, len(p.Pages))
+	if p.running {
+		newFooterText += " Use the arrows below to navigate."
+	}
+
+	pageCopy := *p.Pages[p.Index]
+	if newTitle != "" {
+		pageCopy.Title = newTitle
+	}
+	if pageCopy.Footer == nil {
+		pageCopy.Footer = &discordgo.MessageEmbedFooter{}
+	}
+	if newFooterText != "" {
+		pageCopy.Footer.Text = newFooterText
+	}
+	if newFooterIconURL != "" {
+		pageCopy.Footer.IconURL = newFooterIconURL
+	}
+
+	if !p.running && p.ColourWhenDone >= 0 {
+		pageCopy.Color = p.ColourWhenDone
+	}
+
+	return &pageCopy, nil
 }
 
 // NextPage sets the page index to the next page
@@ -213,18 +254,4 @@ func (p *Paginator) Running() bool {
 	running := p.running
 	p.Unlock()
 	return running
-}
-
-// SetPageFooters sets the footer of each embed to
-// Be its page number out of the total length of the embeds.
-func (p *Paginator) SetPageFooters() {
-	for index, embed := range p.Pages {
-		newFooterText := fmt.Sprintf("Page %d out of %d. Use the arrows below to navigate.", index+1, len(p.Pages))
-		if embed.Footer != nil && embed.Footer.Text != "" {
-			newFooterText = embed.Footer.Text + " " + newFooterText
-		}
-		embed.Footer = &discordgo.MessageEmbedFooter{
-			Text: newFooterText,
-		}
-	}
 }

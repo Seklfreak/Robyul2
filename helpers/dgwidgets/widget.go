@@ -167,7 +167,7 @@ func (w *Widget) Handle(emojiName string, handler WidgetHandler) error {
 //    userID : UserID to get message from
 //    timeout: How long to wait for the user's response
 func (w *Widget) QueryInput(prompt string, userID string, timeout time.Duration) (*discordgo.Message, error) {
-	msg, err := helpers.SendMessage(w.ChannelID, "<@"+userID+">,  "+prompt)
+	msg, err := helpers.SendMessage(w.ChannelID, "<@"+userID+"> "+prompt)
 	if err != nil {
 		return nil, err
 	}

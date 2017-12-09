@@ -108,7 +108,6 @@ func (s *Starboard) actionTop(args []string, in *discordgo.Message, out **discor
 
 	p := dgwidgets.NewPaginator(in.ChannelID, in.Author.ID)
 	p.Add(pages...)
-	p.SetPageFooters()
 	p.Spawn()
 
 	return nil
@@ -791,7 +790,7 @@ func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage
 		sinceLastPage++
 		if sinceLastPage >= perPage {
 			starrersEmbed = &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("Top starred messages on %s:", guild.Name),
+				Title:       fmt.Sprintf("Top starred messages on %s", guild.Name),
 				Description: topText,
 			}
 			pages = append(pages, starrersEmbed)
@@ -801,7 +800,7 @@ func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage
 	}
 	if topText != "" {
 		starrersEmbed = &discordgo.MessageEmbed{
-			Title:       fmt.Sprintf("Top starred messages on %s:", guild.Name),
+			Title:       fmt.Sprintf("Top starred messages on %s", guild.Name),
 			Description: topText,
 		}
 		pages = append(pages, starrersEmbed)
