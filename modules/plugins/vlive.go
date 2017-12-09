@@ -451,7 +451,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			} else if len(vliveChannel.VOD) > 0 {
 				channelEmbed.Fields = append(channelEmbed.Fields, &discordgo.MessageEmbedField{
 					Name:   helpers.GetTextF("plugins.vlive.channel-embed-name-vod", vliveChannel.VOD[0].Date),
-					Value:  fmt.Sprintf("**%s**\n**Plays:** %d\n**Likes:** %d\n%s", vliveChannel.VOD[0].Title, vliveChannel.VOD[0].Plays, vliveChannel.VOD[0].Likes, vliveChannel.VOD[0].Url),
+					Value:  fmt.Sprintf("**%s**\n**Plays:** %s\n**Likes:** %s\n%s", vliveChannel.VOD[0].Title, humanize.Comma(vliveChannel.VOD[0].Plays), humanize.Comma(vliveChannel.VOD[0].Likes), vliveChannel.VOD[0].Url),
 					Inline: false,
 				})
 				channelEmbed.Image = &discordgo.MessageEmbedImage{URL: vliveChannel.VOD[0].Thumbnail}
