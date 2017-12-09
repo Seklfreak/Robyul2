@@ -34,7 +34,7 @@ type Paginator struct {
 // NewPaginator returns a new Paginator
 //    ses      : discordgo session
 //    channelID: channelID to spawn the paginator on
-func NewPaginator(channelID string) *Paginator {
+func NewPaginator(channelID, userID string) *Paginator {
 	p := &Paginator{
 		Pages: []*discordgo.MessageEmbed{},
 		Index: 0,
@@ -43,7 +43,7 @@ func NewPaginator(channelID string) *Paginator {
 		DeleteReactionsWhenDone: true,
 		Colour:                  helpers.GetDiscordColorFromHex("73d016"), // lime green
 		ColourWhenDone:          helpers.GetDiscordColorFromHex("ffb80a"), // orange
-		Widget:                  NewWidget(channelID, nil),
+		Widget:                  NewWidget(channelID, userID, nil),
 	}
 	p.addHandlers()
 

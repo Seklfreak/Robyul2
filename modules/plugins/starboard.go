@@ -106,7 +106,7 @@ func (s *Starboard) actionTop(args []string, in *discordgo.Message, out **discor
 	pages, err := s.getTopMessagesEmbeds(topEntries, 5, 400)
 	helpers.Relax(err)
 
-	p := dgwidgets.NewPaginator(in.ChannelID)
+	p := dgwidgets.NewPaginator(in.ChannelID, in.Author.ID)
 	p.Add(pages...)
 	p.SetPageFooters()
 	p.Spawn()

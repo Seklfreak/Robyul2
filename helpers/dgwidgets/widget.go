@@ -48,7 +48,7 @@ type Widget struct {
 // NewWidget returns a pointer to a Widget object
 //    ses      : discordgo session
 //    channelID: channelID to spawn the widget on
-func NewWidget(channelID string, embed *discordgo.MessageEmbed) *Widget {
+func NewWidget(channelID string, userID string, embed *discordgo.MessageEmbed) *Widget {
 	return &Widget{
 		ChannelID:       channelID,
 		Keys:            []string{},
@@ -57,6 +57,7 @@ func NewWidget(channelID string, embed *discordgo.MessageEmbed) *Widget {
 		DeleteReactions: true,
 		Embed:           embed,
 		Timeout:         time.Minute * 5,
+		UserWhitelist:   []string{userID},
 	}
 }
 
