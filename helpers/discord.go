@@ -987,12 +987,32 @@ func AutoPagify(text string) (pages []string) {
 
 func SendMessage(channelID, content string) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
-	for _, page := range AutoPagify(content) {
-		message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+	if len(content) > 2000 {
+		for _, page := range AutoPagify(content) {
+			message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+			if err != nil {
+				return messages, err
+			}
+			messages = append(messages, message)
+		}
+	} else {
+		message, err = cache.GetSession().ChannelMessageSend(channelID, content)
 		if err != nil {
 			return messages, err
 		}
 		messages = append(messages, message)
+	}
+	return messages, nil
+}
+
+func SendMessageBoxed(channelID, content string) (messages []*discordgo.Message, err error) {
+	var newMessages []*discordgo.Message
+	for _, page := range AutoPagify(content) {
+		newMessages, err = SendMessage(channelID, "```"+page+"```")
+		if err != nil {
+			return messages, err
+		}
+		messages = append(messages, newMessages...)
 	}
 	return messages, nil
 }

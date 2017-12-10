@@ -41,8 +41,6 @@ func (w *Whois) Action(command string, content string, msg *discordgo.Message, s
 	response, err := whois.DefaultClient.Fetch(request)
 	helpers.Relax(err)
 
-	for _, page := range helpers.Pagify(string(response.Body), "\n") {
-		_, err = helpers.SendMessage(msg.ChannelID, "```"+page+"```")
-		helpers.Relax(err)
-	}
+	_, err = helpers.SendMessageBoxed(msg.ChannelID, string(response.Body))
+	helpers.Relax(err)
 }
