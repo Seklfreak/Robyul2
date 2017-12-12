@@ -43,13 +43,6 @@ func (m *WolframAlpha) TypingLoop(channelID string, quitChannel chan int) {
 }
 
 func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	quitChannel := make(chan int)
-	defer func() { quitChannel <- 0 }()
-
-	go m.TypingLoop(msg.ChannelID, quitChannel)
-
-	wolframClient := &wolfram.Client{AppID: helpers.GetConfig().Path("wolframalpha.appid").Data().(string)}
-
 	var err error
 	var res string
 	var imageSearch bool
@@ -60,6 +53,17 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 
 		imageSearch = true
 	}
+
+	if content == "" || content == "img" {
+		return
+	}
+
+	quitChannel := make(chan int)
+	defer func() { quitChannel <- 0 }()
+
+	go m.TypingLoop(msg.ChannelID, quitChannel)
+
+	wolframClient := &wolfram.Client{AppID: helpers.GetConfig().Path("wolframalpha.appid").Data().(string)}
 
 	if !imageSearch {
 		metrics.WolframAlphaRequests.Add(1)
