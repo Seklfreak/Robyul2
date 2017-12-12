@@ -555,12 +555,12 @@ NextKeyword:
 			continue
 		}
 
-		for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```%s```",
+		for _, resultPage := range helpers.Pagify(fmt.Sprintf("```%s```\n:bell: User `%s` mentioned %s in %s on the server `%s`. :arrow_up:",
+			content,
 			pendingNotification.Author.User.Username,
 			keywordsTriggeredText,
 			fmt.Sprintf("<#%s>", channel.ID),
 			guild.Name,
-			content,
 		), "\n") {
 			_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 			if err != nil {
