@@ -255,6 +255,11 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
 			if err != nil {
 				cache.GetLogger().WithField("module", "reactionpolls").Info(fmt.Sprintf("adding message #%s to world state", reaction.MessageID))
 				message, err = session.ChannelMessage(reaction.ChannelID, reaction.MessageID)
+				if err != nil {
+					if errD, ok := err.(*discordgo.RESTError); ok && (errD.Message.Code == discordgo.ErrCodeMissingAccess || errD.Message.Code == discordgo.ErrCodeUnknownMessage) {
+						return
+					}
+				}
 				helpers.Relax(err)
 				err = session.State.MessageAdd(message)
 				helpers.Relax(err)

@@ -104,6 +104,12 @@ func (s *Starboard) actionTop(args []string, in *discordgo.Message, out **discor
 	}
 
 	pages, err := s.getTopMessagesEmbeds(topEntries, 5, 400)
+	if err != nil {
+		if strings.Contains(err.Error(), "no star entries passed") {
+			*out = s.newMsg(helpers.GetText("plugins.starboard.top-no-entries"))
+			return s.actionFinish
+		}
+	}
 	helpers.Relax(err)
 
 	p := dgwidgets.NewPaginator(in.ChannelID, in.Author.ID)
@@ -394,6 +400,11 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 		message, err := cache.GetSession().State.Message(reaction.ChannelID, reaction.MessageID)
 		if err != nil {
 			message, err = cache.GetSession().ChannelMessage(reaction.ChannelID, reaction.MessageID)
+		}
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingAccess {
+				return
+			}
 		}
 		helpers.Relax(err)
 

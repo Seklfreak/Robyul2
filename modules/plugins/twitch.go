@@ -215,7 +215,8 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				entry.TwitchChannelName = targetTwitchChannelName
 				m.setEntry(entry)
 
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del": // [p]twitch delete <id>
@@ -263,20 +264,18 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitch Channels in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err := helpers.SendMessage(msg.ChannelID, resultPage)
-				helpers.Relax(err)
+				_, err = helpers.SendMessage(msg.ChannelID, resultPage)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			}
 		default:
 			if args[0] == "" {
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-				helpers.Relax(err)
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
 			twitchStatus := m.getTwitchStatus(args[0])
 			if twitchStatus.Stream.ID == 0 {
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
-				helpers.Relax(err)
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
 				return
 			} else {
 				twitchChannelEmbed := &discordgo.MessageEmbed{

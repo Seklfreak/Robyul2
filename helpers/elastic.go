@@ -280,7 +280,7 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 		return err
 	}
 
-	if oldElasticMessage.Content[len(oldElasticMessage.Content)-1] == message.Content {
+	if len(oldElasticMessage.Content) > 0 && oldElasticMessage.Content[len(oldElasticMessage.Content)-1] == message.Content {
 		return nil
 	}
 

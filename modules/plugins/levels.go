@@ -401,7 +401,9 @@ func (m *Levels) processExpStackLoop() {
 
 			if expBefore <= 0 || levelBefore != levelAfter {
 				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
-				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Message != "404: Not Found" && errD.Message.Code != discordgo.ErrCodeUnknownMember) {
+				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Message != "404: Not Found" &&
+					errD.Message.Code != discordgo.ErrCodeUnknownMember &&
+					errD.Message.Code != discordgo.ErrCodeMissingAccess) {
 					helpers.RelaxLog(err)
 				}
 			}

@@ -128,7 +128,7 @@ func (h *Handler) actionImageSearch(args []string, in *discordgo.Message, out **
 
 func (h *Handler) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
 	_, err := helpers.SendComplex(in.ChannelID, *out)
-	helpers.Relax(err)
+	helpers.RelaxMessage(err, in.ChannelID, in.ID)
 
 	return nil
 }
