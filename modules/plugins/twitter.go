@@ -8,7 +8,10 @@ import (
 
 	"html"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
@@ -545,6 +548,12 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: tweet.Entities.Media[0].MediaURLHttps}
 	}
 
+	if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
+		channelEmbed.Description += "\n\n`Links:` "
+		for i, mediaUrl := range tweet.ExtendedEntities.Media {
+			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl.MediaURLHttps))
+		}
+	}
 	_, err := helpers.SendComplex(
 		channelID, &discordgo.MessageSend{
 			Content: fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr)),
