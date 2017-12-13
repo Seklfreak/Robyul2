@@ -555,14 +555,8 @@ NextKeyword:
 			continue
 		}
 
-		var notiContent string
-		contentParts := strings.Split(content, "\n")
-		for _, part := range contentParts {
-			notiContent += "`" + part + "`\n"
-		}
-
-		for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: %s:black_small_square: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
-			notiContent,
+		for _, resultPage := range helpers.Pagify(fmt.Sprintf("```%s```:bell: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
+			content,
 			pendingNotification.Author.User.Username,
 			keywordsTriggeredText,
 			fmt.Sprintf("<#%s>", channel.ID),
