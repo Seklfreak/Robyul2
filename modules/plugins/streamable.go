@@ -63,25 +63,29 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 
 	var streamableTitle string
 
-	resp, err := httpClient.Get(sourceUrl)
+	req, err := http.NewRequest("GET", sourceUrl, nil)
 	if err == nil {
-		// try oEmbed title
-		finalURL := resp.Request.URL.String()
+		req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+		resp, _ := httpClient.Do(req)
+		if err == nil {
+			// try oEmbed title
+			finalURL := resp.Request.URL.String()
 
-		oEmbedResult := oEmbedHandler.FindItem(finalURL)
-		if oEmbedResult != nil {
-			oEmbedInfo, err := oEmbedResult.FetchOembed(oembed.Options{URL: sourceUrl})
-			if err == nil {
-				if oEmbedInfo.Status < 300 && oEmbedInfo.Title != "" {
-					streamableTitle = oEmbedInfo.Title
+			oEmbedResult := oEmbedHandler.FindItem(finalURL)
+			if oEmbedResult != nil {
+				oEmbedInfo, err := oEmbedResult.FetchOembed(oembed.Options{URL: sourceUrl})
+				if err == nil {
+					if oEmbedInfo.Status < 300 && oEmbedInfo.Title != "" {
+						streamableTitle = oEmbedInfo.Title
+					}
 				}
 			}
-		}
-		// fallback to html page title
-		if streamableTitle == "" {
-			doc, err := goquery.NewDocumentFromReader(resp.Body)
-			if err == nil {
-				streamableTitle = strings.Trim(doc.Find("title").Text(), "\"")
+			// fallback to html page title
+			if streamableTitle == "" {
+				doc, err := goquery.NewDocumentFromReader(resp.Body)
+				if err == nil {
+					streamableTitle = strings.Trim(doc.Find("title").Text(), "\"")
+				}
 			}
 		}
 	}
