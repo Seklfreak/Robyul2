@@ -674,7 +674,6 @@ func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (
 
 func LogMachineryError(errorMessage string) (err error) {
 	cache.GetLogger().WithField("module", "machinery").Error("Task Failed: ", errorMessage)
-	raven.CaptureError(errors.New(errorMessage), map[string]string{})
 	return err
 }
 
