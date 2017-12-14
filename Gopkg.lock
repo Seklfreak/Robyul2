@@ -45,6 +45,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/Seklfreak/go-oembed"
+  packages = ["oembed"]
+  revision = "c450d75046090e274479bff335e444d1b4dbe52d"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ahmdrz/goinsta"
   packages = [".","response","store","uuid"]
   revision = "a69948e67b11dbce9aa073ad3a00f40fbee799a8"
@@ -448,6 +454,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "78222a09c926ee0922913f82aae1b93199222c7f9ac3531d2637e4080d7be16d"
+  inputs-digest = "49ab331cd89c0b2c808605a08b29a4ac5901a8ee193be8f8e5857851ea54f88f"
   solver-name = "gps-cdcl"
   solver-version = 1

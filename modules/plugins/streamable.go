@@ -9,8 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"io/ioutil"
+
 	"github.com/Jeffail/gabs"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/go-oembed/oembed"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -26,8 +30,17 @@ func (s *Streamable) Commands() []string {
 	}
 }
 
-func (s *Streamable) Init(session *discordgo.Session) {
+var (
+	oEmbedHandler *oembed.Oembed
+)
 
+func (s *Streamable) Init(session *discordgo.Session) {
+	data, err := ioutil.ReadFile(helpers.GetConfig().Path("assets_folder").Data().(string) + "providers.json")
+	helpers.Relax(err)
+
+	oEmbedHandler = oembed.NewOembed()
+	err = oEmbedHandler.ParseProviders(bytes.NewReader(data))
+	helpers.Relax(err)
 }
 
 func (s *Streamable) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) { // [p]streamable [<link>] or attachment
@@ -46,15 +59,45 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 		sourceUrl = msg.Attachments[0].URL
 	}
 
-	createStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("import?url=%s&title=%s", url.QueryEscape(sourceUrl), url.QueryEscape(sourceUrl)))
+	httpClient := http.Client{Timeout: time.Second * 10}
+
+	var streamableTitle string
+
+	resp, err := httpClient.Get(sourceUrl)
+	if err == nil {
+		// try oEmbed title
+		finalURL := resp.Request.URL.String()
+
+		oEmbedResult := oEmbedHandler.FindItem(finalURL)
+		if oEmbedResult != nil {
+			oEmbedInfo, err := oEmbedResult.FetchOembed(oembed.Options{URL: sourceUrl})
+			if err == nil {
+				if oEmbedInfo.Status < 300 && oEmbedInfo.Title != "" {
+					streamableTitle = oEmbedInfo.Title
+				}
+			}
+		}
+		// fallback to html page title
+		if streamableTitle == "" {
+			doc, err := goquery.NewDocumentFromReader(resp.Body)
+			if err == nil {
+				streamableTitle = strings.Trim(doc.Find("title").Text(), "\"")
+			}
+		}
+	}
+
+	if streamableTitle == "" {
+		streamableTitle = sourceUrl
+	} else {
+		streamableTitle += "\n( " + sourceUrl + " )"
+	}
+
+	createStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("import?url=%s&title=%s", url.QueryEscape(sourceUrl), url.QueryEscape(streamableTitle)))
 	request, err := http.NewRequest("GET", createStreamableEndpoint, nil)
 	helpers.Relax(err)
 	request.Header.Add("user-agent", helpers.DEFAULT_UA)
 	request.SetBasicAuth(helpers.GetConfig().Path("streamable.username").Data().(string),
 		helpers.GetConfig().Path("streamable.password").Data().(string))
-	httpClient := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}
 	response, err := httpClient.Do(request)
 	helpers.Relax(err)
 	defer response.Body.Close()

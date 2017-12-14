@@ -195,3 +195,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/domainr/whois"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/Seklfreak/go-oembed"
