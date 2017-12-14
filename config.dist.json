@@ -5,7 +5,7 @@
   "logging": {
     "jsonfile": "",
     "logzio_token": "",
-    "webhook": ""
+    "discord_webhook": ""
   },
   "cache_folder": "",
   "assets_folder": "",

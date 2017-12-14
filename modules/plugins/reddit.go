@@ -161,6 +161,10 @@ func (r *Reddit) checkSubredditLoop() {
 			}
 			time.Sleep(2 * time.Second)
 		}
+
+		if len(entries) <= 10 {
+			time.Sleep(time.Second * 60)
+		}
 	}
 }
 
