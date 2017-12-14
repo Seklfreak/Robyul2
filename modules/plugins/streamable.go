@@ -46,7 +46,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 		sourceUrl = msg.Attachments[0].URL
 	}
 
-	createStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("import?url=%s", url.QueryEscape(sourceUrl)))
+	createStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("import?url=%s&title=%s", url.QueryEscape(sourceUrl), url.QueryEscape(sourceUrl)))
 	request, err := http.NewRequest("GET", createStreamableEndpoint, nil)
 	helpers.Relax(err)
 	request.Header.Add("user-agent", helpers.DEFAULT_UA)
