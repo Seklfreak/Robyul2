@@ -198,4 +198,4 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/Seklfreak/go-oembed"
+  name = "github.com/dyatlov/go-oembed"

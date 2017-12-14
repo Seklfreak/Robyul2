@@ -14,8 +14,8 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/Seklfreak/go-oembed/oembed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dyatlov/go-oembed/oembed"
 )
 
 const (
