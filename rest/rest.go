@@ -1193,8 +1193,6 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			Embeds:         m.Embeds,
 			Deleted:        m.Deleted,
 		})
-
-		sortValues = item.Sort
 	}
 
 	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
@@ -1237,8 +1235,6 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			Embeds:         m.Embeds,
 			Deleted:        m.Deleted,
 		}}, result...)
-
-		sortValues = item.Sort
 	}
 	response.WriteEntity(result)
 }
