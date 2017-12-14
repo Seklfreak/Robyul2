@@ -23,7 +23,8 @@ var (
 )
 
 const (
-	GlobalKeywordsLimit = 3
+	GlobalKeywordsLimit                  = 3
+	UserConfigNotificationsLayoutModeKey = "notifications:layout-mode"
 )
 
 type DB_IgnoredChannel struct {
@@ -285,6 +286,29 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 					go m.refreshNotificationSettingsCache()
 				})
 			}
+		case "toggle-mode", "toggle-modes":
+			session.ChannelTyping(msg.ChannelID)
+
+			var newValue int
+			var message string
+
+			switch helpers.GetUserConfigInt(msg.Author.ID, UserConfigNotificationsLayoutModeKey, 1) {
+			case 2:
+				newValue = 1
+				message = helpers.GetTextF("plugins.notifications.mode-1")
+				break
+			default:
+				newValue = 2
+				message = helpers.GetTextF("plugins.notifications.mode-2")
+				break
+			}
+
+			err := helpers.SetUserConfigInt(msg.Author.ID, UserConfigNotificationsLayoutModeKey, newValue)
+			helpers.Relax(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, message)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			break
 		}
 	}
 
@@ -555,18 +579,37 @@ NextKeyword:
 			continue
 		}
 
-		for _, resultPage := range helpers.Pagify(fmt.Sprintf("```%s```:bell: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
-			content,
-			pendingNotification.Author.User.Username,
-			keywordsTriggeredText,
-			fmt.Sprintf("<#%s>", channel.ID),
-			guild.Name,
-		), "\n") {
-			_, err := helpers.SendMessage(dmChannel.ID, resultPage)
-			if err != nil {
-				cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
-				continue
+		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
+		case 2:
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```%s```:bell: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
+				content,
+				pendingNotification.Author.User.Username,
+				keywordsTriggeredText,
+				fmt.Sprintf("<#%s>", channel.ID),
+				guild.Name,
+			), "\n") {
+				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
+				if err != nil {
+					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
+					continue
+				}
 			}
+			break
+		default:
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```%s```",
+				pendingNotification.Author.User.Username,
+				keywordsTriggeredText,
+				fmt.Sprintf("<#%s>", channel.ID),
+				guild.Name,
+				content,
+			), "\n") {
+				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
+				if err != nil {
+					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
+					continue
+				}
+			}
+			break
 		}
 		metrics.KeywordNotificationsSentCount.Add(1)
 	}

@@ -50,15 +50,16 @@ func SetBotConfig(key string, value interface{}) (err error) {
 
 	entry, err := getBotConfigEntry(key)
 	if err != nil {
-		cache.GetLogger().WithField("Module", "bot_config").Infof("Creating Bot Config Entry: %s Value: %s", key, value)
+		cache.GetLogger().WithField("Module", "bot_config").Infof("Creating Bot Config Entry: %s Value: %#v", key, value)
 		return createBotConfigEntry(key, b)
 	}
 	entry.Value = b
 	entry.LastChanged = time.Now()
-	cache.GetLogger().WithField("Module", "bot_config").Infof("Updating Bot Config Entry: %s Value: %s", key, value)
+	cache.GetLogger().WithField("Module", "bot_config").Infof("Updating Bot Config Entry: %s Value: %#v", key, value)
 	return updateBotConfigEntry(entry)
 }
 
+// TODO: cache
 func GetBotConfig(key string, value interface{}) (err error) {
 	entry, err := getBotConfigEntry(key)
 	if err != nil {

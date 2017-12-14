@@ -53,6 +53,7 @@ var migrations = []helpers.Callback{
 	m41_create_table_bot_status,
 	m42_create_table_vanity_invites,
 	m43_create_elastic_vanityinvite_click_index,
+	m44_create_table_user_config,
 }
 
 // Run executes all registered migrations

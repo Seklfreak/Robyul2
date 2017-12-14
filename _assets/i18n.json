@@ -660,7 +660,9 @@
       "ignore-channel-remove-success": "I will start to look in <#%s> for keywords again. <:blobnomouth:317045295286583296>",
       "ignoredchannels-list-no-keywords-error": "There are currently no ignored channels on this server.",
       "keyword-add-error-duplicate": "<@%s> I'm already notifying you about this keyword. <:blobthinking:317028940885524490>",
-      "keyword-add-global-too-many": "<@%s> Sorry, but you can't have more than %d global notifications. <:blobweary:317036265071575050>"
+      "keyword-add-global-too-many": "<@%s> Sorry, but you can't have more than %d global notifications. <:blobweary:317036265071575050>",
+      "mode-1": "Your notifications will sent to you in the following format now: `content after title`.",
+      "mode-2": "Your notifications will sent to you in the following format now: `content before title`."
     },
     "stats": {
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
