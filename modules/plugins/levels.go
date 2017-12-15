@@ -423,11 +423,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		if len(args) <= 0 {
 			if time.Since(userData.LastRepped).Hours() < 12 {
 				timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
-				_, err := helpers.SendMessage(msg.ChannelID,
-					helpers.GetTextF("plugins.levels.rep-next-rep",
-						int(math.Floor(timeUntil.Hours())),
-						int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
-				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				if timeUntil.Minutes() < 1 {
+					helpers.SendMessage(msg.ChannelID,
+						helpers.GetTextF("plugins.levels.rep-next-rep-seconds", int(math.Floor(timeUntil.Seconds()))))
+				} else {
+					helpers.SendMessage(msg.ChannelID,
+						helpers.GetTextF("plugins.levels.rep-next-rep",
+							int(math.Floor(timeUntil.Hours())),
+							int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
+				}
 			} else {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.rep-target"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -437,11 +441,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 		if time.Since(userData.LastRepped).Hours() < 12 {
 			timeUntil := time.Until(userData.LastRepped.Add(time.Hour * 12))
-			_, err := helpers.SendMessage(msg.ChannelID,
-				helpers.GetTextF("plugins.levels.rep-error-timelimit",
-					int(math.Floor(timeUntil.Hours())),
-					int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
-			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			if timeUntil.Minutes() < 1 {
+				helpers.SendMessage(msg.ChannelID,
+					helpers.GetTextF("plugins.levels.rep-error-timelimit-seconds", int(math.Floor(timeUntil.Seconds()))))
+			} else {
+				helpers.SendMessage(msg.ChannelID,
+					helpers.GetTextF("plugins.levels.rep-error-timelimit",
+						int(math.Floor(timeUntil.Hours())),
+						int(math.Floor(timeUntil.Minutes()))-(int(math.Floor(timeUntil.Hours()))*60)))
+			}
 			return
 		}
 
