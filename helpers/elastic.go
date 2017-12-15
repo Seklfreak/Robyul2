@@ -292,6 +292,7 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 		Upsert(map[string]interface{}{"newContent": 0}).
 		Do(context.Background())
 	if err != nil {
+		cache.GetLogger().WithField("module", "elastic").Errorf("failed to update message, elasticID: %s, newContent: %s, error: %s", elasticID, message.Content, err.Error())
 		return err
 	}
 

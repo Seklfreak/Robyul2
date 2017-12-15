@@ -962,9 +962,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		if len(args) >= 1 && args[0] != "" {
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if err != nil {
-				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == 10013 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				if errD, ok := err.(*discordgo.RESTError); (ok && errD.Message.Code == discordgo.ErrCodeUnknownUser) || strings.Contains(err.Error(), "user not found") {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.user-not-found"))
 					return
 				} else {
 					helpers.Relax(err)

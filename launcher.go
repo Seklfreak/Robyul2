@@ -342,7 +342,7 @@ func main() {
 		err = worker.Launch()
 		cache.RemoveMachineryActiveWorker(worker)
 		if err != nil {
-			if !strings.Contains(err.Error(), "Signal received: interrupt") {
+			if !strings.Contains(err.Error(), "Signal received: interrupt") && !strings.Contains(err.Error(), "errorWorker quit gracefully") {
 				raven.CaptureErrorAndWait(err, nil)
 				panic(err)
 			}

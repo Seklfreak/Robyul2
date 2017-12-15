@@ -818,7 +818,7 @@ func GetUserFromMention(mention string) (*discordgo.User, error) {
 	if len(result) == 4 {
 		return GetUser(result[2])
 	} else {
-		return &discordgo.User{}, errors.New("User not found.")
+		return &discordgo.User{}, errors.New("user not found")
 	}
 }
 
