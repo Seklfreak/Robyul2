@@ -15,6 +15,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/dustin/go-humanize"
@@ -551,7 +552,19 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 	if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
 		channelEmbed.Description += "\n\n`Links:` "
 		for i, mediaUrl := range tweet.ExtendedEntities.Media {
-			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl.MediaURLHttps))
+			switch mediaUrl.Type {
+			case "video", "animated_gif":
+				spew.Dump(mediaUrl)
+				if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
+				} else {
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl.DisplayURL))
+				}
+				break
+			default:
+				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl.MediaURLHttps))
+				break
+			}
 		}
 	}
 	_, err := helpers.SendComplex(
@@ -562,6 +575,18 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 	if err != nil {
 		cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.ID, channelID, err))
 	}
+}
+
+func (m *Twitter) bestVideoVariant(videoVariants []twitter.VideoVariant) (bestVariant twitter.VideoVariant) {
+	for _, videoVariant := range videoVariants {
+		if videoVariant.ContentType == "application/x-mpegURL" {
+			continue
+		}
+		if videoVariant.Bitrate >= bestVariant.Bitrate {
+			bestVariant = videoVariant
+		}
+	}
+	return bestVariant
 }
 
 func (m *Twitter) getEntryBy(key string, id string) DB_Twitter_Entry {

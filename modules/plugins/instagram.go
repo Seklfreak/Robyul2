@@ -235,7 +235,6 @@ func (m *Instagram) Init(session *discordgo.Session) {
 		"logged in to instagram as @%s",
 		instagramClient.Informations.Username,
 	)
-	// defer instagramClient.Logout() TODO
 	storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
 	helpers.Relax(err)
 	err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
