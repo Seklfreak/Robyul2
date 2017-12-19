@@ -284,6 +284,10 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 		return nil
 	}
 
+	if len(oldElasticMessage.Content) >= 10 {
+		return nil
+	}
+
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
 		Script(elastic.
 			NewScript("ctx._source.Content.add(params.newContent)").
