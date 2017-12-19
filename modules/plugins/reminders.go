@@ -67,9 +67,14 @@ func (r *Reminders) Init(session *discordgo.Session) {
 						dmChannel, err := session.UserChannelCreate(reminders.UserID)
 						helpers.Relax(err)
 
+						content := ":alarm_clock: You wanted me to remind you about this:\n" + "```\u200B" + reminder.Message + "```"
+						if reminder.Message == "" {
+							content = ":alarm_clock: You wanted me to remind you about something, but you didn't tell me about what. <:blobthinking:317028940885524490>"
+						}
+
 						helpers.SendMessage(
 							dmChannel.ID,
-							":alarm_clock: You wanted me to remind you about this:\n"+"```"+reminder.Message+"```",
+							content,
 						)
 
 						reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx+1:]...)
@@ -92,6 +97,8 @@ func (r *Reminders) Init(session *discordgo.Session) {
 func (r *Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	switch command {
 	case "rm", "remind", "remindme":
+		session.ChannelTyping(msg.ChannelID)
+
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
 
@@ -122,6 +129,8 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		break
 
 	case "rms", "reminders": // TODO: better interface
+		session.ChannelTyping(msg.ChannelID)
+
 		reminders := getReminders(msg.Author.ID)
 		var embedFields []*discordgo.MessageEmbedField
 
