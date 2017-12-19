@@ -93,7 +93,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	if streamableTitle == "" {
 		streamableTitle = sourceUrl
 	} else {
-		streamableTitle += "\n( " + sourceUrl + " )"
+		streamableTitle += "\n" + sourceUrl
 	}
 
 	createStreamableEndpoint := fmt.Sprintf(streamableApiBaseUrl, fmt.Sprintf("import?url=%s&title=%s", url.QueryEscape(sourceUrl), url.QueryEscape(streamableTitle)))
