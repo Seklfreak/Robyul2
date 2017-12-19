@@ -8,16 +8,16 @@ import (
 
 const (
 	// How many keys a bucket may contain when created
-	BUCKET_INITIAL_FILL = 16
+	BUCKET_INITIAL_FILL = 64
 
 	// The maximum amount of keys a user may possess
-	BUCKET_UPPER_BOUND = 32
+	BUCKET_UPPER_BOUND = 64
 
 	// How often new keys drip into the buckets
 	DROP_INTERVAL = 10 * time.Second
 
 	// How many keys may drop at a time
-	DROP_SIZE = 1
+	DROP_SIZE = 3
 )
 
 // Global pointer to a container instance
