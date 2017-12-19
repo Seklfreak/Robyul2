@@ -7,7 +7,6 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
@@ -208,34 +207,14 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 	} else {
 		helpers.Relax(err)
 	}
-	allMembers := make([]*discordgo.Member, 0)
-	for _, guildMember := range guild.Members {
-		if guildMember.JoinedAt == "" {
-			guildMember, err = helpers.GetGuildMember(member.GuildID, member.User.ID)
-			if err == nil && guildMember.JoinedAt != "" {
-				allMembers = append(allMembers, guildMember)
-			}
-		} else {
-			allMembers = append(allMembers, guildMember)
-		}
-	}
-	slice.Sort(allMembers[:], func(i, j int) bool {
-		if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
-			return false
-		}
-
-		iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
-		helpers.Relax(err)
-		jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
-		helpers.Relax(err)
-		return iMemberTime.Before(jMemberTime)
-	})
 
 	userNumber := -1
-	for i, sortedMember := range allMembers[:] {
-		if sortedMember.User.ID == member.User.ID {
-			userNumber = i + 1
-			break
+	if guild != nil {
+		if guild.Members != nil {
+			userNumber = len(guild.Members)
+		}
+		if guild.MemberCount > userNumber {
+			userNumber = guild.MemberCount
 		}
 	}
 

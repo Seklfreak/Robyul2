@@ -3380,7 +3380,7 @@ func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.S
 
 		err := m.applyLevelsRoles(member.GuildID, member.User.ID, m.GetLevelForUser(member.User.ID, member.GuildID))
 		if err != nil {
-			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeUnknownMember {
+			if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMember && errD.Message.Code != discordgo.ErrCodeMissingAccess) {
 				helpers.RelaxLog(err)
 			}
 		}
