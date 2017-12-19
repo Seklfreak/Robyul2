@@ -581,6 +581,20 @@ func AddMuteRole(guildID string, userID string) (err error) {
 	return nil
 }
 
+func AddMutePersistency(guildID, userID string) (err error) {
+	muteRole, err := GetMuteRole(guildID)
+	if err != nil {
+		return err
+	}
+
+	err = persistencyAddCachedRole(guildID, userID, muteRole.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func CreatePendingUnmute(guildID string, userID string, unmuteAt time.Time) (err error) {
 	if unmuteAt.IsZero() || !time.Now().Before(unmuteAt) {
 		return nil
@@ -601,11 +615,15 @@ func CreatePendingUnmute(guildID string, userID string, unmuteAt time.Time) (err
 
 func MuteUser(guildID string, userID string, unmuteAt time.Time) (err error) {
 	errRole := AddMuteRole(guildID, userID)
+	errAddMutePersistency := AddMutePersistency(guildID, userID)
 	errPendingUnmutes := RemovePendingUnmutes(guildID, userID)
 	errCreatePendingUnmute := CreatePendingUnmute(guildID, userID, unmuteAt)
 
 	if errRole != nil {
 		return errRole
+	}
+	if errAddMutePersistency != nil {
+		return errAddMutePersistency
 	}
 	if errPendingUnmutes != nil {
 		return errPendingUnmutes
@@ -614,6 +632,82 @@ func MuteUser(guildID string, userID string, unmuteAt time.Time) (err error) {
 		return errCreatePendingUnmute
 	}
 	return nil
+}
+
+func persistencyAddCachedRole(GuildID string, UserID string, roleID string) (err error) {
+	key := "robyul2-discord:persistency:" + GuildID + ":" + UserID + ":roles"
+	var redisRoleIDs []string
+	var dbRoles models.PersistencyRolesEntry
+
+	// add to db
+	listCursor, _ := rethink.Table(models.PersistencyRolesTable).Filter(
+		rethink.And(
+			rethink.Row.Field("guild_id").Eq(GuildID),
+			rethink.Row.Field("user_id").Eq(UserID),
+		),
+	).Run(GetDB())
+	defer listCursor.Close()
+	listCursor.One(&dbRoles)
+
+	alreadyInDbRoles := false
+	for _, dbRoleID := range dbRoles.Roles {
+		if dbRoleID == roleID {
+			alreadyInDbRoles = true
+		}
+	}
+
+	if !alreadyInDbRoles {
+		dbRoles.Roles = append(dbRoles.Roles, roleID)
+	}
+
+	if dbRoles.ID != "" {
+		// update
+		_, err = rethink.Table(models.PersistencyRolesTable).Update(dbRoles).Run(GetDB())
+		if err != nil {
+			return err
+		}
+	} else {
+		// insert
+		dbRoles.GuildID = GuildID
+		dbRoles.UserID = UserID
+
+		insert := rethink.Table(models.PersistencyRolesTable).Insert(dbRoles)
+		_, err = insert.RunWrite(GetDB())
+	}
+
+	// add to redis
+	marshalled, err := cache.GetRedisClient().Get(key).Bytes()
+	if err != nil {
+		if strings.Contains(err.Error(), "redis: nil") {
+			return nil
+		}
+		return err
+	}
+
+	err = msgpack.Unmarshal(marshalled, &redisRoleIDs)
+	if err != nil {
+		return err
+	}
+
+	alreadyInRedisRoles := false
+	for _, redisRoleID := range redisRoleIDs {
+		if redisRoleID == roleID {
+			alreadyInRedisRoles = true
+		}
+	}
+
+	if !alreadyInRedisRoles {
+		redisRoleIDs = append(redisRoleIDs, roleID)
+	}
+
+	marshalled, err = msgpack.Marshal(redisRoleIDs)
+	if err != nil {
+		return
+	}
+
+	err = cache.GetRedisClient().Set(key, marshalled, 0).Err()
+
+	return err
 }
 
 func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (err error) {
