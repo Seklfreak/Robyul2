@@ -1204,8 +1204,9 @@ func TruncateEmbed(embed *discordgo.MessageEmbed) (result *discordgo.MessageEmbe
 		if len(field.Name) > 256 {
 			field.Name = field.Name[0:255] + "…"
 		}
-		if len(field.Value) > 2048 {
-			field.Value = field.Value[0:2048] + "…"
+		// TODO: better cutoff (at commas and stuff)
+		if len(field.Value) > 1024 {
+			field.Value = field.Value[0:1023] + "…"
 		}
 		newFields = append(newFields, field)
 		if i >= 25-1 {
