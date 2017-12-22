@@ -556,13 +556,13 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 			case "video", "animated_gif":
 				spew.Dump(mediaUrl)
 				if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
-					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterMediaUrl(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
 				} else {
-					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl.DisplayURL))
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterMediaUrl(mediaUrl.DisplayURL))
 				}
 				break
 			default:
-				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl.MediaURLHttps))
+				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterMediaUrl(mediaUrl.MediaURLHttps))
 				break
 			}
 		}
@@ -587,6 +587,10 @@ func (m *Twitter) bestVideoVariant(videoVariants []twitter.VideoVariant) (bestVa
 		}
 	}
 	return bestVariant
+}
+
+func (t *Twitter) escapeTwitterMediaUrl(input string) (result string) {
+	return strings.Replace(input, "_", "\\_", -1)
 }
 
 func (m *Twitter) getEntryBy(key string, id string) DB_Twitter_Entry {
