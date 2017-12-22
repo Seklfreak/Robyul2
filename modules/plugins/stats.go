@@ -315,19 +315,16 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			ownerText = fmt.Sprintf("%s#%s ~ %s", owner.Username, owner.Discriminator, member.Nick)
 		}
 
-		emoteText := "None"
-		emoteN := 0
-		for _, emote := range guild.Emojis {
-			if emoteN == 0 {
-				emoteText = fmt.Sprintf("`:%s:`", emote.Name)
-			} else {
-
-				emoteText += fmt.Sprintf(", `:%s:`", emote.Name)
+		emoteText := "_None_"
+		if len(guild.Emojis) > 0 {
+			emoteText = fmt.Sprintf("(%d in Total) ", len(guild.Emojis))
+			for i, emote := range guild.Emojis {
+				if i > 0 {
+					emoteText += ", "
+				}
+				emoteText += fmt.Sprintf("`:%s:`", emote.Name)
+				//emoteText += fmt.Sprintf("<:%s>", emote.APIName())
 			}
-			emoteN += 1
-		}
-		if emoteText != "None" {
-			emoteText += fmt.Sprintf(" (%d in Total)", emoteN)
 		}
 
 		numberOfRoles := 0
@@ -1017,7 +1014,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 
-		numberOfPages := int(math.Ceil(float64(len(guild.Emojis)) / float64(9)))
+		numberOfPages := int(math.Ceil(float64(len(guild.Emojis)) / float64(12)))
 		footerAdditionalText := ""
 		if numberOfPages > 1 {
 			footerAdditionalText += " Click on the numbers below to change the page."
@@ -1695,7 +1692,7 @@ func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author 
 		pageText = fmt.Sprintf(" | Page %d of %d", pageN, maxPagesN)
 	}
 	reactionEmbed.Title = helpers.GetTextF("plugins.stats.reaction-embed-title", author.Username, guild.Name) + pageText
-	startEmoteN := (pageN - 1) * 9
+	startEmoteN := (pageN - 1) * 12
 	i := startEmoteN
 	for {
 		if i < len(guild.Emojis) {
@@ -1706,7 +1703,7 @@ func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author 
 			})
 		}
 		i++
-		if i >= startEmoteN+9 {
+		if i >= startEmoteN+12 {
 			break
 		}
 	}
