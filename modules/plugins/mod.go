@@ -1395,7 +1395,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						if settings.InspectTriggersEnabled.UserJoins {
 							enabledEmote = "✔"
 						}
-						chooseEmbed.Description += fmt.Sprintf("%s %s Account joins this sever. Triggers on every join.\n",
+						chooseEmbed.Description += fmt.Sprintf("%s %s Account joins this server. Triggers on every join.\n",
 							emojis.From("9"), enabledEmote)
 
 						if emotesLocked == true {

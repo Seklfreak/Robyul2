@@ -1016,6 +1016,15 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		numberOfPages := int(math.Ceil(float64(len(guild.Emojis)) / float64(12)))
 		footerAdditionalText := ""
+		numberOfAnimatedEmojis := 0
+		for _, emoji := range guild.Emojis {
+			if emoji.Animated {
+				numberOfAnimatedEmojis++
+			}
+		}
+		if numberOfAnimatedEmojis > 0 {
+			footerAdditionalText += fmt.Sprintf(" %d out of these are animated.", numberOfAnimatedEmojis)
+		}
 		if numberOfPages > 1 {
 			footerAdditionalText += " Click on the numbers below to change the page."
 		}
@@ -1037,6 +1046,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		reactionsAdded := 0
 		if numberOfPages > 1 {
 			go func() {
+				defer helpers.Recover()
+
 				for {
 					err = session.MessageReactionAdd(msg.ChannelID, reactionEmbedMessage.ID, emojis.From(strconv.Itoa(reactionsAdded+1)))
 					helpers.Relax(err)
@@ -1694,11 +1705,16 @@ func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author 
 	reactionEmbed.Title = helpers.GetTextF("plugins.stats.reaction-embed-title", author.Username, guild.Name) + pageText
 	startEmoteN := (pageN - 1) * 12
 	i := startEmoteN
+	var value string
 	for {
 		if i < len(guild.Emojis) {
+			value = fmt.Sprintf("<:%s>", guild.Emojis[i].APIName())
+			if guild.Emojis[i].Animated {
+				value = fmt.Sprintf("<a:%s>", guild.Emojis[i].APIName())
+			}
 			reactionEmbed.Fields = append(reactionEmbed.Fields, &discordgo.MessageEmbedField{
 				Name:   fmt.Sprintf("`:%s:`", guild.Emojis[i].Name),
-				Value:  fmt.Sprintf("<:%s>", guild.Emojis[i].APIName()),
+				Value:  value,
 				Inline: true,
 			})
 		}
