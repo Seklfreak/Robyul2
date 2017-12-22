@@ -67,13 +67,13 @@
     "prefix": {
       "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Robyul set prefix ?`",
       "is": [
-        "The prefix is `%s` <:googlesmile:317031693951434752>",
-        "Last time I checked it was `%s` <:blobwink:317030948577476608>",
+        "The prefix is `%s` <a:ablobsmile:393869335312990209>",
+        "Last time I checked it was `%s` <a:ablobwink:393869333232877569>",
         "iirc it's `%s` <:blobthinking:317028940885524490>"
       ],
       "saved": [
         "Ok I'll try to remember `%s` <:blobsmilesweat2:317031354405748747>",
-        "Ok the prefix is now `%s` <:googlesmile:317031693951434752>",
+        "Ok the prefix is now `%s` <a:ablobsmile:393869335312990209>",
         "Ok it's now `%s` <:blobokhand:317032017164238848>"
       ]
     },
@@ -82,14 +82,14 @@
     },
     "help": [
       "<@%s> Check out <https://robyul.chat/commands/%s>!",
-      "<@%s> It's at <https://robyul.chat/commands/%s>! <:googlesmile:317031693951434752>"
+      "<@%s> It's at <https://robyul.chat/commands/%s>! <a:ablobsmile:393869335312990209>"
     ],
     "check-your-dms": "<@%s> Please check your DMs. <:blobeyes:317029938568101890>"
   },
   "dm": {
     "help": [
       "Check out <https://robyul.chat/commands>!",
-      "It's at <https://robyul.chat/commands>! <:googlesmile:317031693951434752>"
+      "It's at <https://robyul.chat/commands>! <a:ablobsmile:393869335312990209>"
     ],
     "invite": "To get Robyul for your server please join the Robyul Discord Server and contact Staff.\nhttps://discord.gg/s5qZvUV"
   },
@@ -592,7 +592,7 @@
       "role-added": [
         "I added the Role for you! <:blobsalute:317043033004703744>",
         "I added the Role for you! <:blobthumbsup:317043177028714497>",
-        "I added the Role for you! <:blobblush:317043283916226562>",
+        "I added the Role for you! <a:ablobsmile:393869335312990209>",
         "I added the Role for you! <:blobokhand:317032017164238848>",
         "I added the Role for you! <:blobhighfive:317043673047236609>",
         "I added the Role for you! :sparkles:"
@@ -704,8 +704,12 @@
       "profile-bio-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
       "rep-error-self": "You can't rep yourself! <:blobeyes:317029938568101890>",
       "rep-error-bot": "You can't rep bots! <:robyulblush:327206930437373952>",
-      "rep-error-session": "I love you too, but please rep a human instead! <:blobsnuggle:333989876695302144>",
-      "rep-success": "I gave %s a reputation point! <:blobhighfive:317043673047236609>",
+      "rep-error-session": "I love you too, but please rep a human instead! <a:ablobkiss:393869334318940160> ",
+      "rep-success": [
+        "I gave %s a reputation point! <:blobhighfive:317043673047236609>",
+        "I gave %s a reputation point! <a:ablobsmile:393869335312990209>",
+        "I gave %s a reputation point! <a:ablobsunglasses:393869335657054210>"
+      ],
       "no-stats-available-yet": "No stats available yet, please try again later! <:googlenerd:317030369205682186>",
       "create-badge-error-duplicate": "There is already a badge like that on this server (or a global badge)! <:googlenerd:317030369205682186>",
       "create-badge-error-too-many": "You already got enough badges on this server. <:blobsmilesweat2:317031354405748747>\nIf you really feel like your server needs more badges contact `Sekl#7397` on Discord and we can discuss raising the limit.",
@@ -793,7 +797,7 @@
       "add-success": "I successfully added the command! <:blobidea:317047867036663809>",
       "list-empty": "There are no custom commands on this server yet! <:blobspy:317048109832208385>",
       "delete-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",
-      "delete-success": "I successfully deleted the command with this name. <:blobwave:317048219098021888>",
+      "delete-success": "I successfully deleted the command with this name. <a:ablobwave:393869340975300638>",
       "edit-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",
       "edit-success": "I successfully edited the command. <:blobcouncil:317048423142522900>",
       "refreshed-commands": "I refreshed the command cache. <:blobgo:317034640181297163>",
@@ -936,7 +940,7 @@
       "add-success": "I added the donator `%s` to the list. :clap:"
     },
     "ping": {
-      "message": ":ping_pong: Pong! <:blobhighfive:317043673047236609>"
+      "message": ":ping_pong: Pong! <a:ablobwave:393869340975300638>"
     },
     "dm": {
       "send-success": "I sent the DM to %s. :e_mail:",

@@ -19,5 +19,5 @@ func (h *Hi) Triggers() []string {
 }
 
 func (h *Hi) Response(trigger string, content string) string {
-	return "<:blobwave:317048219098021888> " + helpers.GetText("triggers.hi.link")
+	return "<a:ablobwave:393869340975300638> " + helpers.GetText("triggers.hi.link")
 }

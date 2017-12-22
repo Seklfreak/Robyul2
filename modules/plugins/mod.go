@@ -1607,7 +1607,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			if helpers.ConfirmEmbed(msg.ChannelID, msg.Author,
 				fmt.Sprintf("Are you sure you want me to leave the server `%s` (`#%s`)?",
 					targetGuild.Name, targetGuild.ID), "✅", "🚫") {
-				helpers.SendMessage(msg.ChannelID, "Goodbye <:blobwave:317048219098021888>")
+				helpers.SendMessage(msg.ChannelID, "Goodbye <a:ablobwave:393869340975300638>")
 				err = session.GuildLeave(targetGuild.ID)
 				helpers.Relax(err)
 			}

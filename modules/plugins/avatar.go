@@ -32,7 +32,7 @@ func (a *Avatar) Action(command string, content string, msg *discordgo.Message, 
 		return
 	}
 
-	helpers.SendMessage(msg.ChannelID, "Here you go <:googlesmile:317031693951434752> \n "+fmt.Sprintf(
+	helpers.SendMessage(msg.ChannelID, "Here you go <a:ablobsmile:393869335312990209> \n "+fmt.Sprintf(
 		"https://cdn.discordapp.com/avatars/%s/%s.jpg",
 		msg.Mentions[0].ID,
 		msg.Mentions[0].Avatar,

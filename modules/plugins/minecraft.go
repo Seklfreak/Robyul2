@@ -43,6 +43,6 @@ func (m *Minecraft) Action(command string, content string, msg *discordgo.Messag
 	helpers.NetGet(url)
 
 	// If NetGet didn't panic send the url
-	helpers.SendMessage(msg.ChannelID, "Here you go <:googlesmile:317031693951434752> \n "+url)
+	helpers.SendMessage(msg.ChannelID, "Here you go <a:ablobsmile:393869335312990209> \n "+url)
 
 }

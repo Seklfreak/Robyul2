@@ -45,7 +45,7 @@ func (c *Choice) Action(command string, content string, msg *discordgo.Message, 
 		choice = strings.Trim(choice, "\"")
 		choice = strings.Trim(choice, "\"")
 
-		_, err := helpers.SendMessage(msg.ChannelID, "I've chosen `"+choice+"` <:googlesmile:317031693951434752>")
+		_, err := helpers.SendMessage(msg.ChannelID, "I've chosen `"+choice+"` <a:ablobsmile:393869335312990209>")
 		helpers.Relax(err)
 		return
 	case "roll": // [p]roll [<max numb, default: 100>]
