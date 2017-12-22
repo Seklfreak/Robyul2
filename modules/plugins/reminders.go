@@ -67,7 +67,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 						dmChannel, err := session.UserChannelCreate(reminders.UserID)
 						helpers.Relax(err)
 
-						content := ":alarm_clock: You wanted me to remind you about this:\n" + "```\u200B" + reminder.Message + "```"
+						content := ":alarm_clock: You wanted me to remind you about this:\n" + "```" + helpers.ZERO_WIDTH_SPACE + reminder.Message + "```"
 						if reminder.Message == "" {
 							content = ":alarm_clock: You wanted me to remind you about something, but you didn't tell me about what. <:blobthinking:317028940885524490>"
 						}

@@ -581,7 +581,7 @@ NextKeyword:
 
 		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
 		case 2:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```\u200B%s```:bell: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
 				content,
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
@@ -596,7 +596,7 @@ NextKeyword:
 			}
 			break
 		default:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```\u200B%s```",
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),

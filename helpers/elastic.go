@@ -288,6 +288,10 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 		return nil
 	}
 
+	if message.Content == "" {
+		message.Content = ZERO_WIDTH_SPACE
+	}
+
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
 		Script(elastic.
 			NewScript("ctx._source.Content.add(params.newContent)").
