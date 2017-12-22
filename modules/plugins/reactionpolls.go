@@ -111,7 +111,7 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 		allowedEmotes := make([]string, 0)
 		for _, allowedEmote := range args[3:] {
 			allowedEmotes = append(allowedEmotes,
-				strings.TrimSuffix(strings.TrimPrefix(allowedEmote, "<:"), ">"),
+				strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(allowedEmote, "<a:"), "<:"), ">"),
 			)
 		}
 		if len(allowedEmotes) > 20 {

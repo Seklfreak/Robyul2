@@ -1708,10 +1708,11 @@ func (r *Stats) setEmbedEmojiPage(reactionEmbed *discordgo.MessageEmbed, author 
 	var value string
 	for {
 		if i < len(guild.Emojis) {
-			value = fmt.Sprintf("<:%s>", guild.Emojis[i].APIName())
+			value = "<"
 			if guild.Emojis[i].Animated {
-				value = fmt.Sprintf("<a:%s>", guild.Emojis[i].APIName())
+				value += "a"
 			}
+			value += fmt.Sprintf(":%s>", guild.Emojis[i].APIName())
 			reactionEmbed.Fields = append(reactionEmbed.Fields, &discordgo.MessageEmbedField{
 				Name:   fmt.Sprintf("`:%s:`", guild.Emojis[i].Name),
 				Value:  value,

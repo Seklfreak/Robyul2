@@ -152,7 +152,11 @@ func (s *Starboard) actionStatus(args []string, in *discordgo.Message, out **dis
 	for _, emoji := range s.getEmoji(channel.GuildID) {
 		discordEmoji, err := helpers.GetDiscordEmojiFromName(channel.GuildID, emoji)
 		if err == nil && discordEmoji != nil && discordEmoji.ID != "" {
-			emojiText += "<:" + discordEmoji.APIName() + ">"
+			emojiText += "<"
+			if discordEmoji.Animated {
+				emojiText += "a"
+			}
+			emojiText += ":" + discordEmoji.APIName() + ">"
 		} else {
 			emojiText += emoji
 		}
@@ -269,7 +273,6 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 	if helpers.IsDiscordEmoji(newEmoji) {
 		discordEmoji, err := helpers.GetDiscordEmojiFromText(channel.GuildID, newEmoji)
 		if err != nil || discordEmoji == nil || discordEmoji.Name == "" {
-			fmt.Println(err.Error())
 			*out = s.newMsg(helpers.GetText("bot.arguments.invalid"))
 			return s.actionFinish
 		}
@@ -705,7 +708,11 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 	firstEmoji := emoji[0]
 	firstDiscordEmoji, err := helpers.GetDiscordEmojiFromName(starEntry.GuildID, firstEmoji)
 	if err == nil && firstDiscordEmoji != nil && firstDiscordEmoji.ID != "" {
-		firstEmoji = "<:" + firstDiscordEmoji.APIName() + ">"
+		firstEmoji = "<"
+		if firstDiscordEmoji.Animated {
+			firstEmoji += "a"
+		}
+		firstEmoji += ":" + firstDiscordEmoji.APIName() + ">"
 	}
 
 	starrersText += fmt.Sprintf(" (%s %s)", humanize.Comma(int64(starEntry.Stars)), firstEmoji)
@@ -788,7 +795,11 @@ func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage
 		firstEmoji := emoji[0]
 		firstDiscordEmoji, err := helpers.GetDiscordEmojiFromName(starMessage.GuildID, firstEmoji)
 		if err == nil && firstDiscordEmoji != nil && firstDiscordEmoji.ID != "" {
-			firstEmoji = "<:" + firstDiscordEmoji.APIName() + ">"
+			firstEmoji = "<"
+			if firstDiscordEmoji.Animated {
+				firstEmoji += "a"
+			}
+			firstEmoji += ":" + firstDiscordEmoji.APIName() + ">"
 		}
 
 		content = fmt.Sprintf("%d. by %s (%s %s): %s\n",

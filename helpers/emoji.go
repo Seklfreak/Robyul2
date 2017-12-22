@@ -20,7 +20,7 @@ var (
 // returns true if text is an unicode emoji or a discord custom emoji, returns false for everything else
 func IsEmoji(text string) (isEmoji bool) {
 	if emojiRegex == nil {
-		emojiRegex = regexp.MustCompile(`[\x{00A0}-\x{1F9EF}]|<:[^<>:]+:[0-9]+>`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
+		emojiRegex = regexp.MustCompile(`[\x{00A0}-\x{1F9EF}]|<(a)?:[^<>:]+:[0-9]+>`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
 	}
 	if emojiRegex.MatchString(text) {
 		return true
@@ -42,7 +42,7 @@ func IsUnicodeEmoji(text string) (isEmoji bool) {
 // returns true if text is a discord custom emoji, returns false for everything else
 func IsDiscordEmoji(text string) (isEmoji bool) {
 	if discordEmojiRegex == nil {
-		discordEmojiRegex = regexp.MustCompile(`<:[^<>:]+:[0-9]+>`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
+		discordEmojiRegex = regexp.MustCompile(`<(a)?:[^<>:]+:[0-9]+>`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
 	}
 	if discordEmojiRegex.MatchString(text) {
 		return true
