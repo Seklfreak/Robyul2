@@ -1,7 +1,7 @@
 {
   "admin": {
     "no_permission": [
-      "Uhm I'm sorry but only server admins may do that <:blobfrowningbig:317028438693117962>",
+      "Uhm I'm sorry but only server admins may do that <a:ablobfrown:394026913292615701>",
       "Don't tell anyone but that command - totally dangerous!\nOnly admins are brave enough to use it.",
       "These are not the druids you're looking for <:googleseenoevil:317027974622740490>",
       "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
@@ -10,7 +10,7 @@
   },
   "mod": {
     "no_permission": [
-      "Uhm I'm sorry but only server mods may do that <:blobfrowningbig:317028438693117962>",
+      "Uhm I'm sorry but only server mods may do that <a:ablobfrown:394026913292615701>",
       "Don't tell anyone but that command - totally dangerous!\nOnly mods are brave enough to use it.",
       "These are not the druids you're looking for <:googleseenoevil:317027974622740490>",
       "Nope. No permission. Sorry ¯\\_(ツ)_/¯",
@@ -59,7 +59,7 @@
     "errors": {
       "general": "Unexpected error: `%s`",
       "no-embed": "Please give me the `Embed Links` permission in this channel. <:googlenerd:317030369205682186>",
-      "generic-nomessage": "Something went terribly wrong. <:blobweary:317036265071575050>"
+      "generic-nomessage": "Something went terribly wrong. <a:ablobweary:394026914479865856>"
     },
     "permissions": {
       "required": "Please give me the `%s` permission to use this feature. <:googlenerd:317030369205682186>"
@@ -68,7 +68,7 @@
       "not-set": "Seems like there is no prefix yet <:blobthinking:317028940885524490>\nAdmins can set one by typing for example `@Robyul set prefix ?`",
       "is": [
         "The prefix is `%s` <a:ablobsmile:393869335312990209>",
-        "Last time I checked it was `%s` <a:ablobwink:393869333232877569>",
+        "Last time I checked it was `%s` <a:ablobwink:394026912436977665>",
         "iirc it's `%s` <:blobthinking:317028940885524490>"
       ],
       "saved": [
@@ -494,10 +494,10 @@
       "user-kicked-failed-too-low": "I wasn't able to kick the user. Please make sure Robyul is above the user you want to kick.",
       "prefix-info": "The Robyul prefix for this server is `%s`. Example: `%shelp`.",
       "prefix-set-success": "The new Robyul prefix for this server is `%s`.",
-      "user-banned-error-too-many-days": "The maximum of days to delete is 7 days. <:blobweary:317036265071575050>",
+      "user-banned-error-too-many-days": "The maximum of days to delete is 7 days. <a:ablobweary:394026914479865856>",
       "set-bot-dp-success": "I successfully changed my DP.",
       "set-bot-dp-error-not-png": "Please upload a `.png` file!",
-      "echo-error-no-access": "I'm not allowed to chat in that channel. <:blobweary:317036265071575050>"
+      "echo-error-no-access": "I'm not allowed to chat in that channel. <a:ablobweary:394026914479865856>"
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
@@ -561,7 +561,7 @@
       "embed-footer-imageurl": "https://i.imgur.com/PcGyex5.png"
     },
     "wolframalpha": {
-      "error": "Sorry, I couldn't find an answer to that. <:blobweary:317036265071575050>"
+      "error": "Sorry, I couldn't find an answer to that. <a:ablobweary:394026914479865856>"
     },
     "lastfm": {
       "profile-embed-title": "%s Last.FM Account",
@@ -575,7 +575,7 @@
       "topartists-embed-title": "%s Top Artists",
       "toptracks-embed-title": "%s Top Tracks",
       "set-username-success": "You set `%s` as your username. <:blobsalute:317043033004703744>\n(This is saved across servers.)",
-      "no-stats-available": "No stats available on this server yet. <:blobweary:317036265071575050>"
+      "no-stats-available": "No stats available on this server yet. <a:ablobweary:394026914479865856>"
     },
     "weather": {
       "address-not-found": "I can't find the location you are looking for. <:blobthinking:317028940885524490>",
@@ -612,7 +612,7 @@
       "refreshed-config": "I loaded the newest config from the Database. <:blobokhand:317032017164238848>",
       "updated-config": "I updated the config for the channel. <:blobokhand:317032017164238848>",
       "generic-error": "Something went wrong. <:blobconfounded:317044878091747349>",
-      "no-stats": "No stats available for this server. <:blobfrowningbig:317028438693117962>",
+      "no-stats": "No stats available for this server. <a:ablobfrown:394026913292615701>",
       "set-config-error-invalid": "Invalid file. Please make sure you submit valid JSON. <:blobnogood:317029275742109706>",
       "roles-batch": "I added %d role(s), removed %d role(s) and failed to change %d role(s) for you! <:blobeyes:317029938568101890>",
       "delete-config-success": "I removed the config for the given channel. <:blobokhand:317032017164238848>"
@@ -660,7 +660,7 @@
       "ignore-channel-remove-success": "I will start to look in <#%s> for keywords again. <:blobnomouth:317045295286583296>",
       "ignoredchannels-list-no-keywords-error": "There are currently no ignored channels on this server.",
       "keyword-add-error-duplicate": "<@%s> I'm already notifying you about this keyword. <:blobthinking:317028940885524490>",
-      "keyword-add-global-too-many": "<@%s> Sorry, but you can't have more than %d global notifications. <:blobweary:317036265071575050>",
+      "keyword-add-global-too-many": "<@%s> Sorry, but you can't have more than %d global notifications. <a:ablobweary:394026914479865856>",
       "mode-1": "Your notifications will sent to you in the following format now: `content after title`.",
       "mode-2": "Your notifications will sent to you in the following format now: `content before title`."
     },
@@ -668,7 +668,7 @@
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
       "voicestats-toplist-embed-title": "Voice Channel Duration Leaderboard for this server",
       "voicestats-embed-footer": "Total durations exclude the currently active sessions. Stats are refreshed every 30 seconds.",
-      "no-emotes": "No custom emotes on this server yet. <:blobflushed:317045406951538688>",
+      "no-emotes": "No custom emotes on this server yet. <a:ablobshocked:394026914076950539>",
       "reaction-embed-title": "@%s: Custom Emotes on %s",
       "reaction-embed-footer": "There are %d custom emotes on this server.",
       "user-not-found": "User not found!",
@@ -780,11 +780,11 @@
       "toggle-success": "I set the mirror mode to `%s`! <:blobokhand:317032017164238848>"
     },
     "randompictures": {
-      "pic-no-picture": "I wasn't able to find a picture for you. <:blobweary:317036265071575050>",
+      "pic-no-picture": "I wasn't able to find a picture for you. <a:ablobweary:394026914479865856>",
       "list-no-entries-error": "No sources set up on this server yet! <:blobdetective:317045632856489985>",
       "refresh-success": "Source successfully refreshed! <:blobokhand:317032017164238848>",
       "refresh-not-found-error": "I wasn't able to find this source. <:blobnomouth:317045295286583296>",
-      "refresh-started": "Refreshing started, this may take a while! <:blobsleeping:317047101534109696>",
+      "refresh-started": "Refreshing started, this may take a while! <a:ablobsleep:394026914290991116>",
       "waiting-for-picture": "<:blobwizard:317049465313689600> Looking for a picture for you.",
       "pic-delay-set-success": "I set the picture command delay to %d minutes.",
       "pic-delay-dm": "Please wait a while until you can use this command again! <:blobshh:317044272161357824>",
@@ -793,7 +793,7 @@
       "pic-delay-ignore-channels-added": "I added the channel to the list of ignored channels."
     },
     "customcommands": {
-      "add-keyword-already-exists": "There is already a custom command with this keyword. <:blobweary:317036265071575050>",
+      "add-keyword-already-exists": "There is already a custom command with this keyword. <a:ablobweary:394026914479865856>",
       "add-success": "I successfully added the command! <:blobidea:317047867036663809>",
       "list-empty": "There are no custom commands on this server yet! <:blobspy:317048109832208385>",
       "delete-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",
@@ -801,9 +801,9 @@
       "edit-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",
       "edit-success": "I successfully edited the command. <:blobcouncil:317048423142522900>",
       "refreshed-commands": "I refreshed the command cache. <:blobgo:317034640181297163>",
-      "search-empty": "I couldn't find any command including `%s` in the name on this server. <:blobweary:317036265071575050>",
+      "search-empty": "I couldn't find any command including `%s` in the name on this server. <a:ablobweary:394026914479865856>",
       "info-not-found": "I wasn't able to find a command with this name. <:blobthinking:317028940885524490>",
-      "add-command-already-exists": "There is already a command with this keyword. <:blobweary:317036265071575050>"
+      "add-command-already-exists": "There is already a command with this keyword. <a:ablobweary:394026914479865856>"
     },
     "reactionpolls": {
       "create-too-many-reactions": "You can only add up to 20 possible reactions. <:blobnogood:317029275742109706>",
@@ -853,7 +853,7 @@
       "role-add-error-duplicate": "This role is already in the list of auto roles. <:blobthinking:317028940885524490>",
       "role-add-success": "Everyone who joins will get the role `%s` assigned now. <:blobsalute:317043033004703744>\nPlease make sure Robyul is allowed to assign the role.",
       "delayed-role-add-success": "Everyone who joins will get the role `%s` assigned after %s now. <:blobsalute:317043033004703744>\nPlease make sure Robyul is allowed to assign the role.",
-      "role-list-none": "There are no AutoRoles on this server. <:blobweary:317036265071575050>",
+      "role-list-none": "There are no AutoRoles on this server. <a:ablobweary:394026914479865856>",
       "role-remove-error-not-found": "I wasn't able to find the role in the list of the AutoRoles on this server. <:blobthinking:317028940885524490>",
       "role-remove-success": "I won't assign this role to new members anymore. <:blobokhand:317032017164238848>",
       "apply-confirm": "Are you sure you want to apply the role `%s (#%s)` to %d members?",
@@ -861,25 +861,25 @@
       "apply-done": "<@%s> I'm done applying roles. I was able to add the role to %d members. I wasn't able to apply the role to %d members."
     },
     "lyrics": {
-      "genius-api-error": "Something went wrong talking to genius.com. <:blobweary:317036265071575050>",
-      "genius-no-results": "I wasn't able to find anything with that name. <:blobweary:317036265071575050>",
+      "genius-api-error": "Something went wrong talking to genius.com. <a:ablobweary:394026914479865856>",
+      "genius-no-results": "I wasn't able to find anything with that name. <a:ablobweary:394026914479865856>",
       "song-list-embed-title": "Results for `%s`",
       "powered-by": "powered by genius.com"
     },
     "friends": {
       "invite-error-already-on-server": "There is already a Robyul Friend on this Server! <:blobsnuggle:333989876695302144>",
       "invite-success": "My friend **%s** joined this server! Please enjoy additional Robyul features. <:blobsalute:317043033004703744>",
-      "invite-error-no-friend-available": "No friend with free slots available! <:blobweary:317036265071575050>",
-      "invite-error-invite-creation-failed": "I wasn't able to create a Discord Invite for my friend. <:blobweary:317036265071575050>",
+      "invite-error-no-friend-available": "No friend with free slots available! <a:ablobweary:394026914479865856>",
+      "invite-error-invite-creation-failed": "I wasn't able to create a Discord Invite for my friend. <a:ablobweary:394026914479865856>",
       "invite-error-accept-invite-invalid-statuscode": "Something went wrong trying to invite my friend. <:blobscream:317043778823389184>"
     },
     "starboard": {
-      "status-none": "There is no starboard set on this server. <:blobweary:317036265071575050>",
+      "status-none": "There is no starboard set on this server. <a:ablobweary:394026914479865856>",
       "status-set": "The starboard on this server is set to <#%s>. :star:\nPlease make sure I can write messages, manage messages and embed links in that channel.\nYou need at least %d reactions for a starboard post.\nThe followings emoji are accepted: %s.",
       "set-success": "I successfully set the starboard channel to <#%s>. :star:",
       "minimum-success": "I successfully set the minimum stars required to %d stars. :star2:",
       "reset-success": "I disabled the starboard for this server. <:blobshh:317044272161357824>",
-      "top-no-entries": "Nothing starred on this server. <:blobweary:317036265071575050>",
+      "top-no-entries": "Nothing starred on this server. <a:ablobweary:394026914479865856>",
       "emoji-add-success": "I added the emoji %s to the list of accepted emojis.",
       "emoji-remove-success": "I removed the emoji %s from the list of accepted emojis."
     },
@@ -925,7 +925,7 @@
       "role-remove-success": "I won't restore this role on rejoin anymore! <:googlenerd:317030369205682186>"
     },
     "dog": {
-      "none": "I wasn't able to find a pic. <:blobweary:317036265071575050>",
+      "none": "I wasn't able to find a pic. <a:ablobweary:394026914479865856>",
       "add-success": "Added the link `%s` to the database! <:doggoblob:374630377043787786>",
       "result": [
         "WOOF! :dog:\n%s",
@@ -935,7 +935,7 @@
       ]
     },
     "donators": {
-      "none": "No donators yet. <:blobweary:317036265071575050>\n_You want to be in this list? <https://www.patreon.com/sekl>!_",
+      "none": "No donators yet. <a:ablobweary:394026914479865856>\n_You want to be in this list? <https://www.patreon.com/sekl>!_",
       "list": "<:robyulblush:327206930437373952> **These awesome people support me:**\n%sThank you so much!\n_You want to be in this list? <https://www.patreon.com/sekl>!_",
       "add-success": "I added the donator `%s` to the list. :clap:"
     },
@@ -948,7 +948,7 @@
       "receive-success": "Received DMs will now get posted to the given channel."
     },
     "google": {
-      "search-no-results": "I wasn't able to find anything googling your query. <:blobweary:317036265071575050>",
+      "search-no-results": "I wasn't able to find anything googling your query. <a:ablobweary:394026914479865856>",
       "embed-footer": "powered by google.com",
       "embed-footer-imageurl": "https://i.imgur.com/fjsXikJ.png"
     },

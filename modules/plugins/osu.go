@@ -60,7 +60,7 @@ func (o *Osu) Action(command string, content string, msg *discordgo.Message, ses
 	helpers.Relax(err)
 
 	if len(jsonc) == 0 {
-		helpers.SendMessage(msg.ChannelID, "User not found <:blobfrowningbig:317028438693117962>")
+		helpers.SendMessage(msg.ChannelID, "User not found <a:ablobfrown:394026913292615701>")
 		return
 	}
 

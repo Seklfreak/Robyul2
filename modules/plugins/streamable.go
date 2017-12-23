@@ -119,7 +119,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 		return
 	}
 
-	helpers.SendMessage(msg.ChannelID, "Your streamable is processing, this may take a while. <:blobsleeping:317047101534109696>")
+	helpers.SendMessage(msg.ChannelID, "Your streamable is processing, this may take a while. <a:ablobsleep:394026914290991116>")
 	session.ChannelTyping(msg.ChannelID)
 
 	streamableShortcode := jsonResult.Path("shortcode").Data().(string)

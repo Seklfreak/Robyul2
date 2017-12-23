@@ -112,9 +112,12 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 				if channelID != "" && commandMessageID != "" {
 					reactions := []string{
 						":blobstop:317034621953114112",
-						":blobweary:317036265071575050",
+						"a:ablobweary:394026914479865856",
 						":googlespeaknoevil:317036753074651139",
 						":notlikeblob:349342777978519562",
+						"a:ablobcry:393869333740126219",
+						"a:ablobfrown:394026913292615701",
+						"a:ablobunamused:393869335573037057",
 					}
 					cache.GetSession().MessageReactionAdd(channelID, commandMessageID, reactions[rand.Intn(len(reactions))])
 				}
@@ -159,21 +162,21 @@ func SendError(msg *discordgo.Message, err interface{}) {
 
 		SendMessage(
 			msg.ChannelID,
-			"Error <:blobfrowningbig:317028438693117962>\n```\n"+spew.Sdump(err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
+			"Error <a:ablobfrown:394026913292615701>\n```\n"+spew.Sdump(err)+fmt.Sprintf("%s\n", string(buf[0:stackSize]))+"\n```",
 		)
 	} else {
 		if errR, ok := err.(*discordgo.RESTError); ok && errR != nil && errR.Message != nil {
 			if msg != nil {
 				SendMessage(
 					msg.ChannelID,
-					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%+#v", errR.Message.Message)+"\n```",
+					"Error <a:ablobfrown:394026913292615701>\n```\n"+fmt.Sprintf("%+#v", errR.Message.Message)+"\n```",
 				)
 			}
 		} else {
 			if msg != nil {
 				SendMessage(
 					msg.ChannelID,
-					"Error <:blobfrowningbig:317028438693117962>\n```\n"+fmt.Sprintf("%+#v", err)+"\n```",
+					"Error <a:ablobfrown:394026913292615701>\n```\n"+fmt.Sprintf("%+#v", err)+"\n```",
 				)
 			}
 		}
