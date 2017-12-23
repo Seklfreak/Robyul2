@@ -290,13 +290,17 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		textChannels := 0
 		voiceChannels := 0
+		categoryChannels := 0
 		for _, channel := range guild.Channels {
 			if channel.Type == discordgo.ChannelTypeGuildVoice {
-				voiceChannels += 1
+				voiceChannels++
 			} else if channel.Type == discordgo.ChannelTypeGuildText {
-				textChannels += 1
+				textChannels++
+			} else if channel.Type == discordgo.ChannelTypeGuildCategory {
+				categoryChannels++
 			}
 		}
+		channelsText := fmt.Sprintf("%d/%d/%d/%d text/voice/category/total", textChannels, voiceChannels, categoryChannels, len(guild.Channels))
 		online := 0
 		for _, presence := range guild.Presences {
 			if presence.Status == discordgo.StatusOnline || presence.Status == discordgo.StatusDoNotDisturb || presence.Status == discordgo.StatusIdle {
@@ -310,14 +314,21 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 		member, err := helpers.GetGuildMember(guild.ID, guild.OwnerID)
 		helpers.Relax(err)
-		ownerText := fmt.Sprintf("%s#%s", owner.Username, owner.Discriminator)
+		ownerText := fmt.Sprintf("%s#%s\n#%s", owner.Username, owner.Discriminator, owner.ID)
 		if member.Nick != "" {
-			ownerText = fmt.Sprintf("%s#%s ~ %s", owner.Username, owner.Discriminator, member.Nick)
+			ownerText = fmt.Sprintf("%s#%s ~ %s\n#%s", owner.Username, owner.Discriminator, member.Nick, owner.ID)
 		}
 
 		emoteText := "_None_"
 		if len(guild.Emojis) > 0 {
-			emoteText = fmt.Sprintf("(%d in Total) ", len(guild.Emojis))
+			animatedEmoji := 0
+			for _, emote := range guild.Emojis {
+				if emote.Animated {
+					animatedEmoji++
+				}
+			}
+			emoteText = fmt.Sprintf("(%d/%d/%d normal/animated/total) ",
+				len(guild.Emojis)-animatedEmoji, animatedEmoji, len(guild.Emojis))
 			for i, emote := range guild.Emojis {
 				if i > 0 {
 					emoteText += ", "
@@ -366,12 +377,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Color:       0x0FADED,
 			Title:       guild.Name,
 			Description: fmt.Sprintf("Since: %s. That's %s.", createdAtTime.Format(time.ANSIC), helpers.SinceInDaysText(createdAtTime)),
-			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server ID: %s", guild.ID)},
+			Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Server #%s", guild.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Region", Value: guild.Region, Inline: true},
 				{Name: "Users", Value: fmt.Sprintf("%d/%d", online, usersCount), Inline: true},
-				{Name: "Text Channels", Value: strconv.Itoa(textChannels), Inline: true},
-				{Name: "Voice Channels", Value: strconv.Itoa(voiceChannels), Inline: true},
+				{Name: "Channels", Value: channelsText, Inline: true},
 				{Name: "Roles", Value: strconv.Itoa(numberOfRoles), Inline: true},
 				{Name: "Owner", Value: ownerText, Inline: true},
 				{Name: "Emotes", Value: emoteText, Inline: false},
@@ -638,7 +648,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		userinfoEmbed := &discordgo.MessageEmbed{
 			Color:  0x0FADED,
 			Title:  title,
-			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User ID: %s", userNumber, targetUser.ID)},
+			Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Member #%d | User #%s", userNumber, targetUser.ID)},
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedTime)), Inline: true},
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
