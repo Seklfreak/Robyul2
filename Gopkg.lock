@@ -3,9 +3,9 @@
 
 [[projects]]
   name = "cloud.google.com/go"
-  packages = ["compute/metadata","internal","translate","translate/internal/translate/v2"]
-  revision = "c116c7972ec94f148459a304d07a67ecbc770d4b"
-  version = "v0.6.0"
+  packages = ["compute/metadata","firestore","firestore/apiv1beta1","internal/atomiccache","internal/fields","internal/version","translate","translate/internal/translate/v2"]
+  revision = "050b16d2314d5fc3d4c9a51e4cd5c7468e77f162"
+  version = "v0.17.0"
 
 [[projects]]
   name = "github.com/AlekSi/pointer"
@@ -65,7 +65,7 @@
   branch = "master"
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/sqs","service/sqs/sqsiface","service/sts"]
-  revision = "d0cb8551ac28d362e77ea475e5b7b2ebaec06b6b"
+  revision = "6eab70e3edd8e65a17a1dbf9a2eeaf83f06281d0"
 
 [[projects]]
   branch = "master"
@@ -190,7 +190,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
-  packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
+  packages = ["proto","protoc-gen-go/descriptor","ptypes","ptypes/any","ptypes/duration","ptypes/empty","ptypes/struct","ptypes/timestamp","ptypes/wrappers"]
   revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
 
 [[projects]]
@@ -289,6 +289,12 @@
   revision = "53693fbb59a88d8eb5a214820c5ec1ea76d2460c"
 
 [[projects]]
+  branch = "release-branch.v6"
+  name = "github.com/olivere/elastic"
+  packages = [".","config","uritemplates"]
+  revision = "7a065d53ac847c9aba9385e84fa24ef4647a6ae2"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -352,7 +358,7 @@
   branch = "master"
   name = "github.com/zonedb/zonedb"
   packages = ["."]
-  revision = "51d19eb58eccf5f264ca26ff85dc1cd14b9fba95"
+  revision = "c403e39fb8b8b87d9bbacb5e45be00d0b91c501e"
 
 [[projects]]
   branch = "master"
@@ -393,8 +399,8 @@
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
-  packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport","transport/grpc","transport/http","youtube/v3"]
-  revision = "905d2b6c9443c02c46229c39d60442903a68c229"
+  packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","iterator","option","transport","transport/grpc","transport/http","youtube/v3"]
+  revision = "272e2963aad1a56aba54e1167c47abff8d37ac08"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -405,7 +411,7 @@
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
-  packages = ["googleapis/rpc/status"]
+  packages = ["googleapis/api/annotations","googleapis/firestore/v1beta1","googleapis/rpc/status","googleapis/type/latlng"]
   revision = "a8101f21cf983e773d0c1133ebc5424792003214"
 
 [[projects]]
@@ -445,12 +451,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "gopkg.in/olivere/elastic.v5"
-  packages = [".","config","uritemplates"]
-  revision = "79ff368708b3a2a9da641dc831d95fd0782bf4ef"
-  version = "v5.0.58"
-
-[[projects]]
   name = "gopkg.in/redsync.v1"
   packages = ["."]
   revision = "98dabdf1c8574561bf976911c14ff652c47b1ddf"
@@ -471,6 +471,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "61a1bafd38ef5935f3fe755b032b5dceb2e293b0ed13bb1439940491f8a5d772"
+  inputs-digest = "bb807909816c88df610e2688e322c3f812348823064024f63e0eef7b41d51015"
   solver-name = "gps-cdcl"
   solver-version = 1

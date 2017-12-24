@@ -16,7 +16,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 )
 
 var lastPresenceUpdates map[string]models.ElasticPresenceUpdate
@@ -289,7 +289,7 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 	}
 
 	if message.Content == "" {
-		message.Content = ZERO_WIDTH_SPACE
+		message.Content = " "
 	}
 
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).

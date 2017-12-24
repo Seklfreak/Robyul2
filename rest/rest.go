@@ -18,9 +18,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
+	"github.com/olivere/elastic"
 	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 func NewRestServices() []*restful.WebService {

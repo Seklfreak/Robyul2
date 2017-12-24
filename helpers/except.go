@@ -16,7 +16,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/getsentry/raven-go"
-	"gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 )
 
 // RecoverDiscord recover()s and sends a message to discord

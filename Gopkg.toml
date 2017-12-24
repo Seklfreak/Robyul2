@@ -23,7 +23,7 @@
 
 [[constraint]]
   name = "cloud.google.com/go"
-  version = "0.6.0"
+  version = "0.17.0"
 
 [[constraint]]
   name = "github.com/Jeffail/gabs"
@@ -155,7 +155,8 @@
   version = "1.0.0"
 
 [[constraint]]
-  name = "gopkg.in/olivere/elastic.v5"
+  name = "github.com/olivere/elastic"
+  branch = "release-branch.v6"
 
 [[constraint]]
   name = "gopkg.in/inconshreveable/go-keen.v0"

@@ -27,7 +27,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
-	"gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 )
 
 type Stats struct{}
