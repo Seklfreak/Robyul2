@@ -3,13 +3,26 @@ package models
 import "time"
 
 const (
-	ElasticIndex                 = "robyul"
-	ElasticTypeMessage           = "message"
-	ElasticTypeJoin              = "join"
-	ElasticTypeLeave             = "leave"
-	ElasticTypeReaction          = "reaction"
-	ElasticTypePresenceUpdate    = "presence_update"
-	ElasticTypeVanityInviteClick = "vanity_invite_click"
+	// deprecated
+	ElasticIndex = "robyul"
+	// deprecated
+	ElasticTypeMessage = "message"
+	// deprecated
+	ElasticTypeJoin = "join"
+	// deprecated
+	ElasticTypeLeave = "leave"
+	// deprecated
+	ElasticTypeReaction = "reaction"
+	// deprecated
+	ElasticTypePresenceUpdate = "presence_update"
+	// deprecated
+	ElasticTypeVanityInviteClick   = "vanity_invite_click"
+	ElasticIndexMessages           = "messages"
+	ElasticIndexJoins              = "joins"
+	ElasticIndexLeaves             = "leaves"
+	ElasticIndexReactions          = "reactions"
+	ElasticIndexPresenceUpdates    = "presence_updates"
+	ElasticIndexVanityInviteClicks = "vanity_invite_clicks"
 )
 
 type ElasticLegacyMessage struct {

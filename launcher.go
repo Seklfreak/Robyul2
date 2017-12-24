@@ -152,6 +152,12 @@ func main() {
 			panic(err)
 		}
 		cache.SetElastic(client)
+
+		version, err := client.ElasticsearchVersion(config.Path("elasticsearch.url").Data().(string))
+		if err != nil {
+			panic(err)
+		}
+		log.WithField("module", "launcher").Info("Connected to ElasticSearch v" + version)
 	}
 
 	// Run migrations
