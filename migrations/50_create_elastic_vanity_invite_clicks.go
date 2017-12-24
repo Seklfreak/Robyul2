@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/models"
 )
 
 func m50_create_elastic_vanity_invite_clicks() {
@@ -13,7 +12,7 @@ func m50_create_elastic_vanity_invite_clicks() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists(models.ElasticIndexVanityInviteClicks).Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-vanity_invite_clicks").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +46,7 @@ func m50_create_elastic_vanity_invite_clicks() {
 		},
 	}
 
-	index, err := elastic.CreateIndex(models.ElasticIndexVanityInviteClicks).BodyJson(vanityInviteClickMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-vanity_invite_clicks").BodyJson(vanityInviteClickMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}

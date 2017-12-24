@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/models"
 )
 
 func m46_create_elastic_index_joins() {
@@ -13,7 +12,7 @@ func m46_create_elastic_index_joins() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists(models.ElasticIndexJoins).Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-joins").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +44,7 @@ func m46_create_elastic_index_joins() {
 		},
 	}
 
-	index, err := elastic.CreateIndex(models.ElasticIndexJoins).BodyJson(joinMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-joins").BodyJson(joinMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/models"
 )
 
 func m48_create_elastic_index_reactions() {
@@ -13,7 +12,7 @@ func m48_create_elastic_index_reactions() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists(models.ElasticIndexReactions).Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-reactions").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -51,7 +50,7 @@ func m48_create_elastic_index_reactions() {
 		},
 	}
 
-	index, err := elastic.CreateIndex(models.ElasticIndexReactions).BodyJson(reactionMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-reactions").BodyJson(reactionMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}

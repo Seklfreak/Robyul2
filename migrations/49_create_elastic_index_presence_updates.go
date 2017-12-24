@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/models"
 )
 
 func m49_create_elastic_index_presence_updates() {
@@ -13,7 +12,7 @@ func m49_create_elastic_index_presence_updates() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists(models.ElasticIndexPresenceUpdates).Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-presence_updates").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -51,7 +50,7 @@ func m49_create_elastic_index_presence_updates() {
 		},
 	}
 
-	index, err := elastic.CreateIndex(models.ElasticIndexPresenceUpdates).BodyJson(presenceUpdateMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-presence_updates").BodyJson(presenceUpdateMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}

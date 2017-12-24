@@ -17,12 +17,12 @@ const (
 	ElasticTypePresenceUpdate = "presence_update"
 	// deprecated
 	ElasticTypeVanityInviteClick   = "vanity_invite_click"
-	ElasticIndexMessages           = "messages"
-	ElasticIndexJoins              = "joins"
-	ElasticIndexLeaves             = "leaves"
-	ElasticIndexReactions          = "reactions"
-	ElasticIndexPresenceUpdates    = "presence_updates"
-	ElasticIndexVanityInviteClicks = "vanity_invite_clicks"
+	ElasticIndexMessages           = "robyul-messages"
+	ElasticIndexJoins              = "robyul-joins"
+	ElasticIndexLeaves             = "robyul-leaves"
+	ElasticIndexReactions          = "robyul-reactions"
+	ElasticIndexPresenceUpdates    = "robyul-presence_updates"
+	ElasticIndexVanityInviteClicks = "robyul-vanity_invite_clicks"
 )
 
 type ElasticLegacyMessage struct {

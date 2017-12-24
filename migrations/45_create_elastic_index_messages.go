@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/models"
 )
 
 func m45_create_elastic_index_messages() {
@@ -13,7 +12,7 @@ func m45_create_elastic_index_messages() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists(models.ElasticIndexMessages).Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-messages").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +57,7 @@ func m45_create_elastic_index_messages() {
 		},
 	}
 
-	index, err := elastic.CreateIndex(models.ElasticIndexMessages).BodyJson(messageMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-messages").BodyJson(messageMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}

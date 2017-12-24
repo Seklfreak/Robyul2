@@ -24,7 +24,7 @@ func m51_reindex_elasticv5_to_v6() {
 	cache.GetLogger().WithField("module", "migrations").Info("reindexing ElasticSearch indexes")
 
 	src := elastic.NewReindexSource().Index("robyul").Type("message")
-	dst := elastic.NewReindexDestination().Index("messages").Type("doc")
+	dst := elastic.NewReindexDestination().Index("robyul-messages").Type("doc")
 	res, err := elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)
@@ -33,7 +33,7 @@ func m51_reindex_elasticv5_to_v6() {
 		"Reindexed a total of %d message documents", res.Total)
 
 	src = elastic.NewReindexSource().Index("robyul").Type("join")
-	dst = elastic.NewReindexDestination().Index("joins").Type("doc")
+	dst = elastic.NewReindexDestination().Index("robyul-joins").Type("doc")
 	res, err = elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)
@@ -42,7 +42,7 @@ func m51_reindex_elasticv5_to_v6() {
 		"Reindexed a total of %d join documents", res.Total)
 
 	src = elastic.NewReindexSource().Index("robyul").Type("leave")
-	dst = elastic.NewReindexDestination().Index("leaves").Type("doc")
+	dst = elastic.NewReindexDestination().Index("robyul-leaves").Type("doc")
 	res, err = elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)
@@ -51,7 +51,7 @@ func m51_reindex_elasticv5_to_v6() {
 		"Reindexed a total of %d leave documents", res.Total)
 
 	src = elastic.NewReindexSource().Index("robyul").Type("reaction")
-	dst = elastic.NewReindexDestination().Index("reactions").Type("doc")
+	dst = elastic.NewReindexDestination().Index("robyul-reactions").Type("doc")
 	res, err = elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)
@@ -60,7 +60,7 @@ func m51_reindex_elasticv5_to_v6() {
 		"Reindexed a total of %d reaction documents", res.Total)
 
 	src = elastic.NewReindexSource().Index("robyul").Type("presence_update")
-	dst = elastic.NewReindexDestination().Index("presence_updates").Type("doc")
+	dst = elastic.NewReindexDestination().Index("robyul-presence_updates").Type("doc")
 	res, err = elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)
@@ -69,7 +69,7 @@ func m51_reindex_elasticv5_to_v6() {
 		"Reindexed a total of %d presence update documents", res.Total)
 
 	src = elastic.NewReindexSource().Index("robyul").Type("vanity_invite_click")
-	dst = elastic.NewReindexDestination().Index("vanity_invite_clicks").Type("doc")
+	dst = elastic.NewReindexDestination().Index("robyul-vanity_invite_clicks").Type("doc")
 	res, err = elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)

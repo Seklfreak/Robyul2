@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/models"
 )
 
 func m47_create_elastic_index_leaves() {
@@ -13,7 +12,7 @@ func m47_create_elastic_index_leaves() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists(models.ElasticIndexLeaves).Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-leaves").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +38,7 @@ func m47_create_elastic_index_leaves() {
 		},
 	}
 
-	index, err := elastic.CreateIndex(models.ElasticIndexLeaves).BodyJson(leaveMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-leaves").BodyJson(leaveMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
