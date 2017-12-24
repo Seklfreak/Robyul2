@@ -3,20 +3,6 @@ package models
 import "time"
 
 const (
-	// deprecated
-	ElasticIndex = "robyul"
-	// deprecated
-	ElasticTypeMessage = "message"
-	// deprecated
-	ElasticTypeJoin = "join"
-	// deprecated
-	ElasticTypeLeave = "leave"
-	// deprecated
-	ElasticTypeReaction = "reaction"
-	// deprecated
-	ElasticTypePresenceUpdate = "presence_update"
-	// deprecated
-	ElasticTypeVanityInviteClick   = "vanity_invite_click"
 	ElasticIndexMessages           = "robyul-messages"
 	ElasticIndexJoins              = "robyul-joins"
 	ElasticIndexLeaves             = "robyul-leaves"

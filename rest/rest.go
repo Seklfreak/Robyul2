@@ -817,10 +817,11 @@ func GetMessageStatisticsCount(request *restful.Request, response *restful.Respo
 	rangeQuery := elastic.NewRangeQuery("CreatedAt").
 		Gte("now-" + interval).
 		Lte("now")
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
 	searchResult, err := cache.GetElastic().Count().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		Query(finalQuery).
 		Do(context.Background())
 	if err != nil {
@@ -845,10 +846,11 @@ func GetJoinsStatisticsCount(request *restful.Request, response *restful.Respons
 	rangeQuery := elastic.NewRangeQuery("CreatedAt").
 		Gte("now-" + interval).
 		Lte("now")
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeJoin + " AND GuildID:" + guildID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
 	searchResult, err := cache.GetElastic().Count().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexJoins).
+		Type("doc").
 		Query(finalQuery).
 		Do(context.Background())
 	if err != nil {
@@ -873,10 +875,11 @@ func GetLeavesStatisticsCount(request *restful.Request, response *restful.Respon
 	rangeQuery := elastic.NewRangeQuery("CreatedAt").
 		Gte("now-" + interval).
 		Lte("now")
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeLeave + " AND GuildID:" + guildID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
 	searchResult, err := cache.GetElastic().Count().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexLeaves).
+		Type("doc").
 		Query(finalQuery).
 		Do(context.Background())
 	if err != nil {
@@ -903,9 +906,10 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 		//Format("yyyy-MM-dd HH:mm:ss").
 		Interval(interval)
 
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	searchResult, err := cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		Query(termQuery).
 		Aggregation("messages", agg).
 		Size(24).
@@ -978,9 +982,10 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 
 	combinedAgg := agg.SubAggregation("referers", refererAgg)
 
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeVanityInviteClick + " AND GuildID:" + guildID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	searchResult, err := cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexVanityInviteClicks).
+		Type("doc").
 		Query(termQuery).
 		Aggregation("clicks", combinedAgg).
 		Size(0).
@@ -1027,9 +1032,10 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		}
 	}
 
-	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeJoin + " AND GuildID:" + guildID + " AND VanityInvite:" + vanityInvite.VanityName)
+	termQuery = elastic.NewQueryStringQuery("GuildID:" + guildID + " AND VanityInvite:" + vanityInvite.VanityName)
 	searchResult, err = cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexJoins).
+		Type("doc").
 		Query(termQuery).
 		Aggregation("joins", agg).
 		Size(0).
@@ -1103,9 +1109,10 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		messageID = lastMessages[0].ID
 	}
 
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
 	searchResult, err := cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		Query(termQuery).
 		Size(1).
 		Sort("CreatedAt", true).
@@ -1153,9 +1160,10 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		sortValues = item.Sort
 	}
 
-	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
+	termQuery = elastic.NewQueryStringQuery("GuildID:" + guildID + " AND ChannelID:" + channelID)
 	searchResult, err = cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		Query(termQuery).
 		Size(50).
 		SearchAfter(sortValues[0]).
@@ -1195,9 +1203,10 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		})
 	}
 
-	termQuery = elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID)
+	termQuery = elastic.NewQueryStringQuery("GuildID:" + guildID + " AND ChannelID:" + channelID)
 	searchResult, err = cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		Query(termQuery).
 		Size(50).
 		SearchAfter(sortValues[0]).

@@ -557,10 +557,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		var sinceStatusName, sinceStatusValue, lastMessageText string
 		if cache.HasElastic() && !helpers.GuildSettingsGetCached(currentGuild.ID).ChatlogDisabled {
-			queryString := "_type:" + models.ElasticTypePresenceUpdate + " AND UserID:" + targetUser.ID + " AND NOT Status:\"\""
+			queryString := "UserID:" + targetUser.ID + " AND NOT Status:\"\""
 			termQuery := elastic.NewQueryStringQuery(queryString)
 			searchResult, err := cache.GetElastic().Search().
-				Index(models.ElasticIndex).
+				Index(models.ElasticIndexPresenceUpdates).
+				Type("doc").
 				Query(termQuery).
 				Sort("CreatedAt", false).
 				From(0).Size(1).
@@ -603,10 +604,11 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				}
 			}
 
-			queryString = "_type:" + models.ElasticTypeMessage + " AND UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
+			queryString = "UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
 			termQuery = elastic.NewQueryStringQuery(queryString)
 			searchResult, err = cache.GetElastic().Search().
-				Index(models.ElasticIndex).
+				Index(models.ElasticIndexMessages).
+				Type("doc").
 				Query(termQuery).
 				Sort("CreatedAt", false).
 				From(0).Size(1).

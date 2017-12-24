@@ -208,8 +208,8 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 		lastPresenceUpdates[presence.User.ID] = elasticPresenceUpdate
 		lastPresenceUpdatesLock.Unlock()
 		_, err := cache.GetElastic().Index().
-			Index(models.ElasticIndex).
-			Type(models.ElasticTypePresenceUpdate).
+			Index(models.ElasticIndexPresenceUpdates).
+			Type("doc").
 			BodyJson(elasticPresenceUpdate).
 			Do(context.Background())
 		return err
@@ -254,8 +254,8 @@ func ElasticAddMessage(message *discordgo.Message) error {
 	}
 
 	_, err = cache.GetElastic().Index().
-		Index(models.ElasticIndex).
-		Type(models.ElasticTypeMessage).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		BodyJson(elasticMessageData).
 		Do(context.Background())
 	return err
@@ -292,7 +292,7 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 		message.Content = " "
 	}
 
-	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
+	_, err = cache.GetElastic().Update().Index(models.ElasticIndexMessages).Type("doc").Id(elasticID).
 		Script(elastic.
 			NewScript("ctx._source.Content.add(params.newContent)").
 			Param("newContent", message.Content).
@@ -326,7 +326,7 @@ func ElasticDeleteMessage(message *discordgo.Message) error {
 		return err
 	}
 
-	_, err = cache.GetElastic().Update().Index(models.ElasticIndex).Type(models.ElasticTypeMessage).Id(elasticID).
+	_, err = cache.GetElastic().Update().Index(models.ElasticIndexMessages).Type("doc").Id(elasticID).
 		Script(elastic.
 			NewScript("ctx._source.Deleted = params.deleted").
 			Param("deleted", true).
@@ -367,8 +367,8 @@ func ElasticAddJoin(member *discordgo.Member, usedInvite, usedVanityName string)
 	}
 
 	_, err = cache.GetElastic().Index().
-		Index(models.ElasticIndex).
-		Type(models.ElasticTypeJoin).
+		Index(models.ElasticIndexJoins).
+		Type("doc").
 		BodyJson(elasticJoinData).
 		Do(context.Background())
 	return err
@@ -399,8 +399,8 @@ func ElasticAddLeave(member *discordgo.Member) error {
 	}
 
 	_, err = cache.GetElastic().Index().
-		Index(models.ElasticIndex).
-		Type(models.ElasticTypeLeave).
+		Index(models.ElasticIndexLeaves).
+		Type("doc").
 		BodyJson(elasticLeaveData).
 		Do(context.Background())
 	return err
@@ -435,8 +435,8 @@ func ElasticAddReaction(reaction *discordgo.MessageReaction) error {
 	}
 
 	_, err = cache.GetElastic().Index().
-		Index(models.ElasticIndex).
-		Type(models.ElasticTypeReaction).
+		Index(models.ElasticIndexReactions).
+		Type("doc").
 		BodyJson(elasticLeaveData).
 		Do(context.Background())
 	return err
@@ -461,8 +461,8 @@ func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry, referer 
 	}
 
 	_, err = cache.GetElastic().Index().
-		Index(models.ElasticIndex).
-		Type(models.ElasticTypeVanityInviteClick).
+		Index(models.ElasticIndexVanityInviteClicks).
+		Type("doc").
 		BodyJson(elasticVanityInviteClickData).
 		Do(context.Background())
 	return err
@@ -499,9 +499,10 @@ func GetMinTimeForInterval(interval string, count int) (minTime time.Time) {
 }
 
 func getElasticMessage(messageID, channelID, guildID string) (elasticID string, message models.ElasticMessage, err error) {
-	termQuery := elastic.NewQueryStringQuery("_type:" + models.ElasticTypeMessage + " AND GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
 	searchResult, err := cache.GetElastic().Search().
-		Index(models.ElasticIndex).
+		Index(models.ElasticIndexMessages).
+		Type("doc").
 		Query(termQuery).
 		Size(1).
 		Sort("CreatedAt", true).
