@@ -63,17 +63,6 @@ const (
 	VOICE_SESSION_SAVE_DURATION_MIN_SECONDS = 60
 )
 
-/*
-type DB_VoiceTime struct {
-	ID           string    `gorethink:"id,omitempty"`
-	GuildID      string    `gorethink:"guildid"`
-	ChannelID    string    `gorethink:"channelid"`
-	UserID       string    `gorethink:"userid"`
-	JoinTimeUtc  time.Time `gorethink:"join_time_utc"`
-	LeaveTimeUtc time.Time `gorethink:"leave_time_utc"`
-}
-*/
-
 type VoiceSessionStart struct {
 	UserID    string
 	ChannelID string
