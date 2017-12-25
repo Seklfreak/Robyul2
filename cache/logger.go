@@ -23,7 +23,7 @@ func GetLogger() *logrus.Logger {
 	defer loggerMutex.RUnlock()
 
 	if logger == nil {
-		panic(errors.New("Tried to get discord session before logger#SetLogger() was called"))
+		panic(errors.New("Tried to get logger before logger#SetLogger() was called"))
 	}
 
 	return logger
