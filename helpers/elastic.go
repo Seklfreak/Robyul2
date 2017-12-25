@@ -468,6 +468,40 @@ func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry, referer 
 	return err
 }
 
+func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTime time.Time) (err error) {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	if guildID == "" || channelID == "" || userID == "" ||
+		joinTime.IsZero() || leaveTime.IsZero() || leaveTime.Before(joinTime) {
+		return errors.New("invalid voice session entry submitted")
+	}
+
+	if IsBlacklistedGuild(guildID) || IsLimitedGuild(guildID) || IsBlacklisted(userID) {
+		return nil
+	}
+
+	duration := leaveTime.Sub(joinTime)
+
+	elasticVoiceSessionData := models.ElasticVoiceSession{
+		CreatedAt:       time.Now(),
+		GuildID:         guildID,
+		ChannelID:       channelID,
+		UserID:          userID,
+		JoinTime:        joinTime,
+		LeaveTime:       leaveTime,
+		DurationSeconds: int64(duration.Seconds()),
+	}
+
+	_, err = cache.GetElastic().Index().
+		Index(models.ElasticIndexVoiceSessions).
+		Type("doc").
+		BodyJson(elasticVoiceSessionData).
+		Do(context.Background())
+	return err
+}
+
 func GetMinTimeForInterval(interval string, count int) (minTime time.Time) {
 	switch interval {
 	case "second":

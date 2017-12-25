@@ -15,6 +15,8 @@ import (
 
 	"encoding/json"
 
+	"sync"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
@@ -26,7 +28,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
-	rethink "github.com/gorethink/gorethink"
 	"github.com/olivere/elastic"
 )
 
@@ -54,9 +55,15 @@ func (s *Stats) Commands() []string {
 }
 
 var (
-	voiceStatesWithTime []VoiceStateWithTime
+	VoiceSessionStarts     []VoiceSessionStart
+	VoiceSessionStartsLock sync.Mutex
 )
 
+const (
+	VOICE_SESSION_SAVE_DURATION_MIN_SECONDS = 60
+)
+
+/*
 type DB_VoiceTime struct {
 	ID           string    `gorethink:"id,omitempty"`
 	GuildID      string    `gorethink:"guildid"`
@@ -65,86 +72,106 @@ type DB_VoiceTime struct {
 	JoinTimeUtc  time.Time `gorethink:"join_time_utc"`
 	LeaveTimeUtc time.Time `gorethink:"leave_time_utc"`
 }
+*/
 
-type VoiceStateWithTime struct {
-	VoiceState  *discordgo.VoiceState
-	JoinTimeUtc time.Time
+type VoiceSessionStart struct {
+	UserID    string
+	ChannelID string
+	GuildID   string
+	JoinTime  time.Time
+}
+
+func (s *Stats) handleVoiceStateUpdate(session *discordgo.Session, update *discordgo.VoiceStateUpdate) {
+	defer helpers.Recover()
+
+	if update == nil || update.GuildID == "" ||
+		helpers.IsBlacklistedGuild(update.GuildID) || helpers.IsLimitedGuild(update.GuildID) {
+		return
+	}
+
+	user, err := helpers.GetUser(update.UserID)
+	helpers.Relax(err)
+	if user.Bot || helpers.IsBlacklisted(user.ID) {
+		return
+	}
+
+	VoiceSessionStartsLock.Lock()
+	defer VoiceSessionStartsLock.Unlock()
+	if update.ChannelID == "" || update.SelfDeaf == true || update.Deaf == true {
+		// disconnect
+		newVoiceSessionStarts := make([]VoiceSessionStart, 0)
+		for _, voiceSessionStart := range VoiceSessionStarts {
+			if voiceSessionStart.UserID == update.UserID && voiceSessionStart.GuildID == update.GuildID {
+				channelID := voiceSessionStart.ChannelID
+				start := voiceSessionStart.JoinTime
+				now := time.Now()
+				go func() {
+					defer helpers.Recover()
+
+					if now.Sub(start).Seconds() < VOICE_SESSION_SAVE_DURATION_MIN_SECONDS {
+						return
+					}
+
+					err := helpers.ElasticAddVoiceSession(update.GuildID, channelID, update.UserID,
+						start, now)
+					helpers.Relax(err)
+					cache.GetLogger().WithField("module", "stats").Infof(
+						"saved voice session Guild #%s User #%s Channel #%s Duration %d (disconnect)",
+						update.GuildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
+					)
+				}()
+			} else {
+				newVoiceSessionStarts = append(newVoiceSessionStarts, voiceSessionStart)
+			}
+		}
+		VoiceSessionStarts = newVoiceSessionStarts
+	} else if update.ChannelID != "" {
+		// connect
+		newVoiceSessionStarts := make([]VoiceSessionStart, 0)
+		for _, voiceSessionStart := range VoiceSessionStarts {
+			if voiceSessionStart.UserID == update.UserID {
+				if voiceSessionStart.ChannelID == update.ChannelID {
+					// nothing changed
+					return
+				}
+				// change channel
+				channelID := voiceSessionStart.ChannelID
+				guildID := voiceSessionStart.GuildID
+				start := voiceSessionStart.JoinTime
+				now := time.Now()
+				go func() {
+					defer helpers.Recover()
+
+					if now.Sub(start).Seconds() < VOICE_SESSION_SAVE_DURATION_MIN_SECONDS {
+						return
+					}
+
+					err := helpers.ElasticAddVoiceSession(guildID, channelID, update.UserID,
+						start, now)
+					helpers.Relax(err)
+					cache.GetLogger().WithField("module", "stats").Infof(
+						"saved voice session Guild #%s User #%s Channel #%s Duration %d (channel change)",
+						guildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
+					)
+				}()
+				continue
+			}
+			newVoiceSessionStarts = append(newVoiceSessionStarts, voiceSessionStart)
+		}
+		VoiceSessionStarts = newVoiceSessionStarts
+		// new session
+		VoiceSessionStarts = append(VoiceSessionStarts, VoiceSessionStart{
+			GuildID:   update.GuildID,
+			ChannelID: update.ChannelID,
+			UserID:    update.UserID,
+			JoinTime:  time.Now(),
+		})
+	}
 }
 
 func (s *Stats) Init(session *discordgo.Session) {
-	go func() {
-		defer helpers.Recover()
-
-		var voiceStatesBefore []*discordgo.VoiceState
-		var voiceStatesCurrently []*discordgo.VoiceState
-		for {
-			voiceStatesCurrently = []*discordgo.VoiceState{}
-			// get for all vc users
-			for _, guild := range session.State.Guilds {
-				for _, voiceState := range guild.VoiceStates {
-					user, err := helpers.GetUser(voiceState.UserID)
-					if err != nil {
-						continue
-					}
-					if user.Bot == true {
-						continue
-					}
-
-					voiceStatesCurrently = append(voiceStatesCurrently, voiceState)
-					alreadyInVoiceStatesWithTime := false
-					for _, voiceStateWithTime := range voiceStatesWithTime {
-						if voiceState.UserID == voiceStateWithTime.VoiceState.UserID && voiceState.ChannelID == voiceStateWithTime.VoiceState.ChannelID {
-							alreadyInVoiceStatesWithTime = true
-						}
-					}
-					if alreadyInVoiceStatesWithTime == false {
-						voiceStatesWithTime = append(voiceStatesWithTime, VoiceStateWithTime{VoiceState: voiceState, JoinTimeUtc: time.Now().UTC()})
-					}
-				}
-			}
-			// check who left since last check
-			for _, voiceStateBefore := range voiceStatesBefore {
-				userStillConnected := false
-				voiceStateWithTimeIndex := -1
-				for _, voiceStateCurrently := range voiceStatesCurrently {
-					if voiceStateCurrently.UserID == voiceStateBefore.UserID && voiceStateCurrently.ChannelID == voiceStateBefore.ChannelID {
-						userStillConnected = true
-					}
-				}
-				if userStillConnected == false {
-					for i, voiceStateWithTimeEntry := range voiceStatesWithTime {
-						if voiceStateBefore.UserID == voiceStateWithTimeEntry.VoiceState.UserID && voiceStateBefore.ChannelID == voiceStateWithTimeEntry.VoiceState.ChannelID {
-							voiceStateWithTimeIndex = i
-						}
-					}
-				}
-				if voiceStateWithTimeIndex >= 0 && voiceStateWithTimeIndex < len(voiceStatesWithTime) {
-					channel, err := helpers.GetChannel(voiceStateBefore.ChannelID)
-					if err == nil {
-						newVoiceTime := s.getVoiceTimeEntryByOrCreateEmpty("id", "")
-						newVoiceTime.GuildID = channel.GuildID
-						newVoiceTime.ChannelID = channel.ID
-						newVoiceTime.UserID = voiceStateBefore.UserID
-						newVoiceTime.LeaveTimeUtc = time.Now().UTC()
-						newVoiceTime.JoinTimeUtc = voiceStatesWithTime[voiceStateWithTimeIndex].JoinTimeUtc
-						s.setVoiceTimeEntry(newVoiceTime)
-						voiceStatesWithTime = append(voiceStatesWithTime[:voiceStateWithTimeIndex], voiceStatesWithTime[voiceStateWithTimeIndex+1:]...)
-						cache.GetLogger().WithField("module", "stats").Info(fmt.Sprintf("Saved Voice Session Length in DB for user #%s in channel #%s on server #%s",
-							newVoiceTime.UserID, newVoiceTime.ChannelID, newVoiceTime.GuildID))
-					} else {
-						if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != 10003 {
-							helpers.Relax(err)
-						}
-					}
-				}
-			}
-			voiceStatesBefore = voiceStatesCurrently
-
-			time.Sleep(30 * time.Second)
-		}
-	}()
-
-	cache.GetLogger().WithField("module", "stats").Info("Started voice stats loop (30s)")
+	VoiceSessionStarts = make([]VoiceSessionStart, 0)
+	session.AddHandler(s.handleVoiceStateUpdate)
 }
 
 func (s *Stats) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -814,55 +841,63 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		channel, err := helpers.GetChannel(msg.ChannelID)
 		helpers.Relax(err)
 
+		channelsAgg := elastic.NewTermsAggregation().
+			Field("ChannelID.keyword").
+			Order("_count", false)
+
+		usersAgg := elastic.NewTermsAggregation().
+			Field("UserID.keyword").
+			Order("_count", false)
+
+		durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
+
+		durationByChannelsAgg := channelsAgg.SubAggregation("totalDuration", durationSumAgg)
+
+		durationbyChannelsByUsersAgg := channelsAgg.SubAggregation("users",
+			usersAgg.SubAggregation("totalDuration", durationSumAgg))
+
 		if len(args) >= 1 && args[0] != "" {
 			switch args[0] {
 			case "leaderboard", "top": // [p]voicestats top
-				var entryBucket []DB_VoiceTime
-				listCursor, err := rethink.Table("stats_voicetimes").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).Run(helpers.GetDB())
+				termQuery := elastic.NewQueryStringQuery("GuildID:" + channel.GuildID)
+				searchResult, err := cache.GetElastic().Search().
+					Index(models.ElasticIndexVoiceSessions).
+					Type("doc").
+					Query(termQuery).
+					Aggregation("channels", durationbyChannelsByUsersAgg).
+					Size(0).
+					Do(context.Background())
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&entryBucket)
 
-				if err != nil {
-					if err == rethink.ErrEmptyResult {
-						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
-						helpers.Relax(err)
-					} else {
-						helpers.Relax(err)
+				channelUsersDurations := make(map[string]map[string]int64, 0)
+
+				if agg, found := searchResult.Aggregations.Terms("channels"); found {
+					for _, bucket := range agg.Buckets {
+						channelUsersDurations[bucket.Key.(string)] = make(map[string]int64, 0)
+						if subAgg, found := bucket.Aggregations.Terms("users"); found {
+							for _, subBucket := range subAgg.Buckets {
+								if subSubAgg, found := subBucket.Aggregations.Sum("totalDuration"); found {
+									channelUsersDurations[bucket.Key.(string)][subBucket.Key.(string)] = int64(*subSubAgg.Value)
+								}
+							}
+						}
 					}
-					return
 				}
-				if len(entryBucket) <= 0 {
+
+				if len(channelUsersDurations) <= 0 {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
 					helpers.Relax(err)
 					return
 				}
 
-				voiceChannelsDurationPerUser := map[string]map[string]time.Duration{}
-				var totalDuration time.Duration
-
-				for _, voiceTime := range entryBucket {
-					if voiceTime.UserID == session.State.User.ID { // Don't show Robyul in the stats
-						continue
-					}
-
-					voiceChannelDuration := voiceTime.LeaveTimeUtc.Sub(voiceTime.JoinTimeUtc)
-					totalDuration += voiceChannelDuration
-					if _, ok := voiceChannelsDurationPerUser[voiceTime.ChannelID]; ok {
-						if _, ok := voiceChannelsDurationPerUser[voiceTime.ChannelID][voiceTime.UserID]; ok {
-							voiceChannelsDurationPerUser[voiceTime.ChannelID][voiceTime.UserID] += voiceChannelDuration
-						} else {
-							voiceChannelsDurationPerUser[voiceTime.ChannelID][voiceTime.UserID] = voiceChannelDuration
-						}
-					} else {
-						voiceChannelsDurationPerUser[voiceTime.ChannelID] = map[string]time.Duration{}
-						voiceChannelsDurationPerUser[voiceTime.ChannelID][voiceTime.UserID] = voiceChannelDuration
+				var totalDurationSeconds int64
+				for _, voiceChannelData := range channelUsersDurations {
+					for _, voiceChannelUserDuration := range voiceChannelData {
+						totalDurationSeconds += voiceChannelUserDuration
 					}
 				}
 
-				if totalDuration <= 0 {
+				if totalDurationSeconds <= 0 {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.voicestats-toplist-no-entries"))
 					helpers.Relax(err)
 					return
@@ -872,35 +907,35 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					Color: 0x0FADED,
 					Title: helpers.GetText("plugins.stats.voicestats-toplist-embed-title"),
 					Description: fmt.Sprintf("Total time connected by all users: **%s**",
-						helpers.HumanizedTimesSinceText(time.Now().UTC().Add(totalDuration))),
+						helpers.HumanizedTimesSinceText(time.Now().UTC().Add(-1*(time.Second*time.Duration(totalDurationSeconds))))),
 					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.stats.voicestats-embed-footer")},
 					Fields: []*discordgo.MessageEmbedField{},
 				}
 
-				for voiceChannelID, voiceChannelDurations := range voiceChannelsDurationPerUser {
-					resultPairs := s.rankByDuration(voiceChannelDurations)
+				guild, err := session.State.Guild(channel.GuildID)
+				helpers.Relax(err)
 
-					voiceChannel, err := helpers.GetChannel(voiceChannelID)
-					if err != nil {
+				slice.Sort(guild.Channels, func(i, j int) bool {
+					return guild.Channels[i].Position < guild.Channels[j].Position
+				})
+
+				var i int
+				var channelToplistText string
+				for _, guildChannel := range guild.Channels {
+					userDurations, ok := channelUsersDurations[guildChannel.ID]
+					if !ok {
 						continue
 					}
 
-					channelToplistText := ""
+					durations := s.rankByDuration(userDurations)
 
-					i := 0
-					for _, voiceUserDuration := range resultPairs {
-						user, err := helpers.GetUser(voiceUserDuration.Key)
-						if err != nil {
-							continue
-						}
-						if user.Bot == true {
-							continue
-						}
-
+					channelToplistText = ""
+					i = 0
+					for _, voiceChannelUserDurationData := range durations {
 						channelToplistText += fmt.Sprintf("#%d: <@%s>: %s\n",
 							i+1,
-							voiceUserDuration.Key,
-							helpers.HumanizedTimesSinceText(time.Now().UTC().Add(voiceUserDuration.Value)))
+							voiceChannelUserDurationData.Key,
+							helpers.HumanizedTimesSinceText(time.Now().Add(-1*(time.Second*time.Duration(voiceChannelUserDurationData.Value)))))
 						i++
 						if i >= 5 {
 							break
@@ -908,7 +943,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 
 					totalVoiceStatsEmbed.Fields = append(totalVoiceStatsEmbed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("Top 5 users connected to #%s", voiceChannel.Name),
+						Name:   fmt.Sprintf("Top 5 users connected to #%s", guildChannel.Name),
 						Value:  channelToplistText,
 						Inline: false,
 					})
@@ -927,43 +962,37 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		currentConnectionText := "Currently not connected to any Voice Channel on this server."
-		for _, voiceStateWithTime := range voiceStatesWithTime {
-			if voiceStateWithTime.VoiceState.GuildID == channel.GuildID && voiceStateWithTime.VoiceState.UserID == targetUser.ID {
-				//duration := time.Since(voiceStateWithTime.JoinTimeUtc)
-				currentVoiceChannel, err := helpers.GetChannel(voiceStateWithTime.VoiceState.ChannelID)
+		for _, voiceSessionStart := range VoiceSessionStarts {
+			if voiceSessionStart.GuildID == channel.GuildID && voiceSessionStart.UserID == targetUser.ID {
+				currentVoiceChannel, err := helpers.GetChannel(voiceSessionStart.ChannelID)
 				if err == nil {
 					currentConnectionText = fmt.Sprintf("Connected to **<#%s>** since **%s**",
 						currentVoiceChannel.ID,
-						helpers.HumanizedTimesSinceText(voiceStateWithTime.JoinTimeUtc))
+						helpers.HumanizedTimesSinceText(voiceSessionStart.JoinTime))
 				}
 			}
 		}
 
 		title := fmt.Sprintf("Voice Stats for %s", targetUser.Username)
 
-		var entryBucket []DB_VoiceTime
-		listCursor, err := rethink.Table("stats_voicetimes").Filter(
-			rethink.Row.Field("guildid").Eq(channel.GuildID),
-		).Filter(
-			rethink.Row.Field("userid").Eq(targetUser.ID),
-		).Run(helpers.GetDB())
+		termQuery := elastic.NewQueryStringQuery("GuildID:" + channel.GuildID + " AND UserID:" + targetUser.ID)
+		searchResult, err := cache.GetElastic().Search().
+			Index(models.ElasticIndexVoiceSessions).
+			Type("doc").
+			Query(termQuery).
+			Aggregation("channels", durationByChannelsAgg).
+			Size(0).
+			Do(context.Background())
 		helpers.Relax(err)
-		defer listCursor.Close()
-		err = listCursor.All(&entryBucket)
 
-		voiceChannelsDuration := map[string]time.Duration{}
+		channelDurations := make(map[string]int64, 0)
 
-		if err != rethink.ErrEmptyResult && len(entryBucket) > 0 {
-			for _, voiceTime := range entryBucket {
-				voiceChannelDuration := voiceTime.LeaveTimeUtc.Sub(voiceTime.JoinTimeUtc)
-				if _, ok := voiceChannelsDuration[voiceTime.ChannelID]; ok {
-					voiceChannelsDuration[voiceTime.ChannelID] += voiceChannelDuration
-				} else {
-					voiceChannelsDuration[voiceTime.ChannelID] = voiceChannelDuration
+		if agg, found := searchResult.Aggregations.Terms("channels"); found {
+			for _, bucket := range agg.Buckets {
+				if subAgg, found := bucket.Aggregations.Sum("totalDuration"); found {
+					channelDurations[bucket.Key.(string)] = int64(*subAgg.Value)
 				}
 			}
-		} else if err != nil && err != rethink.ErrEmptyResult {
-			helpers.Relax(err)
 		}
 
 		voicestatsEmbed := &discordgo.MessageEmbed{
@@ -974,26 +1003,23 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			Fields:      []*discordgo.MessageEmbedField{},
 		}
 
-		guildChannels, err := session.GuildChannels(channel.GuildID)
+		guild, err := session.State.Guild(channel.GuildID)
 		helpers.Relax(err)
 
-		slice.Sort(guildChannels, func(i, j int) bool {
-			return guildChannels[i].Position < guildChannels[j].Position
+		slice.Sort(guild.Channels, func(i, j int) bool {
+			return guild.Channels[i].Position < guild.Channels[j].Position
 		})
 
-		for _, guildChannel := range guildChannels {
-			for voiceChannelID, voiceChannelDuration := range voiceChannelsDuration {
-				if voiceChannelID == guildChannel.ID {
-					voiceChannel, err := helpers.GetChannel(voiceChannelID)
-					if err == nil {
-						voicestatsEmbed.Fields = append(voicestatsEmbed.Fields, &discordgo.MessageEmbedField{
-							Name:   fmt.Sprintf("Total duration connected to #%s", voiceChannel.Name),
-							Value:  fmt.Sprintf("%s", helpers.HumanizedTimesSinceText(time.Now().UTC().Add(voiceChannelDuration))),
-							Inline: false,
-						})
-					}
-				}
+		for _, guildChannel := range guild.Channels {
+			duration, ok := channelDurations[guildChannel.ID]
+			if !ok {
+				continue
 			}
+			voicestatsEmbed.Fields = append(voicestatsEmbed.Fields, &discordgo.MessageEmbedField{
+				Name:   fmt.Sprintf("Total duration connected to #%s", guildChannel.Name),
+				Value:  fmt.Sprintf("%s", helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(duration)))),
+				Inline: false,
+			})
 		}
 
 		_, err = helpers.SendEmbed(msg.ChannelID, voicestatsEmbed)
@@ -1867,41 +1893,8 @@ func (r *Stats) setEmbedChannellistPage(memberlistEmbed *discordgo.MessageEmbed,
 	return
 }
 
-func (r *Stats) setVoiceTimeEntry(entry DB_VoiceTime) {
-	_, err := rethink.Table("stats_voicetimes").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (r *Stats) getVoiceTimeEntryByOrCreateEmpty(key string, id string) DB_VoiceTime {
-	var entryBucket DB_VoiceTime
-	listCursor, err := rethink.Table("stats_voicetimes").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("stats_voicetimes").Insert(DB_VoiceTime{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return r.getVoiceTimeEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
 // source: http://stackoverflow.com/a/18695740
-func (r *Stats) rankByDuration(durations map[string]time.Duration) VoiceChannelDurationPairList {
+func (r *Stats) rankByDuration(durations map[string]int64) VoiceChannelDurationPairList {
 	pl := make(VoiceChannelDurationPairList, len(durations))
 	i := 0
 	for k, v := range durations {
@@ -1914,7 +1907,7 @@ func (r *Stats) rankByDuration(durations map[string]time.Duration) VoiceChannelD
 
 type VoiceChannelDurationPair struct {
 	Key   string
-	Value time.Duration
+	Value int64
 }
 type VoiceChannelDurationPairList []VoiceChannelDurationPair
 

@@ -667,7 +667,7 @@
     "stats": {
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",
       "voicestats-toplist-embed-title": "Voice Channel Duration Leaderboard for this server",
-      "voicestats-embed-footer": "Total durations exclude the currently active sessions. Stats are refreshed every 30 seconds.",
+      "voicestats-embed-footer": "Total durations exclude the currently active sessions.",
       "no-emotes": "No custom emotes on this server yet. <a:ablobshocked:394026914076950539>",
       "reaction-embed-title": "@%s: Custom Emotes on %s",
       "reaction-embed-footer": "There are %d custom emotes on this server.",

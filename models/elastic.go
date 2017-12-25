@@ -9,6 +9,7 @@ const (
 	ElasticIndexReactions          = "robyul-reactions"
 	ElasticIndexPresenceUpdates    = "robyul-presence_updates"
 	ElasticIndexVanityInviteClicks = "robyul-vanity_invite_clicks"
+	ElasticIndexVoiceSessions      = "robyul-voice_session"
 )
 
 type ElasticLegacyMessage struct {
@@ -75,4 +76,14 @@ type ElasticVanityInviteClick struct {
 	VanityInviteName string
 	GuildID          string
 	Referer          string
+}
+
+type ElasticVoiceSession struct {
+	CreatedAt       time.Time
+	GuildID         string
+	ChannelID       string
+	UserID          string
+	JoinTime        time.Time
+	LeaveTime       time.Time
+	DurationSeconds int64
 }
