@@ -200,3 +200,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/dyatlov/go-oembed"
+
+[[constraint]]
+  name = "github.com/cheggaaa/pb"
+  version = "2.0.0"
