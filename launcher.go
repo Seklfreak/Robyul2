@@ -147,6 +147,8 @@ func main() {
 		client, err := elastic.NewClient(
 			elastic.SetURL(config.Path("elasticsearch.url").Data().(string)),
 			elastic.SetSniff(false),
+			elastic.SetErrorLog(log),
+			//elastic.SetInfoLog(log),
 		)
 		if err != nil {
 			panic(err)
