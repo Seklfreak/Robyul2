@@ -121,7 +121,7 @@ func main() {
 	log.WithField("module", "launcher").Info("USERAGENT: '" + helpers.DEFAULT_UA + "'")
 
 	// Call home
-	log.WithField("module", "launcher").Info("[SENTRY] Calling home...")
+	log.WithField("module", "launcher").Info("Connecting to sentry...")
 	err = raven.SetDSN(config.Path("sentry").Data().(string))
 	if err != nil {
 		panic(err)
@@ -129,21 +129,28 @@ func main() {
 	if version.BOT_VERSION != "UNSET" {
 		raven.SetRelease(version.BOT_VERSION)
 	}
-	log.WithField("module", "launcher").Info("[SENTRY] Someone picked up the phone \\^-^/")
+	log.WithField("module", "launcher").Info(
+		"Connected to Sentry Project ID: ", raven.ProjectID(), " Release: ", raven.Release())
 
 	// Connect to DB
-	log.WithField("module", "launcher").Info("Opening database connection...")
+	log.WithField("module", "launcher").Info("Connecting to rethinkDB...")
 	helpers.ConnectDB(
 		config.Path("rethink.url").Data().(string),
 		config.Path("rethink.db").Data().(string),
 	)
+	rethinkdbServer, err := helpers.GetDB().Server()
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("module", "launcher").Info(
+		"Connected to rethinkDB Server: ", rethinkdbServer.Name, " (ID: "+rethinkdbServer.ID+")")
 
 	// Close DB when main dies
 	defer helpers.GetDB().Close()
 
 	// Connect to elastic search
 	if config.Path("elasticsearch.url").Data().(string) != "" {
-		log.WithField("module", "launcher").Info("Connecting bot to elastic search...")
+		log.WithField("module", "launcher").Info("Connecting to ElasticSearch...")
 		client, err := elastic.NewClient(
 			elastic.SetURL(config.Path("elasticsearch.url").Data().(string)),
 			elastic.SetSniff(false),
