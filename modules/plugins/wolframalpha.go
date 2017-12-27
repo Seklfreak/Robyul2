@@ -5,12 +5,9 @@ import (
 
 	"net/url"
 
-	"time"
-
 	"bytes"
 
 	"github.com/Krognol/go-wolfram"
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
@@ -30,18 +27,6 @@ func (m *WolframAlpha) Init(session *discordgo.Session) {
 
 }
 
-func (m *WolframAlpha) TypingLoop(channelID string, quitChannel chan int) {
-	for {
-		select {
-		case <-quitChannel:
-			return
-		default:
-			cache.GetSession().ChannelTyping(channelID)
-			time.Sleep(5 * time.Second)
-		}
-	}
-}
-
 func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	var err error
 	var res string
@@ -58,10 +43,8 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 		return
 	}
 
-	quitChannel := make(chan int)
+	quitChannel := helpers.StartTypingLoop(msg.ChannelID)
 	defer func() { quitChannel <- 0 }()
-
-	go m.TypingLoop(msg.ChannelID, quitChannel)
 
 	wolframClient := &wolfram.Client{AppID: helpers.GetConfig().Path("wolframalpha.appid").Data().(string)}
 
@@ -93,6 +76,7 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 			return
 		}
 
+		quitChannel <- 0
 		_, err = helpers.SendComplex(
 			msg.ChannelID, &discordgo.MessageSend{
 				Files: []*discordgo.File{
@@ -107,10 +91,12 @@ func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Mes
 	}
 
 	if res == "" || res == "Wolfram|Alpha did not understand your input" {
+		quitChannel <- 0
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.wolframalpha.error"))
 		return
 	}
 
+	quitChannel <- 0
 	_, err = helpers.SendMessage(msg.ChannelID, res)
 	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 }
