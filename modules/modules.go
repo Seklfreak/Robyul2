@@ -73,6 +73,7 @@ var (
 		&plugins.VanityInvite{},
 		&plugins.DiscordMoney{},
 		&plugins.Whois{},
+		&plugins.Isup{},
 	}
 
 	// PluginList is the list of active plugins

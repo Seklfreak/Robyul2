@@ -1181,6 +1181,8 @@ func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err e
 	}
 }
 
+// TODO: Webhook
+
 // Applies Embed Limits to the given Embed
 // Source: https://discordapp.com/developers/docs/resources/channel#embed-limits
 func TruncateEmbed(embed *discordgo.MessageEmbed) (result *discordgo.MessageEmbed) {
@@ -1252,4 +1254,20 @@ func CalculateFullEmbedLength(embed *discordgo.MessageEmbed) (count int) {
 	return count
 }
 
-// TODO: Webhook
+func StartTypingLoop(channelID string) (quitChannel chan int) {
+	quitChannel = make(chan int)
+	go typingLoop(channelID, quitChannel)
+	return quitChannel
+}
+
+func typingLoop(channelID string, quitChannel chan int) {
+	for {
+		select {
+		case <-quitChannel:
+			return
+		default:
+			cache.GetSession().ChannelTyping(channelID)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}

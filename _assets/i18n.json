@@ -970,6 +970,11 @@
       "set-change-confirm": "Are you sure you want to change the custom invite for this server? The previous custom invite `%s` will stop working.",
       "set-error-noinviteperm": "I'm not able to create invites to the given channel.\nCustom invite creation aborted.",
       "setlog-success": "Custom Invite changes will get posted in the given channel."
+    },
+    "isup": {
+      "isup": "<:blobgo:317034640181297163> The website seems to be up! <a:ablobgrimace:394026913108328449>",
+      "isnotup": "<:blobstop:317034621953114112> It's not just you! The website looks down from here. <a:ablobshocked:394026914076950539>",
+      "credits": "_powered by isup.me_"
     }
   }
 }
