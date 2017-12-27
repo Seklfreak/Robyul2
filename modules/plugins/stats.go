@@ -28,6 +28,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
+	"github.com/gorethink/gorethink"
 	"github.com/olivere/elastic"
 )
 
@@ -197,7 +198,28 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			activeWorkersText += worker.ConsumerTag + " (" + strconv.Itoa(worker.Concurrency) + ")"
 		}
 		if activeWorkersText == "" {
-			activeWorkersText = "N/A"
+			activeWorkersText = "_N/A_"
+		}
+
+		var rethinkDBStatusText string
+
+		rethinkDBServerStatus := make(map[string]interface{}, 0)
+		rethinkDBServerStatusCursor, err := gorethink.DB(gorethink.SystemDatabase).Table(gorethink.ServerStatusSystemTable).
+			Run(helpers.GetDB())
+		helpers.Relax(err)
+		rethinkDBServerStatusCursor.One(&rethinkDBServerStatus)
+		defer rethinkDBServerStatusCursor.Close()
+
+		rethinkDBProcess, ok := rethinkDBServerStatus["process"].(map[string]interface{})
+		if ok {
+			startedAt, ok := rethinkDBProcess["time_started"].(time.Time)
+			if ok {
+				rethinkDBStatusText += "Uptime " + helpers.HumanizeDuration(time.Now().Sub(startedAt)) + "\n"
+			}
+			cacheSizeMb, ok := rethinkDBProcess["cache_size_mb"].(float64)
+			if ok {
+				rethinkDBStatusText += "Cache " + humanize.Bytes(uint64(cacheSizeMb*1000000)) + "\n"
+			}
 		}
 
 		var redisUptimeSecondsText, redisConnectedClients, redisUsedMemoryHuman string
@@ -226,7 +248,29 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		redisLaunched := time.Now().Add(time.Duration(redisUptimeSeconds) * time.Second * -1)
 		redisUptime := helpers.HumanizeDuration(time.Now().Sub(redisLaunched))
 
-		// TODO: RethinkDB stats
+		var elasticStatusText, elasticStatsText, elasticProcessText string
+
+		if cache.HasElastic() {
+			clusterHealth, err := cache.GetElastic().ClusterHealth().Do(context.Background())
+			helpers.Relax(err)
+			clusterStats, err := cache.GetElastic().ClusterStats().Do(context.Background())
+			helpers.Relax(err)
+			elasticStatusText += fmt.Sprintf(
+				"%s\n%d node(s)\n%d pending task(s)",
+				clusterStats.Status, clusterStats.Nodes.Count.Total, clusterHealth.NumberOfPendingTasks,
+			)
+			elasticStatsText += fmt.Sprintf("%d Indices\n%s Documents\nSize %s",
+				clusterStats.Indices.Count, humanize.Comma(int64(clusterStats.Indices.Docs.Count)),
+				humanize.Bytes(uint64(clusterStats.Indices.Store.SizeInBytes)))
+			elasticProcessText += fmt.Sprintf(
+				"Uptime %s\nMemory %s\n%d Threads",
+				helpers.HumanizeDuration(
+					time.Now().Sub(time.Now().Add(-1*(time.Millisecond*time.Duration(clusterStats.Nodes.JVM.MaxUptimeInMillis)))),
+				),
+				humanize.Bytes(uint64(clusterStats.Nodes.JVM.Mem.HeapUsedInBytes)),
+				clusterStats.Nodes.JVM.Threads,
+			)
+		}
 
 		pendingTasks, err := cache.GetMachineryServer().GetBroker().GetPendingTasks("robyul_tasks")
 		helpers.Relax(err)
@@ -234,7 +278,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
 		helpers.Relax(err)
 
-		_, err = helpers.SendEmbed(msg.ChannelID, &discordgo.MessageEmbed{
+		statsEmbed := &discordgo.MessageEmbed{
 			Color: 0x0FADED,
 			Fields: []*discordgo.MessageEmbedField{
 				// Build
@@ -267,15 +311,37 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Active Workers", Value: activeWorkersText, Inline: true},
 				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
+				{Name: "RethinkDB", Value: rethinkDBStatusText, Inline: false},
+
 				// Redis
 				{Name: "Redis Uptime", Value: redisUptime, Inline: true},
 				{Name: "Redis Clients", Value: redisConnectedClients, Inline: true},
 				{Name: "Redis Memory", Value: redisUsedMemoryHuman, Inline: true},
-
-				// Link
-				{Name: "Want more stats and awesome graphs?", Value: "Visit my [stats dashboard](https://robyul.chat/statistics)", Inline: false},
 			},
-		})
+		}
+
+		// ElasticSearch
+		if elasticStatusText != "" {
+			statsEmbed.Fields = append(statsEmbed.Fields, &discordgo.MessageEmbedField{
+				Name: "ElasticSearch Status", Value: elasticStatusText, Inline: true,
+			})
+			statsEmbed.Fields = append(statsEmbed.Fields, &discordgo.MessageEmbedField{
+				Name: "ElasticSearch Storage", Value: elasticStatsText, Inline: true,
+			})
+			statsEmbed.Fields = append(statsEmbed.Fields, &discordgo.MessageEmbedField{
+				Name: "ElasticSearch Process", Value: elasticProcessText, Inline: true,
+			})
+		}
+
+		// Link
+		statsEmbed.Fields = append(statsEmbed.Fields,
+			&discordgo.MessageEmbedField{
+				Name:   "Want more stats and awesome graphs?",
+				Value:  "Visit my [stats dashboard](https://robyul.chat/statistics)",
+				Inline: false,
+			})
+
+		_, err = helpers.SendEmbed(msg.ChannelID, statsEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "serverinfo":
 		session.ChannelTyping(msg.ChannelID)
@@ -406,7 +472,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		if guild.Icon != "" {
 			serverinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)}
-			serverinfoEmbed.URL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)
+			serverinfoEmbed.URL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.png?size=2048", guild.ID, guild.Icon)
 		}
 
 		if totalMessagesText != "" {

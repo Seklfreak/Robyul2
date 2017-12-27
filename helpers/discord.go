@@ -1200,7 +1200,10 @@ func TruncateEmbed(embed *discordgo.MessageEmbed) (result *discordgo.MessageEmbe
 		embed.Author.Name = embed.Author.Name[0:255] + "…"
 	}
 	newFields := make([]*discordgo.MessageEmbedField, 0)
-	for i, field := range embed.Fields {
+	for _, field := range embed.Fields {
+		if field.Value == "" {
+			continue
+		}
 		if len(field.Name) > 256 {
 			field.Name = field.Name[0:255] + "…"
 		}
@@ -1209,7 +1212,7 @@ func TruncateEmbed(embed *discordgo.MessageEmbed) (result *discordgo.MessageEmbe
 			field.Value = field.Value[0:1023] + "…"
 		}
 		newFields = append(newFields, field)
-		if i >= 25-1 {
+		if len(newFields) >= 25 {
 			break
 		}
 	}
