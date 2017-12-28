@@ -16,10 +16,6 @@ var (
 	PluginList = []Plugin{
 		&plugins.About{},
 		&plugins.Stats{},
-		//&plugins.Stone{},
-		//&plugins.Support{},
-		&plugins.Announcement{},
-		//&plugins.Translator{},
 		&plugins.Uptime{},
 		&plugins.Translator{},
 		&plugins.UrbanDict{},
@@ -31,27 +27,13 @@ var (
 		&plugins.LastFm{},
 		&plugins.Twitch{},
 		&plugins.Charts{},
-		//&plugins.Avatar{},
-		//&plugins.Calc{},
-		//&plugins.Changelog{},
 		&plugins.Choice{},
-		//&plugins.FlipCoin{},
-		//&plugins.Giphy{},
-		//&plugins.Google{},
-		//&plugins.Leet{},
-		//&plugins.ListenDotMoe{},
-		//&plugins.Minecraft{},
 		&plugins.Osu{},
 		&plugins.Reminders{},
-		//&plugins.Roll{},
-		//&plugins.Stone{},
-		//&plugins.Support{},
-		//&plugins.XKCD{},
 		&plugins.Ratelimit{},
 		&plugins.Gfycat{},
 		&plugins.RandomPictures{},
 		&youtube.Handler{},
-		// &plugins.YouTube{},
 		&plugins.Spoiler{},
 		&plugins.RandomCat{},
 		&plugins.RPS{},
@@ -76,7 +58,6 @@ var (
 		&plugins.Isup{},
 	}
 
-	// PluginList is the list of active plugins
 	PluginExtendedList = []ExtendedPlugin{
 		&plugins.Bias{},
 		&plugins.GuildAnnouncements{},
@@ -95,21 +76,7 @@ var (
 		&plugins.Twitter{},
 	}
 
-	// TriggerPluginList is the list of plugins that activate on normal chat
 	TriggerPluginList = []TriggerPlugin{
-		//&triggers.CSS{},
-		//&triggers.Donate{},
-		//&triggers.Git{},
 		&triggers.EightBall{},
-		//&triggers.Hi{},
-		//&triggers.HypeTrain{},
-		//&triggers.Invite{},
-		//&triggers.IPTables{},
-		//&triggers.Lenny{},
-		//&triggers.Nep{},
-		//&triggers.ReZero{},
-		//&triggers.Shrug{},
-		//&triggers.TableFlip{},
-		//&triggers.Triggered{},
 	}
 )
