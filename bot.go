@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"regexp"
 	"strings"
 	"time"
@@ -398,6 +399,29 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	// Check if the message is prefixed for us
 	// If not exit
 	if !strings.HasPrefix(message.Content, prefix) {
+		robyulIsMentioned := false
+		for _, mention := range message.Mentions {
+			if mention == nil {
+				continue
+			}
+			if mention.ID == session.State.User.ID {
+				robyulIsMentioned = true
+			}
+		}
+		if robyulIsMentioned {
+			reactions := []string{
+				"a:ablobwave:393869340975300638",
+				"a:ablobgrimace:394026913108328449",
+				"a:ablobwink:394026912436977665",
+				"a:ablobshocked:394026914076950539",
+				":blobglare:317044032658341888",
+				":blobonfire:317034288896016384",
+				":blobsalute:317043033004703744",
+				":blobthinkingeyes:317044481499201538",
+				":googleghost:317030645786476545",
+			}
+			cache.GetSession().MessageReactionAdd(message.ChannelID, message.ID, reactions[rand.Intn(len(reactions))])
+		}
 		return
 	}
 
