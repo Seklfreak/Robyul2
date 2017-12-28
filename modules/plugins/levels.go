@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"regexp"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -2455,7 +2457,7 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
 	if err == rethink.ErrEmptyResult {
 		var entryBucket DB_Profile_Background
 		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", backgroundName))
+			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", regexp.QuoteMeta(backgroundName)))
 		}).Run(helpers.GetDB())
 		if err != nil {
 			panic(err)
@@ -2495,7 +2497,7 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 	if err == rethink.ErrEmptyResult {
 		var entryBucket DB_Profile_Background
 		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", backgroundName))
+			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", regexp.QuoteMeta(backgroundName)))
 		}).Run(helpers.GetDB())
 		if err != nil {
 			panic(err)

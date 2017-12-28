@@ -6,6 +6,8 @@ import (
 
 	"strconv"
 
+	"regexp"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -90,7 +92,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			).Filter(
 				rethink.Row.Field("userid").Eq(msg.Author.ID),
 			).Filter(func(keywordTerm rethink.Term) rethink.Term {
-				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + keywords + "$"))
+				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + regexp.QuoteMeta(keywords) + "$"))
 			}).Run(helpers.GetDB())
 			helpers.Relax(err)
 			defer listCursor.Close()
@@ -162,7 +164,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			).Filter(
 				rethink.Row.Field("userid").Eq(msg.Author.ID),
 			).Filter(func(keywordTerm rethink.Term) rethink.Term {
-				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + keywords + "$"))
+				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + regexp.QuoteMeta(keywords) + "$"))
 			}).Run(helpers.GetDB())
 			helpers.Relax(err)
 			defer listCursor.Close()
