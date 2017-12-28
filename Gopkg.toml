@@ -156,7 +156,7 @@
 
 [[constraint]]
   name = "github.com/olivere/elastic"
-  branch = "release-branch.v6"
+  version = "6.0.0"
 
 [[constraint]]
   name = "gopkg.in/inconshreveable/go-keen.v0"

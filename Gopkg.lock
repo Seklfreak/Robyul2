@@ -65,7 +65,7 @@
   branch = "master"
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/sqs","service/sqs/sqsiface","service/sts"]
-  revision = "6eab70e3edd8e65a17a1dbf9a2eeaf83f06281d0"
+  revision = "793c7bad9fd33bf3cf2095f32f8024bf47f3cd0a"
 
 [[projects]]
   branch = "master"
@@ -95,7 +95,7 @@
   branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
-  revision = "e6ed3d579b4a6d5e972f83583ff512813d07020d"
+  revision = "b58212ae336d123c4191b621c71fd8e3af08b18e"
 
 [[projects]]
   name = "github.com/cenkalti/backoff"
@@ -190,8 +190,8 @@
 [[projects]]
   name = "github.com/go-redis/redis"
   packages = [".","internal","internal/consistenthash","internal/hashtag","internal/pool","internal/proto"]
-  revision = "9c885d5ba8a22f260badcffde1649915fbeebfc0"
-  version = "v6.7.5"
+  revision = "73b70592cdaa9e6abdfcfbf97b4a90d80728c836"
+  version = "v6.8.0"
 
 [[projects]]
   branch = "master"
@@ -255,8 +255,8 @@
 [[projects]]
   name = "github.com/kz/discordrus"
   packages = ["."]
-  revision = "9552996f102c91e7712fee70bd6417be63cc04bd"
-  version = "v1.0.1"
+  revision = "233680a87a4b99f0b9a96fa0390847a8ec35ed66"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -301,10 +301,10 @@
   revision = "53693fbb59a88d8eb5a214820c5ec1ea76d2460c"
 
 [[projects]]
-  branch = "release-branch.v6"
   name = "github.com/olivere/elastic"
   packages = [".","config","uritemplates"]
-  revision = "7a065d53ac847c9aba9385e84fa24ef4647a6ae2"
+  revision = "ddb058ca128ab8faf97562416199b02be2467f55"
+  version = "v6.1.0"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -370,7 +370,7 @@
   branch = "master"
   name = "github.com/zonedb/zonedb"
   packages = ["."]
-  revision = "c403e39fb8b8b87d9bbacb5e45be00d0b91c501e"
+  revision = "19e90b550f692b2bf001bf3f57a52c90f5f07cb0"
 
 [[projects]]
   branch = "master"
@@ -382,7 +382,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ed25519","ed25519/internal/edwards25519","nacl/secretbox","pbkdf2","poly1305","salsa20/salsa","ssh/terminal"]
-  revision = "d585fd2cc9195196078f516b69daff6744ef5e84"
+  revision = "95a4943f35d008beabde8c11e5075a1b714e6419"
 
 [[projects]]
   branch = "master"
@@ -394,7 +394,7 @@
   branch = "master"
   name = "golang.org/x/oauth2"
   packages = [".","google","internal","jws","jwt"]
-  revision = "0448841f0cbe9d174c6c1cedd177f583337b8e2c"
+  revision = "197281d4e0ecd78c33865daf9c6e51626feefcb2"
 
 [[projects]]
   branch = "master"
@@ -406,7 +406,7 @@
   branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "eb22672bea55af56d225d4e35405f4d2e9f062a0"
+  revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
 
 [[projects]]
   branch = "master"
@@ -519,6 +519,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "af96865d0038d0ef561f35002d1eadb1aabf368d7188dd7737c16551c11f17a5"
+  inputs-digest = "1e81bffbfb0eda9fe34bf6160dee3df408f56420e765f90568d0ccbac78c598d"
   solver-name = "gps-cdcl"
   solver-version = 1
