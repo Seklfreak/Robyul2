@@ -346,7 +346,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 			session.ChannelTyping(msg.ChannelID)
 			lastfmRecentTracks, err := lastfmClient.User.GetRecentTracks(lastfm.P{
-				"limit": 1,
+				"limit": 2,
 				"user":  lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -379,6 +379,15 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 							lastTrackEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: image.Url}
 						}
 					}
+				}
+				if lastTrack.NowPlaying == "true" && lastfmRecentTracks.Total > 1 {
+					beforeTrack := lastfmRecentTracks.Tracks[1]
+					lastTrackEmbed.Fields = append(lastTrackEmbed.Fields, &discordgo.MessageEmbedField{
+						Name: "Listened to before",
+						Value: fmt.Sprintf("[**%s** by **%s**](%s)",
+							beforeTrack.Name, beforeTrack.Artist.Name, beforeTrack.Url),
+						Inline: false,
+					})
 				}
 				_, err = helpers.SendEmbed(msg.ChannelID, lastTrackEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)

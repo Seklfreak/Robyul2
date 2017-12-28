@@ -566,7 +566,7 @@
     "lastfm": {
       "profile-embed-title": "%s Last.FM Account",
       "profile-embed-title-realname": "%s (%s) Last.FM Account",
-      "embed-footer": "via last.fm",
+      "embed-footer": "powered by last.fm",
       "no-recent-tracks": "No scrobbles found.",
       "lasttrack-embed-title-np": "%s is currently listening to:",
       "lasttrack-embed-title-last": "%s last listened to:",

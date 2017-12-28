@@ -24,7 +24,7 @@ func NetGet(url string) []byte {
 func NetGetUA(url string, useragent string) []byte {
 	// Allocate client
 	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
+		Timeout: time.Duration(15 * time.Second),
 	}
 
 	// Prepare request
@@ -58,7 +58,7 @@ func NetGetUA(url string, useragent string) []byte {
 func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 	// Allocate client
 	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
+		Timeout: time.Duration(15 * time.Second),
 	}
 
 	// Prepare request
@@ -144,7 +144,7 @@ func NetPost(url string, data string) []byte {
 func NetPostUA(url string, data string, useragent string) []byte {
 	// Allocate client
 	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
+		Timeout: time.Duration(15 * time.Second),
 	}
 
 	// Prepare request
