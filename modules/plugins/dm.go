@@ -194,11 +194,14 @@ func (dm *DM) DmResponse(msg *discordgo.Message) (response *discordgo.MessageSen
 	var content string
 
 	switch {
-	case regexp.MustCompile("(?i)^(.)?HELP.*").MatchString(msg.Content):
+	case regexp.MustCompile("(?i)^(.)?(HELP|COMMAND).*").MatchString(msg.Content):
 		content = helpers.GetText("dm.help")
 		break
 	case regexp.MustCompile("(?i)^(.)?INVITE.*").MatchString(msg.Content):
 		content = helpers.GetText("dm.invite")
+		break
+	case regexp.MustCompile("(?i)^(.)?ABOUT.*").MatchString(msg.Content):
+		content = helpers.GetText("dm.about")
 		break
 	}
 
@@ -228,7 +231,7 @@ func (dm *DM) repostDM(channelID string, message *discordgo.Message, response *d
 	}
 	content = strings.TrimSpace(content)
 
-	if content == "" {
+	if content == "" || content == "." {
 		return nil
 	}
 

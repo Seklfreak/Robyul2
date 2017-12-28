@@ -91,7 +91,8 @@
       "Check out <https://robyul.chat/commands>!",
       "It's at <https://robyul.chat/commands>! <a:ablobsmile:393869335312990209>"
     ],
-    "invite": "To get Robyul for your server please join the Robyul Discord Server and contact Staff.\nhttps://discord.gg/s5qZvUV"
+    "invite": "To get Robyul for your server please join the Robyul Discord Server and contact Staff.\nhttps://discord.gg/s5qZvUV",
+    "about": "I'm the Discord Bot for Kpop Servers written in Golang. You can find out more about me on <https://robyul.chat/>."
   },
   "triggers": {
     "8ball": {
