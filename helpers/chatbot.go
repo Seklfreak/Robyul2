@@ -3,9 +3,8 @@ package helpers
 import (
 	"net/url"
 
-	"strings"
-
 	"github.com/Jeffail/gabs"
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -30,15 +29,13 @@ func ChatbotSend(session *discordgo.Session, channel string, message string) {
 
 	resultRaw, err := NetGetUAWithError(url.String(), DEFAULT_UA)
 	if err != nil {
-		RelaxLog(err)
+		cache.GetLogger().WithField("module", "chatbot").Errorf("getting a chatbot response failed: %s", err.Error())
 		return
 	}
 
 	result, err := gabs.ParseJSON(resultRaw)
 	if err != nil {
-		if !strings.Contains(err.Error(), "unexpected end of JSON input") {
-			RelaxLog(err)
-		}
+		cache.GetLogger().WithField("module", "chatbot").Errorf("parsing a chatbot response failed: %s", err.Error())
 		return
 	}
 

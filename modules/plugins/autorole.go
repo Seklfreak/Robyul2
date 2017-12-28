@@ -45,8 +45,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 			session.ChannelTyping(msg.ChannelID)
 			helpers.RequireAdmin(msg, func() {
 				if len(args) < 2 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 				channel, err := helpers.GetChannel(msg.ChannelID)
@@ -68,7 +67,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					if errD := err.(*discordgo.RESTError); errD != nil {
 						if errD.Message.Code == 50013 {
 							_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
-							helpers.Relax(err)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -90,8 +89,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 				if targetRole == nil || targetRole.ID == "" {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
@@ -100,14 +98,14 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				for _, role := range settings.AutoRoleIDs {
 					if role == targetRole.ID {
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-add-error-duplicate"))
-						helpers.Relax(err)
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
 				}
 				for _, delayedRole := range settings.DelayedAutoRoles {
 					if delayedRole.RoleID == targetRole.ID {
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-add-error-duplicate"))
-						helpers.Relax(err)
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
 				}
@@ -128,7 +126,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, successText)
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
 			return
@@ -140,7 +138,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 
 			if len(settings.AutoRoleIDs) <= 0 {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-list-none"))
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 
@@ -167,14 +165,13 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 			result += fmt.Sprintf("_found %d role(s) in total_", len(settings.AutoRoleIDs))
 
 			_, err = helpers.SendMessage(msg.ChannelID, result)
-			helpers.Relax(err)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		case "delete", "remove":
 			session.ChannelTyping(msg.ChannelID)
 			helpers.RequireAdmin(msg, func() {
 				if len(args) < 2 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 				channel, err := helpers.GetChannel(msg.ChannelID)
@@ -185,7 +182,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					if errD := err.(*discordgo.RESTError); errD != nil {
 						if errD.Message.Code == 50013 {
 							_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
-							helpers.Relax(err)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -204,8 +201,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 				if targetRole == nil || targetRole.ID == "" {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
@@ -237,7 +233,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 
 				if !roleWasInList {
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-remove-error-not-found"))
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 
@@ -248,7 +244,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-remove-success"))
-				helpers.Relax(err)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
 			return
@@ -256,8 +252,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 			session.ChannelTyping(msg.ChannelID)
 			helpers.RequireAdmin(msg, func() {
 				if len(args) < 2 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 				channel, err := helpers.GetChannel(msg.ChannelID)
@@ -268,7 +263,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					if errD := err.(*discordgo.RESTError); errD != nil {
 						if errD.Message.Code == 50013 {
 							_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
-							helpers.Relax(err)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						} else {
 							helpers.Relax(err)
@@ -287,8 +282,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 				if targetRole == nil || targetRole.ID == "" {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
@@ -304,7 +298,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.autorole.apply-confirm",
 					targetRole.Name, targetRole.ID, len(users)), "✅", "🚫") {
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.apply-started"))
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
 					addedSuccess := 0
 					addedError := 0
@@ -320,7 +314,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.autorole.apply-done",
 						msg.Author.ID, addedSuccess, addedError))
-					helpers.Relax(err)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				return

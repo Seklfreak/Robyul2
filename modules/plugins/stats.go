@@ -772,13 +772,28 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		session.ChannelTyping(msg.ChannelID)
 
 		sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-		helpers.Relax(err)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok {
+				if errD.Message.Code == discordgo.ErrCodeMissingAccess {
+					_, err = helpers.SendMessage(msg.ChannelID, "Unable to get information for this Channel.")
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				}
+			}
+			helpers.Relax(err)
+			return
+		}
 
 		args := strings.Fields(content)
 		var channel *discordgo.Channel
 		if len(args) > 0 {
 			channel, err = helpers.GetGlobalChannelFromMention(args[0])
 			if err != nil {
+				if strings.Contains(err.Error(), "Channel not found.") {
+					_, err = helpers.SendMessage(msg.ChannelID, "Channel not found.")
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				}
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == discordgo.ErrCodeMissingAccess {
 						_, err = helpers.SendMessage(msg.ChannelID, "Unable to get information for this Channel.")
@@ -786,6 +801,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 						return
 					}
 				}
+				helpers.Relax(err)
+				return
 			}
 			channel, err = helpers.GetChannel(channel.ID)
 			helpers.Relax(err)
