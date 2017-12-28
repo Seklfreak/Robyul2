@@ -502,15 +502,8 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 	}
 
 	mediaModifier := ""
-	// Not always accurate
-	//if tweet.Entities != nil && len(tweet.Entities.Media) > 0 {
-	//	mediaModifier += fmt.Sprintf(" (%d image", len(tweet.Entities.Media))
-	//	if len(tweet.Entities.Media) > 1 {
-	//		mediaModifier += "s"
-	//	}
-	//	mediaModifier += ")"
-	//}
-	tweetText := html.UnescapeString(tweet.Text)
+
+	tweetText := m.escapeTwitterContent(html.UnescapeString(tweet.Text))
 
 	if tweet.ExtendedEntities != nil {
 		if len(tweet.ExtendedEntities.Media) > 0 {
@@ -556,13 +549,13 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 			case "video", "animated_gif":
 				spew.Dump(mediaUrl)
 				if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
-					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterMediaUrl(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
 				} else {
-					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterMediaUrl(mediaUrl.DisplayURL))
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(mediaUrl.DisplayURL))
 				}
 				break
 			default:
-				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterMediaUrl(mediaUrl.MediaURLHttps))
+				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(mediaUrl.MediaURLHttps))
 				break
 			}
 		}
@@ -589,8 +582,11 @@ func (m *Twitter) bestVideoVariant(videoVariants []twitter.VideoVariant) (bestVa
 	return bestVariant
 }
 
-func (t *Twitter) escapeTwitterMediaUrl(input string) (result string) {
-	return strings.Replace(input, "_", "\\_", -1)
+func (t *Twitter) escapeTwitterContent(input string) (result string) {
+	result = strings.Replace(input, "_", "\\_", -1)
+	result = strings.Replace(result, "*", "\\*", -1)
+	result = strings.Replace(result, "~", "\\~", -1)
+	return result
 }
 
 func (m *Twitter) getEntryBy(key string, id string) DB_Twitter_Entry {
