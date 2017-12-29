@@ -136,7 +136,8 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	channel, err := GetChannelWithoutApi(channelID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Error(
-			"failed to get channel for ModuleIsAllowedSilent:", err.Error(),
+			"failed to get channel for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
+			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
 		return true
 	}
@@ -144,7 +145,8 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	user, err := GetGuildMemberWithoutApi(channel.GuildID, userID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Error(
-			"failed to get user for ModuleIsAllowedSilent:", err.Error(),
+			"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
+			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
 		return true
 	}
@@ -152,7 +154,8 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	guild, err := GetGuildWithoutApi(channel.GuildID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Error(
-			"failed to get guild for ModuleIsAllowedSilent:", err.Error(),
+			"failed to get guild for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
+			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
 		return true
 	}
@@ -167,8 +170,14 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		user.Roles = append(user.Roles, everyoneRoleID)
 	}
 
-	// allowed roles > allowed channels > denied roles > denied channels
+	var checkParent bool
+	if ChannelPermissionsInSync(channelID) {
+		checkParent = true
+	}
 
+	// allowed role > denied role > allowed channel > denied channel > allowed parent channel (if in sync) > denied parent channel (if in sync)
+
+	// allowed role
 	for _, userRoleID := range user.Roles {
 		if GetAllowedForRole(channel.GuildID, userRoleID)&module == module {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
@@ -179,14 +188,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		}
 	}
 
-	if GetAllowedForChannel(channel.GuildID, channelID)&module == module {
-		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"allowed command by channel message #%s channel #%s user #%d module %s",
-			msgID, channelID, userID, GetModuleNameById(module),
-		)
-		return true
-	}
-
+	// denied role
 	for _, userRoleID := range user.Roles {
 		if GetDeniedForRole(channel.GuildID, userRoleID)&module == module {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
@@ -197,12 +199,44 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		}
 	}
 
+	// allowed channel
+	if GetAllowedForChannel(channel.GuildID, channelID)&module == module {
+		cache.GetLogger().WithField("module", "modulepermissions").Infof(
+			"allowed command by channel message #%s channel #%s user #%d module %s",
+			msgID, channelID, userID, GetModuleNameById(module),
+		)
+		return true
+	}
+
+	// denied channel
 	if GetDeniedForChannel(channel.GuildID, channelID)&module == module {
 		cache.GetLogger().WithField("module", "modulepermissions").Infof(
 			"denied command by channel message #%s channel #%s user #%d module %s",
 			msgID, channelID, userID, GetModuleNameById(module),
 		)
 		return false
+	}
+
+	// allowed parent channel (if in sync)
+	if checkParent {
+		if GetAllowedForChannel(channel.GuildID, channel.ParentID)&module == module {
+			cache.GetLogger().WithField("module", "modulepermissions").Infof(
+				"allowed command by parent channel message #%s channel #%s user #%d module %s",
+				msgID, channelID, userID, GetModuleNameById(module),
+			)
+			return true
+		}
+	}
+
+	// denied parent channel (if in sync)
+	if checkParent {
+		if GetDeniedForChannel(channel.GuildID, channel.ParentID)&module == module {
+			cache.GetLogger().WithField("module", "modulepermissions").Infof(
+				"denied command by parent channel message #%s channel #%s user #%d module %s",
+				msgID, channelID, userID, GetModuleNameById(module),
+			)
+			return false
+		}
 	}
 
 	return true

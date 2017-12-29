@@ -54,7 +54,7 @@ func (mp *ModulePermissions) actionStart(args []string, in *discordgo.Message, o
 	}
 
 	switch args[0] {
-	case "status":
+	case "status", "list":
 		return mp.actionStatus
 	case "allow", "enable":
 		return mp.actionAllow
@@ -77,10 +77,13 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 
 	entries := helpers.GetModulePermissionEntries(channel.GuildID)
 
-	var entryText, entryAllowText, entryDenyText, moduleAllowText, moduleDenyText, messageAllowRoles,
-		messageAllowChannels, messageDenyRoles, messageDenyChannels, messageModuleList string
+	var entryIsCategory bool
+	var entryText, entryAllowText, entryDenyText, moduleAllowText, moduleDenyText,
+		messageAllowRoles, messageDenyRoles, messageAllowChannels, messageDenyChannels,
+		messageAllowCategory, messageDenyCategory, messageModuleList string
 
 	for _, entry := range entries {
+		entryIsCategory = false
 		entryText = ""
 		entryAllowText = ""
 		entryDenyText = ""
@@ -94,6 +97,12 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 				moduleDenyText += "`" + helpers.GetModuleNameById(module.Permission) + "`, "
 			}
 		}
+		if entry.Allowed&helpers.ModulePermAll == helpers.ModulePermAll {
+			moduleAllowText = "_ALL_"
+		}
+		if entry.Denied&helpers.ModulePermAll == helpers.ModulePermAll {
+			moduleDenyText = "_ALL_"
+		}
 		if strings.HasSuffix(moduleAllowText, ", ") {
 			moduleAllowText = moduleAllowText[:len(moduleAllowText)-2]
 		}
@@ -102,14 +111,26 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 		}
 		switch entry.Type {
 		case "channel":
+			entryChannel, _ := helpers.GetChannel(entry.TargetID)
+			if entryChannel != nil && entryChannel.ID != "" && entryChannel.Type == discordgo.ChannelTypeGuildCategory {
+				entryIsCategory = true
+			}
 			entryText += "<#" + entry.TargetID + ">: "
 			if entry.Allowed > 0 {
 				entryAllowText += entryText + moduleAllowText + "\n"
-				messageAllowChannels += entryAllowText
+				if entryIsCategory {
+					messageAllowCategory += entryAllowText
+				} else {
+					messageAllowChannels += entryAllowText
+				}
 			}
 			if entry.Denied > 0 {
 				entryDenyText += entryText + moduleDenyText + "\n"
-				messageDenyChannels += entryDenyText
+				if entryIsCategory {
+					messageDenyCategory += entryDenyText
+				} else {
+					messageDenyChannels += entryDenyText
+				}
 			}
 			break
 		case "role":
@@ -140,23 +161,31 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 	if messageAllowRoles == "" {
 		messageAllowRoles = "_None_\n"
 	}
-	if messageAllowChannels == "" {
-		messageAllowChannels = "_None_\n"
-	}
 	if messageDenyRoles == "" {
 		messageDenyRoles = "_None_\n"
+	}
+	if messageAllowChannels == "" {
+		messageAllowChannels = "_None_\n"
 	}
 	if messageDenyChannels == "" {
 		messageDenyChannels = "_None_\n"
 	}
+	if messageAllowCategory == "" {
+		messageAllowCategory = "_None_\n"
+	}
+	if messageDenyCategory == "" {
+		messageDenyCategory = "_None_\n"
+	}
 	if messageModuleList == "" {
-		messageDenyChannels = "_None_\n"
+		messageModuleList = "_None_\n"
 	}
 
-	messageFinal := "__**Allowed Roles:**__\n" + messageAllowRoles +
-		"__**Allowed Channels:**__\n" + messageAllowChannels +
-		"__**Denied Roles:**__\n" + messageDenyRoles +
-		"__**Denied Channels:**__\n" + messageDenyChannels +
+	messageFinal := "__**:arrow_down: Allowed Roles**__\n" + messageAllowRoles +
+		"__**:arrow_down: Denied Roles**__\n" + messageDenyRoles +
+		"__**:arrow_down: Allowed Channels**__\n" + messageAllowChannels +
+		"__**:arrow_down: Denied Channels**__\n" + messageDenyChannels +
+		"__**:arrow_down: Allowed Categories**__\n" + messageAllowCategory +
+		"__**:arrow_down: Denied Categories**__\n" + messageDenyCategory +
 		"__**Module List**__\n" + messageModuleList
 	*out = mp.newMsg(messageFinal)
 	return mp.actionFinish
@@ -272,7 +301,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 	guild, err := helpers.GetGuild(channel.GuildID)
 	helpers.Relax(err)
 
-	targetChannel, err := helpers.GetChannelFromMention(in, args[2])
+	targetChannel, err := helpers.GetChannelOfAnyTypeFromMention(in, args[2])
 	if err == nil && targetChannel != nil && targetChannel.ID != "" {
 		previousPerms := helpers.GetDeniedForChannel(targetChannel.GuildID, targetChannel.ID)
 		if previousPerms&permToAdd == permToAdd {

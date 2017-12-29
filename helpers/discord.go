@@ -15,6 +15,7 @@ import (
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	redisCache "github.com/go-redis/cache"
@@ -837,6 +838,17 @@ func GetMessage(channelID string, messageID string) (*discordgo.Message, error) 
 }
 
 func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
+	result, err := GetChannelOfAnyTypeFromMention(msg, mention)
+	if err != nil {
+		return nil, err
+	}
+	if result.Type != discordgo.ChannelTypeGuildText {
+		return nil, errors.New("not a text channel")
+	}
+	return result, nil
+}
+
+func GetChannelOfAnyTypeFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
 	var targetChannel *discordgo.Channel
 	re := regexp.MustCompile("(<#)?(\\d+)(>)?")
 	result := re.FindStringSubmatch(mention)
@@ -851,9 +863,6 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
 		targetChannel, err := GetChannel(result[2])
 		if err != nil {
 			return targetChannel, err
-		}
-		if targetChannel.Type != discordgo.ChannelTypeGuildText {
-			return targetChannel, errors.New("not a text channel")
 		}
 		if sourceChannel.GuildID != targetChannel.GuildID {
 			return targetChannel, errors.New("Channel on different guild.")
@@ -1275,4 +1284,71 @@ func typingLoop(channelID string, quitChannel chan int) {
 			time.Sleep(5 * time.Second)
 		}
 	}
+}
+
+func ChannelPermissionsInSync(childChannelID string) (inSync bool) {
+	childChannel, err := GetChannel(childChannelID)
+	if err != nil {
+		return false
+	}
+
+	if childChannel.ParentID == "" {
+		return false
+	}
+
+	parentChannel, err := GetChannel(childChannel.ParentID)
+	if err != nil {
+		return false
+	}
+
+	newChildChannelPermissionOverwrites := make([]*discordgo.PermissionOverwrite, 0)
+	for _, permissionOverwrite := range childChannel.PermissionOverwrites {
+		if permissionOverwrite.Allow == 0 && permissionOverwrite.Deny == 0 {
+			continue
+		}
+		newChildChannelPermissionOverwrites = append(newChildChannelPermissionOverwrites, permissionOverwrite)
+	}
+	childChannel.PermissionOverwrites = newChildChannelPermissionOverwrites
+	slice.Sort(childChannel.PermissionOverwrites, func(i, j int) bool {
+		if strings.Compare(childChannel.PermissionOverwrites[i].ID, childChannel.PermissionOverwrites[j].ID) > 0 {
+			return true
+		}
+		return false
+	})
+
+	newParentChannelPermissionOverwrites := make([]*discordgo.PermissionOverwrite, 0)
+	for _, permissionOverwrite := range parentChannel.PermissionOverwrites {
+		if permissionOverwrite.Allow == 0 && permissionOverwrite.Deny == 0 {
+			continue
+		}
+		newParentChannelPermissionOverwrites = append(newParentChannelPermissionOverwrites, permissionOverwrite)
+	}
+	parentChannel.PermissionOverwrites = newParentChannelPermissionOverwrites
+	slice.Sort(parentChannel.PermissionOverwrites, func(i, j int) bool {
+		if strings.Compare(parentChannel.PermissionOverwrites[i].ID, parentChannel.PermissionOverwrites[j].ID) > 0 {
+			return true
+		}
+		return false
+	})
+
+	if len(childChannel.PermissionOverwrites) != len(parentChannel.PermissionOverwrites) {
+		return false
+	}
+
+	for i := 0; i < len(childChannel.PermissionOverwrites); i++ {
+		if childChannel.PermissionOverwrites[i].ID != parentChannel.PermissionOverwrites[i].ID {
+			return false
+		}
+		if childChannel.PermissionOverwrites[i].Type != parentChannel.PermissionOverwrites[i].Type {
+			return false
+		}
+		if childChannel.PermissionOverwrites[i].Allow != parentChannel.PermissionOverwrites[i].Allow {
+			return false
+		}
+		if childChannel.PermissionOverwrites[i].Deny != parentChannel.PermissionOverwrites[i].Deny {
+			return false
+		}
+	}
+
+	return true
 }
