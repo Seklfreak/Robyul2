@@ -982,8 +982,7 @@
       "set-allow-added": "Added the entry to the whitelist.",
       "set-allow-removed": "Removed the entry from the whitelist.",
       "set-deny-added": "Added the entry to the blacklist.",
-      "set-deny-removed": "Removed the entry from the blacklist.",
-      "status-none": "Nothing set up yet!"
+      "set-deny-removed": "Removed the entry from the blacklist."
     }
   }
 }

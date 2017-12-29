@@ -77,11 +77,6 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 
 	entries := helpers.GetModulePermissionEntries(channel.GuildID)
 
-	if len(entries) <= 0 {
-		*out = mp.newMsg("plugins.modulepermissions.status-none")
-		return mp.actionFinish
-	}
-
 	var entryText, entryAllowText, entryDenyText, moduleAllowText, moduleDenyText, messageAllowRoles,
 		messageAllowChannels, messageDenyRoles, messageDenyChannels, messageModuleList string
 
