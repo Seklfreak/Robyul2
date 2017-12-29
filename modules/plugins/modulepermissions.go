@@ -97,10 +97,10 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 				moduleDenyText += "`" + helpers.GetModuleNameById(module.Permission) + "`, "
 			}
 		}
-		if entry.Allowed&helpers.ModulePermAll == helpers.ModulePermAll {
+		if entry.Allowed&helpers.ModulePermAllPlaceholder == helpers.ModulePermAllPlaceholder {
 			moduleAllowText = "_ALL_"
 		}
-		if entry.Denied&helpers.ModulePermAll == helpers.ModulePermAll {
+		if entry.Denied&helpers.ModulePermAllPlaceholder == helpers.ModulePermAllPlaceholder {
 			moduleDenyText = "_ALL_"
 		}
 		if strings.HasSuffix(moduleAllowText, ", ") {
@@ -204,7 +204,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 
 	var permToAdd models.ModulePermissionsModule
 	if "all" == strings.ToLower(args[1]) {
-		permToAdd = helpers.ModulePermAll
+		permToAdd = helpers.ModulePermAll | helpers.ModulePermAllPlaceholder
 	}
 	for _, module := range helpers.Modules {
 		for _, moduleName := range module.Names {
@@ -228,7 +228,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		previousPerms := helpers.GetAllowedForChannel(targetChannel.GuildID, targetChannel.ID)
 		if previousPerms&permToAdd == permToAdd {
 			err = helpers.SetAllowedForChannel(
-				targetChannel.GuildID, targetChannel.ID, previousPerms&^permToAdd)
+				targetChannel.GuildID, targetChannel.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
 			*out = mp.newMsg("plugins.modulepermissions.set-allow-removed")
@@ -255,7 +255,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		previousPerms := helpers.GetAllowedForRole(guild.ID, targetRole.ID)
 		if previousPerms&permToAdd == permToAdd {
 			err = helpers.SetAllowedForRole(
-				guild.ID, targetRole.ID, previousPerms&^permToAdd)
+				guild.ID, targetRole.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
 			*out = mp.newMsg("plugins.modulepermissions.set-allow-removed")
@@ -282,7 +282,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 
 	var permToAdd models.ModulePermissionsModule
 	if "all" == strings.ToLower(args[1]) {
-		permToAdd = helpers.ModulePermAll
+		permToAdd = helpers.ModulePermAll | helpers.ModulePermAllPlaceholder
 	}
 	for _, module := range helpers.Modules {
 		for _, moduleName := range module.Names {
@@ -306,7 +306,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		previousPerms := helpers.GetDeniedForChannel(targetChannel.GuildID, targetChannel.ID)
 		if previousPerms&permToAdd == permToAdd {
 			err = helpers.SetDeniedForChannel(
-				targetChannel.GuildID, targetChannel.ID, previousPerms&^permToAdd)
+				targetChannel.GuildID, targetChannel.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
 			*out = mp.newMsg("plugins.modulepermissions.set-deny-removed")
@@ -333,7 +333,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		previousPerms := helpers.GetDeniedForRole(guild.ID, targetRole.ID)
 		if previousPerms&permToAdd == permToAdd {
 			err = helpers.SetDeniedForRole(
-				guild.ID, targetRole.ID, previousPerms&^permToAdd)
+				guild.ID, targetRole.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
 			*out = mp.newMsg("plugins.modulepermissions.set-deny-removed")
