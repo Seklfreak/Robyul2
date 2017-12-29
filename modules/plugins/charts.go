@@ -206,6 +206,10 @@ func (m *Charts) Init(session *discordgo.Session) {
 }
 
 func (m *Charts) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCharts) {
+		return
+	}
+
 	args := strings.Fields(content)
 
 	switch command {

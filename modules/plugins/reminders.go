@@ -95,6 +95,10 @@ func (r *Reminders) Init(session *discordgo.Session) {
 }
 
 func (r *Reminders) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermReminders) {
+		return
+	}
+
 	switch command {
 	case "rm", "remind", "remindme":
 		session.ChannelTyping(msg.ChannelID)

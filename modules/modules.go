@@ -56,6 +56,7 @@ var (
 		&plugins.DiscordMoney{},
 		&plugins.Whois{},
 		&plugins.Isup{},
+		&plugins.ModulePermissions{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

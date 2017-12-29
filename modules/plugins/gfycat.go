@@ -33,6 +33,10 @@ func (m *Gfycat) Init(session *discordgo.Session) {
 }
 
 func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) { // [p]gfy [<link>] or attachment [<start in seconds> <duration in seconds>]
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGfycat) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	if len(content) <= 0 && len(msg.Attachments) <= 0 {

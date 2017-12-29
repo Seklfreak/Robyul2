@@ -41,6 +41,10 @@ func (s *Spoiler) Init(session *discordgo.Session) {
 }
 
 func (s *Spoiler) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermSpoiler) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	content = strings.TrimSpace(content)

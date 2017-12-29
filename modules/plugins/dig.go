@@ -22,6 +22,10 @@ func (d *Dig) Init(session *discordgo.Session) {
 }
 
 func (d *Dig) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermDig) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	args := strings.Fields(content)

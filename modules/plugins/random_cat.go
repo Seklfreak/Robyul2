@@ -18,6 +18,10 @@ func (rc RandomCat) Init(session *discordgo.Session) {
 }
 
 func (rc RandomCat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermRandomCat) {
+		return
+	}
+
 	const ENDPOINT = "http://random.cat/meow"
 
 	session.ChannelTyping(msg.ChannelID)

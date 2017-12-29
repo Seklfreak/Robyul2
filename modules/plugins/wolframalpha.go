@@ -28,6 +28,10 @@ func (m *WolframAlpha) Init(session *discordgo.Session) {
 }
 
 func (m *WolframAlpha) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermWolframAlpha) {
+		return
+	}
+
 	var err error
 	var res string
 	var imageSearch bool

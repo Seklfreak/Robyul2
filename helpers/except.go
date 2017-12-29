@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"time"
 
 	"math/rand"
 
@@ -110,16 +111,7 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 		if errD, ok := err.(*discordgo.RESTError); ok && errD != nil {
 			if errD.Message.Code == 50013 {
 				if channelID != "" && commandMessageID != "" {
-					reactions := []string{
-						":blobstop:317034621953114112",
-						"a:ablobweary:394026914479865856",
-						":googlespeaknoevil:317036753074651139",
-						":notlikeblob:349342777978519562",
-						"a:ablobcry:393869333740126219",
-						"a:ablobfrown:394026913292615701",
-						"a:ablobunamused:393869335573037057",
-					}
-					cache.GetSession().MessageReactionAdd(channelID, commandMessageID, reactions[rand.Intn(len(reactions))])
+					go AddNoPermissionsReaction(channelID, commandMessageID)
 				}
 				panic("handled discord error")
 				return
@@ -130,6 +122,22 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 			Relax(err)
 		}
 	}
+}
+
+func AddNoPermissionsReaction(channelID, messageID string) {
+	reactions := []string{
+		":blobstop:317034621953114112",
+		"a:ablobweary:394026914479865856",
+		":googlespeaknoevil:317036753074651139",
+		":notlikeblob:349342777978519562",
+		"a:ablobcry:393869333740126219",
+		"a:ablobfrown:394026913292615701",
+		"a:ablobunamused:393869335573037057",
+	}
+	// todo: global rand object in cache
+	randSource := rand.NewSource(time.Now().UnixNano())
+	randType := rand.New(randSource)
+	cache.GetSession().MessageReactionAdd(channelID, messageID, reactions[randType.Intn(len(reactions))])
 }
 
 func RelaxLog(err error) {

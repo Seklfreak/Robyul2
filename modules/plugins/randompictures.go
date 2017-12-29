@@ -260,6 +260,10 @@ func (rp *RandomPictures) setServerFeaturesLoop() {
 }
 
 func (rp *RandomPictures) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermRandomPictures) {
+		return
+	}
+
 	switch command {
 	case "pic": // [p]pic [<name>]
 		channel, err := helpers.GetChannel(msg.ChannelID)

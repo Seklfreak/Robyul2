@@ -23,6 +23,10 @@ func (iu *Isup) Init(session *discordgo.Session) {
 }
 
 func (iu *Isup) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermIsup) {
+		return
+	}
+
 	args := strings.Fields(content)
 
 	if len(args) < 1 {

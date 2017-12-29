@@ -52,6 +52,10 @@ func (cc *CustomCommands) Uninit(session *discordgo.Session) {
 }
 
 func (cc *CustomCommands) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermLevels) {
+		return
+	}
+
 	args := strings.Fields(content)
 	if len(args) >= 1 {
 		switch args[0] {
@@ -443,6 +447,10 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 }
 
 func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowedSilent(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCustomCommands) {
+		return
+	}
+
 	channel, err := helpers.GetChannel(msg.ChannelID)
 	if err != nil {
 		go raven.CaptureError(err, map[string]string{})

@@ -98,6 +98,10 @@ func (w *Weather) Init(session *discordgo.Session) {
 }
 
 func (w *Weather) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermWeather) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	var latResult float64

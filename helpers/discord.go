@@ -804,6 +804,11 @@ func GetGuild(guildID string) (*discordgo.Guild, error) {
 	return targetGuild, err
 }
 
+func GetGuildWithoutApi(guildID string) (*discordgo.Guild, error) {
+	targetGuild, err := cache.GetSession().State.Guild(guildID)
+	return targetGuild, err
+}
+
 func GetChannel(channelID string) (*discordgo.Channel, error) {
 	targetChannel, err := cache.GetSession().State.Channel(channelID)
 	if targetChannel == nil || targetChannel.ID == "" {

@@ -77,6 +77,10 @@ func (l *Lyrics) Init(session *discordgo.Session) {
 }
 
 func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermLyrics) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	listSongs := false

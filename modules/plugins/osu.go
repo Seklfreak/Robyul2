@@ -26,6 +26,10 @@ func (o *Osu) Init(session *discordgo.Session) {
 }
 
 func (o *Osu) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermOsu) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	user := strings.TrimSpace(content)

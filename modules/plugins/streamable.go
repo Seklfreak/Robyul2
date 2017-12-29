@@ -44,6 +44,10 @@ func (s *Streamable) Init(session *discordgo.Session) {
 }
 
 func (s *Streamable) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) { // [p]streamable [<link>] or attachment
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermStreamable) {
+		return
+	}
+
 	var err error
 
 	session.ChannelTyping(msg.ChannelID)

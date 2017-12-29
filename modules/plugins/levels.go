@@ -416,6 +416,10 @@ func (m *Levels) processExpStackLoop() {
 }
 
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermLevels) {
+		return
+	}
+
 	switch command {
 	case "rep": // [p]rep <user id/mention>
 		session.ChannelTyping(msg.ChannelID)

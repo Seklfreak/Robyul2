@@ -976,6 +976,14 @@
       "isup": "<:blobgo:317034640181297163> The website seems to be up! <a:ablobgrimace:394026913108328449>",
       "isnotup": "<:blobstop:317034621953114112> It's not just you! The website looks down from here. <a:ablobshocked:394026914076950539>",
       "credits": "_powered by isup.me_"
+    },
+    "modulepermissions": {
+      "module-not-found": "I wasn't able to find the given module.",
+      "set-allow-added": "Added the entry to the whitelist.",
+      "set-allow-removed": "Removed the entry from the whitelist.",
+      "set-deny-added": "Added the entry to the blacklist.",
+      "set-deny-removed": "Removed the entry from the blacklist.",
+      "status-none": "Nothing set up yet!"
     }
   }
 }

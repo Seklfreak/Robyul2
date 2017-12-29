@@ -22,6 +22,10 @@ func (u *Uptime) Init(session *discordgo.Session) {
 }
 
 func (u *Uptime) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermStats) {
+		return
+	}
+
 	// Get uptime
 	bootTime, err := strconv.ParseInt(metrics.Uptime.String(), 10, 64)
 	if err != nil {

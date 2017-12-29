@@ -31,6 +31,10 @@ func (c *Choice) Init(session *discordgo.Session) {
 }
 
 func (c *Choice) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermChoice) {
+		return
+	}
+
 	switch command {
 	case "choose", "choice": // [p]choose <option a> <option b> [...]
 		choices := splitChooseRegex.FindAllString(content, -1)

@@ -238,6 +238,10 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission,
 func (r *Reddit) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	defer helpers.Recover()
 
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermReddit) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend

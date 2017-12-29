@@ -211,43 +211,48 @@ func (m *Instagram) Commands() []string {
 }
 
 func (m *Instagram) Init(session *discordgo.Session) {
-	var err error
+	go func() {
+		defer helpers.Recover()
+		// TODO: add retry
 
-	storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
-	if err == nil {
-		instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
+		var err error
+
+		storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
+		if err == nil {
+			instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
+			helpers.Relax(err)
+			cache.GetLogger().WithField("module", "instagram").Infof(
+				"restoring instagram session from redis",
+			)
+		} else {
+			instagramClient = goinsta.New(
+				helpers.GetConfig().Path("instagram.username").Data().(string),
+				helpers.GetConfig().Path("instagram.password").Data().(string),
+			)
+			cache.GetLogger().WithField("module", "instagram").Infof(
+				"starting new instagram session",
+			)
+		}
+		err = instagramClient.Login() // TODO: login required when restoring session?
 		helpers.Relax(err)
 		cache.GetLogger().WithField("module", "instagram").Infof(
-			"restoring instagram session from redis",
+			"logged in to instagram as @%s",
+			instagramClient.Informations.Username,
 		)
-	} else {
-		instagramClient = goinsta.New(
-			helpers.GetConfig().Path("instagram.username").Data().(string),
-			helpers.GetConfig().Path("instagram.password").Data().(string),
-		)
+		storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
+		helpers.Relax(err)
+		err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
+		helpers.Relax(err)
 		cache.GetLogger().WithField("module", "instagram").Infof(
-			"starting new instagram session",
+			"stored instagram session in redis",
 		)
-	}
-	err = instagramClient.Login() // TODO: login required when restoring session?
-	helpers.Relax(err)
-	cache.GetLogger().WithField("module", "instagram").Infof(
-		"logged in to instagram as @%s",
-		instagramClient.Informations.Username,
-	)
-	storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
-	helpers.Relax(err)
-	err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
-	helpers.Relax(err)
-	cache.GetLogger().WithField("module", "instagram").Infof(
-		"stored instagram session in redis",
-	)
 
-	instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
-	helpers.Relax(err)
+		instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
+		helpers.Relax(err)
 
-	go m.checkInstagramFeedsLoop()
-	cache.GetLogger().WithField("module", "instagram").Info("Started Instagram loop")
+		go m.checkInstagramFeedsLoop()
+		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram loop")
+	}()
 }
 
 func (m *Instagram) fillUserIDs() {
@@ -434,6 +439,10 @@ func (m *Instagram) checkInstagramFeedsLoop() {
 }
 
 func (m *Instagram) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermInstagram) {
+		return
+	}
+
 	args := strings.Fields(content)
 	if len(args) >= 1 {
 		switch args[0] {

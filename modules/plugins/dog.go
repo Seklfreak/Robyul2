@@ -25,6 +25,10 @@ func (d *Dog) Init(session *discordgo.Session) {
 }
 
 func (d *Dog) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermDog) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	args := strings.Fields(content)

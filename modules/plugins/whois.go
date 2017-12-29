@@ -20,6 +20,10 @@ func (w *Whois) Init(session *discordgo.Session) {
 }
 
 func (w *Whois) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermWhois) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	args := strings.Fields(content)

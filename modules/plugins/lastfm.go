@@ -307,6 +307,10 @@ func (m *LastFm) generateDiscordStats() {
 }
 
 func (m *LastFm) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermLastFm) {
+		return
+	}
+
 	args := strings.Fields(content)
 	lastfmUsername := m.getLastFmUsername(msg.Author.ID)
 	subCom := ""

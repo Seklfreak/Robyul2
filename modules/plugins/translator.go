@@ -50,6 +50,10 @@ func (t *Translator) Init(session *discordgo.Session) {
 }
 
 func (t *Translator) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermTranslator) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 	// Assumed format: <lang_in> <lang_out> <text>
 	parts := strings.Fields(content)

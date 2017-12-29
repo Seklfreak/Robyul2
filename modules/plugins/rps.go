@@ -20,6 +20,10 @@ func (r *RPS) Init(session *discordgo.Session) {
 }
 
 func (r *RPS) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermRPS) {
+		return
+	}
+
 	switch {
 	case regexp.MustCompile("(?i)(rock|stone)").MatchString(content):
 		helpers.SendMessage(msg.ChannelID, "I've chosen :newspaper:\nMy paper wraps your stone.\nI win <a:ablobsmile:393869335312990209>")

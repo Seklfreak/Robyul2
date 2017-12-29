@@ -30,6 +30,10 @@ func (c *Color) Init(session *discordgo.Session) {
 }
 
 func (c *Color) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermColor) {
+		return
+	}
+
 	session.ChannelTyping(msg.ChannelID)
 
 	args := strings.Fields(content)

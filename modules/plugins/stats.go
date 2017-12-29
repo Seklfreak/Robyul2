@@ -165,6 +165,10 @@ func (s *Stats) Init(session *discordgo.Session) {
 }
 
 func (s *Stats) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermStats) {
+		return
+	}
+
 	switch command {
 	case "stats":
 		session.ChannelTyping(msg.ChannelID)
