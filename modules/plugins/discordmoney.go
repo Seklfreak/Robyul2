@@ -22,6 +22,10 @@ func (dm *DiscordMoney) Init(session *discordgo.Session) {
 }
 
 func (dm *DiscordMoney) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermDiscordmoney) {
+		return
+	}
+
 	channel, err := helpers.GetChannel(msg.ChannelID)
 	helpers.Relax(err)
 

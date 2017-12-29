@@ -19,13 +19,6 @@ type Plugin interface {
 	)
 }
 
-type TriggerPlugin interface {
-	BaseModule
-
-	Triggers() []string
-	Response(trigger string, content string) string
-}
-
 type ExtendedPlugin interface {
 	BaseModule
 

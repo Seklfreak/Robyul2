@@ -67,6 +67,10 @@ func (m *Mirror) Uninit(session *discordgo.Session) {
 }
 
 func (m *Mirror) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermMirror) {
+		return
+	}
+
 	args := strings.Fields(content)
 	if len(args) >= 1 {
 		switch args[0] {

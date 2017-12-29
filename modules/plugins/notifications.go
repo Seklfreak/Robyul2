@@ -63,6 +63,10 @@ func (m *Notifications) Uninit(session *discordgo.Session) {
 // @TODO: add command to make a keyword global (owner only)
 
 func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermNotifications) {
+		return
+	}
+
 	args := strings.Fields(content)
 	if len(args) > 0 {
 		switch args[0] {

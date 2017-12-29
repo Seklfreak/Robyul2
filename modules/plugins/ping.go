@@ -32,6 +32,10 @@ func (p *Ping) Init(session *discordgo.Session) {
 }
 
 func (p *Ping) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermPing) {
+		return
+	}
+
 	_, err := helpers.SendMessage(msg.ChannelID, pingMessage+" ~ "+strconv.FormatInt(time.Now().UnixNano(), 10))
 	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 }

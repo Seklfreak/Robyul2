@@ -5,12 +5,10 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 	//"github.com/Seklfreak/Robyul2/modules/triggers"
 	"github.com/Seklfreak/Robyul2/modules/plugins/google"
-	"github.com/Seklfreak/Robyul2/modules/triggers"
 )
 
 var (
 	pluginCache         map[string]*Plugin
-	triggerCache        map[string]*TriggerPlugin
 	extendedPluginCache map[string]*ExtendedPlugin
 
 	PluginList = []Plugin{
@@ -57,6 +55,7 @@ var (
 		&plugins.Whois{},
 		&plugins.Isup{},
 		&plugins.ModulePermissions{},
+		&plugins.M8ball{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
@@ -75,9 +74,5 @@ var (
 		&plugins.Persistency{},
 		&plugins.DM{},
 		&plugins.Twitter{},
-	}
-
-	TriggerPluginList = []TriggerPlugin{
-		&triggers.EightBall{},
 	}
 )

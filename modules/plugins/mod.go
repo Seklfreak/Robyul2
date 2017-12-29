@@ -171,6 +171,10 @@ func (m *Mod) cacheBans() {
 }
 
 func (m *Mod) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermMod) {
+		return
+	}
+
 	regexNumberOnly := regexp.MustCompile(`^\d+$`)
 
 	switch command {

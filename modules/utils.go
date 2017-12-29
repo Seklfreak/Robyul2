@@ -21,10 +21,8 @@ func Init(session *discordgo.Session) {
 
 	pluginCount := len(PluginList)
 	extendedPluginCount := len(PluginExtendedList)
-	triggerCount := len(TriggerPluginList)
 	pluginCache = make(map[string]*Plugin)
 	extendedPluginCache = make(map[string]*ExtendedPlugin)
-	triggerCache = make(map[string]*TriggerPlugin)
 
 	logTemplate := "[PLUG] %s reacts to [ %s]"
 	listeners := ""
@@ -71,23 +69,6 @@ func Init(session *discordgo.Session) {
 		(*ref).Init(session)
 	}
 
-	logTemplate = "[TRIG] %s gets triggered by [ %s]"
-	for i := 0; i < triggerCount; i++ {
-		ref := &TriggerPluginList[i]
-
-		for _, trigger := range (*ref).Triggers() {
-			triggerCache[trigger] = ref
-			listeners += trigger + " "
-		}
-
-		cache.GetLogger().WithField("module", "modules").Info(fmt.Sprintf(
-			logTemplate,
-			helpers.Typeof(*ref),
-			listeners,
-		))
-		listeners = ""
-	}
-
 	pluginCommands := make([]string, 0, len(pluginCache))
 	for k := range pluginCache {
 		pluginCommands = append(pluginCommands, k)
@@ -98,15 +79,10 @@ func Init(session *discordgo.Session) {
 		extendedPluginCommands = append(extendedPluginCommands, k)
 	}
 	cache.SetPluginExtendedList(extendedPluginCommands)
-	triggerCommands := make([]string, 0, len(triggerCache))
-	for k := range pluginCache {
-		triggerCommands = append(triggerCommands, k)
-	}
-	cache.SetTriggerPluginList(triggerCommands)
 
 	cache.GetLogger().WithField("module", "modules").Info(
 		"modules",
-		"Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins, "+strconv.Itoa(len(PluginExtendedList))+" extended plugins and "+strconv.Itoa(len(TriggerPluginList))+" triggers",
+		"Initializer finished. Loaded "+strconv.Itoa(len(PluginList))+" plugins and "+strconv.Itoa(len(PluginExtendedList))+" extended plugins",
 	)
 }
 
@@ -158,24 +134,6 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message) {
 	// call the extended module
 	if ref, ok := extendedPluginCache[command]; ok {
 		(*ref).Action(command, content, msg, cache.GetSession())
-	}
-}
-
-// msg     - The message that triggered the execution
-// session - The discord session
-func CallTriggerPlugin(trigger string, content string, msg *discordgo.Message) {
-	// Defer a recovery in case anything panics
-	defer helpers.RecoverDiscord(msg)
-
-	// Consume a key for this action
-	ratelimits.Container.Drain(1, msg.Author.ID)
-
-	// Redirect trigger
-	if ref, ok := triggerCache[trigger]; ok {
-		helpers.SendMessage(
-			msg.ChannelID,
-			(*ref).Response(trigger, content),
-		)
 	}
 }
 
@@ -251,19 +209,6 @@ func checkDuplicateCommands() {
 	for _, plug := range PluginList {
 		for _, cmd := range plug.Commands() {
 			t := helpers.Typeof(plug)
-
-			if occupant, ok := cmds[cmd]; ok {
-				cache.GetLogger().WithField("module", "modules").Info("Failed to load " + t + " because '" + cmd + "' was already registered by " + occupant)
-				os.Exit(1)
-			}
-
-			cmds[cmd] = t
-		}
-	}
-
-	for _, trig := range TriggerPluginList {
-		for _, cmd := range trig.Triggers() {
-			t := helpers.Typeof(trig)
 
 			if occupant, ok := cmds[cmd]; ok {
 				cache.GetLogger().WithField("module", "modules").Info("Failed to load " + t + " because '" + cmd + "' was already registered by " + occupant)

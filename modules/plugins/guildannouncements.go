@@ -40,6 +40,10 @@ func (m *GuildAnnouncements) Uninit(session *discordgo.Session) {
 }
 
 func (m *GuildAnnouncements) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGuildAnnouncements) {
+		return
+	}
+
 	args := strings.Fields(content)
 	if len(args) >= 2 {
 		switch args[0] {

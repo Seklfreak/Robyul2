@@ -459,9 +459,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Check if a module matches said command
 	modules.CallBotPlugin(cmd, content, message.Message)
-
-	// Check if a trigger matches
-	modules.CallTriggerPlugin(cmd, content, message.Message)
 }
 
 func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
