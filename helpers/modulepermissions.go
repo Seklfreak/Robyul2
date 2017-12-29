@@ -164,7 +164,7 @@ func ModuleIsAllowed(channelID, msgID, userID string, module models.ModulePermis
 func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.ModulePermissionsModule) (isAllowed bool) {
 	channel, err := GetChannelWithoutApi(channelID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "modulepermissions").Error(
+		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
 			"failed to get channel for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
 			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
@@ -173,7 +173,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 
 	user, err := GetGuildMemberWithoutApi(channel.GuildID, userID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "modulepermissions").Error(
+		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
 			"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
 			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
@@ -182,7 +182,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 
 	guild, err := GetGuildWithoutApi(channel.GuildID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "modulepermissions").Error(
+		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
 			"failed to get guild for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
 			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
