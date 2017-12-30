@@ -247,8 +247,8 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 				}
 			}
 			featureModules = append(featureModules, models.Rest_Feature_Module{
-				ModuleName: helpers.GetModuleNameById(module.Permission),
-				ModuleID:   module.Permission,
+				Name: helpers.GetModuleNameById(module.Permission),
+				ID:   module.Permission,
 			})
 		}
 
@@ -762,8 +762,8 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 				}
 			}
 			featureModules = append(featureModules, models.Rest_Feature_Module{
-				ModuleName: helpers.GetModuleNameById(module.Permission),
-				ModuleID:   module.Permission,
+				Name: helpers.GetModuleNameById(module.Permission),
+				ID:   module.Permission,
 			})
 		}
 

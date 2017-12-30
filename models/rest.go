@@ -38,8 +38,8 @@ type Rest_Guild_Features struct {
 }
 
 type Rest_Feature_Module struct {
-	ModuleName string
-	ModuleID   ModulePermissionsModule
+	Name string
+	ID   ModulePermissionsModule
 }
 
 type Rest_User struct {
