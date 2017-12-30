@@ -102,7 +102,7 @@ func NewRestServices() []*restful.WebService {
 	service.Route(service.GET("/{guild-id}/messages/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsCount))
 	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
 	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
-	service.Route(service.GET("/{guild-id}/messages/{interval}/histogram").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsHistogram))
+	service.Route(service.GET("/{guild-id}/serveractivity/{interval}/histogram/{count}").Filter(sessionAndWebkeyAuthenticate).To(GetServerActivityStatisticsHistogram))
 	service.Route(service.GET("/{guild-id}/vanityinvite/{interval}/histogram/{count}").Filter(sessionAndWebkeyAuthenticate).To(GetVanityInviteStatistics))
 	service.Route(service.GET("/bot").Filter(webkeyAuthenticate).To(GotBotStatistics))
 	services = append(services, service)
@@ -923,9 +923,10 @@ func GetLeavesStatisticsCount(request *restful.Request, response *restful.Respon
 	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
 }
 
-func GetMessageStatisticsHistogram(request *restful.Request, response *restful.Response) {
+func GetServerActivityStatisticsHistogram(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	interval := request.PathParameter("interval")
+	count := request.PathParameter("count")
 
 	if request.Attribute("UserID").(string) != "global" {
 		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
@@ -934,10 +935,21 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 		}
 	}
 
+	countNumber, err := strconv.Atoi(count)
+	if err != nil {
+		response.WriteError(http.StatusNoContent, errors.New("invalid count"))
+		return
+	}
+
+	minBound := helpers.GetMinTimeForInterval(interval, countNumber)
+
 	agg := elastic.NewDateHistogramAggregation().
 		Field("CreatedAt").
-		//Format("yyyy-MM-dd HH:mm:ss").
-		Interval(interval)
+		Interval(interval).
+		Order("_key", false).
+		MinDocCount(0).
+		ExtendedBoundsMin(minBound).
+		ExtendedBoundsMax(time.Now())
 
 	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	searchResult, err := cache.GetElastic().Search().
@@ -945,14 +957,14 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 		Type("doc").
 		Query(termQuery).
 		Aggregation("messages", agg).
-		Size(24).
+		Size(0).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
 		return
 	}
 
-	result := make([]models.Rest_Statistics_Histogram, 0)
+	result := make([]models.Rest_Statistics_Histogram_Three, 0)
 
 	var timestamp int64
 	var timeConverted time.Time
@@ -962,12 +974,69 @@ func GetMessageStatisticsHistogram(request *restful.Request, response *restful.R
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
 			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
-			result = append(result, models.Rest_Statistics_Histogram{
-				Time:  timeISO8601,
-				Count: bucket.DocCount,
+
+			result = append(result, models.Rest_Statistics_Histogram_Three{
+				Time:   timeISO8601,
+				Count1: bucket.DocCount,
+				Count2: 0,
+				Count3: 0,
 			})
-			if len(result) >= 24 {
+			if len(result) >= countNumber {
 				break
+			}
+		}
+	}
+
+	termQuery = elastic.NewQueryStringQuery("GuildID:" + guildID)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndexJoins).
+		Type("doc").
+		Query(termQuery).
+		Aggregation("joins", agg).
+		Size(0).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if agg, found := searchResult.Aggregations.Terms("joins"); found {
+		for _, bucket := range agg.Buckets {
+			timestamp = int64(bucket.Key.(float64) / 1000)
+			timeConverted = time.Unix(timestamp, 0)
+			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+
+			for resultN := range result {
+				if result[resultN].Time == timeISO8601 {
+					result[resultN].Count2 = bucket.DocCount
+				}
+			}
+		}
+	}
+
+	termQuery = elastic.NewQueryStringQuery("GuildID:" + guildID)
+	searchResult, err = cache.GetElastic().Search().
+		Index(models.ElasticIndexLeaves).
+		Type("doc").
+		Query(termQuery).
+		Aggregation("leaves", agg).
+		Size(0).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if agg, found := searchResult.Aggregations.Terms("leaves"); found {
+		for _, bucket := range agg.Buckets {
+			timestamp = int64(bucket.Key.(float64) / 1000)
+			timeConverted = time.Unix(timestamp, 0)
+			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+
+			for resultN := range result {
+				if result[resultN].Time == timeISO8601 {
+					result[resultN].Count3 = bucket.DocCount
+				}
 			}
 		}
 	}

@@ -134,6 +134,13 @@ type Rest_Statistics_Histogram_Two struct {
 	Count2 int64
 }
 
+type Rest_Statistics_Histogram_Three struct {
+	Time   string // ISO 8601
+	Count1 int64
+	Count2 int64
+	Count3 int64
+}
+
 type Rest_Statistics_Histogram_TwoSub struct {
 	Time     string // ISO 8601
 	Count1   int64
