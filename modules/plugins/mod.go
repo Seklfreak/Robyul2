@@ -1105,10 +1105,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 				}
 
-				joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s`%s created by `%s (#%s)` %s\n",
-					joins[0].InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+				joinsText = fmt.Sprintf("✅ User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
+					humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
+					createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 			} else {
-				joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+				joinsText = fmt.Sprintf("✅ User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
+					joins[0].JoinedAt)
 			}
 		} else if len(joins) > 1 {
 			sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
@@ -1127,11 +1129,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 				}
 
-				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
-					len(joins),
-					lastJoin.InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+				joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+					"Last time with the invite `%s`%s created by `%s (#%s)` %s\n",
+					len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
+					labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 			} else {
-				joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+				joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+					"Give Robyul the `Manage Server` permission to see using which invites.\n",
+					len(joins), humanize.Time(lastJoin.JoinedAt))
 			}
 		}
 
@@ -2159,10 +2164,12 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s`%s created by `%s (#%s)` %s\n",
-								joins[0].InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+							joinsText = fmt.Sprintf("✅ User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
+								humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
+								createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 						} else {
-							joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+							joinsText = fmt.Sprintf("✅ User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
+								joins[0].JoinedAt)
 						}
 					} else if len(joins) > 1 {
 						sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
@@ -2181,12 +2188,13 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
-								len(joins),
-								lastJoin.InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
+								len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
+								labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 						} else {
-
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+								"Give Robyul the `Manage Server` permission to see using which invites.\n",
+								len(joins), humanize.Time(lastJoin.JoinedAt))
 						}
 					}
 
@@ -2397,10 +2405,12 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("✅ User joined this server once with the invite `%s`%s created by `%s (#%s)` %s\n",
-								joins[0].InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
+							joinsText = fmt.Sprintf("✅ User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
+								humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
+								createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 						} else {
-							joinsText = "✅ User joined this server once\nGive Robyul the `Manage Server` permission to see using which invite.\n"
+							joinsText = fmt.Sprintf("✅ User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
+								joins[0].JoinedAt)
 						}
 					} else if len(joins) > 1 {
 						sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
@@ -2419,12 +2429,14 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
-								len(joins),
-								lastJoin.InviteCodeUsed, labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+								"Last time with the invite `%s`%s created by `%s (#%s)` %s\n",
+								len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
+								labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 						} else {
-
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times\nGive Robyul the `Manage Server` permission to see using which invites.\n", len(joins))
+							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+								"Give Robyul the `Manage Server` permission to see using which invites.\n",
+								len(joins), humanize.Time(lastJoin.JoinedAt))
 						}
 					}
 
