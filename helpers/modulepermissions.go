@@ -294,6 +294,39 @@ func GetModuleNameById(id models.ModulePermissionsModule) (name string) {
 	return "not found"
 }
 
+func GetDisabledModules(guildID string) (disabledModules []models.ModulePermissionsModule) {
+	guild, err := GetGuild(guildID)
+	if err != nil {
+		return disabledModules
+	}
+
+	var everyoneRoleID string
+	for _, role := range guild.Roles {
+		if role.Name == "@everyone" {
+			everyoneRoleID = role.ID
+		}
+	}
+	if everyoneRoleID == "" {
+		return disabledModules
+	}
+
+NextModule:
+	for _, module := range Modules {
+		if GetDeniedForRole(guildID, everyoneRoleID)&module.Permission == module.Permission {
+			// is denied for everyone
+			for _, role := range guild.Roles {
+				if GetAllowedForRole(guildID, role.ID)&module.Permission == module.Permission {
+					continue NextModule
+				}
+			}
+
+			disabledModules = append(disabledModules, module.Permission)
+		}
+	}
+
+	return disabledModules
+}
+
 func SetAllowedForChannel(guildID, channelID string, newPermissions models.ModulePermissionsModule) (err error) {
 	entry := findModulePermissionsEntry(guildID, "channel", channelID)
 	entry.Allowed = newPermissions

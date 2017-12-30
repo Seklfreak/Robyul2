@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Rest_Guild struct {
 	ID        string
@@ -32,6 +34,12 @@ type Rest_Guild_Features struct {
 	RandomPictures Rest_Feature_RandomPictures
 	Chatlog        Rest_Feature_Chatlog
 	VanityInvite   Rest_Feature_VanityInvite
+	Modules        []Rest_Feature_Module
+}
+
+type Rest_Feature_Module struct {
+	ModuleName string
+	ModuleID   ModulePermissionsModule
 }
 
 type Rest_User struct {

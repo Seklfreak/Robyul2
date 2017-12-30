@@ -205,6 +205,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 	var featureLevels_Badges models.Rest_Feature_Levels_Badges
 	var featureRandomPictures models.Rest_Feature_RandomPictures
 	var featureVanityInvite models.Rest_Feature_VanityInvite
+	var featureModules []models.Rest_Feature_Module
 	var botPrefix string
 	var err error
 
@@ -236,6 +237,21 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
 		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
 
+		featureModules = make([]models.Rest_Feature_Module, 0)
+		disabledModules := helpers.GetDisabledModules(guild.ID)
+	NextModule:
+		for _, module := range helpers.Modules {
+			for _, disabledModule := range disabledModules {
+				if disabledModule == module.Permission {
+					continue NextModule
+				}
+			}
+			featureModules = append(featureModules, models.Rest_Feature_Module{
+				ModuleName: helpers.GetModuleNameById(module.Permission),
+				ModuleID:   module.Permission,
+			})
+		}
+
 		returnGuilds = append(returnGuilds, models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -248,6 +264,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 				RandomPictures: featureRandomPictures,
 				Chatlog:        featureChatlog,
 				VanityInvite:   featureVanityInvite,
+				Modules:        featureModules,
 			},
 		})
 	}
@@ -735,6 +752,21 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
 		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
 
+		featureModules := make([]models.Rest_Feature_Module, 0)
+		disabledModules := helpers.GetDisabledModules(guildID)
+	NextModule:
+		for _, module := range helpers.Modules {
+			for _, disabledModule := range disabledModules {
+				if disabledModule == module.Permission {
+					continue NextModule
+				}
+			}
+			featureModules = append(featureModules, models.Rest_Feature_Module{
+				ModuleName: helpers.GetModuleNameById(module.Permission),
+				ModuleID:   module.Permission,
+			})
+		}
+
 		returnGuild := &models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -747,6 +779,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 				RandomPictures: featureRandomPictures,
 				Chatlog:        featureChatlog,
 				VanityInvite:   featureVanityInvite,
+				Modules:        featureModules,
 			},
 			Channels: channels,
 		}
