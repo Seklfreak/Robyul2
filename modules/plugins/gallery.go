@@ -72,7 +72,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 					return
 				}
 				progressMessage := progressMessages[0]
-				if len(args) < 5 {
+				if len(args) < 3 {
 					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
 					helpers.Relax(err)
 					return
@@ -94,11 +94,35 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 					return
 				}
 
-				targetChannelWebhookId := args[3]
-				targetChannelWebhookToken := args[4]
+				var targetChannelWebhookId, targetChannelWebhookToken string
+				if len(args) >= 5 {
+					targetChannelWebhookId = args[3]
+					targetChannelWebhookToken = args[4]
 
-				webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
-				if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
+					webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
+					if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
+						_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
+						helpers.Relax(err)
+						return
+					}
+				} else {
+					newWebhook, err := session.WebhookCreate(targetChannel.ID, "Robyul Gallery Webhook", "")
+					if err != nil {
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+								_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
+								helpers.Relax(err)
+								return
+							}
+						}
+					}
+					helpers.Relax(err)
+
+					targetChannelWebhookId = newWebhook.ID
+					targetChannelWebhookToken = newWebhook.Token
+				}
+
+				if targetChannelWebhookId == "" || targetChannelWebhookToken == "" {
 					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
 					helpers.Relax(err)
 					return
