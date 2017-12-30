@@ -9,12 +9,11 @@ import (
 
 	"fmt"
 
-	"strconv"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/sirupsen/logrus"
 )
@@ -120,9 +119,9 @@ func (bs *BotStatus) replaceText(text string) (result string) {
 		}
 	}
 
-	text = strings.Replace(text, "{GUILD_COUNT}", strconv.Itoa(len(cache.GetSession().State.Guilds)), -1)
-	text = strings.Replace(text, "{MEMBER_COUNT}", strconv.Itoa(len(users)), -1)
-	text = strings.Replace(text, "{CHANNEL_COUNT}", strconv.Itoa(len(channels)), -1)
+	text = strings.Replace(text, "{GUILD_COUNT}", humanize.Comma(int64(len(cache.GetSession().State.Guilds))), -1)
+	text = strings.Replace(text, "{MEMBER_COUNT}", humanize.Comma(int64(len(users))), -1)
+	text = strings.Replace(text, "{CHANNEL_COUNT}", humanize.Comma(int64(len(channels))), -1)
 
 	return text
 }
