@@ -192,6 +192,8 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		return true
 	}
 
+	userRoles := user.Roles
+
 	var everyoneRoleID string
 	for _, role := range guild.Roles {
 		if role.Name == "@everyone" {
@@ -199,7 +201,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		}
 	}
 	if everyoneRoleID != "" {
-		user.Roles = append(user.Roles, everyoneRoleID)
+		userRoles = append(userRoles, everyoneRoleID)
 	}
 
 	var checkParent bool
@@ -210,7 +212,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	// allowed role > denied role > allowed channel > denied channel > allowed parent channel (if in sync) > denied parent channel (if in sync)
 
 	// allowed role
-	for _, userRoleID := range user.Roles {
+	for _, userRoleID := range userRoles {
 		if GetAllowedForRole(channel.GuildID, userRoleID)&module == module ||
 			GetAllowedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
@@ -222,7 +224,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	}
 
 	// denied role
-	for _, userRoleID := range user.Roles {
+	for _, userRoleID := range userRoles {
 		if GetDeniedForRole(channel.GuildID, userRoleID)&module == module ||
 			GetDeniedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
