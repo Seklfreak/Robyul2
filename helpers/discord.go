@@ -1021,11 +1021,6 @@ func CommandExists(name string) bool {
 			return true
 		}
 	}
-	for _, command := range cache.GetTriggerPluginList() {
-		if command == strings.ToLower(name) {
-			return true
-		}
-	}
 	return false
 }
 

@@ -45,20 +45,3 @@ func GetPluginExtendedList() []string {
 
 	return pluginExtendedCommandList
 }
-
-func SetTriggerPluginList(l []string) {
-	modulelistsMutex.Lock()
-	triggerPluginCommandList = l
-	modulelistsMutex.Unlock()
-}
-
-func GetTriggerPluginList() []string {
-	modulelistsMutex.RLock()
-	defer modulelistsMutex.RUnlock()
-
-	if triggerPluginCommandList == nil {
-		panic(errors.New("Tried to get trigger plugin list before cache#SetTriggerPluginList() was called"))
-	}
-
-	return triggerPluginCommandList
-}
