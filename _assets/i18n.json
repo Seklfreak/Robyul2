@@ -650,6 +650,11 @@
         "very doubtful."
       ],
       "ask_a_question": "I cannot respond if you don't ask a question <:blobthinking:317028940885524490>"
+    },
+    "feedback": {
+      "suggestion-received": "**Thank you!** We received your suggestion. <a:ablobsmile:393869335312990209>\nYou can follow the progress of your suggestion and any other suggestion here: <https://trello.robyul.chat/>.",
+      "issue-received": "**Thank you!** We received your issue report. <a:ablobgrimace:394026913108328449>\nYou can follow the progress of your report and any other report here: <https://trello.robyul.chat/>.",
+      "arguments-too-few": "Please tell me more. <:blobthinkingeyes:317044481499201538>"
     }
   }
 }

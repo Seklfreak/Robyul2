@@ -40,8 +40,14 @@
 [[projects]]
   name = "github.com/RichardKnop/machinery"
   packages = ["v1","v1/backends","v1/brokers","v1/common","v1/config","v1/log","v1/retry","v1/tasks"]
-  revision = "a17f5bd227441f7678f2223d9deb50b5ac173f19"
-  version = "v1.1.1"
+  revision = "a46655a1f22d8f6352cc906bf78ed81753c30daf"
+  version = "v1.1.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/VojtechVitek/go-trello"
+  packages = ["."]
+  revision = "28ebf2756ecc6c69262fba5d5c2f80c0e6dce5e8"
 
 [[projects]]
   branch = "master"
@@ -65,7 +71,7 @@
   branch = "master"
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/sqs","service/sqs/sqsiface","service/sts"]
-  revision = "793c7bad9fd33bf3cf2095f32f8024bf47f3cd0a"
+  revision = "f98ff3505c17e44d349af899eb85e6b37a7953db"
 
 [[projects]]
   branch = "master"
@@ -166,8 +172,8 @@
 [[projects]]
   name = "github.com/garyburd/redigo"
   packages = ["internal","redis"]
-  revision = "47dc60e71eed504e3ef8e77ee3c6fe720f3be57f"
-  version = "v1.3.0"
+  revision = "d1ed5c67e5794de818ea85e6b522fda02623a484"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"
@@ -263,12 +269,6 @@
   name = "github.com/lucasb-eyer/go-colorful"
   packages = ["."]
   revision = "231272389856c976b7500c4fffcc52ddf06ff4eb"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/marcmak/calc"
-  packages = ["calc"]
-  revision = "5bbbfc3b3149741fda5147a18568a62f6cd3fec1"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -370,7 +370,7 @@
   branch = "master"
   name = "github.com/zonedb/zonedb"
   packages = ["."]
-  revision = "19e90b550f692b2bf001bf3f57a52c90f5f07cb0"
+  revision = "0762b2e4e470364f140f4bb58a93eeb88f1473c6"
 
 [[projects]]
   branch = "master"
@@ -412,7 +412,7 @@
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport/http","youtube/v3"]
-  revision = "272e2963aad1a56aba54e1167c47abff8d37ac08"
+  revision = "92c31202d4179425301c9ad5a63abd8df45a9674"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -519,6 +519,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1e81bffbfb0eda9fe34bf6160dee3df408f56420e765f90568d0ccbac78c598d"
+  inputs-digest = "84e0c01cb17ebf5ef0692a7b7c4caf522cf15f8df831a2cd5a7aa39ed6579a95"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -56,6 +56,7 @@ var (
 		&plugins.Isup{},
 		&plugins.ModulePermissions{},
 		&plugins.M8ball{},
+		&plugins.Feedback{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

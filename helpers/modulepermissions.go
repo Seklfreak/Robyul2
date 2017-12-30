@@ -69,6 +69,7 @@ const (
 	ModulePermVanityInvite                                                  // vanityinvite.go
 	ModulePerm8ball                                                         // 8ball.go
 	ModulePermAllPlaceholder
+	ModulePermFeedback // feedback.go
 
 	ModulePermAll = ModulePermStats | ModulePermTranslator | ModulePermUrban | ModulePermWeather | ModulePermVLive |
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
@@ -80,7 +81,7 @@ const (
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
 		ModulePermGuildAnnouncements | ModulePermMirror | ModulePermMirror | ModulePermMod | ModulePermNotifications |
 		ModulePermNuke | ModulePermPersistency | ModulePermPing | ModulePermTroublemaker | ModulePermVanityInvite |
-		ModulePerm8ball
+		ModulePerm8ball | ModulePermFeedback
 )
 
 var (
@@ -134,6 +135,7 @@ var (
 		{Names: []string{"troublemaker"}, Permission: ModulePermTroublemaker},
 		{Names: []string{"custominvite", "vanityinvite"}, Permission: ModulePermVanityInvite},
 		{Names: []string{"8ball"}, Permission: ModulePerm8ball},
+		{Names: []string{"feedback"}, Permission: ModulePermFeedback},
 	}
 )
 
@@ -166,7 +168,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	channel, err := GetChannelWithoutApi(channelID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
-			"failed to get channel for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
+			"failed to get channel for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
 			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
 		return true
@@ -175,7 +177,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	user, err := GetGuildMemberWithoutApi(channel.GuildID, userID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
-			"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
+			"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
 			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
 		return true
@@ -184,7 +186,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	guild, err := GetGuildWithoutApi(channel.GuildID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
-			"failed to get guild for ModuleIsAllowedSilent message #%s channel #%s user #%d module %s: %s",
+			"failed to get guild for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
 			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
 		)
 		return true
@@ -212,7 +214,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		if GetAllowedForRole(channel.GuildID, userRoleID)&module == module ||
 			GetAllowedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"allowed command by role message #%s channel #%s user #%d module %s",
+				"allowed command by role message #%s channel #%s user #%s module %s",
 				msgID, channelID, userID, GetModuleNameById(module),
 			)
 			return true
@@ -224,7 +226,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		if GetDeniedForRole(channel.GuildID, userRoleID)&module == module ||
 			GetDeniedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"denied command by role message #%s channel #%s user #%d module %s",
+				"denied command by role message #%s channel #%s user #%s module %s",
 				msgID, channelID, userID, GetModuleNameById(module),
 			)
 			return false
@@ -235,7 +237,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	if GetAllowedForChannel(channel.GuildID, channelID)&module == module ||
 		GetAllowedForChannel(channel.GuildID, channelID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"allowed command by channel message #%s channel #%s user #%d module %s",
+			"allowed command by channel message #%s channel #%s user #%s module %s",
 			msgID, channelID, userID, GetModuleNameById(module),
 		)
 		return true
@@ -245,7 +247,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	if GetDeniedForChannel(channel.GuildID, channelID)&module == module ||
 		GetDeniedForChannel(channel.GuildID, channelID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"denied command by channel message #%s channel #%s user #%d module %s",
+			"denied command by channel message #%s channel #%s user #%s module %s",
 			msgID, channelID, userID, GetModuleNameById(module),
 		)
 		return false
@@ -256,7 +258,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		if GetAllowedForChannel(channel.GuildID, channel.ParentID)&module == module ||
 			GetAllowedForChannel(channel.GuildID, channel.ParentID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"allowed command by parent channel message #%s channel #%s user #%d module %s",
+				"allowed command by parent channel message #%s channel #%s user #%s module %s",
 				msgID, channelID, userID, GetModuleNameById(module),
 			)
 			return true
@@ -268,7 +270,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		if GetDeniedForChannel(channel.GuildID, channel.ParentID)&module == module ||
 			GetDeniedForChannel(channel.GuildID, channel.ParentID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"denied command by parent channel message #%s channel #%s user #%d module %s",
+				"denied command by parent channel message #%s channel #%s user #%s module %s",
 				msgID, channelID, userID, GetModuleNameById(module),
 			)
 			return false

@@ -110,5 +110,13 @@
   "botlists": {
     "discordbotsorg-token": ""
   },
-  "bansdiscordlistnet-token": ""
+  "bansdiscordlistnet-token": "",
+  "trello": {
+    "key": "",
+    "token": "",
+    "board-ids": {
+      "suggestions": "",
+      "issues": ""
+    }
+  }
 }
