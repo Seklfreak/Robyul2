@@ -19,35 +19,35 @@ var (
 )
 
 const (
-	ModulePermStats              models.ModulePermissionsModule = 1 << iota // stats.go, uptime.go x
-	ModulePermTranslator                                                    // translator.go x
-	ModulePermUrban                                                         // urbandict.go x
-	ModulePermWeather                                                       // weather.go x
-	ModulePermVLive                                                         // vlive.go x
-	ModulePermInstagram                                                     // instagram.go x
-	ModulePermFacebook                                                      // facebook.go x
-	ModulePermWolframAlpha                                                  // wolframalpha.go x
-	ModulePermLastFm                                                        // lastfm.go x
-	ModulePermTwitch                                                        // twitch.go x
-	ModulePermCharts                                                        // charts.go x
-	ModulePermChoice                                                        // choice.go x
-	ModulePermOsu                                                           // osu.go x
-	ModulePermReminders                                                     // reminders.go x
-	ModulePermGfycat                                                        // gfycat.go x
-	ModulePermRandomPictures                                                // randompictures.go x
-	ModulePermYouTube                                                       // youtube/ x
-	ModulePermSpoiler                                                       // spoiler.go x
-	ModulePermRandomCat                                                     // random_cat.go x
-	ModulePermRPS                                                           // rps.go x
-	ModulePermDig                                                           // dig.go x
-	ModulePermStreamable                                                    // streamable.go x
-	ModulePermLyrics                                                        // lyrics.go x
-	ModulePermNames                                                         // names.go x
-	ModulePermReddit                                                        // reddit.go x
-	ModulePermColor                                                         // color.go x
-	ModulePermDog                                                           // dog.go x
-	ModulePermGoogle                                                        // google/ x
-	ModulePermWhois                                                         // whois.go x
+	ModulePermStats              models.ModulePermissionsModule = 1 << iota // stats.go, uptime.go
+	ModulePermTranslator                                                    // translator.go
+	ModulePermUrban                                                         // urbandict.go
+	ModulePermWeather                                                       // weather.go
+	ModulePermVLive                                                         // vlive.go
+	ModulePermInstagram                                                     // instagram/
+	ModulePermFacebook                                                      // facebook.go
+	ModulePermWolframAlpha                                                  // wolframalpha.go
+	ModulePermLastFm                                                        // lastfm.go
+	ModulePermTwitch                                                        // twitch.go
+	ModulePermCharts                                                        // charts.go
+	ModulePermChoice                                                        // choice.go
+	ModulePermOsu                                                           // osu.go
+	ModulePermReminders                                                     // reminders.go
+	ModulePermGfycat                                                        // gfycat.go
+	ModulePermRandomPictures                                                // randompictures.go
+	ModulePermYouTube                                                       // youtube/
+	ModulePermSpoiler                                                       // spoiler.go
+	ModulePermRandomCat                                                     // random_cat.go
+	ModulePermRPS                                                           // rps.go
+	ModulePermDig                                                           // dig.go
+	ModulePermStreamable                                                    // streamable.go
+	ModulePermLyrics                                                        // lyrics.go
+	ModulePermNames                                                         // names.go
+	ModulePermReddit                                                        // reddit.go
+	ModulePermColor                                                         // color.go
+	ModulePermDog                                                           // dog.go
+	ModulePermGoogle                                                        // google/
+	ModulePermWhois                                                         // whois.go
 	ModulePermIsup                                                          // isup.go
 	ModulePermLevels                                                        // levels.go
 	ModulePermCustomCommands                                                // customcommands.go

@@ -2,9 +2,9 @@ package modules
 
 import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
-	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
-	//"github.com/Seklfreak/Robyul2/modules/triggers"
 	"github.com/Seklfreak/Robyul2/modules/plugins/google"
+	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
+	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 		&plugins.UrbanDict{},
 		&plugins.Weather{},
 		&plugins.VLive{},
-		&plugins.Instagram{},
+		&instagram.Handler{},
 		&plugins.Facebook{},
 		&plugins.WolframAlpha{},
 		&plugins.LastFm{},
