@@ -52,11 +52,15 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			}{ID: strconv.Itoa(int(instagramAccountID)), First: "10"})
 			helpers.Relax(err)
 
-			result, err := helpers.NetGetUAWithError(
-				"https://www.instagram.com/graphql/query/"+
-					"?query_id=17888483320059182"+
-					"&variables="+url.QueryEscape(string(jsonData)), helpers.DEFAULT_UA)
-			helpers.Relax(err)
+			graphQlUrl := "https://www.instagram.com/graphql/query/" +
+				"?query_id=17888483320059182" +
+				"&variables=" + url.QueryEscape(string(jsonData))
+			result, err := helpers.NetGetUAWithError(graphQlUrl, helpers.DEFAULT_UA)
+			if err != nil {
+				cache.GetLogger().WithField("module", "instagram").Warnf(
+					"getting graphql %s failed", graphQlUrl)
+				helpers.Relax(err)
+			}
 
 			err = json.Unmarshal(result, &graphQlFeedResult)
 			helpers.Relax(err)

@@ -3,7 +3,6 @@ package instagram
 import (
 	"sync"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	rethink "github.com/gorethink/gorethink"
 )
@@ -251,8 +250,8 @@ func (m *Handler) getBundledEntries() (bundledEntries map[int64][]DB_Instagram_E
 
 		channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 		if err != nil || channel == nil || channel.ID == "" {
-			cache.GetLogger().WithField("module", "instagram").Infof("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
-				entry.Username, entry.ChannelID, entry.ServerID)
+			//cache.GetLogger().WithField("module", "instagram").Infof("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
+			//	entry.Username, entry.ChannelID, entry.ServerID)
 			continue
 		}
 
