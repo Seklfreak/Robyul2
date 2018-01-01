@@ -73,7 +73,8 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 					cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
 					goto RetryGraphQl
 				}
-				if strings.Contains(err.Error(), "getsockopt: connection refused") {
+				if strings.Contains(err.Error(), "getsockopt: connection refused") ||
+					strings.Contains(err.Error(), "read: connection reset by peer") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
 						"failed to connect to proxy checking Instagram Account %d (GraphQL), "+
 							"proxy dead?, switching proxy and then trying again", instagramAccountID)
@@ -159,7 +160,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 					}
 
 					if postAlreadyPosted == false {
-						log.WithField("module", "instagram").Infof("Posting Post: #%s", post.ID)
+						log.WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
 							DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
 						changes = true
@@ -266,7 +267,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 						}
 					}
 					if postAlreadyPosted == false {
-						log.WithField("module", "instagram").Infof("Posting Post: #%s", post.ID)
+						log.WithField("module", "instagram").Infof("Posting Post (Feed and Story): #%s", post.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
 							DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
 						changes = true
@@ -284,7 +285,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 					}
 					if reelMediaAlreadyPosted == false {
 						log.WithField("module", "instagram").Infof(
-							"Posting Reel Media: #%s", reelMedia.ID)
+							"Posting Reel Media (Feed and Story): #%s", reelMedia.ID)
 						entry.PostedReelMedias = append(entry.PostedReelMedias,
 							DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
 						changes = true
@@ -297,7 +298,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				/*
 				   if entry.IsLive == false {
 				       if story.Broadcast != 0 {
-				           log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live: #%s", instagramUser.User.Broadcast.ID))
+				           log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live (Feed and Story): #%s", instagramUser.User.Broadcast.ID))
 				           go m.postLiveToChannel(entry.ChannelID, instagramUser)
 				           entry.IsLive = true
 				           changes = true
