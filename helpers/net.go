@@ -78,9 +78,7 @@ func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
-		if err != nil {
-			return []byte{}, errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode))
-		}
+		return []byte{}, errors.New("expected status 200; got " + strconv.Itoa(response.StatusCode))
 	} else {
 		// Read body
 		defer response.Body.Close()
@@ -93,7 +91,7 @@ func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 
 		return buf.Bytes(), nil
 	}
-	return []byte{}, errors.New("Internal Error")
+	return []byte{}, errors.New("internal error")
 }
 
 func NetGetUAWithErrorAndTimeout(url string, useragent string, timeout time.Duration) ([]byte, error) {

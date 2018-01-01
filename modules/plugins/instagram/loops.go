@@ -52,11 +52,19 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			}{ID: strconv.Itoa(int(instagramAccountID)), First: "10"})
 			helpers.Relax(err)
 
+		RetryGraphQl:
 			graphQlUrl := "https://www.instagram.com/graphql/query/" +
 				"?query_id=17888483320059182" +
 				"&variables=" + url.QueryEscape(string(jsonData))
 			result, err := helpers.NetGetUAWithError(graphQlUrl, helpers.DEFAULT_UA)
 			if err != nil {
+				if strings.Contains(err.Error(), "expected status 200; got 429") {
+					cache.GetLogger().WithField("module", "instagram").Infof(
+						"hit rate limit checking Instagram Account %d (GraphQL),"+
+							"sleeping for 20 seconds and then trying again", instagramAccountID)
+					time.Sleep(20 * time.Second)
+					goto RetryGraphQl
+				}
 				cache.GetLogger().WithField("module", "instagram").Warnf(
 					"getting graphql %s failed", graphQlUrl)
 				helpers.Relax(err)
