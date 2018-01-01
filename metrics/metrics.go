@@ -59,8 +59,11 @@ var (
 	// InstagramAccountsCount counts all connected instagram accounts
 	InstagramAccountsCount = expvar.NewInt("instagram_accounts_count")
 
-	// InstagramRefreshTime is the latest refresh time
+	// InstagramRefreshTime is the latest Feeds and Story refresh time
 	InstagramRefreshTime = expvar.NewFloat("instagram_refresh_time")
+
+	// InstagramGraphQlRefreshTime is the latest GraphQL feed refresh time
+	InstagramGraphQlFeedRefreshTime = expvar.NewFloat("instagram_graphql_feed_refresh_time")
 
 	// FacebookPagesCount counts all connected instagram accounts
 	FacebookPagesCount = expvar.NewInt("facebook_pages_count")

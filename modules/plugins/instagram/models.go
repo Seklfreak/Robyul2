@@ -1,6 +1,12 @@
 package instagram
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/helpers"
+	rethink "github.com/gorethink/gorethink"
+)
 
 type DB_Instagram_Entry struct {
 	ID               string                   `gorethink:"id,omitempty"`
@@ -169,4 +175,93 @@ type Instagram_Broadcast struct {
 type Instagram_Safe_Entries struct {
 	entries []DB_Instagram_Entry
 	mux     sync.Mutex
+}
+
+type Instagram_GraphQl_User_Feed struct {
+	Data struct {
+		User struct {
+			EdgeOwnerToTimelineMedia struct {
+				Count    int `json:"count"`
+				PageInfo struct {
+					HasNextPage bool   `json:"has_next_page"`
+					EndCursor   string `json:"end_cursor"`
+				} `json:"page_info"`
+				Edges []struct {
+					Node struct {
+						ID                 string `json:"id"`
+						Typename           string `json:"__typename"`
+						EdgeMediaToCaption struct {
+							Edges []struct {
+								Node struct {
+									Text string `json:"text"`
+								} `json:"node"`
+							} `json:"edges"`
+						} `json:"edge_media_to_caption"`
+						Shortcode          string `json:"shortcode"`
+						EdgeMediaToComment struct {
+							Count int `json:"count"`
+						} `json:"edge_media_to_comment"`
+						CommentsDisabled bool `json:"comments_disabled"`
+						TakenAtTimestamp int  `json:"taken_at_timestamp"`
+						Dimensions       struct {
+							Height int `json:"height"`
+							Width  int `json:"width"`
+						} `json:"dimensions"`
+						DisplayURL           string `json:"display_url"`
+						EdgeMediaPreviewLike struct {
+							Count int `json:"count"`
+						} `json:"edge_media_preview_like"`
+						Owner struct {
+							ID string `json:"id"`
+						} `json:"owner"`
+						ThumbnailSrc       string `json:"thumbnail_src"`
+						ThumbnailResources []struct {
+							Src          string `json:"src"`
+							ConfigWidth  int    `json:"config_width"`
+							ConfigHeight int    `json:"config_height"`
+						} `json:"thumbnail_resources"`
+						IsVideo bool `json:"is_video"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"edge_owner_to_timeline_media"`
+		} `json:"user"`
+	} `json:"data"`
+	Status string `json:"status"`
+}
+
+func (m *Handler) getBundledEntries() (bundledEntries map[int64][]DB_Instagram_Entry, entriesCount int, err error) {
+	var entries []DB_Instagram_Entry
+
+	cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
+	if err != nil {
+		return bundledEntries, 0, err
+	}
+
+	err = cursor.All(&entries)
+	if err != nil {
+		return bundledEntries, 0, err
+	}
+
+	bundledEntries = make(map[int64][]DB_Instagram_Entry, 0)
+
+	for _, entry := range entries {
+		if entry.InstagramUserID == 0 {
+			continue
+		}
+
+		channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
+		if err != nil || channel == nil || channel.ID == "" {
+			cache.GetLogger().WithField("module", "instagram").Infof("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
+				entry.Username, entry.ChannelID, entry.ServerID)
+			continue
+		}
+
+		if _, ok := bundledEntries[entry.InstagramUserID]; ok {
+			bundledEntries[entry.InstagramUserID] = append(bundledEntries[entry.InstagramUserID], entry)
+		} else {
+			bundledEntries[entry.InstagramUserID] = []DB_Instagram_Entry{entry}
+		}
+	}
+
+	return bundledEntries, len(entries), nil
 }

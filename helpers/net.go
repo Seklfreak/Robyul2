@@ -175,6 +175,44 @@ func NetPostUA(url string, data string, useragent string) []byte {
 	}
 }
 
+func NetPostUAWithError(url string, data string, useragent string) (result []byte, err error) {
+	// Allocate client
+	client := &http.Client{
+		Timeout: time.Duration(15 * time.Second),
+	}
+
+	// Prepare request
+	request, err := http.NewRequest("POST", url, bytes.NewBufferString(data))
+	if err != nil {
+		return result, err
+	}
+
+	request.Header.Set("User-Agent", useragent)
+	request.Header.Set("Content-Type", "application/json")
+
+	// Do request
+	response, err := client.Do(request)
+	if err != nil {
+		return result, err
+	}
+
+	// Only continue if code was 200
+	if response.StatusCode != 200 {
+		return result, errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode))
+	} else {
+		// Read body
+		defer response.Body.Close()
+
+		buf := bytes.NewBuffer(nil)
+		_, err := io.Copy(buf, response.Body)
+		if err != nil {
+			return result, err
+		}
+
+		return buf.Bytes(), nil
+	}
+}
+
 // GetJSON sends a GET request to $url, parses it and returns the JSON
 func GetJSON(url string) *gabs.Container {
 	// Parse json
