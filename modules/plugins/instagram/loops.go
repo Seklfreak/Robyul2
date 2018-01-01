@@ -33,6 +33,9 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 		}()
 	}()
 
+	proxy, err := helpers.GimmeProxy()
+	helpers.Relax(err)
+
 	var graphQlFeedResult Instagram_GraphQl_User_Feed
 
 	for {
@@ -56,7 +59,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			graphQlUrl := "https://www.instagram.com/graphql/query/" +
 				"?query_id=17888483320059182" +
 				"&variables=" + url.QueryEscape(string(jsonData))
-			result, err := helpers.NetGetUAWithError(graphQlUrl, helpers.DEFAULT_UA)
+			result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, proxy)
 			if err != nil {
 				if strings.Contains(err.Error(), "expected status 200; got 429") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
@@ -157,6 +160,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 				}
 			}
 
+			time.Sleep(1 * time.Second)
 		}
 
 		elapsed := time.Since(start)
@@ -297,6 +301,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 					lockPostedPosts.Unlock()
 				}
 			}
+			time.Sleep(1 * time.Second)
 		}
 
 		elapsed := time.Since(start)
