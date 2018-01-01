@@ -1,7 +1,6 @@
 package instagram
 
 import (
-	"math/rand"
 	"strings"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 	"net/url"
 
 	"strconv"
-
-	"net/http"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -36,21 +33,8 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 		}()
 	}()
 
-	proxyList := make([]http.Transport, 0)
-
-	for {
-		proxy, err := helpers.GimmeProxy()
-		helpers.Relax(err)
-		proxyList = append(proxyList, proxy)
-		if len(proxyList) >= 4 {
-			break
-		}
-	}
-
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s)
-
-	currentProxy := proxyList[r.Intn(len(proxyList))]
+	currentProxy, err := helpers.GetRandomProxy()
+	helpers.Relax(err)
 	cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
 
 	var graphQlFeedResult Instagram_GraphQl_User_Feed
@@ -63,6 +47,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			"checking graphql feed on %d accounts for %d feeds", len(bundledEntries), entriesCount)
 		start := time.Now()
 
+	NextEntry:
 		for instagramAccountID, entries := range bundledEntries {
 			// log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", instagramUsername))
 
@@ -83,7 +68,17 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 						"hit rate limit checking Instagram Account %d (GraphQL), "+
 							"sleeping for 5 seconds, switching proxy and then trying again", instagramAccountID)
 					time.Sleep(5 * time.Second)
-					currentProxy = proxyList[r.Intn(len(proxyList))]
+					currentProxy, err = helpers.GetRandomProxy()
+					helpers.Relax(err)
+					cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
+					goto RetryGraphQl
+				}
+				if strings.Contains(err.Error(), "getsockopt: connection refused") {
+					cache.GetLogger().WithField("module", "instagram").Infof(
+						"failed to connect to proxy checking Instagram Account %d (GraphQL), "+
+							"proxy dead?, switching proxy and then trying again", instagramAccountID)
+					currentProxy, err = helpers.GetRandomProxy()
+					helpers.Relax(err)
 					cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
 					goto RetryGraphQl
 				}
@@ -129,7 +124,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 					if err != nil &&
 						strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 						cache.GetLogger().WithField("module", "instagram").Infof(
-							"hit rate limit checking Instagram Account %d,"+
+							"hit rate limit checking Instagram Account (Media Info) %d,"+
 								"sleeping for 20 seconds and then trying again", instagramAccountID)
 						time.Sleep(20 * time.Second)
 						goto RetryPost
@@ -149,9 +144,9 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 
 				if post.ID == "" {
 					log.WithField("module", "instagram").Warnf(
-						"failed to find post information in returned post information for %s account %d failed: %s",
+						"failed to find post information in returned post information for %s account %d",
 						receivedPost.Node.ID, instagramAccountID, err)
-					continue
+					continue NextEntry
 				}
 
 				for _, entry := range entries {
@@ -179,7 +174,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 				}
 			}
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(100 * time.Millisecond) // 0.1 second
 		}
 
 		elapsed := time.Since(start)
@@ -226,7 +221,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 					if err != nil &&
 						strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 						cache.GetLogger().WithField("module", "instagram").Infof(
-							"hit rate limit checking Instagram Account %d,"+
+							"hit rate limit checking Instagram Account (User Feed) %d, "+
 								"sleeping for 20 seconds and then trying again", instagramAccountID)
 						time.Sleep(20 * time.Second)
 						goto RetryAccount
@@ -241,7 +236,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				if err != nil &&
 					strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
-						"hit rate limit checking Instagram Account %d,"+
+						"hit rate limit checking Instagram Account (Stories) %d, "+
 							"sleeping for 20 seconds and then trying again", instagramAccountID)
 					time.Sleep(20 * time.Second)
 					goto RetryAccount

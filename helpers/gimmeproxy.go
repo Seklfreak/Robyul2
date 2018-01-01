@@ -8,6 +8,11 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 )
 
+const (
+	PROXIES_KEY       = "robyul-discord:gimmeproxy:proxies"
+	NUMBER_OF_PROXIES = 10
+)
+
 type gimmeProxyResult struct {
 	SupportsHTTPS  bool   `json:"supportsHttps"`
 	Protocol       string `json:"protocol"`
@@ -34,26 +39,58 @@ type gimmeProxyResult struct {
 	} `json:"otherProtocols"`
 }
 
-func GimmeProxy() (proxy http.Transport, err error) {
+func GimmeProxy() (proxyUrl string, err error) {
 	gimmeProxyUrl := "https://gimmeproxy.com/api/getProxy?supportsHttps=true&protocol=http&minSpeed=50"
 	result, err := NetGetUAWithError(gimmeProxyUrl, DEFAULT_UA)
 	if err != nil {
-		return proxy, err
+		return proxyUrl, err
 	}
 
 	var receivedProxy gimmeProxyResult
 	err = json.Unmarshal(result, &receivedProxy)
 	if err != nil {
-		return proxy, err
+		return proxyUrl, err
 	}
 
-	proxyUrl, err := url.Parse(receivedProxy.Curl)
+	cache.GetLogger().WithField("module", "gimmeproxy").Info("received new proxy: ", receivedProxy.Curl)
+	return receivedProxy.Curl, nil
+}
+
+func GetRandomProxy() (proxy http.Transport, err error) {
+	redis := cache.GetRedisClient()
+	length, err := redis.SCard(PROXIES_KEY).Result()
 	if err != nil {
 		return proxy, err
 	}
 
-	transport := http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+	if length < NUMBER_OF_PROXIES {
+		cache.GetLogger().WithField("module", "gimmeproxy").Infof(
+			"found %d cached proxies, which is less than %d, adding one", length, NUMBER_OF_PROXIES,
+		)
+		proxyUrlString, err := GimmeProxy()
+		if err != nil {
+			return proxy, err
+		}
+		_, err = redis.SAdd(PROXIES_KEY, proxyUrlString).Result()
+		if err != nil {
+			return proxy, err
+		}
+	}
 
-	cache.GetLogger().WithField("module", "gimmeproxy").Info("got proxy: ", proxyUrl)
+	randomProxyUrlString, err := redis.SRandMember(PROXIES_KEY).Result()
+	if err != nil {
+		return proxy, err
+	}
+
+	randomProxyUrl, err := url.Parse(randomProxyUrlString)
+	if err != nil {
+		return proxy, err
+	}
+
+	cache.GetLogger().WithField("module", "gimmeproxy").Info("got proxy from cache: ", randomProxyUrl)
+
+	transport := http.Transport{Proxy: http.ProxyURL(randomProxyUrl)}
 	return transport, nil
 }
+
+// TODO: test proxies, remove dead ones
