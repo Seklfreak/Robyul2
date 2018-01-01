@@ -1,6 +1,7 @@
 package instagram
 
 import (
+	"math/rand"
 	"strings"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	"net/url"
 
 	"strconv"
+
+	"net/http"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -33,8 +36,22 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 		}()
 	}()
 
-	proxy, err := helpers.GimmeProxy()
-	helpers.Relax(err)
+	proxyList := make([]http.Transport, 0)
+
+	for {
+		proxy, err := helpers.GimmeProxy()
+		helpers.Relax(err)
+		proxyList = append(proxyList, proxy)
+		if len(proxyList) >= 4 {
+			break
+		}
+	}
+
+	s := rand.NewSource(time.Now().Unix())
+	r := rand.New(s)
+
+	currentProxy := proxyList[r.Intn(len(proxyList))]
+	cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
 
 	var graphQlFeedResult Instagram_GraphQl_User_Feed
 
@@ -59,13 +76,15 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			graphQlUrl := "https://www.instagram.com/graphql/query/" +
 				"?query_id=17888483320059182" +
 				"&variables=" + url.QueryEscape(string(jsonData))
-			result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, proxy)
+			result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, currentProxy)
 			if err != nil {
 				if strings.Contains(err.Error(), "expected status 200; got 429") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
-						"hit rate limit checking Instagram Account %d (GraphQL),"+
-							"sleeping for 20 seconds and then trying again", instagramAccountID)
-					time.Sleep(20 * time.Second)
+						"hit rate limit checking Instagram Account %d (GraphQL), "+
+							"sleeping for 5 seconds, switching proxy and then trying again", instagramAccountID)
+					time.Sleep(5 * time.Second)
+					currentProxy = proxyList[r.Intn(len(proxyList))]
+					cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
 					goto RetryGraphQl
 				}
 				cache.GetLogger().WithField("module", "instagram").Warnf(
@@ -160,7 +179,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 				}
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 
 		elapsed := time.Since(start)

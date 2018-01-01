@@ -54,6 +54,6 @@ func GimmeProxy() (proxy http.Transport, err error) {
 
 	transport := http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 
-	cache.GetLogger().WithField("module", "gimmeproxy").Info("got proxy:", proxyUrl)
+	cache.GetLogger().WithField("module", "gimmeproxy").Info("got proxy: ", proxyUrl)
 	return transport, nil
 }
