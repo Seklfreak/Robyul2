@@ -160,4 +160,37 @@ func CachedProxiesHealthcheck() {
 		_, err = redis.SRem(PROXIES_KEY, proxyToDelete).Result()
 		RelaxLog(err)
 	}
+
+	FillProxies()
+}
+
+func FillProxies() {
+	redis := cache.GetRedisClient()
+
+	for {
+		length, err := redis.SCard(PROXIES_KEY).Result()
+		Relax(err)
+
+		if length < NUMBER_OF_PROXIES {
+			proxyUrlString, err := GimmeProxy()
+			if err != nil {
+				cache.GetLogger().WithField("module", "gimmeproxy").Warnf(
+					"found %d cached proxies, which is less than %d, adding one failed: %s",
+					length, NUMBER_OF_PROXIES, err.Error(),
+				)
+				if strings.Contains(err.Error(), "expected status 200; got 429") {
+					return
+				} else {
+					time.Sleep(10 * time.Second)
+					continue
+				}
+			} else {
+				cache.GetLogger().WithField("module", "gimmeproxy").Infof(
+					"found %d cached proxies, which is less than %d, adding one", length, NUMBER_OF_PROXIES,
+				)
+				_, err = redis.SAdd(PROXIES_KEY, proxyUrlString).Result()
+				Relax(err)
+			}
+		}
+	}
 }

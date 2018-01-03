@@ -558,7 +558,12 @@ NextKeyword:
 							Keywords: []string{notificationSetting.Keyword},
 						})
 					}
-					go m.increaseNotificationEntryById(notificationSetting.ID)
+					idToIncrease := notificationSetting.ID
+					go func() {
+						defer helpers.Recover()
+
+						m.increaseNotificationEntryById(idToIncrease)
+					}()
 				}
 			}
 		}
