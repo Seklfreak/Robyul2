@@ -174,7 +174,7 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 		return true
 	}
 
-	user, err := GetGuildMemberWithoutApi(channel.GuildID, userID)
+	user, err := GetGuildMember(channel.GuildID, userID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
 			"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
