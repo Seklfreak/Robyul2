@@ -133,6 +133,9 @@ var (
 
 	// DiscordRestApiRequests counts all discord rest requests made
 	DiscordRestApiRequests = expvar.NewInt("discord_rest_api_requests")
+
+	// GimmeProxyCachedProxies counts all cached gimmeproxy proxies
+	GimmeProxyCachedProxies = expvar.NewInt("gimmeproxy_cached_proxies")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -224,6 +227,10 @@ func CollectRuntimeMetrics() {
 		} else {
 			YoutubeLeftQuota.Set(0)
 		}
+
+		redis := cache.GetRedisClient()
+		numberOfProxies, _ := redis.SCard(helpers.PROXIES_KEY).Result()
+		GimmeProxyCachedProxies.Set(numberOfProxies)
 	}
 }
 

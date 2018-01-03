@@ -371,6 +371,9 @@ func main() {
 	})
 	cache.SetMachineryRedisClient(machineryRedisClient)
 
+	// start proxies healthcheck loop
+	helpers.CachedProxiesHealthcheckLoop()
+
 	// Make a channel that waits for a os signal
 	BotRuntimeChannel = make(chan os.Signal, 1)
 	signal.Notify(BotRuntimeChannel, os.Interrupt, os.Kill)

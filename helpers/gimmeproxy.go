@@ -5,12 +5,18 @@ import (
 	"net/http"
 	"net/url"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 )
 
 const (
 	PROXIES_KEY       = "robyul-discord:gimmeproxy:proxies"
 	NUMBER_OF_PROXIES = 100
+)
+
+var (
+	PROXY_CHECK_URLS = []string{"https://instagram.com"}
 )
 
 type gimmeProxyResult struct {
@@ -93,4 +99,62 @@ func GetRandomProxy() (proxy http.Transport, err error) {
 	return transport, nil
 }
 
-// TODO: test proxies, remove dead ones
+func CachedProxiesHealthcheckLoop() {
+	defer Recover()
+	defer func() {
+		go func() {
+			cache.GetLogger().WithField("module", "gimmeproxy").Error(
+				"The CachedProxiesHealthcheckLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			CachedProxiesHealthcheckLoop()
+		}()
+	}()
+
+	for {
+		CachedProxiesHealthcheck()
+
+		time.Sleep(1 * time.Hour)
+	}
+}
+
+func CachedProxiesHealthcheck() {
+	defer Recover()
+
+	redis := cache.GetRedisClient()
+	proxieUrlStrings, err := redis.SMembers(PROXIES_KEY).Result()
+	RelaxLog(err)
+
+	proxiesToDelete := make([]string, 0)
+
+	for _, proxyUrlString := range proxieUrlStrings {
+		randomProxyUrl, err := url.Parse(proxyUrlString)
+		if err != nil {
+			cache.GetLogger().WithField("module", "gimmeproxy").Infof(
+				"removing proxy %s because error: %s", proxyUrlString, err.Error(),
+			)
+			proxiesToDelete = append(proxiesToDelete, proxyUrlString)
+			continue
+		}
+
+		for _, proxyCheckUrl := range PROXY_CHECK_URLS {
+			_, err := NetGetUAWithErrorAndTransport(proxyCheckUrl, DEFAULT_UA, http.Transport{Proxy: http.ProxyURL(randomProxyUrl)})
+			if err != nil {
+				cache.GetLogger().WithField("module", "gimmeproxy").Infof(
+					"removing proxy %s because error: %s checking %s",
+					proxyUrlString, err.Error(), proxyCheckUrl,
+				)
+				proxiesToDelete = append(proxiesToDelete, proxyUrlString)
+				continue
+			}
+		}
+	}
+
+	cache.GetLogger().WithField("module", "gimmeproxy").Infof(
+		"deleting %d proxies from cache", len(proxiesToDelete),
+	)
+
+	for _, proxyToDelete := range proxiesToDelete {
+		_, err = redis.SRem(PROXIES_KEY, proxyToDelete).Result()
+		RelaxLog(err)
+	}
+}
