@@ -289,7 +289,7 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 	}
 
 	if message.Content == "" {
-		message.Content = " "
+		message.Content = "/"
 	}
 
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndexMessages).Type("doc").Id(elasticID).

@@ -117,7 +117,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 CheckGfycatStatusLoop:
 	for {
 		statusGfycatEndpoint := fmt.Sprintf(gfycatApiBaseUrl, fmt.Sprintf("gfycats/fetch/status/%s", gfyName))
-		result, err := gabs.ParseJSON(helpers.NetGet(statusGfycatEndpoint))
+		rawResult, err := helpers.NetGetUAWithError(statusGfycatEndpoint, helpers.DEFAULT_UA)
 		if err != nil {
 			if strings.Contains(err.Error(), "Expected status 200; Got 504") {
 				_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
@@ -125,8 +125,12 @@ CheckGfycatStatusLoop:
 				return
 			}
 		}
+		result, err := gabs.ParseJSON(rawResult)
+		helpers.Relax(err)
 
-		switch result.Path("task").Data().(string) {
+		taskData, _ := result.Path("task").Data().(string)
+
+		switch taskData {
 		case "encoding":
 			time.Sleep(5 * time.Second)
 			session.ChannelTyping(msg.ChannelID)

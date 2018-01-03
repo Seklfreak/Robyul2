@@ -7,6 +7,8 @@ import (
 
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 )
 
@@ -75,11 +77,12 @@ func GetRandomProxy() (proxy http.Transport, err error) {
 		)
 		proxyUrlString, err := GimmeProxy()
 		if err != nil {
-			return proxy, err
-		}
-		_, err = redis.SAdd(PROXIES_KEY, proxyUrlString).Result()
-		if err != nil {
-			return proxy, err
+			if !strings.Contains(err.Error(), "expected status 200; got 429") {
+				RelaxLog(err)
+			}
+		} else {
+			_, err = redis.SAdd(PROXIES_KEY, proxyUrlString).Result()
+			RelaxLog(err)
 		}
 	}
 
