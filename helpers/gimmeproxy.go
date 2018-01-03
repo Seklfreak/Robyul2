@@ -12,7 +12,7 @@ import (
 
 const (
 	PROXIES_KEY       = "robyul-discord:gimmeproxy:proxies"
-	NUMBER_OF_PROXIES = 100
+	NUMBER_OF_PROXIES = 150
 )
 
 var (
@@ -93,7 +93,7 @@ func GetRandomProxy() (proxy http.Transport, err error) {
 		return proxy, err
 	}
 
-	cache.GetLogger().WithField("module", "gimmeproxy").Info("got proxy from cache: ", randomProxyUrl)
+	//cache.GetLogger().WithField("module", "gimmeproxy").Info("got proxy from cache: ", randomProxyUrl)
 
 	transport := http.Transport{Proxy: http.ProxyURL(randomProxyUrl)}
 	return transport, nil

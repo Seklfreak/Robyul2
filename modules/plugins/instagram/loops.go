@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	InstagramGraphQlWorkers = 10
+	InstagramGraphQlWorkers = 15
 )
 
 func (m *Handler) checkInstagramGraphQlFeedLoop() {
