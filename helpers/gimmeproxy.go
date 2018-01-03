@@ -10,7 +10,7 @@ import (
 
 const (
 	PROXIES_KEY       = "robyul-discord:gimmeproxy:proxies"
-	NUMBER_OF_PROXIES = 10
+	NUMBER_OF_PROXIES = 100
 )
 
 type gimmeProxyResult struct {

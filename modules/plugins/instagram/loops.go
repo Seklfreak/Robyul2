@@ -16,6 +16,10 @@ import (
 	goinstaResponse "github.com/ahmdrz/goinsta/response"
 )
 
+const (
+	InstagramGraphQlWorkers = 10
+)
+
 func (m *Handler) checkInstagramGraphQlFeedLoop() {
 	if !useGraphQlQuery {
 		return
@@ -33,24 +37,69 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 		}()
 	}()
 
-	currentProxy, err := helpers.GetRandomProxy()
-	helpers.Relax(err)
-	cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
-
-	var graphQlFeedResult Instagram_GraphQl_User_Feed
-
 	for {
 		bundledEntries, entriesCount, err := m.getBundledEntries()
 		helpers.Relax(err)
 
 		cache.GetLogger().WithField("module", "instagram").Infof(
-			"checking graphql feed on %d accounts for %d feeds", len(bundledEntries), entriesCount)
+			"checking graphql feed on %d accounts for %d feeds with %d workers",
+			len(bundledEntries), entriesCount, InstagramGraphQlWorkers)
 		start := time.Now()
 
-	NextEntry:
-		for instagramAccountID, entries := range bundledEntries {
-			// log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", instagramUsername))
+		jobs := make(chan map[int64][]DB_Instagram_Entry, 0)
+		results := make(chan int, 0)
 
+		workerEntries := make(map[int]map[int64][]DB_Instagram_Entry, 0)
+		for w := 1; w <= InstagramGraphQlWorkers; w++ {
+			go m.checkInstagramGraphQlFeedWorker(w, jobs, results)
+			workerEntries[w] = make(map[int64][]DB_Instagram_Entry)
+		}
+
+		lastWorker := 1
+		for code, codeEntries := range bundledEntries {
+			workerEntries[lastWorker][code] = codeEntries
+			lastWorker++
+			if lastWorker > InstagramGraphQlWorkers {
+				lastWorker = 1
+			}
+		}
+
+		for _, workerEntry := range workerEntries {
+			jobs <- workerEntry
+		}
+		close(jobs)
+
+		for a := 1; a <= InstagramGraphQlWorkers; a++ {
+			<-results
+		}
+		elapsed := time.Since(start)
+		cache.GetLogger().WithField("module", "instagram").Infof(
+			"checked graphql feed on %d accounts for %d feeds with %d workers, took %s",
+			len(bundledEntries), entriesCount, InstagramGraphQlWorkers, elapsed)
+		metrics.InstagramGraphQlFeedRefreshTime.Set(elapsed.Seconds())
+
+		if entriesCount <= 10 {
+			time.Sleep(60 * time.Second)
+		}
+	}
+}
+
+func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64][]DB_Instagram_Entry, results chan<- int) {
+	defer helpers.Recover()
+
+	var graphQlFeedResult Instagram_GraphQl_User_Feed
+
+	currentProxy, err := helpers.GetRandomProxy()
+	helpers.Relax(err)
+	cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
+
+	for job := range jobs {
+		//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(
+		//	"worker %d started for %d accounts", id, len(job))
+	NextEntry:
+		for instagramAccountID, entries := range job {
+			//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(
+			//	"checking graphql feed for %d for %d channels", instagramAccountID, len(entries))
 			jsonData, err := json.Marshal(struct {
 				ID    string `json:"id"`
 				First string `json:"first"`
@@ -66,26 +115,23 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 				if strings.Contains(err.Error(), "expected status 200; got 429") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
 						"hit rate limit checking Instagram Account %d (GraphQL), "+
-							"sleeping for 5 seconds, switching proxy and then trying again", instagramAccountID)
-					time.Sleep(5 * time.Second)
+							"sleeping for 1 seconds, switching proxy and then trying again", instagramAccountID)
+					time.Sleep(1 * time.Second)
 					currentProxy, err = helpers.GetRandomProxy()
 					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
-					goto RetryGraphQl
-				}
-				if strings.Contains(err.Error(), "getsockopt: connection refused") ||
-					strings.Contains(err.Error(), "read: connection reset by peer") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
-						"failed to connect to proxy checking Instagram Account %d (GraphQL), "+
-							"proxy dead?, switching proxy and then trying again", instagramAccountID)
-					currentProxy, err = helpers.GetRandomProxy()
-					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
+						"switched to random proxy")
 					goto RetryGraphQl
 				}
-				cache.GetLogger().WithField("module", "instagram").Warnf(
-					"getting graphql %s failed", graphQlUrl)
+				cache.GetLogger().WithField("module", "instagram").Infof(
+					"failed to connect to proxy checking Instagram Account %d (GraphQL): %s, "+
+						"proxy dead?, sleeping for 1 second, switching proxy and then trying again",
+					instagramAccountID, err.Error())
+				time.Sleep(1 * time.Second)
+				currentProxy, err = helpers.GetRandomProxy()
 				helpers.Relax(err)
+				cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
+				goto RetryGraphQl
 			}
 
 			err = json.Unmarshal(result, &graphQlFeedResult)
@@ -130,7 +176,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 						time.Sleep(20 * time.Second)
 						goto RetryPost
 					}
-					log.WithField("module", "instagram").Warnf(
+					cache.GetLogger().WithField("module", "instagram").Warnf(
 						"failed to get post information for %s account %d failed: %s",
 						receivedPost.Node.ID, instagramAccountID, err)
 					continue
@@ -144,9 +190,9 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 				}
 
 				if post.ID == "" {
-					log.WithField("module", "instagram").Warnf(
+					cache.GetLogger().WithField("module", "instagram").Warnf(
 						"failed to find post information in returned post information for %s account %d",
-						receivedPost.Node.ID, instagramAccountID, err)
+						receivedPost.Node.ID, instagramAccountID)
 					continue NextEntry
 				}
 
@@ -160,7 +206,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 					}
 
 					if postAlreadyPosted == false {
-						log.WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
+						cache.GetLogger().WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
 							DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
 						changes = true
@@ -175,19 +221,10 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 				}
 			}
 
-			time.Sleep(100 * time.Millisecond) // 0.1 second
-		}
-
-		elapsed := time.Since(start)
-		cache.GetLogger().WithField("module", "instagram").Infof(
-			"checked graphql on %d accounts for %d feeds, took %s",
-			len(bundledEntries), entriesCount, elapsed)
-		metrics.InstagramGraphQlFeedRefreshTime.Set(elapsed.Seconds())
-
-		if entriesCount <= 10 {
-			time.Sleep(30 * time.Second)
+			time.Sleep(10 * time.Millisecond) // 0.01 second
 		}
 	}
+	results <- len(jobs)
 }
 
 func (m *Handler) checkInstagramFeedsAndStoryLoop() {
@@ -228,7 +265,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 						goto RetryAccount
 					}
 					log.WithField("module", "instagram").Warnf(
-						"updating instagram account %d failed: %s", instagramAccountID, err)
+						"updating instagram account %d (User Feed) failed: %s", instagramAccountID, err)
 					continue
 				}
 			}
@@ -243,7 +280,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 					goto RetryAccount
 				}
 				log.WithField("module", "instagram").Warnf(
-					"updating instagram account %d failed: %s", instagramAccountID, err)
+					"updating instagram account %d (Story) failed: %s", instagramAccountID, err)
 				continue
 			}
 

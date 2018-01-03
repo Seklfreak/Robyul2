@@ -181,6 +181,8 @@ func (r *VLive) checkVliveFeedsLoop() {
 }
 
 func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, results chan<- int) {
+	defer helpers.Recover()
+
 	for job := range jobs {
 		//cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Infof("worker %d started for %d channels", id, len(job))
 		for channelCode, entries := range job {
