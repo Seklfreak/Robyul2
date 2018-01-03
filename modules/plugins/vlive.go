@@ -467,7 +467,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			if len(vliveChannel.Upcoming) > 0 {
 				channelEmbed.Fields = append(channelEmbed.Fields, &discordgo.MessageEmbedField{
 					Name:   helpers.GetTextF("plugins.vlive.channel-embed-name-upcoming", vliveChannel.Upcoming[0].Date),
-					Value:  fmt.Sprintf("**%s**\n%s", vliveChannel.Upcoming[0].Title, vliveChannel.Upcoming[0].Url),
+					Value:  fmt.Sprintf("**%s**", vliveChannel.Upcoming[0].Title),
 					Inline: false,
 				})
 			}
