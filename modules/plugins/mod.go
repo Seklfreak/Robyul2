@@ -1047,7 +1047,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 		isOnServerList := m.inspectCommonServers(targetUser)
 		commonGuildsText := ""
-		if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
+		if len(isOnServerList) > 0 {
 			if isExtendedInspect == false {
 				commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.\n", len(isOnServerList))
 			} else {
@@ -1064,7 +1064,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 			}
 		} else {
-			commonGuildsText += "❓ User is on **none** other servers with Robyul.\n"
+			commonGuildsText += "❓ User is on **none** servers with Robyul.\n"
 		}
 
 		joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
@@ -2126,10 +2126,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					}
 
 					commonGuildsText := ""
-					if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-						commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
+					if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
+						commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
 					} else {
-						commonGuildsText += "❓ User is on **none** other servers with Robyul."
+						commonGuildsText += "❓ User is on **none** servers with Robyul."
 					}
 					joinedTimeText := ""
 					if !joinedTime.After(oneWeekAgo) {
@@ -2361,10 +2361,10 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 					isOnServerList := m.inspectCommonServers(user.User)
 					commonGuildsText := ""
-					if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-						commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
+					if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
+						commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
 					} else {
-						commonGuildsText += "❓ User is on **none** other servers with Robyul."
+						commonGuildsText += "❓ User is on **none** servers with Robyul."
 					}
 
 					joinedTime := helpers.GetTimeFromSnowflake(user.User.ID)
