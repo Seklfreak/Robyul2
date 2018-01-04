@@ -268,7 +268,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			default: // [p]notifications ignore-channel <channel>
 				helpers.RequireAdmin(msg, func() {
-					targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+					targetChannel, err := helpers.GetChannelOrCategoryFromMention(msg, args[1])
 					helpers.Relax(err)
 
 					if targetChannel.GuildID != commandIssueChannel.GuildID {
@@ -376,10 +376,16 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 		return
 	}
 
-	// ignore messages in ignored channels
 	for _, ignoredChannel := range ignoredChannelsCache {
+		// ignore messages in ignored channels
 		if ignoredChannel.ChannelID == msg.ChannelID {
 			return
+		}
+		// ignore messages if parent channel is ignored and child is in sync
+		if ignoredChannel.ChannelID == channel.ParentID {
+			if helpers.ChannelPermissionsInSync(channel.ID) {
+				return
+			}
 		}
 	}
 

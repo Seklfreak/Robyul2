@@ -848,6 +848,17 @@ func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.C
 	return result, nil
 }
 
+func GetChannelOrCategoryFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
+	result, err := GetChannelOfAnyTypeFromMention(msg, mention)
+	if err != nil {
+		return nil, err
+	}
+	if result.Type != discordgo.ChannelTypeGuildText && result.Type != discordgo.ChannelTypeGuildCategory {
+		return nil, errors.New("not a text channel nor a category channel")
+	}
+	return result, nil
+}
+
 func GetChannelOfAnyTypeFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
 	var targetChannel *discordgo.Channel
 	re := regexp.MustCompile("(<#)?(\\d+)(>)?")
