@@ -251,6 +251,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 		return
 	}
 
+	if channel.Type == discordgo.ChannelTypeDM {
+		return
+	}
+
 	if helpers.IsBlacklistedGuild(channel.GuildID) {
 		return
 	}

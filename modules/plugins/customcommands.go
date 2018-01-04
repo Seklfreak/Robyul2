@@ -447,6 +447,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 }
 
 func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+
 	if !helpers.ModuleIsAllowedSilent(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCustomCommands) {
 		return
 	}

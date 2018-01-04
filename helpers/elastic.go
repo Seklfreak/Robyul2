@@ -36,6 +36,10 @@ func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.Messa
 		return
 	}
 
+	if channel.Type == discordgo.ChannelTypeDM {
+		return
+	}
+
 	go func() {
 		defer Recover()
 
@@ -55,6 +59,10 @@ func ElasticOnMessageUpdate(session *discordgo.Session, message *discordgo.Messa
 	}
 
 	if IsLimitedGuild(channel.GuildID) {
+		return
+	}
+
+	if channel.Type == discordgo.ChannelTypeDM {
 		return
 	}
 
@@ -81,6 +89,10 @@ func ElasticOnMessageDelete(session *discordgo.Session, message *discordgo.Messa
 	}
 
 	if IsLimitedGuild(channel.GuildID) {
+		return
+	}
+
+	if channel.Type == discordgo.ChannelTypeDM {
 		return
 	}
 
