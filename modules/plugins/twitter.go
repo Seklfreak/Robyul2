@@ -553,11 +553,11 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 				if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
 					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
 				} else {
-					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(mediaUrl.DisplayURL))
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(m.maxQualityMediaUrl(mediaUrl.DisplayURL)))
 				}
 				break
 			default:
-				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(mediaUrl.MediaURLHttps))
+				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(m.maxQualityMediaUrl(mediaUrl.MediaURLHttps)))
 				break
 			}
 		}
@@ -589,6 +589,13 @@ func (t *Twitter) escapeTwitterContent(input string) (result string) {
 	result = strings.Replace(result, "*", "\\*", -1)
 	result = strings.Replace(result, "~", "\\~", -1)
 	return result
+}
+
+func (t *Twitter) maxQualityMediaUrl(input string) (result string) {
+	if strings.HasSuffix(input, ".jpg") || strings.HasSuffix(input, ".png") {
+		return input + ":orig"
+	}
+	return input
 }
 
 func (m *Twitter) getEntryBy(key string, id string) DB_Twitter_Entry {
