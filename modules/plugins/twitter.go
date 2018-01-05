@@ -32,6 +32,7 @@ type DB_Twitter_Entry struct {
 	PostedTweets      []DB_Twitter_Tweet `gorethink:"posted_tweets"`
 	AccountID         string             `gorethink:"account_id"`
 	MentionRoleID     string             `gorethink:"mention_role_id"`
+	PostMode          int                `gorethink:"post_mode"`
 }
 
 type DB_Twitter_Tweet struct {
@@ -381,10 +382,14 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 							mentionRole = serverRole
 						}
 					}
-					if mentionRole.ID == "" {
+					if mentionRole.ID == "" && mentionRoleName != "discord-embed" {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
+				}
+				var postMode int
+				if strings.HasSuffix(content, " discord-embed") {
+					postMode = 1
 				}
 				// Create DB Entries
 				var dbTweets []DB_Twitter_Tweet
@@ -401,6 +406,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				entry.PostedTweets = dbTweets
 				entry.AccountID = twitterUser.IDStr
 				entry.MentionRoleID = mentionRole.ID
+				entry.PostMode = postMode // TODO
 				m.setEntry(entry)
 
 				twitterStreamNeedsUpdate = true
@@ -451,6 +457,11 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			resultMessage := ""
 			for _, entry := range entryBucket {
 				var specialText string
+				switch entry.PostMode {
+				case 1:
+					specialText += " as discord embed"
+					break
+				}
 				if entry.MentionRoleID != "" {
 					role, err := session.State.Role(currentChannel.GuildID, entry.MentionRoleID)
 					if err == nil {
@@ -537,6 +548,22 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 }
 
 func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User, entry DB_Twitter_Entry) {
+	if entry.PostMode == 1 {
+		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr))
+		if entry.MentionRoleID != "" {
+			content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
+		}
+
+		_, err := helpers.SendComplex(
+			channelID, &discordgo.MessageSend{
+				Content: content,
+			})
+		if err != nil {
+			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (discord embed mode): #%d to channel: #%s failed: %s", tweet.ID, channelID, err))
+		}
+		return
+	}
+
 	twitterNameModifier := ""
 	if twitterUser.Verified {
 		twitterNameModifier += " ☑"
