@@ -15,6 +15,8 @@ func (m *EmbedPost) Commands() []string {
 	return []string{
 		"embedpost",
 		"embed",
+		"edit-embed",
+		"embed-edit",
 	}
 }
 
@@ -34,6 +36,7 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 		return
 	}
 
+	var targetMessage *discordgo.Message
 	targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
 	if err != nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -41,6 +44,31 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 	}
 
 	embedText := strings.TrimSpace(strings.Replace(content, args[0], "", 1))
+
+	if command == "edit-embed" || command == "embed-edit" {
+		if len(args) < 3 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			return
+		}
+
+		messageID := args[1]
+		embedText = strings.TrimSpace(strings.Replace(
+			strings.Replace(content, args[0], "", 1), args[1], "", 1))
+
+		targetMessage, err = session.ChannelMessage(targetChannel.ID, messageID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok {
+				if errD.Message.Code == discordgo.ErrCodeUnknownMessage || strings.Contains(err.Error(), "is not snowflake") {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+					return
+				} else {
+					helpers.Relax(err)
+				}
+			} else {
+				helpers.Relax(err)
+			}
+		}
+	}
 
 	// Code ported from https://github.com/appu1232/Discord-Selfbot/blob/master/cogs/misc.py#L146
 	var ptext, title, description, image, thumbnail, color, footer, author string
@@ -194,13 +222,27 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 		}
 	}
 
-	newMessages, err := helpers.SendComplex(targetChannel.ID, &discordgo.MessageSend{
-		Content: ptext,
-		Embed:   &embed,
-	})
-	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+	if targetMessage == nil {
+		newMessages, err := helpers.SendComplex(targetChannel.ID, &discordgo.MessageSend{
+			Content: ptext,
+			Embed:   &embed,
+		})
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 
-	if len(newMessages) > 0 {
-		session.MessageReactionAdd(msg.ChannelID, msg.ID, "👌")
+		if len(newMessages) > 0 {
+			session.MessageReactionAdd(msg.ChannelID, msg.ID, "👌")
+		}
+	} else {
+		editMessage, err := helpers.EditComplex(&discordgo.MessageEdit{
+			Content: &ptext,
+			Embed:   &embed,
+			ID:      targetMessage.ID,
+			Channel: targetChannel.ID,
+		})
+		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+		if editMessage != nil {
+			session.MessageReactionAdd(msg.ChannelID, msg.ID, "👌")
+		}
 	}
 }
