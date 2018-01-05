@@ -189,6 +189,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 
 					// Send notifications out
 					go func() {
+						defer helpers.Recover()
 
 						for _, guildToNotify := range guildsToNotify {
 							guildToNotifySettings := helpers.GuildSettingsGetCached(guildToNotify.ID)
@@ -222,7 +223,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 								}
 
 								reportEmbed.Fields = append(reportEmbed.Fields, &discordgo.MessageEmbedField{
-									Name: "Reported by", Value: fmt.Sprintf("**%s** (#%s) <@%s>\non **%s** (#%s)",
+									Name: "Reported by (DO NOT BAN THIS USER)", Value: fmt.Sprintf("**%s** (#%s) <@%s>\non **%s** (#%s)",
 										msg.Author.Username, msg.Author.ID, msg.Author.ID, guild.Name, guild.ID,
 									), Inline: false})
 

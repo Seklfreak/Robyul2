@@ -57,6 +57,7 @@ var (
 		&plugins.ModulePermissions{},
 		&plugins.M8ball{},
 		&plugins.Feedback{},
+		&plugins.DM{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
@@ -73,7 +74,6 @@ var (
 		&plugins.Starboard{},
 		&plugins.Autoleaver{},
 		&plugins.Persistency{},
-		&plugins.DM{},
 		&plugins.Twitter{},
 	}
 )

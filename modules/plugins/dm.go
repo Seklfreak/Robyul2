@@ -32,7 +32,7 @@ func (dm *DM) Commands() []string {
 }
 
 func (dm *DM) Init(session *discordgo.Session) {
-
+	session.AddHandler(dm.OnMessage)
 }
 
 func (dm *DM) Uninit(session *discordgo.Session) {
@@ -162,26 +162,30 @@ func (dm *DM) logger() *logrus.Entry {
 	return cache.GetLogger().WithField("module", "dm")
 }
 
-func (dm *DM) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-	if msg.Author.Bot == true {
+func (dm *DM) OnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
+	if message.Author.Bot == true {
 		return
 	}
 
-	channel, err := helpers.GetChannel(msg.ChannelID)
+	if helpers.IsBlacklisted(message.Author.ID) {
+		return
+	}
+
+	channel, err := helpers.GetChannel(message.ChannelID)
 	helpers.Relax(err)
 
 	if channel.Type != discordgo.ChannelTypeDM {
 		return
 	}
 
-	response := dm.DmResponse(msg)
+	response := dm.DmResponse(message.Message)
 	if response != nil {
-		helpers.SendComplex(msg.ChannelID, response)
+		helpers.SendComplex(message.ChannelID, response)
 	}
 
 	dmChannelID, _ := helpers.GetBotConfigString(DMReceiveChannelIDKey)
 	if dmChannelID != "" {
-		err = dm.repostDM(dmChannelID, msg, response)
+		err = dm.repostDM(dmChannelID, message.Message, response)
 		helpers.RelaxLog(err)
 	}
 }
@@ -272,32 +276,4 @@ func (dm *DM) repostDM(channelID string, message *discordgo.Message, response *d
 
 	_, err = helpers.SendEmbed(channel.ID, embed)
 	return err
-}
-
-func (dm *DM) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-
-}
-
-func (dm *DM) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
-
-}
-
-func (dm *DM) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
-
-}
-
-func (dm *DM) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
-
-}
-
-func (dm *DM) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
-
-}
-
-func (dm *DM) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-
-}
-
-func (dm *DM) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
-
 }
