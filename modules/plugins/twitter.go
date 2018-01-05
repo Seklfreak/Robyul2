@@ -31,6 +31,7 @@ type DB_Twitter_Entry struct {
 	AccountScreenName string             `gorethink:"account_screen_name"`
 	PostedTweets      []DB_Twitter_Tweet `gorethink:"posted_tweets"`
 	AccountID         string             `gorethink:"account_id"`
+	MentionRoleID     string             `gorethink:"mention_role_id"`
 }
 
 type DB_Twitter_Tweet struct {
@@ -96,7 +97,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s", tweet.IDStr))
 				entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 				changes = true
-				go t.postTweetToChannel(entry.ChannelID, tweet, tweet.User)
+				go t.postTweetToChannel(entry.ChannelID, tweet, tweet.User, entry)
 			}
 
 			if changes == true {
@@ -287,7 +288,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
 						tweetToPost := tweet
-						go m.postTweetToChannel(entry.ChannelID, &tweetToPost, twitterUser)
+						go m.postTweetToChannel(entry.ChannelID, &tweetToPost, twitterUser, entry)
 					}
 
 				}
@@ -321,7 +322,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				var targetChannel *discordgo.Channel
 				var targetGuild *discordgo.Guild
 				if len(args) >= 3 {
-					targetChannel, err = helpers.GetChannelFromMention(msg, args[len(args)-1])
+					targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
 					if err != nil {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
@@ -356,6 +357,35 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					}
 				}
 				helpers.Relax(err)
+
+				mentionRole := new(discordgo.Role)
+				if len(args) >= 4 {
+					mentionRoleName := args[3]
+					serverRoles, err := session.GuildRoles(targetGuild.ID)
+					if err != nil {
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+								_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission.")
+								helpers.Relax(err)
+								return
+							} else {
+								helpers.Relax(err)
+							}
+						} else {
+							helpers.Relax(err)
+						}
+					}
+					for _, serverRole := range serverRoles {
+						if serverRole.Mentionable == true &&
+							(strings.ToLower(serverRole.Name) == strings.ToLower(mentionRoleName) || serverRole.ID == mentionRoleName) {
+							mentionRole = serverRole
+						}
+					}
+					if mentionRole.ID == "" {
+						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+						return
+					}
+				}
 				// Create DB Entries
 				var dbTweets []DB_Twitter_Tweet
 				for _, tweet := range twitterUserTweets {
@@ -370,6 +400,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				entry.AccountScreenName = twitterUser.ScreenName
 				entry.PostedTweets = dbTweets
 				entry.AccountID = twitterUser.IDStr
+				entry.MentionRoleID = mentionRole.ID
 				m.setEntry(entry)
 
 				twitterStreamNeedsUpdate = true
@@ -419,7 +450,17 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 
 			resultMessage := ""
 			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s`: Twitter Account `@%s` posting to <#%s>\n", entry.ID, entry.AccountScreenName, entry.ChannelID)
+				var specialText string
+				if entry.MentionRoleID != "" {
+					role, err := session.State.Role(currentChannel.GuildID, entry.MentionRoleID)
+					if err == nil {
+						specialText += fmt.Sprintf(" mentioning `@%s`", role.Name)
+					} else {
+						specialText += " mentioning N/A"
+					}
+				}
+				resultMessage += fmt.Sprintf("`%s`: Twitter Account `@%s` posting to <#%s>%s\n",
+					entry.ID, entry.AccountScreenName, entry.ChannelID, specialText)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitter Accounts in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
@@ -495,7 +536,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 	}
 }
 
-func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User) {
+func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User, entry DB_Twitter_Entry) {
 	twitterNameModifier := ""
 	if twitterUser.Verified {
 		twitterNameModifier += " ☑"
@@ -562,9 +603,15 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 			}
 		}
 	}
+
+	content := fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr))
+	if entry.MentionRoleID != "" {
+		content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
+	}
+
 	_, err := helpers.SendComplex(
 		channelID, &discordgo.MessageSend{
-			Content: fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr)),
+			Content: content,
 			Embed:   channelEmbed,
 		})
 	if err != nil {
