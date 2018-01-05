@@ -360,7 +360,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				helpers.Relax(err)
 
 				mentionRole := new(discordgo.Role)
-				if len(args) >= 4 {
+				if len(args) >= 4 && args[3] != "discord-embed" {
 					mentionRoleName := args[3]
 					serverRoles, err := session.GuildRoles(targetGuild.ID)
 					if err != nil {
@@ -382,7 +382,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 							mentionRole = serverRole
 						}
 					}
-					if mentionRole.ID == "" && mentionRoleName != "discord-embed" {
+					if mentionRole.ID == "" {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 						return
 					}
