@@ -58,6 +58,7 @@ var (
 		&plugins.M8ball{},
 		&plugins.Feedback{},
 		&plugins.DM{},
+		&plugins.EmbedPost{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

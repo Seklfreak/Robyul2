@@ -69,7 +69,8 @@ const (
 	ModulePermVanityInvite                                                  // vanityinvite.go
 	ModulePerm8ball                                                         // 8ball.go
 	ModulePermAllPlaceholder
-	ModulePermFeedback // feedback.go
+	ModulePermFeedback  // feedback.go
+	ModulePermEmbedPost // embedpost.go
 
 	ModulePermAll = ModulePermStats | ModulePermTranslator | ModulePermUrban | ModulePermWeather | ModulePermVLive |
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
@@ -81,7 +82,7 @@ const (
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
 		ModulePermGuildAnnouncements | ModulePermMirror | ModulePermMirror | ModulePermMod | ModulePermNotifications |
 		ModulePermNuke | ModulePermPersistency | ModulePermPing | ModulePermTroublemaker | ModulePermVanityInvite |
-		ModulePerm8ball | ModulePermFeedback
+		ModulePerm8ball | ModulePermFeedback | ModulePermEmbedPost
 )
 
 var (
@@ -136,6 +137,7 @@ var (
 		{Names: []string{"custominvite", "vanityinvite"}, Permission: ModulePermVanityInvite},
 		{Names: []string{"8ball"}, Permission: ModulePerm8ball},
 		{Names: []string{"feedback"}, Permission: ModulePermFeedback},
+		{Names: []string{"embed", "embedpost"}, Permission: ModulePermEmbedPost},
 	}
 )
 
