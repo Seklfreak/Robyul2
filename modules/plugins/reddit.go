@@ -236,7 +236,7 @@ func (r *Reddit) postSubmission(channelID string, submission *geddit.Submission,
 }
 
 func (r *Reddit) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
+	defer helpers.RecoverDiscord(msg)
 
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermReddit) {
 		return

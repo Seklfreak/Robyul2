@@ -2126,10 +2126,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					}
 
 					commonGuildsText := ""
-					if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
-						commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
+					if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
+						commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
 					} else {
-						commonGuildsText += "❓ User is on **none** servers with Robyul."
+						commonGuildsText += "❓ User is on **none** other servers with Robyul."
 					}
 					joinedTimeText := ""
 					if !joinedTime.After(oneWeekAgo) {

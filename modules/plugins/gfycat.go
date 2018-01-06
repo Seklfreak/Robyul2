@@ -76,6 +76,13 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
     "fetchUrl": "%s"%s}`,
 		sourceUrl, cutArgJson,
 	)))
+	if err != nil {
+		if strings.Contains(err.Error(), "unexpected end of JSON input") {
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Error")+"\nPlease check the link or try again later.")
+			cache.GetLogger().WithField("module", "gfycat").Errorf("Gfycat Error: %s", err.Error())
+			return
+		}
+	}
 	helpers.Relax(err)
 	request, err := http.NewRequest("POST", postGfycatEndpoint, strings.NewReader(postData.String()))
 	request.Header.Add("user-agent", helpers.DEFAULT_UA)

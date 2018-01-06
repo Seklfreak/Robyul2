@@ -190,7 +190,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 				facebookPage, err := m.lookupFacebookPage(args[1])
 				if err != nil {
 					if e, ok := err.(*fb.Error); ok {
-						if e.Code == 803 || e.Code == 100 {
+						if e.Code == 803 || e.Code == 100 || strings.Contains(err.Error(), "Unknown path components") {
 							helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.page-not-found"))
 							return
 						}
