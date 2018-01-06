@@ -8,6 +8,7 @@ install:
     - dep ensure
     - go get -u github.com/jteeuwen/go-bindata/...
     - patch vendor/github.com/bwmarrin/discordgo/restapi.go patches/adds_robyul_discord_rest_api_logging.patch -R
+    - snyk test
     #- go get -v github.com/golang/lint/golint
     #- go get github.com/mitchellh/gox
 script:
@@ -17,6 +18,8 @@ script:
     #- go vet -x ./...
     #- golint ./...
     #- gox -output="robyul2-{{.OS}}-{{.Arch}}" -osarch="windows/amd64"
+after_success:
+    - snyk monitor
 deploy:
   provider: releases
   api_key:
