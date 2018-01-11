@@ -328,7 +328,8 @@
       "rolelist-embed-title": "@%s: Roles on %s",
       "channellist-none": "No channels found.",
       "channellist-embed-footer": "There are %s channels on this server.",
-      "channellist-embed-title": "@%s: Channels on %s"
+      "channellist-embed-title": "@%s: Channels on %s",
+      "unknown-invite": "This invite does either not exist or I am banned from that server. <a:ablobcry:393869333740126219>"
     },
     "levels": {
       "level-no-stats": "No stats for this user yet. Chat more! <:googlenerd:317030369205682186>",
@@ -656,6 +657,10 @@
       "suggestion-received": "**Thank you!** We received your suggestion. <a:ablobsmile:393869335312990209>\nYou can follow the progress of your suggestion and any other suggestion here: <https://trello.robyul.chat/>.",
       "issue-received": "**Thank you!** We received your issue report. <a:ablobgrimace:394026913108328449>\nYou can follow the progress of your report and any other report here: <https://trello.robyul.chat/>.",
       "arguments-too-few": "Please tell me more. <:blobthinkingeyes:317044481499201538>"
+    },
+    "eventlog": {
+      "enabled": "The Eventlog has been enabled!\nPlease make sure I have the `View Audit Log` permission for full effectiveness.",
+      "disabled": "The Eventlog has been disabled."
     }
   }
 }

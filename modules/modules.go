@@ -2,6 +2,7 @@ package modules
 
 import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
+	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
 	"github.com/Seklfreak/Robyul2/modules/plugins/google"
 	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
@@ -76,5 +77,6 @@ var (
 		&plugins.Autoleaver{},
 		&plugins.Persistency{},
 		&plugins.Twitter{},
+		&eventlog.Handler{},
 	}
 )

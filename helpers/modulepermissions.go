@@ -71,6 +71,7 @@ const (
 	ModulePermAllPlaceholder
 	ModulePermFeedback  // feedback.go
 	ModulePermEmbedPost // embedpost.go
+	ModulePermEventlog  // eventlog/
 
 	ModulePermAll = ModulePermStats | ModulePermTranslator | ModulePermUrban | ModulePermWeather | ModulePermVLive |
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
@@ -82,7 +83,7 @@ const (
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
 		ModulePermGuildAnnouncements | ModulePermMirror | ModulePermMirror | ModulePermMod | ModulePermNotifications |
 		ModulePermNuke | ModulePermPersistency | ModulePermPing | ModulePermTroublemaker | ModulePermVanityInvite |
-		ModulePerm8ball | ModulePermFeedback | ModulePermEmbedPost
+		ModulePerm8ball | ModulePermFeedback | ModulePermEmbedPost | ModulePermEventlog
 )
 
 var (
@@ -138,6 +139,7 @@ var (
 		{Names: []string{"8ball"}, Permission: ModulePerm8ball},
 		{Names: []string{"feedback"}, Permission: ModulePermFeedback},
 		{Names: []string{"embed", "embedpost"}, Permission: ModulePermEmbedPost},
+		{Names: []string{"eventlog"}, Permission: ModulePermEventlog},
 	}
 )
 
