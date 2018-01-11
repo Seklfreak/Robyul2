@@ -10,6 +10,7 @@ const (
 	ElasticIndexPresenceUpdates    = "robyul-presence_updates"
 	ElasticIndexVanityInviteClicks = "robyul-vanity_invite_clicks"
 	ElasticIndexVoiceSessions      = "robyul-voice_session"
+	ElasticIndexEventlogs          = "robyul-eventlogs"
 )
 
 type ElasticLegacyMessage struct {
@@ -86,4 +87,26 @@ type ElasticVoiceSession struct {
 	JoinTime        time.Time
 	LeaveTime       time.Time
 	DurationSeconds int64
+}
+
+type ElasticEventlog struct {
+	CreatedAt  time.Time
+	GuildID    string
+	TargetID   string
+	UserID     string
+	ActionType string
+	Reason     string
+	Changes    []ElasticEventlogChange
+	Options    []ElasticEventlogOption
+}
+
+type ElasticEventlogChange struct {
+	Key      string
+	OldValue string
+	NewValue string
+}
+
+type ElasticEventlogOption struct {
+	Key   string
+	Value string
 }

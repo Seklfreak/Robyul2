@@ -64,6 +64,7 @@ var migrations = []helpers.Callback{
 	m52_create_elastic_index_voice_sessions,
 	m53_move_rethinkdb_voicesessions_to_elasticsearch,
 	m54_create_table_module_permissions,
+	m55_create_elastic_index_eventlogs,
 }
 
 // Run executes all registered migrations

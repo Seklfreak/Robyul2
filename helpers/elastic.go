@@ -510,6 +510,95 @@ func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTi
 	return err
 }
 
+func ElasticAddEventlog(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) (err error) {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	elasticEventlog := models.ElasticEventlog{
+		CreatedAt:  createdAt,
+		GuildID:    guildID,
+		TargetID:   targetID,
+		UserID:     userID,
+		ActionType: actionType,
+		Reason:     reason,
+		Changes:    changes,
+		Options:    options,
+	}
+
+	_, err = cache.GetElastic().Index().
+		Index(models.ElasticIndexEventlogs).
+		Type("doc").
+		BodyJson(elasticEventlog).
+		Do(context.Background())
+	return err
+}
+
+func ElasticUpdateEventlog(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) error {
+	if !cache.HasElastic() {
+		return errors.New("no elastic client")
+	}
+
+	elasticID, oldElasticMessage, err := getElasticEvents(createdAt, guildID, targetID, userID, actionType,
+		reason, changes, options)
+	if err != nil {
+		return err
+	}
+
+	/*
+		_, err = cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
+			Script(elastic.
+				NewScript("ctx._source.Content.add(params.newContent)").
+				Param("newContent", message.Content).
+				Lang("painless")).
+			Upsert(map[string]interface{}{"newContent": 0}).
+			Do(context.Background())
+		if err != nil {
+			cache.GetLogger().WithField("module", "elastic").Errorf("failed to update message, elasticID: %s, newContent: %s, error: %s", elasticID, message.Content, err.Error())
+			return err
+		}
+	*/
+	_, _ = elasticID, oldElasticMessage
+	// TODO: add stuff
+
+	return nil
+}
+
+func getElasticEvents(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) (elasticID string,
+	eventlog models.ElasticEventlog, err error) {
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND TargetID:" + targetID + " AND ActionType:" + actionType)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndexEventlogs).
+		Type("doc").
+		Query(termQuery).
+		//Size(1).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		return "", eventlog, err
+	}
+
+	// check timespan
+
+	for _, item := range searchResult.Hits.Hits {
+		if item == nil {
+			continue
+		}
+
+		err := json.Unmarshal(*item.Source, &eventlog)
+		if err != nil {
+			return elasticID, eventlog, err
+		}
+
+		return elasticID, eventlog, nil
+	}
+
+	return elasticID, eventlog, errors.New("item not found")
+}
+
 func GetMinTimeForInterval(interval string, count int) (minTime time.Time) {
 	switch interval {
 	case "second":

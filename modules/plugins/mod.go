@@ -16,6 +16,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
@@ -1987,6 +1988,11 @@ func (m *Mod) getTroublemakerReports(user *discordgo.User) []DB_Troublemaker_Ent
 
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
 	go func() {
+		// get joined at date
+		joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
+		if err != nil {
+			joinedAt = time.Now()
+		}
 		// Get invite link
 		var usedInvite CacheInviteInformation
 		invites, err := session.GuildInvites(member.GuildID)
@@ -2046,6 +2052,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 		}
 
 		go func() {
+			defer helpers.Recover()
+
 			joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
 			if err != nil {
 				joinedAt = time.Now()
@@ -2246,6 +2254,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 			}()
 		}()
 		go func() {
+			defer helpers.Recover()
+
 			settings := helpers.GuildSettingsGetCached(member.GuildID)
 
 			for _, mutedMember := range settings.MutedMembers {
@@ -2262,6 +2272,26 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					}
 				}
 			}
+		}()
+		go func() {
+			defer helpers.Recover()
+
+			options := make([]models.ElasticEventlogOption, 0)
+
+			if usedInvite.Code != "" {
+				options = append(options, models.ElasticEventlogOption{
+					Key:   "used_invite_code",
+					Value: usedInvite.Code,
+				})
+			}
+			if usedVanityInvite != "" {
+				options = append(options, models.ElasticEventlogOption{
+					Key:   "used_vanity_invite_name",
+					Value: usedVanityInvite,
+				})
+			}
+
+			helpers.EventlogLog(joinedAt, member.GuildID, member.User.ID, "", models.EventlogTypeMemberJoin, "", nil, options)
 		}()
 	}()
 }
