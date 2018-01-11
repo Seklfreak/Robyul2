@@ -279,7 +279,7 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 									continue
 								}
 							}
-							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+							helpers.RelaxLog(err)
 							continue
 						}
 						err = g.rememberPostedMessage(msg, result)

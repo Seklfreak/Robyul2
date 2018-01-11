@@ -1343,7 +1343,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 					}
 				}
 				err = session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
-				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMessage && errD.Message.Code != discordgo.ErrCodeMissingPermissions) {
+				if errD, ok := err.(*discordgo.RESTError); !ok ||
+					(errD.Message.Code != discordgo.ErrCodeUnknownMessage &&
+						errD.Message.Code != discordgo.ErrCodeMissingPermissions &&
+						errD.Message.Code != discordgo.ErrCodeUnknownEmoji) {
 					helpers.RelaxLog(err)
 				}
 			}
@@ -1390,6 +1393,12 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		respBody, err := session.RequestWithBucketID("GET", discordgo.EndpointInvite(inviteCode)+"?with_counts=true", nil, discordgo.EndpointInvite(""))
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownInvite {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.unknown-invite"))
+				return
+			}
+		}
 		helpers.Relax(err)
 
 		var invite InviteWithCounts

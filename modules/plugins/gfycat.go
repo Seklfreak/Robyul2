@@ -133,6 +133,13 @@ CheckGfycatStatusLoop:
 			}
 		}
 		result, err := gabs.ParseJSON(rawResult)
+		if err != nil {
+			if strings.Contains(err.Error(), "unexpected end of JSON input") {
+				_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Parsing Error")+"\nPlease check the link or try again later.")
+				helpers.Relax(err)
+				return
+			}
+		}
 		helpers.Relax(err)
 
 		taskData, _ := result.Path("task").Data().(string)

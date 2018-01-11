@@ -355,7 +355,7 @@ func (s *Starboard) OnMessageDelete(msg *discordgo.MessageDelete, session *disco
 		err = cache.GetSession().ChannelMessageDelete(
 			starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
 		if errD, ok := err.(*discordgo.RESTError); ok {
-			if errD.Message.Message == "404: Not Found" {
+			if errD.Message.Message == "404: Not Found" || errD.Message.Code == discordgo.ErrCodeUnknownMessage {
 				return
 			}
 		}

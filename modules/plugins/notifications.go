@@ -269,6 +269,12 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			default: // [p]notifications ignore-channel <channel>
 				helpers.RequireAdmin(msg, func() {
 					targetChannel, err := helpers.GetChannelOrCategoryFromMention(msg, args[1])
+					if err != nil {
+						if strings.Contains(err.Error(), "Channel not found.") {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+							return
+						}
+					}
 					helpers.Relax(err)
 
 					if targetChannel.GuildID != commandIssueChannel.GuildID {
@@ -796,12 +802,14 @@ func (m *Notifications) increaseNotificationEntryById(id string) {
 	listCursor, err := rethink.Table("notifications").Filter(
 		rethink.Row.Field("id").Eq(id),
 	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
 	helpers.Relax(err)
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
+	if err != nil {
+		if strings.Contains(err.Error(), "The result does not contain any more rows") {
+			return
+		}
+	}
 	helpers.Relax(err)
 
 	entryBucket.Triggered += 1

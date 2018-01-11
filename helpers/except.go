@@ -109,7 +109,14 @@ func RelaxEmbed(err error, channelID string, commandMessageID string) {
 func RelaxMessage(err error, channelID string, commandMessageID string) {
 	if err != nil {
 		if errD, ok := err.(*discordgo.RESTError); ok && errD != nil {
-			if errD.Message.Code == 50013 {
+			if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+				if channelID != "" && commandMessageID != "" {
+					go AddNoPermissionsReaction(channelID, commandMessageID)
+				}
+				panic("handled discord error")
+				return
+			}
+			if errD.Message.Code == discordgo.ErrCodeCannotSendMessagesToThisUser {
 				if channelID != "" && commandMessageID != "" {
 					go AddNoPermissionsReaction(channelID, commandMessageID)
 				}
