@@ -510,7 +510,7 @@ func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTi
 	return err
 }
 
-func ElasticAddEventlog(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) (err error) {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
@@ -520,6 +520,7 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, userID, actionTy
 		CreatedAt:  createdAt,
 		GuildID:    guildID,
 		TargetID:   targetID,
+		TargetType: targetType,
 		UserID:     userID,
 		ActionType: actionType,
 		Reason:     reason,
@@ -535,13 +536,13 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, userID, actionTy
 	return err
 }
 
-func ElasticUpdateEventlog(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+func ElasticUpdateEventlog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) error {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
 
-	elasticID, oldElasticMessage, err := getElasticEvents(createdAt, guildID, targetID, userID, actionType,
+	elasticID, oldElasticMessage, err := getElasticEvents(createdAt, guildID, targetID, targetType, userID, actionType,
 		reason, changes, options)
 	if err != nil {
 		return err
@@ -566,7 +567,7 @@ func ElasticUpdateEventlog(createdAt time.Time, guildID, targetID, userID, actio
 	return nil
 }
 
-func getElasticEvents(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+func getElasticEvents(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) (elasticID string,
 	eventlog models.ElasticEventlog, err error) {
 	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND TargetID:" + targetID + " AND ActionType:" + actionType)

@@ -184,13 +184,15 @@ type Rest_VanityInvite_Invite struct {
 }
 
 type Rest_Eventlog struct {
-	Users   []Rest_User
-	Entries []Rest_Eventlog_Entry
+	Channels []Rest_Channel
+	Users    []Rest_User
+	Entries  []Rest_Eventlog_Entry
 }
 
 type Rest_Eventlog_Entry struct {
 	CreatedAt  time.Time
 	TargetID   string
+	TargetType string
 	UserID     string
 	ActionType string
 	Reason     string

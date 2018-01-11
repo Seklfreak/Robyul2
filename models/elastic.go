@@ -93,6 +93,7 @@ type ElasticEventlog struct {
 	CreatedAt  time.Time
 	GuildID    string
 	TargetID   string
+	TargetType string
 	UserID     string
 	ActionType string
 	Reason     string

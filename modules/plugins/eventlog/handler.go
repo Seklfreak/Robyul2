@@ -3,8 +3,13 @@ package eventlog
 import (
 	"strings"
 
+	"time"
+
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -22,6 +27,9 @@ func (h *Handler) Commands() []string {
 
 func (h *Handler) Init(session *discordgo.Session) {
 	defer helpers.Recover()
+
+	session.AddHandler(h.OnChannelCreate)
+	session.AddHandler(h.OnChannelDelete)
 }
 
 func (h *Handler) Uninit(session *discordgo.Session) {
@@ -114,11 +122,17 @@ func (h *Handler) OnMessageDelete(msg *discordgo.MessageDelete, session *discord
 }
 
 func (h *Handler) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-
+	// handled in mod.go (to get invite code)
 }
 
 func (h *Handler) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
 
+		leftAt := time.Now()
+
+		helpers.EventlogLog(leftAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberLeave, "", nil, nil)
+	}()
 }
 
 func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
@@ -135,4 +149,168 @@ func (h *Handler) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.
 
 func (h *Handler) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
+}
+
+func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo.ChannelCreate) {
+	go func() {
+		// TODO: backfill, who created the channel
+		defer helpers.Recover()
+
+		leftAt := time.Now()
+
+		options := make([]models.ElasticEventlogOption, 0)
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_name",
+			Value: channel.Name,
+		})
+
+		switch channel.Type {
+		case discordgo.ChannelTypeGuildCategory:
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_type",
+				Value: "category",
+			})
+			break
+		case discordgo.ChannelTypeGuildText:
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_type",
+				Value: "text",
+			})
+			break
+		case discordgo.ChannelTypeGuildVoice:
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_type",
+				Value: "voice",
+			})
+			break
+		}
+
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_topic",
+			Value: channel.Topic,
+		})
+
+		if channel.NSFW {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_nsfw",
+				Value: "yes",
+			})
+		} else {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_nsfw",
+				Value: "no",
+			})
+		}
+
+		if channel.Bitrate > 0 {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_bitrate",
+				Value: strconv.Itoa(channel.Bitrate),
+			})
+		}
+
+		if channel.Position > 0 {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_position",
+				Value: strconv.Itoa(channel.Position),
+			})
+		}
+
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_parentid",
+			Value: channel.ParentID,
+		})
+
+		/*
+			TODO: handle permission overwrites
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "permission_overwrites",
+				Value: channel.PermissionOverwrites,
+			})
+		*/
+
+		helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelCreate, "", nil, options)
+	}()
+}
+
+func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo.ChannelDelete) {
+	go func() {
+		// TODO: backfill, who deleted the channel
+		defer helpers.Recover()
+
+		leftAt := time.Now()
+
+		options := make([]models.ElasticEventlogOption, 0)
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_name",
+			Value: channel.Name,
+		})
+
+		switch channel.Type {
+		case discordgo.ChannelTypeGuildCategory:
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_type",
+				Value: "category",
+			})
+			break
+		case discordgo.ChannelTypeGuildText:
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_type",
+				Value: "text",
+			})
+			break
+		case discordgo.ChannelTypeGuildVoice:
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_type",
+				Value: "voice",
+			})
+			break
+		}
+
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_topic",
+			Value: channel.Topic,
+		})
+
+		if channel.NSFW {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_nsfw",
+				Value: "yes",
+			})
+		} else {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_nsfw",
+				Value: "no",
+			})
+		}
+
+		if channel.Bitrate > 0 {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_bitrate",
+				Value: strconv.Itoa(channel.Bitrate),
+			})
+		}
+
+		if channel.Position > 0 {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "channel_position",
+				Value: strconv.Itoa(channel.Position),
+			})
+		}
+
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_parentid",
+			Value: channel.ParentID,
+		})
+
+		/*
+			TODO: handle permission overwrites
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "permission_overwrites",
+				Value: channel.PermissionOverwrites,
+			})
+		*/
+
+		helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelDelete, "", nil, options)
+	}()
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 )
 
-func EventlogLog(createdAt time.Time, guildID, targetID, userID, actionType, reason string,
+func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) (err error) {
 	if guildID == "" {
 		return nil
@@ -42,7 +42,7 @@ func EventlogLog(createdAt time.Time, guildID, targetID, userID, actionType, rea
 		"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",
 		createdAt.Format(time.RFC3339), guildID, targetID, userID, actionType, reason, changes, options,
 	)
-	ElasticAddEventlog(createdAt, guildID, targetID, userID, actionType, reason, changes, options)
+	ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options)
 
 	return
 }

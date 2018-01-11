@@ -43,6 +43,9 @@ func m55_create_elastic_index_eventlogs() {
 							},
 						},
 					},
+					"TargetType": map[string]interface{}{
+						"type": "text",
+					},
 					"UserID": map[string]interface{}{
 						"type": "text",
 						"fields": map[string]interface{}{

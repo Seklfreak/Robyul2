@@ -1417,9 +1417,10 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	}
 
 	lookupUserIDs := make([]string, 0)
+	lookupChannelIDs := make([]string, 0)
 
 	var elasticEventlog models.ElasticEventlog
-	var alreadyLookingUpUser bool
+	var alreadyLookingUp bool
 	for _, item := range searchResult.Hits.Hits {
 		if item == nil {
 			continue
@@ -1434,6 +1435,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 		eventlog.Entries = append(eventlog.Entries, models.Rest_Eventlog_Entry{
 			CreatedAt:  elasticEventlog.CreatedAt,
 			TargetID:   elasticEventlog.TargetID,
+			TargetType: elasticEventlog.TargetType,
 			UserID:     elasticEventlog.UserID,
 			ActionType: elasticEventlog.ActionType,
 			Reason:     elasticEventlog.Reason,
@@ -1441,39 +1443,109 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 			Options:    elasticEventlog.Options,
 		})
 
-		alreadyLookingUpUser = false
-		for _, lookupUserID := range lookupUserIDs {
-			if lookupUserID == elasticEventlog.TargetID {
-				alreadyLookingUpUser = true
+		alreadyLookingUp = false
+		switch elasticEventlog.TargetType {
+		case "user":
+			for _, lookupUserID := range lookupUserIDs {
+				if lookupUserID == elasticEventlog.TargetID {
+					alreadyLookingUp = true
+				}
 			}
+			if !alreadyLookingUp {
+				lookupUserIDs = append(lookupUserIDs, elasticEventlog.TargetID)
+			}
+			break
+		case "channel":
+			for _, lookupChannelID := range lookupChannelIDs {
+				if lookupChannelID == elasticEventlog.TargetID {
+					alreadyLookingUp = true
+				}
+			}
+			if !alreadyLookingUp {
+				lookupChannelIDs = append(lookupChannelIDs, elasticEventlog.TargetID)
+			}
+			break
 		}
-		if !alreadyLookingUpUser {
-			lookupUserIDs = append(lookupUserIDs, elasticEventlog.TargetID)
-		}
+
+		alreadyLookingUp = false
 		if elasticEventlog.UserID != "" {
 			for _, lookupUserID := range lookupUserIDs {
 				if lookupUserID == elasticEventlog.UserID {
-					alreadyLookingUpUser = true
+					alreadyLookingUp = true
 				}
 			}
-			if !alreadyLookingUpUser {
+			if !alreadyLookingUp {
 				lookupUserIDs = append(lookupUserIDs, elasticEventlog.UserID)
 			}
 		}
 	}
 
-	var restUser models.Rest_User
 	for _, lookupUserID := range lookupUserIDs {
 		user, _ := helpers.GetUserWithoutAPI(lookupUserID)
 		if user != nil && user.ID != "" {
-			restUser = models.Rest_User{
+			eventlog.Users = append(eventlog.Users, models.Rest_User{
 				ID:            user.ID,
 				Username:      user.Username,
 				AvatarHash:    user.Avatar,
 				Discriminator: user.Discriminator,
 				Bot:           user.Bot,
+			})
+		}
+	}
+
+	for _, lookupChannelID := range lookupChannelIDs {
+		channel, _ := helpers.GetChannelWithoutApi(lookupChannelID)
+		if channel != nil && channel.ID != "" {
+			channelType := "text"
+			switch channel.Type {
+			case discordgo.ChannelTypeGuildVoice:
+				channelType = "voice"
+			case discordgo.ChannelTypeGuildCategory:
+				channelType = "category"
 			}
-			eventlog.Users = append(eventlog.Users, restUser)
+			eventlog.Channels = append(eventlog.Channels, models.Rest_Channel{
+				ID:       channel.ID,
+				ParentID: channel.ParentID,
+				GuildID:  channel.GuildID,
+				Name:     channel.Name,
+				Type:     channelType,
+				Topic:    channel.Topic,
+				Position: channel.Position,
+			})
+			if channel.ParentID != "" {
+				alreadyLookingUp = false
+				for _, lookupChannelID := range lookupChannelIDs {
+					if lookupChannelID == channel.ParentID {
+						alreadyLookingUp = true
+					}
+				}
+				for _, lookedUpChannel := range eventlog.Channels {
+					if lookedUpChannel.ID == channel.ParentID {
+						alreadyLookingUp = true
+					}
+				}
+				if !alreadyLookingUp {
+					channel, _ := helpers.GetChannelWithoutApi(lookupChannelID)
+					if channel != nil && channel.ID != "" {
+						channelType := "text"
+						switch channel.Type {
+						case discordgo.ChannelTypeGuildVoice:
+							channelType = "voice"
+						case discordgo.ChannelTypeGuildCategory:
+							channelType = "category"
+						}
+						eventlog.Channels = append(eventlog.Channels, models.Rest_Channel{
+							ID:       channel.ID,
+							ParentID: channel.ParentID,
+							GuildID:  channel.GuildID,
+							Name:     channel.Name,
+							Type:     channelType,
+							Topic:    channel.Topic,
+							Position: channel.Position,
+						})
+					}
+				}
+			}
 		}
 	}
 
