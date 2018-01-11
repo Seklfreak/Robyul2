@@ -10,6 +10,8 @@ import (
 
 	"strings"
 
+	"encoding/json"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/generator"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -114,6 +116,15 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{guild-id}/{channel-id}/around/{message-id}").Filter(sessionAndWebkeyAuthenticate).To(GetChatlogAroundMessageID))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/eventlog").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{guild-id}").Filter(sessionAndWebkeyAuthenticate).To(GetEventlog))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -233,6 +244,10 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 		if guildSettings.ChatlogDisabled {
 			featureChatlog.Enabled = false
 		}
+		featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
+		if guildSettings.EventlogDisabled {
+			featureEventlog.Enabled = false
+		}
 
 		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
 		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
@@ -265,6 +280,7 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 				Chatlog:        featureChatlog,
 				VanityInvite:   featureVanityInvite,
 				Modules:        featureModules,
+				Eventlog:       featureEventlog,
 			},
 		})
 	}
@@ -337,6 +353,11 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 			featureChatlog.Enabled = false
 		}
 
+		featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
+		if guildSettings.EventlogDisabled {
+			featureEventlog.Enabled = false
+		}
+
 		returnStatus := models.Rest_Status_Member{}
 		returnStatus.IsMember = true
 		if helpers.IsBotAdmin(userID) {
@@ -376,6 +397,7 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 				RandomPictures: featureRandomPictures,
 				Chatlog:        featureChatlog,
 				VanityInvite:   featureVanityInvite,
+				Eventlog:       featureEventlog,
 			},
 			Status: returnStatus,
 		})
@@ -749,6 +771,11 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			featureChatlog.Enabled = false
 		}
 
+		featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
+		if guildSettings.EventlogDisabled {
+			featureEventlog.Enabled = false
+		}
+
 		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
 		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
 
@@ -780,6 +807,7 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 				Chatlog:        featureChatlog,
 				VanityInvite:   featureVanityInvite,
 				Modules:        featureModules,
+				Eventlog:       featureEventlog,
 			},
 			Channels: channels,
 		}
@@ -1348,6 +1376,115 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		}}, result...)
 	}
 	response.WriteEntity(result)
+}
+
+func GetEventlog(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	if helpers.GuildSettingsGetCached(guildID).EventlogDisabled {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndexEventlogs).
+		Type("doc").
+		Query(termQuery).
+		Size(50).
+		Sort("CreatedAt", true).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if searchResult.TotalHits() <= 0 {
+		response.WriteError(http.StatusNoContent, errors.New("eventlog empty"))
+		return
+	}
+
+	eventlog := models.Rest_Eventlog{
+		Users:   make([]models.Rest_User, 0),
+		Entries: make([]models.Rest_Eventlog_Entry, 0),
+	}
+
+	lookupUserIDs := make([]string, 0)
+
+	var elasticEventlog models.ElasticEventlog
+	var alreadyLookingUpUser bool
+	for _, item := range searchResult.Hits.Hits {
+		if item == nil {
+			continue
+		}
+
+		err := json.Unmarshal(*item.Source, &elasticEventlog)
+		if err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
+			return
+		}
+
+		eventlog.Entries = append(eventlog.Entries, models.Rest_Eventlog_Entry{
+			CreatedAt:  elasticEventlog.CreatedAt,
+			TargetID:   elasticEventlog.TargetID,
+			UserID:     elasticEventlog.UserID,
+			ActionType: elasticEventlog.ActionType,
+			Reason:     elasticEventlog.Reason,
+			Changes:    elasticEventlog.Changes,
+			Options:    elasticEventlog.Options,
+		})
+
+		alreadyLookingUpUser = false
+		for _, lookupUserID := range lookupUserIDs {
+			if lookupUserID == elasticEventlog.TargetID {
+				alreadyLookingUpUser = true
+			}
+		}
+		if !alreadyLookingUpUser {
+			lookupUserIDs = append(lookupUserIDs, elasticEventlog.TargetID)
+		}
+		if elasticEventlog.UserID != "" {
+			for _, lookupUserID := range lookupUserIDs {
+				if lookupUserID == elasticEventlog.UserID {
+					alreadyLookingUpUser = true
+				}
+			}
+			if !alreadyLookingUpUser {
+				lookupUserIDs = append(lookupUserIDs, elasticEventlog.UserID)
+			}
+		}
+	}
+
+	var restUser models.Rest_User
+	for _, lookupUserID := range lookupUserIDs {
+		user, _ := helpers.GetUserWithoutAPI(lookupUserID)
+		if user != nil && user.ID != "" {
+			restUser = models.Rest_User{
+				ID:            user.ID,
+				Username:      user.Username,
+				AvatarHash:    user.Avatar,
+				Discriminator: user.Discriminator,
+				Bot:           user.Bot,
+			}
+			eventlog.Users = append(eventlog.Users, restUser)
+		}
+	}
+
+	if len(eventlog.Entries) > 0 {
+		// reverse slice https://stackoverflow.com/a/19239850/1443726
+		for i, j := 0, len(eventlog.Entries)-1; i < j; i, j = i+1, j-1 {
+			eventlog.Entries[i], eventlog.Entries[j] = eventlog.Entries[j], eventlog.Entries[i]
+		}
+	}
+
+	response.WriteEntity(eventlog)
 }
 
 func GetVanityInviteByName(request *restful.Request, response *restful.Response) {

@@ -931,6 +931,16 @@ func GetUser(userID string) (*discordgo.User, error) {
 	return &targetUser, err
 }
 
+func GetUserWithoutAPI(userID string) (*discordgo.User, error) {
+	for _, guild := range cache.GetSession().State.Guilds {
+		member, err := GetGuildMemberWithoutApi(guild.ID, userID)
+		if err == nil && member != nil && member.User != nil && member.User.ID != "" {
+			return member.User, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
 func GetUserFromMention(mention string) (*discordgo.User, error) {
 	re := regexp.MustCompile("(<@)?(\\d+)(>)?")
 	result := re.FindStringSubmatch(mention)

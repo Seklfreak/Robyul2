@@ -35,6 +35,7 @@ type Rest_Guild_Features struct {
 	Chatlog        Rest_Feature_Chatlog
 	VanityInvite   Rest_Feature_VanityInvite
 	Modules        []Rest_Feature_Module
+	Eventlog       Rest_Feature_Eventlog
 }
 
 type Rest_Feature_Module struct {
@@ -114,6 +115,10 @@ type Rest_Feature_VanityInvite struct {
 	VanityInviteName string
 }
 
+type Rest_Feature_Eventlog struct {
+	Enabled bool
+}
+
 type Rest_RandomPictures_HistoryItem struct {
 	Link      string
 	SourceID  string
@@ -176,6 +181,21 @@ type Rest_Chatlog_Message struct {
 type Rest_VanityInvite_Invite struct {
 	Code    string
 	GuildID string
+}
+
+type Rest_Eventlog struct {
+	Users   []Rest_User
+	Entries []Rest_Eventlog_Entry
+}
+
+type Rest_Eventlog_Entry struct {
+	CreatedAt  time.Time
+	TargetID   string
+	UserID     string
+	ActionType string
+	Reason     string
+	Changes    []ElasticEventlogChange
+	Options    []ElasticEventlogOption
 }
 
 const (
