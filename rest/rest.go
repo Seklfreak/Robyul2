@@ -1419,13 +1419,13 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	lookupUserIDs := make([]string, 0)
 	lookupChannelIDs := make([]string, 0)
 
-	var elasticEventlog models.ElasticEventlog
 	var alreadyLookingUp bool
 	for _, item := range searchResult.Hits.Hits {
 		if item == nil {
 			continue
 		}
 
+		var elasticEventlog models.ElasticEventlog
 		err := json.Unmarshal(*item.Source, &elasticEventlog)
 		if err != nil {
 			response.WriteError(http.StatusInternalServerError, err)
