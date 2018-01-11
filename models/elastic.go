@@ -90,15 +90,16 @@ type ElasticVoiceSession struct {
 }
 
 type ElasticEventlog struct {
-	CreatedAt  time.Time
-	GuildID    string
-	TargetID   string
-	TargetType string
-	UserID     string
-	ActionType string
-	Reason     string
-	Changes    []ElasticEventlogChange
-	Options    []ElasticEventlogOption
+	CreatedAt          time.Time
+	GuildID            string
+	TargetID           string
+	TargetType         string
+	UserID             string
+	ActionType         string
+	Reason             string
+	Changes            []ElasticEventlogChange
+	Options            []ElasticEventlogOption
+	AuditLogBackfilled bool
 }
 
 type ElasticEventlogChange struct {

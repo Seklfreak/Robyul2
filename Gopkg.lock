@@ -28,8 +28,8 @@
 [[projects]]
   name = "github.com/PuerkitoBio/goquery"
   packages = ["."]
-  revision = "e1271ee34c6a305e38566ecd27ae374944907ee9"
-  version = "v1.1.0"
+  revision = "a41cf096e64e3752d7683898d5746bc0b98ee213"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -71,7 +71,7 @@
   branch = "master"
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/sqs","service/sqs/sqsiface","service/sts"]
-  revision = "f98ff3505c17e44d349af899eb85e6b37a7953db"
+  revision = "15a0ee49045ffdc43b742968e4046f9e788263c5"
 
 [[projects]]
   branch = "master"
@@ -101,7 +101,7 @@
   branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
-  revision = "b58212ae336d123c4191b621c71fd8e3af08b18e"
+  revision = "18dfe540ad6b60a4039901b724ccc8319c73eadb"
 
 [[projects]]
   name = "github.com/cenkalti/backoff"
@@ -286,7 +286,7 @@
   branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "90888765254c1fa54fa39e2eb383aa3436a2e8f8"
+  revision = "f5ac34d755eb6975958108413c7802a782ca16c8"
 
 [[projects]]
   branch = "master"
@@ -303,8 +303,8 @@
 [[projects]]
   name = "github.com/olivere/elastic"
   packages = [".","config","uritemplates"]
-  revision = "ddb058ca128ab8faf97562416199b02be2467f55"
-  version = "v6.1.0"
+  revision = "d2219c2438ba6598db654794f018522c0f88c918"
+  version = "v6.1.1"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -327,8 +327,8 @@
 [[projects]]
   name = "github.com/satori/go.uuid"
   packages = ["."]
-  revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
-  version = "v1.1.0"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -364,43 +364,43 @@
   branch = "master"
   name = "github.com/xuri/excelize"
   packages = ["."]
-  revision = "46187309f4fcf317515693fcba913ae6ae3c7eb7"
+  revision = "50cdaed5a36f7112c2ff01504c475457f0d4944e"
 
 [[projects]]
   branch = "master"
   name = "github.com/zonedb/zonedb"
   packages = ["."]
-  revision = "0762b2e4e470364f140f4bb58a93eeb88f1473c6"
+  revision = "a44ef01d55ba26a1f94eff65a4fd15fc28b1a72e"
 
 [[projects]]
   branch = "master"
   name = "go4.org"
   packages = ["reflectutil"]
-  revision = "034d17a462f7b2dcd1a4a73553ec5357ff6e6c6e"
+  revision = "fba789b7e39ba524b9e60c45c37a50fae63a2a09"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ed25519","ed25519/internal/edwards25519","nacl/secretbox","pbkdf2","poly1305","salsa20/salsa","ssh/terminal"]
-  revision = "95a4943f35d008beabde8c11e5075a1b714e6419"
+  revision = "5f55bce93ad2c89f411e009659bb1fd83da36e7b"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf","context","context/ctxhttp","html","html/atom","html/charset","http2","http2/hpack","idna","internal/iana","internal/socket","internal/timeseries","ipv4","ipv6","lex/httplex","trace"]
-  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
+  revision = "ab555f366c4508dbe0802550b1b20c46c5c18aa0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/oauth2"
   packages = [".","google","internal","jws","jwt"]
-  revision = "197281d4e0ecd78c33865daf9c6e51626feefcb2"
+  revision = "30785a2c434e431ef7c507b54617d6a951d5f2b4"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "83801418e1b59fb1880e363299581ee543af32ca"
+  revision = "810d7000345868fc619eb81f46307107118f4ae1"
 
 [[projects]]
   branch = "master"
@@ -412,7 +412,7 @@
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates","googleapi/transport","internal","option","transport/http","youtube/v3"]
-  revision = "92c31202d4179425301c9ad5a63abd8df45a9674"
+  revision = "d2c53ea20b719a26e291430d99eaaf6c9a8eb68c"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -428,9 +428,9 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","balancer","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
-  revision = "e687fa4e6424368ece6e4fe727cea2c806a0fcb4"
-  version = "v1.8.2"
+  packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
+  revision = "7cea4cc846bcf00cbb27595b07da5de875ef7de9"
+  version = "v1.9.1"
 
 [[projects]]
   name = "gopkg.in/VividCortex/ewma.v1"
@@ -508,7 +508,7 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [[projects]]
   name = "mvdan.cc/xurls"

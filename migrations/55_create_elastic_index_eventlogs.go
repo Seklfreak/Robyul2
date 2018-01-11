@@ -80,6 +80,10 @@ func m55_create_elastic_index_eventlogs() {
 							"Value": map[string]interface{}{"type": "text"},
 						},
 					},
+					"AuditLogBackfilled": map[string]interface{}{
+						"type":       "boolean",
+						"null_value": false,
+					},
 				},
 			},
 		},

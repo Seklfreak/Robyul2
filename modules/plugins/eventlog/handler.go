@@ -7,6 +7,8 @@ import (
 
 	"strconv"
 
+	"sync"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -25,11 +27,98 @@ func (h *Handler) Commands() []string {
 	}
 }
 
+type AuditLogBackfillType int
+
+const (
+	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = 1 << iota
+	AuditLogBackfillTypeChannelDelete
+)
+
+type AuditLogBackfillRequest struct {
+	GuildID string
+	Type    AuditLogBackfillType
+}
+
+var (
+	auditLogBackfillRequests     = make([]AuditLogBackfillRequest, 0)
+	auditLogBackfillRequestsLock = sync.Mutex{}
+)
+
 func (h *Handler) Init(session *discordgo.Session) {
 	defer helpers.Recover()
 
 	session.AddHandler(h.OnChannelCreate)
 	session.AddHandler(h.OnChannelDelete)
+
+	go func() {
+		defer helpers.Recover()
+
+		for {
+			time.Sleep(time.Minute * 1)
+			cache.GetLogger().WithField("module", "eventlog").Info("starting backfills")
+			auditLogBackfillRequestsLock.Lock()
+			backfillsToDo := auditLogBackfillRequests
+			auditLogBackfillRequests = make([]AuditLogBackfillRequest, 0)
+			auditLogBackfillRequestsLock.Unlock()
+			for _, backfillToDo := range backfillsToDo {
+				switch backfillToDo.Type {
+				case AuditLogBackfillTypeChannelCreate:
+					cache.GetLogger().WithField("module", "eventlog").Infof("doing channel create backfill for guild #%s", backfillToDo.GuildID)
+					results, err := session.GuildAuditLog(backfillToDo.GuildID, "", "", discordgo.AuditLogActionChannelCreate, 10)
+					helpers.RelaxLog(err)
+
+					for _, result := range results.AuditLogEntries {
+						elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+						elasticItems, err := helpers.GetElasticEventlogs(elasticTime, backfillToDo.GuildID, result.TargetID, models.EventlogTypeChannelCreate)
+						if err != nil {
+							if strings.Contains(err.Error(), "no fitting items found") {
+								continue
+							}
+						}
+						helpers.RelaxLog(err)
+
+						if len(elasticItems) >= 1 {
+							err = helpers.ElasticAddUserIDToEventLog(
+								elasticItems[0].ElasticID,
+								result.UserID,
+								true,
+							)
+							helpers.RelaxLog(err)
+						}
+					}
+					break
+				case AuditLogBackfillTypeChannelDelete:
+					cache.GetLogger().WithField("module", "eventlog").Infof("doing channel delete backfill for guild #%s", backfillToDo.GuildID)
+					results, err := session.GuildAuditLog(backfillToDo.GuildID, "", "", discordgo.AuditLogActionChannelDelete, 10)
+					helpers.RelaxLog(err)
+
+					for _, result := range results.AuditLogEntries {
+						elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+						elasticItems, err := helpers.GetElasticEventlogs(elasticTime, backfillToDo.GuildID, result.TargetID, models.EventlogTypeChannelDelete)
+						if err != nil {
+							if strings.Contains(err.Error(), "no fitting items found") {
+								continue
+							}
+						}
+						helpers.RelaxLog(err)
+
+						if len(elasticItems) >= 1 {
+							err = helpers.ElasticAddUserIDToEventLog(
+								elasticItems[0].ElasticID,
+								result.UserID,
+								true,
+							)
+							helpers.RelaxLog(err)
+						}
+					}
+					break
+				}
+			}
+			cache.GetLogger().WithField("module", "eventlog").Info("ending backfills")
+		}
+	}()
 }
 
 func (h *Handler) Uninit(session *discordgo.Session) {
@@ -153,7 +242,6 @@ func (h *Handler) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *disc
 
 func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo.ChannelCreate) {
 	go func() {
-		// TODO: backfill, who created the channel
 		defer helpers.Recover()
 
 		leftAt := time.Now()
@@ -230,12 +318,13 @@ func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo
 		*/
 
 		helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelCreate, "", nil, options)
+
+		h.requestAuditLogBackfill(channel.GuildID, AuditLogBackfillTypeChannelCreate)
 	}()
 }
 
 func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo.ChannelDelete) {
 	go func() {
-		// TODO: backfill, who deleted the channel
 		defer helpers.Recover()
 
 		leftAt := time.Now()
@@ -312,5 +401,23 @@ func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo
 		*/
 
 		helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelDelete, "", nil, options)
+
+		h.requestAuditLogBackfill(channel.GuildID, AuditLogBackfillTypeChannelDelete)
 	}()
+}
+
+func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) {
+	auditLogBackfillRequestsLock.Lock()
+	defer auditLogBackfillRequestsLock.Unlock()
+
+	for _, request := range auditLogBackfillRequests {
+		if request.GuildID == guildID && request.Type == backfillType {
+			return
+		}
+	}
+
+	auditLogBackfillRequests = append(auditLogBackfillRequests, AuditLogBackfillRequest{
+		GuildID: guildID,
+		Type:    backfillType,
+	})
 }
