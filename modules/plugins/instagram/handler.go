@@ -403,16 +403,17 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 	thumbnailUrl := ""
 
 	if len(reelMedia.ImageVersions2.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: reelMedia.ImageVersions2.Candidates[0].URL}
-		mediaUrl = reelMedia.ImageVersions2.Candidates[0].URL
+		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(reelMedia.ImageVersions2.Candidates)}
+		mediaUrl = getBestCandidateURL(reelMedia.ImageVersions2.Candidates)
 	}
 	if len(reelMedia.VideoVersions) > 0 {
 		channelEmbed.Video = &discordgo.MessageEmbedVideo{
-			URL: reelMedia.VideoVersions[0].URL, Height: reelMedia.VideoVersions[0].Height, Width: reelMedia.VideoVersions[0].Width}
+			URL: getBestStoryVideoVersionURL(story, number),
+		}
 		if mediaUrl != "" {
 			thumbnailUrl = mediaUrl
 		}
-		mediaUrl = reelMedia.VideoVersions[0].URL
+		mediaUrl = getBestStoryVideoVersionURL(story, number)
 	}
 
 	if mediaUrl != "" {
@@ -488,25 +489,25 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 	}
 
 	if len(post.ImageVersions2.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.ImageVersions2.Candidates[0].URL)}
+		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(post.ImageVersions2.Candidates)}
 	}
 	if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getFullResUrl(post.CarouselMedia[0].ImageVersions.Candidates[0].URL)}
+		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(post.CarouselMedia[0].ImageVersions.Candidates)}
 	}
 
 	mediaUrls := make([]string, 0)
 	if len(post.CarouselMedia) <= 0 {
 		if len(post.VideoVersions) > 0 {
-			mediaUrls = append(mediaUrls, getFullResUrl(post.VideoVersions[0].URL))
+			mediaUrls = append(mediaUrls, getBestVideoVersionURL(post))
 		} else {
-			mediaUrls = append(mediaUrls, getFullResUrl(post.ImageVersions2.Candidates[0].URL))
+			mediaUrls = append(mediaUrls, getBestCandidateURL(post.ImageVersions2.Candidates))
 		}
 	} else {
-		for _, carouselMedia := range post.CarouselMedia {
+		for i, carouselMedia := range post.CarouselMedia {
 			if len(carouselMedia.VideoVersions) > 0 {
-				mediaUrls = append(mediaUrls, getFullResUrl(carouselMedia.VideoVersions[0].URL))
+				mediaUrls = append(mediaUrls, getBestCarouselVideoVersionURL(post, i))
 			} else {
-				mediaUrls = append(mediaUrls, getFullResUrl(carouselMedia.ImageVersions.Candidates[0].URL))
+				mediaUrls = append(mediaUrls, getBestCandidateURL(carouselMedia.ImageVersions.Candidates))
 			}
 		}
 	}
@@ -517,9 +518,9 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 		channelEmbed.Description += "\n\n`Links:` "
 		for i, mediaUrl := range mediaUrls {
 			if postDirectLinks {
-				content += "\n" + getFullResUrl(mediaUrl)
+				content += "\n" + mediaUrl
 			}
-			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), getFullResUrl(mediaUrl))
+			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)
 		}
 	}
 
@@ -536,13 +537,83 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 	}
 }
 
-// breaks reel media links!
-func getFullResUrl(url string) string {
-	result := instagramPicUrlRegex.FindStringSubmatch(url)
-	if result != nil && len(result) >= 8 {
-		return result[1] + result[7]
+func getBestCandidateURL(imageCandidates []goinstaResponse.ImageCandidate) string {
+	var lastBestCandidate goinstaResponse.ImageCandidate
+	for _, candidate := range imageCandidates {
+		if lastBestCandidate.URL == "" {
+			lastBestCandidate = candidate
+		} else {
+			if candidate.Height > lastBestCandidate.Height || candidate.Width > lastBestCandidate.Width {
+				lastBestCandidate = candidate
+			}
+		}
 	}
-	return url
+
+	return lastBestCandidate.URL
+}
+
+func getBestVideoVersionURL(item goinstaResponse.Item) string {
+	var lastBestCandidateURL string
+	var lastBestCandidateWidth, lastBestCandidataHeight int
+	for _, version := range item.VideoVersions {
+		if lastBestCandidateURL == "" {
+			lastBestCandidateURL = version.URL
+			lastBestCandidataHeight = version.Height
+			lastBestCandidateWidth = version.Width
+		} else {
+			if version.Height > lastBestCandidataHeight || version.Width > lastBestCandidateWidth {
+				lastBestCandidateURL = version.URL
+				lastBestCandidataHeight = version.Height
+				lastBestCandidateWidth = version.Width
+			}
+		}
+	}
+
+	return lastBestCandidateURL
+}
+
+func getBestCarouselVideoVersionURL(post goinstaResponse.Item, number int) string {
+	item := post.CarouselMedia[number]
+
+	var lastBestCandidateURL string
+	var lastBestCandidateWidth, lastBestCandidataHeight int
+	for _, version := range item.VideoVersions {
+		if lastBestCandidateURL == "" {
+			lastBestCandidateURL = version.URL
+			lastBestCandidataHeight = version.Height
+			lastBestCandidateWidth = version.Width
+		} else {
+			if version.Height > lastBestCandidataHeight || version.Width > lastBestCandidateWidth {
+				lastBestCandidateURL = version.URL
+				lastBestCandidataHeight = version.Height
+				lastBestCandidateWidth = version.Width
+			}
+		}
+	}
+
+	return lastBestCandidateURL
+}
+
+func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int) string {
+	item := story.Reel.Items[number]
+
+	var lastBestCandidateURL string
+	var lastBestCandidateWidth, lastBestCandidataHeight int
+	for _, version := range item.VideoVersions {
+		if lastBestCandidateURL == "" {
+			lastBestCandidateURL = version.URL
+			lastBestCandidataHeight = version.Height
+			lastBestCandidateWidth = version.Width
+		} else {
+			if version.Height > lastBestCandidataHeight || version.Width > lastBestCandidateWidth {
+				lastBestCandidateURL = version.URL
+				lastBestCandidataHeight = version.Height
+				lastBestCandidateWidth = version.Width
+			}
+		}
+	}
+
+	return lastBestCandidateURL
 }
 
 func (m *Handler) getEntryBy(key string, id string) DB_Instagram_Entry {
