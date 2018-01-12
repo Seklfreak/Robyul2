@@ -76,13 +76,21 @@ func m55_create_elastic_index_eventlogs() {
 					"Options": map[string]interface{}{
 						"type": "nested",
 						"properties": map[string]interface{}{
-							"Key":   map[string]interface{}{"type": "text"},
-							"Value": map[string]interface{}{"type": "text"},
+							"Key": map[string]interface{}{
+								"type": "text",
+							},
+							"Value": map[string]interface{}{
+								"type": "text",
+							},
 						},
 					},
-					"AuditLogBackfilled": map[string]interface{}{
-						"type":       "boolean",
-						"null_value": false,
+					"WaitingFor": map[string]interface{}{
+						"properties": map[string]interface{}{
+							"AuditLogBackfill": map[string]interface{}{
+								"type":       "boolean",
+								"null_value": false,
+							},
+						},
 					},
 				},
 			},

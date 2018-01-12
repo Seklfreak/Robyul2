@@ -511,7 +511,7 @@ func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTi
 }
 
 func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
-	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption) (err error) {
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (err error) {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -526,6 +526,11 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 		Reason:     reason,
 		Changes:    changes,
 		Options:    options,
+		WaitingFor: struct {
+			AuditLogBackfill bool
+		}{
+			AuditLogBackfill: waitingForAuditLogBackfill,
+		},
 	}
 
 	_, err = cache.GetElastic().Index().
@@ -546,7 +551,7 @@ func ElasticAddUserIDToEventLog(elasticID string, UserID string, auditLogBackfil
 	}
 
 	if auditLogBackfilled {
-		newData["AuditLogBackfilled"] = true
+		newData["WaitingFor.AuditLogBackfill"] = true
 	}
 
 	_, err := cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
@@ -560,8 +565,8 @@ type GetElasticEventlogsResult struct {
 	Entry     models.ElasticEventlog
 }
 
-func GetElasticEventlogs(createdAt time.Time, guildID, targetID, actionType string) (result []GetElasticEventlogsResult, err error) {
-	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND TargetID:" + targetID + " AND ActionType:" + actionType + " AND AuditLogBackfilled:false")
+func GetElasticPendingAuditLogBackfillEventlogs(createdAt time.Time, guildID, targetID, actionType string) (result []GetElasticEventlogsResult, err error) {
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND TargetID:" + targetID + " AND ActionType:" + actionType + " AND WaitingFor.AuditLogBackfill:true")
 	searchResult, err := cache.GetElastic().Search().
 		Index(models.ElasticIndexEventlogs).
 		Type("doc").
@@ -573,8 +578,6 @@ func GetElasticEventlogs(createdAt time.Time, guildID, targetID, actionType stri
 		return result, err
 	}
 
-	// TODO: check timespan
-
 	result = make([]GetElasticEventlogsResult, 0)
 
 	for _, item := range searchResult.Hits.Hits {
@@ -585,6 +588,11 @@ func GetElasticEventlogs(createdAt time.Time, guildID, targetID, actionType stri
 		var eventlog models.ElasticEventlog
 		err := json.Unmarshal(*item.Source, &eventlog)
 		if err != nil {
+			continue
+		}
+
+		// max time difference between elastic event and audit log event: 10 seconds
+		if eventlog.CreatedAt.Sub(createdAt).Seconds() >= 5 {
 			continue
 		}
 

@@ -136,6 +136,12 @@ var (
 
 	// GimmeProxyCachedProxies counts all cached gimmeproxy proxies
 	GimmeProxyCachedProxies = expvar.NewInt("gimmeproxy_cached_proxies")
+
+	// EventlogAuditLogRequests counts all audit log requests made
+	EventlogAuditLogRequests = expvar.NewInt("eventlog_audit_log_requests")
+
+	// EventlogAuditLogBackfillTime is the latest AuditLog Backfill time
+	EventlogAuditLogBackfillTime = expvar.NewFloat("eventlog_audit_log_backfill_time")
 )
 
 // Init starts a http server on 127.0.0.1:1337
