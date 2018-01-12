@@ -1432,15 +1432,22 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 			return
 		}
 
+		waitingForData := false
+
+		if elasticEventlog.WaitingFor.AuditLogBackfill {
+			waitingForData = true
+		}
+
 		eventlog.Entries = append(eventlog.Entries, models.Rest_Eventlog_Entry{
-			CreatedAt:  elasticEventlog.CreatedAt,
-			TargetID:   elasticEventlog.TargetID,
-			TargetType: elasticEventlog.TargetType,
-			UserID:     elasticEventlog.UserID,
-			ActionType: elasticEventlog.ActionType,
-			Reason:     elasticEventlog.Reason,
-			Changes:    elasticEventlog.Changes,
-			Options:    elasticEventlog.Options,
+			CreatedAt:      elasticEventlog.CreatedAt,
+			TargetID:       elasticEventlog.TargetID,
+			TargetType:     elasticEventlog.TargetType,
+			UserID:         elasticEventlog.UserID,
+			ActionType:     elasticEventlog.ActionType,
+			Reason:         elasticEventlog.Reason,
+			Changes:        elasticEventlog.Changes,
+			Options:        elasticEventlog.Options,
+			WaitingForData: waitingForData,
 		})
 
 		alreadyLookingUp = false

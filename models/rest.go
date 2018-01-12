@@ -190,14 +190,15 @@ type Rest_Eventlog struct {
 }
 
 type Rest_Eventlog_Entry struct {
-	CreatedAt  time.Time
-	TargetID   string
-	TargetType string
-	UserID     string
-	ActionType string
-	Reason     string
-	Changes    []ElasticEventlogChange
-	Options    []ElasticEventlogOption
+	CreatedAt      time.Time
+	TargetID       string
+	TargetType     string
+	UserID         string
+	ActionType     string
+	Reason         string
+	Changes        []ElasticEventlogChange
+	Options        []ElasticEventlogOption
+	WaitingForData bool
 }
 
 const (

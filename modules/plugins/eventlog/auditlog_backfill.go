@@ -46,9 +46,11 @@ func auditlogBackfillLoop() {
 
 		var successfulBackfills int
 
-		// TODO: don't send requests if bot doesn't have permissions, or audit log is disabled
-
 		for _, guildID := range channelCreateBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
 			logger().Infof("doing channel create backfill for guild #%s", guildID)
 			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionChannelCreate, 10)
 			if err != nil {
@@ -83,6 +85,10 @@ func auditlogBackfillLoop() {
 		}
 
 		for _, guildID := range channelDeleteBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
 			logger().Infof("doing channel delete backfill for guild #%s", guildID)
 			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionChannelDelete, 10)
 			if err != nil {
@@ -121,6 +127,18 @@ func auditlogBackfillLoop() {
 			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs), successfulBackfills, elapsed)
 		metrics.EventlogAuditLogBackfillTime.Set(elapsed.Seconds())
 	}
+}
+
+func shouldBackfill(guildID string) (do bool) {
+	if helpers.GuildSettingsGetCached(guildID).EventlogDisabled {
+		return false
+	}
+
+	if helpers.GetMemberPermissions(guildID, cache.GetSession().State.User.ID)&discordgo.PermissionViewAuditLogs != discordgo.PermissionViewAuditLogs {
+		return false
+	}
+
+	return true
 }
 
 func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {

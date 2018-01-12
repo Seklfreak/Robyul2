@@ -1366,3 +1366,42 @@ func ChannelPermissionsInSync(childChannelID string) (inSync bool) {
 
 	return true
 }
+
+func GetMemberPermissions(guildID, userID string) (apermissions int) {
+	guild, err := GetGuildWithoutApi(guildID)
+	if err != nil {
+		return
+	}
+
+	member, err := GetGuildMemberWithoutApi(guildID, userID)
+	if err != nil {
+		return
+	}
+
+	if userID == guild.OwnerID {
+		apermissions = discordgo.PermissionAll
+		return
+	}
+
+	for _, role := range guild.Roles {
+		if role.ID == guild.ID {
+			apermissions |= role.Permissions
+			break
+		}
+	}
+
+	for _, role := range guild.Roles {
+		for _, roleID := range member.Roles {
+			if role.ID == roleID {
+				apermissions |= role.Permissions
+				break
+			}
+		}
+	}
+
+	if apermissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+		apermissions |= discordgo.PermissionAll
+	}
+
+	return apermissions
+}
