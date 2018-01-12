@@ -27,6 +27,8 @@ func (h *Handler) OnGuildMemberRemove(member *discordgo.Member, session *discord
 
 		leftAt := time.Now()
 
+		// TODO: check for kick
+
 		helpers.EventlogLog(leftAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberLeave, "", nil, nil, false)
 	}()
 }
@@ -36,14 +38,6 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 }
 
 func (h *Handler) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
-
-}
-
-func (h *Handler) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-
-}
-
-func (h *Handler) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 
 }
 
@@ -259,6 +253,32 @@ func (h *Handler) OnGuildRoleDelete(session *discordgo.Session, role *discordgo.
 		helpers.EventlogLog(leftAt, role.GuildID, role.RoleID, models.EventlogTargetTypeRole, "", models.EventlogTypeRoleDelete, "", nil, nil, true)
 
 		err := h.requestAuditLogBackfill(role.GuildID, AuditLogBackfillTypeRoleDelete)
+		helpers.RelaxLog(err)
+	}()
+}
+
+func (h *Handler) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+
+		leftAt := time.Now()
+
+		helpers.EventlogLog(leftAt, user.GuildID, user.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeBanAdd, "", nil, nil, true)
+
+		err := h.requestAuditLogBackfill(user.GuildID, AuditLogBackfillTypeBanAdd)
+		helpers.RelaxLog(err)
+	}()
+}
+
+func (h *Handler) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+
+		leftAt := time.Now()
+
+		helpers.EventlogLog(leftAt, user.GuildID, user.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeBanRemove, "", nil, nil, true)
+
+		err := h.requestAuditLogBackfill(user.GuildID, AuditLogBackfillTypeBanRemove)
 		helpers.RelaxLog(err)
 	}()
 }

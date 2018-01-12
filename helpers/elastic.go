@@ -541,11 +541,9 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 	return err
 }
 
-func ElasticAddUserIDToEventLog(elasticID string, UserID string, auditLogBackfilled bool) error {
-	return ElasticAddUserIDAndOptionsToEventLog(elasticID, UserID, nil, auditLogBackfilled)
-}
-
-func ElasticAddUserIDAndOptionsToEventLog(elasticID string, UserID string, options []models.ElasticEventlogOption, auditLogBackfilled bool) error {
+func ElasticUpdateEventLog(elasticID string, UserID string,
+	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
+	reason string, auditLogBackfilled bool) error {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -562,7 +560,9 @@ func ElasticAddUserIDAndOptionsToEventLog(elasticID string, UserID string, optio
 		return err
 	}
 
-	elasticEventlog.UserID = UserID
+	if UserID != "" {
+		elasticEventlog.UserID = UserID
+	}
 
 	if options != nil {
 		if elasticEventlog.Options == nil {
@@ -583,6 +583,33 @@ func ElasticAddUserIDAndOptionsToEventLog(elasticID string, UserID string, optio
 				Value: options[newI].Value,
 			})
 		}
+	}
+
+	if changes != nil {
+		if elasticEventlog.Changes == nil {
+			elasticEventlog.Changes = make([]models.ElasticEventlogChange, 0)
+		}
+
+	UpdateNextChange:
+		for newI := range changes {
+			for oldI := range elasticEventlog.Changes {
+				if elasticEventlog.Changes[oldI].Key == changes[newI].Key {
+					elasticEventlog.Changes[oldI].OldValue = changes[newI].OldValue
+					elasticEventlog.Changes[oldI].NewValue = changes[newI].NewValue
+					continue UpdateNextChange
+				}
+			}
+
+			elasticEventlog.Changes = append(elasticEventlog.Changes, models.ElasticEventlogChange{
+				Key:      changes[newI].Key,
+				OldValue: changes[newI].OldValue,
+				NewValue: changes[newI].NewValue,
+			})
+		}
+	}
+
+	if reason != "" {
+		elasticEventlog.Reason = reason
 	}
 
 	if auditLogBackfilled {

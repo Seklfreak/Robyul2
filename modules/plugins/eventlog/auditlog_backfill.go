@@ -17,6 +17,8 @@ const (
 	AuditLogBackfillTypeChannelDelete
 	AuditLogBackfillTypeRoleCreate
 	AuditLogBackfillTypeRoleDelete
+	AuditLogBackfillTypeBanAdd
+	AuditLogBackfillTypeBanRemove
 )
 
 func auditlogBackfillLoop() {
@@ -40,19 +42,27 @@ func auditlogBackfillLoop() {
 		channelDeleteBackfillGuildIDs, errMembers2 := redis.SMembers(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		roleCreateBackfillGuildIDs, errMembers3 := redis.SMembers(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
 		roleDeleteBackfillGuildIDs, errMembers4 := redis.SMembers(models.AuditLogBackfillTypeRoleDeleteRedisSet).Result()
+		banAddBackfillGuildIDs, errMembers5 := redis.SMembers(models.AuditLogBackfillTypeBanAddRedisSet).Result()
+		banRemoveBackfillGuildIDs, errMembers6 := redis.SMembers(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
 		_, errDel1 := redis.Del(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
 		_, errDel2 := redis.Del(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		_, errDel3 := redis.Del(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
 		_, errDel4 := redis.Del(models.AuditLogBackfillTypeRoleDeleteRedisSet).Result()
+		_, errDel5 := redis.Del(models.AuditLogBackfillTypeBanAddRedisSet).Result()
+		_, errDel6 := redis.Del(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
 		auditLogBackfillRequestsLock.Unlock()
 		helpers.Relax(errMembers1)
 		helpers.Relax(errMembers2)
 		helpers.Relax(errMembers3)
 		helpers.Relax(errMembers4)
+		helpers.Relax(errMembers5)
+		helpers.Relax(errMembers6)
 		helpers.Relax(errDel1)
 		helpers.Relax(errDel2)
 		helpers.Relax(errDel3)
 		helpers.Relax(errDel4)
+		helpers.Relax(errDel5)
+		helpers.Relax(errDel6)
 
 		var successfulBackfills int
 
@@ -83,9 +93,12 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticAddUserIDToEventLog(
+					err = helpers.ElasticUpdateEventLog(
 						elasticItems[0].ElasticID,
 						result.UserID,
+						nil,
+						nil,
+						result.Reason,
 						true,
 					)
 					helpers.RelaxLog(err)
@@ -121,9 +134,12 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticAddUserIDToEventLog(
+					err = helpers.ElasticUpdateEventLog(
 						elasticItems[0].ElasticID,
 						result.UserID,
+						nil,
+						nil,
+						result.Reason,
 						true,
 					)
 					helpers.RelaxLog(err)
@@ -159,9 +175,12 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticAddUserIDToEventLog(
+					err = helpers.ElasticUpdateEventLog(
 						elasticItems[0].ElasticID,
 						result.UserID,
+						nil,
+						nil,
+						result.Reason,
 						true,
 					)
 					helpers.RelaxLog(err)
@@ -237,10 +256,135 @@ func auditlogBackfillLoop() {
 				}
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticAddUserIDAndOptionsToEventLog(
+					err = helpers.ElasticUpdateEventLog(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						options,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
+		for _, guildID := range channelDeleteBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing channel delete backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionChannelDelete, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelDelete)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
+		for _, guildID := range banAddBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing ban add backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionMemberBanAdd, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeBanAdd)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
+		for _, guildID := range banRemoveBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing ban remove backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionMemberBanRemove, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeBanRemove)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
 						true,
 					)
 					helpers.RelaxLog(err)
@@ -252,7 +396,8 @@ func auditlogBackfillLoop() {
 		elapsed := time.Since(start)
 		logger().Infof("did %d audit log backfills, %d entries backfilled, took %s",
 			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs)+
-				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs),
+				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+
+				len(banAddBackfillGuildIDs)+len(banRemoveBackfillGuildIDs),
 			successfulBackfills, elapsed)
 		metrics.EventlogAuditLogBackfillTime.Set(elapsed.Seconds())
 	}
@@ -288,6 +433,12 @@ func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogB
 		return err
 	case AuditLogBackfillTypeRoleDelete:
 		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleDeleteRedisSet, guildID).Result()
+		return err
+	case AuditLogBackfillTypeBanAdd:
+		_, err := redis.SAdd(models.AuditLogBackfillTypeBanAddRedisSet, guildID).Result()
+		return err
+	case AuditLogBackfillTypeBanRemove:
+		_, err := redis.SAdd(models.AuditLogBackfillTypeBanRemoveRedisSet, guildID).Result()
 		return err
 	}
 	return errors.New("unknown backfill type")
