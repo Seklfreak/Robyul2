@@ -27,9 +27,10 @@ func (h *Handler) OnGuildMemberRemove(member *discordgo.Member, session *discord
 
 		leftAt := time.Now()
 
-		// TODO: check for kick
-
 		helpers.EventlogLog(leftAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberLeave, "", nil, nil, false)
+
+		err := h.requestAuditLogBackfill(member.GuildID, AuditLogBackfillTypeMemberRemove)
+		helpers.RelaxLog(err)
 	}()
 }
 

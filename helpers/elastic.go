@@ -609,7 +609,14 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 	}
 
 	if reason != "" {
-		elasticEventlog.Reason = reason
+		if elasticEventlog.Reason != reason {
+			if elasticEventlog.Reason == "" {
+				elasticEventlog.Reason = reason
+			} else {
+
+				elasticEventlog.Reason += " | " + reason
+			}
+		}
 	}
 
 	if auditLogBackfilled {
@@ -627,19 +634,22 @@ type GetElasticEventlogsResult struct {
 	Entry     models.ElasticEventlog
 }
 
-func GetElasticPendingAuditLogBackfillEventlogs(createdAt time.Time, guildID, targetID, actionType string) (result []GetElasticEventlogsResult, err error) {
+func GetElasticPendingAuditLogBackfillEventlogs(createdAt time.Time, guildID, targetID, actionType string, all bool) (result []GetElasticEventlogsResult, err error) {
 	boolQuery := elastic.NewBoolQuery().
 		Must(elastic.NewMatchQuery("GuildID", guildID)).
 		Must(elastic.NewMatchQuery("TargetID", targetID)).
-		Must(elastic.NewMatchQuery("ActionType", actionType)).
-		Must(elastic.NewMatchQuery("WaitingFor.AuditLogBackfill", true))
+		Must(elastic.NewMatchQuery("ActionType", actionType))
+
+	if !all {
+		boolQuery.Must(elastic.NewMatchQuery("WaitingFor.AuditLogBackfill", true))
+	}
 
 	searchResult, err := cache.GetElastic().Search().
 		Index(models.ElasticIndexEventlogs).
 		Type("doc").
 		Query(boolQuery).
 		//Size(1).
-		Sort("CreatedAt", true).
+		Sort("CreatedAt", false).
 		Do(context.Background())
 	if err != nil {
 		return result, err
@@ -658,10 +668,12 @@ func GetElasticPendingAuditLogBackfillEventlogs(createdAt time.Time, guildID, ta
 			continue
 		}
 
-		// max time difference between elastic event and audit log event: 10 seconds
-		if eventlog.CreatedAt.Sub(createdAt).Seconds() >= 5 {
+		// max time difference between elastic event and audit log event: 5 seconds
+		if eventlog.CreatedAt.Sub(createdAt).Seconds() > 5 || eventlog.CreatedAt.Sub(createdAt).Seconds() < -5 {
+			//fmt.Println("backfilled rejected for", item.Id, "timeDiff:", eventlog.CreatedAt.Sub(createdAt).Seconds())
 			continue
 		}
+		//fmt.Println("backfilled passed for", item.Id, "timeDiff:", eventlog.CreatedAt.Sub(createdAt).Seconds())
 
 		result = append(result, GetElasticEventlogsResult{
 			ElasticID: item.Id,
@@ -713,7 +725,7 @@ func getElasticMessage(messageID, channelID, guildID string) (elasticID string, 
 		Type("doc").
 		Query(termQuery).
 		Size(1).
-		Sort("CreatedAt", true).
+		Sort("CreatedAt", true). // TODO: should be false?
 		Do(context.Background())
 	if err != nil {
 		return "", message, err

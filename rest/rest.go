@@ -1399,7 +1399,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 		Type("doc").
 		Query(termQuery).
 		Size(50).
-		Sort("CreatedAt", true).
+		Sort("CreatedAt", false).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
@@ -1440,7 +1440,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 		}
 
 		eventlog.Entries = append(eventlog.Entries, models.Rest_Eventlog_Entry{
-			CreatedAt:      elasticEventlog.CreatedAt,
+			CreatedAt:      elasticEventlog.CreatedAt.UTC(),
 			TargetID:       elasticEventlog.TargetID,
 			TargetType:     elasticEventlog.TargetType,
 			UserID:         elasticEventlog.UserID,
@@ -1581,13 +1581,6 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 				Position:    role.Position,
 				Permissions: role.Permissions,
 			})
-		}
-	}
-
-	if len(eventlog.Entries) > 0 {
-		// reverse slice https://stackoverflow.com/a/19239850/1443726
-		for i, j := 0, len(eventlog.Entries)-1; i < j; i, j = i+1, j-1 {
-			eventlog.Entries[i], eventlog.Entries[j] = eventlog.Entries[j], eventlog.Entries[i]
 		}
 	}
 

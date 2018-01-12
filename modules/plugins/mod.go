@@ -1988,6 +1988,8 @@ func (m *Mod) getTroublemakerReports(user *discordgo.User) []DB_Troublemaker_Ent
 
 func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
 	go func() {
+		defer helpers.Recover()
+
 		// get joined at date
 		joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
 		if err != nil {

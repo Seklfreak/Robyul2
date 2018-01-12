@@ -19,6 +19,7 @@ const (
 	AuditLogBackfillTypeRoleDelete
 	AuditLogBackfillTypeBanAdd
 	AuditLogBackfillTypeBanRemove
+	AuditLogBackfillTypeMemberRemove
 )
 
 func auditlogBackfillLoop() {
@@ -44,12 +45,14 @@ func auditlogBackfillLoop() {
 		roleDeleteBackfillGuildIDs, errMembers4 := redis.SMembers(models.AuditLogBackfillTypeRoleDeleteRedisSet).Result()
 		banAddBackfillGuildIDs, errMembers5 := redis.SMembers(models.AuditLogBackfillTypeBanAddRedisSet).Result()
 		banRemoveBackfillGuildIDs, errMembers6 := redis.SMembers(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
+		memberRemoveBackfillGuildIDs, errMembers7 := redis.SMembers(models.AuditLogBackfillTypeMemberRemoveRedisSet).Result()
 		_, errDel1 := redis.Del(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
 		_, errDel2 := redis.Del(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		_, errDel3 := redis.Del(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
 		_, errDel4 := redis.Del(models.AuditLogBackfillTypeRoleDeleteRedisSet).Result()
 		_, errDel5 := redis.Del(models.AuditLogBackfillTypeBanAddRedisSet).Result()
 		_, errDel6 := redis.Del(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
+		_, errDel7 := redis.Del(models.AuditLogBackfillTypeMemberRemoveRedisSet).Result()
 		auditLogBackfillRequestsLock.Unlock()
 		helpers.Relax(errMembers1)
 		helpers.Relax(errMembers2)
@@ -57,12 +60,14 @@ func auditlogBackfillLoop() {
 		helpers.Relax(errMembers4)
 		helpers.Relax(errMembers5)
 		helpers.Relax(errMembers6)
+		helpers.Relax(errMembers7)
 		helpers.Relax(errDel1)
 		helpers.Relax(errDel2)
 		helpers.Relax(errDel3)
 		helpers.Relax(errDel4)
 		helpers.Relax(errDel5)
 		helpers.Relax(errDel6)
+		helpers.Relax(errDel7)
 
 		var successfulBackfills int
 
@@ -84,7 +89,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelCreate)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelCreate, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -125,7 +130,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelDelete)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelDelete, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -166,7 +171,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeRoleCreate)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeRoleCreate, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -207,7 +212,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeRoleDelete)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeRoleDelete, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -288,7 +293,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelDelete)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelDelete, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -329,7 +334,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeBanAdd)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeBanAdd, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -342,6 +347,30 @@ func auditlogBackfillLoop() {
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+
+				elasticItems, err = helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeMemberLeave, true)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						[]models.ElasticEventlogOption{{
+							Key:   "member_leave_type",
+							Value: "ban",
+						}},
 						nil,
 						result.Reason,
 						true,
@@ -370,7 +399,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeBanRemove)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeBanRemove, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -393,11 +422,56 @@ func auditlogBackfillLoop() {
 			}
 		}
 
+		for _, guildID := range memberRemoveBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing member remove backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionMemberKick, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeMemberLeave, true)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						[]models.ElasticEventlogOption{{
+							Key:   "member_leave_type",
+							Value: "kick",
+						}},
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
 		elapsed := time.Since(start)
 		logger().Infof("did %d audit log backfills, %d entries backfilled, took %s",
 			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs)+
 				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+
-				len(banAddBackfillGuildIDs)+len(banRemoveBackfillGuildIDs),
+				len(banAddBackfillGuildIDs)+len(banRemoveBackfillGuildIDs)+
+				len(memberRemoveBackfillGuildIDs),
 			successfulBackfills, elapsed)
 		metrics.EventlogAuditLogBackfillTime.Set(elapsed.Seconds())
 	}
@@ -423,22 +497,32 @@ func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogB
 
 	switch backfillType {
 	case AuditLogBackfillTypeChannelCreate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel create")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelCreateRedisSet, guildID).Result()
 		return err
 	case AuditLogBackfillTypeChannelDelete:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel delete")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelDeleteRedisSet, guildID).Result()
 		return err
 	case AuditLogBackfillTypeRoleCreate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role create")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleCreateRedisSet, guildID).Result()
 		return err
 	case AuditLogBackfillTypeRoleDelete:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role delete")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleDeleteRedisSet, guildID).Result()
 		return err
 	case AuditLogBackfillTypeBanAdd:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "ban add")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeBanAddRedisSet, guildID).Result()
 		return err
 	case AuditLogBackfillTypeBanRemove:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "ban remove")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeBanRemoveRedisSet, guildID).Result()
+		return err
+	case AuditLogBackfillTypeMemberRemove:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member remove")
+		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberRemoveRedisSet, guildID).Result()
 		return err
 	}
 	return errors.New("unknown backfill type")
