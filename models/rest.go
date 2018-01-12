@@ -58,6 +58,18 @@ type Rest_Member struct {
 	Roles    []string
 }
 
+type Rest_Role struct {
+	ID          string
+	GuildID     string
+	Name        string
+	Managed     bool
+	Mentionable bool
+	Hoist       bool
+	Color       string
+	Position    int
+	Permissions int
+}
+
 type Rest_Is_Member struct {
 	IsMember bool
 }
@@ -186,6 +198,7 @@ type Rest_VanityInvite_Invite struct {
 type Rest_Eventlog struct {
 	Channels []Rest_Channel
 	Users    []Rest_User
+	Roles    []Rest_Role
 	Entries  []Rest_Eventlog_Entry
 }
 

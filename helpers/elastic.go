@@ -542,22 +542,55 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 }
 
 func ElasticAddUserIDToEventLog(elasticID string, UserID string, auditLogBackfilled bool) error {
+	return ElasticAddUserIDAndOptionsToEventLog(elasticID, UserID, nil, auditLogBackfilled)
+}
+
+func ElasticAddUserIDAndOptionsToEventLog(elasticID string, UserID string, options []models.ElasticEventlogOption, auditLogBackfilled bool) error {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
 
-	newData := map[string]interface{}{
-		"UserID": UserID,
+	get1, err := cache.GetElastic().Get().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
+		Do(context.Background())
+	if err != nil {
+		return nil
 	}
 
-	if auditLogBackfilled {
-		newData["WaitingFor"] = map[string]interface{}{
-			"AuditLogBackfill": false,
+	var elasticEventlog models.ElasticEventlog
+	err = json.Unmarshal(*get1.Source, &elasticEventlog)
+	if err != nil {
+		return err
+	}
+
+	elasticEventlog.UserID = UserID
+
+	if options != nil {
+		if elasticEventlog.Options == nil {
+			elasticEventlog.Options = make([]models.ElasticEventlogOption, 0)
+		}
+
+	UpdateNextOption:
+		for newI := range options {
+			for oldI := range elasticEventlog.Options {
+				if elasticEventlog.Options[oldI].Key == options[newI].Key {
+					elasticEventlog.Options[oldI].Value = options[newI].Value
+					continue UpdateNextOption
+				}
+			}
+
+			elasticEventlog.Options = append(elasticEventlog.Options, models.ElasticEventlogOption{
+				Key:   options[newI].Key,
+				Value: options[newI].Value,
+			})
 		}
 	}
 
-	_, err := cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
-		Doc(newData).
+	if auditLogBackfilled {
+		elasticEventlog.WaitingFor.AuditLogBackfill = false
+	}
+
+	_, err = cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
+		Doc(elasticEventlog).
 		Do(context.Background())
 	return err
 }

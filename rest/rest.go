@@ -1418,6 +1418,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 
 	lookupUserIDs := make([]string, 0)
 	lookupChannelIDs := make([]string, 0)
+	lookupRoleIDs := make([]string, 0)
 
 	var alreadyLookingUp bool
 	for _, item := range searchResult.Hits.Hits {
@@ -1452,7 +1453,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 
 		alreadyLookingUp = false
 		switch elasticEventlog.TargetType {
-		case "user":
+		case models.EventlogTargetTypeUser:
 			for _, lookupUserID := range lookupUserIDs {
 				if lookupUserID == elasticEventlog.TargetID {
 					alreadyLookingUp = true
@@ -1462,7 +1463,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 				lookupUserIDs = append(lookupUserIDs, elasticEventlog.TargetID)
 			}
 			break
-		case "channel":
+		case models.EventlogTargetTypeChannel:
 			for _, lookupChannelID := range lookupChannelIDs {
 				if lookupChannelID == elasticEventlog.TargetID {
 					alreadyLookingUp = true
@@ -1470,6 +1471,16 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 			}
 			if !alreadyLookingUp {
 				lookupChannelIDs = append(lookupChannelIDs, elasticEventlog.TargetID)
+			}
+			break
+		case models.EventlogTargetTypeRole:
+			for _, lookupRoleID := range lookupRoleIDs {
+				if lookupRoleID == elasticEventlog.TargetID {
+					alreadyLookingUp = true
+				}
+			}
+			if !alreadyLookingUp {
+				lookupRoleIDs = append(lookupRoleIDs, elasticEventlog.TargetID)
 			}
 			break
 		}
@@ -1553,6 +1564,23 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 					}
 				}
 			}
+		}
+	}
+
+	for _, lookupRoleID := range lookupRoleIDs {
+		role, _ := cache.GetSession().State.Role(guildID, lookupRoleID)
+		if role != nil && role.ID != "" {
+			eventlog.Roles = append(eventlog.Roles, models.Rest_Role{
+				ID:          role.ID,
+				GuildID:     guildID,
+				Name:        role.Name,
+				Managed:     role.Managed,
+				Mentionable: role.Mentionable,
+				Hoist:       role.Hoist,
+				Color:       helpers.GetHexFromDiscordColor(role.Color),
+				Position:    role.Position,
+				Permissions: role.Permissions,
+			})
 		}
 	}
 

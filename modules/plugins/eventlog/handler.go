@@ -33,6 +33,8 @@ func (h *Handler) Init(session *discordgo.Session) {
 
 	session.AddHandler(h.OnChannelCreate)
 	session.AddHandler(h.OnChannelDelete)
+	session.AddHandler(h.OnGuildRoleCreate)
+	session.AddHandler(h.OnGuildRoleDelete)
 
 	go auditlogBackfillLoop()
 	logger().Info("started auditlogBackfillLoop loop (1m)")
