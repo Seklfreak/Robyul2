@@ -8,4 +8,7 @@ const (
 
 	EventlogTargetTypeUser    = "user"
 	EventlogTargetTypeChannel = "channel"
+
+	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
+	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
 )

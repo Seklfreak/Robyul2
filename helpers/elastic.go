@@ -551,7 +551,9 @@ func ElasticAddUserIDToEventLog(elasticID string, UserID string, auditLogBackfil
 	}
 
 	if auditLogBackfilled {
-		newData["WaitingFor.AuditLogBackfill"] = true
+		newData["WaitingFor"] = map[string]interface{}{
+			"AuditLogBackfill": false,
+		}
 	}
 
 	_, err := cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
@@ -566,11 +568,16 @@ type GetElasticEventlogsResult struct {
 }
 
 func GetElasticPendingAuditLogBackfillEventlogs(createdAt time.Time, guildID, targetID, actionType string) (result []GetElasticEventlogsResult, err error) {
-	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND TargetID:" + targetID + " AND ActionType:" + actionType + " AND WaitingFor.AuditLogBackfill:true")
+	boolQuery := elastic.NewBoolQuery().
+		Must(elastic.NewMatchQuery("GuildID", guildID)).
+		Must(elastic.NewMatchQuery("TargetID", targetID)).
+		Must(elastic.NewMatchQuery("ActionType", actionType)).
+		Must(elastic.NewMatchQuery("WaitingFor.AuditLogBackfill", true))
+
 	searchResult, err := cache.GetElastic().Search().
 		Index(models.ElasticIndexEventlogs).
 		Type("doc").
-		Query(termQuery).
+		Query(boolQuery).
 		//Size(1).
 		Sort("CreatedAt", true).
 		Do(context.Background())

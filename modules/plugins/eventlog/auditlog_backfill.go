@@ -9,6 +9,12 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/pkg/errors"
+)
+
+const (
+	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = 1 << iota
+	AuditLogBackfillTypeChannelDelete
 )
 
 func auditlogBackfillLoop() {
@@ -25,94 +31,111 @@ func auditlogBackfillLoop() {
 		time.Sleep(time.Minute * 1)
 		start := time.Now()
 
+		redis := cache.GetRedisClient()
+
 		auditLogBackfillRequestsLock.Lock()
-		backfillsToDo := auditLogBackfillRequests
-		auditLogBackfillRequests = make([]AuditLogBackfillRequest, 0)
+		channelCreateBackfillGuildIDs, errMembers1 := redis.SMembers(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
+		channelDeleteBackfillGuildIDs, errMembers2 := redis.SMembers(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
+		_, errDel1 := redis.Del(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
+		_, errDel2 := redis.Del(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		auditLogBackfillRequestsLock.Unlock()
+		helpers.Relax(errMembers1)
+		helpers.Relax(errMembers2)
+		helpers.Relax(errDel1)
+		helpers.Relax(errDel2)
 
 		var successfulBackfills int
 
-		for _, backfillToDo := range backfillsToDo {
-			switch backfillToDo.Type {
-			case AuditLogBackfillTypeChannelCreate:
-				logger().Infof("doing channel create backfill for guild #%s", backfillToDo.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfillToDo.GuildID, "", "", discordgo.AuditLogActionChannelCreate, 10)
-				helpers.RelaxLog(err)
-				metrics.EventlogAuditLogRequests.Add(1)
+		// TODO: don't send requests if bot doesn't have permissions, or audit log is disabled
 
-				for _, result := range results.AuditLogEntries {
-					elasticTime := helpers.GetTimeFromSnowflake(result.ID)
-
-					elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, backfillToDo.GuildID, result.TargetID, models.EventlogTypeChannelCreate)
-					if err != nil {
-						if strings.Contains(err.Error(), "no fitting items found") {
-							continue
-						}
-					}
-					helpers.RelaxLog(err)
-
-					if len(elasticItems) >= 1 {
-						err = helpers.ElasticAddUserIDToEventLog(
-							elasticItems[0].ElasticID,
-							result.UserID,
-							true,
-						)
-						helpers.RelaxLog(err)
-						successfulBackfills++
-					}
+		for _, guildID := range channelCreateBackfillGuildIDs {
+			logger().Infof("doing channel create backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionChannelCreate, 10)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
 				}
-				break
-			case AuditLogBackfillTypeChannelDelete:
-				logger().Infof("doing channel delete backfill for guild #%s", backfillToDo.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfillToDo.GuildID, "", "", discordgo.AuditLogActionChannelDelete, 10)
-				helpers.RelaxLog(err)
-				metrics.EventlogAuditLogRequests.Add(1)
-
-				for _, result := range results.AuditLogEntries {
-					elasticTime := helpers.GetTimeFromSnowflake(result.ID)
-
-					elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, backfillToDo.GuildID, result.TargetID, models.EventlogTypeChannelDelete)
-					if err != nil {
-						if strings.Contains(err.Error(), "no fitting items found") {
-							continue
-						}
-					}
-					helpers.RelaxLog(err)
-
-					if len(elasticItems) >= 1 {
-						err = helpers.ElasticAddUserIDToEventLog(
-							elasticItems[0].ElasticID,
-							result.UserID,
-							true,
-						)
-						helpers.RelaxLog(err)
-						successfulBackfills++
-					}
-				}
-				break
 			}
-			time.Sleep(time.Second * 1)
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelCreate)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticAddUserIDToEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
 		}
+
+		for _, guildID := range channelDeleteBackfillGuildIDs {
+			logger().Infof("doing channel delete backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionChannelDelete, 10)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeChannelDelete)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticAddUserIDToEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
 		elapsed := time.Since(start)
 		logger().Infof("did %d audit log backfills, %d entries backfilled, took %s",
-			len(backfillsToDo), successfulBackfills, elapsed)
+			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs), successfulBackfills, elapsed)
 		metrics.EventlogAuditLogBackfillTime.Set(elapsed.Seconds())
 	}
 }
 
-func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) {
-	// TODO: store pending backfills in redis
+func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
 	auditLogBackfillRequestsLock.Lock()
 	defer auditLogBackfillRequestsLock.Unlock()
 
-	for _, request := range auditLogBackfillRequests {
-		if request.GuildID == guildID && request.Type == backfillType {
-			return
-		}
-	}
+	redis := cache.GetRedisClient()
 
-	auditLogBackfillRequests = append(auditLogBackfillRequests, AuditLogBackfillRequest{
-		GuildID: guildID,
-		Type:    backfillType,
-	})
+	switch backfillType {
+	case AuditLogBackfillTypeChannelCreate:
+		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelCreateRedisSet, guildID).Result()
+		return err
+	case AuditLogBackfillTypeChannelDelete:
+		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelDeleteRedisSet, guildID).Result()
+		return err
+	}
+	return errors.New("unknown backfill type")
 }

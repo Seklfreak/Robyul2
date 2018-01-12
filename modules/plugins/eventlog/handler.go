@@ -24,18 +24,7 @@ func (h *Handler) Commands() []string {
 
 type AuditLogBackfillType int
 
-const (
-	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = 1 << iota
-	AuditLogBackfillTypeChannelDelete
-)
-
-type AuditLogBackfillRequest struct {
-	GuildID string
-	Type    AuditLogBackfillType
-}
-
 var (
-	auditLogBackfillRequests     = make([]AuditLogBackfillRequest, 0)
 	auditLogBackfillRequestsLock = sync.Mutex{}
 )
 

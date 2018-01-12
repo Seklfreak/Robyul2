@@ -126,7 +126,8 @@ func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo
 
 		helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelCreate, "", nil, options, true)
 
-		h.requestAuditLogBackfill(channel.GuildID, AuditLogBackfillTypeChannelCreate)
+		err := h.requestAuditLogBackfill(channel.GuildID, AuditLogBackfillTypeChannelCreate)
+		helpers.RelaxLog(err)
 	}()
 }
 
@@ -209,6 +210,7 @@ func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo
 
 		helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelDelete, "", nil, options, true)
 
-		h.requestAuditLogBackfill(channel.GuildID, AuditLogBackfillTypeChannelDelete)
+		err := h.requestAuditLogBackfill(channel.GuildID, AuditLogBackfillTypeChannelDelete)
+		helpers.RelaxLog(err)
 	}()
 }
