@@ -40,11 +40,6 @@ type DB_Twitter_Tweet struct {
 	CreatedAt string `gorethink:"createdat"`
 }
 
-type Twitter_Safe_Entries struct {
-	entries []DB_Twitter_Entry
-	mux     sync.Mutex
-}
-
 var (
 	twitterClient            *twitter.Client
 	twitterStream            *twitter.Stream
@@ -52,6 +47,7 @@ var (
 	twitterStreamNeedsUpdate bool
 	twitterEntriesCache      []DB_Twitter_Entry
 	twitterStreamIsStarting  sync.Mutex
+	twitterEntryLocks        = make(map[string]*sync.Mutex, 0)
 )
 
 const (
@@ -84,6 +80,11 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				continue
 			}
 
+			if _, ok := twitterEntryLocks[entry.ID]; !ok {
+				twitterEntryLocks[entry.ID] = &sync.Mutex{}
+			}
+			twitterEntryLocks[entry.ID].Lock()
+
 			entry := t.getEntryBy("id", entry.ID)
 
 			changes := false
@@ -95,7 +96,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				}
 			}
 			if tweetAlreadyPosted == false {
-				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s", tweet.IDStr))
+				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", tweet.IDStr, entry.ChannelID))
 				entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 				changes = true
 				go t.postTweetToChannel(entry.ChannelID, tweet, tweet.User, entry)
@@ -104,6 +105,8 @@ func (t *Twitter) Init(session *discordgo.Session) {
 			if changes == true {
 				t.setEntry(entry)
 			}
+
+			twitterEntryLocks[entry.ID].Unlock()
 		}
 	}
 
@@ -273,6 +276,11 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			for _, entry := range entries {
+				if _, ok := twitterEntryLocks[entry.ID]; !ok {
+					twitterEntryLocks[entry.ID] = &sync.Mutex{}
+				}
+				twitterEntryLocks[entry.ID].Lock()
+
 				entry := m.getEntryBy("id", entry.ID)
 
 				changes := false
@@ -285,7 +293,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 						}
 					}
 					if tweetAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s", tweet.IDStr))
+						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s to: #%s", tweet.IDStr, entry.ChannelID))
 						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
 						tweetToPost := tweet
@@ -296,6 +304,8 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				if changes == true {
 					m.setEntry(entry)
 				}
+
+				twitterEntryLocks[entry.ID].Unlock()
 			}
 		}
 
