@@ -3,8 +3,6 @@ package eventlog
 import (
 	"strings"
 
-	"sync"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -21,12 +19,6 @@ func (h *Handler) Commands() []string {
 		"eventlog",
 	}
 }
-
-type AuditLogBackfillType int
-
-var (
-	auditLogBackfillRequestsLock = sync.Mutex{}
-)
 
 func (h *Handler) Init(session *discordgo.Session) {
 	defer helpers.Recover()

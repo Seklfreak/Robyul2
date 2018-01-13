@@ -9,17 +9,6 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/pkg/errors"
-)
-
-const (
-	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = 1 << iota
-	AuditLogBackfillTypeChannelDelete
-	AuditLogBackfillTypeRoleCreate
-	AuditLogBackfillTypeRoleDelete
-	AuditLogBackfillTypeBanAdd
-	AuditLogBackfillTypeBanRemove
-	AuditLogBackfillTypeMemberRemove
 )
 
 func auditlogBackfillLoop() {
@@ -38,7 +27,7 @@ func auditlogBackfillLoop() {
 
 		redis := cache.GetRedisClient()
 
-		auditLogBackfillRequestsLock.Lock()
+		helpers.AuditLogBackfillRequestsLock.Lock()
 		channelCreateBackfillGuildIDs, errMembers1 := redis.SMembers(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
 		channelDeleteBackfillGuildIDs, errMembers2 := redis.SMembers(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		roleCreateBackfillGuildIDs, errMembers3 := redis.SMembers(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
@@ -46,6 +35,9 @@ func auditlogBackfillLoop() {
 		banAddBackfillGuildIDs, errMembers5 := redis.SMembers(models.AuditLogBackfillTypeBanAddRedisSet).Result()
 		banRemoveBackfillGuildIDs, errMembers6 := redis.SMembers(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
 		memberRemoveBackfillGuildIDs, errMembers7 := redis.SMembers(models.AuditLogBackfillTypeMemberRemoveRedisSet).Result()
+		emojiCreateBackfillGuildIDs, errMembers8 := redis.SMembers(models.AuditLogBackfillTypeEmojiCreateRedisSet).Result()
+		emojiDeleteBackfillGuildIDs, errMembers9 := redis.SMembers(models.AuditLogBackfillTypeEmojiDeleteRedisSet).Result()
+		emojiUpdateBackfillGuildIDs, errMembers10 := redis.SMembers(models.AuditLogBackfillTypeEmojiUpdateRedisSet).Result()
 		_, errDel1 := redis.Del(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
 		_, errDel2 := redis.Del(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		_, errDel3 := redis.Del(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
@@ -53,7 +45,10 @@ func auditlogBackfillLoop() {
 		_, errDel5 := redis.Del(models.AuditLogBackfillTypeBanAddRedisSet).Result()
 		_, errDel6 := redis.Del(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
 		_, errDel7 := redis.Del(models.AuditLogBackfillTypeMemberRemoveRedisSet).Result()
-		auditLogBackfillRequestsLock.Unlock()
+		_, errDel8 := redis.Del(models.AuditLogBackfillTypeEmojiCreateRedisSet).Result()
+		_, errDel9 := redis.Del(models.AuditLogBackfillTypeEmojiDeleteRedisSet).Result()
+		_, errDel10 := redis.Del(models.AuditLogBackfillTypeEmojiUpdateRedisSet).Result()
+		helpers.AuditLogBackfillRequestsLock.Unlock()
 		helpers.Relax(errMembers1)
 		helpers.Relax(errMembers2)
 		helpers.Relax(errMembers3)
@@ -61,6 +56,9 @@ func auditlogBackfillLoop() {
 		helpers.Relax(errMembers5)
 		helpers.Relax(errMembers6)
 		helpers.Relax(errMembers7)
+		helpers.Relax(errMembers8)
+		helpers.Relax(errMembers9)
+		helpers.Relax(errMembers10)
 		helpers.Relax(errDel1)
 		helpers.Relax(errDel2)
 		helpers.Relax(errDel3)
@@ -68,6 +66,9 @@ func auditlogBackfillLoop() {
 		helpers.Relax(errDel5)
 		helpers.Relax(errDel6)
 		helpers.Relax(errDel7)
+		helpers.Relax(errDel8)
+		helpers.Relax(errDel9)
+		helpers.Relax(errDel10)
 
 		var successfulBackfills int
 
@@ -237,14 +238,14 @@ func auditlogBackfillLoop() {
 						mentionAbleValue, _ := change.OldValue.(bool)
 						options = append(options, models.ElasticEventlogOption{
 							Key:   "role_mentionable",
-							Value: storeBoolAsString(mentionAbleValue),
+							Value: helpers.StoreBoolAsString(mentionAbleValue),
 						})
 						break
 					case "hoist":
 						hoistValue, _ := change.OldValue.(bool)
 						options = append(options, models.ElasticEventlogOption{
 							Key:   "role_hoist",
-							Value: storeBoolAsString(hoistValue),
+							Value: helpers.StoreBoolAsString(hoistValue),
 						})
 						break
 					case "name":
@@ -466,12 +467,136 @@ func auditlogBackfillLoop() {
 			}
 		}
 
+		for _, guildID := range emojiCreateBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing emoji create backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionEmojiCreate, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiCreate, true)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
+		for _, guildID := range emojiDeleteBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing emoji delete backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionEmojiDelete, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiDelete, true)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
+		for _, guildID := range emojiUpdateBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing emoji update backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionEmojiUpdate, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiUpdate, true)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
 		elapsed := time.Since(start)
 		logger().Infof("did %d audit log backfills, %d entries backfilled, took %s",
 			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs)+
 				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+
 				len(banAddBackfillGuildIDs)+len(banRemoveBackfillGuildIDs)+
-				len(memberRemoveBackfillGuildIDs),
+				len(memberRemoveBackfillGuildIDs)+
+				len(emojiCreateBackfillGuildIDs)+len(emojiDeleteBackfillGuildIDs)+len(emojiUpdateBackfillGuildIDs),
 			successfulBackfills, elapsed)
 		metrics.EventlogAuditLogBackfillTime.Set(elapsed.Seconds())
 	}
@@ -487,43 +612,4 @@ func shouldBackfill(guildID string) (do bool) {
 	}
 
 	return true
-}
-
-func (m *Handler) requestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
-	auditLogBackfillRequestsLock.Lock()
-	defer auditLogBackfillRequestsLock.Unlock()
-
-	redis := cache.GetRedisClient()
-
-	switch backfillType {
-	case AuditLogBackfillTypeChannelCreate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel create")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelCreateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeChannelDelete:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel delete")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelDeleteRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeRoleCreate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role create")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleCreateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeRoleDelete:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role delete")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleDeleteRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeBanAdd:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "ban add")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeBanAddRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeBanRemove:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "ban remove")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeBanRemoveRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeMemberRemove:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member remove")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberRemoveRedisSet, guildID).Result()
-		return err
-	}
-	return errors.New("unknown backfill type")
 }

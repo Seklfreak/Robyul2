@@ -8,11 +8,15 @@ const (
 	EventlogTypeRoleCreate    = "Role_Create"    // EventlogTargetTypeRole
 	EventlogTypeRoleDelete    = "Role_Delete"    // EventlogTargetTypeRole
 	EventlogTypeBanAdd        = "Ban_Add"        // EventlogTargetTypeUser
-	EventlogTypeBanRemove     = "Ban_remove"     // EventlogTargetTypeUser
+	EventlogTypeBanRemove     = "Ban_Remove"     // EventlogTargetTypeUser
+	EventlogTypeEmojiCreate   = "Emoji_Create"   // EventlogTargetTypeEmoji
+	EventlogTypeEmojiDelete   = "Emoji_Delete"   // EventlogTargetTypeEmoji
+	EventlogTypeEmojiUpdate   = "Emoji_Update"   // EventlogTargetTypeEmoji
 
 	EventlogTargetTypeUser    = "user"
 	EventlogTargetTypeChannel = "channel"
 	EventlogTargetTypeRole    = "role"
+	EventlogTargetTypeEmoji   = "emoji"
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
@@ -21,4 +25,7 @@ const (
 	AuditLogBackfillTypeBanAddRedisSet        = "robyul-discord:eventlog:auditlog-backfill:ban-add"
 	AuditLogBackfillTypeBanRemoveRedisSet     = "robyul-discord:eventlog:auditlog-backfill:ban-remove"
 	AuditLogBackfillTypeMemberRemoveRedisSet  = "robyul-discord:eventlog:auditlog-backfill:member-remove"
+	AuditLogBackfillTypeEmojiCreateRedisSet   = "robyul-discord:eventlog:auditlog-backfill:emoji-create"
+	AuditLogBackfillTypeEmojiDeleteRedisSet   = "robyul-discord:eventlog:auditlog-backfill:emoji-delete"
+	AuditLogBackfillTypeEmojiUpdateRedisSet   = "robyul-discord:eventlog:auditlog-backfill:emoji-update"
 )
