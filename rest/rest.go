@@ -1419,6 +1419,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	lookupUserIDs := make([]string, 0)
 	lookupChannelIDs := make([]string, 0)
 	lookupRoleIDs := make([]string, 0)
+	lookupEmojiIDs := make([]string, 0)
 
 	var alreadyLookingUp bool
 	for _, item := range searchResult.Hits.Hits {
@@ -1481,6 +1482,16 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 			}
 			if !alreadyLookingUp {
 				lookupRoleIDs = append(lookupRoleIDs, elasticEventlog.TargetID)
+			}
+			break
+		case models.EventlogTargetTypeEmoji:
+			for _, lookupEmojiID := range lookupEmojiIDs {
+				if lookupEmojiID == elasticEventlog.TargetID {
+					alreadyLookingUp = true
+				}
+			}
+			if !alreadyLookingUp {
+				lookupEmojiIDs = append(lookupEmojiIDs, elasticEventlog.TargetID)
 			}
 			break
 		}
@@ -1580,6 +1591,21 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 				Color:       helpers.GetHexFromDiscordColor(role.Color),
 				Position:    role.Position,
 				Permissions: role.Permissions,
+			})
+		}
+	}
+
+	for _, lookupEmojiID := range lookupEmojiIDs {
+		emoji, _ := cache.GetSession().State.Emoji(guildID, lookupEmojiID)
+		if emoji != nil && emoji.ID != "" {
+			eventlog.Emoji = append(eventlog.Emoji, models.Rest_Emoji{
+				ID:            emoji.ID,
+				GuildID:       guildID,
+				Name:          emoji.Name,
+				Managed:       emoji.Managed,
+				RequireColons: emoji.RequireColons,
+				Animated:      emoji.Animated,
+				APIName:       emoji.APIName(),
 			})
 		}
 	}

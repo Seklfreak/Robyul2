@@ -70,6 +70,16 @@ type Rest_Role struct {
 	Permissions int
 }
 
+type Rest_Emoji struct {
+	ID            string
+	GuildID       string
+	Name          string
+	Managed       bool
+	RequireColons bool
+	Animated      bool
+	APIName       string
+}
+
 type Rest_Is_Member struct {
 	IsMember bool
 }
@@ -200,6 +210,7 @@ type Rest_Eventlog struct {
 	Users    []Rest_User
 	Roles    []Rest_Role
 	Entries  []Rest_Eventlog_Entry
+	Emoji    []Rest_Emoji
 }
 
 type Rest_Eventlog_Entry struct {
