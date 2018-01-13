@@ -1420,6 +1420,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	lookupChannelIDs := make([]string, 0)
 	lookupRoleIDs := make([]string, 0)
 	lookupEmojiIDs := make([]string, 0)
+	lookupGuildIDs := make([]string, 0)
 
 	var alreadyLookingUp bool
 	for _, item := range searchResult.Hits.Hits {
@@ -1492,6 +1493,16 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 			}
 			if !alreadyLookingUp {
 				lookupEmojiIDs = append(lookupEmojiIDs, elasticEventlog.TargetID)
+			}
+			break
+		case models.EventlogTargetTypeGuild:
+			for _, lookupGuildID := range lookupGuildIDs {
+				if lookupGuildID == elasticEventlog.TargetID {
+					alreadyLookingUp = true
+				}
+			}
+			if !alreadyLookingUp {
+				lookupGuildIDs = append(lookupGuildIDs, elasticEventlog.TargetID)
 			}
 			break
 		}
@@ -1606,6 +1617,100 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 				RequireColons: emoji.RequireColons,
 				Animated:      emoji.Animated,
 				APIName:       emoji.APIName(),
+			})
+		}
+	}
+
+	for _, lookupGuildID := range lookupGuildIDs {
+		guild, _ := cache.GetSession().State.Guild(lookupGuildID)
+		if guild != nil && guild.ID != "" {
+			joinedAt, _ := guild.JoinedAt.Parse()
+
+			var featureLevels_Badges models.Rest_Feature_Levels_Badges
+			key := fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+			if err = cache.GetRedisCacheCodec().Get(key, &featureLevels_Badges); err != nil {
+				featureLevels_Badges = models.Rest_Feature_Levels_Badges{
+					Count: 0,
+				}
+			}
+
+			var featureRandomPictures models.Rest_Feature_RandomPictures
+			key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+			if err = cache.GetRedisCacheCodec().Get(key, &featureRandomPictures); err != nil {
+				featureRandomPictures = models.Rest_Feature_RandomPictures{
+					Count: 0,
+				}
+			}
+
+			botPrefix := helpers.GetPrefixForServer(guild.ID)
+
+			channels := make([]models.Rest_Channel, 0)
+			sort.Slice(guild.Channels, func(i, j int) bool { return guild.Channels[i].Position < guild.Channels[j].Position })
+			for _, channel := range guild.Channels {
+				channelType := "text"
+				switch channel.Type {
+				case discordgo.ChannelTypeGuildVoice:
+					channelType = "voice"
+				case discordgo.ChannelTypeGuildCategory:
+					channelType = "category"
+				}
+				channels = append(channels, models.Rest_Channel{
+					ID:       channel.ID,
+					ParentID: channel.ParentID,
+					GuildID:  channel.GuildID,
+					Name:     channel.Name,
+					Type:     channelType,
+					Topic:    channel.Topic,
+					Position: channel.Position,
+				})
+			}
+
+			guildSettings := helpers.GuildSettingsGetCached(guild.ID)
+			featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
+			if guildSettings.ChatlogDisabled {
+				featureChatlog.Enabled = false
+			}
+
+			featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
+			if guildSettings.EventlogDisabled {
+				featureEventlog.Enabled = false
+			}
+
+			vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
+			var featureVanityInvite models.Rest_Feature_VanityInvite
+			featureVanityInvite.VanityInviteName = vanityInvite.VanityName
+
+			featureModules := make([]models.Rest_Feature_Module, 0)
+			disabledModules := helpers.GetDisabledModules(guildID)
+		NextModule:
+			for _, module := range helpers.Modules {
+				for _, disabledModule := range disabledModules {
+					if disabledModule == module.Permission {
+						continue NextModule
+					}
+				}
+				featureModules = append(featureModules, models.Rest_Feature_Module{
+					Name: helpers.GetModuleNameById(module.Permission),
+					ID:   module.Permission,
+				})
+			}
+
+			eventlog.Guilds = append(eventlog.Guilds, models.Rest_Guild{
+				ID:        guild.ID,
+				Name:      guild.Name,
+				Icon:      guild.Icon,
+				OwnerID:   guild.OwnerID,
+				JoinedAt:  joinedAt,
+				BotPrefix: botPrefix,
+				Features: models.Rest_Guild_Features{
+					Levels_Badges:  featureLevels_Badges,
+					RandomPictures: featureRandomPictures,
+					Chatlog:        featureChatlog,
+					VanityInvite:   featureVanityInvite,
+					Modules:        featureModules,
+					Eventlog:       featureEventlog,
+				},
+				Channels: channels,
 			})
 		}
 	}

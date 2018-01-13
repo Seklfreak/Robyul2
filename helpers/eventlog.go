@@ -5,6 +5,8 @@ import (
 
 	"sync"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -68,6 +70,7 @@ const (
 	AuditLogBackfillTypeEmojiCreate
 	AuditLogBackfillTypeEmojiDelete
 	AuditLogBackfillTypeEmojiUpdate
+	AuditLogBackfillTypeGuildUpdate
 )
 
 func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
@@ -117,170 +120,289 @@ func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) 
 		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "emoji update")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeEmojiUpdateRedisSet, guildID).Result()
 		return err
+	case AuditLogBackfillTypeGuildUpdate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "guild update")
+		_, err := redis.SAdd(models.AuditLogBackfillTypeGuildUpdateRedisSet, guildID).Result()
+		return err
 	}
 	return errors.New("unknown backfill type")
 }
 
 func OnEmojiCreate(guildID string, emoji *discordgo.Emoji) {
-	go func() {
-		defer Recover()
+	leftAt := time.Now()
 
-		leftAt := time.Now()
+	options := make([]models.ElasticEventlogOption, 0)
 
-		options := make([]models.ElasticEventlogOption, 0)
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_name",
+		Value: emoji.Name,
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_name",
-			Value: emoji.Name,
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_managed",
+		Value: StoreBoolAsString(emoji.Managed),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_managed",
-			Value: StoreBoolAsString(emoji.Managed),
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_requirecolons",
+		Value: StoreBoolAsString(emoji.RequireColons),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_requirecolons",
-			Value: StoreBoolAsString(emoji.RequireColons),
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_animated",
+		Value: StoreBoolAsString(emoji.Animated),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_animated",
-			Value: StoreBoolAsString(emoji.Animated),
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_apiname",
+		Value: emoji.APIName(),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_apiname",
-			Value: emoji.APIName(),
-		})
+	EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
 
-		EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
-
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiCreate)
-		RelaxLog(err)
-	}()
+	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiCreate)
+	RelaxLog(err)
 }
 
 func OnEmojiDelete(guildID string, emoji *discordgo.Emoji) {
-	go func() {
-		defer Recover()
+	leftAt := time.Now()
 
-		leftAt := time.Now()
+	options := make([]models.ElasticEventlogOption, 0)
 
-		options := make([]models.ElasticEventlogOption, 0)
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_name",
+		Value: emoji.Name,
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_name",
-			Value: emoji.Name,
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_managed",
+		Value: StoreBoolAsString(emoji.Managed),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_managed",
-			Value: StoreBoolAsString(emoji.Managed),
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_requirecolons",
+		Value: StoreBoolAsString(emoji.RequireColons),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_requirecolons",
-			Value: StoreBoolAsString(emoji.RequireColons),
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_animated",
+		Value: StoreBoolAsString(emoji.Animated),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_animated",
-			Value: StoreBoolAsString(emoji.Animated),
-		})
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_apiname",
+		Value: emoji.APIName(),
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_apiname",
-			Value: emoji.APIName(),
-		})
+	EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
 
-		EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
-
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiDelete)
-		RelaxLog(err)
-	}()
+	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiDelete)
+	RelaxLog(err)
 }
 
 func OnEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) {
-	go func() {
-		defer Recover()
+	leftAt := time.Now()
 
-		leftAt := time.Now()
+	options := make([]models.ElasticEventlogOption, 0)
 
-		options := make([]models.ElasticEventlogOption, 0)
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_name",
+		Value: newEmoji.Name,
+	})
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_name",
-			Value: newEmoji.Name,
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_managed",
+		Value: StoreBoolAsString(newEmoji.Managed),
+	})
+
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_requirecolons",
+		Value: StoreBoolAsString(newEmoji.RequireColons),
+	})
+
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_animated",
+		Value: StoreBoolAsString(newEmoji.Animated),
+	})
+
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_apiname",
+		Value: newEmoji.APIName(),
+	})
+
+	changes := make([]models.ElasticEventlogChange, 0)
+
+	if oldEmoji.Name != newEmoji.Name {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "emoji_name",
+			OldValue: oldEmoji.Name,
+			NewValue: newEmoji.Name,
 		})
+	}
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_managed",
-			Value: StoreBoolAsString(newEmoji.Managed),
+	if oldEmoji.Managed != newEmoji.Managed {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "emoji_managed",
+			OldValue: StoreBoolAsString(oldEmoji.Managed),
+			NewValue: StoreBoolAsString(newEmoji.Managed),
 		})
+	}
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_requirecolons",
-			Value: StoreBoolAsString(newEmoji.RequireColons),
+	if oldEmoji.RequireColons != newEmoji.RequireColons {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "emoji_requirecolons",
+			OldValue: StoreBoolAsString(oldEmoji.RequireColons),
+			NewValue: StoreBoolAsString(newEmoji.RequireColons),
 		})
+	}
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_animated",
-			Value: StoreBoolAsString(newEmoji.Animated),
+	if oldEmoji.Animated != newEmoji.Animated {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "emoji_animated",
+			OldValue: StoreBoolAsString(oldEmoji.Animated),
+			NewValue: StoreBoolAsString(newEmoji.Animated),
 		})
+	}
 
-		options = append(options, models.ElasticEventlogOption{
-			Key:   "emoji_apiname",
-			Value: newEmoji.APIName(),
+	if oldEmoji.APIName() != newEmoji.APIName() {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "emoji_apiname",
+			OldValue: oldEmoji.APIName(),
+			NewValue: newEmoji.APIName(),
 		})
+	}
 
-		changes := make([]models.ElasticEventlogChange, 0)
+	EventlogLog(leftAt, guildID, newEmoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiUpdate, "", changes, options, true)
 
-		if oldEmoji.Name != newEmoji.Name {
-			changes = append(changes, models.ElasticEventlogChange{
-				Key:      "emoji_name",
-				OldValue: oldEmoji.Name,
-				NewValue: newEmoji.Name,
-			})
+	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiUpdate)
+	RelaxLog(err)
+}
+
+func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) {
+	leftAt := time.Now()
+
+	changes := make([]models.ElasticEventlogChange, 0)
+	if oldGuild.Name != newGuild.Name {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_name",
+			OldValue: oldGuild.Name,
+			NewValue: newGuild.Name,
+		})
+	}
+
+	if oldGuild.Icon != newGuild.Icon {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_icon",
+			OldValue: oldGuild.Icon,
+			NewValue: newGuild.Icon,
+		})
+	}
+
+	if oldGuild.Region != newGuild.Region {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_region",
+			OldValue: oldGuild.Region,
+			NewValue: newGuild.Region,
+		})
+	}
+
+	if oldGuild.AfkChannelID != newGuild.AfkChannelID {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_afkchannelid",
+			OldValue: oldGuild.AfkChannelID,
+			NewValue: newGuild.AfkChannelID,
+		})
+	}
+
+	if oldGuild.EmbedChannelID != newGuild.EmbedChannelID {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_embedchannelid",
+			OldValue: oldGuild.EmbedChannelID,
+			NewValue: newGuild.EmbedChannelID,
+		})
+	}
+
+	if oldGuild.OwnerID != newGuild.OwnerID {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_ownerid",
+			OldValue: oldGuild.OwnerID,
+			NewValue: newGuild.OwnerID,
+		})
+	}
+
+	if oldGuild.Splash != newGuild.Splash {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_splash",
+			OldValue: oldGuild.Splash,
+			NewValue: newGuild.Splash,
+		})
+	}
+
+	if oldGuild.AfkTimeout != newGuild.AfkTimeout {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_afktimeout",
+			OldValue: strconv.Itoa(oldGuild.AfkTimeout),
+			NewValue: strconv.Itoa(newGuild.AfkTimeout),
+		})
+	}
+
+	if oldGuild.VerificationLevel != newGuild.VerificationLevel {
+		var oldVerificationLevel, newVerificationLevel string
+		switch oldGuild.VerificationLevel {
+		case discordgo.VerificationLevelNone:
+			oldVerificationLevel = "none"
+			break
+		case discordgo.VerificationLevelLow:
+			oldVerificationLevel = "low"
+			break
+		case discordgo.VerificationLevelMedium:
+			oldVerificationLevel = "medium"
+			break
+		case discordgo.VerificationLevelHigh:
+			oldVerificationLevel = "high"
+			break
 		}
-
-		if oldEmoji.Managed != newEmoji.Managed {
-			changes = append(changes, models.ElasticEventlogChange{
-				Key:      "emoji_managed",
-				OldValue: StoreBoolAsString(oldEmoji.Managed),
-				NewValue: StoreBoolAsString(newEmoji.Managed),
-			})
+		switch newGuild.VerificationLevel {
+		case discordgo.VerificationLevelNone:
+			newVerificationLevel = "none"
+			break
+		case discordgo.VerificationLevelLow:
+			newVerificationLevel = "low"
+			break
+		case discordgo.VerificationLevelMedium:
+			newVerificationLevel = "medium"
+			break
+		case discordgo.VerificationLevelHigh:
+			newVerificationLevel = "high"
+			break
 		}
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_verificationlevel",
+			OldValue: oldVerificationLevel,
+			NewValue: newVerificationLevel,
+		})
+	}
 
-		if oldEmoji.RequireColons != newEmoji.RequireColons {
-			changes = append(changes, models.ElasticEventlogChange{
-				Key:      "emoji_requirecolons",
-				OldValue: StoreBoolAsString(oldEmoji.RequireColons),
-				NewValue: StoreBoolAsString(newEmoji.RequireColons),
-			})
-		}
+	if oldGuild.EmbedEnabled != newGuild.EmbedEnabled {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_embedenabled",
+			OldValue: StoreBoolAsString(oldGuild.EmbedEnabled),
+			NewValue: StoreBoolAsString(newGuild.EmbedEnabled),
+		})
+	}
 
-		if oldEmoji.Animated != newEmoji.Animated {
-			changes = append(changes, models.ElasticEventlogChange{
-				Key:      "emoji_animated",
-				OldValue: StoreBoolAsString(oldEmoji.Animated),
-				NewValue: StoreBoolAsString(newEmoji.Animated),
-			})
-		}
+	if oldGuild.DefaultMessageNotifications != newGuild.DefaultMessageNotifications {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "guild_defaultmessagenotifications",
+			OldValue: strconv.Itoa(oldGuild.DefaultMessageNotifications),
+			NewValue: strconv.Itoa(newGuild.DefaultMessageNotifications),
+		})
+	}
 
-		if oldEmoji.APIName() != newEmoji.APIName() {
-			changes = append(changes, models.ElasticEventlogChange{
-				Key:      "emoji_apiname",
-				OldValue: oldEmoji.APIName(),
-				NewValue: newEmoji.APIName(),
-			})
-		}
+	EventlogLog(leftAt, guildID, newGuild.ID, models.EventlogTargetTypeGuild, "", models.EventlogTypeGuildUpdate, "", changes, nil, true)
 
-		EventlogLog(leftAt, guildID, newEmoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiUpdate, "", changes, options, true)
-
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiUpdate)
-		RelaxLog(err)
-	}()
+	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeGuildUpdate)
+	RelaxLog(err)
 }
 
 func StoreBoolAsString(input bool) (output string) {

@@ -211,6 +211,7 @@ type Rest_Eventlog struct {
 	Roles    []Rest_Role
 	Entries  []Rest_Eventlog_Entry
 	Emoji    []Rest_Emoji
+	Guilds   []Rest_Guild
 }
 
 type Rest_Eventlog_Entry struct {

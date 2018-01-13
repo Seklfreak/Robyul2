@@ -12,11 +12,13 @@ const (
 	EventlogTypeEmojiCreate   = "Emoji_Create"   // EventlogTargetTypeEmoji
 	EventlogTypeEmojiDelete   = "Emoji_Delete"   // EventlogTargetTypeEmoji
 	EventlogTypeEmojiUpdate   = "Emoji_Update"   // EventlogTargetTypeEmoji
+	EventlogTypeGuildUpdate   = "Guild_Update"   // EventlogTargetTypeGuild
 
 	EventlogTargetTypeUser    = "user"
 	EventlogTargetTypeChannel = "channel"
 	EventlogTargetTypeRole    = "role"
 	EventlogTargetTypeEmoji   = "emoji"
+	EventlogTargetTypeGuild   = "guild"
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
@@ -28,4 +30,5 @@ const (
 	AuditLogBackfillTypeEmojiCreateRedisSet   = "robyul-discord:eventlog:auditlog-backfill:emoji-create"
 	AuditLogBackfillTypeEmojiDeleteRedisSet   = "robyul-discord:eventlog:auditlog-backfill:emoji-delete"
 	AuditLogBackfillTypeEmojiUpdateRedisSet   = "robyul-discord:eventlog:auditlog-backfill:emoji-update"
+	AuditLogBackfillTypeGuildUpdateRedisSet   = "robyul-discord:eventlog:auditlog-backfill:guild-update"
 )
