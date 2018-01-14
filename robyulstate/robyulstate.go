@@ -16,7 +16,6 @@ type Robyulstate struct {
 	sync.RWMutex
 
 	guildMap map[string]*discordgo.Guild
-	emojiMap map[string][]*discordgo.Emoji
 
 	Logger func(msgL, caller int, format string, a ...interface{})
 }
@@ -24,7 +23,6 @@ type Robyulstate struct {
 func NewState() *Robyulstate {
 	return &Robyulstate{
 		guildMap: make(map[string]*discordgo.Guild),
-		emojiMap: make(map[string][]*discordgo.Emoji),
 	}
 }
 
@@ -190,10 +188,26 @@ func (s *Robyulstate) GuildAdd(guild *discordgo.Guild) error {
 
 	guildCopy := new(discordgo.Guild)
 	*guildCopy = *guild
-	s.guildMap[guild.ID] = guildCopy
 
-	s.emojiMap[guild.ID] = make([]*discordgo.Emoji, len(guild.Emojis))
-	copy(s.emojiMap[guild.ID], guild.Emojis)
+	guildCopy.Roles = make([]*discordgo.Role, len(guild.Roles))
+	copy(guildCopy.Roles, guild.Roles)
+
+	guildCopy.Emojis = make([]*discordgo.Emoji, len(guild.Emojis))
+	copy(guildCopy.Emojis, guild.Emojis)
+
+	guildCopy.Members = make([]*discordgo.Member, len(guild.Members))
+	copy(guildCopy.Members, guild.Members)
+
+	guildCopy.Presences = make([]*discordgo.Presence, len(guild.Presences))
+	copy(guildCopy.Presences, guild.Presences)
+
+	guildCopy.Channels = make([]*discordgo.Channel, len(guild.Channels))
+	copy(guildCopy.Channels, guild.Channels)
+
+	guildCopy.VoiceStates = make([]*discordgo.VoiceState, len(guild.VoiceStates))
+	copy(guildCopy.VoiceStates, guild.VoiceStates)
+
+	s.guildMap[guild.ID] = guildCopy
 
 	return nil
 }
@@ -242,7 +256,6 @@ func (s *Robyulstate) GuildRemove(guild *discordgo.Guild) error {
 	defer s.Unlock()
 
 	s.guildMap[guild.ID] = nil
-	s.emojiMap[guild.ID] = nil
 
 	return nil
 }
@@ -255,12 +268,17 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.emojiMap[guildID]; !ok {
-		s.emojiMap[guildID] = emojis
+	if _, ok := s.guildMap[guildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[guildID].Emojis == nil {
+		s.guildMap[guildID].Emojis = make([]*discordgo.Emoji, len(emojis))
+		copy(s.guildMap[guildID].Emojis, emojis)
 	}
 
 	// remove guild emoji not in emojis
-	for i, oldEmoji := range s.emojiMap[guildID] {
+	for i, oldEmoji := range s.guildMap[guildID].Emojis {
 		emojiRemoved := true
 		for _, newEmoji := range emojis {
 			if newEmoji.ID == oldEmoji.ID {
@@ -268,15 +286,15 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 			}
 		}
 		if emojiRemoved {
-			s.emojiMap[guildID] = append(s.emojiMap[guildID][:i], s.emojiMap[guildID][i+1:]...)
+			s.guildMap[guildID].Emojis = append(s.guildMap[guildID].Emojis[:i], s.guildMap[guildID].Emojis[i+1:]...)
 			// emoji got removed
 			//fmt.Println("emoji removed", oldEmoji.Name)
-			helpers.OnEmojiDelete(guildID, oldEmoji)
+			helpers.OnEventlogEmojiDelete(guildID, oldEmoji)
 		}
 	}
 
 	// update guild emoji
-	for j, oldEmoji := range s.emojiMap[guildID] {
+	for j, oldEmoji := range s.guildMap[guildID].Emojis {
 		for i, newEmoji := range emojis {
 			if oldEmoji.ID == newEmoji.ID {
 				if oldEmoji.Name != newEmoji.Name ||
@@ -285,20 +303,20 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 					oldEmoji.Managed != newEmoji.Managed {
 					// emoji got updated
 					//fmt.Println("emoji update", oldEmoji.Name, "to", newEmoji.Name)
-					helpers.OnEmojiUpdate(guildID, oldEmoji, newEmoji)
+					helpers.OnEventlogEmojiUpdate(guildID, oldEmoji, newEmoji)
 				}
 				emojis = append(emojis[:i], emojis[i+1:]...)
-				s.emojiMap[guildID][j] = newEmoji
+				s.guildMap[guildID].Emojis[j] = newEmoji
 			}
 		}
 	}
 
 	// add guild emoji
 	for _, newEmoji := range emojis {
-		s.emojiMap[guildID] = append(s.emojiMap[guildID], newEmoji)
+		s.guildMap[guildID].Emojis = append(s.guildMap[guildID].Emojis, newEmoji)
 		// emoji got added
 		//fmt.Println("emoji added", newEmoji.Name)
-		helpers.OnEmojiCreate(guildID, newEmoji)
+		helpers.OnEventlogEmojiCreate(guildID, newEmoji)
 	}
 
 	return nil

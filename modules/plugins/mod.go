@@ -2293,7 +2293,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				})
 			}
 
-			helpers.EventlogLog(joinedAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberJoin, "", nil, options, false)
+			_, err := helpers.EventlogLog(joinedAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberJoin, "", nil, options, false)
+			helpers.RelaxLog(err)
 		}()
 	}()
 }

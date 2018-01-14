@@ -18,21 +18,21 @@ var (
 )
 
 func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
-	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (err error) {
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (added bool, err error) {
 	if guildID == "" {
-		return nil
+		return false, nil
 	}
 
 	if IsBlacklistedGuild(guildID) {
-		return nil
+		return false, nil
 	}
 
 	if IsLimitedGuild(guildID) {
-		return nil
+		return false, nil
 	}
 
 	if GuildSettingsGetCached(guildID).EventlogDisabled {
-		return nil
+		return false, nil
 	}
 
 	if changes == nil {
@@ -52,9 +52,13 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",
 		createdAt.Format(time.RFC3339), guildID, targetID, userID, actionType, reason, changes, options,
 	)
-	ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill)
+	err = ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill)
 
-	return
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 type AuditLogBackfillType int
@@ -128,7 +132,7 @@ func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) 
 	return errors.New("unknown backfill type")
 }
 
-func OnEmojiCreate(guildID string, emoji *discordgo.Emoji) {
+func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 	leftAt := time.Now()
 
 	options := make([]models.ElasticEventlogOption, 0)
@@ -158,13 +162,15 @@ func OnEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 		Value: emoji.APIName(),
 	})
 
-	EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
-
-	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiCreate)
+	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
 	RelaxLog(err)
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiCreate)
+		RelaxLog(err)
+	}
 }
 
-func OnEmojiDelete(guildID string, emoji *discordgo.Emoji) {
+func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 	leftAt := time.Now()
 
 	options := make([]models.ElasticEventlogOption, 0)
@@ -194,13 +200,15 @@ func OnEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 		Value: emoji.APIName(),
 	})
 
-	EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
-
-	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiDelete)
+	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
 	RelaxLog(err)
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiDelete)
+		RelaxLog(err)
+	}
 }
 
-func OnEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) {
+func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) {
 	leftAt := time.Now()
 
 	options := make([]models.ElasticEventlogOption, 0)
@@ -272,10 +280,12 @@ func OnEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) {
 		})
 	}
 
-	EventlogLog(leftAt, guildID, newEmoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiUpdate, "", changes, options, true)
-
-	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiUpdate)
+	added, err := EventlogLog(leftAt, guildID, newEmoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiUpdate, "", changes, options, true)
 	RelaxLog(err)
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiUpdate)
+		RelaxLog(err)
+	}
 }
 
 func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) {
@@ -399,10 +409,12 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 		})
 	}
 
-	EventlogLog(leftAt, guildID, newGuild.ID, models.EventlogTargetTypeGuild, "", models.EventlogTypeGuildUpdate, "", changes, nil, true)
-
-	err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeGuildUpdate)
+	added, err := EventlogLog(leftAt, guildID, newGuild.ID, models.EventlogTargetTypeGuild, "", models.EventlogTypeGuildUpdate, "", changes, nil, true)
 	RelaxLog(err)
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeGuildUpdate)
+		RelaxLog(err)
+	}
 }
 
 func StoreBoolAsString(input bool) (output string) {
