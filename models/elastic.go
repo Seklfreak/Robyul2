@@ -102,6 +102,7 @@ type ElasticEventlog struct {
 	WaitingFor struct {
 		AuditLogBackfill bool
 	}
+	EventlogMessages []string
 }
 
 type ElasticEventlogChange struct {

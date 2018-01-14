@@ -511,7 +511,7 @@ func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTi
 }
 
 func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
-	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (err error) {
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool, messageIDs []string) (err error) {
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -531,6 +531,7 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 		}{
 			AuditLogBackfill: waitingForAuditLogBackfill,
 		},
+		EventlogMessages: messageIDs,
 	}
 
 	_, err = cache.GetElastic().Index().
@@ -543,21 +544,21 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 
 func ElasticUpdateEventLog(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
-	reason string, auditLogBackfilled bool) error {
+	reason string, auditLogBackfilled bool) (eventlogItem *models.ElasticEventlog, err error) {
 	if !cache.HasElastic() {
-		return errors.New("no elastic client")
+		return nil, errors.New("no elastic client")
 	}
 
 	get1, err := cache.GetElastic().Get().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
 		Do(context.Background())
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	var elasticEventlog models.ElasticEventlog
 	err = json.Unmarshal(*get1.Source, &elasticEventlog)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if UserID != "" {
@@ -626,7 +627,7 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
 		Doc(elasticEventlog).
 		Do(context.Background())
-	return err
+	return &elasticEventlog, err
 }
 
 type GetElasticEventlogsResult struct {

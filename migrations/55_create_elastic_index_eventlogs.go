@@ -92,7 +92,7 @@ func m55_create_elastic_index_eventlogs() {
 							},
 						},
 					},
-					"MessageID": map[string]interface{}{
+					"EventlogMessages": map[string]interface{}{
 						"type": "text",
 					},
 				},

@@ -56,13 +56,96 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",
 		createdAt.Format(time.RFC3339), guildID, targetID, userID, actionType, reason, changes, options,
 	)
-	err = ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill)
+
+	messageIDs := make([]string, 0)
+	eventlogChannelIDs := GuildSettingsGetCached(guildID).EventlogChannelIDs
+	for _, eventlogChannelID := range eventlogChannelIDs {
+		messages, _ := SendEmbed(eventlogChannelID, getEventlogEmbed(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill))
+		if messages != nil && len(messages) >= 1 {
+			messageIDs = append(messageIDs, eventlogChannelID+"|"+messages[0].ID)
+		}
+	}
+
+	err = ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill, messageIDs)
 
 	if err != nil {
 		return false, err
 	}
 
 	return true, nil
+}
+
+func EventlogLogUpdate(elasticID string, UserID string,
+	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
+	reason string, auditLogBackfilled bool) (err error) {
+	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, options, changes, reason, auditLogBackfilled)
+	if err != nil {
+		return
+	}
+
+	if eventlogItem != nil && eventlogItem.EventlogMessages != nil && len(eventlogItem.EventlogMessages) > 0 {
+		embed := getEventlogEmbed(eventlogItem.CreatedAt, eventlogItem.GuildID, eventlogItem.TargetID,
+			eventlogItem.TargetType, eventlogItem.UserID, eventlogItem.ActionType, eventlogItem.Reason,
+			eventlogItem.Changes, eventlogItem.Options, eventlogItem.WaitingFor.AuditLogBackfill)
+		for _, messageID := range eventlogItem.EventlogMessages {
+			if strings.Contains(messageID, "|") {
+				parts := strings.SplitN(messageID, "|", 2)
+				if len(parts) >= 2 {
+					EditEmbed(parts[0], parts[1], embed)
+				}
+			}
+		}
+	}
+
+	return
+}
+
+func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (embed *discordgo.MessageEmbed) {
+	embed = &discordgo.MessageEmbed{
+		URL:       "",
+		Type:      "",
+		Title:     actionType + ": #" + targetID + " (" + targetType + ")",
+		Timestamp: createdAt.Format(time.RFC3339),
+		Color:     0,
+		Fields: []*discordgo.MessageEmbedField{{
+			Name:  "Reason",
+			Value: reason,
+		},
+		},
+	}
+
+	if changes != nil {
+		for _, change := range changes {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:  change.Key,
+				Value: change.OldValue + " ➡ " + change.NewValue,
+			})
+		}
+	}
+
+	if options != nil {
+		for _, option := range options {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:  option.Key,
+				Value: option.Value,
+			})
+		}
+	}
+
+	if userID != "" {
+		user, err := GetUserWithoutAPI(userID)
+		if err != nil {
+			user = new(discordgo.User)
+			user.Username = "N/A"
+		}
+		embed.Author = &discordgo.MessageEmbedAuthor{
+			Name:    user.Username,
+			IconURL: user.AvatarURL("64"),
+		}
+	}
+
+	return embed
 }
 
 type AuditLogBackfillType int

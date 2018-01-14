@@ -111,7 +111,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -152,7 +152,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -193,7 +193,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -234,7 +234,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -315,7 +315,7 @@ func auditlogBackfillLoop() {
 				}
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						options,
@@ -356,7 +356,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -397,7 +397,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -418,7 +418,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						[]models.ElasticEventlogOption{{
@@ -462,7 +462,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -503,7 +503,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						[]models.ElasticEventlogOption{{
@@ -547,7 +547,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -588,7 +588,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -629,7 +629,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -670,7 +670,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
@@ -711,7 +711,7 @@ func auditlogBackfillLoop() {
 				helpers.RelaxLog(err)
 
 				if len(elasticItems) >= 1 {
-					err = helpers.ElasticUpdateEventLog(
+					err = helpers.EventlogLogUpdate(
 						elasticItems[0].ElasticID,
 						result.UserID,
 						nil,
