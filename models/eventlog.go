@@ -5,6 +5,7 @@ const (
 	EventlogTypeMemberLeave   = "Member_Leave"   // EventlogTargetTypeUser
 	EventlogTypeChannelCreate = "Channel_Create" // EventlogTargetTypeChannel
 	EventlogTypeChannelDelete = "Channel_Delete" // EventlogTargetTypeChannel
+	EventlogTypeChannelUpdate = "Channel_Update" // EventlogTargetTypeChannel
 	EventlogTypeRoleCreate    = "Role_Create"    // EventlogTargetTypeRole
 	EventlogTypeRoleDelete    = "Role_Delete"    // EventlogTargetTypeRole
 	EventlogTypeBanAdd        = "Ban_Add"        // EventlogTargetTypeUser
@@ -22,6 +23,7 @@ const (
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
+	AuditLogBackfillTypeChannelUpdateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-update"
 	AuditLogBackfillTypeRoleCreateRedisSet    = "robyul-discord:eventlog:auditlog-backfill:role-create"
 	AuditLogBackfillTypeRoleDeleteRedisSet    = "robyul-discord:eventlog:auditlog-backfill:role-delete"
 	AuditLogBackfillTypeBanAddRedisSet        = "robyul-discord:eventlog:auditlog-backfill:ban-add"

@@ -1315,51 +1315,38 @@ func ChannelPermissionsInSync(childChannelID string) (inSync bool) {
 		return false
 	}
 
-	newChildChannelPermissionOverwrites := make([]*discordgo.PermissionOverwrite, 0)
-	for _, permissionOverwrite := range childChannel.PermissionOverwrites {
-		if permissionOverwrite.Allow == 0 && permissionOverwrite.Deny == 0 {
-			continue
+	return ChannelOverwritesMatch(parentChannel.PermissionOverwrites, childChannel.PermissionOverwrites)
+}
+
+func ChannelOverwritesMatch(aOverwrites, bOverwrites []*discordgo.PermissionOverwrite) (match bool) {
+	slice.Sort(aOverwrites, func(i, j int) bool {
+		if strings.Compare(aOverwrites[i].ID, aOverwrites[j].ID) > 0 {
+			return true
 		}
-		newChildChannelPermissionOverwrites = append(newChildChannelPermissionOverwrites, permissionOverwrite)
-	}
-	childChannel.PermissionOverwrites = newChildChannelPermissionOverwrites
-	slice.Sort(childChannel.PermissionOverwrites, func(i, j int) bool {
-		if strings.Compare(childChannel.PermissionOverwrites[i].ID, childChannel.PermissionOverwrites[j].ID) > 0 {
+		return false
+	})
+	slice.Sort(bOverwrites, func(i, j int) bool {
+		if strings.Compare(bOverwrites[i].ID, bOverwrites[j].ID) > 0 {
 			return true
 		}
 		return false
 	})
 
-	newParentChannelPermissionOverwrites := make([]*discordgo.PermissionOverwrite, 0)
-	for _, permissionOverwrite := range parentChannel.PermissionOverwrites {
-		if permissionOverwrite.Allow == 0 && permissionOverwrite.Deny == 0 {
-			continue
-		}
-		newParentChannelPermissionOverwrites = append(newParentChannelPermissionOverwrites, permissionOverwrite)
-	}
-	parentChannel.PermissionOverwrites = newParentChannelPermissionOverwrites
-	slice.Sort(parentChannel.PermissionOverwrites, func(i, j int) bool {
-		if strings.Compare(parentChannel.PermissionOverwrites[i].ID, parentChannel.PermissionOverwrites[j].ID) > 0 {
-			return true
-		}
-		return false
-	})
-
-	if len(childChannel.PermissionOverwrites) != len(parentChannel.PermissionOverwrites) {
+	if len(aOverwrites) != len(bOverwrites) {
 		return false
 	}
 
-	for i := 0; i < len(childChannel.PermissionOverwrites); i++ {
-		if childChannel.PermissionOverwrites[i].ID != parentChannel.PermissionOverwrites[i].ID {
+	for i := 0; i < len(aOverwrites); i++ {
+		if aOverwrites[i].ID != bOverwrites[i].ID {
 			return false
 		}
-		if childChannel.PermissionOverwrites[i].Type != parentChannel.PermissionOverwrites[i].Type {
+		if aOverwrites[i].Type != bOverwrites[i].Type {
 			return false
 		}
-		if childChannel.PermissionOverwrites[i].Allow != parentChannel.PermissionOverwrites[i].Allow {
+		if aOverwrites[i].Allow != bOverwrites[i].Allow {
 			return false
 		}
-		if childChannel.PermissionOverwrites[i].Deny != parentChannel.PermissionOverwrites[i].Deny {
+		if aOverwrites[i].Deny != bOverwrites[i].Deny {
 			return false
 		}
 	}

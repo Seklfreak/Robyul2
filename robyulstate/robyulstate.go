@@ -63,67 +63,16 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 		err = s.GuildRemove(t.Guild)
 	case *discordgo.GuildEmojisUpdate:
 		err = s.EmojisUpdate(t.GuildID, t.Emojis)
+	case *discordgo.ChannelUpdate:
+		err = s.ChannelUpdate(t.Channel)
 		/*
-			case *GuildMemberAdd:
-				if s.TrackMembers {
-					err = s.MemberAdd(t.Member)
-				}
 			case *GuildMemberUpdate:
 				if s.TrackMembers {
 					err = s.MemberAdd(t.Member)
 				}
-			case *GuildMemberRemove:
-				if s.TrackMembers {
-					err = s.MemberRemove(t.Member)
-				}
-			case *GuildMembersChunk:
-				if s.TrackMembers {
-					for i := range t.Members {
-						t.Members[i].GuildID = t.GuildID
-						err = s.MemberAdd(t.Members[i])
-					}
-				}
-			case *GuildRoleCreate:
-				if s.TrackRoles {
-					err = s.RoleAdd(t.GuildID, t.Role)
-				}
 			case *GuildRoleUpdate:
 				if s.TrackRoles {
 					err = s.RoleAdd(t.GuildID, t.Role)
-				}
-			case *GuildRoleDelete:
-				if s.TrackRoles {
-					err = s.RoleRemove(t.GuildID, t.RoleID)
-				}
-			case *ChannelCreate:
-				if s.TrackChannels {
-					err = s.ChannelAdd(t.Channel)
-				}
-			case *ChannelUpdate:
-				if s.TrackChannels {
-					err = s.ChannelAdd(t.Channel)
-				}
-			case *ChannelDelete:
-				if s.TrackChannels {
-					err = s.ChannelRemove(t.Channel)
-				}
-			case *MessageCreate:
-				if s.MaxMessageCount != 0 {
-					err = s.MessageAdd(t.Message)
-				}
-			case *MessageUpdate:
-				if s.MaxMessageCount != 0 {
-					err = s.MessageAdd(t.Message)
-				}
-			case *MessageDelete:
-				if s.MaxMessageCount != 0 {
-					err = s.MessageRemove(t.Message)
-				}
-			case *MessageDeleteBulk:
-				if s.MaxMessageCount != 0 {
-					for _, mID := range t.Messages {
-						s.messageRemoveByID(t.ChannelID, mID)
-					}
 				}
 			case *VoiceStateUpdate:
 				if s.TrackVoice {
@@ -202,7 +151,10 @@ func (s *Robyulstate) GuildAdd(guild *discordgo.Guild) error {
 	copy(guildCopy.Presences, guild.Presences)
 
 	guildCopy.Channels = make([]*discordgo.Channel, len(guild.Channels))
-	copy(guildCopy.Channels, guild.Channels)
+	for i, guildChannel := range guild.Channels {
+		guildCopy.Channels[i] = new(discordgo.Channel)
+		*guildCopy.Channels[i] = *guildChannel
+	}
 
 	guildCopy.VoiceStates = make([]*discordgo.VoiceState, len(guild.VoiceStates))
 	copy(guildCopy.VoiceStates, guild.VoiceStates)
@@ -242,7 +194,31 @@ func (s *Robyulstate) GuildUpdate(guild *discordgo.Guild) error {
 		helpers.OnEventlogGuildUpdate(guild.ID, s.guildMap[guild.ID], guild)
 	}
 
-	*s.guildMap[guild.ID] = *guild
+	guildCopy := new(discordgo.Guild)
+	*guildCopy = *guild
+
+	guildCopy.Roles = make([]*discordgo.Role, len(guild.Roles))
+	copy(guildCopy.Roles, guild.Roles)
+
+	guildCopy.Emojis = make([]*discordgo.Emoji, len(guild.Emojis))
+	copy(guildCopy.Emojis, guild.Emojis)
+
+	guildCopy.Members = make([]*discordgo.Member, len(guild.Members))
+	copy(guildCopy.Members, guild.Members)
+
+	guildCopy.Presences = make([]*discordgo.Presence, len(guild.Presences))
+	copy(guildCopy.Presences, guild.Presences)
+
+	guildCopy.Channels = make([]*discordgo.Channel, len(guild.Channels))
+	for i, guildChannel := range guild.Channels {
+		guildCopy.Channels[i] = new(discordgo.Channel)
+		*guildCopy.Channels[i] = *guildChannel
+	}
+
+	guildCopy.VoiceStates = make([]*discordgo.VoiceState, len(guild.VoiceStates))
+	copy(guildCopy.VoiceStates, guild.VoiceStates)
+
+	*s.guildMap[guild.ID] = *guildCopy
 
 	return nil
 }
@@ -317,6 +293,46 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 		// emoji got added
 		//fmt.Println("emoji added", newEmoji.Name)
 		helpers.OnEventlogEmojiCreate(guildID, newEmoji)
+	}
+
+	return nil
+}
+
+func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
+	if s == nil {
+		return discordgo.ErrNilState
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, ok := s.guildMap[newChannel.GuildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[newChannel.GuildID].Channels == nil {
+		s.guildMap[newChannel.GuildID].Channels = make([]*discordgo.Channel, 1)
+		s.guildMap[newChannel.GuildID].Channels[1] = new(discordgo.Channel)
+		*s.guildMap[newChannel.GuildID].Channels[1] = *newChannel
+	}
+
+	// update channel
+	for j, oldChannel := range s.guildMap[newChannel.GuildID].Channels {
+		if oldChannel.ID == newChannel.ID {
+			if oldChannel.Name != newChannel.Name ||
+				oldChannel.Topic != newChannel.Topic ||
+				oldChannel.NSFW != newChannel.NSFW ||
+				oldChannel.Position != newChannel.Position ||
+				oldChannel.Bitrate != newChannel.Bitrate ||
+				oldChannel.ParentID != newChannel.ParentID ||
+				!helpers.ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
+				// channel got updated
+				//fmt.Println("channel update", oldChannel.Name, "to", oldChannel.Name)
+				helpers.OnEventlogChannelUpdate(newChannel.GuildID, oldChannel, newChannel)
+			}
+			_ = j
+			s.guildMap[newChannel.GuildID].Channels[j] = newChannel
+		}
 	}
 
 	return nil

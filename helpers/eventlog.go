@@ -7,6 +7,8 @@ import (
 
 	"strconv"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -66,6 +68,7 @@ type AuditLogBackfillType int
 const (
 	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = 1 << iota
 	AuditLogBackfillTypeChannelDelete
+	AuditLogBackfillTypeChannelUpdate
 	AuditLogBackfillTypeRoleCreate
 	AuditLogBackfillTypeRoleDelete
 	AuditLogBackfillTypeBanAdd
@@ -91,6 +94,10 @@ func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) 
 	case AuditLogBackfillTypeChannelDelete:
 		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel delete")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelDeleteRedisSet, guildID).Result()
+		return err
+	case AuditLogBackfillTypeChannelUpdate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel update")
+		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelUpdateRedisSet, guildID).Result()
 		return err
 	case AuditLogBackfillTypeRoleCreate:
 		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role create")
@@ -413,6 +420,79 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	RelaxLog(err)
 	if added {
 		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeGuildUpdate)
+		RelaxLog(err)
+	}
+}
+
+func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.Channel) {
+	leftAt := time.Now()
+
+	changes := make([]models.ElasticEventlogChange, 0)
+
+	if oldChannel.Name != newChannel.Name {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "channel_name",
+			OldValue: oldChannel.Name,
+			NewValue: newChannel.Name,
+		})
+	}
+
+	if oldChannel.Topic != newChannel.Topic {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "channel_topic",
+			OldValue: oldChannel.Topic,
+			NewValue: newChannel.Topic,
+		})
+	}
+
+	if oldChannel.NSFW != newChannel.NSFW {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "channel_nsfw",
+			OldValue: StoreBoolAsString(oldChannel.NSFW),
+			NewValue: StoreBoolAsString(newChannel.NSFW),
+		})
+	}
+
+	if oldChannel.Position != newChannel.Position {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "channel_position",
+			OldValue: strconv.Itoa(oldChannel.Position),
+			NewValue: strconv.Itoa(newChannel.Position),
+		})
+	}
+
+	if oldChannel.Bitrate != newChannel.Bitrate {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "channel_bitrate",
+			OldValue: strconv.Itoa(oldChannel.Bitrate),
+			NewValue: strconv.Itoa(newChannel.Bitrate),
+		})
+	}
+
+	if oldChannel.ParentID != newChannel.ParentID {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "channel_parentid",
+			OldValue: oldChannel.ParentID,
+			NewValue: newChannel.ParentID,
+		})
+	}
+
+	if !ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
+		fmt.Println("permission overwrites changed")
+		// TODO: handle permission overwrites
+		/*
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "channel_permissionoverwrites",
+				OldValue: oldChannel.PermissionOverwrites,
+				NewValue: newChannel.PermissionOverwrites,
+			})
+		*/
+	}
+
+	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, true)
+	RelaxLog(err)
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeChannelUpdate)
 		RelaxLog(err)
 	}
 }
