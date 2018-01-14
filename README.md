@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/Seklfreak/Robyul2.svg?branch=master)](https://travis-ci.org/Seklfreak/Robyul2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seklfreak/Robyul2)](https://goreportcard.com/report/github.com/Seklfreak/Robyul2)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FSeklfreak%2FRobyul2.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FSeklfreak%2FRobyul2?ref=badge_shield)
 [<img src="https://img.shields.io/badge/Support-me!-orange.svg">](https://www.patreon.com/sekl)
 [<img src="https://discordapp.com/api/guilds/286619174371852298/widget.png?style=shield">](https://discord.is/robyul)
 
@@ -39,3 +40,7 @@ Robyul is built on top of a lot of different components that make running your o
 
 ## Development
 Feature requests can be made on the Robyul Discord Server (https://discord.gg/s5qZvUV). PRs are welcomed and will likely be merged if the quality is good and the change fits into Robyuls feature set.
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FSeklfreak%2FRobyul2.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FSeklfreak%2FRobyul2?ref=badge_large)
