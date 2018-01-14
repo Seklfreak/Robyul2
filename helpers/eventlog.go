@@ -530,6 +530,22 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 		}
 	}
 
+	if oldMember.User.Username+"#"+oldMember.User.Discriminator != newMember.User.Username+"#"+newMember.User.Discriminator {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "member_username",
+			OldValue: oldMember.User.Username + "#" + oldMember.User.Discriminator,
+			NewValue: newMember.User.Username + "#" + newMember.User.Discriminator,
+		})
+	}
+
+	if oldMember.Nick != newMember.Nick {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "member_nick",
+			OldValue: oldMember.Nick,
+			NewValue: newMember.Nick,
+		})
+	}
+
 	_, err := EventlogLog(leftAt, guildID, newMember.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberUpdate, "", changes, options, false)
 	RelaxLog(err)
 	/*

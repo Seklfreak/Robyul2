@@ -1,6 +1,7 @@
 package robyulstate
 
 import (
+	"reflect"
 	"sync"
 
 	"fmt"
@@ -52,7 +53,7 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 
 	var err error
 
-	//fmt.Println("received event:", reflect.TypeOf(i))
+	fmt.Println("received event:", reflect.TypeOf(i))
 
 	switch t := i.(type) {
 	case *discordgo.GuildCreate:
@@ -80,6 +81,46 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 			t.Members[i].GuildID = t.GuildID
 			err = s.MemberAdd(t.Members[i])
 		}
+	case *discordgo.PresenceUpdate:
+		//s.PresenceAdd(t.GuildID, &t.Presence)
+		if _, ok := s.guildMap[t.GuildID]; !ok {
+			return
+		}
+
+		var m *discordgo.Member
+		for _, possibleMember := range s.guildMap[t.GuildID].Members {
+			if possibleMember.User.ID == t.User.ID {
+				m = possibleMember
+			}
+		}
+
+		if m == nil {
+			// Member not found; this is a user coming online
+			m = &discordgo.Member{
+				GuildID: t.GuildID,
+				Nick:    t.Nick,
+				User:    t.User,
+				Roles:   t.Roles,
+			}
+
+		} else {
+			if t.Nick != "" {
+				m.Nick = t.Nick
+			}
+
+			if t.User.Username != "" {
+				m.User.Username = t.User.Username
+			}
+			if t.User.Discriminator != "" {
+				m.User.Discriminator = t.User.Discriminator
+			}
+
+			// PresenceUpdates always contain a list of roles, so there's no need to check for an empty list here
+			m.Roles = t.Roles
+
+		}
+
+		err = s.MemberAdd(m)
 		/*
 			case *GuildRoleUpdate:
 				if s.TrackRoles {
@@ -88,44 +129,6 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 			case *VoiceStateUpdate:
 				if s.TrackVoice {
 					err = s.voiceStateUpdate(t)
-				}
-			case *PresenceUpdate:
-				if s.TrackPresences {
-					s.PresenceAdd(t.GuildID, &t.Presence)
-				}
-				if s.TrackMembers {
-					if t.Status == StatusOffline {
-						return
-					}
-
-					var m *Member
-					m, err = s.Member(t.GuildID, t.User.ID)
-
-					if err != nil {
-						// Member not found; this is a user coming online
-						m = &Member{
-							GuildID: t.GuildID,
-							Nick:    t.Nick,
-							User:    t.User,
-							Roles:   t.Roles,
-						}
-
-					} else {
-
-						if t.Nick != "" {
-							m.Nick = t.Nick
-						}
-
-						if t.User.Username != "" {
-							m.User.Username = t.User.Username
-						}
-
-						// PresenceUpdates always contain a list of roles, so there's no need to check for an empty list here
-						m.Roles = t.Roles
-
-					}
-
-					err = s.MemberAdd(m)
 				}
 		*/
 
@@ -403,7 +406,10 @@ func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
 		if oldMember.User.ID == member.User.ID {
 			// update member
 			oldRoles, newRoles := helpers.StringSliceDiff(oldMember.Roles, member.Roles)
-			if len(oldRoles) > 0 || len(newRoles) > 0 {
+			if (len(oldRoles) > 0 || len(newRoles) > 0) ||
+				oldMember.User.Username != member.User.Username ||
+				oldMember.Nick != member.Nick ||
+				oldMember.User.Discriminator != member.User.Discriminator {
 				//fmt.Println("member", member.User.Username, "update roles:", len(oldMember.Roles), "to:", len(member.Roles))
 				helpers.OnEventlogMemberUpdate(member.GuildID, oldMember, member)
 			}
