@@ -83,7 +83,8 @@ func NewRestServices() []*restful.WebService {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{guild-id}").Filter(webkeyAuthenticate).To(FindGuild))
+	service.Route(service.GET("/{guild-id}").Filter(sessionAndWebkeyAuthenticate).To(FindGuild))
+	service.Route(service.POST("/{guild-id}/set-settings").Filter(sessionAndWebkeyAuthenticate).To(SetGuildSettings).Reads(&models.Rest_Receive_SetSettings{}))
 	services = append(services, service)
 
 	service = new(restful.WebService)
@@ -211,61 +212,12 @@ func sessionAndWebkeyAuthenticate(request *restful.Request, response *restful.Re
 
 func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 	allGuilds := cache.GetSession().State.Guilds
-	cacheCodec := cache.GetRedisCacheCodec()
-	var key string
-	var featureLevels_Badges models.Rest_Feature_Levels_Badges
-	var featureRandomPictures models.Rest_Feature_RandomPictures
-	var featureVanityInvite models.Rest_Feature_VanityInvite
-	var featureModules []models.Rest_Feature_Module
 	var botPrefix string
-	var err error
 
 	returnGuilds := make([]models.Rest_Guild, 0)
 	for _, guild := range allGuilds {
 		joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
-		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
-		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
-			featureLevels_Badges = models.Rest_Feature_Levels_Badges{
-				Count: 0,
-			}
-		}
-
-		key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
-		if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
-			featureRandomPictures = models.Rest_Feature_RandomPictures{
-				Count: 0,
-			}
-		}
-
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
-
-		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
-		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
-		if guildSettings.ChatlogDisabled {
-			featureChatlog.Enabled = false
-		}
-		featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
-		if guildSettings.EventlogDisabled {
-			featureEventlog.Enabled = false
-		}
-
-		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
-		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
-
-		featureModules = make([]models.Rest_Feature_Module, 0)
-		disabledModules := helpers.GetDisabledModules(guild.ID)
-	NextModule:
-		for _, module := range helpers.Modules {
-			for _, disabledModule := range disabledModules {
-				if disabledModule == module.Permission {
-					continue NextModule
-				}
-			}
-			featureModules = append(featureModules, models.Rest_Feature_Module{
-				Name: helpers.GetModuleNameById(module.Permission),
-				ID:   module.Permission,
-			})
-		}
 
 		returnGuilds = append(returnGuilds, models.Rest_Guild{
 			ID:        guild.ID,
@@ -274,14 +226,8 @@ func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
 			OwnerID:   guild.OwnerID,
 			JoinedAt:  joinedAt,
 			BotPrefix: botPrefix,
-			Features: models.Rest_Guild_Features{
-				Levels_Badges:  featureLevels_Badges,
-				RandomPictures: featureRandomPictures,
-				Chatlog:        featureChatlog,
-				VanityInvite:   featureVanityInvite,
-				Modules:        featureModules,
-				Eventlog:       featureEventlog,
-			},
+			Features:  getGuildFeatures(guild.ID),
+			Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
 		})
 	}
 
@@ -316,13 +262,7 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 	userID := request.PathParameter("user-id")
 
 	allGuilds := cache.GetSession().State.Guilds
-	cacheCodec := cache.GetRedisCacheCodec()
-	var key string
-	var featureLevels_Badges models.Rest_Feature_Levels_Badges
-	var featureRandomPictures models.Rest_Feature_RandomPictures
-	var featureVanityInvite models.Rest_Feature_VanityInvite
 	var botPrefix string
-	var err error
 
 	returnGuilds := make([]models.Rest_Member_Guild, 0)
 	for _, guild := range allGuilds {
@@ -331,32 +271,8 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 		}
 
 		joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
-		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
-		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
-			featureLevels_Badges = models.Rest_Feature_Levels_Badges{
-				Count: 0,
-			}
-		}
-
-		key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
-		if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
-			featureRandomPictures = models.Rest_Feature_RandomPictures{
-				Count: 0,
-			}
-		}
 
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
-
-		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
-		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
-		if guildSettings.ChatlogDisabled {
-			featureChatlog.Enabled = false
-		}
-
-		featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
-		if guildSettings.EventlogDisabled {
-			featureEventlog.Enabled = false
-		}
 
 		returnStatus := models.Rest_Status_Member{}
 		returnStatus.IsMember = true
@@ -382,9 +298,6 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 			returnStatus.HasGuildPermissionAdministrator = true
 		}
 
-		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
-		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
-
 		returnGuilds = append(returnGuilds, models.Rest_Member_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -392,14 +305,9 @@ func FindUserGuilds(request *restful.Request, response *restful.Response) {
 			OwnerID:   guild.OwnerID,
 			JoinedAt:  joinedAt,
 			BotPrefix: botPrefix,
-			Features: models.Rest_Guild_Features{
-				Levels_Badges:  featureLevels_Badges,
-				RandomPictures: featureRandomPictures,
-				Chatlog:        featureChatlog,
-				VanityInvite:   featureVanityInvite,
-				Eventlog:       featureEventlog,
-			},
-			Status: returnStatus,
+			Features:  getGuildFeatures(guild.ID),
+			Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
+			Status:    returnStatus,
 		})
 	}
 
@@ -717,30 +625,15 @@ func GetAllUserRanking(request *restful.Request, response *restful.Response) {
 func FindGuild(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 
-	cacheCodec := cache.GetRedisCacheCodec()
-	var err error
-	var key string
-	var featureLevels_Badges models.Rest_Feature_Levels_Badges
-	var featureRandomPictures models.Rest_Feature_RandomPictures
-	var featureVanityInvite models.Rest_Feature_VanityInvite
+	if request.Attribute("UserID").(string) != "global" && !helpers.GetIsInGuild(guildID, request.Attribute("UserID").(string)) {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
 	var botPrefix string
 	guild, _ := helpers.GetGuild(guildID)
 	if guild != nil && guild.ID != "" {
 		joinedAt, _ := guild.JoinedAt.Parse()
-
-		key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
-		if err = cacheCodec.Get(key, &featureLevels_Badges); err != nil {
-			featureLevels_Badges = models.Rest_Feature_Levels_Badges{
-				Count: 0,
-			}
-		}
-
-		key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
-		if err = cacheCodec.Get(key, &featureRandomPictures); err != nil {
-			featureRandomPictures = models.Rest_Feature_RandomPictures{
-				Count: 0,
-			}
-		}
 
 		botPrefix = helpers.GetPrefixForServer(guild.ID)
 
@@ -765,35 +658,6 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			})
 		}
 
-		guildSettings := helpers.GuildSettingsGetCached(guild.ID)
-		featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
-		if guildSettings.ChatlogDisabled {
-			featureChatlog.Enabled = false
-		}
-
-		featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
-		if guildSettings.EventlogDisabled {
-			featureEventlog.Enabled = false
-		}
-
-		vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
-		featureVanityInvite.VanityInviteName = vanityInvite.VanityName
-
-		featureModules := make([]models.Rest_Feature_Module, 0)
-		disabledModules := helpers.GetDisabledModules(guildID)
-	NextModule:
-		for _, module := range helpers.Modules {
-			for _, disabledModule := range disabledModules {
-				if disabledModule == module.Permission {
-					continue NextModule
-				}
-			}
-			featureModules = append(featureModules, models.Rest_Feature_Module{
-				Name: helpers.GetModuleNameById(module.Permission),
-				ID:   module.Permission,
-			})
-		}
-
 		returnGuild := &models.Rest_Guild{
 			ID:        guild.ID,
 			Name:      guild.Name,
@@ -801,15 +665,9 @@ func FindGuild(request *restful.Request, response *restful.Response) {
 			OwnerID:   guild.OwnerID,
 			JoinedAt:  joinedAt,
 			BotPrefix: botPrefix,
-			Features: models.Rest_Guild_Features{
-				Levels_Badges:  featureLevels_Badges,
-				RandomPictures: featureRandomPictures,
-				Chatlog:        featureChatlog,
-				VanityInvite:   featureVanityInvite,
-				Modules:        featureModules,
-				Eventlog:       featureEventlog,
-			},
-			Channels: channels,
+			Features:  getGuildFeatures(guild.ID),
+			Channels:  channels,
+			Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
 		}
 
 		response.WriteEntity(returnGuild)
@@ -1682,22 +1540,6 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 		if guild != nil && guild.ID != "" {
 			joinedAt, _ := guild.JoinedAt.Parse()
 
-			var featureLevels_Badges models.Rest_Feature_Levels_Badges
-			key := fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
-			if err = cache.GetRedisCacheCodec().Get(key, &featureLevels_Badges); err != nil {
-				featureLevels_Badges = models.Rest_Feature_Levels_Badges{
-					Count: 0,
-				}
-			}
-
-			var featureRandomPictures models.Rest_Feature_RandomPictures
-			key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
-			if err = cache.GetRedisCacheCodec().Get(key, &featureRandomPictures); err != nil {
-				featureRandomPictures = models.Rest_Feature_RandomPictures{
-					Count: 0,
-				}
-			}
-
 			botPrefix := helpers.GetPrefixForServer(guild.ID)
 
 			channels := make([]models.Rest_Channel, 0)
@@ -1721,36 +1563,6 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 				})
 			}
 
-			guildSettings := helpers.GuildSettingsGetCached(guild.ID)
-			featureChatlog := models.Rest_Feature_Chatlog{Enabled: true}
-			if guildSettings.ChatlogDisabled {
-				featureChatlog.Enabled = false
-			}
-
-			featureEventlog := models.Rest_Feature_Eventlog{Enabled: true}
-			if guildSettings.EventlogDisabled {
-				featureEventlog.Enabled = false
-			}
-
-			vanityInvite, _ := helpers.GetVanityUrlByGuildID(guild.ID)
-			var featureVanityInvite models.Rest_Feature_VanityInvite
-			featureVanityInvite.VanityInviteName = vanityInvite.VanityName
-
-			featureModules := make([]models.Rest_Feature_Module, 0)
-			disabledModules := helpers.GetDisabledModules(guildID)
-		NextModule:
-			for _, module := range helpers.Modules {
-				for _, disabledModule := range disabledModules {
-					if disabledModule == module.Permission {
-						continue NextModule
-					}
-				}
-				featureModules = append(featureModules, models.Rest_Feature_Module{
-					Name: helpers.GetModuleNameById(module.Permission),
-					ID:   module.Permission,
-				})
-			}
-
 			eventlog.Guilds = append(eventlog.Guilds, models.Rest_Guild{
 				ID:        guild.ID,
 				Name:      guild.Name,
@@ -1758,15 +1570,9 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 				OwnerID:   guild.OwnerID,
 				JoinedAt:  joinedAt,
 				BotPrefix: botPrefix,
-				Features: models.Rest_Guild_Features{
-					Levels_Badges:  featureLevels_Badges,
-					RandomPictures: featureRandomPictures,
-					Chatlog:        featureChatlog,
-					VanityInvite:   featureVanityInvite,
-					Modules:        featureModules,
-					Eventlog:       featureEventlog,
-				},
-				Channels: channels,
+				Features:  getGuildFeatures(guild.ID),
+				Channels:  channels,
+				Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
 			})
 		}
 	}
@@ -1798,4 +1604,30 @@ func GetVanityInviteByName(request *restful.Request, response *restful.Response)
 		Code:    code,
 		GuildID: vanityInvite.GuildID,
 	})
+}
+
+func SetGuildSettings(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+
+	if request.Attribute("UserID").(string) != "global" && !helpers.GetIsInGuild(guildID, request.Attribute("UserID").(string)) {
+		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	newSettings := new(models.Rest_Receive_SetSettings)
+	err := request.ReadEntity(&newSettings)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	for _, newStringSetting := range newSettings.Strings {
+		err = setGuildStringSetting(guildID, request.Attribute("UserID").(string), newStringSetting.Key, newStringSetting.Values)
+		if err != nil {
+			response.WriteError(http.StatusUnauthorized, err)
+			return
+		}
+	}
+
+	return
 }

@@ -4,7 +4,9 @@ import (
 	"time"
 )
 
-type Rest_Guild struct {
+type SettingLevel string
+
+type Rest_Member_Guild struct {
 	ID        string
 	Name      string
 	Icon      string
@@ -13,6 +15,30 @@ type Rest_Guild struct {
 	BotPrefix string
 	Features  Rest_Guild_Features
 	Channels  []Rest_Channel
+	Settings  Rest_Settings
+	Status    Rest_Status_Member
+}
+
+type Rest_Guild struct {
+	ID        string
+	Name      string
+	Icon      string
+	OwnerID   string
+	JoinedAt  time.Time
+	BotPrefix string
+	Features  Rest_Guild_Features
+	Settings  Rest_Settings
+	Channels  []Rest_Channel
+}
+
+type Rest_Settings struct {
+	Strings []Rest_Setting_String
+}
+
+type Rest_Setting_String struct {
+	Key    string
+	Level  SettingLevel
+	Values []string
 }
 
 type Rest_Channel struct {
@@ -93,18 +119,6 @@ type Rest_Status_Member struct {
 	IsGuildAdmin                    bool
 	IsGuildMod                      bool
 	HasGuildPermissionAdministrator bool
-}
-
-type Rest_Member_Guild struct {
-	ID        string
-	Name      string
-	Icon      string
-	OwnerID   string
-	JoinedAt  time.Time
-	BotPrefix string
-	Features  Rest_Guild_Features
-	Channels  []Rest_Channel
-	Status    Rest_Status_Member
 }
 
 type Rest_Ranking struct {

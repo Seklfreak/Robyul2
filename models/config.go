@@ -59,7 +59,8 @@ type Config struct {
 
 	ChatlogDisabled bool `rethink:"chatlog_disabled"`
 
-	EventlogDisabled bool `rethink:"eventlog_disabled"`
+	EventlogDisabled   bool     `rethink:"eventlog_disabled"`
+	EventlogChannelIDs []string `rethink:"eventlog_channelids"`
 
 	PersistencyBiasEnabled bool     `rethink:"persistency_bias_enabled"`
 	PersistencyRoleIDs     []string `rethink:"persistency_roleids"`
