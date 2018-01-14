@@ -63,6 +63,10 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 		err = s.GuildRemove(t.Guild)
 	case *discordgo.GuildEmojisUpdate:
 		err = s.EmojisUpdate(t.GuildID, t.Emojis)
+	case *discordgo.ChannelCreate:
+		err = s.ChannelUpdate(t.Channel)
+	case *discordgo.ChannelDelete:
+		err = s.ChannelDelete(t.Channel)
 	case *discordgo.ChannelUpdate:
 		err = s.ChannelUpdate(t.Channel)
 	case *discordgo.GuildMemberAdd:
@@ -337,8 +341,42 @@ func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
 				//fmt.Println("channel update", oldChannel.Name, "to", oldChannel.Name)
 				helpers.OnEventlogChannelUpdate(newChannel.GuildID, oldChannel, newChannel)
 			}
-			_ = j
 			s.guildMap[newChannel.GuildID].Channels[j] = newChannel
+			return nil
+		}
+	}
+
+	channelCopy := new(discordgo.Channel)
+	*channelCopy = *newChannel
+
+	// add channel
+	//fmt.Println("added channel")
+	s.guildMap[newChannel.GuildID].Channels = append(s.guildMap[newChannel.GuildID].Channels, channelCopy)
+
+	return nil
+}
+
+func (s *Robyulstate) ChannelDelete(channel *discordgo.Channel) error {
+	if s == nil {
+		return discordgo.ErrNilState
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, ok := s.guildMap[channel.GuildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[channel.GuildID].Channels == nil {
+		s.guildMap[channel.GuildID].Channels = make([]*discordgo.Channel, 0)
+	}
+
+	for j, oldChannel := range s.guildMap[channel.GuildID].Channels {
+		if oldChannel.ID == channel.ID {
+			// remove channel
+			//fmt.Println("removed channel")
+			s.guildMap[channel.GuildID].Channels = append(s.guildMap[channel.GuildID].Channels[:j], s.guildMap[channel.GuildID].Channels[j+1:]...)
 		}
 	}
 
@@ -380,7 +418,7 @@ func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
 	*memberCopy = *member
 
 	// add member
-	fmt.Println("added member")
+	//fmt.Println("added member")
 	s.guildMap[member.GuildID].Members = append(s.guildMap[member.GuildID].Members, memberCopy)
 
 	return nil
@@ -404,8 +442,8 @@ func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
 
 	for j, oldMember := range s.guildMap[member.GuildID].Members {
 		if oldMember.User.ID == member.User.ID {
-			// update member
-			fmt.Println("removed member")
+			// remove member
+			//fmt.Println("removed member")
 			s.guildMap[member.GuildID].Members = append(s.guildMap[member.GuildID].Members[:j], s.guildMap[member.GuildID].Members[j+1:]...)
 		}
 	}
