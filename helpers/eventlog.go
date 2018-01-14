@@ -80,6 +80,7 @@ const (
 	AuditLogBackfillTypeEmojiDelete
 	AuditLogBackfillTypeEmojiUpdate
 	AuditLogBackfillTypeGuildUpdate
+	AuditLogBackfillTypeRoleUpdate
 )
 
 func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
@@ -136,6 +137,10 @@ func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) 
 	case AuditLogBackfillTypeGuildUpdate:
 		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "guild update")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeGuildUpdateRedisSet, guildID).Result()
+		return err
+	case AuditLogBackfillTypeRoleUpdate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role update")
+		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleUpdateRedisSet, guildID).Result()
 		return err
 	}
 	return errors.New("unknown backfill type")
@@ -555,6 +560,75 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 			RelaxLog(err)
 		}
 	*/
+}
+
+func OnEventlogRoleUpdate(guildID string, oldRole, newRole *discordgo.Role) {
+	leftAt := time.Now()
+
+	changes := make([]models.ElasticEventlogChange, 0)
+
+	if oldRole.Name != newRole.Name {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_name",
+			OldValue: oldRole.Name,
+			NewValue: newRole.Name,
+		})
+	}
+
+	if oldRole.Managed != newRole.Managed {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_managed",
+			OldValue: StoreBoolAsString(oldRole.Managed),
+			NewValue: StoreBoolAsString(newRole.Managed),
+		})
+	}
+
+	if oldRole.Mentionable != newRole.Mentionable {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_mentionable",
+			OldValue: StoreBoolAsString(oldRole.Mentionable),
+			NewValue: StoreBoolAsString(newRole.Mentionable),
+		})
+	}
+
+	if oldRole.Hoist != newRole.Hoist {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_hoist",
+			OldValue: StoreBoolAsString(oldRole.Hoist),
+			NewValue: StoreBoolAsString(newRole.Hoist),
+		})
+	}
+
+	if oldRole.Color != newRole.Color {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_color",
+			OldValue: GetHexFromDiscordColor(oldRole.Color),
+			NewValue: GetHexFromDiscordColor(newRole.Color),
+		})
+	}
+
+	if oldRole.Position != newRole.Position {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_position",
+			OldValue: strconv.Itoa(oldRole.Position),
+			NewValue: strconv.Itoa(newRole.Position),
+		})
+	}
+
+	if oldRole.Permissions != newRole.Permissions {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "role_permissions",
+			OldValue: strconv.Itoa(oldRole.Permissions),
+			NewValue: strconv.Itoa(newRole.Permissions),
+		})
+	}
+
+	added, err := EventlogLog(leftAt, guildID, newRole.ID, models.EventlogTargetTypeRole, "", models.EventlogTypeRoleUpdate, "", changes, nil, true)
+	RelaxLog(err)
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeRoleUpdate)
+		RelaxLog(err)
+	}
 }
 
 func StoreBoolAsString(input bool) (output string) {

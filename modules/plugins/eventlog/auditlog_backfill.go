@@ -40,6 +40,7 @@ func auditlogBackfillLoop() {
 		emojiUpdateBackfillGuildIDs, errMembers10 := redis.SMembers(models.AuditLogBackfillTypeEmojiUpdateRedisSet).Result()
 		guildUpdateBackfillGuildIDs, errMembers11 := redis.SMembers(models.AuditLogBackfillTypeGuildUpdateRedisSet).Result()
 		channelUpdateBackfillGuildIDs, errMembers12 := redis.SMembers(models.AuditLogBackfillTypeChannelUpdateRedisSet).Result()
+		roleUpdateBackfillGuildIDs, errMembers13 := redis.SMembers(models.AuditLogBackfillTypeRoleUpdateRedisSet).Result()
 		_, errDel1 := redis.Del(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
 		_, errDel2 := redis.Del(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
 		_, errDel3 := redis.Del(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
@@ -52,6 +53,7 @@ func auditlogBackfillLoop() {
 		_, errDel10 := redis.Del(models.AuditLogBackfillTypeEmojiUpdateRedisSet).Result()
 		_, errDel11 := redis.Del(models.AuditLogBackfillTypeGuildUpdateRedisSet).Result()
 		_, errDel12 := redis.Del(models.AuditLogBackfillTypeChannelUpdateRedisSet).Result()
+		_, errDel13 := redis.Del(models.AuditLogBackfillTypeRoleUpdateRedisSet).Result()
 		helpers.AuditLogBackfillRequestsLock.Unlock()
 		helpers.Relax(errMembers1)
 		helpers.Relax(errMembers2)
@@ -65,6 +67,7 @@ func auditlogBackfillLoop() {
 		helpers.Relax(errMembers10)
 		helpers.Relax(errMembers11)
 		helpers.Relax(errMembers12)
+		helpers.Relax(errMembers13)
 		helpers.Relax(errDel1)
 		helpers.Relax(errDel2)
 		helpers.Relax(errDel3)
@@ -77,6 +80,7 @@ func auditlogBackfillLoop() {
 		helpers.Relax(errDel10)
 		helpers.Relax(errDel11)
 		helpers.Relax(errDel12)
+		helpers.Relax(errDel13)
 
 		var successfulBackfills int
 
@@ -534,7 +538,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiCreate, true)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiCreate, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -575,7 +579,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiDelete, true)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiDelete, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -616,7 +620,7 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiUpdate, true)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeEmojiUpdate, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -657,7 +661,48 @@ func auditlogBackfillLoop() {
 			for _, result := range results.AuditLogEntries {
 				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
 
-				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeGuildUpdate, true)
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeGuildUpdate, false)
+				if err != nil {
+					if strings.Contains(err.Error(), "no fitting items found") {
+						continue
+					}
+				}
+				helpers.RelaxLog(err)
+
+				if len(elasticItems) >= 1 {
+					err = helpers.ElasticUpdateEventLog(
+						elasticItems[0].ElasticID,
+						result.UserID,
+						nil,
+						nil,
+						result.Reason,
+						true,
+					)
+					helpers.RelaxLog(err)
+					successfulBackfills++
+				}
+			}
+		}
+
+		for _, guildID := range roleUpdateBackfillGuildIDs {
+			if !shouldBackfill(guildID) {
+				continue
+			}
+
+			logger().Infof("doing role update backfill for guild #%s", guildID)
+			results, err := cache.GetSession().GuildAuditLog(guildID, "", "", discordgo.AuditLogActionRoleUpdate, 5)
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+					continue
+				}
+			}
+			helpers.Relax(err)
+			metrics.EventlogAuditLogRequests.Add(1)
+
+			for _, result := range results.AuditLogEntries {
+				elasticTime := helpers.GetTimeFromSnowflake(result.ID)
+
+				elasticItems, err := helpers.GetElasticPendingAuditLogBackfillEventlogs(elasticTime, guildID, result.TargetID, models.EventlogTypeRoleUpdate, false)
 				if err != nil {
 					if strings.Contains(err.Error(), "no fitting items found") {
 						continue
@@ -683,7 +728,7 @@ func auditlogBackfillLoop() {
 		elapsed := time.Since(start)
 		logger().Infof("did %d audit log backfills, %d entries backfilled, took %s",
 			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs)+len(channelCreateBackfillGuildIDs)+
-				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+
+				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+len(roleUpdateBackfillGuildIDs)+
 				len(banAddBackfillGuildIDs)+len(banRemoveBackfillGuildIDs)+
 				len(memberRemoveBackfillGuildIDs)+
 				len(emojiCreateBackfillGuildIDs)+len(emojiDeleteBackfillGuildIDs)+len(emojiUpdateBackfillGuildIDs)+

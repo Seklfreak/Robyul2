@@ -1,7 +1,6 @@
 package robyulstate
 
 import (
-	"reflect"
 	"sync"
 
 	"fmt"
@@ -53,7 +52,7 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 
 	var err error
 
-	fmt.Println("received event:", reflect.TypeOf(i))
+	//fmt.Println("received event:", reflect.TypeOf(i))
 
 	switch t := i.(type) {
 	case *discordgo.GuildCreate:
@@ -121,11 +120,13 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 		}
 
 		err = s.MemberAdd(m)
+	case *discordgo.GuildRoleCreate:
+		err = s.RoleAdd(t.GuildID, t.Role)
+	case *discordgo.GuildRoleDelete:
+		err = s.RoleDelete(t.GuildID, t.RoleID)
+	case *discordgo.GuildRoleUpdate:
+		err = s.RoleAdd(t.GuildID, t.Role)
 		/*
-			case *GuildRoleUpdate:
-				if s.TrackRoles {
-					err = s.RoleAdd(t.GuildID, t.Role)
-				}
 			case *VoiceStateUpdate:
 				if s.TrackVoice {
 					err = s.voiceStateUpdate(t)
@@ -451,6 +452,78 @@ func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
 			// remove member
 			//fmt.Println("removed member")
 			s.guildMap[member.GuildID].Members = append(s.guildMap[member.GuildID].Members[:j], s.guildMap[member.GuildID].Members[j+1:]...)
+		}
+	}
+
+	return nil
+}
+
+func (s *Robyulstate) RoleAdd(guildID string, role *discordgo.Role) error {
+	if s == nil {
+		return discordgo.ErrNilState
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, ok := s.guildMap[guildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[guildID].Roles == nil {
+		s.guildMap[guildID].Roles = make([]*discordgo.Role, 0)
+	}
+
+	for j, oldRole := range s.guildMap[guildID].Roles {
+		if oldRole.ID == role.ID {
+			// update role
+			if oldRole.Name != role.Name ||
+				oldRole.Managed != role.Managed ||
+				oldRole.Mentionable != role.Mentionable ||
+				oldRole.Hoist != role.Hoist ||
+				oldRole.Color != role.Color ||
+				oldRole.Position != role.Position ||
+				oldRole.Permissions != role.Permissions {
+				helpers.OnEventlogRoleUpdate(guildID, oldRole, role)
+			}
+
+			s.guildMap[guildID].Roles[j] = new(discordgo.Role)
+			*s.guildMap[guildID].Roles[j] = *role
+			return nil
+		}
+	}
+
+	roleCopy := new(discordgo.Role)
+	*roleCopy = *role
+
+	// add role
+	//fmt.Println("added role")
+	s.guildMap[guildID].Roles = append(s.guildMap[guildID].Roles, roleCopy)
+
+	return nil
+}
+
+func (s *Robyulstate) RoleDelete(guildID, roleID string) error {
+	if s == nil {
+		return discordgo.ErrNilState
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, ok := s.guildMap[guildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[guildID].Roles == nil {
+		s.guildMap[guildID].Roles = make([]*discordgo.Role, 0)
+	}
+
+	for j, oldRole := range s.guildMap[guildID].Roles {
+		if oldRole.ID == roleID {
+			// remove role
+			//fmt.Println("removed role")
+			s.guildMap[guildID].Roles = append(s.guildMap[guildID].Roles[:j], s.guildMap[guildID].Roles[j+1:]...)
 		}
 	}
 
