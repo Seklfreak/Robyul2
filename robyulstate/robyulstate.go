@@ -65,11 +65,18 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 		err = s.EmojisUpdate(t.GuildID, t.Emojis)
 	case *discordgo.ChannelUpdate:
 		err = s.ChannelUpdate(t.Channel)
+	case *discordgo.GuildMemberAdd:
+		err = s.MemberAdd(t.Member)
+	case *discordgo.GuildMemberRemove:
+		err = s.MemberRemove(t.Member)
+	case *discordgo.GuildMemberUpdate:
+		err = s.MemberAdd(t.Member)
+	case *discordgo.GuildMembersChunk:
+		for i := range t.Members {
+			t.Members[i].GuildID = t.GuildID
+			err = s.MemberAdd(t.Members[i])
+		}
 		/*
-			case *GuildMemberUpdate:
-				if s.TrackMembers {
-					err = s.MemberAdd(t.Member)
-				}
 			case *GuildRoleUpdate:
 				if s.TrackRoles {
 					err = s.RoleAdd(t.GuildID, t.Role)
@@ -332,6 +339,74 @@ func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
 			}
 			_ = j
 			s.guildMap[newChannel.GuildID].Channels[j] = newChannel
+		}
+	}
+
+	return nil
+}
+
+func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
+	if s == nil {
+		return discordgo.ErrNilState
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, ok := s.guildMap[member.GuildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[member.GuildID].Members == nil {
+		s.guildMap[member.GuildID].Members = make([]*discordgo.Member, 0)
+	}
+
+	for j, oldMember := range s.guildMap[member.GuildID].Members {
+		if oldMember.User.ID == member.User.ID {
+			// update member
+			oldRoles, newRoles := helpers.StringSliceDiff(oldMember.Roles, member.Roles)
+			if len(oldRoles) > 0 || len(newRoles) > 0 {
+				//fmt.Println("member", member.User.Username, "update roles:", len(oldMember.Roles), "to:", len(member.Roles))
+				helpers.OnEventlogMemberUpdate(member.GuildID, oldMember, member)
+			}
+
+			s.guildMap[member.GuildID].Members[j] = new(discordgo.Member)
+			*s.guildMap[member.GuildID].Members[j] = *member
+			return nil
+		}
+	}
+
+	memberCopy := new(discordgo.Member)
+	*memberCopy = *member
+
+	// add member
+	fmt.Println("added member")
+	s.guildMap[member.GuildID].Members = append(s.guildMap[member.GuildID].Members, memberCopy)
+
+	return nil
+}
+
+func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
+	if s == nil {
+		return discordgo.ErrNilState
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, ok := s.guildMap[member.GuildID]; !ok {
+		return discordgo.ErrStateNotFound
+	}
+
+	if s.guildMap[member.GuildID].Members == nil {
+		s.guildMap[member.GuildID].Members = make([]*discordgo.Member, 0)
+	}
+
+	for j, oldMember := range s.guildMap[member.GuildID].Members {
+		if oldMember.User.ID == member.User.ID {
+			// update member
+			fmt.Println("removed member")
+			s.guildMap[member.GuildID].Members = append(s.guildMap[member.GuildID].Members[:j], s.guildMap[member.GuildID].Members[j+1:]...)
 		}
 	}
 

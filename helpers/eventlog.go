@@ -9,6 +9,8 @@ import (
 
 	"fmt"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -495,6 +497,48 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeChannelUpdate)
 		RelaxLog(err)
 	}
+}
+
+func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Member) {
+	leftAt := time.Now()
+
+	changes := make([]models.ElasticEventlogChange, 0)
+
+	options := make([]models.ElasticEventlogOption, 0)
+
+	rolesAdded, rolesRemoved := StringSliceDiff(oldMember.Roles, newMember.Roles)
+
+	if len(rolesAdded) > 0 || len(rolesRemoved) > 0 {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "member_roles",
+			OldValue: strings.Join(oldMember.Roles, ","),
+			NewValue: strings.Join(newMember.Roles, ","),
+		})
+
+		if len(rolesAdded) > 0 {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "member_roles_added",
+				Value: strings.Join(rolesAdded, ","),
+			})
+		}
+
+		if len(rolesRemoved) > 0 {
+			options = append(options, models.ElasticEventlogOption{
+				Key:   "member_roles_removed",
+				Value: strings.Join(rolesRemoved, ","),
+			})
+		}
+	}
+
+	_, err := EventlogLog(leftAt, guildID, newMember.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberUpdate, "", changes, options, false)
+	RelaxLog(err)
+	/*
+		backfill? lots of requests because of bot role changes
+		if added {
+			err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeChannelUpdate)
+			RelaxLog(err)
+		}
+	*/
 }
 
 func StoreBoolAsString(input bool) (output string) {

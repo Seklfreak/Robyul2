@@ -1507,6 +1507,62 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 			break
 		}
 
+		for _, option := range elasticEventlog.Options {
+			if option.Key == "member_roles_added" {
+				alreadyLookingUp = false
+				for _, roleID := range strings.Split(option.Value, ",") {
+					for _, lookupRoleID := range lookupRoleIDs {
+						if lookupRoleID == roleID {
+							alreadyLookingUp = true
+						}
+					}
+					if !alreadyLookingUp {
+						lookupRoleIDs = append(lookupRoleIDs, roleID)
+					}
+				}
+			}
+			if option.Key == "member_roles_removed" {
+				alreadyLookingUp = false
+				for _, roleID := range strings.Split(option.Value, ",") {
+					for _, lookupRoleID := range lookupRoleIDs {
+						if lookupRoleID == roleID {
+							alreadyLookingUp = true
+						}
+					}
+					if !alreadyLookingUp {
+						lookupRoleIDs = append(lookupRoleIDs, roleID)
+					}
+				}
+			}
+		}
+
+		for _, change := range elasticEventlog.Changes {
+			if change.Key == "member_roles" {
+				alreadyLookingUp = false
+				for _, roleID := range strings.Split(change.OldValue, ",") {
+					for _, lookupRoleID := range lookupRoleIDs {
+						if lookupRoleID == roleID {
+							alreadyLookingUp = true
+						}
+					}
+					if !alreadyLookingUp {
+						lookupRoleIDs = append(lookupRoleIDs, roleID)
+					}
+				}
+				alreadyLookingUp = false
+				for _, roleID := range strings.Split(change.NewValue, ",") {
+					for _, lookupRoleID := range lookupRoleIDs {
+						if lookupRoleID == roleID {
+							alreadyLookingUp = true
+						}
+					}
+					if !alreadyLookingUp {
+						lookupRoleIDs = append(lookupRoleIDs, roleID)
+					}
+				}
+			}
+		}
+
 		alreadyLookingUp = false
 		if elasticEventlog.UserID != "" {
 			for _, lookupUserID := range lookupUserIDs {

@@ -14,6 +14,7 @@ const (
 	EventlogTypeEmojiDelete   = "Emoji_Delete"   // EventlogTargetTypeEmoji
 	EventlogTypeEmojiUpdate   = "Emoji_Update"   // EventlogTargetTypeEmoji
 	EventlogTypeGuildUpdate   = "Guild_Update"   // EventlogTargetTypeGuild
+	EventlogTypeMemberUpdate  = "Member_Update"  // EventlogTargetTypeUser
 
 	EventlogTargetTypeUser    = "user"
 	EventlogTargetTypeChannel = "channel"
