@@ -193,7 +193,8 @@
       "post-direct-links-enabled": "I will now post direct links for this account.",
       "embed-footer-imageurl": "https://i.imgur.com/DEiSLA6.png",
       "ratelimited": "Robyul is currently rate limited by Instagram: Please try again in a few minutes!",
-      "account-embed-footer": "User #%d"
+      "account-embed-footer": "User #%d",
+      "logged-in": "Successfully logged in."
     },
     "facebook": {
       "page-not-found": "Page not found!",

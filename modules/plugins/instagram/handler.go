@@ -254,6 +254,15 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				helpers.SendMessage(msg.ChannelID, messageText)
 				return
 			})
+		case "login":
+			helpers.RequireRobyulMod(msg, func() {
+				err := instagramClient.Login()
+				helpers.Relax(err)
+
+				helpers.SendMessage(msg.ChannelID, "plugins.instagram.logged-in")
+				return
+			})
+			return
 		default:
 			session.ChannelTyping(msg.ChannelID)
 			instagramUsername := strings.Replace(args[0], "@", "", 1)
