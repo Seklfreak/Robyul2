@@ -121,12 +121,16 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		Type:      "",
 		Title:     actionType + ": #" + targetID + " (" + targetType + ")",
 		Timestamp: createdAt.Format(time.RFC3339),
-		Color:     0,
 		Fields: []*discordgo.MessageEmbedField{{
 			Name:  "Reason",
 			Value: reason,
 		},
 		},
+	}
+
+	embed.Color = GetDiscordColorFromHex("#73d016") // lime green
+	if waitingForAuditLogBackfill {
+		embed.Color = GetDiscordColorFromHex("#ffb80a") // orange
 	}
 
 	if changes != nil {
