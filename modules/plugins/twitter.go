@@ -47,6 +47,7 @@ var (
 	twitterStreamNeedsUpdate bool
 	twitterEntriesCache      []DB_Twitter_Entry
 	twitterStreamIsStarting  sync.Mutex
+	twitterEntryLocksLock    sync.Mutex
 	twitterEntryLocks        = make(map[string]*sync.Mutex, 0)
 )
 
@@ -80,10 +81,12 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				continue
 			}
 
+			twitterEntryLocksLock.Lock()
 			if _, ok := twitterEntryLocks[entry.ID]; !ok {
 				twitterEntryLocks[entry.ID] = &sync.Mutex{}
 			}
 			twitterEntryLocks[entry.ID].Lock()
+			twitterEntryLocksLock.Unlock()
 
 			entry := t.getEntryBy("id", entry.ID)
 
@@ -106,7 +109,9 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				t.setEntry(entry)
 			}
 
+			twitterEntryLocksLock.Lock()
 			twitterEntryLocks[entry.ID].Unlock()
+			twitterEntryLocksLock.Unlock()
 		}
 	}
 
@@ -276,10 +281,12 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			for _, entry := range entries {
+				twitterEntryLocksLock.Lock()
 				if _, ok := twitterEntryLocks[entry.ID]; !ok {
 					twitterEntryLocks[entry.ID] = &sync.Mutex{}
 				}
 				twitterEntryLocks[entry.ID].Lock()
+				twitterEntryLocksLock.Unlock()
 
 				entry := m.getEntryBy("id", entry.ID)
 
@@ -305,7 +312,9 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 					m.setEntry(entry)
 				}
 
+				twitterEntryLocksLock.Lock()
 				twitterEntryLocks[entry.ID].Unlock()
+				twitterEntryLocksLock.Unlock()
 			}
 		}
 
