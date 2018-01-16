@@ -1026,23 +1026,23 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 		resultBansText := ""
 		if len(bannedOnServerList) <= 0 {
-			resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
+			resultBansText += fmt.Sprintf(":white_check_mark: User is banned on none servers.\n:black_medium_small_square:Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
 		} else {
 			if isExtendedInspect == false {
-				resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers.\n◾Checked %d servers.\n", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+				resultBansText += fmt.Sprintf(":warning: User is banned on **%d** servers.\n:black_medium_small_square:Checked %d servers.\n", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
 			} else {
-				resultBansText += fmt.Sprintf("⚠ User is banned on **%d** servers:\n", len(bannedOnServerList))
+				resultBansText += fmt.Sprintf(":warning: User is banned on **%d** servers:\n", len(bannedOnServerList))
 				i := 0
 			BannedOnLoop:
 				for _, bannedOnServer := range bannedOnServerList {
-					resultBansText += fmt.Sprintf("▪`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
+					resultBansText += fmt.Sprintf(":black_small_square:`%s` (#%s)\n", bannedOnServer.Name, bannedOnServer.ID)
 					i++
 					if i >= 4 && textVersion == false {
-						resultBansText += fmt.Sprintf("▪ and %d other server(s)\n", len(bannedOnServerList)-(i+1))
+						resultBansText += fmt.Sprintf(":black_small_square: and %d other server(s)\n", len(bannedOnServerList)-(i+1))
 						break BannedOnLoop
 					}
 				}
-				resultBansText += fmt.Sprintf("◾Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
+				resultBansText += fmt.Sprintf(":black_medium_small_square:Checked %d servers.\n", len(session.State.Guilds)-len(checkFailedServerList))
 			}
 		}
 
@@ -1050,22 +1050,22 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		commonGuildsText := ""
 		if len(isOnServerList) > 0 {
 			if isExtendedInspect == false {
-				commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.\n", len(isOnServerList))
+				commonGuildsText += fmt.Sprintf(":white_check_mark: User is on **%d** server(s) with Robyul.\n", len(isOnServerList))
 			} else {
-				commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul:\n", len(isOnServerList))
+				commonGuildsText += fmt.Sprintf(":white_check_mark: User is on **%d** server(s) with Robyul:\n", len(isOnServerList))
 				i := 0
 			ServerListLoop:
 				for _, isOnServer := range isOnServerList {
-					commonGuildsText += fmt.Sprintf("▪`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
+					commonGuildsText += fmt.Sprintf(":black_small_square:`%s` (#%s)\n", isOnServer.Name, isOnServer.ID)
 					i++
 					if i >= 4 && textVersion == false {
-						commonGuildsText += fmt.Sprintf("▪ and %d other server(s)\n", len(isOnServerList)-(i))
+						commonGuildsText += fmt.Sprintf(":black_small_square: and %d other server(s)\n", len(isOnServerList)-(i))
 						break ServerListLoop
 					}
 				}
 			}
 		} else {
-			commonGuildsText += "❓ User is on **none** servers with Robyul.\n"
+			commonGuildsText += ":question: User is on **none** servers with Robyul.\n"
 		}
 
 		joinedTime := helpers.GetTimeFromSnowflake(targetUser.ID)
@@ -1073,25 +1073,25 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		oneWeekAgo := time.Now().AddDate(0, 0, -7)
 		joinedTimeText := ""
 		if !joinedTime.After(oneWeekAgo) {
-			joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.\n", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+			joinedTimeText += fmt.Sprintf(":white_check_mark: User Account got created %s.\n:black_medium_small_square:Joined at %s.\n", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
 		} else if !joinedTime.After(oneDayAgo) {
-			joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
+			joinedTimeText += fmt.Sprintf(":question: User Account is less than one Week old.\n:black_medium_small_square:Joined at %s.\n", joinedTime.Format(time.ANSIC))
 		} else {
-			joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.\n", joinedTime.Format(time.ANSIC))
+			joinedTimeText += fmt.Sprintf(":warning: User Account is less than one Day old.\n:black_medium_small_square:Joined at %s.\n", joinedTime.Format(time.ANSIC))
 		}
 
 		troublemakerReports := m.getTroublemakerReports(targetUser)
 		var troublemakerReportsText string
 		if len(troublemakerReports) <= 0 {
-			troublemakerReportsText = "✅ User never got reported\n"
+			troublemakerReportsText = ":white_check_mark: User never got reported\n"
 		} else {
-			troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.\n", len(troublemakerReports), targetUser.ID)
+			troublemakerReportsText = fmt.Sprintf(":warning: User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.\n", len(troublemakerReports), targetUser.ID)
 		}
 
 		joins, _ := m.GetJoins(targetUser.ID, channel.GuildID)
 		joinsText := ""
 		if len(joins) == 0 {
-			joinsText = "✅ User never joined this server\n"
+			joinsText = ":white_check_mark: User never joined this server\n"
 		} else if len(joins) == 1 {
 			if joins[0].InviteCodeUsed != "" {
 				createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
@@ -1106,11 +1106,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 				}
 
-				joinsText = fmt.Sprintf("✅ User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
+				joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
 					humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
 					createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 			} else {
-				joinsText = fmt.Sprintf("✅ User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
+				joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
 					joins[0].JoinedAt)
 			}
 		} else if len(joins) > 1 {
@@ -1130,12 +1130,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 				}
 
-				joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+				joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
 					"Last time with the invite `%s`%s created by `%s (#%s)` %s\n",
 					len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
 					labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 			} else {
-				joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+				joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
 					"Give Robyul the `Manage Server` permission to see using which invites.\n",
 					len(joins), humanize.Time(lastJoin.JoinedAt))
 			}
@@ -1143,11 +1143,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 		isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(targetUser.ID)
 		helpers.RelaxLog(err)
-		isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
-		isBannedOnBansdiscordlistNetTextText := "✅ User is not banned on <https://bans.discordlist.net/>.\n"
+		isBannedOnBansdiscordlistNetText := ":white_check_mark: User is not banned.\n"
+		isBannedOnBansdiscordlistNetTextText := ":white_check_mark: User is not banned on <https://bans.discordlist.net/>.\n"
 		if isBannedOnBansdiscordlistNet {
-			isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
-			isBannedOnBansdiscordlistNetTextText = "⚠ User is banned on <https://bans.discordlist.net/>.\n"
+			isBannedOnBansdiscordlistNetText = ":warning: User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
+			isBannedOnBansdiscordlistNetTextText = ":warning: User is banned on <https://bans.discordlist.net/>.\n"
 		}
 
 		resultEmbed.Fields = []*discordgo.MessageEmbedField{
@@ -1167,7 +1167,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 		for _, failedServer := range checkFailedServerList {
 			if failedServer.ID == channel.GuildID {
-				noAccessToBansText := "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers.\n"
+				noAccessToBansText := "\n:warning: I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers.\n"
 				resultEmbed.Description += noAccessToBansText
 				resultText += noAccessToBansText
 				break
@@ -1359,61 +1359,61 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							"Choose which warnings should trigger an automatic inspect post in <#%s>.\n"+
 								"**Available Triggers**\n",
 							targetChannel.ID)
-						enabledEmote := "🔲"
+						enabledEmote := ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserBannedOnOtherServers {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s User is banned on a different server with Robyul on. Gets checked everytime an user joins or gets banned on a different server with Robyul on.\n",
-							emojis.From("1"), enabledEmote)
+							emojis.FromToText("1"), enabledEmote)
 
-						enabledEmote = "🔲"
+						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserNoCommonServers {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s User has none other common servers with Robyul. Gets checked everytime an user joins.\n",
-							emojis.From("2"), enabledEmote)
+							emojis.FromToText("2"), enabledEmote)
 
-						enabledEmote = "🔲"
+						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserNewlyCreatedAccount {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s Account is less than one week old. Gets checked everytime an user joins.\n",
-							emojis.From("3"), enabledEmote)
+							emojis.FromToText("3"), enabledEmote)
 
-						enabledEmote = "🔲"
+						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserReported {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s Account got reported as a troublemaker. Gets checked everytime an user joins.\n",
-							emojis.From("4"), enabledEmote)
+							emojis.FromToText("4"), enabledEmote)
 
-						enabledEmote = "🔲"
+						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserMultipleJoins {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s Account joined this server more than once. Gets checked everytime an user joins.\n",
-							emojis.From("5"), enabledEmote)
+							emojis.FromToText("5"), enabledEmote)
 
-						enabledEmote = "🔲"
+						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserBannedDiscordlistNet {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s Account is banned on bans.discordlist.net, a global (unofficial) discord ban list. Gets checked everytime an user joins.\n",
-							emojis.From("6"), enabledEmote)
+							emojis.FromToText("6"), enabledEmote)
 
-						enabledEmote = "🔲"
+						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserJoins {
-							enabledEmote = "✔"
+							enabledEmote = ":heavy_check_mark:"
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s Account joins this server. Triggers on every join.\n",
-							emojis.From("9"), enabledEmote)
+							emojis.FromToText("9"), enabledEmote)
 
 						if emotesLocked == true {
-							chooseEmbed.Description += fmt.Sprintf("⚠ Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
+							chooseEmbed.Description += fmt.Sprintf(":warning: Please give Robyul the `Manage Messages` permission to be able to disable triggers or disable all triggers using `%sauto-inspects-channel`.\n",
 								helpers.GetPrefixForServer(channel.GuildID),
 							)
 						}
-						chooseEmbed.Description += "Use 💾 to save and exit."
+						chooseEmbed.Description += "Use :floppy_disk: to save and exit."
 						chooseMessage, err = helpers.EditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
 						helpers.Relax(err)
 						needEmbedUpdate = false
@@ -1427,7 +1427,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 				settings.InspectsChannel = targetChannel.ID
 
-				chooseEmbed.Description = strings.Replace(chooseEmbed.Description, "Use 💾 to save and exit.", "Saved.", -1)
+				chooseEmbed.Description = strings.Replace(chooseEmbed.Description, "Use :floppy_disk: to save and exit.", "Saved.", -1)
 				helpers.EditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
 
 				successMessage = helpers.GetText("plugins.mod.inspects-channel-set")
@@ -1449,9 +1449,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			if len(searchText) > 3 {
 				globalCheck := helpers.IsBotAdmin(msg.Author.ID)
 				if globalCheck == true {
-					helpers.SendMessage(msg.ChannelID, "Searching for users on all servers with Robyul. 💬")
+					helpers.SendMessage(msg.ChannelID, "Searching for users on all servers with Robyul. :speech_balloon:")
 				} else {
-					helpers.SendMessage(msg.ChannelID, "Searching for users on this server. 💬")
+					helpers.SendMessage(msg.ChannelID, "Searching for users on this server. :speech_balloon:")
 				}
 
 				currentChannel, err := helpers.GetChannel(msg.ChannelID)
@@ -1487,7 +1487,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 
 				if len(usersMatched) <= 0 {
-					_, err := helpers.SendMessage(msg.ChannelID, "Found no user who matches your search text. 🕵")
+					_, err := helpers.SendMessage(msg.ChannelID, "Found no user who matches your search text. :spy:")
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				} else {
@@ -2130,36 +2130,36 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
 					resultBansText := ""
 					if len(bannedOnServerList) <= 0 {
-						resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+						resultBansText += fmt.Sprintf(":white_check_mark: User is banned on none servers.\n:black_medium_small_square:Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
 					} else {
-						resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+						resultBansText += fmt.Sprintf(":warning: User is banned on **%d** server(s).\n:black_medium_small_square:Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
 					}
 
 					commonGuildsText := ""
 					if len(isOnServerList)-1 > 0 { // -1 to exclude the server the user is currently on
-						commonGuildsText += fmt.Sprintf("✅ User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
+						commonGuildsText += fmt.Sprintf(":white_check_mark: User is on **%d** other server(s) with Robyul.", len(isOnServerList)-1)
 					} else {
-						commonGuildsText += "❓ User is on **none** other servers with Robyul."
+						commonGuildsText += ":question: User is on **none** other servers with Robyul."
 					}
 					joinedTimeText := ""
 					if !joinedTime.After(oneWeekAgo) {
-						joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+						joinedTimeText += fmt.Sprintf(":white_check_mark: User Account got created %s.\n:black_medium_small_square:Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
 					} else if !joinedTime.After(oneDayAgo) {
-						joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+						joinedTimeText += fmt.Sprintf(":question: User Account is less than one Week old.\n:black_medium_small_square:Joined at %s.", joinedTime.Format(time.ANSIC))
 					} else {
-						joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+						joinedTimeText += fmt.Sprintf(":warning: User Account is less than one Day old.\n:black_medium_small_square:Joined at %s.", joinedTime.Format(time.ANSIC))
 					}
 
 					var troublemakerReportsText string
 					if len(troublemakerReports) <= 0 {
-						troublemakerReportsText = "✅ User never got reported"
+						troublemakerReportsText = ":white_check_mark: User never got reported"
 					} else {
-						troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
+						troublemakerReportsText = fmt.Sprintf(":warning: User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), member.User.ID)
 					}
 
 					joinsText := ""
 					if len(joins) == 0 {
-						joinsText = "✅ User never joined this server\n"
+						joinsText = ":white_check_mark: User never joined this server\n"
 					} else if len(joins) == 1 {
 						if joins[0].InviteCodeUsed != "" {
 							createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
@@ -2174,11 +2174,11 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("✅ User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
+							joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
 								humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
 								createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 						} else {
-							joinsText = fmt.Sprintf("✅ User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
+							joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
 								joins[0].JoinedAt)
 						}
 					} else if len(joins) > 1 {
@@ -2198,19 +2198,19 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
+							joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\nLast time with the invite `%s`%s created by `%s (#%s)` %s\n",
 								len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
 								labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 						} else {
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+							joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
 								"Give Robyul the `Manage Server` permission to see using which invites.\n",
 								len(joins), humanize.Time(lastJoin.JoinedAt))
 						}
 					}
 
-					isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
+					isBannedOnBansdiscordlistNetText := ":white_check_mark: User is not banned.\n"
 					if isBannedOnBansdiscordlistNet {
-						isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
+						isBannedOnBansdiscordlistNetText = ":warning: User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
 					}
 
 					resultEmbed.Fields = []*discordgo.MessageEmbedField{
@@ -2224,7 +2224,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 
 					for _, failedServer := range checkFailedServerList {
 						if failedServer.ID == member.GuildID {
-							resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+							resultEmbed.Description += "\n:warning: I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
 							break
 						}
 					}
@@ -2387,17 +2387,17 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 					resultBansText := ""
 					if len(bannedOnServerList) <= 0 {
-						resultBansText += fmt.Sprintf("✅ User is banned on none servers.\n◾Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
+						resultBansText += fmt.Sprintf(":white_check_mark: User is banned on none servers.\n:black_medium_small_square:Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
 					} else {
-						resultBansText += fmt.Sprintf("⚠ User is banned on **%d** server(s).\n◾Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
+						resultBansText += fmt.Sprintf(":warning: User is banned on **%d** server(s).\n:black_medium_small_square:Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
 					}
 
 					isOnServerList := m.inspectCommonServers(user.User)
 					commonGuildsText := ""
 					if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
-						commonGuildsText += fmt.Sprintf("✅ User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
+						commonGuildsText += fmt.Sprintf(":white_check_mark: User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
 					} else {
-						commonGuildsText += "❓ User is on **none** servers with Robyul."
+						commonGuildsText += ":question: User is on **none** servers with Robyul."
 					}
 
 					joinedTime := helpers.GetTimeFromSnowflake(user.User.ID)
@@ -2405,25 +2405,25 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 					oneWeekAgo := time.Now().AddDate(0, 0, -7)
 					joinedTimeText := ""
 					if !joinedTime.After(oneWeekAgo) {
-						joinedTimeText += fmt.Sprintf("✅ User Account got created %s.\n◾Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
+						joinedTimeText += fmt.Sprintf(":white_check_mark: User Account got created %s.\n:black_medium_small_square:Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
 					} else if !joinedTime.After(oneDayAgo) {
-						joinedTimeText += fmt.Sprintf("❓ User Account is less than one Week old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+						joinedTimeText += fmt.Sprintf(":question: User Account is less than one Week old.\n:black_medium_small_square:Joined at %s.", joinedTime.Format(time.ANSIC))
 					} else {
-						joinedTimeText += fmt.Sprintf("⚠ User Account is less than one Day old.\n◾Joined at %s.", joinedTime.Format(time.ANSIC))
+						joinedTimeText += fmt.Sprintf(":warning: User Account is less than one Day old.\n:black_medium_small_square:Joined at %s.", joinedTime.Format(time.ANSIC))
 					}
 
 					troublemakerReports := m.getTroublemakerReports(user.User)
 					var troublemakerReportsText string
 					if len(troublemakerReports) <= 0 {
-						troublemakerReportsText = "✅ User never got reported"
+						troublemakerReportsText = ":white_check_mark: User never got reported"
 					} else {
-						troublemakerReportsText = fmt.Sprintf("⚠ User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
+						troublemakerReportsText = fmt.Sprintf(":warning: User got reported %d time(s)\nUse `_troublemaker list %s` to view the details.", len(troublemakerReports), user.User.ID)
 					}
 
 					joins, _ := m.GetJoins(user.User.ID, targetGuild.ID)
 					joinsText := ""
 					if len(joins) == 0 {
-						joinsText = "✅ User never joined this server\n"
+						joinsText = ":white_check_mark: User never joined this server\n"
 					} else if len(joins) == 1 {
 						if joins[0].InviteCodeUsed != "" {
 							createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
@@ -2438,11 +2438,11 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("✅ User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
+							joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
 								humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
 								createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
 						} else {
-							joinsText = fmt.Sprintf("✅ User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
+							joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
 								joins[0].JoinedAt)
 						}
 					} else if len(joins) > 1 {
@@ -2462,12 +2462,12 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
 							}
 
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+							joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
 								"Last time with the invite `%s`%s created by `%s (#%s)` %s\n",
 								len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
 								labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
 						} else {
-							joinsText = fmt.Sprintf("⚠ User joined this server %d times (last time %s)\n"+
+							joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
 								"Give Robyul the `Manage Server` permission to see using which invites.\n",
 								len(joins), humanize.Time(lastJoin.JoinedAt))
 						}
@@ -2475,9 +2475,9 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 					isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(user.User.ID)
 					helpers.RelaxLog(err)
-					isBannedOnBansdiscordlistNetText := "✅ User is not banned.\n"
+					isBannedOnBansdiscordlistNetText := ":white_check_mark: User is not banned.\n"
 					if isBannedOnBansdiscordlistNet {
-						isBannedOnBansdiscordlistNetText = "⚠ User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
+						isBannedOnBansdiscordlistNetText = ":warning: User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
 					}
 
 					resultEmbed.Fields = []*discordgo.MessageEmbedField{
@@ -2491,7 +2491,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 					for _, failedServer := range checkFailedServerList {
 						if failedServer.ID == targetGuild.ID {
-							resultEmbed.Description += "\n⚠ I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
+							resultEmbed.Description += "\n:warning: I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
 							break
 						}
 					}

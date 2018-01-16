@@ -1476,7 +1476,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		if helpers.IsRobyulMod(msg.Author.ID) && !helpers.GuildIsOnWhitelist(invite.Guild.ID) {
-			inviteEmbed.Fields = append(inviteEmbed.Fields, &discordgo.MessageEmbedField{Name: "Whitelisted", Value: "⚠ Guild is not whitelisted!", Inline: false})
+			inviteEmbed.Fields = append(inviteEmbed.Fields, &discordgo.MessageEmbedField{Name: "Whitelisted", Value: ":warning: Guild is not whitelisted!", Inline: false})
 		}
 
 		_, err = helpers.SendEmbed(msg.ChannelID, inviteEmbed)
