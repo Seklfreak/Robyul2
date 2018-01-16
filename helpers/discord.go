@@ -1171,10 +1171,10 @@ func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*dis
 		}
 	} else {
 		message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
-		messages = append(messages, message)
 		if err != nil {
 			return messages, err
 		}
+		messages = append(messages, message)
 	}
 	return messages, nil
 }
