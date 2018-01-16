@@ -5,8 +5,6 @@ import (
 
 	"time"
 
-	"fmt"
-
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -323,12 +321,8 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 								errorMessage = strings.TrimSuffix(errorMessage, ", ")
 								helpers.SendMessage(msg.ChannelID, errorMessage)
 								return
-							} else {
-								fmt.Println(err.Error())
 							}
 						}
-					} else {
-						fmt.Println(err.Error())
 					}
 				}
 			}
