@@ -214,11 +214,11 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 
 								if targetUserIsOnServer == true {
 									reportEmbed.Fields = append(reportEmbed.Fields, &discordgo.MessageEmbedField{
-										Name: "Member status", Value: "⚠ User is on this server", Inline: false,
+										Name: "Member status", Value: ":warning: User is on this server", Inline: false,
 									})
 								} else {
 									reportEmbed.Fields = append(reportEmbed.Fields, &discordgo.MessageEmbedField{
-										Name: "Member status", Value: "✅ User is not on this server", Inline: false,
+										Name: "Member status", Value: ":white_check_mark: User is not on this server", Inline: false,
 									})
 								}
 

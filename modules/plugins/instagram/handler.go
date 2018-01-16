@@ -529,7 +529,7 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 			if postDirectLinks {
 				content += "\n" + mediaUrl
 			}
-			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)
+			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.FromToText(strconv.Itoa(i+1)), mediaUrl)
 		}
 	}
 
