@@ -39,14 +39,6 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		return false, nil
 	}
 
-	if changes == nil {
-		changes = make([]models.ElasticEventlogChange, 0)
-	}
-
-	if options == nil {
-		options = make([]models.ElasticEventlogOption, 0)
-	}
-
 	if createdAt.IsZero() {
 		createdAt = time.Now()
 	}
@@ -60,7 +52,8 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 	messageIDs := make([]string, 0)
 	eventlogChannelIDs := GuildSettingsGetCached(guildID).EventlogChannelIDs
 	for _, eventlogChannelID := range eventlogChannelIDs {
-		messages, _ := SendEmbed(eventlogChannelID, getEventlogEmbed(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill))
+		messages, _ := SendEmbed(eventlogChannelID, getEventlogEmbed(createdAt, guildID, targetID, targetType, userID,
+			actionType, reason, cleanChanges(changes), cleanOptions(options), waitingForAuditLogBackfill))
 		if messages != nil && len(messages) >= 1 {
 			messageIDs = append(messageIDs, eventlogChannelID+"|"+messages[0].ID)
 		}
@@ -78,7 +71,8 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 func EventlogLogUpdate(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
 	reason string, auditLogBackfilled bool) (err error) {
-	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, options, changes, reason, auditLogBackfilled)
+	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, cleanOptions(options), cleanChanges(changes), reason,
+		auditLogBackfilled)
 	if err != nil {
 		return
 	}
@@ -720,4 +714,42 @@ func StoreBoolAsString(input bool) (output string) {
 	} else {
 		return "no"
 	}
+}
+
+func cleanChanges(oldChanges []models.ElasticEventlogChange) (newChanges []models.ElasticEventlogChange) {
+	newChanges = make([]models.ElasticEventlogChange, 0)
+	if oldChanges == nil {
+		return
+	}
+
+	for _, oldChange := range oldChanges {
+		if oldChange.Key == "" {
+			continue
+		}
+		if oldChange.NewValue == "" && oldChange.OldValue == "" {
+			continue
+		}
+		newChanges = append(newChanges, oldChange)
+	}
+
+	return
+}
+
+func cleanOptions(oldOptions []models.ElasticEventlogOption) (newOptions []models.ElasticEventlogOption) {
+	newOptions = make([]models.ElasticEventlogOption, 0)
+	if oldOptions == nil {
+		return
+	}
+
+	for _, oldOption := range oldOptions {
+		if oldOption.Key == "" {
+			continue
+		}
+		if oldOption.Value == "" {
+			continue
+		}
+		newOptions = append(newOptions, oldOption)
+	}
+
+	return
 }

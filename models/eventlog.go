@@ -23,6 +23,13 @@ const (
 	EventlogTargetTypeEmoji   = "emoji"
 	EventlogTargetTypeGuild   = "guild"
 
+	EventlogTypeRobyulBadgeCreate = "Robyul_Badge_Create" // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeDelete = "Robyul_Badge_Delete" // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeAllow  = "Robyul_Badge_Allow"  // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeDeny   = "Robyul_Badge_Deny"   // EventlogTargetTypeRobyulBadge
+
+	EventlogTargetTypeRobyulBadge = "robyul-badge"
+
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
 	AuditLogBackfillTypeChannelUpdateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-update"

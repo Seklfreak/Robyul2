@@ -752,7 +752,47 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								return
 							}
 
-							m.InsertBadge(*newBadge)
+							badgeID, err := m.InsertBadge(*newBadge)
+							helpers.Relax(err)
+
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeID,
+								models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
+								models.EventlogTypeRobyulBadgeCreate, "", nil,
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "badge_category",
+										Value: newBadge.Category,
+									},
+									{
+										Key:   "badge_name",
+										Value: newBadge.Name,
+									},
+									{
+										Key:   "badge_url",
+										Value: newBadge.URL,
+									},
+									{
+										Key:   "badge_bordercolor",
+										Value: newBadge.BorderColor,
+									},
+									{
+										Key:   "badge_levelrequirement",
+										Value: strconv.Itoa(newBadge.LevelRequirement),
+									},
+									{
+										Key:   "badge_guildid",
+										Value: newBadge.GuildID,
+									},
+									{
+										Key:   "badge_alloweduserids",
+										Value: strings.Join(newBadge.AllowedUserIDs, ","),
+									},
+									{
+										Key:   "badge_denieduserids",
+										Value: strings.Join(newBadge.DeniedUserIDs, ","),
+									},
+								}, false)
+							helpers.RelaxLog(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -783,6 +823,45 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 
 							m.DeleteBadge(badgeFound.ID)
+
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeFound.ID,
+								models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
+								models.EventlogTypeRobyulBadgeDelete, "", nil,
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "badge_category",
+										Value: badgeFound.Category,
+									},
+									{
+										Key:   "badge_name",
+										Value: badgeFound.Name,
+									},
+									{
+										Key:   "badge_url",
+										Value: badgeFound.URL,
+									},
+									{
+										Key:   "badge_bordercolor",
+										Value: badgeFound.BorderColor,
+									},
+									{
+										Key:   "badge_levelrequirement",
+										Value: strconv.Itoa(badgeFound.LevelRequirement),
+									},
+									{
+										Key:   "badge_guildid",
+										Value: badgeFound.GuildID,
+									},
+									{
+										Key:   "badge_alloweduserids",
+										Value: strings.Join(badgeFound.AllowedUserIDs, ","),
+									},
+									{
+										Key:   "badge_denieduserids",
+										Value: strings.Join(badgeFound.DeniedUserIDs, ","),
+									},
+								}, false)
+							helpers.RelaxLog(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.delete-badge-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -907,9 +986,52 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 							}
 
+							allowedIDsBefore := badgeToAllow.AllowedUserIDs
 							if isAlreadyAllowed == false {
 								badgeToAllow.AllowedUserIDs = append(badgeToAllow.AllowedUserIDs, targetUser.ID)
 								m.UpdateBadge(badgeToAllow)
+
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToAllow.ID,
+									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
+									models.EventlogTypeRobyulBadgeAllow, "",
+									[]models.ElasticEventlogChange{
+										{
+											Key:      "badge_alloweduserids",
+											OldValue: strings.Join(allowedIDsBefore, ","),
+											NewValue: strings.Join(badgeToAllow.AllowedUserIDs, ","),
+										},
+									},
+									[]models.ElasticEventlogOption{
+										{
+											Key:   "badge_category",
+											Value: badgeToAllow.Category,
+										},
+										{
+											Key:   "badge_name",
+											Value: badgeToAllow.Name,
+										},
+										{
+											Key:   "badge_url",
+											Value: badgeToAllow.URL,
+										},
+										{
+											Key:   "badge_bordercolor",
+											Value: badgeToAllow.BorderColor,
+										},
+										{
+											Key:   "badge_levelrequirement",
+											Value: strconv.Itoa(badgeToAllow.LevelRequirement),
+										},
+										{
+											Key:   "badge_guildid",
+											Value: badgeToAllow.GuildID,
+										},
+										{
+											Key:   "badge_alloweduserids_added",
+											Value: targetUser.ID,
+										},
+									}, false)
+								helpers.RelaxLog(err)
 
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-allowed",
 									targetUser.Username, badgeToAllow.Name, badgeToAllow.Category))
@@ -924,6 +1046,48 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 								badgeToAllow.AllowedUserIDs = allowedUserIDsWithout
 								m.UpdateBadge(badgeToAllow)
+
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToAllow.ID,
+									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
+									models.EventlogTypeRobyulBadgeAllow, "",
+									[]models.ElasticEventlogChange{
+										{
+											Key:      "badge_alloweduserids",
+											OldValue: strings.Join(allowedIDsBefore, ","),
+											NewValue: strings.Join(badgeToAllow.AllowedUserIDs, ","),
+										},
+									},
+									[]models.ElasticEventlogOption{
+										{
+											Key:   "badge_category",
+											Value: badgeToAllow.Category,
+										},
+										{
+											Key:   "badge_name",
+											Value: badgeToAllow.Name,
+										},
+										{
+											Key:   "badge_url",
+											Value: badgeToAllow.URL,
+										},
+										{
+											Key:   "badge_bordercolor",
+											Value: badgeToAllow.BorderColor,
+										},
+										{
+											Key:   "badge_levelrequirement",
+											Value: strconv.Itoa(badgeToAllow.LevelRequirement),
+										},
+										{
+											Key:   "badge_guildid",
+											Value: badgeToAllow.GuildID,
+										},
+										{
+											Key:   "badge_alloweduserids_removed",
+											Value: targetUser.ID,
+										},
+									}, false)
+								helpers.RelaxLog(err)
 
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.allow-badge-success-not-allowed",
 									targetUser.Username, badgeToAllow.Name, badgeToAllow.Category))
@@ -970,9 +1134,52 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 							}
 
+							deniedIDsBefore := badgeToDeny.DeniedUserIDs
 							if isAlreadyDenied == false {
 								badgeToDeny.DeniedUserIDs = append(badgeToDeny.DeniedUserIDs, targetUser.ID)
 								m.UpdateBadge(badgeToDeny)
+
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToDeny.ID,
+									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
+									models.EventlogTypeRobyulBadgeDeny, "",
+									[]models.ElasticEventlogChange{
+										{
+											Key:      "badge_denieduserids",
+											OldValue: strings.Join(deniedIDsBefore, ","),
+											NewValue: strings.Join(badgeToDeny.DeniedUserIDs, ","),
+										},
+									},
+									[]models.ElasticEventlogOption{
+										{
+											Key:   "badge_category",
+											Value: badgeToDeny.Category,
+										},
+										{
+											Key:   "badge_name",
+											Value: badgeToDeny.Name,
+										},
+										{
+											Key:   "badge_url",
+											Value: badgeToDeny.URL,
+										},
+										{
+											Key:   "badge_bordercolor",
+											Value: badgeToDeny.BorderColor,
+										},
+										{
+											Key:   "badge_levelrequirement",
+											Value: strconv.Itoa(badgeToDeny.LevelRequirement),
+										},
+										{
+											Key:   "badge_guildid",
+											Value: badgeToDeny.GuildID,
+										},
+										{
+											Key:   "badge_denieduserids_added",
+											Value: targetUser.ID,
+										},
+									}, false)
+								helpers.RelaxLog(err)
 
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-denied",
 									targetUser.Username, badgeToDeny.Name, badgeToDeny.Category))
@@ -987,6 +1194,48 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 								badgeToDeny.DeniedUserIDs = deniedUserIDsWithout
 								m.UpdateBadge(badgeToDeny)
+
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToDeny.ID,
+									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
+									models.EventlogTypeRobyulBadgeDeny, "",
+									[]models.ElasticEventlogChange{
+										{
+											Key:      "badge_denieduserids",
+											OldValue: strings.Join(deniedIDsBefore, ","),
+											NewValue: strings.Join(badgeToDeny.DeniedUserIDs, ","),
+										},
+									},
+									[]models.ElasticEventlogOption{
+										{
+											Key:   "badge_category",
+											Value: badgeToDeny.Category,
+										},
+										{
+											Key:   "badge_name",
+											Value: badgeToDeny.Name,
+										},
+										{
+											Key:   "badge_url",
+											Value: badgeToDeny.URL,
+										},
+										{
+											Key:   "badge_bordercolor",
+											Value: badgeToDeny.BorderColor,
+										},
+										{
+											Key:   "badge_levelrequirement",
+											Value: strconv.Itoa(badgeToDeny.LevelRequirement),
+										},
+										{
+											Key:   "badge_guildid",
+											Value: badgeToDeny.GuildID,
+										},
+										{
+											Key:   "badge_denieduserids_removed",
+											Value: targetUser.ID,
+										},
+									}, false)
+								helpers.RelaxLog(err)
 
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.deny-badge-success-not-denied",
 									targetUser.Username, badgeToDeny.Name, badgeToDeny.Category))
@@ -2913,13 +3162,13 @@ func (l *Levels) GetLevelForUser(userID string, guildID string) int {
 	return 0
 }
 
-func (l *Levels) InsertBadge(entry DB_Badge) {
+func (l *Levels) InsertBadge(entry DB_Badge) (badgeID string, err error) {
 	insert := rethink.Table("profile_badge").Insert(entry)
-	_, err := insert.RunWrite(helpers.GetDB())
+	res, err := insert.RunWrite(helpers.GetDB())
 	if err != nil {
-		helpers.Relax(err)
+		return "", err
 	}
-	return
+	return res.GeneratedKeys[0], nil
 }
 
 func (l *Levels) UpdateBadge(entry DB_Badge) {
