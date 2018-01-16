@@ -21,6 +21,26 @@ var (
 	AuditLogBackfillRequestsLock = sync.Mutex{}
 )
 
+/*
+_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetID,
+	models.EventlogTargetType, msg.Author.ID,
+	models.EventlogType, "",
+	[]models.ElasticEventlogChange{
+		{
+			Key:      "key",
+			OldValue: "",
+			NewValue: "",
+		},
+	},
+	[]models.ElasticEventlogOption{
+		{
+			Key:   "",
+			Value: "",
+		},
+	}, false)
+helpers.RelaxLog(err)
+*/
+
 func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (added bool, err error) {
 	if guildID == "" {

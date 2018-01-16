@@ -1863,8 +1863,24 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 
 							levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, targetUser.ID)
+
+							expBefore := levelsServerUser.Exp
+
 							levelsServerUser.Exp = 0
 							m.setLevelsServerUser(levelsServerUser)
+
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+								models.EventlogTargetTypeUser, msg.Author.ID,
+								models.EventlogTypeRobyulLevelsReset, "",
+								[]models.ElasticEventlogChange{
+									{
+										Key:      "levels_exp",
+										OldValue: strconv.FormatInt(expBefore, 10),
+										NewValue: strconv.FormatInt(levelsServerUser.Exp, 10),
+									},
+								},
+								nil, false)
+							helpers.RelaxLog(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-resetted"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1934,11 +1950,31 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 							settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
+							ignoredUserIDsBefore := settings.LevelsIgnoredUserIDs
+
 							for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
 								if ignoredUserID == targetUser.ID {
 									settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs[:i], settings.LevelsIgnoredUserIDs[i+1:]...)
 									err = helpers.GuildSettingsSet(channel.GuildID, settings)
 									helpers.Relax(err)
+
+									_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+										models.EventlogTargetTypeUser, msg.Author.ID,
+										models.EventlogTypeRobyulLevelsIgnoreUser, "",
+										[]models.ElasticEventlogChange{
+											{
+												Key:      "levels_ignoreduserids",
+												OldValue: strings.Join(ignoredUserIDsBefore, ","),
+												NewValue: strings.Join(settings.LevelsIgnoredUserIDs, ","),
+											},
+										},
+										[]models.ElasticEventlogOption{
+											{
+												Key:   "levels_ignoreduserids_removed",
+												Value: targetUser.ID,
+											},
+										}, false)
+									helpers.RelaxLog(err)
 
 									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-user-removed"))
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1949,6 +1985,24 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							settings.LevelsIgnoredUserIDs = append(settings.LevelsIgnoredUserIDs, targetUser.ID)
 							err = helpers.GuildSettingsSet(channel.GuildID, settings)
 							helpers.Relax(err)
+
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+								models.EventlogTargetTypeUser, msg.Author.ID,
+								models.EventlogTypeRobyulLevelsIgnoreUser, "",
+								[]models.ElasticEventlogChange{
+									{
+										Key:      "levels_ignoreduserids",
+										OldValue: strings.Join(ignoredUserIDsBefore, ","),
+										NewValue: strings.Join(settings.LevelsIgnoredUserIDs, ","),
+									},
+								},
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "levels_ignoreduserids_added",
+										Value: targetUser.ID,
+									},
+								}, false)
+							helpers.RelaxLog(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.ignore-user-added", helpers.GetPrefixForServer(channel.GuildID)))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1973,11 +2027,31 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 							settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
+							ignoredChannelIDsBefore := settings.LevelsIgnoredChannelIDs
+
 							for i, ignoredChannelID := range settings.LevelsIgnoredChannelIDs {
 								if ignoredChannelID == targetChannel.ID {
 									settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs[:i], settings.LevelsIgnoredChannelIDs[i+1:]...)
 									err = helpers.GuildSettingsSet(channel.GuildID, settings)
 									helpers.Relax(err)
+
+									_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+										models.EventlogTargetTypeChannel, msg.Author.ID,
+										models.EventlogTypeRobyulLevelsIgnoreChannel, "",
+										[]models.ElasticEventlogChange{
+											{
+												Key:      "levels_ignoredchannelids",
+												OldValue: strings.Join(ignoredChannelIDsBefore, ","),
+												NewValue: strings.Join(settings.LevelsIgnoredChannelIDs, ","),
+											},
+										},
+										[]models.ElasticEventlogOption{
+											{
+												Key:   "levels_ignoredchannelids_removed",
+												Value: targetChannel.ID,
+											},
+										}, false)
+									helpers.RelaxLog(err)
 
 									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-removed"))
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1988,6 +2062,24 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							settings.LevelsIgnoredChannelIDs = append(settings.LevelsIgnoredChannelIDs, targetChannel.ID)
 							err = helpers.GuildSettingsSet(channel.GuildID, settings)
 							helpers.Relax(err)
+
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+								models.EventlogTargetTypeChannel, msg.Author.ID,
+								models.EventlogTypeRobyulLevelsIgnoreChannel, "",
+								[]models.ElasticEventlogChange{
+									{
+										Key:      "levels_ignoredchannelids",
+										OldValue: strings.Join(ignoredChannelIDsBefore, ","),
+										NewValue: strings.Join(settings.LevelsIgnoredChannelIDs, ","),
+									},
+								},
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "levels_ignoredchannelids_added",
+										Value: targetChannel.ID,
+									},
+								}, false)
+							helpers.RelaxLog(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.ignore-channel-added"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2103,6 +2195,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					temporaryIgnoredGuilds = newTemporaryIgnoredGuilds
 					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Enabled EXP Processing for `%s` again.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+						models.EventlogTargetTypeGuild, msg.Author.ID,
+						models.EventlogTypeRobyulLevelsProcessedHistory, "",
+						nil,
+						nil, false)
+					helpers.RelaxLog(err)
+
 					_, err = helpers.SendMessage(dmChannel.ID, "Done!")
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
@@ -2175,6 +2275,27 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						_, err = m.createLevelsRoleEntry(channel.GuildID, targetRole.ID, startLevel, lastLevel)
 						helpers.Relax(err)
 
+						options := []models.ElasticEventlogOption{
+							{
+								Key:   "role_startlevel",
+								Value: strconv.Itoa(startLevel),
+							},
+						}
+
+						if lastLevel >= 0 {
+							options = append(options, models.ElasticEventlogOption{
+								Key:   "role_lastlevel",
+								Value: strconv.Itoa(lastLevel),
+							})
+						}
+
+						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+							models.EventlogTargetTypeRole, msg.Author.ID,
+							models.EventlogTypeRobyulLevelsRoleAdd, "",
+							nil,
+							options, false)
+						helpers.RelaxLog(err)
+
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-add-success", targetRole.Name))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					})
@@ -2203,6 +2324,22 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									errors = append(errors, errRole)
 								}
 							}
+
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+								models.EventlogTargetTypeGuild, msg.Author.ID,
+								models.EventlogTypeRobyulLevelsRoleApply, "",
+								nil,
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "roles_added",
+										Value: strconv.Itoa(success),
+									},
+									{
+										Key:   "roles_errors",
+										Value: strconv.Itoa(len(errors)),
+									},
+								}, false)
+							helpers.RelaxLog(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-apply-result", msg.Author.ID, success, len(errors)))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2303,6 +2440,27 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							role.Name = "N/A"
 						}
 
+						options := []models.ElasticEventlogOption{
+							{
+								Key:   "role_startlevel",
+								Value: strconv.Itoa(entry.StartLevel),
+							},
+						}
+
+						if entry.LastLevel >= 0 {
+							options = append(options, models.ElasticEventlogOption{
+								Key:   "role_lastlevel",
+								Value: strconv.Itoa(entry.LastLevel),
+							})
+						}
+
+						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entry.RoleID,
+							models.EventlogTargetTypeRole, msg.Author.ID,
+							models.EventlogTypeRobyulLevelsRoleDelete, "",
+							nil,
+							options, false)
+						helpers.RelaxLog(err)
+
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.levels-role-delete-success",
 							role.Name, entry.RoleID))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2357,6 +2515,18 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 							helpers.Relax(err)
 
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+								models.EventlogTargetTypeUser, msg.Author.ID,
+								models.EventlogTypeRobyulLevelsRoleGrant, "",
+								nil,
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "levels_role_grant_roleid_removed",
+										Value: targetRole.ID,
+									},
+								}, false)
+							helpers.RelaxLog(err)
+
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-remove-success",
 								targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2368,6 +2538,18 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 						helpers.Relax(err)
+
+						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+							models.EventlogTargetTypeUser, msg.Author.ID,
+							models.EventlogTypeRobyulLevelsRoleGrant, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "levels_role_grant_roleid_added",
+									Value: targetRole.ID,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-grant-create-success",
 							targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
@@ -2423,6 +2605,18 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 							helpers.Relax(err)
 
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+								models.EventlogTargetTypeUser, msg.Author.ID,
+								models.EventlogTypeRobyulLevelsRoleDeny, "",
+								nil,
+								[]models.ElasticEventlogOption{
+									{
+										Key:   "levels_role_deny_roleid_removed",
+										Value: targetRole.ID,
+									},
+								}, false)
+							helpers.RelaxLog(err)
+
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-remove-success",
 								targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2434,6 +2628,18 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
 						helpers.Relax(err)
+
+						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+							models.EventlogTargetTypeUser, msg.Author.ID,
+							models.EventlogTypeRobyulLevelsRoleDeny, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "levels_role_deny_roleid_added",
+									Value: targetRole.ID,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.roles-deny-create-success",
 							targetUser.Username, targetUser.ID, targetRole.Name, targetRole.ID))

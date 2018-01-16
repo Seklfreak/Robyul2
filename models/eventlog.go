@@ -23,10 +23,19 @@ const (
 	EventlogTargetTypeEmoji   = "emoji"
 	EventlogTargetTypeGuild   = "guild"
 
-	EventlogTypeRobyulBadgeCreate = "Robyul_Badge_Create" // EventlogTargetTypeRobyulBadge
-	EventlogTypeRobyulBadgeDelete = "Robyul_Badge_Delete" // EventlogTargetTypeRobyulBadge
-	EventlogTypeRobyulBadgeAllow  = "Robyul_Badge_Allow"  // EventlogTargetTypeRobyulBadge
-	EventlogTypeRobyulBadgeDeny   = "Robyul_Badge_Deny"   // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeCreate            = "Robyul_Badge_Create"            // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeDelete            = "Robyul_Badge_Delete"            // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeAllow             = "Robyul_Badge_Allow"             // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulBadgeDeny              = "Robyul_Badge_Deny"              // EventlogTargetTypeRobyulBadge
+	EventlogTypeRobyulLevelsReset            = "Robyul_Levels_Reset"            // EventlogTargetTypeUser
+	EventlogTypeRobyulLevelsIgnoreUser       = "Robyul_Levels_Ignore_User"      // EventlogTargetTypeUser
+	EventlogTypeRobyulLevelsIgnoreChannel    = "Robyul_Levels_Ignore_Channel"   // EventlogTargetTypeChannel
+	EventlogTypeRobyulLevelsProcessedHistory = "Robyul_Levels_ProcessedHistory" // EventlogTargetTypeGuild
+	EventlogTypeRobyulLevelsRoleAdd          = "Robyul_Levels_Role_Add"         // EventlogTargetTypeRole
+	EventlogTypeRobyulLevelsRoleApply        = "Robyul_Levels_Role_Apply"       // EventlogTargetTypeGuild
+	EventlogTypeRobyulLevelsRoleDelete       = "Robyul_Levels_Role_Delete"      // EventlogTargetTypeRole
+	EventlogTypeRobyulLevelsRoleGrant        = "Robyul_Levels_Role_Grant"       // EventlogTargetTypeUser
+	EventlogTypeRobyulLevelsRoleDeny         = "Robyul_Levels_Role_Deny"        // EventlogTargetTypeUser
 
 	EventlogTargetTypeRobyulBadge = "robyul-badge"
 
