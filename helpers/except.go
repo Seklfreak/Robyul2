@@ -78,8 +78,8 @@ func Relax(err error) {
 
 			fmt.Println(string(buf[0:stackSize]))
 
-			if errD, ok := err.(*discordgo.RESTError); ok && errD != nil && errD.Message != nil {
-				fmt.Println(strconv.Itoa(errD.Message.Code)+":", errD.Message.Message)
+			if errD, ok := err.(*discordgo.RESTError); ok && errD != nil && errD.Message != nil && errD.Message.Message != "" {
+				fmt.Println(strconv.Itoa(errD.Message.Code)+":", strings.Trim(errD.Message.Message, "\""))
 			}
 
 			panic(err)

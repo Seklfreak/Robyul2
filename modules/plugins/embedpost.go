@@ -5,6 +5,9 @@ import (
 
 	"time"
 
+	"fmt"
+
+	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
@@ -306,6 +309,29 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 				Content: ptext,
 				Embed:   &embed,
 			})
+			if err != nil && strings.Contains(err.Error(), "HTTP 400 Bad Request") {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					container, err := gabs.ParseJSON(errD.ResponseBody)
+					if err == nil {
+						if container.Exists("embed") {
+							children, err := container.Path("embed").Children()
+							if err == nil {
+								errorMessage := "Please check the following field(s) of your embed: "
+								for _, entry := range children {
+									errorMessage += strings.Trim(entry.String(), "\"") + ", "
+								}
+								errorMessage = strings.TrimSuffix(errorMessage, ", ")
+								helpers.SendMessage(msg.ChannelID, errorMessage)
+								return
+							} else {
+								fmt.Println(err.Error())
+							}
+						}
+					} else {
+						fmt.Println(err.Error())
+					}
+				}
+			}
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 
 			if len(newMessages) > 0 {
