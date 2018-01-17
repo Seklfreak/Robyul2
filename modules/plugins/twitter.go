@@ -82,13 +82,22 @@ func (t *Twitter) Init(session *discordgo.Session) {
 			}
 
 			twitterEntryLocksLock.Lock()
-			if _, ok := twitterEntryLocks[entry.ID]; !ok {
+			if _, ok := twitterEntryLocks[entry.ID]; !ok || twitterEntryLocks[entry.ID] == nil {
 				twitterEntryLocks[entry.ID] = &sync.Mutex{}
 			}
 			twitterEntryLocks[entry.ID].Lock()
 			twitterEntryLocksLock.Unlock()
 
-			entry := t.getEntryBy("id", entry.ID)
+			entry, err := t.getEntryBy("id", entry.ID)
+			if err != nil {
+				twitterEntryLocksLock.Lock()
+				if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
+					twitterEntryLocks[entry.ID].Unlock()
+				}
+				twitterEntryLocksLock.Unlock()
+				helpers.RelaxLog(err)
+				continue
+			}
 
 			changes := false
 			tweetAlreadyPosted := false
@@ -110,7 +119,9 @@ func (t *Twitter) Init(session *discordgo.Session) {
 			}
 
 			twitterEntryLocksLock.Lock()
-			twitterEntryLocks[entry.ID].Unlock()
+			if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
+				twitterEntryLocks[entry.ID].Unlock()
+			}
 			twitterEntryLocksLock.Unlock()
 		}
 	}
@@ -282,13 +293,22 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 
 			for _, entry := range entries {
 				twitterEntryLocksLock.Lock()
-				if _, ok := twitterEntryLocks[entry.ID]; !ok {
+				if _, ok := twitterEntryLocks[entry.ID]; !ok || twitterEntryLocks[entry.ID] == nil {
 					twitterEntryLocks[entry.ID] = &sync.Mutex{}
 				}
 				twitterEntryLocks[entry.ID].Lock()
 				twitterEntryLocksLock.Unlock()
 
-				entry := m.getEntryBy("id", entry.ID)
+				entry, err := m.getEntryBy("id", entry.ID)
+				if err != nil {
+					twitterEntryLocksLock.Lock()
+					if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
+						twitterEntryLocks[entry.ID].Unlock()
+					}
+					twitterEntryLocksLock.Unlock()
+					helpers.RelaxLog(err)
+					continue
+				}
 
 				changes := false
 
@@ -313,7 +333,9 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				}
 
 				twitterEntryLocksLock.Lock()
-				twitterEntryLocks[entry.ID].Unlock()
+				if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
+					twitterEntryLocks[entry.ID].Unlock()
+				}
 				twitterEntryLocksLock.Unlock()
 			}
 		}
@@ -438,7 +460,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
 					entryId := args[1]
-					entryBucket := m.getEntryBy("id", entryId)
+					entryBucket, err := m.getEntryBy("id", entryId)
+					helpers.Relax(err)
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
 
@@ -691,24 +714,17 @@ func (t *Twitter) maxQualityMediaUrl(input string) (result string) {
 	return input
 }
 
-func (m *Twitter) getEntryBy(key string, id string) DB_Twitter_Entry {
-	var entryBucket DB_Twitter_Entry
+func (m *Twitter) getEntryBy(key string, id string) (entryBucket DB_Twitter_Entry, err error) {
 	listCursor, err := rethink.Table("twitter").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer listCursor.Close()
 	err = listCursor.One(&entryBucket)
 
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
+	return
 }
 
 func (m *Twitter) getEntryByOrCreateEmpty(key string, id string) DB_Twitter_Entry {
