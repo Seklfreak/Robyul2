@@ -53,7 +53,7 @@ var ExtendedInspectRoleIDs = []string{
 	"345209098100277248", // inspect (Moderator Chat)
 }
 var adminRoleNames = []string{"Admin", "Admins", "ADMIN", "School Board", "admin", "admins"}
-var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods"}
+var modRoleNames = []string{"Mod", "Mods", "Mod Trainee", "Moderator", "Moderators", "MOD", "Minimod", "Guard", "Janitor", "mod", "mods", "Budget Admin"}
 
 func IsBlacklisted(id string) bool {
 	for _, s := range Blacklisted {
