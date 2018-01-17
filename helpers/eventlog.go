@@ -137,7 +137,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		for _, change := range changes {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:  change.Key,
-				Value: change.OldValue + " ➡ " + change.NewValue,
+				Value: "`" + change.OldValue + "` ➡ `" + change.NewValue + "`",
 			})
 		}
 	}
@@ -146,7 +146,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		for _, option := range options {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:  option.Key,
-				Value: option.Value,
+				Value: "`" + option.Value + "`",
 			})
 		}
 	}

@@ -883,13 +883,36 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 
 				newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-				_, err = helpers.SendMessage(targetChannel.ID, newText)
+				newMessages, err := helpers.SendMessage(targetChannel.ID, newText)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingAccess {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-no-access"))
 						return
 					}
 				}
+
+				if newMessages != nil && len(newMessages) > 0 {
+					newMessageIDs := make([]string, 0)
+					for _, newMessage := range newMessages {
+						newMessageIDs = append(newMessageIDs, newMessage.ID)
+					}
+					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, strings.Join(newMessageIDs, ","),
+						models.EventlogTargetTypeMessage, msg.Author.ID,
+						models.EventlogTypeRobyulPostCreate, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "post_message",
+								Value: newText,
+							},
+							{
+								Key:   "post_channelid",
+								Value: targetChannel.ID,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+				}
+
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
@@ -928,7 +951,28 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					}
 				}
 				newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-				helpers.EditMessage(targetChannel.ID, targetMessage.ID, newText)
+				editMessage, _ := helpers.EditMessage(targetChannel.ID, targetMessage.ID, newText)
+
+				if editMessage != nil && targetMessage != nil {
+					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, editMessage.ID,
+						models.EventlogTargetTypeMessage, msg.Author.ID,
+						models.EventlogTypeRobyulPostUpdate, "",
+						[]models.ElasticEventlogChange{
+							{
+								Key:      "post_message",
+								OldValue: targetMessage.Content,
+								NewValue: newText,
+							},
+						},
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "post_channelid",
+								Value: targetChannel.ID,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+				}
+
 			} else {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
@@ -952,7 +996,29 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
-				session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
+				newMessage, _ := session.ChannelFileSend(targetChannel.ID, msg.Attachments[0].Filename, bytes.NewReader(fileToUpload))
+				if newMessage != nil && newMessage.Attachments != nil && len(newMessage.Attachments) > 0 {
+					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, newMessage.ID,
+						models.EventlogTargetTypeMessage, msg.Author.ID,
+						models.EventlogTypeRobyulPostCreate, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "post_attachment_filename",
+								Value: msg.Attachments[0].Filename,
+							},
+							{
+								Key:   "post_attachment_link",
+								Value: newMessage.Attachments[0].URL,
+							},
+							{
+								Key:   "post_channelid",
+								Value: targetChannel.ID,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+				}
+
 			} else {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return

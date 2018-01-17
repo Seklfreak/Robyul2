@@ -22,6 +22,7 @@ const (
 	EventlogTargetTypeRole    = "role"
 	EventlogTargetTypeEmoji   = "emoji"
 	EventlogTargetTypeGuild   = "guild"
+	EventlogTargetTypeMessage = "message"
 
 	EventlogTypeRobyulBadgeCreate                = "Robyul_Badge_Create"                 // EventlogTargetTypeRobyulBadge
 	EventlogTypeRobyulBadgeDelete                = "Robyul_Badge_Delete"                 // EventlogTargetTypeRobyulBadge
@@ -52,6 +53,8 @@ const (
 	EventlogTypeRobyulCleanup                    = "Robyul_Cleanup"                      //
 	EventlogTypeRobyulMute                       = "Robyul_Mute"                         // EventlogTargetTypeUser
 	EventlogTypeRobyulUnmute                     = "Robyul_Unmute"                       // EventlogTargetTypeUser
+	EventlogTypeRobyulPostCreate                 = "Robyul_Post_Create"                  // EventlogTargetTypeMessage
+	EventlogTypeRobyulPostUpdate                 = "Robyul_Post_Update"                  // EventlogTargetTypeMessage
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"

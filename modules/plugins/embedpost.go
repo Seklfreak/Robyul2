@@ -7,6 +7,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -79,65 +80,7 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 					return
 				}
 
-				targetEmbed := targetMessage.Embeds[0]
-				var embedCode string
-
-				if len(targetMessage.Content) > 0 {
-					embedCode += "ptext=" + m.cleanEmbedValue(targetMessage.Content) + " | "
-				}
-				if targetEmbed.Author != nil && targetEmbed.Author.Name != "" {
-					if targetEmbed.Author.URL == "" && targetEmbed.Author.IconURL == "" {
-						embedCode += "author=" + m.cleanEmbedValue(targetEmbed.Author.Name) + " | "
-					} else {
-						embedCode += "author=name=" + m.cleanEmbedValue(targetEmbed.Author.Name)
-						if targetEmbed.Author.URL != "" {
-							embedCode += " url=" + m.cleanEmbedValue(targetEmbed.Author.URL)
-						}
-						if targetEmbed.Author.IconURL != "" {
-							embedCode += " icon=" + m.cleanEmbedValue(targetEmbed.Author.IconURL)
-						}
-						embedCode += " | "
-					}
-				}
-				if targetEmbed.Title != "" {
-					embedCode += "title=" + m.cleanEmbedValue(targetEmbed.Title) + " | "
-				}
-				if targetEmbed.Description != "" {
-					embedCode += "description=" + m.cleanEmbedValue(targetEmbed.Description) + " | "
-				}
-				if targetEmbed.Thumbnail != nil && targetEmbed.Thumbnail.URL != "" {
-					embedCode += "thumbnail=" + m.cleanEmbedValue(targetEmbed.Thumbnail.URL) + " | "
-				}
-				if targetEmbed.Image != nil && targetEmbed.Image.URL != "" {
-					embedCode += "image=" + m.cleanEmbedValue(targetEmbed.Image.URL) + " | "
-				}
-				if targetEmbed.Fields != nil && len(targetEmbed.Fields) > 0 {
-					for _, targetField := range targetEmbed.Fields {
-						if targetField.Inline {
-							embedCode += "field=name=" + m.cleanEmbedValue(targetField.Name) +
-								" value=" + m.cleanEmbedValue(targetField.Value) + " | "
-						} else {
-							embedCode += "field=name=" + m.cleanEmbedValue(targetField.Name) +
-								" value=" + m.cleanEmbedValue(targetField.Value) + " inline=no | "
-						}
-					}
-				}
-				if targetEmbed.Footer != nil && targetEmbed.Footer.Text != "" {
-					if targetEmbed.Footer.IconURL == "" {
-						embedCode += "footer=" + m.cleanEmbedValue(targetEmbed.Footer.Text)
-					} else {
-						embedCode += "footer=name=" + m.cleanEmbedValue(targetEmbed.Footer.Text) +
-							" icon=" + m.cleanEmbedValue(targetEmbed.Footer.IconURL)
-					}
-					embedCode += " | "
-				}
-				if targetEmbed.Color > 0 {
-					embedCode += "color=#" + helpers.GetHexFromDiscordColor(targetEmbed.Color) + " | "
-				}
-
-				embedCode = strings.TrimSuffix(embedCode, " | ")
-
-				_, err = helpers.SendMessageBoxed(msg.ChannelID, embedCode)
+				_, err = helpers.SendMessageBoxed(msg.ChannelID, helpers.GetEmbedCode(targetMessage))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
 				return
@@ -330,6 +273,26 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 
 			if len(newMessages) > 0 {
 				session.MessageReactionAdd(msg.ChannelID, msg.ID, "👌")
+
+				newMessageIDs := make([]string, 0)
+				for _, newMessage := range newMessages {
+					newMessageIDs = append(newMessageIDs, newMessage.ID)
+				}
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, strings.Join(newMessageIDs, ","),
+					models.EventlogTargetTypeMessage, msg.Author.ID,
+					models.EventlogTypeRobyulPostCreate, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "post_channelid",
+							Value: targetChannel.ID,
+						},
+						{
+							Key:   "post_embedcode",
+							Value: embedText,
+						},
+					}, false)
+				helpers.RelaxLog(err)
 			}
 		} else {
 			editMessage, err := helpers.EditComplex(&discordgo.MessageEdit{
@@ -342,11 +305,25 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 
 			if editMessage != nil {
 				session.MessageReactionAdd(msg.ChannelID, msg.ID, "👌")
+
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, editMessage.ID,
+					models.EventlogTargetTypeMessage, msg.Author.ID,
+					models.EventlogTypeRobyulPostUpdate, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "post_embedcode",
+							OldValue: helpers.GetEmbedCode(targetMessage),
+							NewValue: embedText,
+						},
+					},
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "post_channelid",
+							Value: targetChannel.ID,
+						},
+					}, false)
+				helpers.RelaxLog(err)
 			}
 		}
 	})
-}
-
-func (m *EmbedPost) cleanEmbedValue(input string) (output string) {
-	return strings.Replace(input, "|", "-", -1)
 }
