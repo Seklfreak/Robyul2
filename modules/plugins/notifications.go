@@ -8,9 +8,12 @@ import (
 
 	"regexp"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
@@ -289,10 +292,36 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						ignoredChannel.ChannelID = targetChannel.ID
 						ignoredChannel.GuildID = targetChannel.GuildID
 						m.setIgnoredChannel(ignoredChannel)
+
+						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+							models.EventlogTargetTypeChannel, msg.Author.ID,
+							models.EventlogTypeRobyulNotificationsChannelIgnore, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "notifications_ignoredchannelids_added",
+									Value: targetChannel.ID,
+								},
+							}, false)
+						helpers.RelaxLog(err)
+
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-add-success", targetChannel.ID))
 					} else {
 						// Remove from list
 						m.deleteIgnoredChannel(ignoredChannel.ID)
+
+						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+							models.EventlogTargetTypeChannel, msg.Author.ID,
+							models.EventlogTypeRobyulNotificationsChannelIgnore, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "notifications_ignoredchannelids_removed",
+									Value: targetChannel.ID,
+								},
+							}, false)
+						helpers.RelaxLog(err)
+
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
 					}
 					go m.refreshNotificationSettingsCache()

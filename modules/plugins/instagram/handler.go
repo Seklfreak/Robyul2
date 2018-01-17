@@ -8,9 +8,12 @@ import (
 
 	"sync"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/ahmdrz/goinsta"
 	goinstaResponse "github.com/ahmdrz/goinsta/response"
 	goinstaStore "github.com/ahmdrz/goinsta/store"
@@ -173,6 +176,30 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				entry.InstagramUserID = instagramUser.User.ID
 				m.setEntry(entry)
 
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+					models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
+					models.EventlogTypeRobyulInstagramFeedAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "instagram_channelid",
+							Value: targetChannel.ID,
+						},
+						{
+							Key:   "instagram_postdirectlinks",
+							Value: helpers.StoreBoolAsString(linkMode),
+						},
+						{
+							Key:   "instagram_instagramuserid",
+							Value: strconv.FormatInt(instagramUser.User.ID, 10),
+						},
+						{
+							Key:   "instagram_instagramusername",
+							Value: instagramUser.User.Username,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID, specialText))
 				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
@@ -180,10 +207,38 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 			helpers.RequireMod(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
 					entryId := args[1]
 					entryBucket := m.getEntryBy("id", entryId)
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
+
+						_, err := helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+							models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
+							models.EventlogTypeRobyulInstagramFeedRemove, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "instagram_channelid",
+									Value: entryBucket.ID,
+								},
+								{
+									Key:   "instagram_postdirectlinks",
+									Value: helpers.StoreBoolAsString(entryBucket.PostDirectLinks),
+								},
+								{
+									Key:   "instagram_instagramuserid",
+									Value: strconv.FormatInt(entryBucket.InstagramUserID, 10),
+								},
+								{
+									Key:   "instagram_instagramusername",
+									Value: entryBucket.Username,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-delete-success", entryBucket.Username))
 						cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Deleted Instagram Account @%s", entryBucket.Username))
@@ -232,6 +287,10 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 		case "toggle-direct-link", "toggle-direct-links": // [p]instagram toggle-direct-links <id>
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
+
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+
 				if len(args) < 2 {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
@@ -242,6 +301,9 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
+
+				beforeValue := entryBucket.PostDirectLinks
+
 				var messageText string
 				if entryBucket.PostDirectLinks {
 					entryBucket.PostDirectLinks = false
@@ -250,6 +312,37 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					entryBucket.PostDirectLinks = true
 					messageText = helpers.GetText("plugins.instagram.post-direct-links-enabled")
 				}
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+					models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
+					models.EventlogTypeRobyulInstagramFeedUpdate, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "instagram_postdirectlinks",
+							OldValue: helpers.StoreBoolAsString(beforeValue),
+							NewValue: helpers.StoreBoolAsString(entryBucket.PostDirectLinks),
+						},
+					},
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "instagram_channelid",
+							Value: entryBucket.ID,
+						},
+						{
+							Key:   "instagram_postdirectlinks",
+							Value: helpers.StoreBoolAsString(entryBucket.PostDirectLinks),
+						},
+						{
+							Key:   "instagram_instagramuserid",
+							Value: strconv.FormatInt(entryBucket.InstagramUserID, 10),
+						},
+						{
+							Key:   "instagram_instagramusername",
+							Value: entryBucket.Username,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				m.setEntry(entryBucket)
 				helpers.SendMessage(msg.ChannelID, messageText)
 				return

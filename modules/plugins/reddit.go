@@ -323,8 +323,32 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 		return r.actionFinish
 	}
 
-	_, err = r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID, postDelay, linkMode)
+	subredditEntry, err := r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID, postDelay, linkMode)
 	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, subredditEntry.ID,
+		models.EventlogTargetTypeRobyulRedditFeed, in.Author.ID,
+		models.EventlogTypeRobyulRedditFeedAdd, "",
+		nil,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "reddit_channelid",
+				Value: subredditEntry.ChannelID,
+			},
+			{
+				Key:   "reddit_postdirectlinks",
+				Value: helpers.StoreBoolAsString(subredditEntry.PostDirectLinks),
+			},
+			{
+				Key:   "reddit_postdelay",
+				Value: strconv.Itoa(subredditEntry.PostDelay),
+			},
+			{
+				Key:   "reddit_subredditname",
+				Value: subredditEntry.SubredditName,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	// TODO: Post preview post
 
@@ -371,6 +395,9 @@ func (r *Reddit) actionRemove(args []string, in *discordgo.Message, out **discor
 		return r.actionFinish
 	}
 
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
 	subredditEntry, err := r.getSubredditEntryBy("id", args[1])
 	if err != nil || subredditEntry.ID == "" {
 		*out = r.newMsg("plugins.reddit.remove-subreddit-error-not-found")
@@ -379,6 +406,30 @@ func (r *Reddit) actionRemove(args []string, in *discordgo.Message, out **discor
 
 	err = r.removeSubredditEntry(subredditEntry)
 	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, subredditEntry.ID,
+		models.EventlogTargetTypeRobyulRedditFeed, in.Author.ID,
+		models.EventlogTypeRobyulRedditFeedRemove, "",
+		nil,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "reddit_channelid",
+				Value: subredditEntry.ChannelID,
+			},
+			{
+				Key:   "reddit_postdirectlinks",
+				Value: helpers.StoreBoolAsString(subredditEntry.PostDirectLinks),
+			},
+			{
+				Key:   "reddit_postdelay",
+				Value: strconv.Itoa(subredditEntry.PostDelay),
+			},
+			{
+				Key:   "reddit_subredditname",
+				Value: subredditEntry.SubredditName,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	*out = r.newMsg("plugins.reddit.remove-subreddit-success", subredditEntry.SubredditName)
 	return r.actionFinish
@@ -411,11 +462,16 @@ func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, o
 		return r.actionFinish
 	}
 
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
 	subredditEntry, err := r.getSubredditEntryBy("id", args[1])
 	if err != nil || subredditEntry.ID == "" {
 		*out = r.newMsg("plugins.reddit.toggledirectlinks-error-subreddit-not-found")
 		return r.actionFinish
 	}
+
+	beforeValue := subredditEntry.PostDirectLinks
 
 	if subredditEntry.PostDirectLinks {
 		subredditEntry.PostDirectLinks = false
@@ -424,6 +480,36 @@ func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, o
 		subredditEntry.PostDirectLinks = true
 		*out = r.newMsg("plugins.reddit.toggledirectlinks-enabled", subredditEntry.SubredditName)
 	}
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, subredditEntry.ID,
+		models.EventlogTargetTypeRobyulRedditFeed, in.Author.ID,
+		models.EventlogTypeRobyulRedditFeedUpdate, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "reddit_postdirectlinks",
+				OldValue: helpers.StoreBoolAsString(beforeValue),
+				NewValue: helpers.StoreBoolAsString(subredditEntry.PostDirectLinks),
+			},
+		},
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "reddit_channelid",
+				Value: subredditEntry.ChannelID,
+			},
+			{
+				Key:   "reddit_postdirectlinks",
+				Value: helpers.StoreBoolAsString(subredditEntry.PostDirectLinks),
+			},
+			{
+				Key:   "reddit_postdelay",
+				Value: strconv.Itoa(subredditEntry.PostDelay),
+			},
+			{
+				Key:   "reddit_subredditname",
+				Value: subredditEntry.SubredditName,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	err = r.setSubredditEntry(subredditEntry)
 	helpers.Relax(err)

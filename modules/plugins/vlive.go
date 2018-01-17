@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	redisCache "github.com/go-redis/cache"
@@ -356,6 +357,30 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 				entry.MentionRoleID = mentionRole.ID
 				r.setEntry(entry)
 
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+					models.EventlogTargetTypeRobyulVliveFeed, msg.Author.ID,
+					models.EventlogTypeRobyulVliveFeedAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "vlive_feed_channelid",
+							Value: targetChannel.ID,
+						},
+						{
+							Key:   "vlive_feed_vlivechannel_name",
+							Value: vliveChannel.Name,
+						},
+						{
+							Key:   "vlive_feed_vlivechannel_code",
+							Value: vliveChannel.Code,
+						},
+						{
+							Key:   "vlive_feed_mentionroleid",
+							Value: mentionRole.ID,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				successMessage := helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID)
 				if mentionRole.ID != "" {
 					successMessage += helpers.GetTextF("plugins.vlive.channel-added-success-additional-role", mentionRole.Name)
@@ -369,10 +394,38 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 			helpers.RequireMod(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
 					entryId := args[1]
 					entryBucket := r.getEntryBy("id", entryId)
 					if entryBucket.ID != "" {
 						r.deleteEntryById(entryBucket.ID)
+
+						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryId,
+							models.EventlogTargetTypeRobyulVliveFeed, msg.Author.ID,
+							models.EventlogTypeRobyulVliveFeedRemove, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "vlive_feed_channelid",
+									Value: entryBucket.ID,
+								},
+								{
+									Key:   "vlive_feed_vlivechannel_name",
+									Value: entryBucket.VLiveChannel.Name,
+								},
+								{
+									Key:   "vlive_feed_vlivechannel_code",
+									Value: entryBucket.VLiveChannel.Code,
+								},
+								{
+									Key:   "vlive_feed_mentionroleid",
+									Value: entryBucket.MentionRoleID,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
 						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))

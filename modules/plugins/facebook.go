@@ -8,6 +8,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
@@ -212,6 +213,22 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 				entry.PostedPosts = dbPosts
 				m.setEntry(entry)
 
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+					models.EventlogTargetTypeRobyulFacebookFeed, msg.Author.ID,
+					models.EventlogTypeRobyulFacebookFeedAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "facebook_channelid",
+							Value: entry.ChannelID,
+						},
+						{
+							Key:   "facebook_facebookusername",
+							Value: entry.Username,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", entry.Username, entry.ChannelID))
 				cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
@@ -219,10 +236,30 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			helpers.RequireAdmin(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
 					entryId := args[1]
 					entryBucket := m.getEntryBy("id", entryId)
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
+
+						_, err := helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+							models.EventlogTargetTypeRobyulFacebookFeed, msg.Author.ID,
+							models.EventlogTypeRobyulFacebookFeedRemove, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "facebook_channelid",
+									Value: entryBucket.ChannelID,
+								},
+								{
+									Key:   "facebook_facebookusername",
+									Value: entryBucket.Username,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-delete-success", entryBucket.Username))
 						cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Deleted Facebook Page `%s`", entryBucket.Username))

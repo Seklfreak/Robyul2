@@ -146,7 +146,7 @@ func (h *Handler) actionChannel(args []string, in *discordgo.Message, out **disc
 	switch args[1] {
 	case "add":
 		return h.actionAddChannel
-	case "delete":
+	case "delete", "remove":
 		return h.actionDeleteChannel
 	case "list":
 		return h.actionListChannel
@@ -230,7 +230,7 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 	}
 
 	// insert entry into the db
-	_, err = createEntry(entry)
+	entryID, err := createEntry(entry)
 	if err != nil {
 		logger().Error(err)
 		*out = h.newMsg(err.Error())
@@ -238,6 +238,26 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 	}
 
 	h.service.IncQuotaEntryCount()
+
+	_, err = helpers.EventlogLog(time.Now(), dc.GuildID, entryID,
+		models.EventlogTargetTypeRobyulYouTubeChannelFeed, in.Author.ID,
+		models.EventlogTypeRobyulYouTubeChannelFeedAdd, "",
+		nil,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "youtube_channel_channelid",
+				Value: dc.ID,
+			},
+			{
+				Key:   "youtube_channel_ytchannelid",
+				Value: yc.Id.ChannelId,
+			},
+			{
+				Key:   "youtube_channel_ytchannelname",
+				Value: yc.Snippet.ChannelTitle,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	*out = h.newMsg("plugins.youtube.channel-added-success", yc.Snippet.ChannelTitle, dc.ID)
 	return h.actionFinish
@@ -255,6 +275,13 @@ func (h *Handler) actionDeleteChannel(args []string, in *discordgo.Message, out 
 		return h.actionFinish
 	}
 
+	channel, err := helpers.GetChannel(in.ChannelID)
+	if err != nil {
+		logger().Error(err)
+		*out = h.newMsg(err.Error())
+		return h.actionFinish
+	}
+
 	n, err := deleteEntry(args[2])
 	if err != nil {
 		logger().Error(err)
@@ -268,6 +295,13 @@ func (h *Handler) actionDeleteChannel(args []string, in *discordgo.Message, out 
 	}
 
 	h.service.DecQuotaEntryCount()
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, args[2],
+		models.EventlogTargetTypeRobyulYouTubeChannelFeed, in.Author.ID,
+		models.EventlogTypeRobyulYouTubeChannelFeedRemove, "",
+		nil,
+		nil, false)
+	helpers.RelaxLog(err)
 
 	*out = h.newMsg("Delete channel, ID: " + args[2])
 	return h.actionFinish
