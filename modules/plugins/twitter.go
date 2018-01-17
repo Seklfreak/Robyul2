@@ -47,6 +47,7 @@ var (
 	twitterStreamNeedsUpdate bool
 	twitterEntriesCache      []DB_Twitter_Entry
 	twitterStreamIsStarting  sync.Mutex
+	twitterEntryLocks        = make(map[string]*sync.Mutex)
 )
 
 const (
@@ -79,8 +80,12 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				continue
 			}
 
+			entryID := entry.ID
+			t.lockEntry(entryID)
+
 			entry, err := t.getEntryBy("id", entry.ID)
 			if err != nil {
+				t.unlockEntry(entryID)
 				helpers.RelaxLog(err)
 				continue
 			}
@@ -101,8 +106,15 @@ func (t *Twitter) Init(session *discordgo.Session) {
 			}
 
 			if changes == true {
-				t.setEntry(entry)
+				err = t.setEntry(entry)
+				if err != nil {
+					t.unlockEntry(entryID)
+					helpers.RelaxLog(err)
+					continue
+				}
 			}
+
+			t.unlockEntry(entryID)
 		}
 	}
 
@@ -153,7 +165,11 @@ func (t *Twitter) startTwitterStream() {
 				idToAdd = user.IDStr
 				if idToAdd != "" && idToAdd != "0" {
 					entry.AccountID = idToAdd
-					t.setEntry(entry)
+					err := t.setEntry(entry)
+					if err != nil {
+						helpers.RelaxLog(err)
+						continue
+					}
 				}
 			}
 			cache.GetLogger().WithField("module", "twitter").Infof("saved User ID %s for Twitter Account @%s", idToAdd, entry.AccountScreenName)
@@ -272,8 +288,12 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			for _, entry := range entries {
+				entryID := entry.ID
+				m.lockEntry(entryID)
+
 				entry, err := m.getEntryBy("id", entry.ID)
 				if err != nil {
+					m.unlockEntry(entryID)
 					helpers.RelaxLog(err)
 					continue
 				}
@@ -297,8 +317,15 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 
 				}
 				if changes == true {
-					m.setEntry(entry)
+					err = m.setEntry(entry)
+					if err != nil {
+						m.unlockEntry(entryID)
+						helpers.RelaxLog(err)
+						continue
+					}
 				}
+
+				m.unlockEntry(entryID)
 			}
 		}
 
@@ -410,7 +437,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				entry.AccountID = twitterUser.IDStr
 				entry.MentionRoleID = mentionRole.ID
 				entry.PostMode = postMode // TODO
-				m.setEntry(entry)
+				err = m.setEntry(entry)
+				helpers.Relax(err)
 
 				twitterStreamNeedsUpdate = true
 
@@ -717,11 +745,12 @@ func (m *Twitter) getEntryByOrCreateEmpty(key string, id string) DB_Twitter_Entr
 	return entryBucket
 }
 
-func (m *Twitter) setEntry(entry DB_Twitter_Entry) {
+func (m *Twitter) setEntry(entry DB_Twitter_Entry) (err error) {
 	if entry.ID != "" {
-		_, err := rethink.Table("twitter").Update(entry).Run(helpers.GetDB())
-		helpers.Relax(err)
+		_, err = rethink.Table("twitter").Update(entry).Run(helpers.GetDB())
+		return
 	}
+	return errors.New("invalid entry id")
 }
 
 func (m *Twitter) deleteEntryById(id string) {
@@ -762,6 +791,21 @@ func (m *Twitter) handleError(err error) string {
 	// Unreachable
 	err = errors.Wrap(err, "reached to unreachable code")
 	panic(err)
+}
+
+func (m *Twitter) lockEntry(entryID string) {
+	if _, ok := twitterEntryLocks[entryID]; ok {
+		twitterEntryLocks[entryID].Lock()
+		return
+	}
+	twitterEntryLocks[entryID] = new(sync.Mutex)
+	twitterEntryLocks[entryID].Lock()
+}
+
+func (m *Twitter) unlockEntry(entryID string) {
+	if _, ok := twitterEntryLocks[entryID]; ok {
+		twitterEntryLocks[entryID].Unlock()
+	}
 }
 
 func (t *Twitter) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
