@@ -31,6 +31,7 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 
 	vanityEntryByGuildID, _ := GetVanityUrlByGuildID(guildID)
 	if vanityEntryByGuildID.VanityName != "" {
+		// update vanity invite
 		oldVanityInvite := vanityEntryByGuildID
 
 		vanityEntryByGuildID.VanityName = strings.ToLower(vanityName)
@@ -58,9 +59,29 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 				RelaxLog(err)
 			}
 		}()
+
+		_, err = EventlogLog(time.Now(), guildID, guildID,
+			models.EventlogTargetTypeGuild, userID,
+			models.EventlogTypeRobyulVanityInviteUpdate, "",
+			[]models.ElasticEventlogChange{
+				{
+					Key:      "vanityinvite_name",
+					OldValue: oldVanityInvite.VanityName,
+					NewValue: vanityEntryByGuildID.VanityName,
+				},
+				{
+					Key:      "vanityinvite_channelid",
+					OldValue: oldVanityInvite.ChannelID,
+					NewValue: vanityEntryByGuildID.ChannelID,
+				},
+			},
+			nil, false)
+		RelaxLog(err)
+
 		return nil
 	}
 
+	// create vanity invite
 	newVanityInvite := models.VanityInviteEntry{
 		GuildID:          guildID,
 		VanityName:       strings.ToLower(vanityName),
@@ -87,6 +108,22 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 			RelaxLog(err)
 		}
 	}()
+
+	_, err = EventlogLog(time.Now(), guildID, guildID,
+		models.EventlogTargetTypeGuild, userID,
+		models.EventlogTypeRobyulVanityInviteCreate, "",
+		nil,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "vanityinvite_name",
+				Value: vanityName,
+			},
+			{
+				Key:   "vanityinvite_channelid",
+				Value: channelID,
+			},
+		}, false)
+	RelaxLog(err)
 
 	err = ResetCachedDiscordInviteByVanityInvite(newVanityInvite)
 	RelaxLog(err)

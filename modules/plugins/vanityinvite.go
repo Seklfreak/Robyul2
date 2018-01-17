@@ -5,6 +5,8 @@ import (
 
 	"fmt"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -171,6 +173,22 @@ func (vi VanityInvite) actionRemove(args []string, in *discordgo.Message, out **
 
 	err = helpers.RemoveVanityUrl(vanityInvite)
 	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), vanityInvite.GuildID, vanityInvite.GuildID,
+		models.EventlogTargetTypeGuild, in.Author.ID,
+		models.EventlogTypeRobyulVanityInviteDelete, "",
+		nil,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "vanityinvite_name",
+				Value: vanityInvite.VanityName,
+			},
+			{
+				Key:   "vanityinvite_channelid",
+				Value: vanityInvite.ChannelID,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	*out = vi.newMsg(helpers.GetTextF("plugins.vanityinvite.remove-success"))
 	return vi.actionFinish

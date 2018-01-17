@@ -59,6 +59,9 @@ const (
 	EventlogTypeRobyulAutoInspectsChannel        = "Robyul_AutoInspectsChannel"          // EventlogTargetTypeChannel
 	EventlogTypeRobyulPrefixUpdate               = "Robyul_Prefix_Update"                // EventlogTargetTypeGuild
 	EventlogTypeRobyulChatlogUpdate              = "Robyul_Chatlog_Update"               // EventlogTargetTypeGuild
+	EventlogTypeRobyulVanityInviteCreate         = "Robyul_VanityInvite_Create"          // EventlogTargetTypeGuild
+	EventlogTypeRobyulVanityInviteDelete         = "Robyul_VanityInvite_Delete"          // EventlogTargetTypeGuild
+	EventlogTypeRobyulVanityInviteUpdate         = "Robyul_VanityInvite_Update"          // EventlogTargetTypeGuild
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
