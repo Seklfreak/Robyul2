@@ -47,8 +47,6 @@ var (
 	twitterStreamNeedsUpdate bool
 	twitterEntriesCache      []DB_Twitter_Entry
 	twitterStreamIsStarting  sync.Mutex
-	twitterEntryLocksLock    sync.Mutex
-	twitterEntryLocks        = make(map[string]*sync.Mutex, 0)
 )
 
 const (
@@ -81,20 +79,8 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				continue
 			}
 
-			twitterEntryLocksLock.Lock()
-			if _, ok := twitterEntryLocks[entry.ID]; !ok || twitterEntryLocks[entry.ID] == nil {
-				twitterEntryLocks[entry.ID] = &sync.Mutex{}
-			}
-			twitterEntryLocks[entry.ID].Lock()
-			twitterEntryLocksLock.Unlock()
-
 			entry, err := t.getEntryBy("id", entry.ID)
 			if err != nil {
-				twitterEntryLocksLock.Lock()
-				if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
-					twitterEntryLocks[entry.ID].Unlock()
-				}
-				twitterEntryLocksLock.Unlock()
 				helpers.RelaxLog(err)
 				continue
 			}
@@ -117,12 +103,6 @@ func (t *Twitter) Init(session *discordgo.Session) {
 			if changes == true {
 				t.setEntry(entry)
 			}
-
-			twitterEntryLocksLock.Lock()
-			if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
-				twitterEntryLocks[entry.ID].Unlock()
-			}
-			twitterEntryLocksLock.Unlock()
 		}
 	}
 
@@ -292,20 +272,8 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			for _, entry := range entries {
-				twitterEntryLocksLock.Lock()
-				if _, ok := twitterEntryLocks[entry.ID]; !ok || twitterEntryLocks[entry.ID] == nil {
-					twitterEntryLocks[entry.ID] = &sync.Mutex{}
-				}
-				twitterEntryLocks[entry.ID].Lock()
-				twitterEntryLocksLock.Unlock()
-
 				entry, err := m.getEntryBy("id", entry.ID)
 				if err != nil {
-					twitterEntryLocksLock.Lock()
-					if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
-						twitterEntryLocks[entry.ID].Unlock()
-					}
-					twitterEntryLocksLock.Unlock()
 					helpers.RelaxLog(err)
 					continue
 				}
@@ -331,12 +299,6 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				if changes == true {
 					m.setEntry(entry)
 				}
-
-				twitterEntryLocksLock.Lock()
-				if _, ok := twitterEntryLocks[entry.ID]; ok && twitterEntryLocks[entry.ID] != nil {
-					twitterEntryLocks[entry.ID].Unlock()
-				}
-				twitterEntryLocksLock.Unlock()
 			}
 		}
 
