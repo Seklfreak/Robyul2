@@ -859,7 +859,7 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 		for _, bucket := range agg.Buckets {
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
-			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			timeISO8601 = timeConverted.Format(models.ISO8601)
 
 			result = append(result, models.Rest_Statistics_Histogram_Three{
 				Time:   timeISO8601,
@@ -890,7 +890,7 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 		for _, bucket := range agg.Buckets {
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
-			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			timeISO8601 = timeConverted.Format(models.ISO8601)
 
 			for resultN := range result {
 				if result[resultN].Time == timeISO8601 {
@@ -917,7 +917,7 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 		for _, bucket := range agg.Buckets {
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
-			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			timeISO8601 = timeConverted.Format(models.ISO8601)
 
 			for resultN := range result {
 				if result[resultN].Time == timeISO8601 {
@@ -992,7 +992,7 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		for _, bucket := range agg.Buckets {
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
-			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			timeISO8601 = timeConverted.Format(models.ISO8601)
 
 			subItems := make([]models.Rest_Statistics_Histogram_TwoSub_SubItem, 0)
 
@@ -1037,7 +1037,7 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 		for _, bucket := range agg.Buckets {
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
-			timeISO8601 = timeConverted.Format("2006-01-02T15:04:05-0700")
+			timeISO8601 = timeConverted.Format(models.ISO8601)
 			//fmt.Println("joins bucket", timeISO8601+":", bucket.DocCount)
 			//result[n].Count2 = bucket.DocCount
 			for resultN := range result {

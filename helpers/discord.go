@@ -527,6 +527,21 @@ func RemovePendingUnmutes(guildID string, userID string) (err error) {
 	return nil
 }
 
+func UnmuteUserMachinery(guildID string, userID string) (err error) {
+	err = UnmuteUser(guildID, userID)
+
+	if err == nil {
+		_, err = EventlogLog(time.Now(), guildID, userID,
+			models.EventlogTargetTypeUser, cache.GetSession().State.User.ID,
+			models.EventlogTypeRobyulUnmute, "timed mute expired",
+			nil,
+			nil, false)
+		RelaxLog(err)
+	}
+
+	return err
+}
+
 func UnmuteUser(guildID string, userID string) (err error) {
 	errRole := RemoveMuteRole(guildID, userID)
 	errDatabase := RemoveMuteDatabase(guildID, userID)

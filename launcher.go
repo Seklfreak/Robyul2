@@ -378,7 +378,7 @@ func main() {
 	}
 	log.WithField("module", "launcher").Info("started machinery server, default queue: robyul_tasks")
 	machineryServer.RegisterTasks(map[string]interface{}{
-		"unmute_user":    helpers.UnmuteUser,
+		"unmute_user":    helpers.UnmuteUserMachinery,
 		"apply_autorole": plugins.AutoroleApply,
 		"log_error":      helpers.LogMachineryError,
 	})

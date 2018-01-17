@@ -189,6 +189,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 						return
 					} else {
+
+						channel, err := helpers.GetChannel(msg.ChannelID)
+						helpers.Relax(err)
+
 						afterMessageId := args[1]
 						untilMessageId := ""
 						if regexNumberOnly.MatchString(afterMessageId) == false {
@@ -256,6 +260,26 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 									helpers.Relax(err)
 								}
 								return
+							} else {
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, "",
+									"", msg.Author.ID,
+									models.EventlogTypeRobyulCleanup, "",
+									nil,
+									[]models.ElasticEventlogOption{
+										{
+											Key:   "cleanup_aftermessageid",
+											Value: afterMessageId,
+										},
+										{
+											Key:   "cleanup_untilmessageid",
+											Value: untilMessageId,
+										},
+										{
+											Key:   "cleanup_deleted_messages",
+											Value: strconv.Itoa(len(messagesToDeleteIds)),
+										},
+									}, false)
+								helpers.RelaxLog(err)
 							}
 						} else {
 							if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)), "✅", "🚫") == true {
@@ -280,6 +304,26 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 											helpers.Relax(err)
 										}
 										return
+									} else {
+										_, err = helpers.EventlogLog(time.Now(), channel.GuildID, "",
+											"", msg.Author.ID,
+											models.EventlogTypeRobyulCleanup, "",
+											nil,
+											[]models.ElasticEventlogOption{
+												{
+													Key:   "cleanup_aftermessageid",
+													Value: afterMessageId,
+												},
+												{
+													Key:   "cleanup_untilmessageid",
+													Value: untilMessageId,
+												},
+												{
+													Key:   "cleanup_deleted_messages",
+													Value: strconv.Itoa(len(messagesToDeleteIds)),
+												},
+											}, false)
+										helpers.RelaxLog(err)
 									}
 								}
 							} else {
@@ -293,6 +337,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 						return
 					} else {
+						channel, err := helpers.GetChannel(msg.ChannelID)
+						helpers.Relax(err)
+
 						if regexNumberOnly.MatchString(args[1]) == false {
 							helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
 							return
@@ -354,6 +401,18 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 									helpers.Relax(err)
 								}
 								return
+							} else {
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, "",
+									"", msg.Author.ID,
+									models.EventlogTypeRobyulCleanup, "",
+									nil,
+									[]models.ElasticEventlogOption{
+										{
+											Key:   "cleanup_deleted_messages",
+											Value: strconv.Itoa(len(messagesToDeleteIds)),
+										},
+									}, false)
+								helpers.RelaxLog(err)
 							}
 						} else {
 							if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.mod.deleting-message-bulkdelete-confirm", len(messagesToDeleteIds)-1), "✅", "🚫") == true {
@@ -378,6 +437,18 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 											helpers.Relax(err)
 										}
 										return
+									} else {
+										_, err = helpers.EventlogLog(time.Now(), channel.GuildID, "",
+											"", msg.Author.ID,
+											models.EventlogTypeRobyulCleanup, "",
+											nil,
+											[]models.ElasticEventlogOption{
+												{
+													Key:   "cleanup_deleted_messages",
+													Value: strconv.Itoa(len(messagesToDeleteIds)),
+												},
+											}, false)
+										helpers.RelaxLog(err)
 									}
 								}
 							} else {
@@ -474,9 +545,23 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 				successText := helpers.GetTextF("plugins.mod.user-muted-success", targetUser.Username, targetUser.ID)
 
+				var options []models.ElasticEventlogOption
 				if time.Now().Before(timeToUnmuteAt) {
 					successText = helpers.GetTextF("plugins.mod.user-muted-success-timed", targetUser.Username, targetUser.ID, timeToUnmuteAt.Format(time.ANSIC)+" UTC")
+					options = []models.ElasticEventlogOption{
+						{
+							Key:   "mute_until",
+							Value: timeToUnmuteAt.Format(models.ISO8601),
+						},
+					}
 				}
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+					models.EventlogTargetTypeUser, msg.Author.ID,
+					models.EventlogTypeRobyulMute, "",
+					nil,
+					options, false)
+				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, successText)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -503,6 +588,13 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 				err = helpers.UnmuteUser(channel.GuildID, targetUser.ID)
 				helpers.Relax(err)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+					models.EventlogTargetTypeUser, msg.Author.ID,
+					models.EventlogTypeRobyulUnmute, "",
+					nil,
+					nil, false)
+				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-success", targetUser.Username, targetUser.ID))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)

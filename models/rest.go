@@ -6,6 +6,10 @@ import (
 
 type SettingLevel string
 
+var (
+	ISO8601 = "2006-01-02T15:04:05-0700"
+)
+
 type Rest_Member_Guild struct {
 	ID        string
 	Name      string

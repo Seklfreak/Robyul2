@@ -49,6 +49,9 @@ const (
 	EventlogTypeRobyulRedditFeedUpdate           = "Robyul_Reddit_Feed_Update"           // EventlogTargetTypeRobyulRedditFeed
 	EventlogTypeRobyulFacebookFeedAdd            = "Robyul_Facebook_Feed_Add"            // EventlogTargetTypeRobyulFacebookFeed
 	EventlogTypeRobyulFacebookFeedRemove         = "Robyul_Facebook_Feed_Remove"         // EventlogTargetTypeRobyulFacebookFeed
+	EventlogTypeRobyulCleanup                    = "Robyul_Cleanup"                      //
+	EventlogTypeRobyulMute                       = "Robyul_Mute"                         // EventlogTargetTypeUser
+	EventlogTypeRobyulUnmute                     = "Robyul_Unmute"                       // EventlogTargetTypeUser
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
