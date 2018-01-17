@@ -277,6 +277,11 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 		Value: emoji.APIName(),
 	})
 
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_roleids",
+		Value: strings.Join(emoji.Roles, ","),
+	})
+
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
 	RelaxLog(err)
 	if added {
@@ -313,6 +318,11 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_apiname",
 		Value: emoji.APIName(),
+	})
+
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_roleids",
+		Value: strings.Join(emoji.Roles, ","),
 	})
 
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
@@ -353,6 +363,25 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 		Value: newEmoji.APIName(),
 	})
 
+	options = append(options, models.ElasticEventlogOption{
+		Key:   "emoji_roleids",
+		Value: strings.Join(newEmoji.Roles, ","),
+	})
+
+	rolesAdded, rolesRemoved := StringSliceDiff(oldEmoji.Roles, newEmoji.Roles)
+	if len(rolesAdded) >= 0 {
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "emoji_roleids_added",
+			Value: strings.Join(rolesAdded, ","),
+		})
+	}
+	if len(rolesRemoved) >= 0 {
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "emoji_roleids_removed",
+			Value: strings.Join(rolesRemoved, ","),
+		})
+	}
+
 	changes := make([]models.ElasticEventlogChange, 0)
 
 	if oldEmoji.Name != newEmoji.Name {
@@ -392,6 +421,14 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 			Key:      "emoji_apiname",
 			OldValue: oldEmoji.APIName(),
 			NewValue: newEmoji.APIName(),
+		})
+	}
+
+	if len(rolesAdded) > 0 || len(rolesRemoved) > 0 {
+		changes = append(changes, models.ElasticEventlogChange{
+			Key:      "emoji_roleids",
+			OldValue: strings.Join(oldEmoji.Roles, ","),
+			NewValue: strings.Join(newEmoji.Roles, ","),
 		})
 	}
 
