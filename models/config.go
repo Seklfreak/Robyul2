@@ -26,16 +26,8 @@ type Config struct {
 	// one day after its state changes to closed
 	Polls []Poll `rethink:"polls"`
 
-	InspectTriggersEnabled struct {
-		UserBannedOnOtherServers bool
-		UserNoCommonServers      bool
-		UserNewlyCreatedAccount  bool
-		UserReported             bool
-		UserMultipleJoins        bool
-		UserBannedDiscordlistNet bool // https://bans.discordlist.net/
-		UserJoins                bool
-	} `rethink:"inspect_triggers_enabled"`
-	InspectsChannel string `rethink:"inspects_channel"`
+	InspectTriggersEnabled InspectTriggersEnabled `rethink:"inspect_triggers_enabled"`
+	InspectsChannel        string                 `rethink:"inspects_channel"`
 
 	NukeIsParticipating bool   `rethink:"nuke_participation"`
 	NukeLogChannel      string `rethink:"nuke_channel"`
@@ -67,6 +59,16 @@ type Config struct {
 
 	RandomPicturesPicDelay                  int      `rethink:"randompictures_pic_delay"`
 	RandomPicturesPicDelayIgnoredChannelIDs []string `rethink:"randompictures_pic_delay_ignored_channelids"`
+}
+
+type InspectTriggersEnabled struct {
+	UserBannedOnOtherServers bool
+	UserNoCommonServers      bool
+	UserNewlyCreatedAccount  bool
+	UserReported             bool
+	UserMultipleJoins        bool
+	UserBannedDiscordlistNet bool // https://bans.discordlist.net/
+	UserJoins                bool
 }
 
 type DelayedAutoRole struct {

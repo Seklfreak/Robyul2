@@ -1392,6 +1392,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					helpers.Relax(err)
 				}
 
+				channelIDBefore := settings.InspectsChannel
+				settingsBefore := settings.InspectTriggersEnabled
+
 				needEmbedUpdate := true
 				emotesLocked := false
 
@@ -1585,15 +1588,82 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 				settings.InspectsChannel = targetChannel.ID
 
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, "",
+					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTypeRobyulAutoInspectsChannel, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "autoinspectschannel_channelid",
+							OldValue: channelIDBefore,
+							NewValue: targetChannel.ID,
+						},
+						{
+							Key:      "autoinspectschannel_userbannedonotherservers",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserBannedOnOtherServers),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserBannedOnOtherServers),
+						},
+						{
+							Key:      "autoinspectschannel_usernocommonservers",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserNoCommonServers),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserNoCommonServers),
+						},
+						{
+							Key:      "autoinspectschannel_usernewlycreatedaccount",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserNewlyCreatedAccount),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserNewlyCreatedAccount),
+						},
+						{
+							Key:      "autoinspectschannel_userreported",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserReported),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserReported),
+						},
+						{
+							Key:      "autoinspectschannel_usermultiplejoins",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserMultipleJoins),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserMultipleJoins),
+						},
+						{
+							Key:      "autoinspectschannel_userbanneddiscordlistnet",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserBannedDiscordlistNet),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserBannedDiscordlistNet),
+						},
+						{
+							Key:      "autoinspectschannel_userjoins",
+							OldValue: helpers.StoreBoolAsString(settingsBefore.UserJoins),
+							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserJoins),
+						},
+					},
+					nil, false)
+				helpers.RelaxLog(err)
+
 				chooseEmbed.Description = strings.Replace(chooseEmbed.Description, "Use :floppy_disk: to save and exit.", "Saved.", -1)
 				helpers.EditEmbed(msg.ChannelID, chooseMessage.ID, chooseEmbed)
 
 				successMessage = helpers.GetText("plugins.mod.inspects-channel-set")
 			} else {
+				channelIDBefore := settings.InspectsChannel
+				settings.InspectsChannel = ""
 				settings.InspectTriggersEnabled.UserBannedOnOtherServers = false
 				settings.InspectTriggersEnabled.UserNoCommonServers = false
 				settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
+				settings.InspectTriggersEnabled.UserReported = false
+				settings.InspectTriggersEnabled.UserMultipleJoins = false
+				settings.InspectTriggersEnabled.UserBannedDiscordlistNet = false
+				settings.InspectTriggersEnabled.UserJoins = false
 				successMessage = helpers.GetText("plugins.mod.inspects-channel-disabled")
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, "",
+					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTypeRobyulAutoInspectsChannel, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "autoinspectschannel_channelid",
+							OldValue: channelIDBefore,
+							NewValue: "",
+						},
+					},
+					nil, false)
+				helpers.RelaxLog(err)
 			}
 			err = helpers.GuildSettingsSet(channel.GuildID, settings)
 			helpers.Relax(err)
@@ -1828,9 +1898,25 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				newPrefix := args[0]
 
 				settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+				oldPrefix := settings.Prefix
+
 				settings.Prefix = newPrefix
 				err = helpers.GuildSettingsSet(channel.GuildID, settings)
 				helpers.Relax(err)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, msg.Author.ID,
+					models.EventlogTypeRobyulPrefixUpdate, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "prefix",
+							OldValue: oldPrefix,
+							NewValue: settings.Prefix,
+						},
+					},
+					nil, false)
+				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID,
 					helpers.GetTextF(
@@ -1858,6 +1944,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			helpers.Relax(err)
 
 			settings := helpers.GuildSettingsGetCached(channel.GuildID)
+			oldSetting := true
+			if settings.ChatlogDisabled {
+				oldSetting = false
+			}
 			var setMessage string
 			if settings.ChatlogDisabled {
 				settings.ChatlogDisabled = false
@@ -1868,6 +1958,24 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 			err = helpers.GuildSettingsSet(channel.GuildID, settings)
 			helpers.Relax(err)
+
+			newSetting := true
+			if settings.ChatlogDisabled {
+				newSetting = false
+			}
+
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+				models.EventlogTargetTypeGuild, msg.Author.ID,
+				models.EventlogTypeRobyulChatlogUpdate, "",
+				[]models.ElasticEventlogChange{
+					{
+						Key:      "chatlog_enabled",
+						OldValue: helpers.StoreBoolAsString(oldSetting),
+						NewValue: helpers.StoreBoolAsString(newSetting),
+					},
+				},
+				nil, false)
+			helpers.RelaxLog(err)
 
 			_, err = helpers.SendMessage(msg.ChannelID, setMessage)
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1911,6 +2019,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				}
 			}
 			if colourText, ok := data["color"]; ok {
+				colour = helpers.GetDiscordColorFromHex(colourText)
+			}
+			if colourText, ok := data["colour"]; ok {
 				colour = helpers.GetDiscordColorFromHex(colourText)
 			}
 			if afterText, ok := data["after"]; ok {
@@ -1985,6 +2096,36 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					resultText += ", reordered the roles successfully"
 				}
 			}
+
+			options := []models.ElasticEventlogOption{
+				{
+					Key:   "batchroles_created",
+					Value: strconv.Itoa(rolesCreated),
+				},
+				{
+					Key:   "batchroles_errors",
+					Value: strconv.Itoa(len(roleErrors)),
+				},
+			}
+			if colour > 0 {
+				options = append(options, models.ElasticEventlogOption{
+					Key:   "batchroles_color",
+					Value: helpers.GetHexFromDiscordColor(colour),
+				})
+			}
+			if afterRole != nil {
+				options = append(options, models.ElasticEventlogOption{
+					Key:   "batchroles_afteroleid",
+					Value: afterRole.ID,
+				})
+			}
+
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+				models.EventlogTargetTypeGuild, msg.Author.ID,
+				models.EventlogTypeRobyulBatchRolesCreate, "",
+				nil,
+				options, false)
+			helpers.RelaxLog(err)
 
 			_, err = helpers.SendMessage(msg.ChannelID, resultText)
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)

@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules"
 	"github.com/Seklfreak/Robyul2/ratelimits"
 	"github.com/bwmarrin/discordgo"
@@ -342,9 +343,25 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 				// Set new prefix
 				settings := helpers.GuildSettingsGetCached(channel.GuildID)
+
+				oldPrefix := settings.Prefix
+
 				settings.Prefix = prefix
 				err = helpers.GuildSettingsSet(channel.GuildID, settings)
 				helpers.Relax(err)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, message.Author.ID,
+					models.EventlogTypeRobyulPrefixUpdate, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "prefix",
+							OldValue: oldPrefix,
+							NewValue: settings.Prefix,
+						},
+					},
+					nil, false)
+				helpers.RelaxLog(err)
 
 				if err != nil {
 					helpers.SendError(message.Message, err)

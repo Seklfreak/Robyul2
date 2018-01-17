@@ -55,6 +55,10 @@ const (
 	EventlogTypeRobyulUnmute                     = "Robyul_Unmute"                       // EventlogTargetTypeUser
 	EventlogTypeRobyulPostCreate                 = "Robyul_Post_Create"                  // EventlogTargetTypeMessage
 	EventlogTypeRobyulPostUpdate                 = "Robyul_Post_Update"                  // EventlogTargetTypeMessage
+	EventlogTypeRobyulBatchRolesCreate           = "Robyul_BatchRoles_Create"            // EventlogTargetTypeGuild
+	EventlogTypeRobyulAutoInspectsChannel        = "Robyul_AutoInspectsChannel"          // EventlogTargetTypeChannel
+	EventlogTypeRobyulPrefixUpdate               = "Robyul_Prefix_Update"                // EventlogTargetTypeGuild
+	EventlogTypeRobyulChatlogUpdate              = "Robyul_Chatlog_Update"               // EventlogTargetTypeGuild
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"

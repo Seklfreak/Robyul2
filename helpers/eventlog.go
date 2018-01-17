@@ -135,18 +135,30 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 
 	if changes != nil {
 		for _, change := range changes {
+			oldValueText := "`" + change.OldValue + "`"
+			if change.OldValue == "" {
+				oldValueText = "_/_"
+			}
+			newValueText := "`" + change.NewValue + "`"
+			if change.NewValue == "" {
+				newValueText = "_/_"
+			}
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:  change.Key,
-				Value: "`" + change.OldValue + "` ➡ `" + change.NewValue + "`",
+				Value: oldValueText + " ➡ " + newValueText,
 			})
 		}
 	}
 
 	if options != nil {
 		for _, option := range options {
+			valueText := "`" + option.Value + "`"
+			if option.Value == "" {
+				valueText = "_/_"
+			}
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:  option.Key,
-				Value: "`" + option.Value + "`",
+				Value: valueText,
 			})
 		}
 	}
@@ -788,6 +800,9 @@ func cleanChanges(oldChanges []models.ElasticEventlogChange) (newChanges []model
 			continue
 		}
 		if oldChange.NewValue == "" && oldChange.OldValue == "" {
+			continue
+		}
+		if oldChange.NewValue == oldChange.OldValue {
 			continue
 		}
 		newChanges = append(newChanges, oldChange)
