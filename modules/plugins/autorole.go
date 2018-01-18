@@ -6,6 +6,8 @@ import (
 
 	"time"
 
+	"strconv"
+
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -129,6 +131,21 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				err = helpers.GuildSettingsSet(channel.GuildID, settings)
 				helpers.Relax(err)
 
+				options := make([]models.ElasticEventlogOption, 0)
+				if delay > 0 {
+					options = append(options, models.ElasticEventlogOption{
+						Key:   "autorole_delay",
+						Value: delay.String(),
+					})
+				}
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+					models.EventlogTargetTypeRole, msg.Author.ID,
+					models.EventlogTypeRobyulAutoroleAdd, "",
+					nil,
+					options, false)
+				helpers.RelaxLog(err)
+
 				_, err = helpers.SendMessage(msg.ChannelID, successText)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
@@ -223,9 +240,12 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 
+				var delay time.Duration
+
 				if !roleWasInList {
 					for _, delayedRole := range settings.DelayedAutoRoles {
 						if delayedRole.RoleID == targetRole.ID {
+							delay = delayedRole.Delay
 							roleWasInList = true
 						} else {
 							newDelayedRoles = append(newDelayedRoles, delayedRole)
@@ -246,6 +266,21 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 
 				err = helpers.GuildSettingsSet(channel.GuildID, settings)
 				helpers.Relax(err)
+
+				options := make([]models.ElasticEventlogOption, 0)
+				if delay > 0 {
+					options = append(options, models.ElasticEventlogOption{
+						Key:   "autorole_delay",
+						Value: delay.String(),
+					})
+				}
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+					models.EventlogTargetTypeRole, msg.Author.ID,
+					models.EventlogTypeRobyulAutoroleRemove, "",
+					nil,
+					options, false)
+				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-remove-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -315,6 +350,22 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 							addedSuccess += 1
 						}
 					}
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+						models.EventlogTargetTypeRole, msg.Author.ID,
+						models.EventlogTypeRobyulAutoroleApply, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "autoroles_applied",
+								Value: strconv.Itoa(addedSuccess),
+							},
+							{
+								Key:   "autoroles_errors",
+								Value: strconv.Itoa(addedError),
+							},
+						}, false)
+					helpers.RelaxLog(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.autorole.apply-done",
 						msg.Author.ID, addedSuccess, addedError))

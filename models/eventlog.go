@@ -65,6 +65,9 @@ const (
 	EventlogTypeRobyulBiasConfigCreate           = "Robyul_Bias_Config_Create"           // EventlogTargetTypeChannel
 	EventlogTypeRobyulBiasConfigDelete           = "Robyul_Bias_Config_Delete"           // EventlogTargetTypeChannel
 	EventlogTypeRobyulBiasConfigUpdate           = "Robyul_Bias_Config_Update"           // EventlogTargetTypeChannel
+	EventlogTypeRobyulAutoroleAdd                = "Robyul_Autorole_Add"                 // EventlogTargetTypeRole
+	EventlogTypeRobyulAutoroleRemove             = "Robyul_Autorole_Remove"              // EventlogTargetTypeRole
+	EventlogTypeRobyulAutoroleApply              = "Robyul_Autorole_Apply"               // EventlogTargetTypeRole
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
