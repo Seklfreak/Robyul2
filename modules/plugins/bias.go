@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/kennygrant/sanitize"
@@ -159,11 +160,49 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					return
 				}
 
+				previousConfig := m.getChannelConfigBy("channelid", targetChannel.ID)
+
+				newBiasConfigBytes, err := json.Marshal(channelConfig)
+				helpers.Relax(err)
+
+				var previousConfigBytes []byte
+				if previousConfig.ID != "" {
+					previousConfigBytes, err = json.Marshal(previousConfig.Categories)
+					helpers.Relax(err)
+				}
+
 				channelDb := m.getChannelConfigByOrCreateEmpty("channelid", targetChannel.ID)
 				channelDb.ServerID = targetChannel.GuildID
 				channelDb.ChannelID = targetChannel.ID
 				channelDb.Categories = channelConfig
 				m.setChannelConfig(channelDb)
+
+				if previousConfig.ID == "" {
+					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+						models.EventlogTargetTypeChannel, msg.Author.ID,
+						models.EventlogTypeRobyulBiasConfigCreate, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "bias_config",
+								Value: string(newBiasConfigBytes),
+							},
+						}, false)
+					helpers.RelaxLog(err)
+				} else {
+					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+						models.EventlogTargetTypeChannel, msg.Author.ID,
+						models.EventlogTypeRobyulBiasConfigUpdate, "",
+						[]models.ElasticEventlogChange{
+							{
+								Key:      "bias_config",
+								OldValue: string(previousConfigBytes),
+								NewValue: string(newBiasConfigBytes),
+							},
+						},
+						nil, false)
+					helpers.RelaxLog(err)
+				}
 
 				biasChannels = m.GetBiasChannels()
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.updated-config"))
@@ -226,9 +265,24 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					return
 				}
 
+				previousConfigBytes, err := json.Marshal(channelDb.Categories)
+				helpers.Relax(err)
+
 				err = m.deleteChannelConfig(channelDb)
 				helpers.Relax(err)
 				biasChannels = m.GetBiasChannels()
+
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTypeRobyulBiasConfigDelete, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "bias_config",
+							Value: string(previousConfigBytes),
+						},
+					}, false)
+				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.delete-config-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)

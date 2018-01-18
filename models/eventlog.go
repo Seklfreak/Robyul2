@@ -62,6 +62,9 @@ const (
 	EventlogTypeRobyulVanityInviteCreate         = "Robyul_VanityInvite_Create"          // EventlogTargetTypeGuild
 	EventlogTypeRobyulVanityInviteDelete         = "Robyul_VanityInvite_Delete"          // EventlogTargetTypeGuild
 	EventlogTypeRobyulVanityInviteUpdate         = "Robyul_VanityInvite_Update"          // EventlogTargetTypeGuild
+	EventlogTypeRobyulBiasConfigCreate           = "Robyul_Bias_Config_Create"           // EventlogTargetTypeChannel
+	EventlogTypeRobyulBiasConfigDelete           = "Robyul_Bias_Config_Delete"           // EventlogTargetTypeChannel
+	EventlogTypeRobyulBiasConfigUpdate           = "Robyul_Bias_Config_Update"           // EventlogTargetTypeChannel
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
