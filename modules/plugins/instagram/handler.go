@@ -342,7 +342,9 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					}, false)
 				helpers.RelaxLog(err)
 
-				m.setEntry(entryBucket)
+				err = m.setEntry(entryBucket)
+				helpers.Relax(err)
+
 				helpers.SendMessage(msg.ChannelID, messageText)
 				return
 			})
