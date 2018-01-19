@@ -222,7 +222,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 							[]models.ElasticEventlogOption{
 								{
 									Key:   "instagram_channelid",
-									Value: entryBucket.ID,
+									Value: entryBucket.ChannelID,
 								},
 								{
 									Key:   "instagram_postdirectlinks",

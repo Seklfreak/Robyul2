@@ -5,8 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
@@ -69,12 +72,34 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 						guildAnnouncementSetting.GuildJoinChannelID = targetChannel.ID
 						guildAnnouncementSetting.GuildJoinText = newText
 						successMessage = helpers.GetText("plugins.guildannouncements.message-edited")
+
+						m.setEntry(guildAnnouncementSetting)
+
+						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+							models.EventlogTargetTypeChannel, msg.Author.ID,
+							models.EventlogTypeRobyulGuildAnnouncementsJoinSet, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "join_text",
+									Value: newText,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 					} else {
 						// Remove Text
 						guildAnnouncementSetting.GuildJoinEnabled = false
 						successMessage = helpers.GetText("plugins.guildannouncements.message-disabled")
+
+						m.setEntry(guildAnnouncementSetting)
+
+						_, err = helpers.EventlogLog(time.Now(), sourceChannel.GuildID, "",
+							models.EventlogTargetTypeChannel, msg.Author.ID,
+							models.EventlogTypeRobyulGuildAnnouncementsJoinRemove, "",
+							nil,
+							nil, false)
+						helpers.RelaxLog(err)
 					}
-					m.setEntry(guildAnnouncementSetting)
 					_, err = helpers.SendMessage(msg.ChannelID, successMessage)
 					helpers.Relax(err)
 				})
@@ -99,12 +124,34 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 						guildAnnouncementSetting.GuildLeaveChannelID = targetChannel.ID
 						guildAnnouncementSetting.GuildLeaveText = newText
 						successMessage = helpers.GetText("plugins.guildannouncements.message-edited")
+
+						m.setEntry(guildAnnouncementSetting)
+
+						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+							models.EventlogTargetTypeChannel, msg.Author.ID,
+							models.EventlogTypeRobyulGuildAnnouncementsLeaveSet, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "leave_text",
+									Value: newText,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 					} else {
 						// Remove Text
 						guildAnnouncementSetting.GuildLeaveEnabled = false
 						successMessage = helpers.GetText("plugins.guildannouncements.message-disabled")
+
+						m.setEntry(guildAnnouncementSetting)
+
+						_, err = helpers.EventlogLog(time.Now(), sourceChannel.GuildID, "",
+							models.EventlogTargetTypeChannel, msg.Author.ID,
+							models.EventlogTypeRobyulGuildAnnouncementsLeaveRemove, "",
+							nil,
+							nil, false)
+						helpers.RelaxLog(err)
 					}
-					m.setEntry(guildAnnouncementSetting)
 					_, err = helpers.SendMessage(msg.ChannelID, successMessage)
 					helpers.Relax(err)
 				})
