@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"sync"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -17,6 +15,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/pkg/errors"
 )
 
 type Handler struct{}
@@ -25,7 +24,6 @@ var (
 	instagramClient      *goinsta.Instagram
 	instagramPicUrlRegex *regexp.Regexp
 	useGraphQlQuery      = true
-	lockPostedPosts      sync.Mutex
 )
 
 const (
@@ -171,7 +169,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				entry.PostedReelMedias = dbRealMedias
 				entry.PostDirectLinks = linkMode
 				entry.InstagramUserID = instagramUser.User.ID
-				m.setEntry(entry)
+				err = m.setEntry(entry)
+				helpers.Relax(err)
 
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID, specialText))
 				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
@@ -181,7 +180,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
 					entryId := args[1]
-					entryBucket := m.getEntryBy("id", entryId)
+					entryBucket, _ := m.getEntryBy("id", entryId)
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
 
@@ -237,7 +236,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					return
 				}
 				entryId := args[1]
-				entryBucket := m.getEntryBy("id", entryId)
+				entryBucket, _ := m.getEntryBy("id", entryId)
 				if entryBucket.ID == "" {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
@@ -250,7 +249,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					entryBucket.PostDirectLinks = true
 					messageText = helpers.GetText("plugins.instagram.post-direct-links-enabled")
 				}
-				m.setEntry(entryBucket)
+				err := m.setEntry(entryBucket)
+				helpers.Relax(err)
 				helpers.SendMessage(msg.ChannelID, messageText)
 				return
 			})
@@ -625,24 +625,16 @@ func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int
 	return lastBestCandidateURL
 }
 
-func (m *Handler) getEntryBy(key string, id string) DB_Instagram_Entry {
-	var entryBucket DB_Instagram_Entry
+func (m *Handler) getEntryBy(key string, id string) (entry DB_Instagram_Entry, err error) {
 	listCursor, err := rethink.Table("instagram").Filter(
 		rethink.Row.Field(key).Eq(id),
 	).Run(helpers.GetDB())
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
+	err = listCursor.One(&entry)
+	return
 }
 
 func (m *Handler) getEntryByOrCreateEmpty(key string, id string) DB_Instagram_Entry {
@@ -673,11 +665,12 @@ func (m *Handler) getEntryByOrCreateEmpty(key string, id string) DB_Instagram_En
 	return entryBucket
 }
 
-func (m *Handler) setEntry(entry DB_Instagram_Entry) {
-	_, err := rethink.Table("instagram").Update(entry).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
+func (m *Handler) setEntry(entry DB_Instagram_Entry) (err error) {
+	if entry.ID != "" {
+		_, err = rethink.Table("instagram").Update(entry).Run(helpers.GetDB())
+		return
 	}
+	return errors.New("invalid id submitted")
 }
 
 func (m *Handler) deleteEntryById(id string) {

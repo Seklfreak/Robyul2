@@ -10,10 +10,16 @@ import (
 
 	"strconv"
 
+	"sync"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	goinstaResponse "github.com/ahmdrz/goinsta/response"
+)
+
+var (
+	instagramEntryLocks = make(map[string]*sync.Mutex)
 )
 
 const (
@@ -197,6 +203,16 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 				}
 
 				for _, entry := range entries {
+					entryID := entry.ID
+					m.lockEntry(entryID)
+
+					entry, err := m.getEntryBy("id", entryID)
+					if err != nil {
+						m.unlockEntry(entryID)
+						helpers.RelaxLog(err)
+						continue
+					}
+
 					changes := false
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
@@ -214,10 +230,15 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					}
 
 					if changes {
-						lockPostedPosts.Lock()
-						m.setEntry(entry)
-						lockPostedPosts.Unlock()
+						err = m.setEntry(entry)
+						if err != nil {
+							m.unlockEntry(entryID)
+							helpers.RelaxLog(err)
+							continue
+						}
 					}
+
+					m.unlockEntry(entryID)
 				}
 			}
 
@@ -296,6 +317,17 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 
 			for _, entry := range entries {
 				changes := false
+
+				entryID := entry.ID
+				m.lockEntry(entryID)
+
+				entry, err := m.getEntryBy("id", entryID)
+				if err != nil {
+					m.unlockEntry(entryID)
+					helpers.RelaxLog(err)
+					continue
+				}
+
 				for _, post := range posts.Items {
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
@@ -348,10 +380,15 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				   }*/
 
 				if changes == true {
-					lockPostedPosts.Lock()
-					m.setEntry(entry)
-					lockPostedPosts.Unlock()
+					err = m.setEntry(entry)
+					if err != nil {
+						m.unlockEntry(entryID)
+						helpers.RelaxLog(err)
+						continue
+					}
 				}
+
+				m.unlockEntry(entryID)
 			}
 			time.Sleep(1 * time.Second)
 		}
@@ -365,5 +402,20 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 		if entriesCount <= 10 {
 			time.Sleep(30 * time.Second)
 		}
+	}
+}
+
+func (m *Handler) lockEntry(entryID string) {
+	if _, ok := instagramEntryLocks[entryID]; ok {
+		instagramEntryLocks[entryID].Lock()
+		return
+	}
+	instagramEntryLocks[entryID] = new(sync.Mutex)
+	instagramEntryLocks[entryID].Lock()
+}
+
+func (m *Handler) unlockEntry(entryID string) {
+	if _, ok := instagramEntryLocks[entryID]; ok {
+		instagramEntryLocks[entryID].Unlock()
 	}
 }
