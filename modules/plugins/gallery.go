@@ -10,6 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
@@ -137,6 +138,22 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 				newGalleryEntry.GuildID = channel.GuildID
 				g.setEntry(newGalleryEntry)
 
+				_, err = helpers.EventlogLog(time.Now(), newGalleryEntry.GuildID, newGalleryEntry.ID,
+					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTypeRobyulGalleryAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "gallery_sourcechannelid",
+							Value: newGalleryEntry.SourceChannelID,
+						},
+						{
+							Key:   "gallery_targetchannelid",
+							Value: newGalleryEntry.TargetChannelID,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Added Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
 					guild.Name, guild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
 				_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.gallery.add-success"))
@@ -204,9 +221,25 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 				}
 				g.deleteEntryById(entryBucket.ID)
 
+				_, err := helpers.EventlogLog(time.Now(), entryBucket.GuildID, entryBucket.ID,
+					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTypeRobyulGalleryRemove, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "gallery_sourcechannelid",
+							Value: entryBucket.SourceChannelID,
+						},
+						{
+							Key:   "gallery_targetchannelid",
+							Value: entryBucket.TargetChannelID,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Deleted Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
 					galleryGuild.Name, galleryGuild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.delete-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.delete-success"))
 				helpers.Relax(err)
 
 				galleries = g.GetGalleries()

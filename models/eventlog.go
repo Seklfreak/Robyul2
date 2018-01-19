@@ -72,6 +72,8 @@ const (
 	EventlogTypeRobyulGuildAnnouncementsJoinRemove  = "Robyul_GuildAnnouncements_Join_Remove"  // EventlogTargetTypeChannel
 	EventlogTypeRobyulGuildAnnouncementsLeaveSet    = "Robyul_GuildAnnouncements_Leave_Set"    // EventlogTargetTypeChannel
 	EventlogTypeRobyulGuildAnnouncementsLeaveRemove = "Robyul_GuildAnnouncements_Leave_Remove" // EventlogTargetTypeChannel
+	EventlogTypeRobyulGalleryAdd                    = "Robyul_Gallery_Add"                     // EventlogTargetTypeRobyulGallery
+	EventlogTypeRobyulGalleryRemove                 = "Robyul_Gallery_Remove"                  // EventlogTargetTypeRobyulGallery
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
@@ -79,6 +81,7 @@ const (
 	EventlogTargetTypeRobyulInstagramFeed      = "robyul-instagram-feed"
 	EventlogTargetTypeRobyulRedditFeed         = "robyul-reddit-feed"
 	EventlogTargetTypeRobyulFacebookFeed       = "robyul-facebook-feed"
+	EventlogTargetTypeRobyulGallery            = "robyul-gallery"
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
