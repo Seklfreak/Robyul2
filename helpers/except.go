@@ -94,7 +94,7 @@ func RelaxEmbed(err error, channelID string, commandMessageID string) {
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code == 50013 {
 				if channelID != "" {
-					_, err = SendMessage(channelID, GetText("bot.errors.no-embed"))
+					_, err = SendMessage(channelID, GetText("bot.errors.no-embed")) // TODO: check if embed or attach permission required
 					RelaxMessage(err, channelID, commandMessageID)
 				}
 				panic("handled discord error")

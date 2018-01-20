@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/sirupsen/logrus"
@@ -83,12 +84,19 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				newMirrorEntry.ConnectedChannels = make([]Mirror_Channel, 0)
 				m.setEntry(newMirrorEntry)
 
+				mirrors = m.GetMirrors()
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, newMirrorEntry.ID,
+					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
+					models.EventlogTypeRobyulMirrorCreate, "",
+					nil,
+					nil, false)
+				helpers.RelaxLog(err)
+
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Created new Mirror by %s (#%s)", msg.Author.Username, msg.Author.ID))
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.create-success",
 					helpers.GetPrefixForServer(channel.GuildID), newMirrorEntry.ID))
 				helpers.Relax(err)
-
-				mirrors = m.GetMirrors()
 				return
 			})
 			return
@@ -100,12 +108,17 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+
 				mirrorID := args[1]
 				mirrorEntry := m.getEntryBy("id", mirrorID)
 				if mirrorEntry.ID == "" {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
+
+				beforeType := mirrorEntry.Type
 
 				switch mirrorEntry.Type {
 				case "text":
@@ -121,7 +134,20 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					mirrors = m.GetMirrors()
 				}()
 
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", mirrorEntry.Type))
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, mirrorEntry.ID,
+					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
+					models.EventlogTypeRobyulMirrorUpdate, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "mirror_type",
+							OldValue: beforeType,
+							NewValue: mirrorEntry.Type,
+						},
+					},
+					nil, false)
+				helpers.RelaxLog(err)
+
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", mirrorEntry.Type))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
@@ -212,9 +238,19 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 
 				m.setEntry(mirrorEntry)
 
-				go func() {
-					mirrors = m.GetMirrors()
-				}()
+				mirrors = m.GetMirrors()
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, mirrorEntry.ID,
+					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
+					models.EventlogTypeRobyulMirrorUpdate, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "mirror_channelids_added",
+							Value: newMirrorChannel.ChannelID,
+						},
+					}, false)
+				helpers.RelaxLog(err)
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Added Channel %s (#%s) on Server %s (#%s) to Mirror %s by %s (#%s)",
 					targetChannel.Name, targetChannel.ID, guild.Name, guild.ID, mirrorEntry.ID, msg.Author.Username, msg.Author.ID))
@@ -290,6 +326,10 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					helpers.Relax(err)
 					return
 				}
+
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+
 				entryId := args[1]
 				entryBucket := m.getEntryBy("id", entryId)
 				if entryBucket.ID == "" {
@@ -298,12 +338,19 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				}
 				m.deleteEntryById(entryBucket.ID)
 
+				mirrors = m.GetMirrors()
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
+					models.EventlogTypeRobyulMirrorDelete, "",
+					nil,
+					nil, false)
+				helpers.RelaxLog(err)
+
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Deleted Mirror %s by %s (#%s)",
 					entryBucket.ID, msg.Author.Username, msg.Author.ID))
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.delete-success"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.delete-success"))
 				helpers.Relax(err)
-
-				mirrors = m.GetMirrors()
 				return
 			})
 			return

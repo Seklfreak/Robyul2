@@ -139,7 +139,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 				g.setEntry(newGalleryEntry)
 
 				_, err = helpers.EventlogLog(time.Now(), newGalleryEntry.GuildID, newGalleryEntry.ID,
-					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTargetTypeRobyulGallery, msg.Author.ID,
 					models.EventlogTypeRobyulGalleryAdd, "",
 					nil,
 					[]models.ElasticEventlogOption{
@@ -222,7 +222,7 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 				g.deleteEntryById(entryBucket.ID)
 
 				_, err := helpers.EventlogLog(time.Now(), entryBucket.GuildID, entryBucket.ID,
-					models.EventlogTargetTypeChannel, msg.Author.ID,
+					models.EventlogTargetTypeRobyulGallery, msg.Author.ID,
 					models.EventlogTypeRobyulGalleryRemove, "",
 					nil,
 					[]models.ElasticEventlogOption{
