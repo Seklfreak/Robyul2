@@ -5,6 +5,8 @@ import (
 
 	"fmt"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -132,10 +134,30 @@ func (p *Persistency) roleAddAction(args []string, in *discordgo.Message, out **
 		return p.actionFinish
 	}
 
+	beforeValue := guildSettings.PersistencyRoleIDs
+
 	guildSettings.PersistencyRoleIDs = append(guildSettings.PersistencyRoleIDs, roleToAdd.ID)
 
 	err = helpers.GuildSettingsSet(guild.ID, guildSettings)
 	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+		models.EventlogTargetTypeGuild, in.Author.ID,
+		models.EventlogTypeRobyulPersistencyRoleAdd, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "persistency_roleids",
+				OldValue: strings.Join(beforeValue, ","),
+				NewValue: strings.Join(guildSettings.PersistencyRoleIDs, ","),
+			},
+		},
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "persistency_roleids_added",
+				Value: roleToAdd.ID,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	*out = p.newMsg("plugins.persistency.role-add-success", roleToAdd.Name)
 	return p.actionFinish
@@ -186,7 +208,27 @@ func (p *Persistency) roleRemoveAction(args []string, in *discordgo.Message, out
 		return p.actionFinish
 	}
 
+	beforeValue := guildSettings.PersistencyRoleIDs
+
 	guildSettings.PersistencyRoleIDs = newPersistentRoles
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+		models.EventlogTargetTypeGuild, in.Author.ID,
+		models.EventlogTypeRobyulPersistencyRoleRemove, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "persistency_roleids",
+				OldValue: strings.Join(beforeValue, ","),
+				NewValue: strings.Join(guildSettings.PersistencyRoleIDs, ","),
+			},
+		},
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "persistency_roleids_removed",
+				Value: roleToRemove.ID,
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	err = helpers.GuildSettingsSet(guild.ID, guildSettings)
 	helpers.Relax(err)
@@ -274,6 +316,8 @@ func (p *Persistency) toggleBiasAction(args []string, in *discordgo.Message, out
 
 	config := helpers.GuildSettingsGetCached(channel.GuildID)
 
+	beforeValue := config.PersistencyBiasEnabled
+
 	if config.PersistencyBiasEnabled {
 		config.PersistencyBiasEnabled = false
 
@@ -283,6 +327,19 @@ func (p *Persistency) toggleBiasAction(args []string, in *discordgo.Message, out
 
 		*out = p.newMsg(helpers.GetText("plugins.persistency.bias-persistency-enabled"))
 	}
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+		models.EventlogTargetTypeGuild, in.Author.ID,
+		models.EventlogTypeRobyulPersistencyBiasRoles, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "persistency_biasroles_persist",
+				OldValue: helpers.StoreBoolAsString(beforeValue),
+				NewValue: helpers.StoreBoolAsString(config.PersistencyBiasEnabled),
+			},
+		},
+		nil, false)
+	helpers.RelaxLog(err)
 
 	err = helpers.GuildSettingsSet(channel.GuildID, config)
 	helpers.Relax(err)

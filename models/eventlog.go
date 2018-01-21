@@ -92,6 +92,9 @@ const (
 	EventlogTypeRobyulNukeParticipate               = "Robyul_Nuke_Participate"                // EventlogTargetTypeGuild
 	EventlogTypeRobyulTroublemakerParticipate       = "Robyul_Troublemaker_Participate"        // EventlogTargetTypeGuild
 	EventlogTypeRobyulTroublemakerReport            = "Robyul_Troublemaker_Report"             // EventlogTargetTypeUser
+	EventlogTypeRobyulPersistencyBiasRoles          = "Robyul_Persistency_BiasRoles"           // EventlogTargetTypeGuild
+	EventlogTypeRobyulPersistencyRoleAdd            = "Robyul_Persistency_Role_Add"            // EventlogTargetTypeRole
+	EventlogTypeRobyulPersistencyRoleRemove         = "Robyul_Persistency_Role_Remove"         // EventlogTargetTypeRole
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
