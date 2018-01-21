@@ -3,8 +3,11 @@ package eventlog
 import (
 	"strings"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -83,17 +86,54 @@ func (h *Handler) actionToggleEventlog(args []string, in *discordgo.Message, out
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
 
+	var beforeEnabled, afterEnabled bool
+
 	settings := helpers.GuildSettingsGetCached(channel.GuildID)
 	var setMessage string
 	if settings.EventlogDisabled {
 		settings.EventlogDisabled = false
+		beforeEnabled = false
+		afterEnabled = true
 		setMessage = "plugins.eventlog.enabled"
 	} else {
 		settings.EventlogDisabled = true
+		beforeEnabled = true
+		afterEnabled = false
 		setMessage = "plugins.eventlog.disabled"
 	}
+
+	if !helpers.GuildSettingsGetCached(channel.GuildID).EventlogDisabled {
+		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+			models.EventlogTargetTypeGuild, in.Author.ID,
+			models.EventlogTypeRobyulEventlogConfigUpdate, "",
+			[]models.ElasticEventlogChange{
+				{
+					Key:      "eventlog_enabled",
+					OldValue: helpers.StoreBoolAsString(beforeEnabled),
+					NewValue: helpers.StoreBoolAsString(afterEnabled),
+				},
+			},
+			nil, false)
+		helpers.RelaxLog(err)
+	}
+
 	err = helpers.GuildSettingsSet(channel.GuildID, settings)
 	helpers.Relax(err)
+
+	if !helpers.GuildSettingsGetCached(channel.GuildID).EventlogDisabled {
+		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+			models.EventlogTargetTypeGuild, in.Author.ID,
+			models.EventlogTypeRobyulEventlogConfigUpdate, "",
+			[]models.ElasticEventlogChange{
+				{
+					Key:      "eventlog_enabled",
+					OldValue: helpers.StoreBoolAsString(beforeEnabled),
+					NewValue: helpers.StoreBoolAsString(afterEnabled),
+				},
+			},
+			nil, false)
+		helpers.RelaxLog(err)
+	}
 
 	*out = h.newMsg(setMessage)
 	return h.actionFinish

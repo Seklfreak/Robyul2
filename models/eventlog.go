@@ -103,6 +103,7 @@ const (
 	EventlogTypeRobyulModuleDenyRoleRemove          = "Robyul_Module_Deny_Role_Remove"         // EventlogTargetTypeRole
 	EventlogTypeRobyulModuleDenyChannelAdd          = "Robyul_Module_Deny_Channel_Add"         // EventlogTargetTypeChannel
 	EventlogTypeRobyulModuleDenyChannelRemove       = "Robyul_Module_Deny_Channel_Remove"      // EventlogTargetTypeChannel
+	EventlogTypeRobyulEventlogConfigUpdate          = "Robyul_Module_Eventlog_Config_Update"   // EventlogTargetTypeGuild
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
