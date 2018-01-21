@@ -80,15 +80,18 @@ const (
 	EventlogTypeRobyulStarboardCreate               = "Robyul_Starboard_Create"                // EventlogTargetTypeChannel
 	EventlogTypeRobyulStarboardDelete               = "Robyul_Starboard_Delete"                // EventlogTargetTypeChannel
 	EventlogTypeRobyulStarboardUpdate               = "Robyul_Starboard_Update"                // EventlogTargetTypeChannel
+	EventlogTypeRobyulRandomPictureSourceCreate     = "Robyul_RandomPicture_Source_Create"     // EventlogTargetTypeRobyulRandomPictureSource
+	EventlogTypeRobyulRandomPictureConfigUpdate     = "Robyul_RandomPicture_Config_Update"     // EventlogTargetTypeGuild
 
-	EventlogTargetTypeRobyulBadge              = "robyul-badge"
-	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
-	EventlogTargetTypeRobyulYouTubeChannelFeed = "robyul-youtube-channel-feed"
-	EventlogTargetTypeRobyulInstagramFeed      = "robyul-instagram-feed"
-	EventlogTargetTypeRobyulRedditFeed         = "robyul-reddit-feed"
-	EventlogTargetTypeRobyulFacebookFeed       = "robyul-facebook-feed"
-	EventlogTargetTypeRobyulGallery            = "robyul-gallery"
-	EventlogTargetTypeRobyulMirror             = "robyul-mirror"
+	EventlogTargetTypeRobyulBadge               = "robyul-badge"
+	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
+	EventlogTargetTypeRobyulYouTubeChannelFeed  = "robyul-youtube-channel-feed"
+	EventlogTargetTypeRobyulInstagramFeed       = "robyul-instagram-feed"
+	EventlogTargetTypeRobyulRedditFeed          = "robyul-reddit-feed"
+	EventlogTargetTypeRobyulFacebookFeed        = "robyul-facebook-feed"
+	EventlogTargetTypeRobyulGallery             = "robyul-gallery"
+	EventlogTargetTypeRobyulMirror              = "robyul-mirror"
+	EventlogTargetTypeRobyulRandomPictureSource = "robyul-randompicture-source"
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"

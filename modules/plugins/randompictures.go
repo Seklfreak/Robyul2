@@ -403,6 +403,26 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					inserted, err := insert.RunWrite(helpers.GetDB())
 					helpers.Relax(err)
 
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, inserted.GeneratedKeys[0],
+						models.EventlogTargetTypeRobyulRandomPictureSource, msg.Author.ID,
+						models.EventlogTypeRobyulRandomPictureSourceCreate, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "randompicture_source_posttochannelids",
+								Value: strings.Join(postToChannelIDs, ","),
+							},
+							{
+								Key:   "randompicture_source_drivefolderids",
+								Value: strings.Join(driveFolderIDs, ","),
+							},
+							{
+								Key:   "randompicture_source_aliases",
+								Value: strings.Join(aliases, ","),
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
 					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Created a new entry in the Database: `%s`.", inserted.GeneratedKeys[0]))
 					helpers.Relax(err)
 				})
@@ -551,15 +571,34 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					}
 
 					targetGuildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+					delayBefore := targetGuildSettings.RandomPicturesPicDelay
 					targetGuildSettings.RandomPicturesPicDelay = n
 					err = helpers.GuildSettingsSet(channel.GuildID, targetGuildSettings)
 					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+						models.EventlogTargetTypeGuild, msg.Author.ID,
+						models.EventlogTypeRobyulRandomPictureConfigUpdate, "",
+						[]models.ElasticEventlogChange{
+							{
+								Key:      "randompictures_config_delay",
+								OldValue: strconv.Itoa(delayBefore),
+								NewValue: strconv.Itoa(targetGuildSettings.RandomPicturesPicDelay),
+							},
+						},
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "",
+								Value: "",
+							},
+						}, false)
+					helpers.RelaxLog(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.pic-delay-set-success", n))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				})
-			case "pic-delay-ignore-channel", "pic-delay-ignore-channels":
+			case "pic-delay-ignore-channel", "pic-delay-ignore-channels", "delay-ignore-channel", "delay-ignore-channels":
 				// [p]rapi pic-delay-ignore-channel [<#channel or channel id>]
 				helpers.RequireMod(msg, func() {
 					channel, err := helpers.GetChannel(msg.ChannelID)
@@ -599,16 +638,43 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						newChannelList = append(newChannelList, targetChannel.ID)
 					}
 
+					beforeChannelIDs := guildSettings.RandomPicturesPicDelayIgnoredChannelIDs
 					guildSettings.RandomPicturesPicDelayIgnoredChannelIDs = newChannelList
 					err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
 					helpers.Relax(err)
 
+					options := make([]models.ElasticEventlogOption, 0)
 					message := ""
 					if removed {
 						message = helpers.GetText("plugins.randompictures.pic-delay-ignore-channels-removed")
+						options = []models.ElasticEventlogOption{
+							{
+								Key:   "randompictures_config_ignoredchannelids_removed",
+								Value: targetChannel.ID,
+							},
+						}
 					} else {
 						message = helpers.GetText("plugins.randompictures.pic-delay-ignore-channels-added")
+						options = []models.ElasticEventlogOption{
+							{
+								Key:   "randompictures_config_ignoredchannelids_added",
+								Value: targetChannel.ID,
+							},
+						}
 					}
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+						models.EventlogTargetTypeGuild, msg.Author.ID,
+						models.EventlogTypeRobyulRandomPictureConfigUpdate, "",
+						[]models.ElasticEventlogChange{
+							{
+								Key:      "randompictures_config_ignoredchannelids",
+								OldValue: strings.Join(beforeChannelIDs, ","),
+								NewValue: strings.Join(guildSettings.RandomPicturesPicDelayIgnoredChannelIDs, ","),
+							},
+						},
+						options, false)
+					helpers.RelaxLog(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, message)
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
