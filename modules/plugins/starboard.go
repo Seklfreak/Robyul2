@@ -190,9 +190,26 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 
 	if len(args) < 2 {
 		if guildSettings.StarboardChannelID != "" {
+			beforeChannelID := guildSettings.StarboardChannelID
 			guildSettings.StarboardChannelID = ""
 			err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
 			helpers.Relax(err)
+
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, beforeChannelID,
+				models.EventlogTargetTypeChannel, in.Author.ID,
+				models.EventlogTypeRobyulStarboardDelete, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "starboard_emoji",
+						Value: strings.Join(s.getEmoji(channel.GuildID), ","),
+					},
+					{
+						Key:   "starboard_minimum",
+						Value: strconv.Itoa(s.getMinimum(channel.GuildID)),
+					},
+				}, false)
+			helpers.RelaxLog(err)
 
 			*out = s.newMsg(helpers.GetText("plugins.starboard.reset-success"))
 			return s.actionFinish
@@ -210,9 +227,38 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 		}
 		helpers.Relax(err)
 	}
+	previousChannelID := guildSettings.StarboardChannelID
 	guildSettings.StarboardChannelID = targetChannel.ID
 	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
 	helpers.Relax(err)
+
+	changes := make([]models.ElasticEventlogChange, 0)
+
+	if previousChannelID != "" {
+		changes = []models.ElasticEventlogChange{
+			{
+				Key:      "starboard_channelid",
+				OldValue: previousChannelID,
+				NewValue: guildSettings.StarboardChannelID,
+			},
+		}
+	}
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+		models.EventlogTargetTypeChannel, in.Author.ID,
+		models.EventlogTypeRobyulStarboardCreate, "",
+		changes,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "starboard_emoji",
+				Value: strings.Join(s.getEmoji(channel.GuildID), ","),
+			},
+			{
+				Key:   "starboard_minimum",
+				Value: strconv.Itoa(s.getMinimum(channel.GuildID)),
+			},
+		}, false)
+	helpers.RelaxLog(err)
 
 	*out = s.newMsg(helpers.GetTextF("plugins.starboard.set-success", guildSettings.StarboardChannelID))
 	return s.actionFinish
@@ -245,9 +291,23 @@ func (s *Starboard) actionMinimum(args []string, in *discordgo.Message, out **di
 	helpers.Relax(err)
 
 	guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
+	oldMinimum := guildSettings.StarboardMinimum
 	guildSettings.StarboardMinimum = newMinimum
 	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
 	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, guildSettings.StarboardChannelID,
+		models.EventlogTargetTypeChannel, in.Author.ID,
+		models.EventlogTypeRobyulStarboardUpdate, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "starboard_minimum",
+				OldValue: strconv.Itoa(oldMinimum),
+				NewValue: strconv.Itoa(guildSettings.StarboardMinimum),
+			},
+		},
+		nil, false)
+	helpers.RelaxLog(err)
 
 	*out = s.newMsg(helpers.GetTextF("plugins.starboard.minimum-success", guildSettings.StarboardMinimum))
 	return s.actionFinish
@@ -285,6 +345,7 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 
 	guildSettings := helpers.GuildSettingsGetCached(channel.GuildID)
 
+	options := make([]models.ElasticEventlogOption, 0)
 	removed := false
 	newEmojiList := make([]string, 0)
 	for _, emoji := range guildSettings.StarboardEmoji {
@@ -297,12 +358,40 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 
 	if !removed {
 		newEmojiList = append(newEmojiList, newEmoji)
+		options = []models.ElasticEventlogOption{
+			{
+				Key:   "starboard_emoji_added",
+				Value: newEmoji,
+			},
+		}
+	} else {
+		options = []models.ElasticEventlogOption{
+			{
+				Key:   "starboard_emoji_removed",
+				Value: newEmoji,
+			},
+		}
 	}
+
+	emojiBefore := s.getEmoji(channel.GuildID)
 
 	guildSettings.StarboardEmoji = newEmojiList
 
 	err = helpers.GuildSettingsSet(channel.GuildID, guildSettings)
 	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, guildSettings.StarboardChannelID,
+		models.EventlogTargetTypeChannel, in.Author.ID,
+		models.EventlogTypeRobyulStarboardUpdate, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "starboard_emoji",
+				OldValue: strings.Join(emojiBefore, ","),
+				NewValue: strings.Join(s.getEmoji(channel.GuildID), ","),
+			},
+		},
+		options, false)
+	helpers.RelaxLog(err)
 
 	if !removed {
 		*out = s.newMsg(helpers.GetTextF("plugins.starboard.emoji-add-success", newEmoji))

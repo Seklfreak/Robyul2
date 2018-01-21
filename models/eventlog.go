@@ -77,6 +77,9 @@ const (
 	EventlogTypeRobyulMirrorCreate                  = "Robyul_Mirror_Create"                   // EventlogTargetTypeRobyulMirror
 	EventlogTypeRobyulMirrorDelete                  = "Robyul_Mirror_Delete"                   // EventlogTargetTypeRobyulMirror
 	EventlogTypeRobyulMirrorUpdate                  = "Robyul_Mirror_Update"                   // EventlogTargetTypeRobyulMirror
+	EventlogTypeRobyulStarboardCreate               = "Robyul_Starboard_Create"                // EventlogTargetTypeChannel
+	EventlogTypeRobyulStarboardDelete               = "Robyul_Starboard_Delete"                // EventlogTargetTypeChannel
+	EventlogTypeRobyulStarboardUpdate               = "Robyul_Starboard_Update"                // EventlogTargetTypeChannel
 
 	EventlogTargetTypeRobyulBadge              = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed          = "robyul-vlive-feed"
