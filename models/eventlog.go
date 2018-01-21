@@ -82,6 +82,11 @@ const (
 	EventlogTypeRobyulStarboardUpdate               = "Robyul_Starboard_Update"                // EventlogTargetTypeChannel
 	EventlogTypeRobyulRandomPictureSourceCreate     = "Robyul_RandomPicture_Source_Create"     // EventlogTargetTypeRobyulRandomPictureSource
 	EventlogTypeRobyulRandomPictureConfigUpdate     = "Robyul_RandomPicture_Config_Update"     // EventlogTargetTypeGuild
+	EventlogTypeRobyulCommandsAdd                   = "Robyul_Commands_Add"                    // EventlogTargetTypeGuild
+	EventlogTypeRobyulCommandsDelete                = "Robyul_Commands_Delete"                 // EventlogTargetTypeGuild
+	EventlogTypeRobyulCommandsUpdate                = "Robyul_Commands_Update"                 // EventlogTargetTypeGuild
+	EventlogTypeRobyulCommandsJsonExport            = "Robyul_Commands_Json_Export"            // EventlogTargetTypeGuild
+	EventlogTypeRobyulCommandsJsonImport            = "Robyul_Commands_Json_Import"            // EventlogTargetTypeGuild
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"

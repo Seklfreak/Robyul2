@@ -8,9 +8,12 @@ import (
 
 	"bytes"
 
+	"strconv"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
@@ -100,6 +103,22 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				newCommand.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(newCommand)
 
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, msg.Author.ID,
+					models.EventlogTypeRobyulCommandsAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "command_keyword",
+							Value: newCommand.Keyword,
+						},
+						{
+							Key:   "command_content",
+							Value: newCommand.Content,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
@@ -185,6 +204,23 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				}
 
 				cc.deleteEntryById(entryBucket.ID)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, msg.Author.ID,
+					models.EventlogTypeRobyulCommandsDelete, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "command_keyword",
+							Value: entryBucket.Keyword,
+						},
+						{
+							Key:   "command_content",
+							Value: entryBucket.Content,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
@@ -218,11 +254,31 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					helpers.Relax(err)
 				}
 
+				beforeContent := entryBucket.Content
+
 				entryBucket.CreatedByUserID = msg.Author.ID
 				entryBucket.CreatedAt = time.Now().UTC()
 				entryBucket.Triggered = 0
 				entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 				cc.setEntry(entryBucket)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, msg.Author.ID,
+					models.EventlogTypeRobyulCommandsUpdate, "",
+					[]models.ElasticEventlogChange{
+						{
+							Key:      "command_content",
+							OldValue: beforeContent,
+							NewValue: entryBucket.Content,
+						},
+					},
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "command_keyword",
+							Value: entryBucket.Keyword,
+						},
+					}, false)
+				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
 				helpers.Relax(err)
@@ -400,6 +456,18 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					i++
 				}
 
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, msg.Author.ID,
+					models.EventlogTypeRobyulCommandsJsonImport, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "commands_imported",
+							Value: strconv.Itoa(i),
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commnands.", msg.Author.ID, humanize.Comma(int64(i))))
 				helpers.Relax(err)
 				customCommandsCache = cc.getAllCustomCommands()
@@ -433,6 +501,13 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					jsonObj.Set(command.Content, command.Keyword)
 				}
 				jsonObj.StringIndent("", "  ")
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+					models.EventlogTargetTypeGuild, msg.Author.ID,
+					models.EventlogTypeRobyulCommandsJsonExport, "",
+					nil,
+					nil, false)
+				helpers.RelaxLog(err)
 
 				_, err = session.ChannelFileSend(msg.ChannelID, sanitize.Path(guild.Name)+"-robyul-custom-commands.json",
 					bytes.NewReader([]byte(jsonObj.StringIndent("", "  "))),
