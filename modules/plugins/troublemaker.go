@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 )
@@ -59,10 +60,41 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 						return
 					}
 
+					previousChannel := settings.TroublemakerLogChannel
+
 					settings.TroublemakerIsParticipating = true
 					settings.TroublemakerLogChannel = targetChannel.ID
 					err = helpers.GuildSettingsSet(channel.GuildID, settings)
 					helpers.Relax(err)
+
+					changes := make([]models.ElasticEventlogChange, 0)
+					if previousChannel != "" {
+						changes = []models.ElasticEventlogChange{
+							{
+								Key:      "troublemaker_participate_channel",
+								OldValue: previousChannel,
+								NewValue: settings.TroublemakerLogChannel,
+							},
+						}
+					}
+
+					changes = append(changes, models.ElasticEventlogChange{
+						Key:      "troublemaker_participating",
+						OldValue: helpers.StoreBoolAsString(false),
+						NewValue: helpers.StoreBoolAsString(true),
+					})
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+						models.EventlogTargetTypeGuild, msg.Author.ID,
+						models.EventlogTypeRobyulTroublemakerParticipate, "",
+						changes,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "troublemaker_participate_channel",
+								Value: targetChannel.ID,
+							},
+						}, false)
+					helpers.RelaxLog(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.troublemaker.participation-enabled"))
 					helpers.Relax(err)
@@ -73,6 +105,19 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 					settings.TroublemakerIsParticipating = false
 					err = helpers.GuildSettingsSet(channel.GuildID, settings)
 					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+						models.EventlogTargetTypeGuild, msg.Author.ID,
+						models.EventlogTypeRobyulTroublemakerParticipate, "",
+						[]models.ElasticEventlogChange{
+							{
+								Key:      "troublemaker_participating",
+								OldValue: helpers.StoreBoolAsString(true),
+								NewValue: helpers.StoreBoolAsString(false),
+							},
+						},
+						nil, false)
+					helpers.RelaxLog(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.troublemaker.participation-disabled"))
 					helpers.Relax(err)
@@ -184,6 +229,12 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 							}
 						}
 					}
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
+						models.EventlogTargetTypeUser, msg.Author.ID,
+						models.EventlogTypeRobyulTroublemakerReport, reasonText,
+						nil,
+						nil, false)
+					helpers.RelaxLog(err)
 
 					successMessages, _ := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.report-successful", len(guildsToNotify)))
 

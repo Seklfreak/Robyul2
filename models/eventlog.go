@@ -90,6 +90,8 @@ const (
 	EventlogTypeRobyulTwitchFeedAdd                 = "Robyul_Twitch_Feed_Add"                 // EventlogTargetTypeRobyulTwitchFeed
 	EventlogTypeRobyulTwitchFeedRemove              = "Robyul_Twitch_Feed_Remove"              // EventlogTargetTypeRobyulTwitchFeed
 	EventlogTypeRobyulNukeParticipate               = "Robyul_Nuke_Participate"                // EventlogTargetTypeGuild
+	EventlogTypeRobyulTroublemakerParticipate       = "Robyul_Troublemaker_Participate"        // EventlogTargetTypeGuild
+	EventlogTypeRobyulTroublemakerReport            = "Robyul_Troublemaker_Report"             // EventlogTargetTypeUser
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
