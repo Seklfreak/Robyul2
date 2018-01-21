@@ -3,6 +3,8 @@ package plugins
 import (
 	"strings"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -231,6 +233,18 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 				targetChannel.GuildID, targetChannel.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+				models.EventlogTargetTypeChannel, in.Author.ID,
+				models.EventlogTypeRobyulModuleAllowChannelRemove, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "module_allow_channel_removed",
+						Value: helpers.GetModuleNameById(permToAdd),
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
 			*out = mp.newMsg("plugins.modulepermissions.set-allow-removed")
 			return mp.actionFinish
 		}
@@ -238,6 +252,18 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		err = helpers.SetAllowedForChannel(
 			targetChannel.GuildID, targetChannel.ID, previousPerms|permToAdd)
 		helpers.Relax(err)
+
+		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+			models.EventlogTargetTypeChannel, in.Author.ID,
+			models.EventlogTypeRobyulModuleAllowChannelAdd, "",
+			nil,
+			[]models.ElasticEventlogOption{
+				{
+					Key:   "module_allow_channel_added",
+					Value: helpers.GetModuleNameById(permToAdd),
+				},
+			}, false)
+		helpers.RelaxLog(err)
 
 		*out = mp.newMsg("plugins.modulepermissions.set-allow-added")
 		return mp.actionFinish
@@ -247,7 +273,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 	for _, guildRole := range guild.Roles {
 		if guildRole.ID == args[2] ||
 			strings.ToLower(guildRole.Name) == strings.ToLower(args[2]) ||
-			(guildRole.Name == "everyone" && strings.ToLower(args[2]) == "everyone") {
+			(guildRole.ID == guild.ID && strings.ToLower(args[2]) == "everyone") {
 			targetRole = guildRole
 		}
 	}
@@ -258,6 +284,18 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 				guild.ID, targetRole.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+				models.EventlogTargetTypeRole, in.Author.ID,
+				models.EventlogTypeRobyulModuleAllowRoleRemove, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "module_allow_role_removed",
+						Value: helpers.GetModuleNameById(permToAdd),
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
 			*out = mp.newMsg("plugins.modulepermissions.set-allow-removed")
 			return mp.actionFinish
 		}
@@ -265,6 +303,18 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		err = helpers.SetAllowedForRole(
 			guild.ID, targetRole.ID, previousPerms|permToAdd)
 		helpers.Relax(err)
+
+		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+			models.EventlogTargetTypeRole, in.Author.ID,
+			models.EventlogTypeRobyulModuleAllowRoleAdd, "",
+			nil,
+			[]models.ElasticEventlogOption{
+				{
+					Key:   "module_allow_role_added",
+					Value: helpers.GetModuleNameById(permToAdd),
+				},
+			}, false)
+		helpers.RelaxLog(err)
 
 		*out = mp.newMsg("plugins.modulepermissions.set-allow-added")
 		return mp.actionFinish
@@ -309,6 +359,18 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 				targetChannel.GuildID, targetChannel.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+				models.EventlogTargetTypeChannel, in.Author.ID,
+				models.EventlogTypeRobyulModuleDenyChannelRemove, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "module_deny_channel_removed",
+						Value: helpers.GetModuleNameById(permToAdd),
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
 			*out = mp.newMsg("plugins.modulepermissions.set-deny-removed")
 			return mp.actionFinish
 		}
@@ -316,6 +378,18 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		err = helpers.SetDeniedForChannel(
 			targetChannel.GuildID, targetChannel.ID, previousPerms|permToAdd)
 		helpers.Relax(err)
+
+		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
+			models.EventlogTargetTypeChannel, in.Author.ID,
+			models.EventlogTypeRobyulModuleDenyChannelAdd, "",
+			nil,
+			[]models.ElasticEventlogOption{
+				{
+					Key:   "module_deny_channel_added",
+					Value: helpers.GetModuleNameById(permToAdd),
+				},
+			}, false)
+		helpers.RelaxLog(err)
 
 		*out = mp.newMsg("plugins.modulepermissions.set-deny-added")
 		return mp.actionFinish
@@ -325,7 +399,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 	for _, guildRole := range guild.Roles {
 		if guildRole.ID == args[2] ||
 			strings.ToLower(guildRole.Name) == strings.ToLower(args[2]) ||
-			(guildRole.Name == "@everyone" && strings.ToLower(args[2]) == "everyone") {
+			(guildRole.ID == guild.ID && strings.ToLower(args[2]) == "everyone") {
 			targetRole = guildRole
 		}
 	}
@@ -336,6 +410,18 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 				guild.ID, targetRole.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
 			helpers.Relax(err)
 
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+				models.EventlogTargetTypeRole, in.Author.ID,
+				models.EventlogTypeRobyulModuleDenyRoleRemove, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "module_deny_role_removed",
+						Value: helpers.GetModuleNameById(permToAdd),
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
 			*out = mp.newMsg("plugins.modulepermissions.set-deny-removed")
 			return mp.actionFinish
 		}
@@ -343,6 +429,18 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		err = helpers.SetDeniedForRole(
 			guild.ID, targetRole.ID, previousPerms|permToAdd)
 		helpers.Relax(err)
+
+		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
+			models.EventlogTargetTypeRole, in.Author.ID,
+			models.EventlogTypeRobyulModuleDenyRoleAdd, "",
+			nil,
+			[]models.ElasticEventlogOption{
+				{
+					Key:   "module_deny_role_added",
+					Value: helpers.GetModuleNameById(permToAdd),
+				},
+			}, false)
+		helpers.RelaxLog(err)
 
 		*out = mp.newMsg("plugins.modulepermissions.set-deny-added")
 		return mp.actionFinish

@@ -95,6 +95,14 @@ const (
 	EventlogTypeRobyulPersistencyBiasRoles          = "Robyul_Persistency_BiasRoles"           // EventlogTargetTypeGuild
 	EventlogTypeRobyulPersistencyRoleAdd            = "Robyul_Persistency_Role_Add"            // EventlogTargetTypeRole
 	EventlogTypeRobyulPersistencyRoleRemove         = "Robyul_Persistency_Role_Remove"         // EventlogTargetTypeRole
+	EventlogTypeRobyulModuleAllowRoleAdd            = "Robyul_Module_Allow_Role_Add"           // EventlogTargetTypeRole
+	EventlogTypeRobyulModuleAllowRoleRemove         = "Robyul_Module_Allow_Role_Remove"        // EventlogTargetTypeRole
+	EventlogTypeRobyulModuleAllowChannelAdd         = "Robyul_Module_Allow_Channel_Add"        // EventlogTargetTypeChannel
+	EventlogTypeRobyulModuleAllowChannelRemove      = "Robyul_Module_Allow_Channel_Remove"     // EventlogTargetTypeChannel
+	EventlogTypeRobyulModuleDenyRoleAdd             = "Robyul_Module_Deny_Role_Add"            // EventlogTargetTypeRole
+	EventlogTypeRobyulModuleDenyRoleRemove          = "Robyul_Module_Deny_Role_Remove"         // EventlogTargetTypeRole
+	EventlogTypeRobyulModuleDenyChannelAdd          = "Robyul_Module_Deny_Channel_Add"         // EventlogTargetTypeChannel
+	EventlogTypeRobyulModuleDenyChannelRemove       = "Robyul_Module_Deny_Channel_Remove"      // EventlogTargetTypeChannel
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"

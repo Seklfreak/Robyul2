@@ -295,6 +295,9 @@ func GetModuleNameById(id models.ModulePermissionsModule) (name string) {
 			return "unnamed"
 		}
 	}
+	if (ModulePermAll | ModulePermAllPlaceholder) == id {
+		return "all modules"
+	}
 	return "not found"
 }
 
