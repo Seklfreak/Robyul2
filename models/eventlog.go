@@ -89,6 +89,7 @@ const (
 	EventlogTypeRobyulCommandsJsonImport            = "Robyul_Commands_Json_Import"            // EventlogTargetTypeGuild
 	EventlogTypeRobyulTwitchFeedAdd                 = "Robyul_Twitch_Feed_Add"                 // EventlogTargetTypeRobyulTwitchFeed
 	EventlogTypeRobyulTwitchFeedRemove              = "Robyul_Twitch_Feed_Remove"              // EventlogTargetTypeRobyulTwitchFeed
+	EventlogTypeRobyulNukeParticipate               = "Robyul_Nuke_Participate"                // EventlogTargetTypeGuild
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"

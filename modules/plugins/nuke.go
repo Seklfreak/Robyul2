@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 )
@@ -173,9 +174,39 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.participation-confirm", strings.Join(nukeModMentions, ", "), helpers.GetPrefixForServer(channel.GuildID)), "✅", "🚫") == true {
 						settings.NukeIsParticipating = true
+						previousChannel := settings.NukeLogChannel
 						settings.NukeLogChannel = targetChannel.ID
 						err = helpers.GuildSettingsSet(channel.GuildID, settings)
 						helpers.Relax(err)
+
+						changes := make([]models.ElasticEventlogChange, 0)
+						if previousChannel != "" {
+							changes = []models.ElasticEventlogChange{
+								{
+									Key:      "nuke_participate_channel",
+									OldValue: previousChannel,
+									NewValue: settings.NukeLogChannel,
+								},
+							}
+						}
+
+						changes = append(changes, models.ElasticEventlogChange{
+							Key:      "nuke_participating",
+							OldValue: helpers.StoreBoolAsString(false),
+							NewValue: helpers.StoreBoolAsString(true),
+						})
+
+						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+							models.EventlogTargetTypeGuild, msg.Author.ID,
+							models.EventlogTypeRobyulNukeParticipate, "",
+							changes,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "nuke_participate_channel",
+									Value: targetChannel.ID,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.participation-enabled"))
 						helpers.Relax(err)
@@ -185,6 +216,19 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 					settings.NukeIsParticipating = false
 					err = helpers.GuildSettingsSet(channel.GuildID, settings)
 					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+						models.EventlogTargetTypeGuild, msg.Author.ID,
+						models.EventlogTypeRobyulNukeParticipate, "",
+						[]models.ElasticEventlogChange{
+							{
+								Key:      "nuke_participating",
+								OldValue: helpers.StoreBoolAsString(true),
+								NewValue: helpers.StoreBoolAsString(false),
+							},
+						},
+						nil, false)
+					helpers.RelaxLog(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.participation-disabled"))
 					helpers.Relax(err)
