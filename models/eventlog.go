@@ -87,6 +87,8 @@ const (
 	EventlogTypeRobyulCommandsUpdate                = "Robyul_Commands_Update"                 // EventlogTargetTypeGuild
 	EventlogTypeRobyulCommandsJsonExport            = "Robyul_Commands_Json_Export"            // EventlogTargetTypeGuild
 	EventlogTypeRobyulCommandsJsonImport            = "Robyul_Commands_Json_Import"            // EventlogTargetTypeGuild
+	EventlogTypeRobyulTwitchFeedAdd                 = "Robyul_Twitch_Feed_Add"                 // EventlogTargetTypeRobyulTwitchFeed
+	EventlogTypeRobyulTwitchFeedRemove              = "Robyul_Twitch_Feed_Remove"              // EventlogTargetTypeRobyulTwitchFeed
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
@@ -97,6 +99,7 @@ const (
 	EventlogTargetTypeRobyulGallery             = "robyul-gallery"
 	EventlogTargetTypeRobyulMirror              = "robyul-mirror"
 	EventlogTargetTypeRobyulRandomPictureSource = "robyul-randompicture-source"
+	EventlogTargetTypeRobyulTwitchFeed          = "robyul-twitch-feed"
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"

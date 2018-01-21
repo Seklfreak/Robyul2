@@ -15,6 +15,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
@@ -219,11 +220,23 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				entry.TwitchChannelName = targetTwitchChannelName
 				m.setEntry(entry)
 
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+					models.EventlogTargetTypeRobyulTwitchFeed, msg.Author.ID,
+					models.EventlogTypeRobyulTwitchFeedAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "twitch_feed_channelname",
+							Value: targetTwitchChannelName,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
-		case "delete", "del": // [p]twitch delete <id>
+		case "delete", "del", "remove": // [p]twitch delete <id>
 			helpers.RequireMod(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
@@ -231,6 +244,18 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 					entryBucket := m.getEntryBy("id", entryId)
 					if entryBucket.ID != "" {
 						m.deleteEntryById(entryBucket.ID)
+
+						_, err := helpers.EventlogLog(time.Now(), entryBucket.ServerID, entryBucket.ID,
+							models.EventlogTargetTypeRobyulTwitchFeed, msg.Author.ID,
+							models.EventlogTypeRobyulTwitchFeedRemove, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "twitch_feed_channelname",
+									Value: entryBucket.TwitchChannelName,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-delete-success", entryBucket.TwitchChannelName))
 						cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Deleted Twitch Channel %s", entryBucket.TwitchChannelName))
