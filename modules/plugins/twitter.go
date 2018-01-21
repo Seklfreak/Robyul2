@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
@@ -442,6 +443,41 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 
 				twitterStreamNeedsUpdate = true
 
+				postModeText := "robyul embed"
+				switch entry.PostMode {
+				case 1:
+					postModeText = "discord embed"
+					break
+				}
+
+				_, err = helpers.EventlogLog(time.Now(), entry.ServerID, entry.ID,
+					models.EventlogTargetTypeRobyulTwitterFeed, msg.Author.ID,
+					models.EventlogTypeRobyulTwitterFeedAdd, "",
+					nil,
+					[]models.ElasticEventlogOption{
+						{
+							Key:   "twitter_channelid",
+							Value: entry.ChannelID,
+						},
+						{
+							Key:   "twitter_accountscreename",
+							Value: entry.AccountScreenName,
+						},
+						{
+							Key:   "twitter_accountid",
+							Value: entry.AccountID,
+						},
+						{
+							Key:   "twitter_mentionroleid",
+							Value: entry.MentionRoleID,
+						},
+						{
+							Key:   "twitter_postmode",
+							Value: postModeText,
+						},
+					}, false)
+				helpers.RelaxLog(err)
+
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
 				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
@@ -456,6 +492,41 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						m.deleteEntryById(entryBucket.ID)
 
 						twitterStreamNeedsUpdate = true
+
+						postModeText := "robyul embed"
+						switch entryBucket.PostMode {
+						case 1:
+							postModeText = "discord embed"
+							break
+						}
+
+						_, err = helpers.EventlogLog(time.Now(), entryBucket.ServerID, entryBucket.ID,
+							models.EventlogTargetTypeRobyulTwitterFeed, msg.Author.ID,
+							models.EventlogTypeRobyulTwitterFeedRemove, "",
+							nil,
+							[]models.ElasticEventlogOption{
+								{
+									Key:   "twitter_channelid",
+									Value: entryBucket.ChannelID,
+								},
+								{
+									Key:   "twitter_accountscreename",
+									Value: entryBucket.AccountScreenName,
+								},
+								{
+									Key:   "twitter_accountid",
+									Value: entryBucket.AccountID,
+								},
+								{
+									Key:   "twitter_mentionroleid",
+									Value: entryBucket.MentionRoleID,
+								},
+								{
+									Key:   "twitter_postmode",
+									Value: postModeText,
+								},
+							}, false)
+						helpers.RelaxLog(err)
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
 						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))

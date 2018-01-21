@@ -337,7 +337,7 @@ func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
 			if oldChannel.Name != newChannel.Name ||
 				oldChannel.Topic != newChannel.Topic ||
 				oldChannel.NSFW != newChannel.NSFW ||
-				oldChannel.Position != newChannel.Position ||
+				//oldChannel.Position != newChannel.Position ||
 				oldChannel.Bitrate != newChannel.Bitrate ||
 				oldChannel.ParentID != newChannel.ParentID ||
 				!helpers.ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {

@@ -104,6 +104,8 @@ const (
 	EventlogTypeRobyulModuleDenyChannelAdd          = "Robyul_Module_Deny_Channel_Add"         // EventlogTargetTypeChannel
 	EventlogTypeRobyulModuleDenyChannelRemove       = "Robyul_Module_Deny_Channel_Remove"      // EventlogTargetTypeChannel
 	EventlogTypeRobyulEventlogConfigUpdate          = "Robyul_Module_Eventlog_Config_Update"   // EventlogTargetTypeGuild
+	EventlogTypeRobyulTwitterFeedAdd                = "Robyul_Twitter_Feed_Add"                // EventlogTargetTypeRobyulTwitterFeed
+	EventlogTypeRobyulTwitterFeedRemove             = "Robyul_Twitter_Feed_Remove"             // EventlogTargetTypeRobyulTwitterFeed
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
@@ -115,6 +117,7 @@ const (
 	EventlogTargetTypeRobyulMirror              = "robyul-mirror"
 	EventlogTargetTypeRobyulRandomPictureSource = "robyul-randompicture-source"
 	EventlogTargetTypeRobyulTwitchFeed          = "robyul-twitch-feed"
+	EventlogTargetTypeRobyulTwitterFeed         = "robyul-twitter-feed"
 
 	AuditLogBackfillTypeChannelCreateRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-create"
 	AuditLogBackfillTypeChannelDeleteRedisSet = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
