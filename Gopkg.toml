@@ -51,6 +51,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/dghubble/go-twitter"
+  source = "github.com/Seklfreak/go-twitter"
 
 [[constraint]]
   name = "github.com/dghubble/oauth1"
@@ -90,15 +91,7 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/marcmak/calc"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/miekg/dns"
-
-[[constraint]]
-  name = "github.com/newrelic/go-agent"
-  version = "1.9.0"
 
 [[constraint]]
   branch = "master"
@@ -117,16 +110,8 @@
   version = "1.0.0"
 
 [[constraint]]
-  name = "github.com/satori/go.uuid"
-  version = "1.1.0"
-
-[[constraint]]
   branch = "master"
   name = "github.com/shkh/lastfm-go"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/ugjka/cleverbot-go"
 
 [[constraint]]
   branch = "master"
