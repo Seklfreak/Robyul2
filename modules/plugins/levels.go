@@ -154,6 +154,7 @@ var (
 	webshotBinary            string
 	topCache                 []Cache_Levels_top
 	activeBadgePickerUserIDs map[string]string
+	repCommandLocks          = make(map[string]*sync.Mutex)
 )
 
 const (
@@ -425,6 +426,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		session.ChannelTyping(msg.ChannelID)
 		args := strings.Fields(content)
 		userData := m.GetUserUserdata(msg.Author)
+
+		m.lockRepUser(msg.Author.ID)
+		defer m.unlockRepUser(msg.Author.ID)
 
 		if len(args) <= 0 {
 			if time.Since(userData.LastRepped).Hours() < 12 {
@@ -4404,4 +4408,19 @@ func (l *Levels) deleteLevelsRolesOverwriteEntry(levelsRolesOverwriteEntry model
 		return err
 	}
 	return errors.New("empty levelsRoleOverwriteEntry submitted")
+}
+
+func (l *Levels) lockRepUser(userID string) {
+	if _, ok := repCommandLocks[userID]; ok {
+		repCommandLocks[userID].Lock()
+		return
+	}
+	repCommandLocks[userID] = new(sync.Mutex)
+	repCommandLocks[userID].Lock()
+}
+
+func (l *Levels) unlockRepUser(userID string) {
+	if _, ok := repCommandLocks[userID]; ok {
+		repCommandLocks[userID].Unlock()
+	}
 }
