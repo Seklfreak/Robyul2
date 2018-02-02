@@ -425,10 +425,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 	case "rep": // [p]rep <user id/mention>
 		session.ChannelTyping(msg.ChannelID)
 		args := strings.Fields(content)
-		userData := m.GetUserUserdata(msg.Author)
 
 		m.lockRepUser(msg.Author.ID)
 		defer m.unlockRepUser(msg.Author.ID)
+
+		userData := m.GetUserUserdata(msg.Author)
 
 		if len(args) <= 0 {
 			if time.Since(userData.LastRepped).Hours() < 12 {
