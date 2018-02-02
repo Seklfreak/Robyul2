@@ -1103,8 +1103,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 	case "inspect", "inspect-extended": // [p]inspect[-extended] <user>
 		isMod := helpers.IsMod(msg)
 		isAllowedToInspectExtended := helpers.CanInspectExtended(msg)
+		isAllowedToInspectBasic := helpers.CanInspectBasic(msg)
 
-		if isMod == false && isAllowedToInspectExtended == false {
+		if isMod == false && isAllowedToInspectExtended == false && isAllowedToInspectBasic == false {
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
 			return
 		}

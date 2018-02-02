@@ -48,6 +48,9 @@ var BlacklistedGuildIDs []string
 var LimitedGuildIDs = []string{
 	"264445053596991498", // Discord Bot List
 }
+var BasicInspectRoleIDs = []string{
+	"345209098100277248", // :hammer: (.kpop)
+}
 var ExtendedInspectRoleIDs = []string{
 	"345209385821274113", // inspect extended (sekl's dev cord)
 	"345209098100277248", // inspect (Moderator Chat)
@@ -116,6 +119,39 @@ func IsRobyulMod(id string) bool {
 		}
 	}
 
+	return false
+}
+
+func CanInspectBasic(msg *discordgo.Message) bool {
+	if CanInspectExtended(msg) {
+		return true
+	}
+
+	channel, e := GetChannel(msg.ChannelID)
+	if e != nil {
+		return false
+	}
+
+	guild, e := GetGuild(channel.GuildID)
+	if e != nil {
+		return false
+	}
+
+	guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
+	if e != nil {
+		return false
+	}
+	for _, role := range guild.Roles {
+		for _, userRole := range guildMember.Roles {
+			if userRole == role.ID {
+				for _, inspectRoleID := range BasicInspectRoleIDs {
+					if role.ID == inspectRoleID {
+						return true
+					}
+				}
+			}
+		}
+	}
 	return false
 }
 
