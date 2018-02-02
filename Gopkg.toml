@@ -193,3 +193,7 @@
 [[constraint]]
   name = "github.com/VojtechVitek/go-trello"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/ChimeraCoder/anaconda"
+  version = "1.0.0"

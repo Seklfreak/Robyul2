@@ -19,6 +19,18 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/ChimeraCoder/anaconda"
+  packages = ["."]
+  revision = "0cb3e4c3ff8c6df5c73d5058c64e9c4eb6299c4b"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/ChimeraCoder/tokenbucket"
+  packages = ["."]
+  revision = "c5a927568de7aad8a58127d80bcd36ca4e71e454"
+
+[[projects]]
   name = "github.com/Jeffail/gabs"
   packages = ["."]
   revision = "2a3aa15961d5fee6047b8151b67ac2f08ba2c48c"
@@ -120,6 +132,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/azr/backoff"
+  packages = ["."]
+  revision = "53511d3c733003985b0b76f733df1f4d0095ee6a"
+
+[[projects]]
+  branch = "master"
   name = "github.com/beefsack/go-rate"
   packages = ["."]
   revision = "de575b104f4218f4aebdc95ba56f61f38d0dad86"
@@ -205,6 +223,18 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/dustin/go-jsonpointer"
+  packages = ["."]
+  revision = "ba0abeacc3dcca5b9b20f31509c46794edbc9965"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dustin/gojson"
+  packages = ["."]
+  revision = "2e71ec9dd5adce3b168cd0dbde03b5cc04951c30"
+
+[[projects]]
+  branch = "master"
   name = "github.com/dyatlov/go-oembed"
   packages = ["oembed"]
   revision = "c72618ca88c6b30a96dfe20223d28e45bb5f1521"
@@ -217,6 +247,12 @@
   ]
   revision = "777bb3f19bcafe2575ffb2a3e46af92509ae9594"
   version = "v1.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/garyburd/go-oauth"
+  packages = ["oauth"]
+  revision = "4cff9ef7b7003713efa191899dbaab8fa75e3e73"
 
 [[projects]]
   name = "github.com/garyburd/redigo"
@@ -719,6 +755,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a6389e6be397d55fb4713873b5115abdffd8bc1562ab2eb097f225420db2928c"
+  inputs-digest = "b13e431d468677d438cf176da8a7440b4d96d119b73826513724b5040a08013e"
   solver-name = "gps-cdcl"
   solver-version = 1
