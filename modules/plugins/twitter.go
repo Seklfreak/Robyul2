@@ -10,12 +10,16 @@ import (
 
 	"strconv"
 
+	"net/url"
+
+	"github.com/ChimeraCoder/anaconda"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/dustin/go-humanize"
@@ -42,9 +46,9 @@ type DB_Twitter_Tweet struct {
 }
 
 var (
+	anacondaClient           *anaconda.TwitterApi
 	twitterClient            *twitter.Client
-	twitterStream            *twitter.Stream
-	twitterDemux             twitter.SwitchDemux
+	twitterStream            *anaconda.Stream
 	twitterStreamNeedsUpdate bool
 	twitterEntriesCache      []DB_Twitter_Entry
 	twitterStreamIsStarting  sync.Mutex
@@ -73,51 +77,67 @@ func (t *Twitter) Init(session *discordgo.Session) {
 	httpClient := config.Client(oauth1.NoContext, token)
 	twitterClient = twitter.NewClient(httpClient)
 
-	twitterDemux = twitter.NewSwitchDemux()
-	twitterDemux.Tweet = func(tweet *twitter.Tweet) {
-		//fmt.Println("received tweet:", tweet.Text, "by:", tweet.User.ScreenName)
-		for _, entry := range twitterEntriesCache {
-			if entry.AccountID != tweet.User.IDStr {
+	anaconda.SetConsumerKey(helpers.GetConfig().Path("twitter.consumer_key").Data().(string))
+	anaconda.SetConsumerSecret(helpers.GetConfig().Path("twitter.consumer_secret").Data().(string))
+	anacondaClient = anaconda.NewTwitterApi(
+		helpers.GetConfig().Path("twitter.access_token").Data().(string),
+		helpers.GetConfig().Path("twitter.access_secret").Data().(string),
+	)
+	go func() {
+		defer helpers.Recover()
+
+		for {
+			if twitterStream == nil {
+				time.Sleep(1 * time.Second)
 				continue
 			}
+			item := <-twitterStream.C
+			switch tweet := item.(type) {
+			case anaconda.Tweet:
+				for _, entry := range twitterEntriesCache {
+					if entry.AccountID != tweet.User.IdStr {
+						continue
+					}
 
-			entryID := entry.ID
-			t.lockEntry(entryID)
+					entryID := entry.ID
+					t.lockEntry(entryID)
 
-			entry, err := t.getEntryBy("id", entry.ID)
-			if err != nil {
-				t.unlockEntry(entryID)
-				helpers.RelaxLog(err)
-				continue
-			}
+					entry, err := t.getEntryBy("id", entry.ID)
+					if err != nil {
+						t.unlockEntry(entryID)
+						helpers.RelaxLog(err)
+						continue
+					}
 
-			changes := false
-			tweetAlreadyPosted := false
+					changes := false
+					tweetAlreadyPosted := false
 
-			for _, postedTweet := range entry.PostedTweets {
-				if postedTweet.ID == tweet.IDStr {
-					tweetAlreadyPosted = true
-				}
-			}
-			if tweetAlreadyPosted == false {
-				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", tweet.IDStr, entry.ChannelID))
-				entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
-				changes = true
-				go t.postTweetToChannel(entry.ChannelID, tweet, tweet.User, entry)
-			}
+					for _, postedTweet := range entry.PostedTweets {
+						if postedTweet.ID == tweet.IdStr {
+							tweetAlreadyPosted = true
+						}
+					}
+					if tweetAlreadyPosted == false {
+						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", tweet.IdStr, entry.ChannelID))
+						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IdStr, CreatedAt: tweet.CreatedAt})
+						changes = true
+						go t.postAnacondaTweetToChannel(entry.ChannelID, &tweet, &tweet.User, entry)
+					}
 
-			if changes == true {
-				err = t.setEntry(entry)
-				if err != nil {
+					if changes == true {
+						err = t.setEntry(entry)
+						if err != nil {
+							t.unlockEntry(entryID)
+							helpers.RelaxLog(err)
+							continue
+						}
+					}
+
 					t.unlockEntry(entryID)
-					helpers.RelaxLog(err)
-					continue
 				}
 			}
-
-			t.unlockEntry(entryID)
 		}
-	}
+	}()
 
 	go t.startTwitterStream()
 	go t.updateTwitterStreamLoop()
@@ -189,12 +209,13 @@ func (t *Twitter) startTwitterStream() {
 		}
 	}
 
-	twitterStream, err = twitterClient.Streams.Filter(&twitter.StreamFilterParams{
-		Follow:        accountIDs,
-		StallWarnings: twitter.Bool(true),
+	spew.Dump(accountIDs)
+
+	twitterStream = anacondaClient.PublicStreamFilter(url.Values{
+		"follow":         accountIDs,
+		"stall_warnings": []string{"true"},
 	})
 	helpers.Relax(err)
-	go twitterDemux.HandleChan(twitterStream.Messages)
 	cache.GetLogger().WithField("module", "twitter").Infof("started Twitter stream for %d accounts", len(accountIDs))
 }
 
@@ -749,7 +770,114 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 	}
 }
 
+func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.Tweet, twitterUser *anaconda.User, entry DB_Twitter_Entry) {
+	if entry.PostMode == 1 {
+		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IdStr))
+		if entry.MentionRoleID != "" {
+			content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
+		}
+
+		_, err := helpers.SendComplex(
+			channelID, &discordgo.MessageSend{
+				Content: content,
+			})
+		if err != nil {
+			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (discord embed mode): #%d to channel: #%s failed: %s", tweet.Id, channelID, err))
+		}
+		return
+	}
+
+	twitterNameModifier := ""
+	if twitterUser.Verified {
+		twitterNameModifier += " ☑"
+	}
+	if twitterUser.Protected {
+		twitterNameModifier += " 🔒"
+	}
+
+	mediaModifier := ""
+
+	tweetText := m.escapeTwitterContent(html.UnescapeString(tweet.Text))
+
+	if len(tweet.ExtendedEntities.Media) > 0 {
+		if tweet.ExtendedEntities.Media[0].Type == "video" {
+			mediaModifier += " (video)"
+		}
+	}
+	if len(tweet.Entities.Urls) > 0 {
+		for _, urlEntity := range tweet.Entities.Urls {
+			if len(urlEntity.Expanded_url) <= 100 {
+				tweetText = strings.Replace(tweetText, urlEntity.Url, urlEntity.Expanded_url, -1)
+			}
+		}
+	}
+
+	channelEmbed := &discordgo.MessageEmbed{
+		Title: helpers.GetText("plugins.twitter.tweet-embed-title") + mediaModifier,
+		URL:   fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IdStr),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.twitter.embed-footer"),
+			IconURL: helpers.GetText("plugins.twitter.embed-footer-imageurl"),
+		},
+		Description: tweetText,
+		Color:       helpers.GetDiscordColorFromHex(twitterUser.ProfileLinkColor),
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    fmt.Sprintf("%s (@%s)%s", twitterUser.Name, twitterUser.ScreenName, twitterNameModifier),
+			URL:     fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName),
+			IconURL: twitterUser.ProfileImageUrlHttps,
+		},
+	}
+
+	if len(tweet.Entities.Media) > 0 {
+		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: tweet.Entities.Media[0].Media_url_https}
+	}
+
+	if len(tweet.ExtendedEntities.Media) > 0 {
+		channelEmbed.Description += "\n\n`Links:` "
+		for i, mediaUrl := range tweet.ExtendedEntities.Media {
+			switch mediaUrl.Type {
+			case "video", "animated_gif":
+				if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url != "" {
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.FromToText(strconv.Itoa(i+1)), m.escapeTwitterContent(m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url))
+				} else {
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.FromToText(strconv.Itoa(i+1)), m.escapeTwitterContent(m.maxQualityMediaUrl(mediaUrl.Display_url)))
+				}
+				break
+			default:
+				channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.FromToText(strconv.Itoa(i+1)), m.escapeTwitterContent(m.maxQualityMediaUrl(mediaUrl.Media_url_https)))
+				break
+			}
+		}
+	}
+
+	content := fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IdStr))
+	if entry.MentionRoleID != "" {
+		content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
+	}
+
+	_, err := helpers.SendComplex(
+		channelID, &discordgo.MessageSend{
+			Content: content,
+			Embed:   channelEmbed,
+		})
+	if err != nil {
+		cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.Id, channelID, err))
+	}
+}
+
 func (m *Twitter) bestVideoVariant(videoVariants []twitter.VideoVariant) (bestVariant twitter.VideoVariant) {
+	for _, videoVariant := range videoVariants {
+		if videoVariant.ContentType == "application/x-mpegURL" {
+			continue
+		}
+		if videoVariant.Bitrate >= bestVariant.Bitrate {
+			bestVariant = videoVariant
+		}
+	}
+	return bestVariant
+}
+
+func (m *Twitter) bestAnacondaVideoVariant(videoVariants []anaconda.Variant) (bestVariant anaconda.Variant) {
 	for _, videoVariant := range videoVariants {
 		if videoVariant.ContentType == "application/x-mpegURL" {
 			continue
