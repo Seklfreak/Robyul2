@@ -66,6 +66,10 @@ func ElasticOnMessageUpdate(session *discordgo.Session, message *discordgo.Messa
 		return
 	}
 
+	if message.Content == "" {
+		return
+	}
+
 	go func() {
 		defer Recover()
 
@@ -290,6 +294,10 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 	elasticID, oldElasticMessage, err := getElasticMessage(message.ID, channel.ID, channel.GuildID)
 	if err != nil {
 		return err
+	}
+
+	if elasticID == "" {
+		return nil
 	}
 
 	if len(oldElasticMessage.Content) > 0 && oldElasticMessage.Content[len(oldElasticMessage.Content)-1] == message.Content {
