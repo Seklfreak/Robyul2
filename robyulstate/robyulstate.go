@@ -10,6 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/getsentry/raven-go"
 	"github.com/olivere/elastic"
+	"github.com/pkg/errors"
 )
 
 type Robyulstate struct {
@@ -260,7 +261,7 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[guildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": EmojisUpdate (" + guildID + ")")
 	}
 
 	if s.guildMap[guildID].Emojis == nil {
@@ -322,7 +323,7 @@ func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[newChannel.GuildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": ChannelUpdate (" + newChannel.GuildID + ")")
 	}
 
 	if s.guildMap[newChannel.GuildID].Channels == nil {
@@ -369,7 +370,7 @@ func (s *Robyulstate) ChannelDelete(channel *discordgo.Channel) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[channel.GuildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": ChannelDelete (" + channel.GuildID + ")")
 	}
 
 	if s.guildMap[channel.GuildID].Channels == nil {
@@ -396,7 +397,7 @@ func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[member.GuildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": MemberAdd (" + member.GuildID + ")")
 	}
 
 	if s.guildMap[member.GuildID].Members == nil {
@@ -440,7 +441,7 @@ func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[member.GuildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": MemberRemove (" + member.GuildID + ")")
 	}
 
 	if s.guildMap[member.GuildID].Members == nil {
@@ -467,7 +468,7 @@ func (s *Robyulstate) RoleAdd(guildID string, role *discordgo.Role) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[guildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": RoleAdd (" + guildID + ")")
 	}
 
 	if s.guildMap[guildID].Roles == nil {
@@ -512,7 +513,7 @@ func (s *Robyulstate) RoleDelete(guildID, roleID string) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[guildID]; !ok {
-		return discordgo.ErrStateNotFound
+		return errors.New(discordgo.ErrStateNotFound.Error() + ": RoleDelete (" + guildID + ")")
 	}
 
 	if s.guildMap[guildID].Roles == nil {
