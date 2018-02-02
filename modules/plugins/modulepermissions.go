@@ -140,7 +140,7 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 			if role == nil || role.ID == "" {
 				continue
 			}
-			entryText += strings.Replace(role.Name, "@", "@"+helpers.ZERO_WIDTH_SPACE, 1) + ": "
+			entryText += role.Name + ": "
 			if entry.Allowed > 0 {
 				entryAllowText += entryText + moduleAllowText + "\n"
 				messageAllowRoles += entryAllowText

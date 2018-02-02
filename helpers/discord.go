@@ -1161,6 +1161,7 @@ func AutoPagify(text string) (pages []string) {
 
 func SendMessage(channelID, content string) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
+	content = CleanDiscordContent(content)
 	if len(content) > 2000 {
 		for _, page := range AutoPagify(content) {
 			message, err = cache.GetSession().ChannelMessageSend(channelID, page)
@@ -1181,6 +1182,7 @@ func SendMessage(channelID, content string) (messages []*discordgo.Message, err 
 
 func SendMessageBoxed(channelID, content string) (messages []*discordgo.Message, err error) {
 	var newMessages []*discordgo.Message
+	content = CleanDiscordContent(content)
 	for _, page := range AutoPagify(content) {
 		newMessages, err = SendMessage(channelID, "```"+page+"```")
 		if err != nil {
@@ -1206,6 +1208,7 @@ func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*dis
 	if data.Embed != nil {
 		data.Embed = TruncateEmbed(data.Embed)
 	}
+	data.Content = CleanDiscordContent(data.Content)
 	pages := AutoPagify(data.Content)
 	if len(pages) > 0 {
 		for i, page := range pages {
@@ -1232,6 +1235,7 @@ func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*dis
 
 func EditMessage(channelID, messageID, content string) (message *discordgo.Message, err error) {
 	message, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, content)
+	content = CleanDiscordContent(content)
 	if err != nil {
 		return nil, err
 	} else {
@@ -1252,12 +1256,20 @@ func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err e
 	if data.Embed != nil {
 		data.Embed = TruncateEmbed(data.Embed)
 	}
+	if data.Content != nil {
+		content := CleanDiscordContent(*data.Content)
+		data.Content = &content
+	}
 	message, err = cache.GetSession().ChannelMessageEditComplex(data)
 	if err != nil {
 		return nil, err
 	} else {
 		return message, err
 	}
+}
+
+func CleanDiscordContent(content string) (output string) {
+	return strings.Replace(content, "@everyone", "@"+ZERO_WIDTH_SPACE+"everyone", -1)
 }
 
 // TODO: Webhook

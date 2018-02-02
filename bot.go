@@ -236,8 +236,8 @@ func BotOnGuildBanRemove(session *discordgo.Session, user *discordgo.GuildBanRem
 // This will be called after *every* message on *every* server so it should die as soon as possible
 // or spawn costly work inside of coroutines.
 func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
-	// Ignore other bots and @everyone/@here
-	if message.Author.Bot || message.MentionEveryone {
+	// Ignore other bots
+	if message.Author.Bot {
 		return
 	}
 
