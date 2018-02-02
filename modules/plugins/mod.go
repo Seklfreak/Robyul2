@@ -95,13 +95,17 @@ func (m *Mod) Init(session *discordgo.Session) {
 
 	invitesCache = make(map[string][]CacheInviteInformation, 0)
 	go func() {
-		log := cache.GetLogger()
+		defer helpers.Recover()
 
 		for _, guild := range session.State.Guilds {
+			if helpers.GetMemberPermissions(guild.ID, cache.GetSession().State.User.ID)&discordgo.PermissionManageServer != discordgo.PermissionManageServer &&
+				helpers.GetMemberPermissions(guild.ID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+				continue
+			}
+
 			invites, err := session.GuildInvites(guild.ID)
 			if err != nil {
-				//log.WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild %s (#%s): %s",
-				//	guild.Name, guild.ID, err.Error()))
+				helpers.RelaxLog(err)
 				continue
 			}
 
@@ -126,7 +130,7 @@ func (m *Mod) Init(session *discordgo.Session) {
 
 			invitesCache[guild.ID] = cacheInvites
 		}
-		log.WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
+		cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
 	}()
 	go m.cacheBans()
 	cache.GetLogger().WithField("module", "mod").Info("Started cacheBans")
@@ -146,26 +150,33 @@ func (m *Mod) cacheBans() {
 	guildBansCached = 0
 	for _, botGuild := range cache.GetSession().State.Guilds {
 		key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
-		guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
-		if err != nil {
-			if errD, ok := err.(*discordgo.RESTError); ok {
-				if errD.Message.Code != 50013 {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-			} else {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
-		} else {
-			err = cacheCodec.Set(&redisCache.Item{
+
+		if helpers.GetMemberPermissions(botGuild.ID, cache.GetSession().State.User.ID)&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
+			helpers.GetMemberPermissions(botGuild.ID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+			err := cacheCodec.Set(&redisCache.Item{
 				Key:        key,
-				Object:     &guildBans,
+				Object:     make([]discordgo.GuildBan, 0),
 				Expiration: time.Hour * 24 * 30 * 365, // TODO
 			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			} else {
-				guildBansCached += 1
-			}
+			helpers.RelaxLog(err)
+			continue
+		}
+
+		guildBans, err := cache.GetSession().GuildBans(botGuild.ID)
+		if err != nil {
+			helpers.RelaxLog(err)
+			continue
+		}
+
+		err = cacheCodec.Set(&redisCache.Item{
+			Key:        key,
+			Object:     &guildBans,
+			Expiration: time.Hour * 24 * 30 * 365, // TODO
+		})
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+		} else {
+			guildBansCached += 1
 		}
 	}
 	cache.GetLogger().WithField("module", "mod").Debug(fmt.Sprintf("cached bans for %d guilds in redis", guildBansCached))
@@ -2297,59 +2308,62 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 		}
 		// Get invite link
 		var usedInvite CacheInviteInformation
-		invites, err := session.GuildInvites(member.GuildID)
-		if err != nil {
-			//cache.GetLogger().WithField("module", "mod").Error(fmt.Sprintf("error getting invites from guild #%s: %s",
-			//	member.GuildID, err.Error()))
-		} else {
-			newCacheInvites := make([]CacheInviteInformation, 0)
-			for _, invite := range invites {
-				createdAt, err := invite.CreatedAt.Parse()
-				if err != nil {
-					continue
+		var usedVanityInvite string
+		if helpers.GetMemberPermissions(member.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionManageServer == discordgo.PermissionManageServer ||
+			helpers.GetMemberPermissions(member.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+
+			invites, err := session.GuildInvites(member.GuildID)
+			if err != nil {
+				helpers.RelaxLog(err)
+			} else {
+				newCacheInvites := make([]CacheInviteInformation, 0)
+				for _, invite := range invites {
+					createdAt, err := invite.CreatedAt.Parse()
+					if err != nil {
+						continue
+					}
+					invitedByID := ""
+					if invite.Inviter != nil {
+						invitedByID = invite.Inviter.ID
+					}
+					newCacheInvites = append(newCacheInvites, CacheInviteInformation{
+						GuildID:         invite.Guild.ID,
+						CreatedByUserID: invitedByID,
+						Code:            invite.Code,
+						CreatedAt:       createdAt,
+						Uses:            invite.Uses,
+					})
 				}
-				invitedByID := ""
-				if invite.Inviter != nil {
-					invitedByID = invite.Inviter.ID
-				}
-				newCacheInvites = append(newCacheInvites, CacheInviteInformation{
-					GuildID:         invite.Guild.ID,
-					CreatedByUserID: invitedByID,
-					Code:            invite.Code,
-					CreatedAt:       createdAt,
-					Uses:            invite.Uses,
-				})
-			}
-			foundDiffsInInvites := make([]CacheInviteInformation, 0)
-			if _, ok := invitesCache[member.GuildID]; ok {
-				for _, newInvite := range newCacheInvites {
-					seenInOldCache := false
-					for _, oldInvite := range invitesCache[member.GuildID] {
-						if oldInvite.Code == newInvite.Code {
-							seenInOldCache = true
-							if oldInvite.Uses != newInvite.Uses {
-								foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+				foundDiffsInInvites := make([]CacheInviteInformation, 0)
+				if _, ok := invitesCache[member.GuildID]; ok {
+					for _, newInvite := range newCacheInvites {
+						seenInOldCache := false
+						for _, oldInvite := range invitesCache[member.GuildID] {
+							if oldInvite.Code == newInvite.Code {
+								seenInOldCache = true
+								if oldInvite.Uses != newInvite.Uses {
+									foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+								}
 							}
 						}
-					}
-					if seenInOldCache == false && newInvite.Uses == 1 {
-						foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+						if seenInOldCache == false && newInvite.Uses == 1 {
+							foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+						}
 					}
 				}
+				invitesCache[member.GuildID] = newCacheInvites
+				if len(foundDiffsInInvites) == 1 {
+					usedInvite = foundDiffsInInvites[0]
+				}
 			}
-			invitesCache[member.GuildID] = newCacheInvites
-			if len(foundDiffsInInvites) == 1 {
-				usedInvite = foundDiffsInInvites[0]
-			}
-		}
 
-		var usedVanityInvite string
-		vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
+			vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
 
-		if vanityInvite.VanityName != "" {
-			discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
-			if discordInviteCode == usedInvite.Code {
-				usedVanityInvite = vanityInvite.VanityName
+			if vanityInvite.VanityName != "" {
+				discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
+				if discordInviteCode == usedInvite.Code {
+					usedVanityInvite = vanityInvite.VanityName
+				}
 			}
 		}
 
