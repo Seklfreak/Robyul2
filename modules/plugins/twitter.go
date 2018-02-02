@@ -740,7 +740,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 			switch mediaUrl.Type {
 			case "video", "animated_gif":
 				if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
-					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.FromToText(strconv.Itoa(i+1)), m.escapeTwitterContent(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
+					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), m.escapeTwitterContent(m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL))
 				} else {
 					channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.FromToText(strconv.Itoa(i+1)), m.escapeTwitterContent(m.maxQualityMediaUrl(mediaUrl.DisplayURL)))
 				}
