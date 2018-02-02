@@ -128,56 +128,59 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 			})
 			break
 		case "list":
-			helpers.RequireMod(msg, func() {
-				session.ChannelTyping(msg.ChannelID)
+			if !helpers.IsMod(msg) && !helpers.CanInspectExtended(msg) && !helpers.CanInspectBasic(msg) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
+				return
+			}
 
-				if len(args) < 2 {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					return
-				}
+			session.ChannelTyping(msg.ChannelID)
 
-				targetUser, err := helpers.GetUserFromMention(args[1])
-				if err != nil || targetUser.ID == "" {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					return
-				}
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
 
-				troublemakerReports := t.getTroublemakerReports(targetUser)
+			targetUser, err := helpers.GetUserFromMention(args[1])
+			if err != nil || targetUser.ID == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
 
-				if len(troublemakerReports) <= 0 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.list-no-reports", targetUser.Username))
-					helpers.Relax(err)
-					return
-				} else {
-					troublemakerText := fmt.Sprintf("I found %d report(s) for `%s#%s` `#%s` <@%s>:\n",
-						len(troublemakerReports), targetUser.Username, targetUser.Discriminator, targetUser.ID, targetUser.ID,
+			troublemakerReports := t.getTroublemakerReports(targetUser)
+
+			if len(troublemakerReports) <= 0 {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.troublemaker.list-no-reports", targetUser.Username))
+				helpers.Relax(err)
+				return
+			} else {
+				troublemakerText := fmt.Sprintf("I found %d report(s) for `%s#%s` `#%s` <@%s>:\n",
+					len(troublemakerReports), targetUser.Username, targetUser.Discriminator, targetUser.ID, targetUser.ID,
+				)
+
+				for _, troublemakerReport := range troublemakerReports {
+					reportedByUser, err := helpers.GetUser(troublemakerReport.ReportedByUserID)
+					if err != nil {
+						reportedByUser = new(discordgo.User)
+						reportedByUser.ID = troublemakerReport.ReportedByUserID
+						reportedByUser.Username = "N/A"
+					}
+					reportedByGuild, err := helpers.GetGuild(troublemakerReport.ReportedByGuildID)
+					if err != nil {
+						reportedByGuild = new(discordgo.Guild)
+						reportedByGuild.ID = troublemakerReport.ReportedByGuildID
+						reportedByGuild.Name = "N/A"
+					}
+					troublemakerText += fmt.Sprintf("At: `%s`, Reason: `%s`, Reported By: `%s` (`#%s`) On: `%s` (`#%s`)\n",
+						troublemakerReport.CreatedAt.Format(time.ANSIC), troublemakerReport.Reason,
+						reportedByUser.Username, reportedByUser.ID, reportedByGuild.Name, reportedByGuild.ID,
 					)
-
-					for _, troublemakerReport := range troublemakerReports {
-						reportedByUser, err := helpers.GetUser(troublemakerReport.ReportedByUserID)
-						if err != nil {
-							reportedByUser = new(discordgo.User)
-							reportedByUser.ID = troublemakerReport.ReportedByUserID
-							reportedByUser.Username = "N/A"
-						}
-						reportedByGuild, err := helpers.GetGuild(troublemakerReport.ReportedByGuildID)
-						if err != nil {
-							reportedByGuild = new(discordgo.Guild)
-							reportedByGuild.ID = troublemakerReport.ReportedByGuildID
-							reportedByGuild.Name = "N/A"
-						}
-						troublemakerText += fmt.Sprintf("At: `%s`, Reason: `%s`, Reported By: `%s` (`#%s`) On: `%s` (`#%s`)\n",
-							troublemakerReport.CreatedAt.Format(time.ANSIC), troublemakerReport.Reason,
-							reportedByUser.Username, reportedByUser.ID, reportedByGuild.Name, reportedByGuild.ID,
-						)
-					}
-
-					for _, page := range helpers.Pagify(troublemakerText, "\n") {
-						_, err := helpers.SendMessage(msg.ChannelID, page)
-						helpers.Relax(err)
-					}
 				}
-			})
+
+				for _, page := range helpers.Pagify(troublemakerText, "\n") {
+					_, err := helpers.SendMessage(msg.ChannelID, page)
+					helpers.Relax(err)
+				}
+			}
 		default:
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
