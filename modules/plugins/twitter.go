@@ -19,7 +19,6 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/dustin/go-humanize"
@@ -208,8 +207,6 @@ func (t *Twitter) startTwitterStream() {
 			}
 		}
 	}
-
-	spew.Dump(accountIDs)
 
 	twitterStream = anacondaClient.PublicStreamFilter(url.Values{
 		"follow":         accountIDs,
