@@ -259,8 +259,9 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 									Description: helpers.GetTextF("plugins.troublemaker.report-embed-description", targetUser.ID, targetUser.ID),
 									URL:         helpers.GetAvatarUrl(targetUser),
 									Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(targetUser)},
-									Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.troublemaker.report-embed-footer", len(guildsToNotify))},
-									Color:       0x0FADED,
+									Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.troublemaker.report-embed-footer",
+										len(guildsToNotify), strings.Replace(helpers.GetStaffUsernamesText(), "`", "", -1))},
+									Color: 0x0FADED,
 									Fields: []*discordgo.MessageEmbedField{
 										{Name: "Reason stated", Value: reasonText, Inline: false},
 									},

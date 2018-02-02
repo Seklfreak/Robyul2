@@ -1455,3 +1455,21 @@ func GetMemberPermissions(guildID, userID string) (apermissions int) {
 
 	return apermissions
 }
+
+func GetStaffUsernamesText() (text string) {
+	staffList := append(botAdmins, RobyulMod...)
+	for i, staffMemberID := range staffList {
+		member, err := GetUser(staffMemberID)
+		if err == nil {
+			text += "`" + member.Username + "#" + member.Discriminator + "`"
+			if i < len(staffList)-1 {
+				if i < len(staffList)-2 {
+					text += ", "
+				} else {
+					text += " or "
+				}
+			}
+		}
+	}
+	return
+}

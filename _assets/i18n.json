@@ -360,7 +360,7 @@
       ],
       "no-stats-available-yet": "No stats available yet, please try again later! <:googlenerd:317030369205682186>",
       "create-badge-error-duplicate": "There is already a badge like that on this server (or a global badge)! <:googlenerd:317030369205682186>",
-      "create-badge-error-too-many": "You already got enough badges on this server. <:blobsmilesweat2:317031354405748747>\nIf you really feel like your server needs more badges contact `Sekl#7397` on Discord and we can discuss raising the limit.",
+      "create-badge-error-too-many": "You already got enough badges on this server. <:blobsmilesweat2:317031354405748747>\nIf you feel like your server needs more badges contact %s on Discord and we can discuss raising the limit.",
       "create-badge-success": "The badge has been created. <:blobokhand:317032017164238848>",
       "delete-badge-error-not-allowed": "You aren't allowed to delete this badge. <:blobshh:317044272161357824>",
       "delete-badge-success": "I deleted the badge. <:blobokhand:317032017164238848>",
@@ -493,7 +493,7 @@
       "report-successful": "Thank you very much for your report. <:blobsalute:317043033004703744>\nI will notify %d servers about this user.",
       "report-embed-title": "The Troublemaker `%s#%s` has been reported",
       "report-embed-description": "User: <@%s> ID: `#%s`",
-      "report-embed-footer": "Report has been sent to %d servers. | If you think this report is unjustified please contact Sekl#7397 on Discord.",
+      "report-embed-footer": "Report has been sent to %d servers. | If you think this report is unjustified please contact %s on Discord.",
       "report-confirm": "Are you sure you want to report\n`%s#%s` (`#%s`, <@%s>)\nbecause of \"`%s`\"?\n_Please note that abuse of this feature will lead to the removal of Robyul from your server and possibly more actions._",
       "list-no-reports": "I wasn't able to find any reports for %s! <:blobsnuggle:333989876695302144>"
     },
