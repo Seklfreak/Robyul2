@@ -82,6 +82,8 @@ func GuildSettingsSet(guild string, config models.Config) error {
 		panic(err)
 	}
 
+	config.EventlogDisabled = true
+
 	// Update cache
 	cacheMutex.Lock()
 	guildSettingsCache[guild] = config
@@ -108,8 +110,10 @@ func GuildSettingsGet(guild string) (models.Config, error) {
 	switch err {
 	case rethink.ErrEmptyResult:
 		settings = models.Config{}.Default(guild)
+		settings.EventlogDisabled = true
 		return settings, nil
 	default:
+		settings.EventlogDisabled = true
 		return settings, err
 	}
 }
