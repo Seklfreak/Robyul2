@@ -8,6 +8,8 @@ import (
 
 	"time"
 
+	"net/url"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -525,16 +527,16 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 		mediaUrl = channelEmbed.URL
 	}
 
-	content += mediaUrl + "\n"
+	content += stripInstagramDirectLink(mediaUrl) + "\n"
 	if thumbnailUrl != "" {
-		content += thumbnailUrl + "\n"
+		content += stripInstagramDirectLink(thumbnailUrl) + "\n"
 	}
 
 	messageSend := &discordgo.MessageSend{
 		Content: content,
 	}
 	if !postDirectLinks {
-		messageSend.Content = fmt.Sprintf("<%s>", mediaUrl)
+		messageSend.Content = fmt.Sprintf("<%s>", stripInstagramDirectLink(mediaUrl))
 		messageSend.Embed = channelEmbed
 	}
 
@@ -621,9 +623,9 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 		channelEmbed.Description += "\n\n`Links:` "
 		for i, mediaUrl := range mediaUrls {
 			if postDirectLinks {
-				content += "\n" + mediaUrl
+				content += "\n" + stripInstagramDirectLink(mediaUrl)
 			}
-			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)
+			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), stripInstagramDirectLink(mediaUrl))
 		}
 	}
 
@@ -638,6 +640,24 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 	if err != nil {
 		cache.GetLogger().WithField("module", "instagram").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
 	}
+}
+
+func stripInstagramDirectLink(link string) (result string) {
+	url, err := url.Parse(link)
+	if err != nil {
+		return link
+	}
+	queries := strings.Split(url.RawQuery, "&")
+	var newQueryString string
+	for _, query := range queries {
+		if strings.HasPrefix(query, "ig_cache_key") { // strip ig_cache_key
+			continue
+		}
+		newQueryString += query + "&"
+	}
+	newQueryString = strings.TrimSuffix(newQueryString, "&")
+	url.RawQuery = newQueryString
+	return url.String()
 }
 
 func getBestCandidateURL(imageCandidates []goinstaResponse.ImageCandidate) string {
