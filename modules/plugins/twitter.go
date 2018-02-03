@@ -505,53 +505,53 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					session.ChannelTyping(msg.ChannelID)
 					entryId := args[1]
 					entryBucket, err := m.getEntryBy("id", entryId)
-					helpers.Relax(err)
-					if entryBucket.ID != "" {
-						m.deleteEntryById(entryBucket.ID)
-
-						twitterStreamNeedsUpdate = true
-
-						postModeText := "robyul embed"
-						switch entryBucket.PostMode {
-						case 1:
-							postModeText = "discord embed"
-							break
-						}
-
-						_, err = helpers.EventlogLog(time.Now(), entryBucket.ServerID, entryBucket.ID,
-							models.EventlogTargetTypeRobyulTwitterFeed, msg.Author.ID,
-							models.EventlogTypeRobyulTwitterFeedRemove, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "twitter_channelid",
-									Value: entryBucket.ChannelID,
-								},
-								{
-									Key:   "twitter_accountscreename",
-									Value: entryBucket.AccountScreenName,
-								},
-								{
-									Key:   "twitter_accountid",
-									Value: entryBucket.AccountID,
-								},
-								{
-									Key:   "twitter_mentionroleid",
-									Value: entryBucket.MentionRoleID,
-								},
-								{
-									Key:   "twitter_postmode",
-									Value: postModeText,
-								},
-							}, false)
-						helpers.RelaxLog(err)
-
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
-						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
-					} else {
+					if (err != nil && strings.Contains(err.Error(), "The result does not contain any more rows")) || entryBucket.ID == "" {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
 						return
 					}
+					helpers.Relax(err)
+					m.deleteEntryById(entryBucket.ID)
+
+					twitterStreamNeedsUpdate = true
+
+					postModeText := "robyul embed"
+					switch entryBucket.PostMode {
+					case 1:
+						postModeText = "discord embed"
+						break
+					}
+
+					_, err = helpers.EventlogLog(time.Now(), entryBucket.ServerID, entryBucket.ID,
+						models.EventlogTargetTypeRobyulTwitterFeed, msg.Author.ID,
+						models.EventlogTypeRobyulTwitterFeedRemove, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "twitter_channelid",
+								Value: entryBucket.ChannelID,
+							},
+							{
+								Key:   "twitter_accountscreename",
+								Value: entryBucket.AccountScreenName,
+							},
+							{
+								Key:   "twitter_accountid",
+								Value: entryBucket.AccountID,
+							},
+							{
+								Key:   "twitter_mentionroleid",
+								Value: entryBucket.MentionRoleID,
+							},
+							{
+								Key:   "twitter_postmode",
+								Value: postModeText,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-delete-success", entryBucket.AccountScreenName))
+					cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Deleted Twitter Account @%s", entryBucket.AccountScreenName))
+
 				} else {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return

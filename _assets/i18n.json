@@ -622,7 +622,8 @@
     "isup": {
       "isup": "<:blobgo:317034640181297163> The website seems to be up! <a:ablobgrimace:394026913108328449>",
       "isnotup": "<:blobstop:317034621953114112> It's not just you! The website looks down from here. <a:ablobshocked:394026914076950539>",
-      "credits": "_powered by isup.me_"
+      "credits": "_powered by isup.me_",
+      "error": "Something went wrong when I tried checking the status. <a:ablobcry:393869333740126219>"
     },
     "modulepermissions": {
       "module-not-found": "I wasn't able to find the given module.",

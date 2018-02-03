@@ -38,24 +38,31 @@ func (iu *Isup) Action(command string, content string, msg *discordgo.Message, s
 	defer func() { quitChannel <- 0 }()
 
 	text := helpers.GetText("plugins.isup.isnotup")
-	if iu.isup(args[0]) {
-		text = helpers.GetText("plugins.isup.isup")
+	status, err := iu.isup(args[0])
+	if err != nil {
+		text = helpers.GetText("plugins.isup.error")
+	} else {
+		if status {
+			text = helpers.GetText("plugins.isup.isup")
+		}
+		text += "\n" + helpers.GetText("plugins.isup.credits")
 	}
-	text += "\n" + helpers.GetText("plugins.isup.credits")
 
 	quitChannel <- 0
-	_, err := helpers.SendMessage(msg.ChannelID, text)
+	_, err = helpers.SendMessage(msg.ChannelID, text)
 	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 	return
 }
 
-func (iu *Isup) isup(link string) (isup bool) {
+func (iu *Isup) isup(link string) (isup bool, err error) {
 	resultBytes, err := helpers.NetGetUAWithErrorAndTimeout(
 		"http://www.isup.me/"+url.QueryEscape(link), helpers.DEFAULT_UA, time.Duration(60*time.Second))
-	helpers.Relax(err)
+	if err != nil {
+		return false, err
+	}
 
 	if strings.Contains(string(resultBytes), "It's just you") {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }

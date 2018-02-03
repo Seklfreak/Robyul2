@@ -266,18 +266,14 @@ func main() {
 
 		switch msgL {
 		case discordgo.LogError:
-			//log.WithField("module", "robyulState").Errorf("%s:%d:%s() %s", file, line, name, msg)
-			log.WithField("module", "robyulState").Infof("%s:%d:%s() %s", file, line, name, msg)
+			log.WithField("module", "robyulState").Errorf("%s:%d:%s() %s", file, line, name, msg)
 		case discordgo.LogWarning:
-			//log.WithField("module", "robyulState").Warnf("%s:%d:%s() %s", file, line, name, msg)
-			log.WithField("module", "robyulState").Infof("%s:%d:%s() %s", file, line, name, msg)
+			log.WithField("module", "robyulState").Warnf("%s:%d:%s() %s", file, line, name, msg)
 		case discordgo.LogInformational:
 			log.WithField("module", "robyulState").Infof("%s:%d:%s() %s", file, line, name, msg)
 		case discordgo.LogDebug:
 			log.WithField("module", "robyulState").Debugf("%s:%d:%s() %s", file, line, name, msg)
 		}
-
-		// TODO: change back to Errorf and Warnf
 	}
 
 	discord.AddHandler(robyulState.OnInterface)
