@@ -874,13 +874,15 @@ func (m *Charts) GetGaonWeekStats() (string, []GenericAlbumScore) {
 		ranks[i].PastRank = ranks[i].CurrentRank
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Text())
-			helpers.Relax(err)
-			ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+			if err == nil {
+				ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+			}
 		}
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Text())
-			helpers.Relax(err)
-			ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+			if err == nil {
+				ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+			}
 		}
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .new", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			ranks[i].IsNew = true
@@ -908,13 +910,15 @@ func (m *Charts) GetGaonMonthStats() (string, []GenericAlbumScore) {
 		ranks[i].PastRank = ranks[i].CurrentRank
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Text())
-			helpers.Relax(err)
-			ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+			if err == nil {
+				ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+			}
 		}
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Text())
-			helpers.Relax(err)
-			ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+			if err == nil {
+				ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+			}
 		}
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .new", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			ranks[i].IsNew = true
@@ -942,13 +946,15 @@ func (m *Charts) GetGaonYearStats() (string, []GenericAlbumScore) {
 		ranks[i].PastRank = ranks[i].CurrentRank
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .up", ranks[i].CurrentRank+1)).Text())
-			helpers.Relax(err)
-			ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+			if err == nil {
+				ranks[i].PastRank = ranks[i].CurrentRank + pastRankUncalculated
+			}
 		}
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			pastRankUncalculated, err := strconv.Atoi(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .down", ranks[i].CurrentRank+1)).Text())
-			helpers.Relax(err)
-			ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+			if err == nil {
+				ranks[i].PastRank = ranks[i].CurrentRank - pastRankUncalculated
+			}
 		}
 		if len(doc.Find(fmt.Sprintf("#wrap > div.chart > table > tbody > tr:nth-child(%d) > td.change > .new", ranks[i].CurrentRank+1)).Nodes) > 0 {
 			ranks[i].IsNew = true
