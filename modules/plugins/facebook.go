@@ -169,7 +169,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 	if len(args) >= 1 {
 		switch args[0] {
 		case "add": // [p]facebook add <facebook page name> <discord channel>
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				// get target channel
 				var err error
@@ -233,7 +233,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 				cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]facebook delete <id>
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireMod(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
 
