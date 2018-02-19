@@ -663,6 +663,9 @@
     "eventlog": {
       "enabled": "The Eventlog has been enabled!\nPlease make sure I have the `View Audit Log` permission for full effectiveness.",
       "disabled": "The Eventlog has been disabled."
+    },
+    "spoiler": {
+      "error-generic": "I'm sorry, I wasn't able to create the spoiler. Please try it again later. <a:ablobcry:393869333740126219>"
     }
   }
 }

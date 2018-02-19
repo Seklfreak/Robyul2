@@ -3,18 +3,28 @@ package plugins
 import (
 	"bytes"
 	"fmt"
-	"image"
-	"image/gif"
-	"image/png"
 	"regexp"
 	"strings"
 
+	"os"
+
+	"os/exec"
+
+	"io/ioutil"
+
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
+	"github.com/pkg/errors"
 	"github.com/ungerik/go-cairo"
 )
 
-type Spoiler struct{}
+type Spoiler struct {
+	cachePath    string
+	ffmpegBinary string
+	env          []string
+}
 
 var (
 	BuiltinEmotePattern *regexp.Regexp
@@ -33,9 +43,17 @@ func (s *Spoiler) Commands() []string {
 
 func (s *Spoiler) Init(session *discordgo.Session) {
 	var err error
+
+	s.cachePath = helpers.GetConfig().Path("cache_folder").Data().(string)
+
+	s.ffmpegBinary, err = exec.LookPath("ffmpeg")
+	helpers.Relax(err)
+
+	s.env = os.Environ()
+
 	BuiltinEmotePattern, err = regexp.Compile(`[\x{1F600}-\x{1F6FF}|[\x{2600}-\x{26FF}]`)
 	helpers.Relax(err)
-	CustomEmotePattern, err = regexp.Compile(`\<(\:[^:]+\:)[0-9]+\>`)
+	CustomEmotePattern, err = regexp.Compile(`\<a?(\:[^:]+\:)[0-9]+\>`)
 	helpers.Relax(err)
 
 }
@@ -57,6 +75,10 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 
 	session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 
+	blankFrameFilename := s.cachePath + "0-" + msg.ID + ".png"
+	contentFrameFilename := s.cachePath + "1-" + msg.ID + ".png"
+	videoFrameFilename := s.cachePath + "output-" + msg.ID + ".webm"
+
 	allUnicodeEmotes := BuiltinEmotePattern.FindAllString(content, -1)
 	for _, unicodeEmote := range allUnicodeEmotes {
 		content = strings.Replace(content, unicodeEmote, "[emote]", 1)
@@ -67,59 +89,81 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 		content = strings.Replace(content, customEmoteSubstrings[0], customEmoteSubstrings[1], 1)
 	}
 
-	lines := s.breakIntoLines(content)
-	lineHeight := float64(40)
-	height := (float64(len(lines)) + float64(0.5)) * float64(lineHeight/2)
+	fontSize := 15.0
+	lines := s.breakIntoLines(content, fontSize)
+	lineHeight := 40.0
+	contentSize := (float64(len(lines)) + float64(0.5)) * float64(lineHeight/2)
+	top := 45.0
+	bottom := 32.0
+	height := top + contentSize + bottom
 
 	surface := cairo.NewSurface(cairo.FORMAT_ARGB32, int(SpoilerWidth), int(height))
-	surface.SetSourceRGB(0.20, 0.20, 0.20)
+	surface.SetSourceRGB(0, 0, 0)
 	surface.Rectangle(0, 0, SpoilerWidth, height)
 	surface.Fill()
 	//surface.SelectFontFace("serif", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
 	surface.SelectFontFace("assets/SourceSansPro-Regular.ttf", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-	surface.SetFontSize(13.0)
+	surface.SetFontSize(fontSize)
 	surface.SetSourceRGB(1.0, 1.0, 1.0)
 	for i, line := range lines {
-		surface.MoveTo(10.0, (lineHeight/2)*float64(i+1))
+		surface.MoveTo(10.0, top+(lineHeight/2)*float64(i+1))
 		surface.ShowText(line)
 	}
-	pngBytes, _ := surface.WriteToPNGStream()
-	decodedImage, err := png.Decode(bytes.NewReader(pngBytes))
-	helpers.Relax(err)
-	buf := bytes.Buffer{}
-	err = gif.Encode(&buf, decodedImage, nil)
-	helpers.Relax(err)
-	tmpimg, err := gif.Decode(&buf)
-	helpers.Relax(err)
+	status := surface.WriteToPNG(contentFrameFilename)
+	if status != cairo.STATUS_SUCCESS {
+		helpers.RelaxLog(errors.New("failed to write surface"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.spoiler.error-generic"))
+		return
+	}
 
 	surface = cairo.NewSurface(cairo.FORMAT_ARGB32, int(SpoilerWidth), int(height))
-	surface.SetSourceRGB(0.20, 0.20, 0.20)
+	surface.SetSourceRGB(0, 0, 0)
 	surface.Rectangle(0, 0, SpoilerWidth, height)
 	surface.Fill()
 	surface.SelectFontFace("assets/SourceSansPro-Regular.ttf", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-	surface.SetFontSize(13.0)
+	surface.SetFontSize(fontSize)
 	surface.SetSourceRGB(1.0, 1.0, 1.0)
-	surface.MoveTo(10.0, (lineHeight/2)*float64(0+1))
-	surface.ShowText("( Hover to reveal spoiler )")
-	pngBytes, _ = surface.WriteToPNGStream()
-	decodedImage, err = png.Decode(bytes.NewReader(pngBytes))
-	helpers.Relax(err)
-	buf = bytes.Buffer{}
-	err = gif.Encode(&buf, decodedImage, nil)
-	helpers.Relax(err)
-	blankFrame, err := gif.Decode(&buf)
-	helpers.Relax(err)
+	surface.MoveTo(99.0, ((height/2)+23.0)+(lineHeight/2)*float64(0+1))
+	surface.ShowText("Press play to reveal the spoiler")
+	status = surface.WriteToPNG(blankFrameFilename)
+	if status != cairo.STATUS_SUCCESS {
+		helpers.RelaxLog(errors.New("failed to write surface"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.spoiler.error-generic"))
+		return
+	}
 
-	outGif := &gif.GIF{}
-	outGif.Image = append(outGif.Image, blankFrame.(*image.Paletted))
-	outGif.Delay = append(outGif.Delay, 0)
-	outGif.Image = append(outGif.Image, tmpimg.(*image.Paletted))
-	outGif.Delay = append(outGif.Delay, 100*60*60*24)
-	outGif.LoopCount = 1
-	// hacky workaround because gifs can not not loop in go: https://github.com/golang/go/issues/15768
+	cmdArgs := []string{
+		"-f",
+		"image2",
+		"-i",
+		s.cachePath + "%01d-" + msg.ID + ".png",
+		"-s",
+		strconv.Itoa(int(SpoilerWidth)) + "x" + strconv.Itoa(int(height)),
+		"-c:v",
+		"libvpx-vp9",
+		"-pix_fmt",
+		"yuva420p",
+		"-framerate",
+		"10",
+		videoFrameFilename,
+	}
+	imgCmd := exec.Command(s.ffmpegBinary, cmdArgs...)
+	imgCmd.Env = s.env
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	imgCmd.Stdout = &out
+	imgCmd.Stderr = &stderr
+	err := imgCmd.Run()
+	if err != nil {
+		helpers.RelaxLog(errors.New(fmt.Sprint(err) + ": " + stderr.String()))
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.spoiler.error-generic"))
+		return
+	}
 
-	buf = bytes.Buffer{}
-	err = gif.EncodeAll(&buf, outGif)
+	os.Remove(blankFrameFilename)
+	os.Remove(contentFrameFilename)
+
+	videoData, err := ioutil.ReadFile(videoFrameFilename)
 	helpers.Relax(err)
 
 	_, err = helpers.SendComplex(
@@ -127,18 +171,20 @@ func (s *Spoiler) Action(command string, content string, msg *discordgo.Message,
 			Content: fmt.Sprintf("<@%s> said:", msg.Author.ID),
 			Files: []*discordgo.File{
 				{
-					Name:   "spoiler.gif",
-					Reader: bytes.NewReader(buf.Bytes()),
+					Name:   "Robyul-Spoiler.webm",
+					Reader: bytes.NewReader(videoData),
 				},
 			},
 		})
 	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+
+	os.Remove(videoFrameFilename)
 }
 
-func (s *Spoiler) breakIntoLines(text string) []string {
+func (s *Spoiler) breakIntoLines(text string, fontSize float64) []string {
 	surface := cairo.NewSurface(cairo.FORMAT_ARGB32, int(SpoilerWidth), 1)
 	surface.SelectFontFace("assets/SourceSansPro-Regular.ttf", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-	surface.SetFontSize(13.0)
+	surface.SetFontSize(fontSize)
 
 	linesSplit := strings.Split(text, "\n")
 	resultLines := make([]string, 0)
