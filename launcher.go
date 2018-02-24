@@ -149,6 +149,13 @@ func main() {
 	// Close DB when main dies
 	defer helpers.GetDB().Close()
 
+	// Connect to MongoDB
+	helpers.ConnectMDB(
+		config.Path("mongodb.url").Data().(string),
+		config.Path("mongodb.db").Data().(string),
+	)
+	defer helpers.GetMDbSession().Close()
+
 	// Connect to elastic search
 	if config.Path("elasticsearch.url").Data().(string) != "" {
 		log.WithField("module", "launcher").Info("Connecting to ElasticSearch...")

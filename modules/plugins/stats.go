@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/mgo.v2/bson"
+
 	"context"
 
 	"reflect"
@@ -226,6 +228,26 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		mdbAliveServers := helpers.GetMDbSession().LiveServers()
+		mdbStats := bson.M{}
+		err = helpers.GetMDb().Run("dbstats", &mdbStats)
+		helpers.Relax(err)
+		mdbServerStatus := bson.M{}
+		err = helpers.GetMDbSession().Run("serverStatus", &mdbServerStatus)
+		helpers.Relax(err)
+
+		mongodbLaunched := time.Now().Add(time.Duration(int64(mdbServerStatus["uptime"].(float64))) * time.Second * -1)
+		mongodbUptime := helpers.HumanizeDuration(time.Now().Sub(mongodbLaunched))
+
+		mongodbStatusText := fmt.Sprintf("Alive Servers %d\nUptime %s",
+			len(mdbAliveServers),
+			mongodbUptime,
+		)
+		mongodbStorageText := fmt.Sprintf("Size %s\nAvg Object Size %s",
+			humanize.Bytes(uint64(mdbStats["storageSize"].(int64))),
+			humanize.Bytes(uint64(mdbStats["avgObjSize"].(float64))),
+		)
+
 		var redisUptimeSecondsText, redisConnectedClients, redisUsedMemoryHuman string
 
 		redisInfoText, err := cache.GetRedisClient().Info().Result()
@@ -315,7 +337,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Active Workers", Value: activeWorkersText, Inline: true},
 				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
+				// RethinkDB
 				{Name: "RethinkDB", Value: rethinkDBStatusText, Inline: false},
+
+				// MongoDB
+				{Name: "MongoDB Status", Value: mongodbStatusText, Inline: true},
+				{Name: "MongoDB Storage", Value: mongodbStorageText, Inline: true},
+				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
 				// Redis
 				{Name: "Redis Uptime", Value: redisUptime, Inline: true},
@@ -400,9 +428,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.Relax(err)
 		member, err := helpers.GetGuildMember(guild.ID, guild.OwnerID)
 		helpers.Relax(err)
-		ownerText := fmt.Sprintf("%s#%s\n#%s", owner.Username, owner.Discriminator, owner.ID)
+		ownerText := fmt.Sprintf("%s#%s\n`#%s`", owner.Username, owner.Discriminator, owner.ID)
 		if member.Nick != "" {
-			ownerText = fmt.Sprintf("%s#%s ~ %s\n#%s", owner.Username, owner.Discriminator, member.Nick, owner.ID)
+			ownerText = fmt.Sprintf("%s#%s ~ %s\n`#%s`", owner.Username, owner.Discriminator, member.Nick, owner.ID)
 		}
 
 		emoteText := "_None_"

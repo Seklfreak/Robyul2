@@ -16,6 +16,10 @@
     "api_key": "",
     "client_credentials_json_location": ""
   },
+  "mongodb": {
+    "db": "Robyul",
+    "url": "[mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]"
+  },
   "rethink": {
     "db": "YOUR_DB_NAME",
     "url": "YOUR_DB_IP"

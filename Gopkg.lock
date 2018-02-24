@@ -270,6 +270,18 @@
   revision = "563b81fc02b75d664e54da31f787c2cc2186780b"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/globalsign/mgo"
+  packages = [
+    ".",
+    "bson",
+    "internal/json",
+    "internal/sasl",
+    "internal/scram"
+  ]
+  revision = "baa28fcb8e7d5dfab92026c0920cb6c9ae72faa2"
+
+[[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
   revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
@@ -767,6 +779,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1fdd804423f493cbe5b64d5c2d73614386e69a8afb9b3a8f968401ad1bde9f45"
+  inputs-digest = "6d697f027160f2920903d33b2193ba43648bd3dcfd2e42364a3f1c84272c32fb"
   solver-name = "gps-cdcl"
   solver-version = 1
