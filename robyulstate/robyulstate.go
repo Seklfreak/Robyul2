@@ -83,7 +83,7 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 		}
 	case *discordgo.PresenceUpdate:
 		//s.PresenceAdd(t.GuildID, &t.Presence)
-		if _, ok := s.guildMap[t.GuildID]; !ok {
+		if _, ok := s.guildMap[t.GuildID]; !ok || s.guildMap[t.GuildID] == nil {
 			return
 		}
 
@@ -93,6 +93,10 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 
 		var m *discordgo.Member
 		for _, possibleMember := range s.guildMap[t.GuildID].Members {
+			if possibleMember.User == nil {
+				continue
+			}
+
 			if possibleMember.User.ID == t.User.ID {
 				m = possibleMember
 			}
@@ -192,7 +196,7 @@ func (s *Robyulstate) GuildUpdate(guild *discordgo.Guild) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[guild.ID]; !ok {
+	if _, ok := s.guildMap[guild.ID]; !ok || s.guildMap[guild.ID] == nil {
 		guildCopy := new(discordgo.Guild)
 		*guildCopy = *guild
 		s.guildMap[guild.ID] = guildCopy
@@ -268,7 +272,7 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[guildID]; !ok {
+	if _, ok := s.guildMap[guildID]; !ok || s.guildMap[guildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": EmojisUpdate (" + guildID + ")")
 	}
 
@@ -334,7 +338,7 @@ func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[newChannel.GuildID]; !ok {
+	if _, ok := s.guildMap[newChannel.GuildID]; !ok || s.guildMap[newChannel.GuildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": ChannelUpdate (" + newChannel.GuildID + ")")
 	}
 
@@ -385,7 +389,7 @@ func (s *Robyulstate) ChannelDelete(channel *discordgo.Channel) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[channel.GuildID]; !ok {
+	if _, ok := s.guildMap[channel.GuildID]; !ok || s.guildMap[channel.GuildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": ChannelDelete (" + channel.GuildID + ")")
 	}
 
@@ -416,7 +420,7 @@ func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[member.GuildID]; !ok {
+	if _, ok := s.guildMap[member.GuildID]; !ok || s.guildMap[member.GuildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": MemberAdd (" + member.GuildID + ")")
 	}
 
@@ -464,7 +468,7 @@ func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[member.GuildID]; !ok {
+	if _, ok := s.guildMap[member.GuildID]; !ok || s.guildMap[member.GuildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": MemberRemove (" + member.GuildID + ")")
 	}
 
@@ -495,7 +499,7 @@ func (s *Robyulstate) RoleAdd(guildID string, role *discordgo.Role) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[guildID]; !ok {
+	if _, ok := s.guildMap[guildID]; !ok || s.guildMap[guildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": RoleAdd (" + guildID + ")")
 	}
 
@@ -544,7 +548,7 @@ func (s *Robyulstate) RoleDelete(guildID, roleID string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, ok := s.guildMap[guildID]; !ok {
+	if _, ok := s.guildMap[guildID]; !ok || s.guildMap[guildID] == nil {
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": RoleDelete (" + guildID + ")")
 	}
 
