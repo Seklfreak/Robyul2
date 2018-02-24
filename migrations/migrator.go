@@ -33,7 +33,6 @@ var migrations = []helpers.Callback{
 	m21_create_table_nukelog,
 	m22_create_table_troublemakerlog,
 	m23_create_table_profile_backgrounds,
-	m24_create_table_profile_userdata,
 	m25_create_table_profile_badge,
 	m26_create_table_mod_joinlog,
 	m27_create_table_starboard_entries,
@@ -65,6 +64,7 @@ var migrations = []helpers.Callback{
 	m53_move_rethinkdb_voicesessions_to_elasticsearch,
 	m54_create_table_module_permissions,
 	m55_create_elastic_index_eventlogs,
+	m56_migratetable_profile_userdate,
 }
 
 // Run executes all registered migrations

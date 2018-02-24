@@ -40,6 +40,8 @@ import (
 	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/oleiade/lane.v1"
 )
 
@@ -100,24 +102,6 @@ type DB_Profile_Background struct {
 	URL       string    `gorethink:"url"`
 	CreatedAt time.Time `gorethink:"createdat"`
 	Tags      []string  `gorethink:"tags"`
-}
-
-type DB_Profile_Userdata struct {
-	ID                string    `gorethink:"id,omitempty"`
-	UserID            string    `gorethink:"userid"`
-	Background        string    `gorethink:"background"`
-	Title             string    `gorethink:"title"`
-	Bio               string    `gorethink:"bio"`
-	Rep               int       `gorethink:"rep"`
-	LastRepped        time.Time `gorethink:"last_repped"`
-	ActiveBadgeIDs    []string  `gorethink:"active_badgeids"`
-	BackgroundColor   string    `gorethink:"background_color"`
-	AccentColor       string    `gorethink:"accent_color"`
-	TextColor         string    `gorethink:"text_color"`
-	BackgroundOpacity string    `gorethink:"background_opacity"`
-	DetailOpacity     string    `gorethink:"detail_opacity"`
-	Timezone          string    `gorethink:"timezone"`
-	Birthday          string    `gorethink:"birthday"`
 }
 
 type DB_Badge struct {
@@ -429,7 +413,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		m.lockRepUser(msg.Author.ID)
 		defer m.unlockRepUser(msg.Author.ID)
 
-		userData := m.GetUserUserdata(msg.Author)
+		userData, err := m.GetUserUserdata(msg.Author)
+		helpers.Relax(err)
 
 		if len(args) <= 0 {
 			if time.Since(userData.LastRepped).Hours() < 12 {
@@ -488,12 +473,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			return
 		}
 
-		targetUserData := m.GetUserUserdata(targetUser)
+		targetUserData, err := m.GetUserUserdata(targetUser)
+		helpers.Relax(err)
 		targetUserData.Rep += 1
-		m.setUserUserdata(targetUserData)
+		_, err = helpers.MDbUpdate(models.ProfileUserdataTable, targetUserData.ID, targetUserData)
+		helpers.Relax(err)
 
 		userData.LastRepped = time.Now()
-		m.setUserUserdata(userData)
+		_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+		helpers.Relax(err)
 
 		_, err = helpers.SendMessage(msg.ChannelID,
 			helpers.GetTextF("plugins.levels.rep-success", targetUser.Username))
@@ -524,9 +512,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					titleText = strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 				}
 
-				userUserdata := m.GetUserUserdata(msg.Author)
+				userUserdata, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
 				userUserdata.Title = titleText
-				m.setUserUserdata(userUserdata)
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-title-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -537,9 +527,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					bioText = strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 				}
 
-				userUserdata := m.GetUserUserdata(msg.Author)
+				userUserdata, err := m.GetUserUserdata(msg.Author)
 				userUserdata.Bio = bioText
-				m.setUserUserdata(userUserdata)
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -669,9 +660,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						return
 					}
 
-					userUserdata := m.GetUserUserdata(msg.Author)
+					userUserdata, err := m.GetUserUserdata(msg.Author)
+					helpers.Relax(err)
 					userUserdata.Background = args[1]
-					m.setUserUserdata(userUserdata)
+					_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+					helpers.Relax(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-success"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1265,7 +1258,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
-						userData := m.GetUserUserdata(msg.Author)
+						userData, err := m.GetUserUserdata(msg.Author)
+						helpers.Relax(err)
 
 						idToMove := ""
 						for _, badgeID := range userData.ActiveBadgeIDs {
@@ -1296,7 +1290,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadgeList = append(newBadgeList, idToMove)
 						}
 						userData.ActiveBadgeIDs = newBadgeList
-						m.setUserUserdata(userData)
+						_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+						helpers.Relax(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.move-badge-success"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1314,7 +1309,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				userData := m.GetUserUserdata(msg.Author)
+				userData, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
 				newActiveBadgeIDs := make([]string, 0)
 				for _, activeBadgeID := range userData.ActiveBadgeIDs {
 					for _, availableBadge := range availableBadges {
@@ -1346,9 +1342,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							if len(loopArgs) > 0 {
 								switch loopArgs[0] {
 								case "stop", "exit":
-									m.setUserUserdata(userData)
+									_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+									helpers.Relax(err)
 									m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-									_, err := helpers.SendMessage(msg.ChannelID,
+									_, err = helpers.SendMessage(msg.ChannelID,
 										fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n", msg.Author.Username))
 									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 									stoppedLoop = true
@@ -1420,9 +1417,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												loopArgs = []string{"categories"}
 												userData.ActiveBadgeIDs = append(userData.ActiveBadgeIDs, badge.ID)
 												if len(userData.ActiveBadgeIDs) >= BadgeLimt {
-													m.setUserUserdata(userData)
+													_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+													helpers.Relax(err)
 													m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-													_, err := helpers.SendMessage(msg.ChannelID,
+													_, err = helpers.SendMessage(msg.ChannelID,
 														fmt.Sprintf("**@%s** I saved your badges. Check out your new shiny profile with `_profile` :sparkles: \n",
 															msg.Author.Username))
 													helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1460,7 +1458,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				time.Sleep(5 * time.Minute)
 				closeHandler()
 				if stoppedLoop == false {
-					m.setUserUserdata(userData)
+					_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+					helpers.Relax(err)
 					newActiveBadgePickerUserIDs := make(map[string]string, 0)
 					for activeBadgePickerUserID, activeBadgePickerChannelID := range activeBadgePickerUserIDs {
 						if activeBadgePickerUserID != msg.Author.ID {
@@ -1470,7 +1469,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					activeBadgePickerUserIDs = newActiveBadgePickerUserIDs
 
 					m.DeleteMessages(msg.ChannelID, lastBotMessageID)
-					_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("**@%s** I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
+					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("**@%s** I stopped the badge picking and saved your badges because of the time limit.\nUse `_profile badge` if you want to pick more badges.",
 						msg.Author.Username))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				}
@@ -1483,7 +1482,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				userUserdata := m.GetUserUserdata(msg.Author)
+				userUserdata, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
 
 				switch args[1] {
 				case "background", "box":
@@ -1509,7 +1509,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
-				m.setUserUserdata(userUserdata)
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-color-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1522,7 +1523,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				userUserdata := m.GetUserUserdata(msg.Author)
+				userUserdata, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
 
 				opacityText := "0.5"
 				if len(args) >= 3 {
@@ -1546,13 +1548,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				m.setUserUserdata(userUserdata)
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "timezone":
-				userUserdata := m.GetUserUserdata(msg.Author)
+				userUserdata, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
 
 				newTimezoneString := ""
 				timeInTimezone := ""
@@ -1573,7 +1577,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					timeInTimezone = time.Now().In(loc).Format(TimeAtUserFormat)
 				}
 				userUserdata.Timezone = newTimezoneString
-				m.setUserUserdata(userUserdata)
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
 
 				if timeInTimezone != "" {
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.profile-timezone-set-success",
@@ -1597,9 +1602,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					newBirthday = args[1]
 				}
 
-				userUserdata := m.GetUserUserdata(msg.Author)
+				userUserdata, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
 				userUserdata.Birthday = newBirthday
-				m.setUserUserdata(userUserdata)
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2983,32 +2990,21 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 	return entryBucket.URL
 }
 
-func (l *Levels) GetUserUserdata(user *discordgo.User) DB_Profile_Userdata {
-	var entryBucket DB_Profile_Userdata
-	listCursor, err := rethink.Table("profile_userdata").Filter(
-		rethink.Row.Field("userid").Eq(user.ID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
+func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileUserdataEntry, err error) {
+	err = helpers.MDbFind(models.ProfileUserdataTable, bson.M{"userid": user.ID}).One(&userdata)
 
-	if err == rethink.ErrEmptyResult {
-		entryBucket.UserID = user.ID
-		insert := rethink.Table("profile_userdata").Insert(entryBucket)
-		_, err := insert.RunWrite(helpers.GetDB())
-		if err != nil {
-			helpers.Relax(err)
-		} else {
-			return l.GetUserUserdata(user)
-		}
-		return entryBucket
-	} else if err != nil {
-		helpers.Relax(err)
+	if err == nil {
+		return userdata, nil
 	}
 
-	return entryBucket
+	if err == mgo.ErrNotFound {
+		userdata.UserID = user.ID
+		newid, err := helpers.MDbInsert(models.ProfileUserdataTable, userdata)
+		userdata.ID = newid
+		return userdata, err
+	}
+
+	return userdata, err
 }
 
 func (l *Levels) GetServerOnlyBadges(guildID string) []DB_Badge {
@@ -3397,11 +3393,6 @@ func (l *Levels) DeleteBadge(badgeID string) {
 	return
 }
 
-func (l *Levels) setUserUserdata(entry DB_Profile_Userdata) {
-	_, err := rethink.Table("profile_userdata").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
 	var levelsServersUser []DB_Levels_ServerUser
 	listCursor, err := rethink.Table("levels_serverusers").Filter(
@@ -3443,7 +3434,10 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		}
 	}
 
-	userData := m.GetUserUserdata(member.User)
+	userData, err := m.GetUserUserdata(member.User)
+	if err != nil {
+		return "", err
+	}
 
 	avatarUrl := helpers.GetAvatarUrl(member.User)
 	avatarUrlGif := ""
@@ -3740,7 +3734,7 @@ func (c *circle) At(x, y int) color.Color {
 	return color.Alpha{0}
 }
 
-func (m *Levels) GetBackgroundColor(userUserdata DB_Profile_Userdata) string {
+func (m *Levels) GetBackgroundColor(userUserdata models.ProfileUserdataEntry) string {
 	if userUserdata.BackgroundColor != "" {
 		return userUserdata.BackgroundColor
 	} else {
@@ -3748,7 +3742,7 @@ func (m *Levels) GetBackgroundColor(userUserdata DB_Profile_Userdata) string {
 	}
 }
 
-func (m *Levels) GetAccentColor(userUserdata DB_Profile_Userdata) string {
+func (m *Levels) GetAccentColor(userUserdata models.ProfileUserdataEntry) string {
 	if userUserdata.AccentColor != "" {
 		return userUserdata.AccentColor
 	} else {
@@ -3756,7 +3750,7 @@ func (m *Levels) GetAccentColor(userUserdata DB_Profile_Userdata) string {
 	}
 }
 
-func (m *Levels) GetTextColor(userUserdata DB_Profile_Userdata) string {
+func (m *Levels) GetTextColor(userUserdata models.ProfileUserdataEntry) string {
 	if userUserdata.TextColor != "" {
 		return userUserdata.TextColor
 	} else {
@@ -3764,7 +3758,7 @@ func (m *Levels) GetTextColor(userUserdata DB_Profile_Userdata) string {
 	}
 }
 
-func (m *Levels) GetBackgroundOpacity(userUserdata DB_Profile_Userdata) string {
+func (m *Levels) GetBackgroundOpacity(userUserdata models.ProfileUserdataEntry) string {
 	if userUserdata.BackgroundOpacity != "" {
 		return userUserdata.BackgroundOpacity
 	} else {
@@ -3772,7 +3766,7 @@ func (m *Levels) GetBackgroundOpacity(userUserdata DB_Profile_Userdata) string {
 	}
 }
 
-func (m *Levels) GetDetailOpacity(userUserdata DB_Profile_Userdata) string {
+func (m *Levels) GetDetailOpacity(userUserdata models.ProfileUserdataEntry) string {
 	if userUserdata.DetailOpacity != "" {
 		return userUserdata.DetailOpacity
 	} else {

@@ -5,23 +5,24 @@ import (
 	rethink "github.com/gorethink/gorethink"
 )
 
-// CreateTableIfNotExists (works like the mysql call)
-func CreateTableIfNotExists(tableName string) {
+func TableExists(tableName string) (exists bool) {
 	cursor, err := rethink.TableList().Run(helpers.GetDB())
 	helpers.Relax(err)
 	defer cursor.Close()
 
-	tableExists := false
-
 	var row string
 	for cursor.Next(&row) {
 		if row == tableName {
-			tableExists = true
-			break
+			return true
 		}
 	}
 
-	if !tableExists {
+	return false
+}
+
+// CreateTableIfNotExists (works like the mysql call)
+func CreateTableIfNotExists(tableName string) {
+	if !TableExists(tableName) {
 		_, err := rethink.TableCreate(tableName).Run(helpers.GetDB())
 		helpers.Relax(err)
 	}

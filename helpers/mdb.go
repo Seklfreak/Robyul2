@@ -115,7 +115,7 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 	return id, nil
 }
 
-func MDbUpsert(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
+func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
 	if !id.Valid() {
 		id = bson.NewObjectId()
 	}
@@ -127,6 +127,12 @@ func MDbUpsert(collection models.MongoDbCollection, id bson.ObjectId, data inter
 	}
 
 	return id, nil
+}
+
+func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
+	_, err = GetMDb().C(collection.String()).Upsert(selector, data)
+
+	return err
 }
 
 func MDbDelete(collection models.MongoDbCollection, id bson.ObjectId) (err error) {
