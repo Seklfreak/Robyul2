@@ -90,13 +90,6 @@ func (m *Levels) Commands() []string {
 	}
 }
 
-type DB_Levels_ServerUser struct {
-	ID      string `gorethink:"id,omitempty"`
-	UserID  string `gorethink:"userid"`
-	GuildID string `gorethink:"guildid"`
-	Exp     int64  `gorethink:"exp"`
-}
-
 type DB_Profile_Background struct {
 	Name      string    `gorethink:"id,omitempty"`
 	URL       string    `gorethink:"url"`
@@ -250,13 +243,13 @@ func (m *Levels) cacheTopLoop() {
 	}()
 
 	for {
+		// TODO: cache still required with MongoDB?
 		var newTopCache []Cache_Levels_top
 
-		var levelsUsers []DB_Levels_ServerUser
-		listCursor, err := rethink.Table("levels_serverusers").Run(helpers.GetDB())
+		var levelsUsers []models.LevelsServerusersEntry
+
+		err := helpers.MDbFind(models.LevelsServerusersTable, nil).All(&levelsUsers)
 		helpers.Relax(err)
-		defer listCursor.Close()
-		err = listCursor.All(&levelsUsers)
 
 		if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
 			log.WithField("module", "levels").Error("empty result from levels db")
@@ -375,7 +368,8 @@ func (m *Levels) processExpStackLoop() {
 	for {
 		if !expStack.Empty() {
 			expItem := expStack.Pop().(ProcessExpInfo)
-			levelsServerUser := m.getLevelsServerUserOrCreateNew(expItem.GuildID, expItem.UserID)
+			levelsServerUser, err := m.getLevelsServerUserOrCreateNew(expItem.GuildID, expItem.UserID)
+			helpers.Relax(err)
 
 			expBefore := levelsServerUser.Exp
 			levelBefore := m.getLevelFromExp(levelsServerUser.Exp)
@@ -384,7 +378,8 @@ func (m *Levels) processExpStackLoop() {
 
 			levelAfter := m.getLevelFromExp(levelsServerUser.Exp)
 
-			m.setLevelsServerUser(levelsServerUser)
+			_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+			helpers.Relax(err)
 
 			if expBefore <= 0 || levelBefore != levelAfter {
 				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
@@ -1683,13 +1678,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			case "leaderboard", "top":
 				// [p]level top
 				// TODO: use cached top list
-				var levelsServersUsers []DB_Levels_ServerUser
-				listCursor, err := rethink.Table("levels_serverusers").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).OrderBy(rethink.Desc("exp")).Limit(10).Run(helpers.GetDB())
+				var levelsServersUsers []models.LevelsServerusersEntry
+				err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).Sort("-exp").Limit(10).All(&levelsServersUsers)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&levelsServersUsers)
 
 				if err == rethink.ErrEmptyResult || len(levelsServersUsers) <= 0 {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
@@ -1714,12 +1705,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					//fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
 					if len(levelsServersUsers) <= i-offset {
 						offset += i
-						listCursor, err := rethink.Table("levels_serverusers").Filter(
-							rethink.Row.Field("guildid").Eq(channel.GuildID),
-						).OrderBy(rethink.Desc("exp")).Skip(offset).Limit(5).Run(helpers.GetDB())
-						helpers.Relax(err)
-						defer listCursor.Close()
-						err = listCursor.All(&levelsServersUsers)
+						err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).Skip(offset).Sort("-exp").Limit(5).All(&levelsServersUsers)
 						helpers.Relax(err)
 					}
 					if len(levelsServersUsers) <= i-offset {
@@ -1744,15 +1730,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					displayRanking++
 				}
 
-				var thislevelUser DB_Levels_ServerUser
-				listCursor, err = rethink.Table("levels_serverusers").Filter(
-					rethink.Row.Field("userid").Eq(targetUser.ID),
-				).Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).Run(helpers.GetDB())
+				var thislevelUser models.LevelsServerusersEntry
+				err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID, "userid": targetUser.ID}).One(&thislevelUser)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.One(&thislevelUser)
 
 				serverRank := "N/A"
 				for _, serverCache := range topCache {
@@ -1823,13 +1803,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					}
 				}
 
-				var thislevelServersUser []DB_Levels_ServerUser
-				listCursor, err := rethink.Table("levels_serverusers").Filter(
-					rethink.Row.Field("userid").Eq(targetUser.ID),
-				).Run(helpers.GetDB())
+				var thislevelServersUser []models.LevelsServerusersEntry
+				err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).All(&thislevelServersUser)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&thislevelServersUser)
 
 				var totalExp int64
 				for _, levelServerUser := range thislevelServersUser {
@@ -1874,12 +1850,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								return
 							}
 
-							levelsServerUser := m.getLevelsServerUserOrCreateNew(channel.GuildID, targetUser.ID)
+							levelsServerUser, err := m.getLevelsServerUserOrCreateNew(channel.GuildID, targetUser.ID)
+							helpers.Relax(err)
 
 							expBefore := levelsServerUser.Exp
 
 							levelsServerUser.Exp = 0
-							m.setLevelsServerUser(levelsServerUser)
+							_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 
 							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
 								models.EventlogTargetTypeUser, msg.Author.ID,
@@ -2118,17 +2095,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Temporary disabled EXP Processing for `%s` while processing the Message History.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					// reset accounts on this server
-					var levelsServersUsers []DB_Levels_ServerUser
-					listCursor, err := rethink.Table("levels_serverusers").Filter(
-						rethink.Row.Field("guildid").Eq(channel.GuildID),
-					).Run(helpers.GetDB())
-					helpers.Relax(err)
-					defer listCursor.Close()
-					err = listCursor.All(&levelsServersUsers)
+					var levelsServersUsers []models.LevelsServerusersEntry
+					err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).All(&levelsServersUsers)
 					helpers.Relax(err)
 					for _, levelsServerUser := range levelsServersUsers {
 						levelsServerUser.Exp = 0
-						m.setLevelsServerUser(levelsServerUser)
+						_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+						helpers.Relax(err)
 					}
 					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Resetted the EXP for every User on `%s`.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2184,9 +2157,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 
 						for userId, expForuser := range expForUsers {
-							levelsServerUser := m.getLevelsServerUserOrCreateNew(guildChannelCurrent.GuildID, userId)
+							levelsServerUser, err := m.getLevelsServerUserOrCreateNew(guildChannelCurrent.GuildID, userId)
+							helpers.Relax(err)
 							levelsServerUser.Exp += expForuser
-							m.setLevelsServerUser(levelsServerUser)
+							_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+							helpers.Relax(err)
 						}
 
 						cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("Completed processing of Channel #%s (#%s) on Guild %s (#%s)",
@@ -2673,13 +2648,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			}
 		}
 
-		var levelsServersUser []DB_Levels_ServerUser
-		listCursor, err := rethink.Table("levels_serverusers").Filter(
-			rethink.Row.Field("userid").Eq(targetUser.ID),
-		).Run(helpers.GetDB())
+		var levelsServersUser []models.LevelsServerusersEntry
+		err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).Sort("-exp").Limit(10).All(&levelsServersUser)
 		helpers.Relax(err)
-		defer listCursor.Close()
-		err = listCursor.All(&levelsServersUser)
 
 		if err == rethink.ErrEmptyResult {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
@@ -2689,7 +2660,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			helpers.Relax(err)
 		}
 
-		var levelThisServerUser DB_Levels_ServerUser
+		var levelThisServerUser models.LevelsServerusersEntry
 		var totalExp int64
 		for _, levelsServerUser := range levelsServersUser {
 			if levelsServerUser.GuildID == channel.GuildID {
@@ -2993,10 +2964,6 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileUserdataEntry, err error) {
 	err = helpers.MDbFind(models.ProfileUserdataTable, bson.M{"userid": user.ID}).One(&userdata)
 
-	if err == nil {
-		return userdata, nil
-	}
-
 	if err == mgo.ErrNotFound {
 		userdata.UserID = user.ID
 		newid, err := helpers.MDbInsert(models.ProfileUserdataTable, userdata)
@@ -3296,7 +3263,6 @@ func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string)
 }
 
 func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []string) []DB_Badge {
-
 	activeBadges := make([]DB_Badge, 0)
 	for _, activeBadgeID := range activeBadgeIDs {
 		badge := l.GetBadgeByID(activeBadgeID)
@@ -3338,13 +3304,9 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []
 }
 
 func (l *Levels) GetLevelForUser(userID string, guildID string) int {
-	var levelsServersUser []DB_Levels_ServerUser
-	listCursor, err := rethink.Table("levels_serverusers").Filter(
-		rethink.Row.Field("userid").Eq(userID),
-	).Run(helpers.GetDB())
+	var levelsServersUser []models.LevelsServerusersEntry
+	err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": userID}).All(&levelsServersUser)
 	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.All(&levelsServersUser)
 
 	if err == rethink.ErrEmptyResult {
 		return 0
@@ -3394,20 +3356,13 @@ func (l *Levels) DeleteBadge(badgeID string) {
 }
 
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
-	var levelsServersUser []DB_Levels_ServerUser
-	listCursor, err := rethink.Table("levels_serverusers").Filter(
-		rethink.Row.Field("userid").Eq(member.User.ID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return "", err
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&levelsServersUser)
+	var levelsServersUser []models.LevelsServerusersEntry
+	err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": member.User.ID}).All(&levelsServersUser)
 	if err != nil {
 		return "", err
 	}
 
-	var levelThisServerUser DB_Levels_ServerUser
+	var levelThisServerUser models.LevelsServerusersEntry
 	var totalExp int64
 	for _, levelsServerUser := range levelsServersUser {
 		if levelsServerUser.GuildID == guild.ID {
@@ -3852,35 +3807,18 @@ func (m *Levels) OnGuildMemberRemove(member *discordgo.Member, session *discordg
 
 }
 
-func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) DB_Levels_ServerUser {
-	var levelsServerUser DB_Levels_ServerUser
-	listCursor, err := rethink.Table("levels_serverusers").GetAllByIndex(
-		"userid", userid,
-	).Filter(
-		rethink.Row.Field("guildid").Eq(guildid),
-	).Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.One(&levelsServerUser)
+func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) (serveruser models.LevelsServerusersEntry, err error) {
+	err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": userid, "guildid": guildid}).One(&serveruser)
 
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("levels_serverusers").Insert(DB_Levels_ServerUser{GuildID: guildid, UserID: userid})
-		_, e := insert.RunWrite(helpers.GetDB())
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getLevelsServerUserOrCreateNew(guildid, userid)
-		}
-	} else if err != nil {
-		panic(err)
+	if err == mgo.ErrNotFound {
+		serveruser.UserID = userid
+		serveruser.GuildID = guildid
+		newid, err := helpers.MDbInsert(models.LevelsServerusersTable, serveruser)
+		serveruser.ID = newid
+		return serveruser, err
 	}
 
-	return levelsServerUser
-}
-
-func (m *Levels) setLevelsServerUser(entry DB_Levels_ServerUser) {
-	_, err := rethink.Table("levels_serverusers").Get(entry.ID).Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
+	return serveruser, err
 }
 
 func (m *Levels) getLevelFromExp(exp int64) int {
