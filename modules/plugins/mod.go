@@ -133,7 +133,6 @@ func (m *Mod) Init(session *discordgo.Session) {
 		cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("got invite link cache of %d servers", len(invitesCache)))
 	}()
 	go m.cacheBans()
-	cache.GetLogger().WithField("module", "mod").Info("Started cacheBans")
 }
 
 func (m *Mod) Uninit(session *discordgo.Session) {
@@ -142,6 +141,8 @@ func (m *Mod) Uninit(session *discordgo.Session) {
 
 func (m *Mod) cacheBans() {
 	defer helpers.Recover()
+
+	time.Sleep(5 * time.Minute)
 
 	var key string
 	var guildBansCached int
