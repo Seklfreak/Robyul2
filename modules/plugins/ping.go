@@ -72,6 +72,11 @@ func (p *Ping) OnMessage(session *discordgo.Session, message *discordgo.MessageC
 	text = text + "\nRethinkDB Latency: " + rethinkTaken.String()
 
 	started = time.Now()
+	helpers.GetMDbSession().Ping()
+	mongodbTaken := time.Since(started)
+	text = text + "\nMongoDB Latency: " + mongodbTaken.String()
+
+	started = time.Now()
 	cache.GetRedisClient().Ping()
 	redisTaken := time.Since(started)
 	text = text + "\nRedis Latency: " + redisTaken.String()
