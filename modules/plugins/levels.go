@@ -3414,6 +3414,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	if member.Nick != "" {
 		userAndNick = fmt.Sprintf("%s (%s)", member.User.Username, member.Nick)
 	}
+	userWithDisc := member.User.Username + "#" + member.User.Discriminator
 	title := userData.Title
 	if title == "" {
 		title = "Robyul's friend"
@@ -3487,6 +3488,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", html.EscapeString(member.User.Username), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", html.EscapeString(member.Nick), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", html.EscapeString(userAndNick), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USERNAME_WITH_DISC}", html.EscapeString(userWithDisc), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_URL}", html.EscapeString(avatarUrl), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TITLE}", html.EscapeString(title), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", html.EscapeString(bio), -1)
