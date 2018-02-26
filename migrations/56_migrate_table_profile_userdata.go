@@ -56,6 +56,13 @@ func m56_migratetable_profile_userdate() {
 
 	bar := pb.StartNew(numberOfElements)
 	for cursor.Next(&rethinkdbEntry) {
+		if rethinkdbEntry.Rep == 0 &&
+			rethinkdbEntry.LastRepped.IsZero() &&
+			rethinkdbEntry.Background == "" &&
+			rethinkdbEntry.Title == "" &&
+			rethinkdbEntry.Bio == "" {
+			continue
+		}
 		err = helpers.MDbUpsert(
 			models.ProfileUserdataTable,
 			bson.M{"userid": rethinkdbEntry.UserID},

@@ -244,7 +244,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			mongodbUptime,
 		)
 		mongodbStorageText := fmt.Sprintf("Size %s\nAvg Object Size %s",
-			humanize.Bytes(uint64(mdbStats["storageSize"].(int64))),
+			humanize.Bytes(uint64(mdbStats["storageSize"].(float64))),
 			humanize.Bytes(uint64(mdbStats["avgObjSize"].(float64))),
 		)
 
