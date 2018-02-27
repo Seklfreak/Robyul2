@@ -5,8 +5,8 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/cheggaaa/pb"
-	"github.com/gorethink/gorethink"
 	"github.com/globalsign/mgo/bson"
+	"github.com/gorethink/gorethink"
 )
 
 func m57_migrate_table_levels_serverusers() {

@@ -36,12 +36,12 @@ import (
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 	"gopkg.in/oleiade/lane.v1"
 )
 
@@ -251,7 +251,7 @@ func (m *Levels) cacheTopLoop() {
 		err := helpers.MDbFind(models.LevelsServerusersTable, nil).All(&levelsUsers)
 		helpers.Relax(err)
 
-		if err == rethink.ErrEmptyResult || len(levelsUsers) <= 0 {
+		if levelsUsers == nil || len(levelsUsers) <= 0 {
 			log.WithField("module", "levels").Error("empty result from levels db")
 			time.Sleep(60 * time.Second)
 			continue
@@ -1682,7 +1682,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).Sort("-exp").Limit(10).All(&levelsServersUsers)
 				helpers.Relax(err)
 
-				if err == rethink.ErrEmptyResult || len(levelsServersUsers) <= 0 {
+				if levelsServersUsers == nil || len(levelsServersUsers) <= 0 {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.top-server-no-stats"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
@@ -1701,22 +1701,23 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 				displayRanking := 1
 				offset := 0
-				skipped := 0
 				for i := 0; displayRanking <= 10; i++ {
 					//fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
 					if len(levelsServersUsers) <= i-offset {
 						offset += i
 						err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).Skip(offset).Sort("-exp").Limit(5).All(&levelsServersUsers)
 						helpers.Relax(err)
+						if levelsServersUsers == nil {
+							break
+						}
 					}
 					if len(levelsServersUsers) <= i-offset {
 						break
 					}
 
-					currentMember, err := helpers.GetGuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
+					currentMember, err := helpers.GetGuildMemberWithoutApi(channel.GuildID, levelsServersUsers[i-offset].UserID)
 					if err != nil {
 						cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
-						skipped++
 						continue
 					}
 					fullUsername := currentMember.User.Username
@@ -1737,14 +1738,22 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				helpers.Relax(err)
 
 				serverRank := "N/A"
+				rank := 1
+				skipped := 0
 				for _, serverCache := range topCache {
 					if serverCache.GuildID == channel.GuildID {
-						for i, pair := range serverCache.Levels {
+						for _, pair := range serverCache.Levels {
+							if _, err := helpers.GetGuildMemberWithoutApi(serverCache.GuildID, targetUser.ID); err != nil {
+								skipped++
+								continue
+							}
 							if pair.Key == targetUser.ID {
 								// substract skipped members to ignore users that left in the ranking
-								serverRank = strconv.Itoa((i + 1) - skipped)
+								serverRank = strconv.Itoa(rank - skipped)
+								break
 							}
 						}
+						rank++
 					}
 				}
 
@@ -1810,27 +1819,29 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).All(&thislevelServersUser)
 				helpers.Relax(err)
 
-				var totalExp int64
-				for _, levelServerUser := range thislevelServersUser {
-					totalExp += levelServerUser.Exp
-				}
+				if thislevelServersUser != nil {
+					var totalExp int64
+					for _, levelServerUser := range thislevelServersUser {
+						totalExp += levelServerUser.Exp
+					}
 
-				globalRank := "N/A"
-				for _, serverCache := range topCache {
-					if serverCache.GuildID == "global" {
-						for i, pair := range serverCache.Levels {
-							if pair.Key == targetUser.ID {
-								globalRank = strconv.Itoa(i + 1)
+					globalRank := "N/A"
+					for _, serverCache := range topCache {
+						if serverCache.GuildID == "global" {
+							for i, pair := range serverCache.Levels {
+								if pair.Key == targetUser.ID {
+									globalRank = strconv.Itoa(i + 1)
+								}
 							}
 						}
 					}
-				}
 
-				globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
-					Name:   "Your Rank: " + globalRank,
-					Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(totalExp)),
-					Inline: false,
-				})
+					globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
+						Name:   "Your Rank: " + globalRank,
+						Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(totalExp)),
+						Inline: false,
+					})
+				}
 
 				_, err = helpers.SendEmbed(msg.ChannelID, globalTopLevelEmbed)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2101,10 +2112,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					var levelsServersUsers []models.LevelsServerusersEntry
 					err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).All(&levelsServersUsers)
 					helpers.Relax(err)
-					for _, levelsServerUser := range levelsServersUsers {
-						levelsServerUser.Exp = 0
-						_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
-						helpers.Relax(err)
+					if levelsServersUsers != nil {
+						for _, levelsServerUser := range levelsServersUsers {
+							levelsServerUser.Exp = 0
+							_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+							helpers.Relax(err)
+						}
 					}
 					_, err = helpers.SendMessage(dmChannel.ID, fmt.Sprintf("Resetted the EXP for every User on `%s`.", guild.Name))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -2655,7 +2668,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).All(&levelsServersUser)
 		helpers.Relax(err)
 
-		if err == mgo.ErrNotFound {
+		if levelsServersUser == nil {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
@@ -3311,7 +3324,7 @@ func (l *Levels) GetLevelForUser(userID string, guildID string) int {
 	err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": userID}).All(&levelsServersUser)
 	helpers.Relax(err)
 
-	if err == rethink.ErrEmptyResult {
+	if levelsServersUser == nil {
 		return 0
 	} else if err != nil {
 		helpers.Relax(err)
@@ -3361,7 +3374,7 @@ func (l *Levels) DeleteBadge(badgeID string) {
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
 	var levelsServersUser []models.LevelsServerusersEntry
 	err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": member.User.ID}).All(&levelsServersUser)
-	if err != nil {
+	if err != nil || levelsServersUser == nil {
 		return "", err
 	}
 

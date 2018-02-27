@@ -32,9 +32,9 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
 	"github.com/go-redis/redis"
+	"github.com/inconshreveable/go-keen"
 	"github.com/kz/discordrus"
 	"github.com/sirupsen/logrus"
-	"github.com/inconshreveable/go-keen"
 )
 
 var (
