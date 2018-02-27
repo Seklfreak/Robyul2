@@ -35,6 +35,7 @@
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
+  version = "1.0.4"
 
 [[constraint]]
   branch = "master"
@@ -122,14 +123,8 @@
   version = "3.1.0"
 
 [[constraint]]
-  name = "golang.org/x/net"
-
-[[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
-
-[[constraint]]
-  name = "golang.org/x/text"
 
 [[constraint]]
   branch = "master"
@@ -144,7 +139,8 @@
   version = "6.0.0"
 
 [[constraint]]
-  name = "gopkg.in/inconshreveable/go-keen.v0"
+  name = "github.com/inconshreveable/go-keen"
+  branch = "v0"
 
 [[constraint]]
   name = "github.com/RichardKnop/machinery"

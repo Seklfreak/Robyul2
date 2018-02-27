@@ -34,7 +34,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/kz/discordrus"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/inconshreveable/go-keen.v0"
+	"github.com/inconshreveable/go-keen"
 )
 
 var (
