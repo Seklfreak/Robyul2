@@ -1752,8 +1752,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								serverRank = strconv.Itoa(rank - skipped)
 								break
 							}
+							rank++
 						}
-						rank++
 					}
 				}
 
