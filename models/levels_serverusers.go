@@ -1,7 +1,7 @@
 package models
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/globalsign/mgo/bson"
 )
 
 const (

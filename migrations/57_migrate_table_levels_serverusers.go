@@ -6,7 +6,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/cheggaaa/pb"
 	"github.com/gorethink/gorethink"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/globalsign/mgo/bson"
 )
 
 func m57_migrate_table_levels_serverusers() {

@@ -741,18 +741,6 @@
   version = "v0.0.2"
 
 [[projects]]
-  branch = "v2"
-  name = "gopkg.in/mgo.v2"
-  packages = [
-    ".",
-    "bson",
-    "internal/json",
-    "internal/sasl",
-    "internal/scram"
-  ]
-  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
-
-[[projects]]
   name = "gopkg.in/oleiade/lane.v1"
   packages = ["."]
   revision = "28f7c3f09254f12b51e620fa4db136ba58804762"
@@ -779,6 +767,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6d697f027160f2920903d33b2193ba43648bd3dcfd2e42364a3f1c84272c32fb"
+  inputs-digest = "de81d85f5b83aa1cdc3ae4d9f6ab45b5b21908d1e08da3582fa26730d862849a"
   solver-name = "gps-cdcl"
   solver-version = 1

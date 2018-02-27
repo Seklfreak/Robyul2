@@ -40,8 +40,8 @@ import (
 	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"gopkg.in/oleiade/lane.v1"
 )
 
