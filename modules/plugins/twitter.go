@@ -313,7 +313,9 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				entry, err := m.getEntryBy("id", entry.ID)
 				if err != nil {
 					m.unlockEntry(entryID)
-					helpers.RelaxLog(err)
+					if !strings.Contains(err.Error(), "The result does not contain any more rows") {
+						helpers.RelaxLog(err)
+					}
 					continue
 				}
 

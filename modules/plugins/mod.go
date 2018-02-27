@@ -1346,8 +1346,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		}
 
 		if textVersion == false {
-			_, err = helpers.EditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
-			helpers.Relax(err)
+			helpers.EditEmbed(msg.ChannelID, resultMessage.ID, resultEmbed)
 		} else {
 			pages := helpers.Pagify(resultText, "\n")
 			if len(pages) <= 1 {

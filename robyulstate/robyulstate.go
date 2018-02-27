@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/davecgh/go-spew/spew"
@@ -469,6 +470,10 @@ func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[member.GuildID]; !ok || s.guildMap[member.GuildID] == nil {
+		if member.User.ID == cache.GetSession().State.User.ID {
+			// robyul left a guild, ignore
+			return nil
+		}
 		return errors.New(discordgo.ErrStateNotFound.Error() + ": MemberRemove (" + member.GuildID + ")")
 	}
 
