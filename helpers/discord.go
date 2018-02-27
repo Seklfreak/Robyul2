@@ -362,6 +362,16 @@ func RequireAdmin(msg *discordgo.Message, cb Callback) {
 }
 
 // RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
+func RequireAdminOrStaff(msg *discordgo.Message, cb Callback) {
+	if !IsAdmin(msg) && !IsRobyulMod(msg.Author.ID) {
+		SendMessage(msg.ChannelID, GetText("admin.no_permission"))
+		return
+	}
+
+	cb()
+}
+
+// RequireAdmin only calls $cb if the author is an admin or has MANAGE_SERVER permission
 func RequireMod(msg *discordgo.Message, cb Callback) {
 	if !IsMod(msg) {
 		SendMessage(msg.ChannelID, GetText("mod.no_permission"))

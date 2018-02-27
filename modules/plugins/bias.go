@@ -68,7 +68,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 	if len(args) >= 1 {
 		switch args[0] {
 		case "help":
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireAdminOrStaff(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				for _, biasChannel := range biasChannels {
 					if msg.ChannelID == biasChannel.ChannelID {
@@ -243,7 +243,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				return
 			})
 		case "delete-config", "remove-config":
-			helpers.RequireAdmin(msg, func() {
+			helpers.RequireAdminOrStaff(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 
 				if len(args) < 2 {
