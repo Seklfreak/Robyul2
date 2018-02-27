@@ -243,9 +243,29 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			len(mdbAliveServers),
 			mongodbUptime,
 		)
+
+		var storageSize, avgObjSize uint64
+
+		storageSizeFloat, ok := mdbStats["storageSize"].(float64)
+		if ok {
+			storageSize = uint64(storageSizeFloat)
+		}
+		storageSizeInt, ok := mdbStats["storageSize"].(int64)
+		if ok {
+			storageSize = uint64(storageSizeInt)
+		}
+		avgObjSizeFloat, ok := mdbStats["avgObjSize"].(float64)
+		if ok {
+			avgObjSize = uint64(avgObjSizeFloat)
+		}
+		avgObjSizeFloatInt, ok := mdbStats["avgObjSize"].(int64)
+		if ok {
+			avgObjSize = uint64(avgObjSizeFloatInt)
+		}
+
 		mongodbStorageText := fmt.Sprintf("Size %s\nAvg Object Size %s",
-			humanize.Bytes(uint64(mdbStats["storageSize"].(float64))),
-			humanize.Bytes(uint64(mdbStats["avgObjSize"].(float64))),
+			humanize.Bytes(storageSize),
+			humanize.Bytes(avgObjSize),
 		)
 
 		var redisUptimeSecondsText, redisConnectedClients, redisUsedMemoryHuman string
