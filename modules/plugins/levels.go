@@ -248,7 +248,7 @@ func (m *Levels) cacheTopLoop() {
 
 		var levelsUsers []models.LevelsServerusersEntry
 
-		err := helpers.MDbFind(models.LevelsServerusersTable, nil).All(&levelsUsers)
+		err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(nil)).All(&levelsUsers)
 		helpers.Relax(err)
 
 		if levelsUsers == nil || len(levelsUsers) <= 0 {
@@ -1679,7 +1679,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				// [p]level top
 				// TODO: use cached top list
 				var levelsServersUsers []models.LevelsServerusersEntry
-				err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).Sort("-exp").Limit(10).All(&levelsServersUsers)
+				err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"guildid": channel.GuildID}).Sort("-exp").Limit(10)).All(&levelsServersUsers)
 				helpers.Relax(err)
 
 				if levelsServersUsers == nil || len(levelsServersUsers) <= 0 {
@@ -1705,7 +1705,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					//fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
 					if len(levelsServersUsers) <= i-offset {
 						offset += i
-						err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).Skip(offset).Sort("-exp").Limit(5).All(&levelsServersUsers)
+						err = helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"guildid": channel.GuildID}).Skip(offset).Sort("-exp").Limit(5)).All(&levelsServersUsers)
 						helpers.Relax(err)
 						if levelsServersUsers == nil {
 							break
@@ -1734,7 +1734,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 
 				var thislevelUser models.LevelsServerusersEntry
-				err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID, "userid": targetUser.ID}).One(&thislevelUser)
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"guildid": channel.GuildID, "userid": targetUser.ID}),
+					&thislevelUser,
+				)
 				helpers.Relax(err)
 
 				serverRank := "N/A"
@@ -1816,7 +1819,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 
 				var thislevelServersUser []models.LevelsServerusersEntry
-				err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).All(&thislevelServersUser)
+				err = helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": targetUser.ID})).All(&thislevelServersUser)
 				helpers.Relax(err)
 
 				if thislevelServersUser != nil {
@@ -2110,7 +2113,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					// reset accounts on this server
 					var levelsServersUsers []models.LevelsServerusersEntry
-					err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"guildid": channel.GuildID}).All(&levelsServersUsers)
+					err = helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"guildid": channel.GuildID})).All(&levelsServersUsers)
 					helpers.Relax(err)
 					if levelsServersUsers != nil {
 						for _, levelsServerUser := range levelsServersUsers {
@@ -2665,7 +2668,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		}
 
 		var levelsServersUser []models.LevelsServerusersEntry
-		err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).All(&levelsServersUser)
+		err = helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": targetUser.ID})).All(&levelsServersUser)
 		helpers.Relax(err)
 
 		if levelsServersUser == nil {
@@ -2978,7 +2981,10 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 }
 
 func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileUserdataEntry, err error) {
-	err = helpers.MDbFind(models.ProfileUserdataTable, bson.M{"userid": user.ID}).One(&userdata)
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.ProfileUserdataTable).Find(bson.M{"userid": user.ID}),
+		&userdata,
+	)
 
 	if err == mgo.ErrNotFound {
 		userdata.UserID = user.ID
@@ -3321,7 +3327,7 @@ func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []
 
 func (l *Levels) GetLevelForUser(userID string, guildID string) int {
 	var levelsServersUser []models.LevelsServerusersEntry
-	err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": userID}).All(&levelsServersUser)
+	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": userID})).All(&levelsServersUser)
 	helpers.Relax(err)
 
 	if levelsServersUser == nil {
@@ -3373,7 +3379,7 @@ func (l *Levels) DeleteBadge(badgeID string) {
 
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
 	var levelsServersUser []models.LevelsServerusersEntry
-	err := helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": member.User.ID}).All(&levelsServersUser)
+	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": member.User.ID})).All(&levelsServersUser)
 	if err != nil || levelsServersUser == nil {
 		return "", err
 	}
@@ -3826,7 +3832,10 @@ func (m *Levels) OnGuildMemberRemove(member *discordgo.Member, session *discordg
 }
 
 func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) (serveruser models.LevelsServerusersEntry, err error) {
-	err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": userid, "guildid": guildid}).One(&serveruser)
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": userid, "guildid": guildid}),
+		&serveruser,
+	)
 
 	if err == mgo.ErrNotFound {
 		serveruser.UserID = userid

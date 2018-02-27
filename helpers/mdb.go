@@ -12,6 +12,9 @@ import (
 
 	"net"
 
+	"fmt"
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/pkg/errors"
@@ -150,6 +153,66 @@ func MDbDelete(collection models.MongoDbCollection, id bson.ObjectId) (err error
 	return nil
 }
 
-func MDbFind(collection models.MongoDbCollection, selection interface{}) (query *mgo.Query) {
-	return GetMDb().C(collection.String()).Find(selection)
+func MdbCollection(collection models.MongoDbCollection) (query *mgo.Collection) {
+	return GetMDb().C(collection.String())
+}
+
+func MDbIter(query *mgo.Query) (iter *mgo.Iter) {
+	start := time.Now()
+	iter = query.Iter()
+	took := time.Since(start)
+	if cache.HasKeen() {
+		queryValue := reflect.ValueOf(*query)
+		queryOp := queryValue.FieldByName("query").FieldByName("op")
+
+		err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+			Seconds:    took.Seconds(),
+			Type:       "query",
+			Method:     "MdbIter()",
+			Collection: queryOp.FieldByName("collection").String(),
+			Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+			Skip:       queryOp.FieldByName("skip").Int(),
+			Limit:      queryOp.FieldByName("limit").Int(),
+		})
+		if err != nil {
+			cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+		}
+	}
+	return
+}
+
+func MdbOne(query *mgo.Query, object interface{}) (err error) {
+	start := time.Now()
+	err = query.One(object)
+	took := time.Since(start)
+	if cache.HasKeen() {
+		queryValue := reflect.ValueOf(*query)
+		queryOp := queryValue.FieldByName("query").FieldByName("op")
+
+		err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+			Seconds:    took.Seconds(),
+			Type:       "query",
+			Method:     "MdbOne()",
+			Collection: queryOp.FieldByName("collection").String(),
+			Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+			Skip:       queryOp.FieldByName("skip").Int(),
+			Limit:      queryOp.FieldByName("limit").Int(),
+		})
+		if err != nil {
+			cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+		}
+	}
+	return
+}
+
+// TODO: add keen logging for the others
+
+type KeenMongoDbEvent struct {
+	Seconds    float64
+	Type       string
+	Method     string
+	Collection string
+	Query      string
+	Skip       int64
+	Limit      int64
 }

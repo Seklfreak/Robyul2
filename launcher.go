@@ -38,7 +38,6 @@ import (
 )
 
 var (
-	keenClient        *keen.Client
 	BotRuntimeChannel chan os.Signal
 )
 
@@ -329,10 +328,11 @@ func main() {
 	if config.Path("keen.project_id").Data().(string) != "" &&
 		config.Path("keen.key").Data().(string) != "" {
 		log.WithField("module", "launcher").Info("Connecting bot to keen.io...")
-		keenClient = &keen.Client{
+		keenClient := &keen.Client{
 			ProjectToken: config.Path("keen.project_id").Data().(string),
 			ApiKey:       config.Path("keen.key").Data().(string),
 		}
+		cache.SetKeen(keenClient)
 	}
 
 	// Open REST API
@@ -443,8 +443,8 @@ type KeenRestEvent struct {
 }
 
 func logKeenRequest(request *restful.Request, timeInSeconds float64) {
-	if keenClient.ApiKey != "" && keenClient.ProjectToken != "" {
-		err := keenClient.AddEvent("Robyul_REST_API", &KeenRestEvent{
+	if cache.HasKeen() {
+		err := cache.GetKeen().AddEvent("Robyul_REST_API", &KeenRestEvent{
 			Seconds:   timeInSeconds,
 			Method:    request.Request.Method,
 			Host:      request.Request.Host,
