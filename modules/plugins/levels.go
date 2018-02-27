@@ -1701,6 +1701,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 				displayRanking := 1
 				offset := 0
+				skipped := 0
 				for i := 0; displayRanking <= 10; i++ {
 					//fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
 					if len(levelsServersUsers) <= i-offset {
@@ -1715,6 +1716,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					currentMember, err := helpers.GetGuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
 					if err != nil {
 						cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
+						skipped++
 						continue
 					}
 					fullUsername := currentMember.User.Username
@@ -1739,7 +1741,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					if serverCache.GuildID == channel.GuildID {
 						for i, pair := range serverCache.Levels {
 							if pair.Key == targetUser.ID {
-								serverRank = strconv.Itoa(i + 1)
+								// substract skipped members to ignore users that left in the ranking
+								serverRank = strconv.Itoa((i + 1) - skipped)
 							}
 						}
 					}
@@ -2649,10 +2652,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		}
 
 		var levelsServersUser []models.LevelsServerusersEntry
-		err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).Sort("-exp").Limit(10).All(&levelsServersUser)
+		err = helpers.MDbFind(models.LevelsServerusersTable, bson.M{"userid": targetUser.ID}).All(&levelsServersUser)
 		helpers.Relax(err)
 
-		if err == rethink.ErrEmptyResult {
+		if err == mgo.ErrNotFound {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.level-no-stats"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
@@ -2675,7 +2678,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			return
 		}
 
-		currentMember, _ := helpers.GetGuildMember(channel.GuildID, levelThisServerUser.UserID)
+		currentMember, _ := helpers.GetGuildMember(channel.GuildID, msg.Author.ID)
 		if currentMember == nil || currentMember.User == nil || currentMember.User.ID == "" {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
