@@ -87,9 +87,10 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 		return bson.ObjectId(""), errors.New("invalid data")
 	}
 
-	newID := bson.NewObjectId()
-	if v.String() == "" {
-		v.SetString(reflect.ValueOf(newID).String())
+	newID := v.String()
+	if newID == "" {
+		newID = string(bson.NewObjectId())
+		v.SetString(newID)
 	}
 
 	err = GetMDb().C(collection.String()).Insert(temp.Interface())
@@ -98,7 +99,7 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 		return bson.ObjectId(""), err
 	}
 
-	return newID, nil
+	return bson.ObjectId(newID), nil
 }
 
 func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
