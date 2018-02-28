@@ -2692,7 +2692,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			return
 		}
 
-		currentMember, _ := helpers.GetGuildMember(channel.GuildID, msg.Author.ID)
+		currentMember, _ := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
 		if currentMember == nil || currentMember.User == nil || currentMember.User.ID == "" {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
