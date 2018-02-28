@@ -1742,17 +1742,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 				serverRank := "N/A"
 				rank := 1
-				skipped := 0
 				for _, serverCache := range topCache {
 					if serverCache.GuildID == channel.GuildID {
 						for _, pair := range serverCache.Levels {
 							if _, err := helpers.GetGuildMemberWithoutApi(serverCache.GuildID, targetUser.ID); err != nil {
-								skipped++
 								continue
 							}
 							if pair.Key == targetUser.ID {
 								// substract skipped members to ignore users that left in the ranking
-								serverRank = strconv.Itoa(rank - skipped)
+								serverRank = strconv.Itoa(rank)
 								break
 							}
 							rank++
