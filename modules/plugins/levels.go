@@ -1745,7 +1745,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				for _, serverCache := range topCache {
 					if serverCache.GuildID == channel.GuildID {
 						for _, pair := range serverCache.Levels {
-							if _, err := helpers.GetGuildMemberWithoutApi(serverCache.GuildID, targetUser.ID); err != nil {
+							if _, err = helpers.GetGuildMemberWithoutApi(serverCache.GuildID, pair.Key); err != nil {
 								continue
 							}
 							if pair.Key == targetUser.ID {
