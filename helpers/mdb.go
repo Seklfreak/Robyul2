@@ -134,6 +134,32 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 	return bson.ObjectId(newID), nil
 }
 
+func MDbInsertWithoutLogging(collection models.MongoDbCollection, data interface{}) (rid bson.ObjectId, err error) {
+	ptr := reflect.New(reflect.TypeOf(data))
+	temp := ptr.Elem()
+	temp.Set(reflect.ValueOf(data))
+
+	v := temp.FieldByName("ID")
+
+	if !v.IsValid() {
+		return bson.ObjectId(""), errors.New("invalid data")
+	}
+
+	newID := v.String()
+	if newID == "" {
+		newID = string(bson.NewObjectId())
+		v.SetString(newID)
+	}
+
+	err = GetMDb().C(collection.String()).Insert(temp.Interface())
+
+	if err != nil {
+		return bson.ObjectId(""), err
+	}
+
+	return bson.ObjectId(newID), nil
+}
+
 func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
 	if !id.Valid() {
 		return bson.ObjectId(""), errors.New("invalid id")
@@ -160,6 +186,20 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 			}
 		}()
 	}
+
+	if err != nil {
+		return bson.ObjectId(""), err
+	}
+
+	return id, nil
+}
+
+func MDbUpdateWithoutLogging(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
+	if !id.Valid() {
+		return bson.ObjectId(""), errors.New("invalid id")
+	}
+
+	err = GetMDb().C(collection.String()).UpdateId(id, data)
 
 	if err != nil {
 		return bson.ObjectId(""), err
@@ -318,6 +358,11 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 			}
 		}()
 	}
+	return
+}
+
+func MdbOneWithoutLogging(query *mgo.Query, object interface{}) (err error) {
+	err = query.One(object)
 	return
 }
 

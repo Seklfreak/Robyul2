@@ -368,7 +368,7 @@ func (m *Levels) processExpStackLoop() {
 	for {
 		if !expStack.Empty() {
 			expItem := expStack.Pop().(ProcessExpInfo)
-			levelsServerUser, err := m.getLevelsServerUserOrCreateNew(expItem.GuildID, expItem.UserID)
+			levelsServerUser, err := m.getLevelsServerUserOrCreateNewWithoutLogging(expItem.GuildID, expItem.UserID)
 			helpers.Relax(err)
 
 			expBefore := levelsServerUser.Exp
@@ -378,7 +378,7 @@ func (m *Levels) processExpStackLoop() {
 
 			levelAfter := m.getLevelFromExp(levelsServerUser.Exp)
 
-			_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+			_, err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 			helpers.Relax(err)
 
 			if expBefore <= 0 || levelBefore != levelAfter {
@@ -3841,6 +3841,23 @@ func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) (
 		serveruser.UserID = userid
 		serveruser.GuildID = guildid
 		newid, err := helpers.MDbInsert(models.LevelsServerusersTable, serveruser)
+		serveruser.ID = newid
+		return serveruser, err
+	}
+
+	return serveruser, err
+}
+
+func (m *Levels) getLevelsServerUserOrCreateNewWithoutLogging(guildid string, userid string) (serveruser models.LevelsServerusersEntry, err error) {
+	err = helpers.MdbOneWithoutLogging(
+		helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": userid, "guildid": guildid}),
+		&serveruser,
+	)
+
+	if err == mgo.ErrNotFound {
+		serveruser.UserID = userid
+		serveruser.GuildID = guildid
+		newid, err := helpers.MDbInsertWithoutLogging(models.LevelsServerusersTable, serveruser)
 		serveruser.ID = newid
 		return serveruser, err
 	}
