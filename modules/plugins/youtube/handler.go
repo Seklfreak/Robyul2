@@ -22,7 +22,7 @@ type action func(args []string, in *discordgo.Message, out **discordgo.MessageSe
 const (
 	youtubeChannelBaseUrl = "https://www.youtube.com/channel/%s"
 	youtubeVideoBaseUrl   = "https://youtu.be/%s"
-	youtubeColor          = "cd201f"
+	youtubeColor          = "FF0000"
 
 	youtubeConfigFileName = "google.client_credentials_json_location"
 )

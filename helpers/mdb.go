@@ -25,6 +25,14 @@ var (
 	mDbDatabase string
 )
 
+type mgoLogger struct {
+}
+
+func (mgol mgoLogger) Output(calldepth int, s string) error {
+	cache.GetLogger().WithField("module", "mdb").Info(s)
+	return nil
+}
+
 // ConnectDB connects to mongodb and stores the session
 func ConnectMDB(url string, database string) {
 	var err error
@@ -32,8 +40,10 @@ func ConnectMDB(url string, database string) {
 	log := cache.GetLogger()
 	log.WithField("module", "mdb").Info("Connecting to " + url)
 
-	// TODO: logger
-	//mgo.SetLogger(cache.GetLogger())
+	mgoL := new(mgoLogger)
+	mgo.SetLogger(mgoL)
+
+	cache.GetLogger()
 
 	newUrl := strings.TrimSuffix(url, "?ssl=true")
 	newUrl = strings.Replace(newUrl, "ssl=true&", "", -1)
@@ -96,7 +106,26 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 		v.SetString(newID)
 	}
 
+	start := time.Now()
 	err = GetMDb().C(collection.String()).Insert(temp.Interface())
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "insert",
+				Method:     "MDbInsert()",
+				Collection: collection.String(),
+				Data:       fmt.Sprintf("%+v", data),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
 
 	if err != nil {
 		return bson.ObjectId(""), err
@@ -110,7 +139,27 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 		return bson.ObjectId(""), errors.New("invalid id")
 	}
 
+	start := time.Now()
 	err = GetMDb().C(collection.String()).UpdateId(id, data)
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "update",
+				Method:     "MDbUpdate()",
+				Collection: collection.String(),
+				Id:         id.String(),
+				Data:       fmt.Sprintf("%+v", data),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
 
 	if err != nil {
 		return bson.ObjectId(""), err
@@ -124,7 +173,27 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 		id = bson.NewObjectId()
 	}
 
+	start := time.Now()
 	_, err = GetMDb().C(collection.String()).UpsertId(id, data)
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "upsert",
+				Method:     "MDbUpsertID()",
+				Collection: collection.String(),
+				Id:         id.String(),
+				Data:       fmt.Sprintf("%+v", data),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
 
 	if err != nil {
 		return bson.ObjectId(""), err
@@ -134,7 +203,27 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 }
 
 func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
+	start := time.Now()
 	_, err = GetMDb().C(collection.String()).Upsert(selector, data)
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "upsert",
+				Method:     "MDbUpsert()",
+				Collection: collection.String(),
+				Query:      fmt.Sprintf("%+v", selector),
+				Data:       fmt.Sprintf("%+v", data),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
 
 	return err
 }
@@ -144,7 +233,26 @@ func MDbDelete(collection models.MongoDbCollection, id bson.ObjectId) (err error
 		return errors.New("invalid id")
 	}
 
+	start := time.Now()
 	err = GetMDb().C(collection.String()).RemoveId(id)
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "remove",
+				Method:     "MDbDelete()",
+				Collection: collection.String(),
+				Id:         id.String(),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
 
 	if err != nil {
 		return err
@@ -162,21 +270,25 @@ func MDbIter(query *mgo.Query) (iter *mgo.Iter) {
 	iter = query.Iter()
 	took := time.Since(start)
 	if cache.HasKeen() {
-		queryValue := reflect.ValueOf(*query)
-		queryOp := queryValue.FieldByName("query").FieldByName("op")
+		go func() {
+			defer Recover()
 
-		err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
-			Seconds:    took.Seconds(),
-			Type:       "query",
-			Method:     "MdbIter()",
-			Collection: queryOp.FieldByName("collection").String(),
-			Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
-			Skip:       queryOp.FieldByName("skip").Int(),
-			Limit:      queryOp.FieldByName("limit").Int(),
-		})
-		if err != nil {
-			cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
-		}
+			queryValue := reflect.ValueOf(*query)
+			queryOp := queryValue.FieldByName("query").FieldByName("op")
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "query",
+				Method:     "MdbIter()",
+				Collection: queryOp.FieldByName("collection").String(),
+				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+				Skip:       queryOp.FieldByName("skip").Int(),
+				Limit:      queryOp.FieldByName("limit").Int(),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
 	}
 	return
 }
@@ -186,33 +298,37 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 	err = query.One(object)
 	took := time.Since(start)
 	if cache.HasKeen() {
-		queryValue := reflect.ValueOf(*query)
-		queryOp := queryValue.FieldByName("query").FieldByName("op")
+		go func() {
+			defer Recover()
 
-		err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
-			Seconds:    took.Seconds(),
-			Type:       "query",
-			Method:     "MdbOne()",
-			Collection: queryOp.FieldByName("collection").String(),
-			Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
-			Skip:       queryOp.FieldByName("skip").Int(),
-			Limit:      queryOp.FieldByName("limit").Int(),
-		})
-		if err != nil {
-			cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
-		}
+			queryValue := reflect.ValueOf(*query)
+			queryOp := queryValue.FieldByName("query").FieldByName("op")
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "query",
+				Method:     "MdbOne()",
+				Collection: queryOp.FieldByName("collection").String(),
+				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+				Skip:       queryOp.FieldByName("skip").Int(),
+				Limit:      queryOp.FieldByName("limit").Int(),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
 	}
 	return
 }
 
-// TODO: add keen logging for the others
-
 type KeenMongoDbEvent struct {
 	Seconds    float64
+	Collection string
 	Type       string
 	Method     string
-	Collection string
-	Query      string
-	Skip       int64
-	Limit      int64
+	Query      string `json:",omitempty"`
+	Skip       int64  `json:",omitempty"`
+	Limit      int64  `json:",omitempty"`
+	Id         string `json:",omitempty"`
+	Data       string `json:",omitempty"`
 }
