@@ -123,7 +123,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 		return
 	}
 
-	helpers.SendMessage(msg.ChannelID, "Your streamable is processing, this may take a while. <a:ablobsleep:394026914290991116>")
+	processMessages, _ := helpers.SendMessage(msg.ChannelID, "Your streamable is processing, this may take a while. <a:ablobsleep:394026914290991116>")
 	session.ChannelTyping(msg.ChannelID)
 
 	streamableShortcode := jsonResult.Path("shortcode").Data().(string)
@@ -160,10 +160,22 @@ CheckStreamableStatusLoop:
 				fmt.Sprintf("<@%s> Something went wrong while creating your streamable. <:blobscream:317043778823389184>",
 					msg.Author.ID))
 			helpers.Relax(err)
+
+			if processMessages != nil && len(processMessages) > 0 {
+				for _, processMessage := range processMessages {
+					session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+				}
+			}
 			return
 		}
 	}
 
 	_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> Your streamable is done: %s .", msg.Author.ID, streamableUrl))
 	helpers.Relax(err)
+
+	if processMessages != nil && len(processMessages) > 0 {
+		for _, processMessage := range processMessages {
+			session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+		}
+	}
 }

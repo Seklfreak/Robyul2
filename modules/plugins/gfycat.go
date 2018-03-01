@@ -98,7 +98,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	jsonResult, err := gabs.ParseJSON(buf.Bytes())
 	helpers.Relax(err)
 
-	helpers.SendMessage(msg.ChannelID, "Your gfycat is processing, this may take a while. <a:ablobsleep:394026914290991116>")
+	processMessages, _ := helpers.SendMessage(msg.ChannelID, "Your gfycat is processing, this may take a while. <a:ablobsleep:394026914290991116>")
 	session.ChannelTyping(msg.ChannelID)
 
 	if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {
@@ -117,6 +117,12 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 			_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+fmt.Sprintf("Error: `%s`.", errorMessage))
 		}
 		helpers.Relax(err)
+
+		if processMessages != nil && len(processMessages) > 0 {
+			for _, processMessage := range processMessages {
+				session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+			}
+		}
 		return
 	}
 
@@ -129,6 +135,12 @@ CheckGfycatStatusLoop:
 			if strings.Contains(err.Error(), "Expected status 200; Got 504") {
 				_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
 				helpers.Relax(err)
+
+				if processMessages != nil && len(processMessages) > 0 {
+					for _, processMessage := range processMessages {
+						session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+					}
+				}
 				return
 			}
 		}
@@ -137,6 +149,12 @@ CheckGfycatStatusLoop:
 			if strings.Contains(err.Error(), "unexpected end of JSON input") {
 				_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Parsing Error")+"\nPlease check the link or try again later.")
 				helpers.Relax(err)
+
+				if processMessages != nil && len(processMessages) > 0 {
+					for _, processMessage := range processMessages {
+						session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+					}
+				}
 				return
 			}
 		}
@@ -156,6 +174,12 @@ CheckGfycatStatusLoop:
 			cache.GetLogger().WithField("module", "gfycat").Errorf("Gfycat Status Error: %s (ID: %s)", result.String(), gfyName)
 			_, err := helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> ", msg.Author.ID)+helpers.GetTextF("bot.errors.general", "Gfycat Status Error")+"\nPlease check the link or try again later.")
 			helpers.Relax(err)
+
+			if processMessages != nil && len(processMessages) > 0 {
+				for _, processMessage := range processMessages {
+					session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+				}
+			}
 			return
 		}
 	}
@@ -164,6 +188,12 @@ CheckGfycatStatusLoop:
 
 	_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> Your gfycat is done: %s .", msg.Author.ID, gfycatUrl))
 	helpers.Relax(err)
+
+	if processMessages != nil && len(processMessages) > 0 {
+		for _, processMessage := range processMessages {
+			session.ChannelMessageDelete(processMessage.ChannelID, processMessage.ID)
+		}
+	}
 }
 
 func (m *Gfycat) getAccessToken() string {
