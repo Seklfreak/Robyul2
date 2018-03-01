@@ -824,7 +824,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 						if sourceEntry.GuildID == channel.GuildID {
 							for _, skippedRoleID := range sourceEntry.BlacklistedRoleIDs {
 								if skippedRoleID == guildRole.ID {
-									break NextSource
+									continue NextSource
 								}
 							}
 
