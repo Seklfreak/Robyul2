@@ -817,14 +817,14 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 		}
 	CheckRoles:
 		for _, guildRole := range guildRoles {
-		NextRole:
 			for _, userRole := range targetMember.Roles {
 				if guildRole.ID == userRole {
+				NextSource:
 					for _, sourceEntry := range rpSources {
 						if sourceEntry.GuildID == channel.GuildID {
 							for _, skippedRoleID := range sourceEntry.BlacklistedRoleIDs {
 								if skippedRoleID == guildRole.ID {
-									break NextRole
+									break NextSource
 								}
 							}
 
