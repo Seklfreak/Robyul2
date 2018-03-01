@@ -522,6 +522,8 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					var entryBucket DB_RandomPictures_Source
 					listCursor, err := rethink.Table("randompictures_sources").Filter(
 						rethink.Row.Field("guildid").Eq(channel.GuildID),
+					).Filter(
+						rethink.Row.Field("id").Eq(args[1]),
 					).Run(helpers.GetDB())
 					helpers.Relax(err)
 					defer listCursor.Close()
