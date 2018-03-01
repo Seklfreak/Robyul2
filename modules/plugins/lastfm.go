@@ -370,9 +370,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					Title:       lastTrackEmbedTitle,
 					URL:         lastTrack.Url,
 					Description: fmt.Sprintf("**%s** by **%s**", lastTrack.Name, lastTrack.Artist.Name),
-					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
-					Fields:      []*discordgo.MessageEmbedField{},
-					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Footer: &discordgo.MessageEmbedFooter{
+						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+						IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+					},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
 				}
 				if lastTrack.Album.Name != "" {
 					lastTrackEmbed.Fields = append(lastTrackEmbed.Fields, &discordgo.MessageEmbedField{Name: "Album", Value: lastTrack.Album.Name, Inline: true})
@@ -463,9 +466,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					Title:       helpers.GetTextF("plugins.lastfm.topalbums-embed-title", lastfmUsername),
 					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopAlbums.User),
 					Description: "of **" + timeString + "**",
-					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
-					Fields:      []*discordgo.MessageEmbedField{},
-					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Footer: &discordgo.MessageEmbedFooter{
+						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+						IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+					},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
 				}
 				for _, topAlbum := range lastfmTopAlbums.Albums {
 					topAlbumsEmbed.Fields = append(topAlbumsEmbed.Fields, &discordgo.MessageEmbedField{
@@ -541,9 +547,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					Title:       helpers.GetTextF("plugins.lastfm.topartists-embed-title", lastfmUsername),
 					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopArtists.User),
 					Description: "of **" + timeString + "**",
-					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
-					Fields:      []*discordgo.MessageEmbedField{},
-					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Footer: &discordgo.MessageEmbedFooter{
+						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+						IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+					},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
 				}
 				for _, topArtist := range lastfmTopArtists.Artists {
 					topArtistsEmbed.Fields = append(topArtistsEmbed.Fields, &discordgo.MessageEmbedField{
@@ -619,9 +628,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					Title:       helpers.GetTextF("plugins.lastfm.toptracks-embed-title", lastfmUsername),
 					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopTracks.User),
 					Description: "of **" + timeString + "**",
-					Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
-					Fields:      []*discordgo.MessageEmbedField{},
-					Color:       helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Footer: &discordgo.MessageEmbedFooter{
+						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+						IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+					},
+					Fields: []*discordgo.MessageEmbedField{},
+					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
 				}
 				for _, topTrack := range lastfmTopTracks.Tracks {
 					topTracksEmbed.Fields = append(topTracksEmbed.Fields, &discordgo.MessageEmbedField{
@@ -688,8 +700,13 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			topTracksEmbed := &discordgo.MessageEmbed{
 				Title:       helpers.GetTextF("plugins.lastfm.toptracks-embed-title", fmt.Sprintf("%s Server", guild.Name)),
 				Description: fmt.Sprintf("of **%s**", timeString),
-				Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("%s | %d last.fm users on this server",
-					helpers.GetText("plugins.lastfm.embed-footer"), combinedStats.NumberOfUsers)},
+				Footer: &discordgo.MessageEmbedFooter{
+					Text: fmt.Sprintf(
+						"%s | %d last.fm users on this server",
+						helpers.GetText("plugins.lastfm.embed-footer"),
+						combinedStats.NumberOfUsers),
+					IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+				},
 				Fields: []*discordgo.MessageEmbedField{},
 				Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
 			}
@@ -732,9 +749,12 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				embedTitle = helpers.GetTextF("plugins.lastfm.profile-embed-title-realname", lastfmUser.RealName, lastfmUser.Name)
 			}
 			accountEmbed := &discordgo.MessageEmbed{
-				Title:  embedTitle,
-				URL:    lastfmUser.Url,
-				Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.lastfm.embed-footer")},
+				Title: embedTitle,
+				URL:   lastfmUser.Url,
+				Footer: &discordgo.MessageEmbedFooter{
+					Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+					IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+				},
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Scrobbles", Value: humanize.Comma(int64(scrobblesCount)), Inline: true}},
 				Color: helpers.GetDiscordColorFromHex(lastfmHexColor),
