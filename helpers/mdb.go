@@ -118,7 +118,7 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 				Seconds:    took.Seconds(),
 				Type:       "insert",
 				Method:     "MDbInsert()",
-				Collection: collection.String(),
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Data:       fmt.Sprintf("%+v", data),
 			})
 			if err != nil {
@@ -177,7 +177,7 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 				Seconds:    took.Seconds(),
 				Type:       "update",
 				Method:     "MDbUpdate()",
-				Collection: collection.String(),
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Id:         id.String(),
 				Data:       fmt.Sprintf("%+v", data),
 			})
@@ -225,7 +225,7 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 				Seconds:    took.Seconds(),
 				Type:       "upsert",
 				Method:     "MDbUpsertID()",
-				Collection: collection.String(),
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Id:         id.String(),
 				Data:       fmt.Sprintf("%+v", data),
 			})
@@ -255,7 +255,7 @@ func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data i
 				Seconds:    took.Seconds(),
 				Type:       "upsert",
 				Method:     "MDbUpsert()",
-				Collection: collection.String(),
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Query:      fmt.Sprintf("%+v", selector),
 				Data:       fmt.Sprintf("%+v", data),
 			})
@@ -285,7 +285,7 @@ func MDbDelete(collection models.MongoDbCollection, id bson.ObjectId) (err error
 				Seconds:    took.Seconds(),
 				Type:       "remove",
 				Method:     "MDbDelete()",
-				Collection: collection.String(),
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Id:         id.String(),
 			})
 			if err != nil {
@@ -320,7 +320,7 @@ func MDbIter(query *mgo.Query) (iter *mgo.Iter) {
 				Seconds:    took.Seconds(),
 				Type:       "query",
 				Method:     "MdbIter()",
-				Collection: queryOp.FieldByName("collection").String(),
+				Collection: stripRobyulDatabaseFromCollection(queryOp.FieldByName("collection").String()),
 				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
 				Skip:       queryOp.FieldByName("skip").Int(),
 				Limit:      queryOp.FieldByName("limit").Int(),
@@ -348,7 +348,7 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 				Seconds:    took.Seconds(),
 				Type:       "query",
 				Method:     "MdbOne()",
-				Collection: queryOp.FieldByName("collection").String(),
+				Collection: stripRobyulDatabaseFromCollection(queryOp.FieldByName("collection").String()),
 				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
 				Skip:       queryOp.FieldByName("skip").Int(),
 				Limit:      queryOp.FieldByName("limit").Int(),
@@ -364,6 +364,10 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 func MdbOneWithoutLogging(query *mgo.Query, object interface{}) (err error) {
 	err = query.One(object)
 	return
+}
+
+func stripRobyulDatabaseFromCollection(input string) (output string) {
+	return strings.TrimPrefix(input, mDbDatabase+".")
 }
 
 type KeenMongoDbEvent struct {
