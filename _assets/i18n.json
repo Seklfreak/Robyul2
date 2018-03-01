@@ -439,7 +439,8 @@
       "pic-delay-dm": "Please wait a while until you can use this command again! <:blobshh:317044272161357824>",
       "pic-delay-ignore-channels-status": "Pic Delay is not active in the following channels: %s.",
       "pic-delay-ignore-channels-removed": "I removed the channel from the list of ignored channels.",
-      "pic-delay-ignore-channels-added": "I added the channel to the list of ignored channels."
+      "pic-delay-ignore-channels-added": "I added the channel to the list of ignored channels.",
+      "remove-success": "I successfully removed the source."
     },
     "customcommands": {
       "add-keyword-already-exists": "There is already a custom command with this keyword. <a:ablobweary:394026914479865856>",

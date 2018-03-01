@@ -81,7 +81,8 @@ const (
 	EventlogTypeRobyulStarboardDelete               = "Robyul_Starboard_Delete"                // EventlogTargetTypeChannel
 	EventlogTypeRobyulStarboardUpdate               = "Robyul_Starboard_Update"                // EventlogTargetTypeChannel
 	EventlogTypeRobyulRandomPictureSourceCreate     = "Robyul_RandomPicture_Source_Create"     // EventlogTargetTypeRobyulRandomPictureSource
-	EventlogTypeRobyulRandomPictureConfigUpdate     = "Robyul_RandomPicture_Config_Update"     // EventlogTargetTypeGuild
+	EventlogTypeRobyulRandomPictureConfigUpdate     = "Robyul_RandomPicture_Config_Update"     // EventlogTargetTypeRobyulRandomPictureSource
+	EventlogTypeRobyulRandomPictureSourceRemove     = "Robyul_RandomPicture_Source_Remove"     // EventlogTargetTypeRobyulRandomPictureSource
 	EventlogTypeRobyulCommandsAdd                   = "Robyul_Commands_Add"                    // EventlogTargetTypeGuild
 	EventlogTypeRobyulCommandsDelete                = "Robyul_Commands_Delete"                 // EventlogTargetTypeGuild
 	EventlogTypeRobyulCommandsUpdate                = "Robyul_Commands_Update"                 // EventlogTargetTypeGuild

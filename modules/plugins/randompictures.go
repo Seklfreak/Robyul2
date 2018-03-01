@@ -32,11 +32,12 @@ import (
 type RandomPictures struct{}
 
 type DB_RandomPictures_Source struct {
-	ID               string   `gorethink:"id,omitempty"`
-	GuildID          string   `gorethink:"guildid"`
-	PostToChannelIDs []string `gorethink:"post_to_channelids"`
-	DriveFolderIDs   []string `gorethink:"drive_folderids"`
-	Aliases          []string `gorethink:"aliases"`
+	ID                 string   `gorethink:"id,omitempty"`
+	GuildID            string   `gorethink:"guildid"`
+	PostToChannelIDs   []string `gorethink:"post_to_channelids"`
+	DriveFolderIDs     []string `gorethink:"drive_folderids"`
+	Aliases            []string `gorethink:"aliases"`
+	BlacklistedRoleIDs []string `gorethink:"blacklisted_role_ids"`
 }
 
 var (
@@ -350,9 +351,13 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					channel, err := helpers.GetChannel(msg.ChannelID)
 					helpers.Relax(err)
 
+					guild, err := helpers.GetGuild(channel.GuildID)
+					helpers.Relax(err)
+
 					postToChannelIDs := make([]string, 0)
 					driveFolderIDs := make([]string, 0)
 					aliases := make([]string, 0)
+					blacklistedRoleIDs := make([]string, 0)
 					data := helpers.ParseKeyValueString(
 						strings.TrimSpace(strings.Replace(content, args[0], "", 1)),
 					)
@@ -387,6 +392,18 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							aliases = append(aliases, parsedAlias)
 						}
 					}
+					if blacklistedRoleIDsText, ok := data["skiproles"]; ok {
+						blacklistedRoleIDsParsed := strings.Split(blacklistedRoleIDsText, ",")
+						for _, parsedRoleID := range blacklistedRoleIDsParsed {
+							parsedRoleID = strings.TrimSpace(parsedRoleID)
+							for _, guildRole := range guild.Roles {
+								if guildRole.ID == parsedRoleID {
+									blacklistedRoleIDs = append(blacklistedRoleIDs, parsedRoleID)
+									break
+								}
+							}
+						}
+					}
 
 					if len(aliases) <= 0 || len(driveFolderIDs) <= 0 {
 						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -395,10 +412,11 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					}
 
 					insert := rethink.Table("randompictures_sources").Insert(DB_RandomPictures_Source{
-						PostToChannelIDs: postToChannelIDs,
-						DriveFolderIDs:   driveFolderIDs,
-						Aliases:          aliases,
-						GuildID:          channel.GuildID,
+						PostToChannelIDs:   postToChannelIDs,
+						DriveFolderIDs:     driveFolderIDs,
+						Aliases:            aliases,
+						GuildID:            channel.GuildID,
+						BlacklistedRoleIDs: blacklistedRoleIDs,
 					})
 					inserted, err := insert.RunWrite(helpers.GetDB())
 					helpers.Relax(err)
@@ -419,6 +437,10 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompicture_source_aliases",
 								Value: strings.Join(aliases, ","),
+							},
+							{
+								Key:   "randompicture_source_blacklistedroleids",
+								Value: strings.Join(blacklistedRoleIDs, ","),
 							},
 						}, false)
 					helpers.RelaxLog(err)
@@ -464,8 +486,12 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							totalCachedImages += pictureCount
 						}
 
-						listText += fmt.Sprintf(":arrow_forward: `%s`: on %s (#%s), %d Aliases, %d Folders, %d Channels, %s\n",
-							rpSource.ID, rpSourceGuild.Name, rpSourceGuild.ID, len(rpSource.Aliases), len(rpSource.DriveFolderIDs), len(rpSource.PostToChannelIDs), cacheText)
+						listText += fmt.Sprintf(":arrow_forward: `%s`: on %s (`#%s`), %d Aliases (`%s`), %d Folders, %d Channels, %d Skipped Roles, %s\n",
+							rpSource.ID, rpSourceGuild.Name, rpSourceGuild.ID,
+							len(rpSource.Aliases), strings.Join(rpSource.Aliases, ","),
+							len(rpSource.DriveFolderIDs),
+							len(rpSource.PostToChannelIDs), len(rpSource.BlacklistedRoleIDs),
+							cacheText)
 						totalSources += 1
 					}
 
@@ -480,6 +506,64 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						_, err = helpers.SendMessage(msg.ChannelID, page)
 						helpers.Relax(err)
 					}
+				})
+				return
+			case "delete-config", "remove-config": // [p]randompictures delete-config <source id>
+				helpers.RequireAdminOrStaff(msg, func() {
+					if len(args) < 2 {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+						return
+					}
+					session.ChannelTyping(msg.ChannelID)
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
+					var entryBucket DB_RandomPictures_Source
+					listCursor, err := rethink.Table("randompictures_sources").Filter(
+						rethink.Row.Field("guildid").Eq(channel.GuildID),
+					).Run(helpers.GetDB())
+					helpers.Relax(err)
+					defer listCursor.Close()
+					err = listCursor.One(&entryBucket)
+
+					if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						return
+					}
+					helpers.Relax(err)
+
+					_, err = rethink.Table("randompictures_sources").Filter(
+						rethink.Row.Field("id").Eq(entryBucket.ID),
+					).Delete().RunWrite(helpers.GetDB())
+					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, entryBucket.ID,
+						models.EventlogTargetTypeRobyulRandomPictureSource, msg.Author.ID,
+						models.EventlogTypeRobyulRandomPictureSourceRemove, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "randompicture_source_posttochannelids",
+								Value: strings.Join(entryBucket.PostToChannelIDs, ","),
+							},
+							{
+								Key:   "randompicture_source_drivefolderids",
+								Value: strings.Join(entryBucket.DriveFolderIDs, ","),
+							},
+							{
+								Key:   "randompicture_source_aliases",
+								Value: strings.Join(entryBucket.Aliases, ","),
+							},
+							{
+								Key:   "randompicture_source_blacklistedroleids",
+								Value: strings.Join(entryBucket.BlacklistedRoleIDs, ","),
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.remove-success"))
+					return
 				})
 				return
 			case "refresh": // [p]randompictures refresh <source id>
@@ -699,14 +783,20 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 			}
 		}
 	} else { // match roles
-		guildRoles, err := cache.GetSession().GuildRoles(channel.GuildID)
-		if err != nil {
-			if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 50013 {
-				guildRoles = []*discordgo.Role{}
-			} else {
-				return false, err
+		var err error
+		guildRoles := make([]*discordgo.Role, 0)
+		if helpers.GetMemberPermissions(channel.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionManageRoles == discordgo.PermissionManageRoles ||
+			helpers.GetMemberPermissions(channel.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+			guildRoles, err = cache.GetSession().GuildRoles(channel.GuildID)
+			if err != nil {
+				if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeMissingPermissions {
+					guildRoles = []*discordgo.Role{}
+				} else {
+					return false, err
+				}
 			}
 		}
+
 		targetMember, err := cache.GetSession().State.Member(channel.GuildID, msg.Author.ID)
 		if err != nil {
 			return false, err
@@ -725,10 +815,17 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 		}
 	CheckRoles:
 		for _, guildRole := range guildRoles {
+		NextRole:
 			for _, userRole := range targetMember.Roles {
 				if guildRole.ID == userRole {
 					for _, sourceEntry := range rpSources {
 						if sourceEntry.GuildID == channel.GuildID {
+							for _, skippedRoleID := range sourceEntry.BlacklistedRoleIDs {
+								if skippedRoleID == guildRole.ID {
+									break NextRole
+								}
+							}
+
 							for _, alias := range sourceEntry.Aliases {
 								if strings.Contains(strings.ToLower(guildRole.Name), strings.ToLower(alias)) {
 									matchEntry = sourceEntry
