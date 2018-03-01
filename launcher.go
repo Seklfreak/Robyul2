@@ -309,7 +309,7 @@ func main() {
 
 			discordFriend.Lock()
 			discordFriend.Debug = false
-			discordFriend.LogLevel = discordgo.LogInformational
+			discordFriend.LogLevel = discordgo.LogError
 			discordFriend.StateEnabled = true
 			discordFriend.Unlock()
 
