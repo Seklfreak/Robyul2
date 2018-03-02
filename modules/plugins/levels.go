@@ -2,8 +2,6 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -11,11 +9,11 @@ import (
 	"image/color"
 	"image/draw"
 	"image/gif"
+	_ "image/jpeg"
 	"image/png"
 	"io/ioutil"
 	"math"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -530,13 +528,129 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
-			case "background":
+			case "background", "backgrounds":
 				if len(args) < 2 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
+					if len(msg.Attachments) <= 0 {
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+
+					quitChannel := helpers.StartTypingLoop(msg.ChannelID)
+					defer func() { quitChannel <- 0 }()
+
+					// <= 2 MB, 400x300px?
+					if msg.Attachments[0].Size > 2e+6 || msg.Attachments[0].Width != 400 || msg.Attachments[0].Height != 300 {
+						quitChannel <- 0
+						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-wrong-dimensions"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+
+					bytesData, err := helpers.NetGetUAWithErrorAndTimeout(msg.Attachments[0].URL, helpers.DEFAULT_UA, time.Second*15)
+					helpers.Relax(err)
+
+					imageConfig, _, err := image.DecodeConfig(bytes.NewReader(bytesData))
+					helpers.Relax(err)
+
+					// check 400x300px again on Robyul
+					if imageConfig.Width != 400 || imageConfig.Height != 300 {
+						quitChannel <- 0
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-wrong-dimensions"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+
+					if !helpers.PictureIsSafe(bytes.NewReader(bytesData)) {
+						quitChannel <- 0
+
+						go func() {
+							logChannelID, _ := helpers.GetBotConfigString(models.UserProfileBackgroundLogChannelKey)
+							if logChannelID != "" {
+								err = m.logUserBackgroundNotSafe(logChannelID, msg.ChannelID, msg.Author.ID, msg.Attachments[0].URL)
+								helpers.RelaxLog(err)
+							}
+						}()
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-not-safe"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+
+					backgroundUrl, err := helpers.UploadImage(bytesData)
+					if err != nil {
+						helpers.RelaxLog(err)
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-upload-failed"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+
+					userUserdata, err := m.GetUserUserdata(msg.Author)
+					helpers.Relax(err)
+					userUserdata.Background = backgroundUrl
+					_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+					helpers.Relax(err)
+
+					go func() {
+						logChannelID, _ := helpers.GetBotConfigString(models.UserProfileBackgroundLogChannelKey)
+						if logChannelID != "" {
+							err = m.logUserBackgroundSet(logChannelID, msg.ChannelID, msg.Author.ID, backgroundUrl)
+							helpers.RelaxLog(err)
+						}
+					}()
+
+					quitChannel <- 0
+					_, err = helpers.SendMessage(msg.ChannelID,
+						helpers.GetTextF("plugins.levels.user-background-success",
+							helpers.GetPrefixForServer(channel.GuildID)))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
 				switch args[1] {
+				case "reset":
+					helpers.RequireRobyulMod(msg, func() {
+						if len(args) < 3 {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							return
+						}
+
+						userToReset, err := helpers.GetUserFromMention(args[2])
+						helpers.Relax(err)
+
+						userUserdata, err := m.GetUserUserdata(userToReset)
+						helpers.Relax(err)
+						userUserdata.Background = ""
+						_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+						helpers.Relax(err)
+
+						_, err = helpers.SendMessage(msg.ChannelID,
+							helpers.GetTextF("plugins.levels.user-reset-success",
+								userToReset.Username))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					})
+					return
+				case "set-log":
+					helpers.RequireRobyulMod(msg, func() {
+						var err error
+						var targetChannel *discordgo.Channel
+
+						if len(args) >= 3 {
+							targetChannel, err = helpers.GetChannelFromMention(msg, args[2])
+							helpers.Relax(err)
+						}
+
+						if targetChannel != nil && targetChannel.ID != "" {
+							err = helpers.SetBotConfigString(models.UserProfileBackgroundLogChannelKey, targetChannel.ID)
+						} else {
+							err = helpers.SetBotConfigString(models.UserProfileBackgroundLogChannelKey, "")
+						}
+
+						_, err = helpers.SendMessage(msg.ChannelID,
+							helpers.GetText("plugins.levels.background-setlog-success"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					})
+					return
 				case "add":
 					helpers.RequireRobyulMod(msg, func() {
 						if len(args) < 5 {
@@ -579,7 +693,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 							return
 						}
-						backgroundUrl, err = m.uploadToImgur(picData)
+						backgroundUrl, err = helpers.UploadImage(picData)
 						if err != nil {
 							if strings.Contains(err.Error(), "Invalid URL") {
 								_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
@@ -716,7 +830,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 								return
 							}
-							newBadge.URL, err = m.uploadToImgur(picData)
+							newBadge.URL, err = helpers.UploadImage(picData)
 							if err != nil {
 								if strings.Contains(err.Error(), "Invalid URL") {
 									_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
@@ -2965,6 +3079,10 @@ func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
 		err = listCursor.One(&entryBucket)
 
 		if err == rethink.ErrEmptyResult {
+			if strings.HasPrefix(backgroundName, "http") {
+				return backgroundName
+			}
+
 			return "http://i.imgur.com/I9b74U9.jpg" // Default Robyul Background
 		} else if err != nil {
 			helpers.Relax(err)
@@ -4031,30 +4149,6 @@ func (b *Levels) OnMessageDelete(msg *discordgo.MessageDelete, session *discordg
 
 }
 
-func (l *Levels) uploadToImgur(picData []byte) (string, error) {
-	parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(picData)}}
-
-	req, err := http.NewRequest("POST", imgurApiUploadBaseUrl, strings.NewReader(parameters.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Client-ID "+helpers.GetConfig().Path("imgur.client_id").Data().(string))
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-
-	var imgurResponse ImgurResponse
-	json.NewDecoder(res.Body).Decode(&imgurResponse)
-	if imgurResponse.Success == false {
-		return "", errors.New(fmt.Sprintf("Imgur API Error: %d (%s)", imgurResponse.Status, fmt.Sprintf("%#v", imgurResponse.Data.Error)))
-	} else {
-		cache.GetLogger().WithField("module", "levels").Info("uploaded a picture to imgur: " + imgurResponse.Data.Link)
-		return imgurResponse.Data.Link, nil
-	}
-}
-
 func (l *Levels) createLevelsRoleEntry(
 	guildID string,
 	roleID string,
@@ -4398,4 +4492,85 @@ func (l *Levels) unlockRepUser(userID string) {
 	if _, ok := repCommandLocks[userID]; ok {
 		repCommandLocks[userID].Unlock()
 	}
+}
+
+func (m *Levels) logUserBackgroundNotSafe(targetChannelID, sourceChannelID, userID, backgroundUrl string) (err error) {
+	author, err := helpers.GetUser(userID)
+	if err != nil {
+		return err
+	}
+
+	channel, err := helpers.GetChannel(sourceChannelID)
+	if err != nil {
+		return err
+	}
+
+	guild, err := helpers.GetGuild(channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	_, err = helpers.SendEmbed(targetChannelID, &discordgo.MessageEmbed{
+		URL:   backgroundUrl,
+		Title: "Background got rejected because it's not safe ❌",
+		Color: 0,
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("In #%s (#%s) on %s (#%s)",
+				channel.Name, channel.ID,
+				guild.Name, guild.ID),
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: backgroundUrl,
+		},
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    author.Username + "#" + author.Discriminator + " (#" + author.ID + ")",
+			IconURL: author.AvatarURL("64"),
+		},
+	})
+
+	return nil
+}
+
+func (m *Levels) logUserBackgroundSet(targetChannelID, sourceChannelID, userID, backgroundUrl string) (err error) {
+	author, err := helpers.GetUser(userID)
+	if err != nil {
+		return err
+	}
+
+	channel, err := helpers.GetChannel(sourceChannelID)
+	if err != nil {
+		return err
+	}
+
+	guild, err := helpers.GetGuild(channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	_, err = helpers.SendEmbed(targetChannelID, &discordgo.MessageEmbed{
+		URL:   backgroundUrl,
+		Title: "Background got accepted ✅",
+		Color: 0,
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("In #%s (#%s) on %s (#%s)",
+				channel.Name, channel.ID,
+				guild.Name, guild.ID),
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: backgroundUrl,
+		},
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    author.Username + "#" + author.Discriminator + " (#" + author.ID + ")",
+			IconURL: author.AvatarURL("64"),
+		},
+		Fields: []*discordgo.MessageEmbedField{{
+			Name: "Reset background:",
+			Value: fmt.Sprintf("`%sprofile background reset %s`",
+				helpers.GetPrefixForServer(guild.ID),
+				author.ID),
+			Inline: false,
+		}},
+	})
+
+	return nil
 }

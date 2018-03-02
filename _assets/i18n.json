@@ -407,7 +407,13 @@
       "roles-grant-create-success": "I granted the user the user `%s` (`#%s`) the role `%s` (`#%s`).",
       "roles-deny-error-denying": "You are already granting this user this role.",
       "roles-deny-remove-success": "I removed the role deny for the user `%s` (`#%s`) for the role `%s` (`#%s`).",
-      "roles-deny-create-success": "I denied the user the user `%s` (`#%s`) the role `%s` (`#%s`)."
+      "roles-deny-create-success": "I denied the user the user `%s` (`#%s`) the role `%s` (`#%s`).",
+      "user-background-wrong-dimensions": "The picture does not fit the requirements. <a:ablobweary:394026914479865856>\nPlease upload a 400x300px smaller than 2MB picture.",
+      "user-background-not-safe": "Looks like your picture might contain explicit content. <a:ablobshocked:394026914076950539>\nIf this is a false alarm please contact a Staff member: <https://discord.is/Robyul>.",
+      "user-background-success": "I successfully set your new background! <a:ablobsunglasses:393869335657054210> \nCheck it out: `%sprofile`!",
+      "background-setlog-success": "I set the background log channel!",
+      "user-background-upload-failed": "Something went wrong trying to process your image. <a:ablobcry:393869333740126219>\nPlease try it again in a few minutes.",
+      "user-reset-success": "The background for %s has been reset."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

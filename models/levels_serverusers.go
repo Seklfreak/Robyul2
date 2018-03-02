@@ -6,6 +6,8 @@ import (
 
 const (
 	LevelsServerusersTable MongoDbCollection = "levels_serverusers"
+
+	UserProfileBackgroundLogChannelKey = "profile-background:log:channel-id"
 )
 
 type LevelsServerusersEntry struct {
