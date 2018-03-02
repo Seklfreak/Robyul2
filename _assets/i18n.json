@@ -59,7 +59,8 @@
     "errors": {
       "general": "Unexpected error: `%s`",
       "no-embed": "Please give me the `Embed Links` permission in this channel. <:googlenerd:317030369205682186>",
-      "generic-nomessage": "Something went terribly wrong. <a:ablobweary:394026914479865856>"
+      "generic-nomessage": "Something went terribly wrong. <a:ablobweary:394026914479865856>",
+      "useruploads-disabled": "You are not allowed to upload files.\nContact a Robyul Moderator to find out why: <https://discord.is/Robyul>."
     },
     "permissions": {
       "required": "Please give me the `%s` permission to use this feature. <:googlenerd:317030369205682186>"
@@ -674,6 +675,9 @@
     },
     "spoiler": {
       "error-generic": "I'm sorry, I wasn't able to create the spoiler. Please try it again later. <a:ablobcry:393869333740126219>"
+    },
+    "useruploads": {
+      "disable-success": "I disabled useruploads for this user."
     }
   }
 }

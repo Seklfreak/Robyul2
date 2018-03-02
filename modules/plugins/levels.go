@@ -539,6 +539,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					quitChannel := helpers.StartTypingLoop(msg.ChannelID)
 					defer func() { quitChannel <- 0 }()
 
+					if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+						quitChannel <- 0
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+
 					// <= 2 MB, 400x300px?
 					if msg.Attachments[0].Size > 2e+6 || msg.Attachments[0].Width != 400 || msg.Attachments[0].Height != 300 {
 						quitChannel <- 0
@@ -683,6 +690,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
+						if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
 						picData, err := helpers.NetGetUAWithError(backgroundUrl, helpers.DEFAULT_UA)
 						if err != nil {
 							if _, ok := err.(*url.Error); ok {
@@ -787,6 +800,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 7 {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+								return
+							}
+
+							if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+								_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
@@ -4563,13 +4582,22 @@ func (m *Levels) logUserBackgroundSet(targetChannelID, sourceChannelID, userID, 
 			Name:    author.Username + "#" + author.Discriminator + " (#" + author.ID + ")",
 			IconURL: author.AvatarURL("64"),
 		},
-		Fields: []*discordgo.MessageEmbedField{{
-			Name: "Reset background:",
-			Value: fmt.Sprintf("`%sprofile background reset %s`",
-				helpers.GetPrefixForServer(guild.ID),
-				author.ID),
-			Inline: false,
-		}},
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name: "Reset background:",
+				Value: fmt.Sprintf("`%sprofile background reset %s`",
+					helpers.GetPrefixForServer(guild.ID),
+					author.ID),
+				Inline: false,
+			},
+			{
+				Name: "Disable uploads for this user:",
+				Value: fmt.Sprintf("`%suseruploads disable %s`",
+					helpers.GetPrefixForServer(guild.ID),
+					author.ID),
+				Inline: false,
+			},
+		},
 	})
 
 	return nil

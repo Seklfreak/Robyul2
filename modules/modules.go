@@ -60,6 +60,7 @@ var (
 		&plugins.Feedback{},
 		&plugins.DM{},
 		&plugins.EmbedPost{},
+		&plugins.Useruploads{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
