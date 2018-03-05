@@ -41,19 +41,19 @@ func PictureIsSafe(reader io.Reader) (safe bool) {
 		return false
 	}
 
-	if safeData.GetAdult() == vision2.Likelihood_LIKELY || safeData.GetAdult() == vision2.Likelihood_VERY_LIKELY {
+	if safeData.GetAdult() == vision2.Likelihood_VERY_LIKELY {
 		return false
 	}
 
-	if safeData.GetMedical() == vision2.Likelihood_LIKELY || safeData.GetMedical() == vision2.Likelihood_VERY_LIKELY {
+	if safeData.GetMedical() == vision2.Likelihood_VERY_LIKELY {
 		return false
 	}
 
-	if safeData.GetViolence() == vision2.Likelihood_LIKELY || safeData.GetViolence() == vision2.Likelihood_VERY_LIKELY {
+	if safeData.GetViolence() == vision2.Likelihood_VERY_LIKELY {
 		return false
 	}
 
-	if safeData.GetRacy() == vision2.Likelihood_LIKELY || safeData.GetRacy() == vision2.Likelihood_VERY_LIKELY {
+	if safeData.GetRacy() == vision2.Likelihood_VERY_LIKELY {
 		return false
 	}
 
