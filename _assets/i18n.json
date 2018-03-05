@@ -224,7 +224,8 @@
       "toptracks-embed-title": "%s Top Tracks",
       "set-username-success": "You set `%s` as your username. <:blobsalute:317043033004703744>\n(This is saved across servers.)",
       "no-stats-available": "No stats available on this server yet. <a:ablobweary:394026914479865856>",
-      "embed-footer-imageurl": "https://i.imgur.com/p8wijg4.png"
+      "embed-footer-imageurl": "https://i.imgur.com/p8wijg4.png",
+      "lastfm-no-youtube": "YouTube is currently not available.\nPlease try again later."
     },
     "weather": {
       "address-not-found": "I can't find the location you are looking for. <:blobthinking:317028940885524490>",

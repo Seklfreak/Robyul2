@@ -10,6 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/services/youtube"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
@@ -20,8 +21,9 @@ import (
 type LastFm struct{}
 
 const (
-	lastfmHexColor     = "#d51007"
-	lastfmFriendlyUser = "https://www.last.fm/user/%s"
+	lastfmHexColor           = "#d51007"
+	lastfmFriendlyUser       = "https://www.last.fm/user/%s"
+	lastfmYouTubeFriendlyUrl = "https://youtu.be/%s"
 )
 
 var (
@@ -399,7 +401,65 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						Inline: false,
 					})
 				}
+				if youtube.HasYouTubeService() {
+					searchResult, err := youtube.GetYouTubeService().SearchQuerySingle(
+						[]string{lastTrack.Artist.Name, lastTrack.Name}, "video")
+					helpers.RelaxLog(err)
+					if err == nil && searchResult != nil && searchResult.Snippet != nil {
+						lastTrackEmbed.Description += "\navailable on [YouTube](" + fmt.Sprintf(lastfmYouTubeFriendlyUrl, searchResult.Id.VideoId) + ")"
+						lastTrackEmbed.Footer.Text += " and YouTube"
+					}
+				}
 				_, err = helpers.SendEmbed(msg.ChannelID, lastTrackEmbed)
+				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+			} else {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
+				return
+			}
+		case "yt", "youtube":
+			if !youtube.HasYouTubeService() {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("lastfm.no-youtube"))
+				return
+			}
+			if len(args) >= 2 {
+				lastfmUsername = args[1]
+				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
+				if err == nil {
+					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+				}
+			}
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			if lastfmUsername == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few", helpers.GetPrefixForServer(channel.GuildID)))
+				return
+			}
+			session.ChannelTyping(msg.ChannelID)
+			lastfmRecentTracks, err := lastfmClient.User.GetRecentTracks(lastfm.P{
+				"limit": 2,
+				"user":  lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			if err != nil {
+				if e, ok := err.(*lastfm.LastfmError); ok {
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					return
+				}
+			}
+			if lastfmRecentTracks.Total > 0 {
+				lastTrack := lastfmRecentTracks.Tracks[0]
+				searchResult, err := youtube.GetYouTubeService().SearchQuerySingle(
+					[]string{lastTrack.Artist.Name, lastTrack.Name}, "video")
+				helpers.RelaxLog(err)
+				if err != nil || searchResult == nil || searchResult.Snippet == nil {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("lastfm.no-youtube"))
+					return
+				}
+				messageContent := "**" + searchResult.Snippet.Title + "** on " + searchResult.Snippet.ChannelTitle + "\n"
+				messageContent += fmt.Sprintf(lastfmYouTubeFriendlyUrl, searchResult.Id.VideoId)
+				_, err = helpers.SendMessage(msg.ChannelID, messageContent)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			} else {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))

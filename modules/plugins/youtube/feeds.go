@@ -5,20 +5,21 @@ import (
 	"sync/atomic"
 	"time"
 
+	youtubeService "github.com/Seklfreak/Robyul2/services/youtube"
+
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/sirupsen/logrus"
 )
 
 type feeds struct {
-	service *service.Service
+	service *youtubeService.Service
 	running uint32
 }
 
-func (f *feeds) Init(e *service.Service) {
+func (f *feeds) Init(e *youtubeService.Service) {
 	if e == nil {
 		helpers.Relax(fmt.Errorf("feeds loop initialize failed"))
 	}

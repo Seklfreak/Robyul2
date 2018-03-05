@@ -7,13 +7,13 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/Seklfreak/Robyul2/modules/plugins/youtube/service"
+	youtubeService "github.com/Seklfreak/Robyul2/services/youtube"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 )
 
 type Handler struct {
-	service   service.Service
+	service   youtubeService.Service
 	feedsLoop feeds
 }
 
@@ -39,6 +39,7 @@ func (h *Handler) Init(session *discordgo.Session) {
 
 	h.service.Init(youtubeConfigFileName)
 	h.feedsLoop.Init(&h.service)
+	youtubeService.SetYouTubeService(&h.service)
 }
 
 func (h *Handler) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

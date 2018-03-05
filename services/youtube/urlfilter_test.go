@@ -1,4 +1,4 @@
-package service
+package youtube
 
 import "testing"
 
