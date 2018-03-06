@@ -1871,31 +1871,32 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"guildid": channel.GuildID, "userid": targetUser.ID}),
 					&thislevelUser,
 				)
-				helpers.Relax(err)
-
-				serverRank := "N/A"
-				rank := 1
-				for _, serverCache := range topCache {
-					if serverCache.GuildID == channel.GuildID {
-						for _, pair := range serverCache.Levels {
-							if _, err = helpers.GetGuildMemberWithoutApi(serverCache.GuildID, pair.Key); err != nil {
-								continue
+				if err == nil && thislevelUser.ID.Valid() {
+					serverRank := "N/A"
+					rank := 1
+					for _, serverCache := range topCache {
+						if serverCache.GuildID == channel.GuildID {
+							for _, pair := range serverCache.Levels {
+								if _, err = helpers.GetGuildMemberWithoutApi(serverCache.GuildID, pair.Key); err != nil {
+									continue
+								}
+								if pair.Key == targetUser.ID {
+									// substract skipped members to ignore users that left in the ranking
+									serverRank = strconv.Itoa(rank)
+									break
+								}
+								rank++
 							}
-							if pair.Key == targetUser.ID {
-								// substract skipped members to ignore users that left in the ranking
-								serverRank = strconv.Itoa(rank)
-								break
-							}
-							rank++
 						}
 					}
-				}
 
-				topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
-					Name:   "Your Rank: " + serverRank,
-					Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(thislevelUser.Exp)),
-					Inline: false,
-				})
+					topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
+						Name:   "Your Rank: " + serverRank,
+						Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(thislevelUser.Exp)),
+						Inline: false,
+					})
+
+				}
 
 				if guild.Icon != "" {
 					topLevelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: discordgo.EndpointGuildIcon(guild.ID, guild.Icon)}
