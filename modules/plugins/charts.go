@@ -757,13 +757,10 @@ func (m *Charts) GetIChartRealtimeStats() (string, []GenericSongScore, bool, boo
 }
 
 func (m *Charts) IChartInMaintenance(doc *goquery.Document) bool {
-	isMaintenance := false
-	doc.Find("script").Each(func(_ int, s *goquery.Selection) {
-		if strings.Contains(s.Text(), "www.instiz.net/index.htm") { // maintenance
-			isMaintenance = true
-		}
-	})
-	return isMaintenance
+	if strings.Contains(doc.Text(), "서버 점검으로 인해 현재 서비스가 일시 중단되었습니다") { // maintenance
+		return true
+	}
+	return false
 }
 
 func (m *Charts) IChartOverloaded(doc *goquery.Document) bool {
