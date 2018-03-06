@@ -7,8 +7,6 @@ import (
 
 	"strconv"
 
-	"fmt"
-
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -635,7 +633,6 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 	}
 
 	if !ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
-		fmt.Println("permission overwrites changed")
 		// TODO: handle permission overwrites
 		/*
 			changes = append(changes, models.ElasticEventlogChange{
