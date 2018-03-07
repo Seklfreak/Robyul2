@@ -613,6 +613,56 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 				switch args[1] {
+				// [p]profile background force <@user or user id> <<image url>|+ ATTACHMENT>
+				case "force":
+					helpers.RequireRobyulMod(msg, func() {
+						if !((len(args) >= 3 && len(msg.Attachments) > 0) || len(args) >= 4) {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+							return
+						}
+
+						sourceUrl := args[len(args)-1]
+						if len(msg.Attachments) > 0 {
+							sourceUrl = msg.Attachments[0].URL
+						}
+
+						userToChange, err := helpers.GetUserFromMention(args[2])
+						helpers.Relax(err)
+
+						bytesData, err := helpers.NetGetUAWithErrorAndTimeout(sourceUrl, helpers.DEFAULT_UA, time.Second*15)
+						helpers.Relax(err)
+
+						imageConfig, _, err := image.DecodeConfig(bytes.NewReader(bytesData))
+						helpers.Relax(err)
+
+						// check 400x300px again on Robyul
+						if imageConfig.Width != 400 || imageConfig.Height != 300 {
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-wrong-dimensions"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						backgroundUrl, err := helpers.UploadImage(bytesData)
+						if err != nil {
+							helpers.RelaxLog(err)
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-upload-failed"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						userUserdata, err := m.GetUserUserdata(userToChange)
+						helpers.Relax(err)
+						userUserdata.Background = backgroundUrl
+						_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+						helpers.Relax(err)
+
+						_, err = helpers.SendMessage(msg.ChannelID,
+							helpers.GetTextF("plugins.levels.user-force-background-success",
+								userToChange.Username))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					})
+					return
 				case "reset":
 					helpers.RequireRobyulMod(msg, func() {
 						if len(args) < 3 {
@@ -4530,6 +4580,11 @@ func (m *Levels) logUserBackgroundNotSafe(targetChannelID, sourceChannelID, user
 		return err
 	}
 
+	targetChannel, err := helpers.GetChannel(targetChannelID)
+	if err != nil {
+		return err
+	}
+
 	_, err = helpers.SendEmbed(targetChannelID, &discordgo.MessageEmbed{
 		URL:   backgroundUrl,
 		Title: "Background got rejected because it's not safe ❌",
@@ -4545,6 +4600,16 @@ func (m *Levels) logUserBackgroundNotSafe(targetChannelID, sourceChannelID, user
 		Author: &discordgo.MessageEmbedAuthor{
 			Name:    author.Username + "#" + author.Discriminator + " (#" + author.ID + ")",
 			IconURL: author.AvatarURL("64"),
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name: "Override the background:",
+				Value: fmt.Sprintf("`%sprofile background force %s %s`",
+					helpers.GetPrefixForServer(targetChannel.GuildID),
+					author.ID,
+					backgroundUrl),
+				Inline: false,
+			},
 		},
 	})
 
@@ -4563,6 +4628,11 @@ func (m *Levels) logUserBackgroundSet(targetChannelID, sourceChannelID, userID, 
 	}
 
 	guild, err := helpers.GetGuild(channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	targetChannel, err := helpers.GetChannel(targetChannelID)
 	if err != nil {
 		return err
 	}
@@ -4587,14 +4657,14 @@ func (m *Levels) logUserBackgroundSet(targetChannelID, sourceChannelID, userID, 
 			{
 				Name: "Reset background:",
 				Value: fmt.Sprintf("`%sprofile background reset %s`",
-					helpers.GetPrefixForServer(guild.ID),
+					helpers.GetPrefixForServer(targetChannel.GuildID),
 					author.ID),
 				Inline: false,
 			},
 			{
 				Name: "Disable uploads for this user:",
 				Value: fmt.Sprintf("`%suseruploads disable %s`",
-					helpers.GetPrefixForServer(guild.ID),
+					helpers.GetPrefixForServer(targetChannel.GuildID),
 					author.ID),
 				Inline: false,
 			},

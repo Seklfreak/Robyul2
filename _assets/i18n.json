@@ -419,7 +419,8 @@
       "user-background-success": "I successfully set your new background! <a:ablobsunglasses:393869335657054210> \nCheck it out: `%sprofile`!",
       "background-setlog-success": "I set the background log channel!",
       "user-background-upload-failed": "Something went wrong trying to process your image. <a:ablobcry:393869333740126219>\nPlease try it again in a few minutes.",
-      "user-reset-success": "The background for %s has been reset."
+      "user-reset-success": "The background for %s has been reset.",
+      "user-force-background-success": "The background for %s has been set."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
