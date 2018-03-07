@@ -32,6 +32,12 @@
   revision = "c5a927568de7aad8a58127d80bcd36ca4e71e454"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/CleverbotIO/go-cleverbot.io"
+  packages = ["."]
+  revision = "d24926702e8da9eab3a8dbd0823c1cecd3a80344"
+
+[[projects]]
   name = "github.com/Jeffail/gabs"
   packages = ["."]
   revision = "2a3aa15961d5fee6047b8151b67ac2f08ba2c48c"
@@ -803,6 +809,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "39a228cad1d00537e12ff3075a49adf2d1012ee03668c883decd9c0d00e61321"
+  inputs-digest = "86918259914bd8207c41d8eff462323385a05fecbec3e2311755f55568488909"
   solver-name = "gps-cdcl"
   solver-version = 1

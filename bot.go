@@ -401,7 +401,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
 
 			// Send to cleverbot
-			helpers.ChatbotSend(session, channel.ID, msg)
+			helpers.ChatbotSendCleverbotIO(session, channel.ID, msg)
 			return
 		}
 	}

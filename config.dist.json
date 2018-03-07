@@ -12,6 +12,10 @@
   "cleverbot": {
     "key": ""
   },
+  "cleverbot-io": {
+    "user": "",
+    "key": ""
+  },
   "google": {
     "api_key": "",
     "client_credentials_json_location": ""

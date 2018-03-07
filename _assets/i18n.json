@@ -60,7 +60,11 @@
       "general": "Unexpected error: `%s`",
       "no-embed": "Please give me the `Embed Links` permission in this channel. <:googlenerd:317030369205682186>",
       "generic-nomessage": "Something went terribly wrong. <a:ablobweary:394026914479865856>",
-      "useruploads-disabled": "You are not allowed to upload files.\nContact a Robyul Moderator to find out why: <https://discord.is/Robyul>."
+      "useruploads-disabled": "You are not allowed to upload files.\nContact a Robyul Moderator to find out why: <https://discord.is/Robyul>.",
+      "chatbot": [
+        "I don't feel like chatting right now. <a:ablobsleep:394026914290991116>",
+        "I'm busy right now, can we chat later? <a:ablobcry:393869333740126219>"
+      ]
     },
     "permissions": {
       "required": "Please give me the `%s` permission to use this feature. <:googlenerd:317030369205682186>"
@@ -409,7 +413,7 @@
       "roles-grant-create-success": "I granted the user the user `%s` (`#%s`) the role `%s` (`#%s`).",
       "roles-deny-error-denying": "You are already granting this user this role.",
       "roles-deny-remove-success": "I removed the role deny for the user `%s` (`#%s`) for the role `%s` (`#%s`).",
-      "roles-deny-create-success": "I denied the user the user `%s` (`#%s`) the role `%s` (`#%s`).",
+      "roles-deny-create-success": "I denied the user `%s` (`#%s`) the role `%s` (`#%s`).",
       "user-background-wrong-dimensions": "The picture does not fit the requirements. <a:ablobweary:394026914479865856>\nPlease upload a 400x300px smaller than 2MB picture.",
       "user-background-not-safe": "Looks like your picture might contain explicit content. <a:ablobshocked:394026914076950539>\nIf this is a false alarm please contact a Staff member: <https://discord.is/Robyul>.",
       "user-background-success": "I successfully set your new background! <a:ablobsunglasses:393869335657054210> \nCheck it out: `%sprofile`!",
