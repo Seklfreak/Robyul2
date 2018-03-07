@@ -258,12 +258,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/evmar/gocairo"
-  packages = ["."]
-  revision = "ddd30f837497f6fcfe5e3c3665b97d7c17d381fe"
-
-[[projects]]
-  branch = "master"
   name = "github.com/garyburd/go-oauth"
   packages = ["oauth"]
   revision = "4cff9ef7b7003713efa191899dbaab8fa75e3e73"
@@ -812,15 +806,9 @@
   revision = "d315b61cf6727664f310fa87b3197e9faf2a8513"
   version = "v1.1.0"
 
-[[projects]]
-  branch = "master"
-  name = "rsc.io/c2go"
-  packages = ["cc"]
-  revision = "520c22818a0844fb1aefa35f8ff24e3c1fc8f66a"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e10c8927e4247ea5ca0bd3f521dc74eac61f0e8b3e1931a1292c5223943f84b1"
+  inputs-digest = "73fdbeb1c4078a60146396ec833ae8fc3d5f90b49f2f779a9308ec6d5f546569"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -3,6 +3,7 @@ package helpers
 import (
 	"C"
 	"bytes"
+	_ "image/jpeg"
 	_ "image/png"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-// Creates a Collage JPEG Image from the given imageUrls.
+// Creates a Collage PNG Image from internet image urls (PNG or JPEG).
 // imageUrls        : a slice with all image URLs. Empty strings will create an empty space in the collage.
 // descriptions     : a slice with text that will be written on each tile. Can be empty.
 // width            : the width of the result collage image.
@@ -24,6 +25,7 @@ import (
 // backgroundColour : the background colour as a hex string.
 func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth, tileHeight int, backgroundColourText string) (collageBytes []byte) {
 	imageDataArray := make([][]byte, 0)
+	// download images
 	for _, imageUrl := range imageUrls {
 		if imageUrl == "" {
 			imageDataArray = append(imageDataArray, nil)
@@ -38,8 +40,8 @@ func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth,
 		}
 	}
 
+	// create surface with given background colour
 	backgroundColour, _ := colorful.Hex(backgroundColourText)
-
 	cairoSurface := cairo.NewSurface(cairo.FORMAT_RGB24, width, height)
 	cairoSurface.SetSourceRGB(backgroundColour.R, backgroundColour.G, backgroundColour.B)
 	cairoSurface.Paint()
@@ -47,33 +49,43 @@ func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth,
 	var posX, posY int
 
 	for i, imageData := range imageDataArray {
+		// switch tile to new line if required
 		if posX > 0 && posX+tileWidth > width {
 			posY += tileHeight
 			posX = 0
 		}
+		// draw image on tile if image exists
 		if imageData != nil && len(imageData) > 0 {
 			tileImage, _, err := image.Decode(bytes.NewReader(imageData))
 			RelaxLog(err)
-			tileSurface := cairo.NewSurfaceFromImage(tileImage)
-			RelaxLog(err)
 			if err == nil {
+				tileSurface := cairo.NewSurfaceFromImage(tileImage)
 				cairoSurface.SetSourceSurface(tileSurface, float64(posX), float64(posY))
 				cairoSurface.Paint()
 			}
 		}
+		// draw description on tile if description exists
 		if len(descriptions) > i {
+			// setup font and variables
+			cairoSurface.SelectFontFace("UnDotum", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+			var offset, fontSize int
+			// split description in lines
 			lines := strings.Split(descriptions[i], "\n")
-			var offset int
 			for _, line := range lines {
-				fontSize := 28
+				// clean line
 				line = strings.TrimSpace(line)
-				cairoSurface.SelectFontFace("UnDotum", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+				// reset font size
+				fontSize = 28
+				// adjust font size to fit tile
 				for {
+					// gather dimensions of line with current font size
 					cairoSurface.SetFontSize(float64(fontSize))
 					extend := cairoSurface.TextExtents(line)
+					// break if line fits into tile, or font size is <= 10
 					if extend.Width < float64(tileWidth)-6-6 || fontSize <= 10 {
 						break
 					}
+					// try a smaller font
 					fontSize--
 				}
 				// draw text
@@ -92,13 +104,15 @@ func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth,
 				cairoSurface.SetSourceRGB(0, 0, 0) // black
 				cairoSurface.SetLineWidth(2.0)
 				cairoSurface.Stroke()
+				// switch to new line
 				offset += fontSize + 6
 			}
 		}
+		// switch to next tile
 		posX += tileWidth
 	}
 
+	// write surface to byte slice and return it
 	bytesData, _ := cairoSurface.WriteToPNGStream()
-
 	return bytesData
 }
