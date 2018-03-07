@@ -11,6 +11,7 @@ import (
 )
 import (
 	"image"
+	"strings"
 )
 
 // Creates a Collage JPEG Image from the given imageUrls.
@@ -61,24 +62,38 @@ func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth,
 			}
 		}
 		if len(descriptions) > i {
-			// draw text
-			cairoSurface.SetSourceRGB(0, 0, 0) // black
-			cairoSurface.SelectFontFace("UnDotum", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-			cairoSurface.SetFontSize(28)
-			cairoSurface.MoveTo(float64(posX+6), float64(posY+6+24))
-			cairoSurface.ShowText(descriptions[i])
-			// draw white outline to improve readability
-			cairoSurface.MoveTo(float64(posX+6), float64(posY+6+24))
-			cairoSurface.TextPath(descriptions[i])
-			cairoSurface.SetSourceRGB(1, 1, 1) // white
-			cairoSurface.SetLineWidth(4.5)
-			cairoSurface.Stroke()
-			// draw black outline to make text bold
-			cairoSurface.MoveTo(float64(posX+6), float64(posY+6+24))
-			cairoSurface.TextPath(descriptions[i])
-			cairoSurface.SetSourceRGB(0, 0, 0) // black
-			cairoSurface.SetLineWidth(2.0)
-			cairoSurface.Stroke()
+			lines := strings.Split(descriptions[i], "\n")
+			var offset int
+			for _, line := range lines {
+				fontSize := 28
+				line = strings.TrimSpace(line)
+				cairoSurface.SelectFontFace("UnDotum", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+				for {
+					cairoSurface.SetFontSize(float64(fontSize))
+					extend := cairoSurface.TextExtents(line)
+					if extend.Width < float64(tileWidth)-6-6 || fontSize <= 10 {
+						break
+					}
+					fontSize--
+				}
+				// draw text
+				cairoSurface.SetSourceRGB(0, 0, 0) // black
+				cairoSurface.MoveTo(float64(posX+6), float64(posY+6+fontSize+offset))
+				cairoSurface.ShowText(line)
+				// draw white outline to improve readability
+				cairoSurface.MoveTo(float64(posX+6), float64(posY+6+fontSize+offset))
+				cairoSurface.TextPath(line)
+				cairoSurface.SetSourceRGB(1, 1, 1) // white
+				cairoSurface.SetLineWidth(4.5)
+				cairoSurface.Stroke()
+				// draw black outline to make text bold
+				cairoSurface.MoveTo(float64(posX+6), float64(posY+6+fontSize+offset))
+				cairoSurface.TextPath(line)
+				cairoSurface.SetSourceRGB(0, 0, 0) // black
+				cairoSurface.SetLineWidth(2.0)
+				cairoSurface.Stroke()
+				offset += fontSize + 6
+			}
 		}
 		posX += tileWidth
 	}

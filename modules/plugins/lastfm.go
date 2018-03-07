@@ -908,12 +908,14 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			helpers.Relax(err)
 			if lastfmTopTracks.Total > 0 {
 				if collage {
+					trackNames := make([]string, 0)
 					imageUrls := make([]string, 0)
 					for _, topTrack := range lastfmTopTracks.Tracks {
 						if len(topTrack.Images) > 0 {
 							for _, topTrackImage := range topTrack.Images {
 								if topTrackImage.Size == "extralarge" {
 									imageUrls = append(imageUrls, topTrackImage.Url)
+									trackNames = append(trackNames, topTrack.Name+"\n"+topTrack.Artist.Name)
 								}
 							}
 							if len(imageUrls) >= 9 {
@@ -924,7 +926,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 
 					collageBytes := helpers.CollageFromUrls(
 						imageUrls,
-						[]string{},
+						trackNames,
 						900, 900,
 						300, 300,
 						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
