@@ -3742,7 +3742,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
 		tempTemplatePath,
 		"--window-size=400/300",
 		"--stream-type=png",
-		"--timeout=20000",
+		//"--timeout=20000",
 		"--p:disk-cache=true",
 		"--p:disk-cache-path=" + cachePath,
 		"--p:proxy-type=none",

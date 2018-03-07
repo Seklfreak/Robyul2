@@ -578,12 +578,17 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			helpers.Relax(err)
 			if lastfmTopAlbums.Total > 0 {
 				if collage {
+					description := ""
+					var n int
 					imageUrls := make([]string, 0)
 					for _, topAlbum := range lastfmTopAlbums.Albums {
 						if len(topAlbum.Images) > 0 {
 							for _, topAlbumImage := range topAlbum.Images {
 								if topAlbumImage.Size == "extralarge" {
+									n++
 									imageUrls = append(imageUrls, topAlbumImage.Url)
+									description += strconv.Itoa(n) + ". "
+									description += "[" + topAlbum.Name + " by " + topAlbum.Artist.Name + "](" + helpers.EscapeLinkForMarkdown(topAlbum.Url) + ") "
 								}
 							}
 							if len(imageUrls) >= 9 {
@@ -599,9 +604,32 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
 					)
 
+					topAlbumsEmbed := &discordgo.MessageEmbed{
+						Description: description,
+						Footer: &discordgo.MessageEmbedFooter{
+							Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+							IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+						},
+						Color: helpers.GetDiscordColorFromHex(lastfmHexColor),
+						Author: &discordgo.MessageEmbedAuthor{
+							Name: helpers.GetTextF("plugins.lastfm.topalbums-embed-title", lastfmUsername) + " of " + timeString,
+							URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopAlbums.User),
+						},
+						Image: &discordgo.MessageEmbedImage{
+							URL: "attachment://Robyul-LastFM-Collage.jpg",
+						},
+					}
+					if len(lastfmUser.Images) > 0 {
+						for _, image := range lastfmUser.Images {
+							if image.Size == "large" {
+								topAlbumsEmbed.Author.IconURL = image.Url
+							}
+						}
+					}
 					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
+						Embed: topAlbumsEmbed,
 						Files: []*discordgo.File{{
-							Name:   "Robyul LastFM Collage.jpg",
+							Name:   "Robyul-LastFM-Collage.jpg",
 							Reader: bytes.NewReader(collageBytes),
 						}},
 					})
@@ -915,7 +943,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "discord-top", "server-top":
+		case "discord-top", "server-top", "servertop", "discordtop":
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 			guild, err := helpers.GetGuild(channel.GuildID)
