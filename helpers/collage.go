@@ -1,25 +1,27 @@
 package helpers
 
 import (
-	"bufio"
+	"C"
 	"bytes"
-	"image"
-	"image/draw"
-	"image/jpeg"
 	_ "image/png"
 	"time"
 
 	"github.com/lucasb-eyer/go-colorful"
+	"github.com/ungerik/go-cairo"
+)
+import (
+	"image"
 )
 
 // Creates a Collage JPEG Image from the given imageUrls.
 // imageUrls        : a slice with all image URLs. Empty strings will create an empty space in the collage.
+// descriptions     : a slice with text that will be written on each tile. Can be empty.
 // width            : the width of the result collage image.
 // height           : the height of the result collage image.
 // tileWidth        : the width of each tile image.
 // tileHeight       : the height of each tile image.
 // backgroundColour : the background colour as a hex string.
-func CollageFromUrls(imageUrls []string, width, height, tileWidth, tileHeight int, backgroundColourText string) (collageBytes []byte) {
+func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth, tileHeight int, backgroundColourText string) (collageBytes []byte) {
 	imageDataArray := make([][]byte, 0)
 	for _, imageUrl := range imageUrls {
 		if imageUrl == "" {
@@ -37,12 +39,13 @@ func CollageFromUrls(imageUrls []string, width, height, tileWidth, tileHeight in
 
 	backgroundColour, _ := colorful.Hex(backgroundColourText)
 
-	collageImage := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.Draw(collageImage, collageImage.Bounds(), image.NewUniform(backgroundColour), image.ZP, draw.Src)
+	cairoSurface := cairo.NewSurface(cairo.FORMAT_RGB24, width, height)
+	cairoSurface.SetSourceRGB(backgroundColour.R, backgroundColour.G, backgroundColour.B)
+	cairoSurface.Paint()
 
 	var posX, posY int
 
-	for _, imageData := range imageDataArray {
+	for i, imageData := range imageDataArray {
 		if posX > 0 && posX+tileWidth > width {
 			posY += tileHeight
 			posX = 0
@@ -50,23 +53,37 @@ func CollageFromUrls(imageUrls []string, width, height, tileWidth, tileHeight in
 		if imageData != nil && len(imageData) > 0 {
 			tileImage, _, err := image.Decode(bytes.NewReader(imageData))
 			RelaxLog(err)
+			tileSurface := cairo.NewSurfaceFromImage(tileImage)
+			RelaxLog(err)
 			if err == nil {
-				draw.Draw(
-					collageImage,
-					tileImage.Bounds().Add(image.Pt(posX, posY)),
-					tileImage,
-					image.Point{0, 0},
-					draw.Src,
-				)
+				cairoSurface.SetSourceSurface(tileSurface, float64(posX), float64(posY))
+				cairoSurface.Paint()
 			}
+		}
+		if len(descriptions) > i {
+			// draw text
+			cairoSurface.SetSourceRGB(0, 0, 0) // black
+			cairoSurface.SelectFontFace("UnDotum", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+			cairoSurface.SetFontSize(28)
+			cairoSurface.MoveTo(float64(posX+6), float64(posY+6+24))
+			cairoSurface.ShowText(descriptions[i])
+			// draw white outline to improve readability
+			cairoSurface.MoveTo(float64(posX+6), float64(posY+6+24))
+			cairoSurface.TextPath(descriptions[i])
+			cairoSurface.SetSourceRGB(1, 1, 1) // white
+			cairoSurface.SetLineWidth(4.5)
+			cairoSurface.Stroke()
+			// draw black outline to make text bold
+			cairoSurface.MoveTo(float64(posX+6), float64(posY+6+24))
+			cairoSurface.TextPath(descriptions[i])
+			cairoSurface.SetSourceRGB(0, 0, 0) // black
+			cairoSurface.SetLineWidth(2.0)
+			cairoSurface.Stroke()
 		}
 		posX += tileWidth
 	}
 
-	var buffer bytes.Buffer
-	writer := bufio.NewWriter(&buffer)
+	bytesData, _ := cairoSurface.WriteToPNGStream()
 
-	jpeg.Encode(writer, collageImage, &jpeg.Options{95})
-
-	return buffer.Bytes()
+	return bytesData
 }

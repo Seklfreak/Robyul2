@@ -201,3 +201,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/CleverbotIO/go-cleverbot.io"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/evmar/gocairo"

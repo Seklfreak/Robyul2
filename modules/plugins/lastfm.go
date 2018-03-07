@@ -599,6 +599,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 
 					collageBytes := helpers.CollageFromUrls(
 						imageUrls,
+						[]string{},
 						900, 900,
 						300, 300,
 						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
@@ -616,7 +617,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 							URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopAlbums.User),
 						},
 						Image: &discordgo.MessageEmbedImage{
-							URL: "attachment://Robyul-LastFM-Collage.jpg",
+							URL: "attachment://Robyul-LastFM-Collage.png",
 						},
 					}
 					if len(lastfmUser.Images) > 0 {
@@ -629,7 +630,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
 						Embed: topAlbumsEmbed,
 						Files: []*discordgo.File{{
-							Name:   "Robyul-LastFM-Collage.jpg",
+							Name:   "Robyul-LastFM-Collage.png",
 							Reader: bytes.NewReader(collageBytes),
 						}},
 					})
@@ -744,11 +745,13 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			if lastfmTopArtists.Total > 0 {
 				if collage {
 					imageUrls := make([]string, 0)
+					artistNames := make([]string, 0)
 					for _, topArtist := range lastfmTopArtists.Artists {
 						if len(topArtist.Images) > 0 {
 							for _, topArtistImage := range topArtist.Images {
 								if topArtistImage.Size == "extralarge" {
 									imageUrls = append(imageUrls, topArtistImage.Url)
+									artistNames = append(artistNames, topArtist.Name)
 								}
 							}
 							if len(imageUrls) >= 9 {
@@ -759,14 +762,39 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 
 					collageBytes := helpers.CollageFromUrls(
 						imageUrls,
+						artistNames,
 						900, 900,
 						300, 300,
 						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
 					)
 
+					topArtistsEmbed := &discordgo.MessageEmbed{
+						Footer: &discordgo.MessageEmbedFooter{
+							Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+							IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+						},
+						Fields: []*discordgo.MessageEmbedField{},
+						Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
+						Author: &discordgo.MessageEmbedAuthor{
+							Name: helpers.GetTextF("plugins.lastfm.topartists-embed-title", lastfmUsername) + " of " + timeString,
+							URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopArtists.User),
+						},
+						Image: &discordgo.MessageEmbedImage{
+							URL: "attachment://Robyul-LastFM-Collage.png",
+						},
+					}
+					if len(lastfmUser.Images) > 0 {
+						for _, image := range lastfmUser.Images {
+							if image.Size == "large" {
+								topArtistsEmbed.Author.IconURL = image.Url
+							}
+						}
+					}
+
 					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
+						Embed: topArtistsEmbed,
 						Files: []*discordgo.File{{
-							Name:   "Robyul LastFM Collage.jpg",
+							Name:   "Robyul-LastFM-Collage.png",
 							Reader: bytes.NewReader(collageBytes),
 						}},
 					})
@@ -896,14 +924,38 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 
 					collageBytes := helpers.CollageFromUrls(
 						imageUrls,
+						[]string{},
 						900, 900,
 						300, 300,
 						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
 					)
 
+					topTracksEmbed := &discordgo.MessageEmbed{
+						Footer: &discordgo.MessageEmbedFooter{
+							Text:    helpers.GetText("plugins.lastfm.embed-footer"),
+							IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+						},
+						Color: helpers.GetDiscordColorFromHex(lastfmHexColor),
+						Author: &discordgo.MessageEmbedAuthor{
+							Name: helpers.GetTextF("plugins.lastfm.toptracks-embed-title", lastfmUsername) + " of " + timeString,
+							URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopTracks.User),
+						},
+						Image: &discordgo.MessageEmbedImage{
+							URL: "attachment://Robyul-LastFM-Collage.png",
+						},
+					}
+					if len(lastfmUser.Images) > 0 {
+						for _, image := range lastfmUser.Images {
+							if image.Size == "large" {
+								topTracksEmbed.Author.IconURL = image.Url
+							}
+						}
+					}
+
 					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
+						Embed: topTracksEmbed,
 						Files: []*discordgo.File{{
-							Name:   "Robyul LastFM Collage.jpg",
+							Name:   "Robyul-LastFM-Collage.png",
 							Reader: bytes.NewReader(collageBytes),
 						}},
 					})
