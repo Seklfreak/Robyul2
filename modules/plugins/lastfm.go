@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -506,32 +508,42 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 		case "topalbums", "topalbum":
 			timeLookup := "overall"
 			timeString := "all time"
+			var collage bool
 			if len(args) >= 2 {
+				if args[len(args)-1] == "collage" {
+					collage = true
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
+				}
 				switch args[len(args)-1] {
 				case "7days", "week", "7day":
 					timeString = "the last seven days"
 					timeLookup = "7day"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "1month", "month":
 					timeString = "the last month"
 					timeLookup = "1month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "3month":
 					timeString = "the last three months"
 					timeLookup = "3month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "6month":
 					timeString = "the last six months"
 					timeLookup = "6month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "12month", "year":
 					timeString = "the last twelve months"
 					timeLookup = "12month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				}
 			}
 
-			if (len(args) >= 2 && timeLookup == "overall") || len(args) > 2 {
+			if len(args) >= 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
@@ -565,6 +577,37 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			helpers.Relax(err)
 			if lastfmTopAlbums.Total > 0 {
+				if collage {
+					imageUrls := make([]string, 0)
+					for _, topAlbum := range lastfmTopAlbums.Albums {
+						if len(topAlbum.Images) > 0 {
+							for _, topAlbumImage := range topAlbum.Images {
+								if topAlbumImage.Size == "extralarge" {
+									imageUrls = append(imageUrls, topAlbumImage.Url)
+								}
+							}
+							if len(imageUrls) >= 9 {
+								break
+							}
+						}
+					}
+
+					collageBytes := helpers.CollageFromUrls(
+						imageUrls,
+						900, 900,
+						300, 300,
+						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
+					)
+
+					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
+						Files: []*discordgo.File{{
+							Name:   "Robyul LastFM Collage.jpg",
+							Reader: bytes.NewReader(collageBytes),
+						}},
+					})
+					return
+				}
+
 				topAlbumsEmbed := &discordgo.MessageEmbed{
 					Description: "of **" + timeString + "**",
 					Footer: &discordgo.MessageEmbedFooter{
@@ -601,32 +644,42 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 		case "topartists", "topartist":
 			timeLookup := "overall"
 			timeString := "all time"
+			var collage bool
 			if len(args) >= 2 {
+				if args[len(args)-1] == "collage" {
+					collage = true
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
+				}
 				switch args[len(args)-1] {
 				case "7days", "week", "7day":
 					timeString = "the last seven days"
 					timeLookup = "7day"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "1month", "month":
 					timeString = "the last month"
 					timeLookup = "1month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "3month":
 					timeString = "the last three months"
 					timeLookup = "3month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "6month":
 					timeString = "the last six months"
 					timeLookup = "6month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "12month", "year":
 					timeString = "the last twelve months"
 					timeLookup = "12month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				}
 			}
 
-			if (len(args) >= 2 && timeLookup == "overall") || len(args) > 2 {
+			if len(args) >= 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
@@ -661,6 +714,37 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			helpers.Relax(err)
 			if lastfmTopArtists.Total > 0 {
+				if collage {
+					imageUrls := make([]string, 0)
+					for _, topArtist := range lastfmTopArtists.Artists {
+						if len(topArtist.Images) > 0 {
+							for _, topArtistImage := range topArtist.Images {
+								if topArtistImage.Size == "extralarge" {
+									imageUrls = append(imageUrls, topArtistImage.Url)
+								}
+							}
+							if len(imageUrls) >= 9 {
+								break
+							}
+						}
+					}
+
+					collageBytes := helpers.CollageFromUrls(
+						imageUrls,
+						900, 900,
+						300, 300,
+						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
+					)
+
+					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
+						Files: []*discordgo.File{{
+							Name:   "Robyul LastFM Collage.jpg",
+							Reader: bytes.NewReader(collageBytes),
+						}},
+					})
+					return
+				}
+
 				topArtistsEmbed := &discordgo.MessageEmbed{
 					Description: "of **" + timeString + "**",
 					Footer: &discordgo.MessageEmbedFooter{
@@ -697,32 +781,42 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 		case "toptracks", "topsongs", "toptrack", "topsong":
 			timeLookup := "overall"
 			timeString := "all time"
+			var collage bool
 			if len(args) >= 2 {
+				if args[len(args)-1] == "collage" {
+					collage = true
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
+				}
 				switch args[len(args)-1] {
 				case "7days", "week", "7day":
 					timeString = "the last seven days"
 					timeLookup = "7day"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "1month", "month":
 					timeString = "the last month"
 					timeLookup = "1month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "3month":
 					timeString = "the last three months"
 					timeLookup = "3month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "6month":
 					timeString = "the last six months"
 					timeLookup = "6month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				case "12month", "year":
 					timeString = "the last twelve months"
 					timeLookup = "12month"
+					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
 				}
 			}
 
-			if (len(args) >= 2 && timeLookup == "overall") || len(args) > 2 {
+			if len(args) >= 2 {
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
@@ -757,6 +851,37 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			metrics.LastFmRequests.Add(1)
 			helpers.Relax(err)
 			if lastfmTopTracks.Total > 0 {
+				if collage {
+					imageUrls := make([]string, 0)
+					for _, topTrack := range lastfmTopTracks.Tracks {
+						if len(topTrack.Images) > 0 {
+							for _, topTrackImage := range topTrack.Images {
+								if topTrackImage.Size == "extralarge" {
+									imageUrls = append(imageUrls, topTrackImage.Url)
+								}
+							}
+							if len(imageUrls) >= 9 {
+								break
+							}
+						}
+					}
+
+					collageBytes := helpers.CollageFromUrls(
+						imageUrls,
+						900, 900,
+						300, 300,
+						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
+					)
+
+					helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
+						Files: []*discordgo.File{{
+							Name:   "Robyul LastFM Collage.jpg",
+							Reader: bytes.NewReader(collageBytes),
+						}},
+					})
+					return
+				}
+
 				topTracksEmbed := &discordgo.MessageEmbed{
 					Description: "of **" + timeString + "**",
 					Footer: &discordgo.MessageEmbedFooter{

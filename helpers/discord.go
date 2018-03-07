@@ -24,7 +24,8 @@ import (
 )
 
 const (
-	DISCORD_EPOCH int64 = 1420070400000
+	DISCORD_EPOCH                     int64 = 1420070400000
+	DISCORD_DARK_THEME_BACKGROUND_HEX       = "#36393F"
 )
 
 var botAdmins = []string{
