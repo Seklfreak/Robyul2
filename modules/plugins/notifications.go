@@ -610,6 +610,11 @@ NextKeyword:
 		}
 	}
 
+	messageTime, err := msg.Timestamp.Parse()
+	if err != nil {
+		messageTime = time.Now()
+	}
+
 	for _, pendingNotification := range pendingNotifications {
 		dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
 		if err != nil {
@@ -633,12 +638,13 @@ NextKeyword:
 
 		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
 		case 2:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on the server `%s`.\n\u200B",
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.\n\u200B",
 				content,
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
 				guild.Name,
+				messageTime.UTC().Format("15:04:05"),
 			), "\n") {
 				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 				if err != nil {
@@ -648,11 +654,12 @@ NextKeyword:
 			}
 			break
 		default:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on the server `%s`:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
 				guild.Name,
+				messageTime.UTC().Format("15:04:05"),
 				content,
 			), "\n") {
 				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
