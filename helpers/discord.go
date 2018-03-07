@@ -1483,3 +1483,7 @@ func GetStaffUsernamesText() (text string) {
 	}
 	return
 }
+
+func EscapeLinkForMarkdown(input string) (result string) {
+	return strings.Replace(strings.Replace(input, ")", "%29", -1), "(", "%28", -1)
+}

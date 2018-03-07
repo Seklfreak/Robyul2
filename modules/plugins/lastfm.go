@@ -49,6 +49,7 @@ type LastFMSongInfo struct {
 	ArtistURL  string
 	ImageURL   string
 	Plays      int
+	Users      int
 }
 
 type LastFMAccountCachedStats struct {
@@ -144,6 +145,7 @@ func (m *LastFm) generateDiscordStats() {
 							ArtistURL:  track.Artist.Url,
 							ImageURL:   imageUrl,
 							Plays:      playCount,
+							Users:      1,
 						}
 						switch period {
 						case "overall":
@@ -204,6 +206,7 @@ func (m *LastFm) generateDiscordStats() {
 								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
 									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
 									newCombinedGuildStat.Overall[i].Plays += track.Plays
+									newCombinedGuildStat.Overall[i].Users += track.Users
 									added = true
 								}
 							}
@@ -217,6 +220,7 @@ func (m *LastFm) generateDiscordStats() {
 								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
 									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
 									newCombinedGuildStat.SevenDay[i].Plays += track.Plays
+									newCombinedGuildStat.SevenDay[i].Users += track.Users
 									added = true
 								}
 							}
@@ -230,6 +234,7 @@ func (m *LastFm) generateDiscordStats() {
 								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
 									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
 									newCombinedGuildStat.OneMonth[i].Plays += track.Plays
+									newCombinedGuildStat.OneMonth[i].Users += track.Users
 									added = true
 								}
 							}
@@ -243,6 +248,7 @@ func (m *LastFm) generateDiscordStats() {
 								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
 									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
 									newCombinedGuildStat.ThreeMonth[i].Plays += track.Plays
+									newCombinedGuildStat.ThreeMonth[i].Users += track.Users
 									added = true
 								}
 							}
@@ -256,6 +262,7 @@ func (m *LastFm) generateDiscordStats() {
 								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
 									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
 									newCombinedGuildStat.SixMonth[i].Plays += track.Plays
+									newCombinedGuildStat.SixMonth[i].Users += track.Users
 									added = true
 								}
 							}
@@ -269,6 +276,7 @@ func (m *LastFm) generateDiscordStats() {
 								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
 									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
 									newCombinedGuildStat.TwelveMonth[i].Plays += track.Plays
+									newCombinedGuildStat.TwelveMonth[i].Users += track.Users
 									added = true
 								}
 							}
@@ -335,9 +343,11 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		case "np", "nowplaying":
+			var err error
+			targetUser := msg.Author
 			if len(args) >= 2 {
 				lastfmUsername = args[1]
-				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
+				targetUser, err = helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
 					lastfmUsername = m.getLastFmUsername(targetUser.ID)
 				}
@@ -362,6 +372,27 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
+			playcountText := ""
+			lastfmAvatar := targetUser.AvatarURL("64")
+			lastfmUserInfo, err := lastfmClient.User.GetInfo(lastfm.P{
+				"user": lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			helpers.RelaxLog(err)
+			if err == nil {
+				playcountText = " | Total plays: " + lastfmUserInfo.PlayCount
+				playcountNumber, err := strconv.Atoi(lastfmUserInfo.PlayCount)
+				if err == nil {
+					playcountText = " | Total plays: " + humanize.Comma(int64(playcountNumber))
+				}
+				if len(lastfmUserInfo.Images) > 0 {
+					for _, lastfmImage := range lastfmUserInfo.Images {
+						if lastfmImage.Size == "large" {
+							lastfmAvatar = lastfmImage.Url
+						}
+					}
+				}
+			}
 			if lastfmRecentTracks.Total > 0 {
 				lastTrack := lastfmRecentTracks.Tracks[0]
 				lastTrackEmbedTitle := helpers.GetTextF("plugins.lastfm.lasttrack-embed-title-last", lastfmUsername)
@@ -369,12 +400,18 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					lastTrackEmbedTitle = helpers.GetTextF("plugins.lastfm.lasttrack-embed-title-np", lastfmUsername)
 				}
 				lastTrackEmbed := &discordgo.MessageEmbed{
-					Title:       lastTrackEmbedTitle,
-					URL:         lastTrack.Url,
-					Description: fmt.Sprintf("**%s** by **%s**", lastTrack.Name, lastTrack.Artist.Name),
+					Description: fmt.Sprintf(
+						"[**%s** by **%s**](%s)",
+						lastTrack.Name, lastTrack.Artist.Name,
+						helpers.EscapeLinkForMarkdown(lastTrack.Url)),
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
 						IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+					},
+					Author: &discordgo.MessageEmbedAuthor{
+						URL:     fmt.Sprintf(lastfmFriendlyUser, lastfmUsername),
+						Name:    lastTrackEmbedTitle,
+						IconURL: lastfmAvatar,
 					},
 					Fields: []*discordgo.MessageEmbedField{},
 					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
@@ -397,7 +434,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					lastTrackEmbed.Fields = append(lastTrackEmbed.Fields, &discordgo.MessageEmbedField{
 						Name: "Listened to before",
 						Value: fmt.Sprintf("[**%s** by **%s**](%s)",
-							beforeTrack.Name, beforeTrack.Artist.Name, strings.Replace(beforeTrack.Url, ")", "%29", -1)),
+							beforeTrack.Name, beforeTrack.Artist.Name, helpers.EscapeLinkForMarkdown(beforeTrack.Url)),
 						Inline: false,
 					})
 				}
@@ -410,6 +447,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						lastTrackEmbed.Footer.Text += " and YouTube"
 					}
 				}
+				lastTrackEmbed.Footer.Text += playcountText
 				_, err = helpers.SendEmbed(msg.ChannelID, lastTrackEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			} else {
@@ -521,10 +559,13 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
+			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{
+				"user": lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			helpers.Relax(err)
 			if lastfmTopAlbums.Total > 0 {
 				topAlbumsEmbed := &discordgo.MessageEmbed{
-					Title:       helpers.GetTextF("plugins.lastfm.topalbums-embed-title", lastfmUsername),
-					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopAlbums.User),
 					Description: "of **" + timeString + "**",
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
@@ -532,12 +573,24 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					},
 					Fields: []*discordgo.MessageEmbedField{},
 					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Author: &discordgo.MessageEmbedAuthor{
+						Name: helpers.GetTextF("plugins.lastfm.topalbums-embed-title", lastfmUsername),
+						URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopAlbums.User),
+					},
 				}
 				for _, topAlbum := range lastfmTopAlbums.Albums {
 					topAlbumsEmbed.Fields = append(topAlbumsEmbed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("**#%s** (%s plays)", topAlbum.Rank, topAlbum.PlayCount),
-						Value:  fmt.Sprintf("**%s** by **%s**", topAlbum.Name, topAlbum.Artist.Name),
+						Name: fmt.Sprintf("**#%s** (%s plays)", topAlbum.Rank, topAlbum.PlayCount),
+						Value: fmt.Sprintf("[**%s** by **%s**](%s)",
+							topAlbum.Name, topAlbum.Artist.Name, helpers.EscapeLinkForMarkdown(topAlbum.Url)),
 						Inline: false})
+				}
+				if len(lastfmUser.Images) > 0 {
+					for _, image := range lastfmUser.Images {
+						if image.Size == "large" {
+							topAlbumsEmbed.Author.IconURL = image.Url
+						}
+					}
 				}
 				_, err = helpers.SendEmbed(msg.ChannelID, topAlbumsEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
@@ -602,10 +655,13 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
+			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{
+				"user": lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			helpers.Relax(err)
 			if lastfmTopArtists.Total > 0 {
 				topArtistsEmbed := &discordgo.MessageEmbed{
-					Title:       helpers.GetTextF("plugins.lastfm.topartists-embed-title", lastfmUsername),
-					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopArtists.User),
 					Description: "of **" + timeString + "**",
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
@@ -613,12 +669,24 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					},
 					Fields: []*discordgo.MessageEmbedField{},
 					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Author: &discordgo.MessageEmbedAuthor{
+						Name: helpers.GetTextF("plugins.lastfm.topartists-embed-title", lastfmUsername),
+						URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopArtists.User),
+					},
 				}
 				for _, topArtist := range lastfmTopArtists.Artists {
 					topArtistsEmbed.Fields = append(topArtistsEmbed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("**#%s** (%s plays)", topArtist.Rank, topArtist.PlayCount),
-						Value:  fmt.Sprintf("**%s**", topArtist.Name),
+						Name: fmt.Sprintf("**#%s** (%s plays)", topArtist.Rank, topArtist.PlayCount),
+						Value: fmt.Sprintf("[**%s**](%s)",
+							topArtist.Name, helpers.EscapeLinkForMarkdown(topArtist.Url)),
 						Inline: false})
+				}
+				if len(lastfmUser.Images) > 0 {
+					for _, image := range lastfmUser.Images {
+						if image.Size == "large" {
+							topArtistsEmbed.Author.IconURL = image.Url
+						}
+					}
 				}
 				_, err = helpers.SendEmbed(msg.ChannelID, topArtistsEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
@@ -683,10 +751,13 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
+			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{
+				"user": lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			helpers.Relax(err)
 			if lastfmTopTracks.Total > 0 {
 				topTracksEmbed := &discordgo.MessageEmbed{
-					Title:       helpers.GetTextF("plugins.lastfm.toptracks-embed-title", lastfmUsername),
-					URL:         fmt.Sprintf(lastfmFriendlyUser, lastfmTopTracks.User),
 					Description: "of **" + timeString + "**",
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
@@ -694,12 +765,24 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					},
 					Fields: []*discordgo.MessageEmbedField{},
 					Color:  helpers.GetDiscordColorFromHex(lastfmHexColor),
+					Author: &discordgo.MessageEmbedAuthor{
+						Name: helpers.GetTextF("plugins.lastfm.toptracks-embed-title", lastfmUsername),
+						URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmTopTracks.User),
+					},
 				}
 				for _, topTrack := range lastfmTopTracks.Tracks {
 					topTracksEmbed.Fields = append(topTracksEmbed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("**#%s** (%s plays)", topTrack.Rank, topTrack.PlayCount),
-						Value:  fmt.Sprintf("**%s** by **%s**", topTrack.Name, topTrack.Artist.Name),
+						Name: fmt.Sprintf("**#%s** (%s plays)", topTrack.Rank, topTrack.PlayCount),
+						Value: fmt.Sprintf("[**%s** by **%s**](%s)",
+							topTrack.Name, topTrack.Artist.Name, helpers.EscapeLinkForMarkdown(topTrack.Url)),
 						Inline: false})
+				}
+				if len(lastfmUser.Images) > 0 {
+					for _, image := range lastfmUser.Images {
+						if image.Size == "large" {
+							topTracksEmbed.Author.IconURL = image.Url
+						}
+					}
 				}
 				_, err = helpers.SendEmbed(msg.ChannelID, topTracksEmbed)
 				helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
@@ -772,20 +855,30 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 			for i, topTrack := range topTracks {
 				topTracksEmbed.Fields = append(topTracksEmbed.Fields, &discordgo.MessageEmbedField{
-					Name:   fmt.Sprintf("**#%s** (%s plays)", strconv.Itoa(i+1), strconv.Itoa(topTrack.Plays)),
-					Value:  fmt.Sprintf("**%s** by **%s**", topTrack.Name, topTrack.ArtistName),
+					Name: fmt.Sprintf("**#%s** (%s plays by %s users)",
+						strconv.Itoa(i+1),
+						humanize.Comma(int64(topTrack.Plays)), humanize.Comma(int64(topTrack.Users))),
+					Value: fmt.Sprintf("[**%s** by **%s**](%s)",
+						topTrack.Name, topTrack.ArtistName, helpers.EscapeLinkForMarkdown(topTrack.Url)),
 					Inline: false})
 				if i == 9 {
 					break
+				}
+			}
+			if guild.Icon != "" {
+				topTracksEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{
+					URL: discordgo.EndpointGuildIcon(guild.ID, guild.Icon),
 				}
 			}
 			_, err = helpers.SendEmbed(msg.ChannelID, topTracksEmbed)
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			break
 		default:
+			var err error
+			targetUser := msg.Author
 			if subCom != "" {
 				lastfmUsername = subCom
-				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
+				targetUser, err = helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
 					lastfmUsername = m.getLastFmUsername(targetUser.ID)
 				}
@@ -809,8 +902,6 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				embedTitle = helpers.GetTextF("plugins.lastfm.profile-embed-title-realname", lastfmUser.RealName, lastfmUser.Name)
 			}
 			accountEmbed := &discordgo.MessageEmbed{
-				Title: embedTitle,
-				URL:   lastfmUser.Url,
 				Footer: &discordgo.MessageEmbedFooter{
 					Text:    helpers.GetText("plugins.lastfm.embed-footer"),
 					IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
@@ -818,11 +909,16 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Scrobbles", Value: humanize.Comma(int64(scrobblesCount)), Inline: true}},
 				Color: helpers.GetDiscordColorFromHex(lastfmHexColor),
+				Author: &discordgo.MessageEmbedAuthor{
+					URL:  fmt.Sprintf(lastfmFriendlyUser, lastfmUsername),
+					Name: embedTitle,
+				},
 			}
 			if len(lastfmUser.Images) > 0 {
 				for _, image := range lastfmUser.Images {
 					if image.Size == "large" {
 						accountEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: image.Url}
+						accountEmbed.Author.IconURL = image.Url
 					}
 				}
 			}
