@@ -670,7 +670,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "topartists", "topartist":
+		case "topartists", "topartist", "top":
 			timeLookup := "overall"
 			timeString := "all time"
 			var collage bool

@@ -88,20 +88,20 @@ func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth,
 					fontSize--
 				}
 				// draw text
-				cairoSurface.SetSourceRGB(0, 0, 0) // black
+				cairoSurface.SetSourceRGB(1, 1, 1) // white
 				cairoSurface.MoveTo(float64(posX+6), float64(posY+6+fontSize+offset))
 				cairoSurface.ShowText(line)
 				// draw white outline to improve readability
 				cairoSurface.MoveTo(float64(posX+6), float64(posY+6+fontSize+offset))
 				cairoSurface.TextPath(line)
-				cairoSurface.SetSourceRGB(1, 1, 1) // white
+				cairoSurface.SetSourceRGB(0, 0, 0) // black
 				cairoSurface.SetLineWidth(4.5)
 				cairoSurface.Stroke()
 				// draw black outline to make text bold
 				cairoSurface.MoveTo(float64(posX+6), float64(posY+6+fontSize+offset))
 				cairoSurface.TextPath(line)
-				cairoSurface.SetSourceRGB(0, 0, 0) // black
-				cairoSurface.SetLineWidth(2.0)
+				cairoSurface.SetSourceRGB(1, 1, 1) // white
+				cairoSurface.SetLineWidth(2.5)
 				cairoSurface.Stroke()
 				// switch to new line
 				offset += fontSize + 6
