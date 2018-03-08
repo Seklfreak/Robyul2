@@ -3841,7 +3841,7 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
 
 		resizeRect := image.Rect(0, 0, 128, 128)
 		cutImage := image.NewRGBA(resizeRect)
-		resizedRect := image.Rect(4, 64, 4+80, 64+80)
+		resizedRect := image.Rect(4, 64+90, 4+80, 64+80+90)
 
 		for i, avatarGifFrame := range avatarGif.Image {
 			resizedImage := resize.Resize(80, 80, avatarGifFrame, resize.NearestNeighbor)
