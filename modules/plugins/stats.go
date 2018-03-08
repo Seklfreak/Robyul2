@@ -967,11 +967,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		channelsAgg := elastic.NewTermsAggregation().
 			Field("ChannelID.keyword").
-			Order("_count", false)
+			Order("_count", false).
+			Size(100)
 
 		usersAgg := elastic.NewTermsAggregation().
 			Field("UserID.keyword").
-			Order("_count", false)
+			Order("totalDuration", false).
+			Size(5)
 
 		durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
 
