@@ -685,6 +685,12 @@
     },
     "useruploads": {
       "disable-success": "I disabled useruploads for this user."
+    },
+    "perspective": {
+      "participation-enabled": "Perspective participation has been enabled.",
+      "participation-disabled": "Perspective participation has been disabled.",
+      "embed-footer": "powered by Google Perspective API",
+      "embed-footer-imageurl": "https://i.imgur.com/ahfJlxp.png"
     }
   }
 }

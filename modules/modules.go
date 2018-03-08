@@ -79,5 +79,6 @@ var (
 		&plugins.Persistency{},
 		&plugins.Twitter{},
 		&eventlog.Handler{},
+		&plugins.Perspective{},
 	}
 )

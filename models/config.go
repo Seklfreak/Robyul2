@@ -59,6 +59,9 @@ type Config struct {
 
 	RandomPicturesPicDelay                  int      `rethink:"randompictures_pic_delay"`
 	RandomPicturesPicDelayIgnoredChannelIDs []string `rethink:"randompictures_pic_delay_ignored_channelids"`
+
+	PerspectiveIsParticipating bool   `rethink:"perspective_participation"`
+	PerspectiveChannelID       string `rethink:"perspective_channelid"`
 }
 
 type InspectTriggersEnabled struct {
