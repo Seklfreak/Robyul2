@@ -3624,6 +3624,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		userAndNick = fmt.Sprintf("%s (%s)", member.User.Username, member.Nick)
 	}
 	userWithDisc := member.User.Username + "#" + member.User.Discriminator
+	if len(userWithDisc) >= 15 {
+		userWithDisc = member.User.Username
+	}
 	title := userData.Title
 	if title == "" {
 		title = "Robyul's friend"
