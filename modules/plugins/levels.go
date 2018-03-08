@@ -921,7 +921,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							serverBadges := m.GetServerOnlyBadges(channel.GuildID)
 							badgeLimit := helpers.GuildSettingsGetCached(channel.GuildID).LevelsMaxBadges
 							if badgeLimit == 0 {
-								badgeLimit = 20
+								badgeLimit = 100
 							}
 							if len(serverBadges) >= badgeLimit {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.create-badge-error-too-many", helpers.GetStaffUsernamesText()))
