@@ -24,6 +24,8 @@ type ProfileUserdataEntry struct {
 	TextColor         string
 	BackgroundOpacity string
 	DetailOpacity     string
+	BadgeOpacity      string
+	EXPOpacity        string
 	Timezone          string
 	Birthday          string
 }

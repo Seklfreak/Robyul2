@@ -1706,6 +1706,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				helpers.Relax(err)
 
 				opacityText := "0.5"
+				switch args[1] {
+				case "badge", "badges":
+					opacityText = "1.0"
+				}
 				if len(args) >= 3 {
 					opacity, err := strconv.ParseFloat(args[2], 64)
 					if err != nil {
@@ -1721,6 +1725,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					userUserdata.BackgroundOpacity = opacityText
 				case "details", "detail":
 					userUserdata.DetailOpacity = opacityText
+				case "exp", "EXP", "expbar":
+					userUserdata.EXPOpacity = opacityText
+				case "badge", "badges":
+					userUserdata.BadgeOpacity = opacityText
 				default:
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -3701,6 +3709,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		}
 	}
 
+	expOpacity := m.GetExpOpacity(userData)
+	badgeOpacity := m.GetBadgeOpacity(userData)
+
 	tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", html.EscapeString(member.User.Username), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", html.EscapeString(member.Nick), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AND_NICKNAME}", html.EscapeString(userAndNick), -1)
@@ -3721,6 +3732,8 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", html.EscapeString(detailColorString), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_EXP_OPACITY}", expOpacity, -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGE_OPACITY}", badgeOpacity, -1)
 
 	if web == false { // privacy
 		tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
@@ -3945,6 +3958,22 @@ func (m *Levels) GetDetailOpacity(userUserdata models.ProfileUserdataEntry) stri
 		return userUserdata.DetailOpacity
 	} else {
 		return "0.5"
+	}
+}
+
+func (m *Levels) GetExpOpacity(userUserdata models.ProfileUserdataEntry) string {
+	if userUserdata.DetailOpacity != "" {
+		return userUserdata.EXPOpacity
+	} else {
+		return "1.0"
+	}
+}
+
+func (m *Levels) GetBadgeOpacity(userUserdata models.ProfileUserdataEntry) string {
+	if userUserdata.BadgeOpacity != "" {
+		return userUserdata.BadgeOpacity
+	} else {
+		return "1.0"
 	}
 }
 
