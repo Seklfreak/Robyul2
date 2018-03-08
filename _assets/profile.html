@@ -193,11 +193,26 @@
             top: -40px;
             left: -5px;
         }
+        #serverexpbar {
+            position: absolute;
+            background-color: {USER_DETAIL_COLOR};
+            width: 400px;
+            height: 5px;
+            left: 0;
+            top: 0;
+        }
+        #serverexpbarprogress {
+            background-color: {USER_ACCENT_COLOR};
+            opacity: 0.5;
+            height: 5px;
+            left: 0;
+            top: 0;
+        }
     </style>
 </head>
 
 <body>
-
+<div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div></div>
 <div id="container">
     <div class="avatar fake-bg"></div>
     <div class="avatar avatar-only"></div>
