@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -12,80 +11,18 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"github.com/shawntoffel/darksky"
 )
 
-type Weather struct{}
+type Weather struct {
+	darkSkyClient darksky.DarkSky
+}
 
 const (
 	googleMapsGeocodingEndpoint = "https://maps.googleapis.com/maps/api/geocode/json?language=en&key=%s&address=%s"
-	darkSkyForecastRequest      = "https://api.darksky.net/forecast/%s/%s,%s?exclude=minutely,hourly&lang=en&units=si"
 	darkSkyFriendlyForecast     = "https://darksky.net/forecast/%s,%s/si24"
 	darkSkyHexColor             = "#2B86F3"
 )
-
-type DarkSkyForecast struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Timezone  string  `json:"timezone"`
-	Offset    float64 `json:"offset"`
-	Currently struct {
-		Time                int     `json:"time"`
-		Summary             string  `json:"summary"`
-		Icon                string  `json:"icon"`
-		PrecipIntensity     float64 `json:"precipIntensity"`
-		PrecipProbability   float64 `json:"precipProbability"`
-		PrecipType          string  `json:"precipType"`
-		Temperature         float64 `json:"temperature"`
-		ApparentTemperature float64 `json:"apparentTemperature"`
-		DewPoint            float64 `json:"dewPoint"`
-		Humidity            float64 `json:"humidity"`
-		WindSpeed           float64 `json:"windSpeed"`
-		WindBearing         int     `json:"windBearing"`
-		Visibility          float64 `json:"visibility"`
-		CloudCover          float64 `json:"cloudCover"`
-		Pressure            float64 `json:"pressure"`
-		Ozone               float64 `json:"ozone"`
-	} `json:"currently"`
-	Daily struct {
-		Summary string `json:"summary"`
-		Icon    string `json:"icon"`
-		Data    []struct {
-			Time                       int     `json:"time"`
-			Summary                    string  `json:"summary"`
-			Icon                       string  `json:"icon"`
-			SunriseTime                int     `json:"sunriseTime"`
-			SunsetTime                 int     `json:"sunsetTime"`
-			MoonPhase                  float64 `json:"moonPhase"`
-			PrecipIntensity            float64 `json:"precipIntensity"`
-			PrecipIntensityMax         float64 `json:"precipIntensityMax"`
-			PrecipIntensityMaxTime     int     `json:"precipIntensityMaxTime,omitempty"`
-			PrecipProbability          float64 `json:"precipProbability"`
-			PrecipType                 string  `json:"precipType,omitempty"`
-			TemperatureMin             float64 `json:"temperatureMin"`
-			TemperatureMinTime         int     `json:"temperatureMinTime"`
-			TemperatureMax             float64 `json:"temperatureMax"`
-			TemperatureMaxTime         int     `json:"temperatureMaxTime"`
-			ApparentTemperatureMin     float64 `json:"apparentTemperatureMin"`
-			ApparentTemperatureMinTime int     `json:"apparentTemperatureMinTime"`
-			ApparentTemperatureMax     float64 `json:"apparentTemperatureMax"`
-			ApparentTemperatureMaxTime int     `json:"apparentTemperatureMaxTime"`
-			DewPoint                   float64 `json:"dewPoint"`
-			Humidity                   float64 `json:"humidity"`
-			WindSpeed                  float64 `json:"windSpeed"`
-			WindBearing                int     `json:"windBearing"`
-			Visibility                 float64 `json:"visibility,omitempty"`
-			CloudCover                 float64 `json:"cloudCover"`
-			Pressure                   float64 `json:"pressure"`
-			Ozone                      float64 `json:"ozone"`
-		} `json:"data"`
-	} `json:"daily"`
-	Flags struct {
-		Sources       []string `json:"sources"`
-		IsdStations   []string `json:"isd-stations"`
-		MadisStations []string `json:"madis-stations"`
-		Units         string   `json:"units"`
-	} `json:"flags"`
-}
 
 func (w *Weather) Commands() []string {
 	return []string{
@@ -94,7 +31,7 @@ func (w *Weather) Commands() []string {
 }
 
 func (w *Weather) Init(session *discordgo.Session) {
-
+	w.darkSkyClient = darksky.New(helpers.GetConfig().Path("darksky.api_key").Data().(string))
 }
 
 func (w *Weather) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -141,14 +78,17 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 		}
 	}
 
-	darkSkyUrl := fmt.Sprintf(darkSkyForecastRequest,
-		helpers.GetConfig().Path("darksky.api_key").Data().(string),
-		strconv.FormatFloat(latResult, 'f', -1, 64),
-		strconv.FormatFloat(lngResult, 'f', -1, 64))
-	forecastResult := helpers.NetGet(darkSkyUrl)
+	darkSkyForecast, err := w.darkSkyClient.Forecast(darksky.ForecastRequest{
+		Latitude:  darksky.Measurement(latResult),
+		Longitude: darksky.Measurement(lngResult),
+		Options: darksky.ForecastRequestOptions{
+			Exclude: "minutely,hourly,alerts,flags",
+			Extend:  "",
+			Lang:    "en",
+			Units:   "si",
+		},
+	})
 	metrics.DarkSkyRequests.Add(1)
-	var darkSkyForecast DarkSkyForecast
-	err := json.Unmarshal(forecastResult, &darkSkyForecast)
 	helpers.Relax(err)
 
 	if darkSkyForecast.Currently.Summary == "" {
@@ -166,24 +106,69 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 			strconv.FormatFloat(latResult, 'f', -1, 64),
 			strconv.FormatFloat(lngResult, 'f', -1, 64)),
 		//Thumbnail: &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf(weatherIconsBaseUrl, darkSkyForecast.Currently.Icon)},
-		Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.weather.embed-footer")},
-		Description: helpers.GetTextF("plugins.weather.current-weather-description",
-			darkSkyForecast.Currently.Summary,
-			strconv.FormatFloat(darkSkyForecast.Currently.Temperature, 'f', 1, 64),
-			strconv.FormatFloat(darkSkyForecast.Currently.Temperature*1.8+32, 'f', 1, 64),
-			strconv.FormatFloat(darkSkyForecast.Currently.ApparentTemperature, 'f', 1, 64),
-			strconv.FormatFloat(darkSkyForecast.Currently.ApparentTemperature*1.8+32, 'f', 1, 64),
-			strconv.FormatFloat(darkSkyForecast.Currently.WindSpeed, 'f', 1, 64),
-			strconv.FormatFloat(darkSkyForecast.Currently.WindSpeed*2.23694, 'f', 1, 64),
-			strconv.FormatFloat(darkSkyForecast.Currently.Humidity*100, 'f', 0, 64),
-		),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.weather.embed-footer"),
+			IconURL: helpers.GetText("plugins.weather.embed-footer-imageurl"),
+		},
 		Fields: []*discordgo.MessageEmbedField{
-			{Name: helpers.GetText("plugins.weather.week-title"), Value: darkSkyForecast.Daily.Summary, Inline: false}},
+			{
+				Name: "Currently",
+				Value: helpers.GetTextF("plugins.weather.current-weather-description",
+					w.getWeatherEmoji(darkSkyForecast.Currently.Icon),
+					darkSkyForecast.Currently.Summary,
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.Temperature), 'f', 1, 64),
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.Temperature)*1.8+32, 'f', 1, 64),
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.ApparentTemperature), 'f', 1, 64),
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.ApparentTemperature)*1.8+32, 'f', 1, 64),
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.WindSpeed), 'f', 1, 64),
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.WindSpeed)*2.23694, 'f', 1, 64),
+					strconv.FormatFloat(float64(darkSkyForecast.Currently.Humidity)*100, 'f', 0, 64),
+				),
+				Inline: false,
+			},
+			{
+				Name:   helpers.GetText("plugins.weather.week-title"),
+				Value:  w.getWeatherEmoji(darkSkyForecast.Daily.Icon) + " " + darkSkyForecast.Daily.Summary,
+				Inline: false,
+			},
+		},
 		Color: helpers.GetDiscordColorFromHex(darkSkyHexColor),
 	}
 
 	_, err = helpers.SendEmbed(msg.ChannelID, weatherEmbed)
 	helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+}
+
+func (w *Weather) getWeatherEmoji(iconName string) (emoji string) {
+	switch iconName {
+	case "clear-day":
+		return "☀"
+	case "clear-night":
+		return ""
+	case "rain":
+		return "🌧"
+	case "snow":
+		return "☃"
+	case "sleet":
+		return "🌃"
+	case "wind":
+		return "🌬"
+	case "fog":
+		return "🌁"
+	case "cloudy":
+		return "☁"
+	case "partly-cloudy-day":
+		return "⛅"
+	case "partly-cloudy-night":
+		return "☁"
+	case "hail":
+		return "🌨"
+	case "thunderstorm":
+		return "⛈"
+	case "tornado":
+		return "🌪"
+	}
+	return ""
 }
 
 func (w *Weather) setLastLocation(userID string, lat float64, lng float64, text string) (err error) {

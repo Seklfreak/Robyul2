@@ -7,23 +7,22 @@ import (
 	_ "image/png"
 	"time"
 
+	"image"
+	"strings"
+
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/ungerik/go-cairo"
 )
-import (
-	"image"
-	"strings"
-)
 
 // Creates a Collage PNG Image from internet image urls (PNG or JPEG).
-// imageUrls        : a slice with all image URLs. Empty strings will create an empty space in the collage.
-// descriptions     : a slice with text that will be written on each tile. Can be empty.
-// width            : the width of the result collage image.
-// height           : the height of the result collage image.
-// tileWidth        : the width of each tile image.
-// tileHeight       : the height of each tile image.
-// backgroundColour : the background colour as a hex string.
-func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth, tileHeight int, backgroundColourText string) (collageBytes []byte) {
+// imageUrls		: a slice with all image URLs. Empty strings will create an empty space in the collage.
+// descriptions		: a slice with text that will be written on each tile. Can be empty.
+// width			: the width of the result collage image.
+// height			: the height of the result collage image.
+// tileWidth		: the width of each tile image.
+// tileHeight		: the height of each tile image.
+// backgroundColour	: the background colour as a hex string.
+func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth, tileHeight int, backgroundColour string) (collageBytes []byte) {
 	imageDataArray := make([][]byte, 0)
 	// download images
 	for _, imageUrl := range imageUrls {
@@ -41,9 +40,9 @@ func CollageFromUrls(imageUrls, descriptions []string, width, height, tileWidth,
 	}
 
 	// create surface with given background colour
-	backgroundColour, _ := colorful.Hex(backgroundColourText)
+	backgroundColourRGB, _ := colorful.Hex(backgroundColour)
 	cairoSurface := cairo.NewSurface(cairo.FORMAT_RGB24, width, height)
-	cairoSurface.SetSourceRGB(backgroundColour.R, backgroundColour.G, backgroundColour.B)
+	cairoSurface.SetSourceRGB(backgroundColourRGB.R, backgroundColourRGB.G, backgroundColourRGB.B)
 	cairoSurface.Paint()
 
 	var posX, posY int

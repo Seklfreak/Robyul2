@@ -201,3 +201,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/CleverbotIO/go-cleverbot.io"
+
+[[constraint]]
+  name = "github.com/shawntoffel/darksky"
+  version = "1.2.0"

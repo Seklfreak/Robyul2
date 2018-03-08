@@ -234,10 +234,11 @@
     "weather": {
       "address-not-found": "I can't find the location you are looking for. <:blobthinking:317028940885524490>",
       "no-weather": "I couldn't find any weather for the given location. <:googlespeaknoevil:317036753074651139>",
-      "weather-embed-title": "Weather for %s",
+      "weather-embed-title": "Weather in %s",
       "embed-footer": "powered by Dark Sky",
-      "current-weather-description": "**Currently**\n**%s**\nTemperature: **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\nWind: **%s m/s** (%s mph)\nHumidity: **%s %%**",
-      "week-title": "This week"
+      "current-weather-description": "%s **%s**\n🌡 Temparature **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\n🌬 Wind **%s m/s** (%s mph)\n💦 Humidity **%s %%**",
+      "week-title": "This week",
+      "embed-footer-imageurl": "https://i.imgur.com/JlQzNZx.png"
     },
     "bias": {
       "role-not-found": "I couldn't find the Role. <:blobthinking:317028940885524490>",

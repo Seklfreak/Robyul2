@@ -493,6 +493,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/shawntoffel/darksky"
+  packages = ["."]
+  revision = "4bf89b49ed59958ce7259a297fc69fc5680d0a29"
+  version = "1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/shkh/lastfm-go"
   packages = ["lastfm"]
@@ -809,6 +815,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "73fdbeb1c4078a60146396ec833ae8fc3d5f90b49f2f779a9308ec6d5f546569"
+  inputs-digest = "0ca2590656b6acf6301ca8025eab002a83fcfcd5d4572970d5a3d8bd42c000d2"
   solver-name = "gps-cdcl"
   solver-version = 1
