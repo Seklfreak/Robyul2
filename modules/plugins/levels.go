@@ -568,6 +568,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						return
 					}
 
+					metrics.CloudVisionApiRequests.Add(1)
 					if !helpers.PictureIsSafe(bytes.NewReader(bytesData)) {
 						quitChannel <- 0
 

@@ -145,6 +145,9 @@ var (
 
 	// PerspectiveApiRequests counts all google perspective api requests made
 	PerspectiveApiRequests = expvar.NewInt("perspective_api_requests")
+
+	// CloudVisionApiRequests counts all google cloud vision api requests made
+	CloudVisionApiRequests = expvar.NewInt("cloudvision_api_requests")
 )
 
 // Init starts a http server on 127.0.0.1:1337
