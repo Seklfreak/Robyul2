@@ -17,9 +17,10 @@
             background: 0.5;
             position: absolute;
             left: 5px;
-            top: 100px;
+            top: 190px;
             width: 390px;
-            height: 195px;
+            height: 105px;
+            border-radius: 8px;
             z-index: -2;
         }
         .avatar {
@@ -42,24 +43,24 @@
             width: 390px;
             height: 30px;
             z-index: -1;
+            border-radius: 8px;
         }
         #repcontainer {
-            background-color: {USER_DETAIL_COLOR};
             position: absolute;
-            left: 0px;
-            top: 43px;
-            width: 80px;
+            left: 320px;
+            top: 3px;
+            width: 102px;
             height: 25px;
             z-index: -1;
         }
         #userrep {
             position: absolute;
-            top: 4px;
-            height: 20px;
-            width: 80px;
-            font-size: 15px;
+            top: 0;
+            right: 30px;
+            height: 30px;
+            width: 120px;
+            font-size: 20px;
             text-align: center;
-            font-weight: bold;
             overflow: hidden;
         }
         .levelbox {
@@ -99,29 +100,25 @@
             text-align: center;
             width: 27px;
         }
-        #userbadgetitle {
+        .userbadges {
             position: absolute;
-            top: 72px;
-            left: 3px;
-            font-weight:bold;
-            font-size: 14px;
-            text-align: center;
-            width: 80px;
-        }
-        #userbadges {
-            position: absolute;
-            top: 88px;
-            left: 3px;
-            height: 120px;
+            left: 80px;
+            height: 32px;
             font-weight:bold;
             font-size: 14px;
             text-align: left;
             text-overflow: clip;
             white-space: pre-wrap;
             overflow: hidden;
-            width: 136px;
+            width: 310px;
         }
-        #userbadges img {
+        #userbadges-line-1 {
+            top: -35px;
+        }
+        #userbadges-line-2 {
+            top: -70px;
+        }
+        .userbadges img {
             border-radius: 20px;
             border: 2px solid white;
             background-color: grey;
@@ -131,10 +128,10 @@
         }
         #username {
             position: absolute;
-            left: 90px;
-            width: 300px;
+            top: -3px;
+            left: 87px;
+            width: 220px;
             height: 30px;
-            /*font-weight: bold;*/
             font-size: 20px;
             text-overflow: clip;
             white-space: nowrap;
@@ -144,13 +141,12 @@
         }
         #usertitle {
             position: absolute;
-            top: 30px;
-            left: 85px;
-            width: 305px;
-            height: 28px;
+            top: 29px;
+            left: 87px;
+            width: 182px;
+            height: 22px;
             padding-top: 2px;
-            /*font-weight: bold;*/
-            font-size: 15px;
+            font-size: 16px;
             text-overflow: clip;
             white-space: nowrap;
             overflow: hidden;
@@ -167,11 +163,11 @@
         }
         #userbio {
             position: absolute;
-            top: 80px;
-            left: 144px;
-            width: 238px;
-            height: 85px;
-            font-size: 12px;
+            top: 53px;
+            left: 6px;
+            width: 245px;
+            height: 47px;
+            font-size: 14px;
             text-overflow: clip;
             white-space: pre-wrap;
             overflow: hidden;
@@ -179,39 +175,18 @@
         }
         #userstats {
             position: absolute;
+            top: 88px;
             bottom: 0px;
-            left: 144px;
-            width: 238px;
-            height: 20px;
-            font-size: 14px;
-        }
-        #serverexpbar {
-            position: absolute;
-            background-color: {USER_DETAIL_COLOR};
-            width: 125px;
-            height: 20px;
-            left: 56px;
-            top: 0;
-        }
-        #serverexpbarprogress {
-            background-color: {USER_ACCENT_COLOR};
-            opacity: 0.5;
-            height: 20px;
-            left: 33px;
-            top: 0;
-        }
-        #serverexpbartext {
-            position: absolute;
-            width: 125px;
-            height: 20px;
-            text-align: center;
-            top: 3px;
+            left: 265px;
+            width: 134px;
+            height: 17px;
+            font-size: 12px;
         }
         .fake-bg {
             background-image: url('{USER_BACKGROUND_URL}');
             background-repeat: no-repeat;
             background-size: 400px 300px;
-            background-position: 0px -60px;
+            background-position: 0px -150px;
             width: 88px;
             height: 88px;
             top: -40px;
@@ -230,15 +205,16 @@
     </div>
     <div id="usertitle">{USER_TITLE}</div>
     <div id="userlvlinfo">
-        <div class="levelbox" style="left: 3px; top: -2px;"><div class="title">Level</div><div class="level">{USER_SERVER_LEVEL}</div></div>
-        <div class="levelbox" style="left: 30px; top: -2px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div>
-        <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div><div id="serverexpbartext">Server EXP Progress</div></div>
-        <div class="levelnextbox" style="left: 185px;"><div class="title">Global Level</div><div class="level" style="width: 22px;">{USER_GLOBAL_LEVEL}</div></div>
-        <div class="levelnextbox" style="left: 244px;"><div class="title">Global Rank</div><div class="level">{USER_GLOBAL_RANK}</div></div>
+        <div class="levelbox" style="left: 190px; top: -23px;"><div class="title">Level</div><div class="level">{USER_SERVER_LEVEL}</div></div>
+        <div class="levelbox" style="left: 190px; top: 3px;"><div class="title">Rank</div><div class="level">{USER_SERVER_RANK}</div></div>
+        <div class="levelnextbox" style="left: 235px; top: -23px;"><div class="title">Global Level</div><div class="level" style="width: 22px;">{USER_GLOBAL_LEVEL}</div></div>
+        <div class="levelnextbox" style="left: 235px; top: 5px;"><div class="title">Global Rank</div><div class="level">{USER_GLOBAL_RANK}</div></div>
     </div>
-    <div id="repcontainer"><div id="userrep">+{USER_REP} REP</div></div>
-    <div id="userbadgetitle">BADGES</div>
-    <div id="userbadges">{USER_BADGES_HTML}</div>
+    <div id="repcontainer">
+        <div id="userrep">+{USER_REP} REP</div>
+    </div>
+    <div class="userbadges" id="userbadges-line-1">{USER_BADGES_HTML_1}</div>
+    <div class="userbadges" id="userbadges-line-2">{USER_BADGES_HTML_2}</div>
     <div id="userbio">{USER_BIO}</div>
     <div id="userstats">{USER_TIME} {USER_BIRTHDAY}</div>
 </div>

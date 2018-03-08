@@ -133,7 +133,7 @@ var (
 )
 
 const (
-	BadgeLimt          = 12
+	BadgeLimt          = 18
 	TimeAtUserFormat   = "Mon, 15:04"
 	TimeBirthdayFormat = "01/02"
 )
@@ -3642,9 +3642,13 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 			}
 		}
 	}
-	badgesHTML := ""
-	for _, badge := range badgesToDisplay {
-		badgesHTML += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+	var badgesHTML1, badgesHTML2 string
+	for i, badge := range badgesToDisplay {
+		if i <= 8 {
+			badgesHTML1 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+		} else {
+			badgesHTML2 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+		}
 	}
 
 	backgroundColor, err := colorful.Hex("#" + m.GetBackgroundColor(userData))
@@ -3708,7 +3712,8 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_RANK}", globalRank, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_REP}", strconv.Itoa(userData.Rep), -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML}", badgesHTML, -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML_1}", badgesHTML1, -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML_2}", badgesHTML2, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_COLOR}", html.EscapeString(backgroundColorString), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_ACCENT_COLOR}", "#"+m.GetAccentColor(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_DETAIL_COLOR}", html.EscapeString(detailColorString), -1)
