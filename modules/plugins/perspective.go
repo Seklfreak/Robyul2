@@ -85,26 +85,22 @@ func (m *Perspective) actionTest(args []string, in *discordgo.Message, out **dis
 	message := strings.TrimSpace(strings.Replace(in.Content, strings.Split(in.Content, " ")[0], "", 1))
 
 	start := time.Now()
-	severeToxicity, inflammatory, obscene, err := m.analyze(message)
+	severeToxicity, inflammatory, err := m.analyze(message)
 	helpers.Relax(err)
 	took := time.Since(start)
 
-	var severeToxicityWarning, inflammatoryWarning, obsceneWarning string
+	var severeToxicityWarning, inflammatoryWarning string
 	if severeToxicity >= PerspectiveThreshold {
 		severeToxicityWarning = " ⚠"
 	}
 	if inflammatory >= PerspectiveThreshold {
 		inflammatoryWarning = " ⚠"
 	}
-	if obscene >= PerspectiveThreshold {
-		obsceneWarning = " ⚠"
-	}
 
 	*out = m.newMsg(fmt.Sprintf(
-		"Severe Toxicity: %.2f%s, Inflammatory: %.2f%s, Obscene %.2f%s\nTook %s",
+		"Severe Toxicity: %.2f%s, Inflammatory: %.2f%s\nTook %s",
 		severeToxicity, severeToxicityWarning,
 		inflammatory, inflammatoryWarning,
-		obscene, obsceneWarning,
 		took.String(),
 	))
 	return m.actionFinish
@@ -187,24 +183,23 @@ func (m *Perspective) OnMessage(content string, msg *discordgo.Message, session 
 		return
 	}
 	// analyze
-	severeToxicity, inflammatory, obscene, err := m.analyze(msg.Content)
+	severeToxicity, inflammatory, err := m.analyze(msg.Content)
 	helpers.Relax(err)
 	// check threshold
 	if severeToxicity < PerspectiveThreshold &&
-		inflammatory < PerspectiveThreshold &&
-		obscene < PerspectiveThreshold {
+		inflammatory < PerspectiveThreshold {
 		return
 	}
 	// debug
-	m.logger().Debugf("Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene %.2f, message: %s",
-		severeToxicity, inflammatory, obscene, msg.Content,
-	)
+	//m.logger().Debugf("Severe Toxicity: %.2f, Inflammatory: %.2f, message: %s",
+	//	severeToxicity, inflammatory, msg.Content,
+	//)
 	// send warning
-	err = m.sendWarning(channel.GuildID, msg, severeToxicity, inflammatory, obscene)
+	err = m.sendWarning(channel.GuildID, msg, severeToxicity, inflammatory)
 	helpers.RelaxLog(err)
 }
 
-func (m *Perspective) sendWarning(guildID string, message *discordgo.Message, severeToxicity, inflammatory, obscene float64) (err error) {
+func (m *Perspective) sendWarning(guildID string, message *discordgo.Message, severeToxicity, inflammatory float64) (err error) {
 	settings := helpers.GuildSettingsGetCached(guildID)
 
 	if !settings.PerspectiveIsParticipating || settings.PerspectiveChannelID == "" {
@@ -218,15 +213,11 @@ func (m *Perspective) sendWarning(guildID string, message *discordgo.Message, se
 
 	severeToxicityWarning := "✅ "
 	inflammatoryWarning := "✅ "
-	obsceneWarning := "✅ "
 	if severeToxicity >= PerspectiveThreshold {
 		severeToxicityWarning = "⚠ "
 	}
 	if inflammatory >= PerspectiveThreshold {
 		inflammatoryWarning = "⚠ "
-	}
-	if obscene >= PerspectiveThreshold {
-		obsceneWarning = "⚠ "
 	}
 
 	warningEmbed := &discordgo.MessageEmbed{
@@ -254,11 +245,6 @@ func (m *Perspective) sendWarning(guildID string, message *discordgo.Message, se
 				Inline: true,
 			},
 			{
-				Name:   "Obscene",
-				Value:  fmt.Sprintf("%s%.2f", obsceneWarning, obscene),
-				Inline: true,
-			},
-			{
 				Name: "Channel", Value: "<#" + message.ChannelID + ">", Inline: false,
 			},
 		},
@@ -268,7 +254,7 @@ func (m *Perspective) sendWarning(guildID string, message *discordgo.Message, se
 	return err
 }
 
-func (m *Perspective) analyze(message string) (severeToxicity, inflammatory, obscene float64, err error) {
+func (m *Perspective) analyze(message string) (severeToxicity, inflammatory float64, err error) {
 	// TODO: strip emoji
 	requestData := &PerspectiveRequest{}
 	requestData.Comment.Text = message
@@ -276,7 +262,7 @@ func (m *Perspective) analyze(message string) (severeToxicity, inflammatory, obs
 
 	marshalled, err := json.Marshal(requestData)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	resultData, err := helpers.NetPostUAWithError(
@@ -286,18 +272,17 @@ func (m *Perspective) analyze(message string) (severeToxicity, inflammatory, obs
 	)
 	metrics.PerspectiveApiRequests.Add(1)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	var response PerspectiveResponse
 	err = json.Unmarshal(resultData, &response)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	return response.AttributeScores.SevereToxicity.SummaryScore.Value,
 		response.AttributeScores.Inflammatory.SummaryScore.Value,
-		response.AttributeScores.Obscene.SummaryScore.Value,
 		nil
 }
 
@@ -372,7 +357,6 @@ type PerspectiveRequest struct {
 	RequestedAttributes struct {
 		SevereToxicity struct{} `json:"SEVERE_TOXICITY"`
 		Inflammatory   struct{} `json:"INFLAMMATORY"`
-		Obscene        struct{} `json:"OBSCENE"`
 	} `json:"requestedAttributes"`
 }
 
@@ -390,11 +374,5 @@ type PerspectiveResponse struct {
 				Type  string  `json:"type"`
 			} `json:"summaryScore"`
 		} `json:"INFLAMMATORY"`
-		Obscene struct {
-			SummaryScore struct {
-				Value float64 `json:"value"`
-				Type  string  `json:"type"`
-			} `json:"summaryScore"`
-		} `json:"OBSCENE"`
 	} `json:"attributeScores"`
 }
