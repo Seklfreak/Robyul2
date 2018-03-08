@@ -3965,7 +3965,7 @@ func (m *Levels) GetExpOpacity(userUserdata models.ProfileUserdataEntry) string 
 	if userUserdata.DetailOpacity != "" {
 		return userUserdata.EXPOpacity
 	} else {
-		return "1.0"
+		return "0.5"
 	}
 }
 
