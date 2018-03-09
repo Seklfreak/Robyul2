@@ -61,6 +61,7 @@ var (
 		&plugins.DM{},
 		&plugins.EmbedPost{},
 		&plugins.Useruploads{},
+		&plugins.Move{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
