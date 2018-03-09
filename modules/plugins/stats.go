@@ -54,6 +54,7 @@ func (s *Stats) Commands() []string {
 		"rolelist",
 		"channels",
 		"channellist",
+		"avatar",
 	}
 }
 
@@ -1865,6 +1866,27 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		return
+	case "avatar":
+		session.ChannelTyping(msg.ChannelID)
+
+		targetUser, err := helpers.GetUser(msg.Author.ID)
+		helpers.Relax(err)
+
+		args := strings.Fields(content)
+		if len(args) >= 1 {
+			targetUser, err = helpers.GetUserFromMention(args[0])
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); (ok && errD.Message.Code == discordgo.ErrCodeUnknownUser) || strings.Contains(err.Error(), "User not found.") {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.user-not-found"))
+					return
+				}
+			}
+			helpers.Relax(err)
+		}
+
+		_, err = helpers.SendMessage(msg.ChannelID, targetUser.AvatarURL(""))
+		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
 }
