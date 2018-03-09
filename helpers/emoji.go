@@ -12,16 +12,13 @@ import (
 )
 
 var (
-	emojiRegex        *regexp.Regexp
-	discordEmojiRegex *regexp.Regexp
-	unicodeEmojiRegex *regexp.Regexp
+	emojiRegex        *regexp.Regexp = regexp.MustCompile(`[\x{00A0}-\x{1F9EF}]|<(a)?:[^<>:]+:[0-9]+>`)
+	discordEmojiRegex *regexp.Regexp = regexp.MustCompile(`<(a)?:([^<>:]+):([0-9]+)>`)
+	unicodeEmojiRegex *regexp.Regexp = regexp.MustCompile(`[\x{00A0}-\x{1F9EF}]`)
 )
 
 // returns true if text is an unicode emoji or a discord custom emoji, returns false for everything else
 func IsEmoji(text string) (isEmoji bool) {
-	if emojiRegex == nil {
-		emojiRegex = regexp.MustCompile(`[\x{00A0}-\x{1F9EF}]|<(a)?:[^<>:]+:[0-9]+>`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
-	}
 	if emojiRegex.MatchString(text) {
 		return true
 	}
@@ -30,9 +27,6 @@ func IsEmoji(text string) (isEmoji bool) {
 
 // returns true if text is an unicode emoji, returns false for everything else
 func IsUnicodeEmoji(text string) (isEmoji bool) {
-	if unicodeEmojiRegex == nil {
-		unicodeEmojiRegex = regexp.MustCompile(`[\x{00A0}-\x{1F9EF}]`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
-	}
 	if unicodeEmojiRegex.MatchString(text) {
 		return true
 	}
@@ -41,13 +35,24 @@ func IsUnicodeEmoji(text string) (isEmoji bool) {
 
 // returns true if text is a discord custom emoji, returns false for everything else
 func IsDiscordEmoji(text string) (isEmoji bool) {
-	if discordEmojiRegex == nil {
-		discordEmojiRegex = regexp.MustCompile(`<(a)?:[^<>:]+:[0-9]+>`) // https://en.wikipedia.org/wiki/Emoji#Unicode_blocks
-	}
 	if discordEmojiRegex.MatchString(text) {
 		return true
 	}
 	return false
+}
+
+// gathers the emoji ID and the animation status from a custom emoji posted on discord
+// text	: the custom emoji string, example: <a:anayoungSCREAM:394044148438794240>
+func ParseCustomEmoji(text string) (emojiID, emojiName string, animated bool) {
+	submatches := discordEmojiRegex.FindStringSubmatch(text)
+	if len(submatches) >= 4 {
+		var animated bool
+		if submatches[1] == "a" {
+			animated = true
+		}
+		return submatches[3], submatches[2], animated
+	}
+	return "", "", false
 }
 
 func GetDiscordEmojiFromText(guildID string, text string) (emoji *discordgo.Emoji, err error) {

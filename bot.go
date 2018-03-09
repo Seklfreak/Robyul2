@@ -9,6 +9,8 @@ import (
 
 	"os"
 
+	"bytes"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -386,9 +388,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			})
 
 		default:
-			// Track usage
-			metrics.ChatbotRequests.Add(1)
-
 			// Mark typing
 			session.ChannelTyping(message.ChannelID)
 
@@ -396,6 +395,60 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			for _, user := range message.Mentions {
 				msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)
 			}
+
+			if helpers.IsEmoji(msg) {
+				// send big emoji
+				emojiID, emojiName, animated := helpers.ParseCustomEmoji(msg)
+				// download and send custom emoji
+				if emojiID != "" {
+					fileName := emojiName
+					emojiUrl := discordgo.EndpointEmoji(emojiID)
+					if animated {
+						emojiUrl = strings.Replace(emojiUrl, ".png", ".gif", -1)
+						fileName += ".gif"
+					} else {
+						fileName += ".png"
+					}
+					emojiData, err := helpers.NetGetUAWithError(emojiUrl, helpers.DEFAULT_UA)
+					helpers.RelaxLog(err)
+					if err == nil {
+						_, err = helpers.SendComplex(message.ChannelID, &discordgo.MessageSend{
+							Files: []*discordgo.File{
+								{
+									Name:   fileName,
+									Reader: bytes.NewReader(emojiData),
+								},
+							},
+						})
+						helpers.RelaxLog(err)
+						return
+					}
+				}
+				// send builtin emoji
+				for character := range msg {
+					filename := emojiFile(helpers.GetConfig().Path("assets_folder").Data().(string)+"/twemoji72", msg[character:])
+					if filename != "" {
+						emojiFile, err := os.Open(filename)
+						if err == nil {
+							defer emojiFile.Close()
+							_, err = helpers.SendComplex(message.ChannelID, &discordgo.MessageSend{
+								Files: []*discordgo.File{
+									{
+										Name:   "emoji.png",
+										Reader: emojiFile,
+									},
+								},
+							})
+							helpers.RelaxLog(err)
+							return
+						}
+					}
+				}
+				return
+			}
+
+			// Track usage
+			metrics.ChatbotRequests.Add(1)
 
 			// Remove smileys
 			msg = regexp.MustCompile(`:\w+:`).ReplaceAllString(msg, "")
@@ -480,6 +533,25 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 
 	// Check if a module matches said command
 	modules.CallBotPlugin(cmd, content, message.Message)
+}
+
+func emojiFile(base, s string) string {
+	found := ""
+	filename := ""
+	for _, r := range s {
+		if filename != "" {
+			filename = fmt.Sprintf("%s-%x", filename, r)
+		} else {
+			filename = fmt.Sprintf("%x", r)
+		}
+
+		if _, err := os.Stat(fmt.Sprintf("%s/%s.png", base, filename)); err == nil {
+			found = fmt.Sprintf("%s/%s.png", base, filename)
+		} else if found != "" {
+			return found
+		}
+	}
+	return found
 }
 
 func BotOnMessageDelete(session *discordgo.Session, message *discordgo.MessageDelete) {
