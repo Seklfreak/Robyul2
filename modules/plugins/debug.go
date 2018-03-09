@@ -56,6 +56,26 @@ func (d *Debug) Action(command string, content string, msg *discordgo.Message, s
 				})
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			return
+		case "cloudvision":
+			session.ChannelTyping(msg.ChannelID)
+
+			if msg.Attachments == nil || len(msg.Attachments) <= 0 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+
+			data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
+			helpers.Relax(err)
+
+			isSafe := helpers.PictureIsSafe(bytes.NewReader(data))
+
+			if isSafe {
+				_, err = helpers.SendMessage(msg.ChannelID, "✅ Picture is safe!")
+				helpers.Relax(err)
+			} else {
+				_, err = helpers.SendMessage(msg.ChannelID, "❌ Picture not is safe!")
+				helpers.Relax(err)
+			}
 		}
 
 		return
