@@ -690,7 +690,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		var sinceStatusName, sinceStatusValue, lastMessageText string
+		var sinceStatusName, sinceStatusValue, lastMessageText, firstMessageText string
 		if cache.HasElastic() && !helpers.GuildSettingsGetCached(currentGuild.ID).ChatlogDisabled {
 			queryString := "UserID:" + targetUser.ID + " AND NOT Status:\"\""
 			termQuery := elastic.NewQueryStringQuery(queryString)
@@ -750,10 +750,52 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				Do(context.Background())
 			if err == nil {
 				if searchResult.TotalHits() > 0 {
-					var ttyp models.ElasticMessage
-					for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-						if message, ok := item.(models.ElasticMessage); ok {
+					for _, item := range searchResult.Hits.Hits {
+						message := helpers.UnmarshalElasticMessage(item)
+						if !message.CreatedAt.IsZero() {
 							lastMessageText = humanize.Time(message.CreatedAt)
+						}
+					}
+				}
+			} else {
+				if errE, ok := err.(*elastic.Error); ok {
+					raven.CaptureError(fmt.Errorf("%#v", errE), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				} else {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
+						"ChannelID":        msg.ChannelID,
+						"Content":          msg.Content,
+						"Timestamp":        string(msg.Timestamp),
+						"TTS":              strconv.FormatBool(msg.Tts),
+						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
+						"IsBot":            strconv.FormatBool(msg.Author.Bot),
+						"ElasticTermQuery": queryString,
+					})
+				}
+			}
+
+			queryString = "UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
+			termQuery = elastic.NewQueryStringQuery(queryString)
+			searchResult, err = cache.GetElastic().Search().
+				Index(models.ElasticIndexMessages).
+				Type("doc").
+				Query(termQuery).
+				Sort("CreatedAt", true).
+				Size(1).
+				Do(context.Background())
+			if err == nil {
+				if searchResult.TotalHits() > 0 {
+					for _, item := range searchResult.Hits.Hits {
+						message := helpers.UnmarshalElasticMessage(item)
+						if !message.CreatedAt.IsZero() {
+							firstMessageText = humanize.Time(message.CreatedAt)
 						}
 					}
 				}
@@ -808,11 +850,15 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			userinfoEmbed.URL = gameUrl
 		}
 
-		if sinceStatusName != "" && sinceStatusValue != "" {
-			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: strings.Title(sinceStatusName) + " since", Value: sinceStatusValue, Inline: true})
+		if firstMessageText != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "First Message", Value: firstMessageText, Inline: true})
 		}
 		if lastMessageText != "" {
 			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: "Last Message", Value: lastMessageText, Inline: true})
+		}
+
+		if sinceStatusName != "" && sinceStatusValue != "" {
+			userinfoEmbed.Fields = append(userinfoEmbed.Fields, &discordgo.MessageEmbedField{Name: strings.Title(sinceStatusName) + " since", Value: sinceStatusValue, Inline: true})
 		}
 
 		if totalMessagesText != "" {
