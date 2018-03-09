@@ -57,7 +57,7 @@ func (m *Move) Action(command string, content string, msg *discordgo.Message, se
 // moves messages and deletes old messages after that
 func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.MessageSend) moveAction {
 	if !helpers.IsMod(in) {
-		*out = m.newMsg("no_permission")
+		*out = m.newMsg("mod.no_permission")
 		return m.actionFinish
 	}
 
@@ -117,7 +117,7 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 // moves messages and keeps the old messages
 func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.MessageSend) moveAction {
 	if !helpers.IsMod(in) {
-		*out = m.newMsg("no_permission")
+		*out = m.newMsg("mod.no_permission")
 		return m.actionFinish
 	}
 
