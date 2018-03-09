@@ -6,6 +6,8 @@ import (
 
 	"strconv"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bradfitz/slice"
@@ -102,6 +104,12 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 
 	cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
 	cache.GetSession().MessageReactionAdd(in.ChannelID, in.ID, "👌")
+	go func() {
+		defer helpers.Recover()
+
+		time.Sleep(5 * time.Second)
+		cache.GetSession().ChannelMessageDelete(in.ChannelID, in.ID)
+	}()
 	return nil
 }
 
@@ -156,6 +164,12 @@ func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.
 
 	cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
 	cache.GetSession().MessageReactionAdd(in.ChannelID, in.ID, "👌")
+	go func() {
+		defer helpers.Recover()
+
+		time.Sleep(5 * time.Second)
+		cache.GetSession().ChannelMessageDelete(in.ChannelID, in.ID)
+	}()
 	return nil
 }
 
