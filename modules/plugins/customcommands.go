@@ -104,13 +104,13 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						}
 						// <= 4 MB
 						if msg.Attachments[0].Size > 4e+6 {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled")) // TODO
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
 							return
 						}
 						// picture is safe?
 						metrics.CloudVisionApiRequests.Add(1)
 						if !helpers.PictureIsSafe(bytes.NewReader(data)) {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled")) // TODO
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-not-safe"))
 							return
 						}
 						// get object name
