@@ -36,6 +36,7 @@ func UploadFile(objectName string, data []byte) (err error) {
 	return err
 }
 
+// TODO: redis cache? file cache?
 // retrieves a file from the minio object storage
 // objectName	: the name of the file to retrieve
 func RetrieveFile(objectName string) (data []byte, err error) {
