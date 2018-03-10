@@ -7,7 +7,12 @@ import (
 
 	"io/ioutil"
 
+	"os"
+
+	"path/filepath"
+
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/kennygrant/sanitize"
 	"github.com/minio/minio-go"
 )
 
@@ -16,6 +21,8 @@ var (
 	minioClient *minio.Client
 	minioLock   sync.Mutex
 )
+
+// TODO: watch cache folder size
 
 // uploads a file to the minio object storage
 // objectName	: the name of the file to upload
@@ -46,7 +53,7 @@ func UploadFile(objectName string, data []byte, metadata map[string]string) (err
 	}
 
 	// upload the data
-	_, err = minioClient.PutObject(minioBucket, objectName, bytes.NewReader(data), -1, options)
+	_, err = minioClient.PutObject(minioBucket, sanitize.BaseName(objectName), bytes.NewReader(data), -1, options)
 	return err
 }
 
@@ -62,10 +69,16 @@ func RetrieveFile(objectName string) (data []byte, err error) {
 		}
 	}
 
+	data = getBucketCache(objectName)
+	if data != nil {
+		cache.GetLogger().WithField("module", "storage").Infof("retrieving " + objectName + " from minio cache")
+		return data, nil
+	}
+
 	cache.GetLogger().WithField("module", "storage").Infof("retrieving " + objectName + " from minio storage")
 
 	// retrieve the object
-	minioObject, err := minioClient.GetObject(minioBucket, objectName, minio.GetObjectOptions{})
+	minioObject, err := minioClient.GetObject(minioBucket, sanitize.BaseName(objectName), minio.GetObjectOptions{})
 	if err != nil {
 		return data, err
 	}
@@ -75,6 +88,14 @@ func RetrieveFile(objectName string) (data []byte, err error) {
 	if err != nil {
 		return data, err
 	}
+
+	go func() {
+		defer Recover()
+		cache.GetLogger().WithField("module", "storage").Infof("caching " + objectName + " into minio cache")
+		err = setBucketCache(objectName, data)
+		RelaxLog(err)
+	}()
+
 	return data, nil
 }
 
@@ -91,9 +112,56 @@ func DeleteFile(objectName string) (err error) {
 
 	cache.GetLogger().WithField("module", "storage").Infof("deleting " + objectName + " from minio storage")
 
+	go func() {
+		defer Recover()
+		cache.GetLogger().WithField("module", "storage").Infof("deleting " + objectName + " from minio cache")
+		err = deleteBucketCache(objectName)
+		RelaxLog(err)
+	}()
+
 	// delete the object
-	err = minioClient.RemoveObject(minioBucket, objectName)
+	err = minioClient.RemoveObject(minioBucket, sanitize.BaseName(objectName))
 	return err
+}
+
+func getBucketCache(objectName string) (data []byte) {
+	var err error
+
+	if _, err = os.Stat(getObjectPath(objectName)); os.IsNotExist(err) {
+		return nil
+	}
+
+	data, err = ioutil.ReadFile(getObjectPath(objectName))
+	if err != nil {
+		return nil
+	}
+
+	return data
+}
+
+func setBucketCache(objectName string, data []byte) (err error) {
+	if _, err = os.Stat(filepath.Dir(getObjectPath(objectName))); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Dir(getObjectPath(objectName)), os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = ioutil.WriteFile(getObjectPath(objectName), data, 0644)
+	return err
+}
+
+func deleteBucketCache(objectName string) (err error) {
+	if _, err = os.Stat(getObjectPath(objectName)); os.IsNotExist(err) {
+		return nil
+	}
+
+	err = os.Remove(getObjectPath(objectName))
+	return err
+}
+
+func getObjectPath(objectName string) (path string) {
+	return GetConfig().Path("cache_folder").Data().(string) + "/minio-" + GetConfig().Path("s3.bucket").Data().(string) + "/" + sanitize.BaseName(objectName)
 }
 
 // Initialize the minio client object, and creates the bucket if it doesn't exist yet
