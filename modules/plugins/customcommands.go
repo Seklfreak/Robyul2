@@ -10,13 +10,14 @@ import (
 
 	"strconv"
 
+	"mime"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
 )
@@ -55,11 +56,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 	if len(args) >= 1 {
 		switch args[0] {
 		case "add": // [p]commands add <command name> <command text>
+			// TODO: videos?
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
-				if len(args) < 3 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
+				if len(args) < 3 && (len(msg.Attachments) <= 0 && len(args) < 2) {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
 				channel, err := helpers.GetChannel(msg.ChannelID)
@@ -86,15 +87,58 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					}
 				}
 
+				var objectName, filetype string
+				if len(msg.Attachments) > 0 {
+					data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
+					helpers.Relax(err)
+
+					filetype, err = helpers.SniffMime(data)
+					helpers.Relax(err)
+
+					// is image?
+					if strings.HasPrefix(filetype, "image/") {
+						// user is allowed to upload files?
+						if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
+							return
+						}
+						// <= 4 MB
+						if msg.Attachments[0].Size > 4e+6 {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled")) // TODO
+							return
+						}
+						// picture is safe?
+						metrics.CloudVisionApiRequests.Add(1)
+						if !helpers.PictureIsSafe(bytes.NewReader(data)) {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled")) // TODO
+							return
+						}
+						// get object name
+						objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
+						// upload to object storage
+						err = helpers.UploadFile(objectName, data)
+						helpers.Relax(err)
+					}
+				}
+
+				content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+
+				if content == "" && (filetype == "" || objectName == "") {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+					return
+				}
+
 				_, err = helpers.MDbInsert(
 					models.CustomCommandsTable,
 					models.CustomCommandsEntry{
-						GuildID:         channel.GuildID,
-						CreatedByUserID: msg.Author.ID,
-						CreatedAt:       time.Now(),
-						Triggered:       0,
-						Keyword:         args[1],
-						Content:         strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1)),
+						GuildID:           channel.GuildID,
+						CreatedByUserID:   msg.Author.ID,
+						CreatedAt:         time.Now(),
+						Triggered:         0,
+						Keyword:           args[1],
+						StorageMimeType:   filetype,
+						StorageObjectName: objectName,
+						Content:           content,
 					},
 				)
 				helpers.Relax(err)
@@ -193,6 +237,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				err = helpers.MDbDelete(models.CustomCommandsTable, entryBucket.ID)
 				helpers.Relax(err)
 
+				if entryBucket.StorageObjectName != "" {
+					err = helpers.DeleteFile(entryBucket.StorageObjectName)
+					helpers.Relax(err)
+				}
+
 				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 					models.EventlogTargetTypeGuild, msg.Author.ID,
 					models.EventlogTypeRobyulCommandsDelete, "",
@@ -216,6 +265,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			})
 			return
 		case "replace", "edit": // [p]commands edit <command name> <new content>
+			// TODO: add file functionality
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				if len(args) < 3 {
@@ -342,17 +392,31 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			author, err := helpers.GetUser(entryBucket.CreatedByUserID)
 			helpers.Relax(err)
 
-			infoEmbed := &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("Custom Command: `%s%s`", helpers.GetPrefixForServer(channel.GuildID), entryBucket.Keyword),
-				Description: entryBucket.Content,
-				Fields: []*discordgo.MessageEmbedField{
-					{Name: "Author", Value: fmt.Sprintf("%s#%s", author.Username, author.Discriminator)},
-					{Name: "Times triggered", Value: humanize.Comma(int64(entryBucket.Triggered))},
-					{Name: "Created At", Value: fmt.Sprintf("%s UTC", entryBucket.CreatedAt.Format(time.ANSIC))},
+			messageSend := &discordgo.MessageSend{
+				Embed: &discordgo.MessageEmbed{
+					Title:       fmt.Sprintf("Custom Command: `%s%s`", helpers.GetPrefixForServer(channel.GuildID), entryBucket.Keyword),
+					Description: entryBucket.Content,
+					Fields: []*discordgo.MessageEmbedField{
+						{Name: "Author", Value: fmt.Sprintf("%s#%s", author.Username, author.Discriminator)},
+						{Name: "Times triggered", Value: humanize.Comma(int64(entryBucket.Triggered))},
+						{Name: "Created At", Value: fmt.Sprintf("%s UTC", entryBucket.CreatedAt.Format(time.ANSIC))},
+					},
 				},
 			}
+			data, filename := cc.getCommandFile(entryBucket)
+			if data != nil && len(data) > 0 {
+				messageSend.Files = []*discordgo.File{
+					{
+						Name:   strings.Replace(filename, " ", "-", -1),
+						Reader: bytes.NewReader(data),
+					},
+				}
+				if strings.HasPrefix(entryBucket.StorageMimeType, "image/") {
+					messageSend.Embed.Image = &discordgo.MessageEmbedImage{URL: "attachment://" + strings.Replace(filename, " ", "-", -1)}
+				}
+			}
 
-			_, err = helpers.SendEmbed(msg.ChannelID, infoEmbed)
+			_, err = helpers.SendComplex(msg.ChannelID, messageSend)
 			helpers.Relax(err)
 			return
 		case "import-json": // [p]command import-json (with json file attached)
@@ -484,16 +548,28 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 
 	channel, err := helpers.GetChannel(msg.ChannelID)
 	if err != nil {
-		go raven.CaptureError(err, map[string]string{})
+		helpers.RelaxLog(err)
 		return
 	}
 	prefix := helpers.GetPrefixForServer(channel.GuildID)
 
 	for i, customCommand := range customCommandsCache {
 		if customCommand.GuildID == channel.GuildID && prefix+customCommand.Keyword == content {
-			_, err := helpers.SendMessage(msg.ChannelID, customCommand.Content)
+			messageSend := &discordgo.MessageSend{
+				Content: customCommand.Content,
+			}
+			data, filename := cc.getCommandFile(customCommand)
+			if data != nil && len(data) > 0 {
+				messageSend.Files = []*discordgo.File{
+					{
+						Name:   filename,
+						Reader: bytes.NewReader(data),
+					},
+				}
+			}
+			_, err = helpers.SendComplex(msg.ChannelID, messageSend)
 			if err != nil {
-				go raven.CaptureError(err, map[string]string{})
+				helpers.RelaxLog(err)
 				return
 			}
 			customCommandsCache[i].Triggered += 1
@@ -506,6 +582,25 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 			return
 		}
 	}
+}
+
+func (cc *CustomCommands) getCommandFile(customCommand models.CustomCommandsEntry) (data []byte, filename string) {
+	if customCommand.StorageMimeType == "" || customCommand.StorageObjectName == "" {
+		return data, filename
+	}
+
+	data, err := helpers.RetrieveFile(customCommand.StorageObjectName)
+	if err != nil {
+		helpers.RelaxLog(err)
+		return data, filename
+	}
+	filename = "Robyul " + customCommand.Keyword
+	extension, err := mime.ExtensionsByType(customCommand.StorageMimeType)
+	helpers.RelaxLog(err)
+	if err == nil && extension != nil && len(extension) > 0 {
+		filename += extension[0]
+	}
+	return data, filename
 }
 
 func (cc *CustomCommands) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {

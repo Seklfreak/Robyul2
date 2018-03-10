@@ -126,5 +126,11 @@
       "suggestions": "",
       "issues": ""
     }
+  },
+  "s3": {
+    "bucket": "robyul",
+    "endpoint": "",
+    "access_key": "",
+    "secret_secret_key": ""
   }
 }

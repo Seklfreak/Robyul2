@@ -441,6 +441,26 @@
   revision = "906238edc6eb0ddface4a1923f6d41ef2a5ca59b"
 
 [[projects]]
+  name = "github.com/minio/minio-go"
+  packages = [
+    ".",
+    "pkg/credentials",
+    "pkg/encrypt",
+    "pkg/policy",
+    "pkg/s3signer",
+    "pkg/s3utils",
+    "pkg/set"
+  ]
+  revision = "9e124ec59547551cb3f1324f73623bbb30650cf8"
+  version = "4.0.9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+
+[[projects]]
   branch = "master"
   name = "github.com/nfnt/resize"
   packages = ["."]
@@ -815,6 +835,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0ca2590656b6acf6301ca8025eab002a83fcfcd5d4572970d5a3d8bd42c000d2"
+  inputs-digest = "a0cf1dd0cddcd63d50282dc0c9682e19648de054ffac8f11554fc401aa3ae336"
   solver-name = "gps-cdcl"
   solver-version = 1
