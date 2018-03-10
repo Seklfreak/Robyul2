@@ -604,7 +604,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		guildRoles, err := session.GuildRoles(currentGuild.ID)
 		if err != nil {
 			if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-				if err.Message.Code == 50013 {
+				if err.Message.Code == discordgo.ErrCodeMissingPermissions {
 					rolesText = "Unable to gather roles"
 				} else {
 					helpers.Relax(err)
@@ -824,6 +824,31 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
+
+		termQuery := elastic.NewQueryStringQuery("GuildID:" + currentGuild.ID + " AND UserID:" + targetUser.ID)
+		searchResult, err := cache.GetElastic().Search().
+			Index(models.ElasticIndexVoiceSessions).
+			Type("doc").
+			Query(termQuery).
+			Aggregation("total", durationSumAgg).
+			Size(0).
+			Do(context.Background())
+		helpers.Relax(err)
+
+		var voiceStatSummaryText string
+		if agg, found := searchResult.Aggregations.Sum("total"); found {
+			totalDuration := int64(*agg.Value)
+			voiceStatSummaryText = "Total duration connected: "
+			if totalDuration > 0 {
+				voiceStatSummaryText += helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(totalDuration))) + "\n"
+				voiceStatSummaryText += fmt.Sprintf("Try `%svoicestats @%s` to view the complete voice stats for this user!",
+					helpers.GetPrefixForServer(currentGuild.ID), fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator))
+			} else {
+				voiceStatSummaryText += "None"
+			}
+		}
+
 		userinfoEmbed := &discordgo.MessageEmbed{
 			Color:  0x0FADED,
 			Title:  title,
@@ -833,9 +858,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
 				{Name: "Roles", Value: rolesText, Inline: false},
 				{Name: "Voice Stats",
-					Value: fmt.Sprintf("use `%svoicestats @%s` to view the voice stats for this user",
-						helpers.GetPrefixForServer(currentGuild.ID),
-						fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator)), Inline: false},
+					Value: voiceStatSummaryText, Inline: false},
 			},
 		}
 		if description != "" {
@@ -1146,7 +1169,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		title := fmt.Sprintf("Voice Stats for %s", targetUser.Username)
+		title := fmt.Sprintf("🎤 Voice Stats for %s", targetUser.Username)
 
 		termQuery := elastic.NewQueryStringQuery("GuildID:" + channel.GuildID + " AND UserID:" + targetUser.ID)
 		searchResult, err := cache.GetElastic().Search().
@@ -1168,12 +1191,31 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
+		searchResult, err = cache.GetElastic().Search().
+			Index(models.ElasticIndexVoiceSessions).
+			Type("doc").
+			Query(termQuery).
+			Aggregation("total", durationSumAgg).
+			Size(0).
+			Do(context.Background())
+		helpers.Relax(err)
+
+		var voiceStatSummaryText string
+		if agg, found := searchResult.Aggregations.Sum("total"); found {
+			totalDuration := int64(*agg.Value)
+			if totalDuration > 0 {
+				voiceStatSummaryText = "Total duration connected: " + helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(totalDuration))) + " | "
+			}
+		}
+
 		voicestatsEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
 			Title:       title,
 			Description: currentConnectionText,
-			Footer:      &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.stats.voicestats-embed-footer")},
-			Fields:      []*discordgo.MessageEmbedField{},
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: voiceStatSummaryText + helpers.GetText("plugins.stats.voicestats-embed-footer"),
+			},
+			Fields: []*discordgo.MessageEmbedField{},
 		}
 
 		guild, err := session.State.Guild(channel.GuildID)
