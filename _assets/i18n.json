@@ -469,7 +469,7 @@
       "search-empty": "I couldn't find any command including `%s` in the name on this server. <a:ablobweary:394026914479865856>",
       "info-not-found": "I wasn't able to find a command with this name. <:blobthinking:317028940885524490>",
       "add-command-already-exists": "There is already a command with this keyword. <a:ablobweary:394026914479865856>",
-      "fileupload-too-big": "The file is too big!\nPlease upload a file smaller than 4 MB.",
+      "fileupload-too-big": "The file is too big!\nPlease upload a file smaller than 8 MB.",
       "fileupload-not-safe": "The file seems to contain explicit content."
     },
     "reactionpolls": {

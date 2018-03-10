@@ -102,8 +102,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
 							return
 						}
-						// <= 4 MB
-						if msg.Attachments[0].Size > 4e+6 {
+						// <= 8 MB
+						if msg.Attachments[0].Size > 8e+6 {
 							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
 							return
 						}
