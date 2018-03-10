@@ -458,7 +458,7 @@
       "remove-success": "I successfully removed the source."
     },
     "customcommands": {
-      "add-keyword-already-exists": "There is already a custom command with this keyword. <a:ablobweary:394026914479865856>",
+      "add-keyword-already-exists": "There is already a custom command or builtin command with this keyword. <a:ablobweary:394026914479865856>",
       "add-success": "I successfully added the command! <:blobidea:317047867036663809>",
       "list-empty": "There are no custom commands on this server yet! <:blobspy:317048109832208385>",
       "delete-not-found": "I wasn't able to find a command with that name on this server! <:blobscream:317043778823389184>",

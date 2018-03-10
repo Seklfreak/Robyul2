@@ -17,21 +17,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
 )
 
 type CustomCommands struct{}
-
-type DB_CustomCommands_Command struct {
-	ID              string    `gorethink:"id,omitempty"`
-	GuildID         string    `gorethink:"guildid"`
-	CreatedByUserID string    `gorethink:"createdby_userid"`
-	CreatedAt       time.Time `gorethink:"createdat"`
-	Triggered       int       `gorethink:"triggered"`
-	Keyword         string    `gorethink:"keyword"`
-	Content         string    `gorethink:"content"`
-}
 
 func (cc *CustomCommands) Commands() []string {
 	return []string{
@@ -43,11 +33,13 @@ func (cc *CustomCommands) Commands() []string {
 }
 
 var (
-	customCommandsCache []DB_CustomCommands_Command
+	customCommandsCache []models.CustomCommandsEntry
 )
 
 func (cc *CustomCommands) Init(session *discordgo.Session) {
-	customCommandsCache = cc.getAllCustomCommands()
+	var err error
+	customCommandsCache, err = cc.getAllCustomCommands()
+	helpers.Relax(err)
 }
 
 func (cc *CustomCommands) Uninit(session *discordgo.Session) {
@@ -79,29 +71,33 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					return
 				}
 
-				var entryBucket DB_CustomCommands_Command
-				listCursor, err := rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).Filter(
-					rethink.Row.Field("keyword").Eq(args[1]),
-				).Run(helpers.GetDB())
-				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.One(&entryBucket)
-				if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
+				var entryBucket models.CustomCommandsEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+					&entryBucket,
+				)
+				if err == nil {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-keyword-already-exists"))
 					helpers.Relax(err)
 					return
+				} else {
+					if !strings.Contains(err.Error(), "not found") {
+						helpers.Relax(err)
+					}
 				}
 
-				newCommand := cc.getEntryByOrCreateEmpty("id", "")
-				newCommand.GuildID = channel.GuildID
-				newCommand.CreatedByUserID = msg.Author.ID
-				newCommand.CreatedAt = time.Now().UTC()
-				newCommand.Triggered = 0
-				newCommand.Keyword = args[1]
-				newCommand.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-				cc.setEntry(newCommand)
+				_, err = helpers.MDbInsert(
+					models.CustomCommandsTable,
+					models.CustomCommandsEntry{
+						GuildID:         channel.GuildID,
+						CreatedByUserID: msg.Author.ID,
+						CreatedAt:       time.Now(),
+						Triggered:       0,
+						Keyword:         args[1],
+						Content:         strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1)),
+					},
+				)
+				helpers.Relax(err)
 
 				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 					models.EventlogTargetTypeGuild, msg.Author.ID,
@@ -110,18 +106,19 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					[]models.ElasticEventlogOption{
 						{
 							Key:   "command_keyword",
-							Value: newCommand.Keyword,
+							Value: args[1],
 						},
 						{
 							Key:   "command_content",
-							Value: newCommand.Content,
+							Value: strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1)),
 						},
 					}, false)
 				helpers.RelaxLog(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
 				helpers.Relax(err)
-				customCommandsCache = cc.getAllCustomCommands()
+				customCommandsCache, err = cc.getAllCustomCommands()
+				helpers.Relax(err)
 			})
 			return
 		case "list": // [p]commands list [top]
@@ -136,21 +133,16 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				topCommands = true
 			}
 
-			var entryBucket []DB_CustomCommands_Command
-			var listCursor *rethink.Cursor
+			var entryBucket []models.CustomCommandsEntry
 			if topCommands {
-				listCursor, err = rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).OrderBy(rethink.Desc("triggered")).Run(helpers.GetDB())
+				err := helpers.MDbIter(helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID}).Sort("-triggered")).All(&entryBucket)
+				helpers.Relax(err)
 			} else {
-				listCursor, err = rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+				err := helpers.MDbIter(helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID}).Sort("keyword")).All(&entryBucket)
+				helpers.Relax(err)
 			}
-			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+
+			if len(entryBucket) <= 0 {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 				helpers.Relax(err)
 				return
@@ -186,24 +178,20 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
-				var entryBucket DB_CustomCommands_Command
-				listCursor, err := rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).Filter(
-					rethink.Row.Field("keyword").Eq(args[1]),
-				).Run(helpers.GetDB())
-				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.One(&entryBucket)
-				if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
+				var entryBucket models.CustomCommandsEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+					&entryBucket,
+				)
+				if err != nil && strings.Contains(err.Error(), "not found") {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-not-found"))
 					helpers.Relax(err)
 					return
-				} else if err != nil {
-					helpers.Relax(err)
 				}
+				helpers.Relax(err)
 
-				cc.deleteEntryById(entryBucket.ID)
+				err = helpers.MDbDelete(models.CustomCommandsTable, entryBucket.ID)
+				helpers.Relax(err)
 
 				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 					models.EventlogTargetTypeGuild, msg.Author.ID,
@@ -223,7 +211,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
 				helpers.Relax(err)
-				customCommandsCache = cc.getAllCustomCommands()
+				customCommandsCache, err = cc.getAllCustomCommands()
+				helpers.Relax(err)
 			})
 			return
 		case "replace", "edit": // [p]commands edit <command name> <new content>
@@ -237,22 +226,17 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
-				var entryBucket DB_CustomCommands_Command
-				listCursor, err := rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).Filter(
-					rethink.Row.Field("keyword").Eq(args[1]),
-				).Run(helpers.GetDB())
-				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.One(&entryBucket)
-
-				if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
-					return
-				} else if err != nil {
+				var entryBucket models.CustomCommandsEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+					&entryBucket,
+				)
+				if err != nil && strings.Contains(err.Error(), "not found") {
+					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
 					helpers.Relax(err)
+					return
 				}
+				helpers.Relax(err)
 
 				beforeContent := entryBucket.Content
 
@@ -260,7 +244,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				entryBucket.CreatedAt = time.Now().UTC()
 				entryBucket.Triggered = 0
 				entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-				cc.setEntry(entryBucket)
+				_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
+				helpers.Relax(err)
 
 				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 					models.EventlogTargetTypeGuild, msg.Author.ID,
@@ -282,14 +267,17 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
 				helpers.Relax(err)
-				customCommandsCache = cc.getAllCustomCommands()
+				customCommandsCache, err = cc.getAllCustomCommands()
+				helpers.Relax(err)
 			})
 			return
 		case "refresh": // [p]commands refresh
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
-				customCommandsCache = cc.getAllCustomCommands()
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.refreshed-commands"))
+				var err error
+				customCommandsCache, err = cc.getAllCustomCommands()
+				helpers.Relax(err)
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.refreshed-commands"))
 				helpers.Relax(err)
 			})
 			return
@@ -303,29 +291,13 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 
-			var entryBucket []DB_CustomCommands_Command
-			listCursor, err := rethink.Table("customcommands").Filter(
-				rethink.Row.Field("guildid").Eq(channel.GuildID),
-			).Filter(
-				rethink.Row.Field("keyword").Match(fmt.Sprintf("(?i)%s", args[1])),
-			).Run(helpers.GetDB())
-			if err != nil {
-				if errR, ok := err.(rethink.RQLQueryLogicError); ok {
-					if strings.Contains(errR.String(), "Error in regexp") {
-						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-						return
-					}
-				}
-			}
+			var entryBucket []models.CustomCommandsEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": bson.M{"$regex": bson.RegEx{Pattern: `.*` + args[1] + `.*`, Options: "i"}}}).Sort("keyword")).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if len(entryBucket) <= 0 {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.customcommands.search-empty", args[1]))
 				helpers.Relax(err)
 				return
-			} else if err != nil {
-				helpers.Relax(err)
 			}
 
 			commandListText := fmt.Sprintf("Custom commands including `%s` on this server:\n", args[1])
@@ -355,22 +327,17 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 
-			var entryBucket DB_CustomCommands_Command
-			listCursor, err := rethink.Table("customcommands").Filter(
-				rethink.Row.Field("guildid").Eq(channel.GuildID),
-			).Filter(
-				rethink.Row.Field("keyword").Eq(args[1]),
-			).Run(helpers.GetDB())
-			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.One(&entryBucket)
-			if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
+			var entryBucket models.CustomCommandsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+				&entryBucket,
+			)
+			if err != nil && strings.Contains(err.Error(), "not found") {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.info-not-found"))
 				helpers.Relax(err)
 				return
-			} else if err != nil {
-				helpers.Relax(err)
 			}
+			helpers.Relax(err)
 
 			author, err := helpers.GetUser(entryBucket.CreatedByUserID)
 			helpers.Relax(err)
@@ -419,16 +386,9 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				commandsContainer, err := commandsContainerJson.ChildrenMap()
 				helpers.Relax(err)
 
-				var entryBucket []DB_CustomCommands_Command
-				listCursor, err := rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+				var entryBucket []models.CustomCommandsEntry
+				err = helpers.MDbIter(helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID}).Sort("keyword")).All(&entryBucket)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&entryBucket)
-				if err != nil && err != rethink.ErrEmptyResult {
-					helpers.Relax(err)
-				}
 
 				i := 0
 				for newCustomCommandName, newCustomCommandContent := range commandsContainer {
@@ -444,14 +404,20 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					}
 
 					newCustomCommandContentText := strings.TrimPrefix(strings.TrimSuffix(newCustomCommandContent.String(), "\""), "\"")
-					newCommand := cc.getEntryByOrCreateEmpty("id", "")
-					newCommand.GuildID = channel.GuildID
-					newCommand.CreatedByUserID = msg.Author.ID
-					newCommand.CreatedAt = time.Now().UTC()
-					newCommand.Triggered = 0
-					newCommand.Keyword = newCustomCommandName
-					newCommand.Content = newCustomCommandContentText
-					cc.setEntry(newCommand)
+
+					_, err = helpers.MDbInsert(
+						models.CustomCommandsTable,
+						models.CustomCommandsEntry{
+							GuildID:         channel.GuildID,
+							CreatedByUserID: msg.Author.ID,
+							CreatedAt:       time.Now(),
+							Triggered:       0,
+							Keyword:         newCustomCommandName,
+							Content:         newCustomCommandContentText,
+						},
+					)
+					helpers.Relax(err)
+
 					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Imported custom command `%s`", newCustomCommandName))
 					i++
 				}
@@ -470,7 +436,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 				_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commnands.", msg.Author.ID, humanize.Comma(int64(i))))
 				helpers.Relax(err)
-				customCommandsCache = cc.getAllCustomCommands()
+				customCommandsCache, err = cc.getAllCustomCommands()
+				helpers.Relax(err)
 			})
 			return
 		case "export-json": // [p]export-json
@@ -481,20 +448,9 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
 
-				var entryBucket []DB_CustomCommands_Command
-				listCursor, err := rethink.Table("customcommands").Filter(
-					rethink.Row.Field("guildid").Eq(channel.GuildID),
-				).OrderBy(rethink.Asc("keyword")).Run(helpers.GetDB())
+				var entryBucket []models.CustomCommandsEntry
+				err = helpers.MDbIter(helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID}).Sort("keyword")).All(&entryBucket)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&entryBucket)
-				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
-					helpers.Relax(err)
-					return
-				} else if err != nil {
-					helpers.Relax(err)
-				}
 
 				jsonObj := gabs.New()
 				for _, command := range entryBucket {
@@ -522,7 +478,6 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 }
 
 func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-
 	if !helpers.ModuleIsAllowedSilent(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCustomCommands) {
 		return
 	}
@@ -542,7 +497,11 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 				return
 			}
 			customCommandsCache[i].Triggered += 1
-			cc.setEntry(customCommandsCache[i])
+
+			// increase triggered in DB by one
+			_, err = helpers.MDbUpdate(models.CustomCommandsTable, customCommandsCache[i].ID, bson.M{"$inc": bson.M{"triggered": 1}})
+			helpers.RelaxLog(err)
+
 			metrics.CustomCommandsTriggered.Add(1)
 			return
 		}
@@ -555,79 +514,14 @@ func (cc *CustomCommands) OnGuildMemberAdd(member *discordgo.Member, session *di
 func (cc *CustomCommands) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 }
 
-func (cc *CustomCommands) getEntryBy(key string, id string) DB_CustomCommands_Command {
-	var entryBucket DB_CustomCommands_Command
-	listCursor, err := rethink.Table("customcommands").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
+func (cc *CustomCommands) getAllCustomCommands() (ccommands []models.CustomCommandsEntry, err error) {
+	err = helpers.MDbIter(helpers.MdbCollection(models.CustomCommandsTable).Find(nil)).All(&ccommands)
 	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
+		return ccommands, err
 	}
 
-	return entryBucket
-}
-
-func (cc *CustomCommands) getEntryByOrCreateEmpty(key string, id string) DB_CustomCommands_Command {
-	var entryBucket DB_CustomCommands_Command
-	listCursor, err := rethink.Table("customcommands").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("customcommands").Insert(DB_CustomCommands_Command{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return cc.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (cc *CustomCommands) setEntry(entry DB_CustomCommands_Command) {
-	_, err := rethink.Table("customcommands").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (cc *CustomCommands) deleteEntryById(id string) {
-	_, err := rethink.Table("customcommands").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (cc *CustomCommands) getAllCustomCommands() []DB_CustomCommands_Command {
-	var entryBucket []DB_CustomCommands_Command
-	listCursor, err := rethink.Table("customcommands").Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err != nil && err != rethink.ErrEmptyResult {
-		helpers.Relax(err)
-	}
-
-	metrics.CustomCommandsCount.Set(int64(len(entryBucket)))
-	return entryBucket
+	metrics.CustomCommandsCount.Set(int64(len(ccommands)))
+	return ccommands, nil
 }
 
 func (cc *CustomCommands) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
