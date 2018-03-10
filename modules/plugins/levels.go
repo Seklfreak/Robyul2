@@ -105,6 +105,7 @@ type DB_Badge struct {
 	CreatedAt        time.Time `gorethink:"createdat"`
 	URL              string    `gorethink:"url"`
 	LevelRequirement int       `gorethink:"levelrequirement"`
+	RoleRequirement  string    `gorethink:"rolerequirement"`
 	AllowedUserIDs   []string  `gorethinK:"allowed_userids"`
 	DeniedUserIDs    []string  `gorethinK:"allowed_userids"`
 }
@@ -864,9 +865,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							channel, err := helpers.GetChannel(msg.ChannelID)
 							helpers.Relax(err)
 
+							guild, err := helpers.GetGuild(channel.GuildID)
+							helpers.Relax(err)
+
 							newBadge := new(DB_Badge)
 
 							newBadge.CreatedByUserID = msg.Author.ID
+							newBadge.GuildID = channel.GuildID
 							newBadge.CreatedAt = time.Now()
 							newBadge.Category = strings.ToLower(args[2])
 							newBadge.Name = strings.ToLower(args[3])
@@ -874,19 +879,38 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
 							newBadge.LevelRequirement, err = strconv.Atoi(args[6])
 							if err != nil {
-								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-								return
-							}
-							newBadge.GuildID = channel.GuildID
-							if len(args) >= 8 {
-								if args[7] == "global" {
-									if helpers.IsBotAdmin(msg.Author.ID) {
-										newBadge.GuildID = "global"
-									} else {
+								if args[6] == "role" && len(args) >= 8 {
+									// trying to connect badge to role
+									roleToMatch := strings.ToLower(args[7])
+									var matchedRole *discordgo.Role
+									for _, role := range guild.Roles {
+										if role.ID == roleToMatch || strings.ToLower(role.Name) == roleToMatch {
+											matchedRole = role
+										}
+									}
+
+									if matchedRole == nil || matchedRole.ID == "" {
 										_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 										helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 										return
+									}
+
+									newBadge.RoleRequirement = matchedRole.ID
+								} else {
+									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+									return
+								}
+							} else {
+								if len(args) >= 8 {
+									if args[7] == "global" {
+										if helpers.IsBotAdmin(msg.Author.ID) {
+											newBadge.GuildID = "global"
+										} else {
+											_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+											helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+											return
+										}
 									}
 								}
 							}
@@ -955,6 +979,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									{
 										Key:   "badge_levelrequirement",
 										Value: strconv.Itoa(newBadge.LevelRequirement),
+									},
+									{
+										Key:   "badge_rolerequirement",
+										Value: newBadge.RoleRequirement,
 									},
 									{
 										Key:   "badge_guildid",
@@ -1026,6 +1054,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										Value: strconv.Itoa(badgeFound.LevelRequirement),
 									},
 									{
+										Key:   "badge_rolerequirement",
+										Value: badgeFound.RoleRequirement,
+									},
+									{
 										Key:   "badge_guildid",
 										Value: badgeFound.GuildID,
 									},
@@ -1071,8 +1103,21 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								if badge.GuildID == "global" {
 									globalText = "GLOBAL "
 								}
-								resultText += fmt.Sprintf("**%s%s**: URL: <%s>, Border Color: #%s, Requirement: %d, Allowed Users: %d, Denied Users %d\n",
-									globalText, badge.Name, badge.URL, badge.BorderColor, badge.LevelRequirement, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
+
+								var requirementText string
+								if badge.RoleRequirement != "" {
+									requirementRole, err := session.State.Role(badge.GuildID, badge.RoleRequirement)
+									if err == nil {
+										requirementText = fmt.Sprintf("Role: %s (`#%s`)", requirementRole.Name, requirementRole.ID)
+									} else {
+										requirementText = fmt.Sprintf("Role: N/A (`#%s`)", badge.RoleRequirement)
+									}
+								} else {
+									requirementText = "Level >= " + strconv.Itoa(badge.LevelRequirement)
+								}
+
+								resultText += fmt.Sprintf("**%s%s**: URL: <%s>, Border Color: #%s, Requirement: %s, Allowed Users: %d, Denied Users %d\n",
+									globalText, badge.Name, badge.URL, badge.BorderColor, requirementText, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
 								)
 							}
 							resultText += fmt.Sprintf("I found %d badges in this category.\n",
@@ -1200,6 +1245,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											Value: strconv.Itoa(badgeToAllow.LevelRequirement),
 										},
 										{
+											Key:   "badge_rolerequirement",
+											Value: badgeToAllow.RoleRequirement,
+										},
+										{
 											Key:   "badge_guildid",
 											Value: badgeToAllow.GuildID,
 										},
@@ -1254,6 +1303,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										{
 											Key:   "badge_levelrequirement",
 											Value: strconv.Itoa(badgeToAllow.LevelRequirement),
+										},
+										{
+											Key:   "badge_rolerequirement",
+											Value: badgeToAllow.RoleRequirement,
 										},
 										{
 											Key:   "badge_guildid",
@@ -1348,6 +1401,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											Value: strconv.Itoa(badgeToDeny.LevelRequirement),
 										},
 										{
+											Key:   "badge_rolerequirement",
+											Value: badgeToDeny.RoleRequirement,
+										},
+										{
 											Key:   "badge_guildid",
 											Value: badgeToDeny.GuildID,
 										},
@@ -1402,6 +1459,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										{
 											Key:   "badge_levelrequirement",
 											Value: strconv.Itoa(badgeToDeny.LevelRequirement),
+										},
+										{
+											Key:   "badge_rolerequirement",
+											Value: badgeToDeny.RoleRequirement,
 										},
 										{
 											Key:   "badge_guildid",
@@ -3390,70 +3451,16 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string)
 				}
 			}
 		}
-
-		// User is in allowed user list?
-		for _, allowedUserID := range foundBadge.AllowedUserIDs {
-			if allowedUserID == user.ID {
-				isAllowed = true
-			}
-		}
-
-		// User is in denied user list?
-		for _, deniedUserID := range foundBadge.DeniedUserIDs {
-			if deniedUserID == user.ID {
-				isAllowed = false
-			}
-		}
-
-		if isAllowed == true {
-			availableBadges = append(availableBadges, foundBadge)
-		}
-	}
-
-	return availableBadges
-}
-
-func (l *Levels) GetBadgesAvailableServer(user *discordgo.User, serverID string) []DB_Badge {
-	guildsToCheck := make([]string, 0)
-	guildsToCheck = append(guildsToCheck, "global")
-
-	if _, err := helpers.GetGuildMember(serverID, user.ID); err == nil {
-		guildsToCheck = append(guildsToCheck, serverID)
-	}
-
-	var allBadges []DB_Badge
-	for _, guildToCheck := range guildsToCheck {
-		var entryBucket []DB_Badge
-		listCursor, err := rethink.Table("profile_badge").Filter(
-			rethink.Row.Field("guildid").Eq(guildToCheck),
-		).Run(helpers.GetDB())
-		defer listCursor.Close()
-		if err != nil {
-			continue
-		}
-		err = listCursor.All(&entryBucket)
-		if err != nil {
-			continue
-		}
-		for _, entryBadge := range entryBucket {
-			allBadges = append(allBadges, entryBadge)
-		}
-	}
-
-	var availableBadges []DB_Badge
-	for _, foundBadge := range allBadges {
-		isAllowed := false
-
-		// Level Check
-		if foundBadge.LevelRequirement < 0 { // Available for no one?
+		// Role Check
+		if foundBadge.RoleRequirement != "" { // is there a role requirement?
 			isAllowed = false
-		} else if foundBadge.LevelRequirement == 0 { // Available for everyone?
-			isAllowed = true
-		} else if foundBadge.LevelRequirement > 0 { // Meets min level=
-			if foundBadge.LevelRequirement <= l.GetLevelForUser(user.ID, foundBadge.GuildID) {
-				isAllowed = true
-			} else {
-				isAllowed = false
+			member, err := helpers.GetGuildMember(foundBadge.GuildID, user.ID)
+			if err == nil {
+				for _, memberRole := range member.Roles { // check if user got role
+					if memberRole == foundBadge.RoleRequirement {
+						isAllowed = true
+					}
+				}
 			}
 		}
 
