@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	rethink "github.com/gorethink/gorethink"
@@ -330,17 +331,22 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 		case "toggle-mode", "toggle-modes":
 			session.ChannelTyping(msg.ChannelID)
 
-			var newValue int
 			var message string
 
-			switch helpers.GetUserConfigInt(msg.Author.ID, UserConfigNotificationsLayoutModeKey, 1) {
-			case 2:
+			newValue := helpers.GetUserConfigInt(msg.Author.ID, UserConfigNotificationsLayoutModeKey, 1) + 1
+			if newValue > 3 {
 				newValue = 1
-				message = helpers.GetTextF("plugins.notifications.mode-1")
+			}
+
+			switch newValue {
+			case 2:
+				message = helpers.GetTextF("plugins.notifications.mode-2")
+				break
+			case 3:
+				message = helpers.GetTextF("plugins.notifications.mode-3")
 				break
 			default:
-				newValue = 2
-				message = helpers.GetTextF("plugins.notifications.mode-2")
+				message = helpers.GetTextF("plugins.notifications.mode-1")
 				break
 			}
 
@@ -421,6 +427,33 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 			if helpers.ChannelPermissionsInSync(channel.ID) {
 				return
 			}
+		}
+	}
+
+	// create a copy of the channel messages in the state
+	session.State.RLock()
+	messagesCopy := make([]*discordgo.Message, len(channel.Messages))
+	copy(messagesCopy, channel.Messages)
+	session.State.RUnlock()
+	// sort in reverse order
+	slice.Sort(messagesCopy, func(i, j int) bool {
+		return messagesCopy[i].Timestamp > messagesCopy[j].Timestamp
+	})
+	// save context
+	contextMessagesLimit := 4
+	contextMessages := make([]*discordgo.Message, 0)
+	var startCollecting bool
+	for _, contextMessage := range messagesCopy {
+		if contextMessagesLimit <= 0 {
+			break
+		}
+		if contextMessage.ID == msg.ID {
+			startCollecting = true
+			continue
+		}
+		if startCollecting {
+			contextMessagesLimit--
+			contextMessages = append([]*discordgo.Message{contextMessage}, contextMessages...)
 		}
 	}
 
@@ -651,6 +684,53 @@ NextKeyword:
 					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
 					continue
 				}
+			}
+			break
+		case 3:
+			notificationEmbed := &discordgo.MessageEmbed{
+				Description: fmt.Sprintf(
+					"`@%s` mentioned %s on `%s` in `#%s`",
+					msg.Author.Username,
+					keywordsTriggeredText,
+					guild.Name,
+					channel.Name,
+				),
+				Color: 0x0FADED,
+				Thumbnail: &discordgo.MessageEmbedThumbnail{
+					URL: msg.Author.AvatarURL("64"),
+				},
+				Author: &discordgo.MessageEmbedAuthor{
+					Name: "Robyul Keyword Notification on " + guild.Name,
+				},
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:  "Channel",
+						Value: "<#" + channel.ID + ">",
+					},
+				},
+			}
+			for _, contextMessage := range contextMessages {
+				contextMessageTime, err := contextMessage.Timestamp.Parse()
+				if err != nil {
+					messageTime = time.Now()
+				}
+				notificationEmbed.Fields = append(notificationEmbed.Fields, &discordgo.MessageEmbedField{
+					Name:   "@" + contextMessage.Author.Username + "#" + contextMessage.Author.Discriminator + " at " + contextMessageTime.UTC().Format("15:04:05") + " UTC",
+					Value:  contextMessage.Content,
+					Inline: false,
+				})
+			}
+			notificationEmbed.Fields = append(notificationEmbed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🔔 @" + msg.Author.Username + "#" + msg.Author.Discriminator + " at " + messageTime.UTC().Format("15:04:05") + " UTC",
+				Value:  content,
+				Inline: false,
+			})
+			if guild.Icon != "" {
+				notificationEmbed.Author.IconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
+			}
+			_, err = helpers.SendEmbed(dmChannel.ID, notificationEmbed)
+			if err != nil {
+				cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
 			}
 			break
 		default:

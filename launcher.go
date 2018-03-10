@@ -226,6 +226,7 @@ func main() {
 	//discord.LogLevel = discordgo.LogInformational
 	discord.LogLevel = discordgo.LogError
 	discord.StateEnabled = true
+	discord.State.MaxMessageCount = 10
 	discord.Unlock()
 
 	discord.AddHandler(BotOnReady)
