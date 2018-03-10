@@ -610,6 +610,7 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 
 	for i, customCommand := range customCommandsCache {
 		if customCommand.GuildID == channel.GuildID && prefix+customCommand.Keyword == content {
+			session.ChannelTyping(msg.ChannelID)
 			messageSend := &discordgo.MessageSend{
 				Content: customCommand.Content,
 			}
