@@ -1,14 +1,21 @@
 package plugins
 
 import (
+	"context"
 	"runtime/pprof"
 	"strings"
+
+	vision "cloud.google.com/go/vision/apiv1"
 
 	"bytes"
 
 	"bufio"
 
 	"fmt"
+
+	"os"
+
+	"strconv"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -59,23 +66,78 @@ func (d *Debug) Action(command string, content string, msg *discordgo.Message, s
 		case "cloudvision":
 			session.ChannelTyping(msg.ChannelID)
 
-			if msg.Attachments == nil || len(msg.Attachments) <= 0 {
+			var imageUrl string
+			if len(args) >= 2 {
+				imageUrl = args[1]
+			}
+			if msg.Attachments != nil && len(msg.Attachments) > 0 {
+				imageUrl = msg.Attachments[0].URL
+			}
+			if imageUrl == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return
 			}
 
-			data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
+			data, err := helpers.NetGetUAWithError(imageUrl, helpers.DEFAULT_UA)
 			helpers.Relax(err)
 
-			isSafe := helpers.PictureIsSafe(bytes.NewReader(data))
+			ctx := context.Background()
+			os.Setenv(
+				"GOOGLE_APPLICATION_CREDENTIALS",
+				helpers.GetConfig().Path("google.client_credentials_json_location").Data().(string),
+			)
 
-			if isSafe {
-				_, err = helpers.SendMessage(msg.ChannelID, "✅ Picture is safe!")
-				helpers.Relax(err)
-			} else {
-				_, err = helpers.SendMessage(msg.ChannelID, "❌ Picture not is safe!")
-				helpers.Relax(err)
+			visionClient, err := vision.NewImageAnnotatorClient(ctx)
+			helpers.Relax(err)
+
+			image, err := vision.NewImageFromReader(bytes.NewReader(data))
+			helpers.Relax(err)
+
+			labelsData, err := visionClient.DetectLabels(ctx, image, nil, 15)
+			helpers.Relax(err)
+
+			var labelsText string
+			if labelsData != nil {
+				for _, labelData := range labelsData {
+					labelsText += labelData.GetDescription() + " " + strconv.FormatFloat(float64(labelData.GetScore()), 'f', 2, 64) + ", "
+				}
+				labelsText = strings.TrimSuffix(labelsText, ", ")
 			}
+
+			webData, err := visionClient.DetectWeb(ctx, image, nil)
+			helpers.Relax(err)
+
+			var webText string
+			if webData != nil {
+				webText += "Best Guess: "
+				for _, webDataEntry := range webData.BestGuessLabels {
+					webText += webDataEntry.GetLabel() + ", "
+				}
+				webText = strings.TrimSuffix(webText, ", ")
+				webText += "\nWeb Entities: "
+				for _, webDataEntry := range webData.WebEntities {
+					webText += webDataEntry.GetDescription() + " " + strconv.FormatFloat(float64(webDataEntry.GetScore()), 'f', 2, 64) + ", "
+				}
+				webText = strings.TrimSuffix(webText, ", ")
+			}
+
+			/*
+				cropHints, err := visionClient.CropHints(ctx, image, nil)
+				helpers.Relax(err)
+			*/
+
+			safeData, err := visionClient.DetectSafeSearch(ctx, image, nil)
+			helpers.Relax(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("__**Result:**__\n"+
+				"**Labels:** %s\n"+
+				"**Web:** %s\n"+
+				"**Safe Search:** %s\n",
+				labelsText,
+				webText,
+				safeData.String()))
+			helpers.Relax(err)
+			return
 		}
 
 		return
