@@ -20,7 +20,8 @@ var (
 // uploads a file to the minio object storage
 // objectName	: the name of the file to upload
 // data			: the data for the new object
-func UploadFile(objectName string, data []byte) (err error) {
+// metadata		: additional metadata attached to the object
+func UploadFile(objectName string, data []byte, metadata map[string]string) (err error) {
 	// setup minioClient if not yet done
 	if minioClient == nil {
 		err = setupMinioClient()
@@ -31,8 +32,21 @@ func UploadFile(objectName string, data []byte) (err error) {
 
 	cache.GetLogger().WithField("module", "storage").Infof("uploading " + objectName + " to minio storage")
 
+	options := minio.PutObjectOptions{}
+
+	// add content type
+	filetype, err := SniffMime(data)
+	if err == nil {
+		options.ContentType = filetype
+	}
+
+	// add metadata
+	if metadata != nil && len(metadata) > 0 {
+		options.UserMetadata = metadata
+	}
+
 	// upload the data
-	_, err = minioClient.PutObject(minioBucket, objectName, bytes.NewReader(data), -1, minio.PutObjectOptions{})
+	_, err = minioClient.PutObject(minioBucket, objectName, bytes.NewReader(data), -1, options)
 	return err
 }
 

@@ -116,7 +116,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						// get object name
 						objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
 						// upload to object storage
-						err = helpers.UploadFile(objectName, data)
+						err = helpers.UploadFile(objectName, data, map[string]string{
+							"userid":    msg.Author.ID,
+							"channelid": msg.ChannelID,
+							"guildid":   channel.GuildID,
+						})
 						helpers.Relax(err)
 					}
 				}
