@@ -1,30 +1,29 @@
 package plugins
 
 import (
-	"math/rand"
-	"time"
-
 	"strings"
+
+	"time"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 )
 
 type Dog struct{}
 
-func (d *Dog) Commands() []string {
+func (m *Dog) Commands() []string {
 	return []string{
 		"dog",
 	}
 }
 
-func (d *Dog) Init(session *discordgo.Session) {
+func (m *Dog) Init(session *discordgo.Session) {
 
 }
 
-func (d *Dog) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Dog) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermDog) {
 		return
 	}
@@ -36,14 +35,38 @@ func (d *Dog) Action(command string, content string, msg *discordgo.Message, ses
 		switch args[0] {
 		case "add":
 			helpers.RequireRobyulMod(msg, func() {
-				if len(args) < 2 {
+				if len(args) < 2 && (len(args) < 1 && len(msg.Attachments) <= 0) {
 					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 					return
 				}
 
-				url := strings.TrimSpace(args[1])
+				var url string
+				if len(msg.Attachments) > 0 {
+					url = msg.Attachments[0].URL
+				}
+				if len(args) >= 2 {
+					url = strings.TrimSpace(args[1])
+				}
 
-				err := d.InsertLink(url, msg.Author.ID)
+				if url == "" {
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
+					return
+				}
+
+				image, err := helpers.NetGetUAWithError(url, helpers.DEFAULT_UA)
+				helpers.Relax(err)
+
+				url, err = helpers.UploadImage(image)
+				helpers.Relax(err)
+
+				_, err = helpers.MDbInsert(
+					models.DogLinksTable,
+					models.DogLinkEntry{
+						URL:           url,
+						AddedByUserID: msg.Author.ID,
+						AddedAt:       time.Now(),
+					},
+				)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.dog.add-success", url))
@@ -54,36 +77,59 @@ func (d *Dog) Action(command string, content string, msg *discordgo.Message, ses
 		}
 	}
 
-	var entryBucket []models.DogLinkEntry
-	listCursor, err := rethink.Table(models.DogLinksTable).Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-	helpers.Relax(err)
+	content = helpers.GetText("plugins.dog.none")
+	link := m.getRandomDogLink()
+	if link != "" {
+		content = helpers.GetTextF("plugins.dog.result", link)
+	}
 
-	if len(entryBucket) <= 0 {
-		helpers.SendMessage(
-			msg.ChannelID,
-			helpers.GetText("plugins.dog.none"),
-		)
+	messages, err := helpers.SendMessage(
+		msg.ChannelID,
+		content,
+	)
+	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+
+	if len(messages) <= 0 {
 		return
 	}
 
-	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
+	err = session.MessageReactionAdd(msg.ChannelID, messages[0].ID, "🎲")
+	if err == nil {
+		if err == nil {
+			rerollHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+				defer helpers.Recover()
 
-	_, err = helpers.SendMessage(
-		msg.ChannelID,
-		helpers.GetTextF("plugins.dog.result", entryBucket[randGen.Intn(len(entryBucket))].URL),
-	)
-	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				if reaction.MessageID == messages[0].ID {
+					if reaction.UserID == session.State.User.ID {
+						return
+					}
+
+					if reaction.UserID == msg.Author.ID && reaction.Emoji.Name == "🎲" {
+						link = m.getRandomDogLink()
+						if link != "" {
+							helpers.EditMessage(messages[0].ChannelID, messages[0].ID,
+								helpers.GetTextF("plugins.dog.result", link))
+						}
+						session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+					}
+				}
+			})
+			time.Sleep(5 * time.Minute)
+			rerollHandler()
+			session.MessageReactionRemove(msg.ChannelID, messages[0].ID, "🎲", session.State.User.ID)
+		}
+	}
 }
 
-func (d *Dog) InsertLink(URL string, UserID string) (err error) {
-	insert := rethink.Table(models.DogLinksTable).Insert(models.DogLinkEntry{
-		URL:           URL,
-		AddedByUserID: UserID,
-		AddedAt:       time.Now(),
-	})
-	_, err = insert.RunWrite(helpers.GetDB())
-	return err
+func (m *Dog) getRandomDogLink() (link string) {
+	var entryBucket models.DogLinkEntry
+	// TODO: pipe aggregation
+	err := helpers.MdbCollection(models.DogLinksTable).Pipe(
+		[]bson.M{{"$sample": bson.M{"size": 1}}},
+	).One(&entryBucket)
+	helpers.RelaxLog(err)
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		return ""
+	}
+	return entryBucket.URL
 }

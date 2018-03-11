@@ -1,14 +1,18 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/globalsign/mgo/bson"
+)
 
 const (
-	DogLinksTable = "dog_links"
+	DogLinksTable MongoDbCollection = "dog_links"
 )
 
 type DogLinkEntry struct {
-	ID            string    `gorethink:"id,omitempty"`
-	URL           string    `gorethink:"url"`
-	AddedByUserID string    `gorethink:"added_by_userid"`
-	AddedAt       time.Time `gorethink:"added_at"`
+	ID            bson.ObjectId `bson:"_id,omitempty"`
+	URL           string
+	AddedByUserID string
+	AddedAt       time.Time
 }
