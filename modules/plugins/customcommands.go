@@ -140,12 +140,6 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
 						return
 					}
-					// picture is safe?
-					metrics.CloudVisionApiRequests.Add(1)
-					if !helpers.PictureIsSafe(bytes.NewReader(data)) {
-						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-not-safe"))
-						return
-					}
 					// get object name
 					objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
 					// upload to object storage
