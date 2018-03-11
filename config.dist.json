@@ -132,5 +132,6 @@
     "endpoint": "",
     "access_key": "",
     "secret_secret_key": ""
-  }
+  },
+  "thecatapi-api-key": ""
 }
