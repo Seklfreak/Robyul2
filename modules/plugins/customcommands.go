@@ -30,6 +30,7 @@ func (cc *CustomCommands) Commands() []string {
 		"customcom",
 		"commands",
 		"command",
+		"random",
 	}
 }
 
@@ -51,6 +52,11 @@ func (cc *CustomCommands) Uninit(session *discordgo.Session) {
 func (cc *CustomCommands) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCustomCommands) {
 		return
+	}
+
+	// shortcut [p]random => [p]commands random
+	if command == "random" {
+		content = "random"
 	}
 
 	args := strings.Fields(content)
@@ -99,7 +105,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			}
 
 			if helpers.CommandExists(args[1]) {
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
 				helpers.Relax(err)
 				return
 			}

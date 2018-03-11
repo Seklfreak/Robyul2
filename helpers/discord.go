@@ -1095,12 +1095,12 @@ func GetAvatarUrlWithSize(user *discordgo.User, size uint16) string {
 
 func CommandExists(name string) bool {
 	for _, command := range cache.GetPluginList() {
-		if command == strings.ToLower(name) {
+		if strings.ToLower(command) == strings.ToLower(name) {
 			return true
 		}
 	}
 	for _, command := range cache.GetPluginExtendedList() {
-		if command == strings.ToLower(name) {
+		if strings.ToLower(command) == strings.ToLower(name) {
 			return true
 		}
 	}

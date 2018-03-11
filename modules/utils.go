@@ -69,13 +69,13 @@ func Init(session *discordgo.Session) {
 		(*ref).Init(session)
 	}
 
-	pluginCommands := make([]string, 0, len(pluginCache))
+	pluginCommands := make([]string, 0)
 	for k := range pluginCache {
 		pluginCommands = append(pluginCommands, k)
 	}
 	cache.SetPluginList(pluginCommands)
-	extendedPluginCommands := make([]string, 0, len(extendedPluginCache))
-	for k := range pluginCache {
+	extendedPluginCommands := make([]string, 0)
+	for k := range extendedPluginCache {
 		extendedPluginCommands = append(extendedPluginCommands, k)
 	}
 	cache.SetPluginExtendedList(extendedPluginCommands)
