@@ -11,7 +11,13 @@ import (
 
 	"path/filepath"
 
+	"errors"
+
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/models"
+	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
 	"github.com/minio/minio-go"
 )
@@ -23,6 +29,35 @@ var (
 )
 
 // TODO: watch cache folder size
+
+// retrieves a file by md5 hash
+// currently supported file sources: custom commands
+// hash	: the md5 hash
+func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, err error) {
+	var entryBucket models.CustomCommandsEntry
+	err = MdbOne(
+		MdbCollection(models.CustomCommandsTable).Find(bson.M{"storagehash": hash}),
+		&entryBucket,
+	)
+	if err == nil {
+		data, err = RetrieveFile(entryBucket.StorageObjectName)
+		RelaxLog(err)
+		if err != nil {
+			return "", "", nil, err
+		}
+		return entryBucket.StorageFilename, entryBucket.StorageMimeType, data, nil
+	}
+	return "", "", nil, errors.New("file not found")
+}
+
+// Gets a public link for a file
+// filename		: the name of the file
+// filetype		: the type of the file
+// objectName	: the minio object name of the file
+func GetPublicFileLink(filename, filehash string) (link string) {
+	return fmt.Sprintf(GetConfig().Path("imageproxy.base_url").Data().(string),
+		filehash, filename)
+}
 
 // uploads a file to the minio object storage
 // objectName	: the name of the file to upload
@@ -57,7 +92,6 @@ func UploadFile(objectName string, data []byte, metadata map[string]string) (err
 	return err
 }
 
-// TODO: redis cache? file cache?
 // retrieves a file from the minio object storage
 // objectName	: the name of the file to retrieve
 func RetrieveFile(objectName string) (data []byte, err error) {

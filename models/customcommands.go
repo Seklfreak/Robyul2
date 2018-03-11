@@ -22,6 +22,8 @@ type CustomCommandsEntry struct {
 	Content           string
 	StorageObjectName string
 	StorageMimeType   string
+	StorageHash       string
+	StorageFilename   string
 }
 
 func CustomCommandsNewObjectName(guildID, userID string) (objectName string) {

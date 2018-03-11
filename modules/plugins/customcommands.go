@@ -87,10 +87,12 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					}
 				}
 
-				var objectName, filetype string
+				var objectName, filetype, filename string
 				if len(msg.Attachments) > 0 {
 					data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
 					helpers.Relax(err)
+
+					filename = msg.Attachments[0].Filename
 
 					filetype, err = helpers.SniffMime(data)
 					helpers.Relax(err)
@@ -142,6 +144,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						Keyword:           args[1],
 						StorageMimeType:   filetype,
 						StorageObjectName: objectName,
+						StorageFilename:   filename,
+						StorageHash:       helpers.GetMD5Hash(objectName),
 						Content:           content,
 					},
 				)
@@ -195,15 +199,15 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				authorText = "@" + author.Username + "#" + author.Discriminator
 			}
 
+			content, filename, data := cc.getCommandContent(entryBucket)
 			messageSend := &discordgo.MessageSend{
 				Content: fmt.Sprintf("`%s%s` by **%s** triggered **%d times**:\n%s",
 					helpers.GetPrefixForServer(channel.GuildID), entryBucket.Keyword,
 					authorText,
 					entryBucket.Triggered,
-					entryBucket.Content,
+					content,
 				),
 			}
-			data, filename := cc.getCommandFile(entryBucket)
 			if data != nil && len(data) > 0 {
 				messageSend.Files = []*discordgo.File{
 					{
@@ -447,10 +451,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			author, err := helpers.GetUser(entryBucket.CreatedByUserID)
 			helpers.Relax(err)
 
+			content, filename, data := cc.getCommandContent(entryBucket)
 			messageSend := &discordgo.MessageSend{
 				Embed: &discordgo.MessageEmbed{
 					Title:       fmt.Sprintf("Custom Command: `%s%s`", helpers.GetPrefixForServer(channel.GuildID), entryBucket.Keyword),
-					Description: entryBucket.Content,
+					Description: content,
 					Fields: []*discordgo.MessageEmbedField{
 						{Name: "Author", Value: fmt.Sprintf("%s#%s", author.Username, author.Discriminator)},
 						{Name: "Times triggered", Value: humanize.Comma(int64(entryBucket.Triggered))},
@@ -458,7 +463,6 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					},
 				},
 			}
-			data, filename := cc.getCommandFile(entryBucket)
 			if data != nil && len(data) > 0 {
 				messageSend.Files = []*discordgo.File{
 					{
@@ -611,10 +615,10 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 	for i, customCommand := range customCommandsCache {
 		if customCommand.GuildID == channel.GuildID && prefix+customCommand.Keyword == content {
 			session.ChannelTyping(msg.ChannelID)
+			content, filename, data := cc.getCommandContent(customCommand)
 			messageSend := &discordgo.MessageSend{
-				Content: customCommand.Content,
+				Content: content,
 			}
-			data, filename := cc.getCommandFile(customCommand)
 			if data != nil && len(data) > 0 {
 				messageSend.Files = []*discordgo.File{
 					{
@@ -638,6 +642,21 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 			return
 		}
 	}
+}
+
+func (cc *CustomCommands) getCommandContent(customCommand models.CustomCommandsEntry) (content, filename string, data []byte) {
+	content += customCommand.Content + "\n"
+	if customCommand.StorageHash != "" {
+		content += helpers.GetPublicFileLink(customCommand.StorageFilename, customCommand.StorageHash)
+		return content, "", nil
+	}
+	if customCommand.StorageObjectName != "" {
+		data, filename = cc.getCommandFile(customCommand)
+		if data != nil {
+			return content, filename, data
+		}
+	}
+	return content, "", nil
 }
 
 func (cc *CustomCommands) getCommandFile(customCommand models.CustomCommandsEntry) (data []byte, filename string) {

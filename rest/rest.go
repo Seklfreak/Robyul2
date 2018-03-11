@@ -12,6 +12,8 @@ import (
 
 	"encoding/json"
 
+	"encoding/base64"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/generator"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -135,6 +137,15 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{vanity-name}").Filter(webkeyAuthenticate).To(GetVanityInviteByName))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/file").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	service.Route(service.GET("/{filehash}").Filter(webkeyAuthenticate).To(GetFileByFilehash))
 	services = append(services, service)
 	return services
 }
@@ -1603,6 +1614,26 @@ func GetVanityInviteByName(request *restful.Request, response *restful.Response)
 	response.WriteEntity(models.Rest_VanityInvite_Invite{
 		Code:    code,
 		GuildID: vanityInvite.GuildID,
+	})
+}
+
+func GetFileByFilehash(request *restful.Request, response *restful.Response) {
+	fileHash := request.PathParameter("filehash")
+
+	filename, filetype, data, err := helpers.RetrieveFileByHash(fileHash)
+	if err != nil {
+		if strings.Contains(err.Error(), "file not found") {
+			response.WriteError(http.StatusNotFound, errors.New("file not found"))
+			return
+		}
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response.WriteEntity(models.Rest_File{
+		FileType: filename,
+		FileName: filetype,
+		Data:     base64.StdEncoding.EncodeToString(data),
 	})
 }
 
