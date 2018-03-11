@@ -12,25 +12,17 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 )
 
 type GuildAnnouncements struct{}
 
-type Announcement_Setting struct {
-	Id                  string `rethink:"id,omitempty"`
-	GuildID             string `rethink:"guildid"`
-	GuildJoinChannelID  string `rethink:"guild_join_channelid"`
-	GuildJoinText       string `rethink:"guild_join_text"`
-	GuildJoinEnabled    bool   `rethink:"guild_join_enabled"`
-	GuildLeaveChannelID string `rethink:"guild_leave_channelid"`
-	GuildLeaveText      string `rethink:"guild_leave_text"`
-	GuildLeaveEnabled   bool   `rethink:"guild_leave_enabled"`
-}
-
 func (m *GuildAnnouncements) Commands() []string {
 	return []string{
 		"guildannouncements",
+		"announcements",
+		"greet",
+		"greeter",
 	}
 }
 
@@ -48,115 +40,130 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 	}
 
 	args := strings.Fields(content)
-	if len(args) >= 2 {
-		switch args[0] {
-		case "set":
-			switch args[1] {
-			case "guild_join":
-				helpers.RequireAdmin(msg, func() {
-					sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-					helpers.Relax(err)
-					guildAnnouncementSetting := m.getEntryByOrCreateEmpty("guildid", sourceChannel.GuildID)
-					guildAnnouncementSetting.GuildID = sourceChannel.GuildID
-					var successMessage string
-					// Add Text
-					if len(args) >= 4 {
-						targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
-						if err != nil || targetChannel.ID == "" {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-							return
-						}
+	if len(args) < 2 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		return
+	}
 
-						newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:3], " "), "", 1))
-						guildAnnouncementSetting.GuildJoinEnabled = true
-						guildAnnouncementSetting.GuildJoinChannelID = targetChannel.ID
-						guildAnnouncementSetting.GuildJoinText = newText
-						successMessage = helpers.GetText("plugins.guildannouncements.message-edited")
-
-						m.setEntry(guildAnnouncementSetting)
-
-						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
-							models.EventlogTargetTypeChannel, msg.Author.ID,
-							models.EventlogTypeRobyulGuildAnnouncementsJoinSet, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "join_text",
-									Value: newText,
-								},
-							}, false)
-						helpers.RelaxLog(err)
-					} else {
-						// Remove Text
-						guildAnnouncementSetting.GuildJoinEnabled = false
-						successMessage = helpers.GetText("plugins.guildannouncements.message-disabled")
-
-						m.setEntry(guildAnnouncementSetting)
-
-						_, err = helpers.EventlogLog(time.Now(), sourceChannel.GuildID, "",
-							models.EventlogTargetTypeChannel, msg.Author.ID,
-							models.EventlogTypeRobyulGuildAnnouncementsJoinRemove, "",
-							nil,
-							nil, false)
-						helpers.RelaxLog(err)
-					}
-					_, err = helpers.SendMessage(msg.ChannelID, successMessage)
-					helpers.Relax(err)
-				})
-			case "guild_leave":
-				helpers.RequireAdmin(msg, func() {
-					sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-					helpers.Relax(err)
-
-					guildAnnouncementSetting := m.getEntryByOrCreateEmpty("guildid", sourceChannel.GuildID)
-					guildAnnouncementSetting.GuildID = sourceChannel.GuildID
-					var successMessage string
-					// Add Text
-					if len(args) >= 4 {
-						targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
-						if err != nil || targetChannel.ID == "" {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-							return
-						}
-
-						newText := strings.TrimSpace(strings.Replace(content, strings.Join(args[:3], " "), "", 1))
-						guildAnnouncementSetting.GuildLeaveEnabled = true
-						guildAnnouncementSetting.GuildLeaveChannelID = targetChannel.ID
-						guildAnnouncementSetting.GuildLeaveText = newText
-						successMessage = helpers.GetText("plugins.guildannouncements.message-edited")
-
-						m.setEntry(guildAnnouncementSetting)
-
-						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
-							models.EventlogTargetTypeChannel, msg.Author.ID,
-							models.EventlogTypeRobyulGuildAnnouncementsLeaveSet, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "leave_text",
-									Value: newText,
-								},
-							}, false)
-						helpers.RelaxLog(err)
-					} else {
-						// Remove Text
-						guildAnnouncementSetting.GuildLeaveEnabled = false
-						successMessage = helpers.GetText("plugins.guildannouncements.message-disabled")
-
-						m.setEntry(guildAnnouncementSetting)
-
-						_, err = helpers.EventlogLog(time.Now(), sourceChannel.GuildID, "",
-							models.EventlogTargetTypeChannel, msg.Author.ID,
-							models.EventlogTypeRobyulGuildAnnouncementsLeaveRemove, "",
-							nil,
-							nil, false)
-						helpers.RelaxLog(err)
-					}
-					_, err = helpers.SendMessage(msg.ChannelID, successMessage)
-					helpers.Relax(err)
-				})
+	switch args[0] {
+	// [p]greeter join <#channel or channel id> <embed code>
+	case "guild_join", "join":
+		helpers.RequireAdmin(msg, func() {
+			targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+			if err != nil || targetChannel.ID == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
 			}
-		}
+
+			var embedCode string
+
+			if len(args) >= 3 {
+				embedCode = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+			}
+
+			if embedCode == "" {
+				var entryBucket models.GreeterEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.GreeterTable).Find(bson.M{
+						"type": models.GreeterTypeJoin, "guildid": targetChannel.GuildID, "channelid": targetChannel.ID,
+					}),
+					&entryBucket,
+				)
+				if err == nil {
+					helpers.MDbDelete(models.GreeterTable, entryBucket.Id)
+				}
+
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-disabled"))
+				helpers.Relax(err)
+				return
+			}
+
+			err = helpers.MDbUpsert(
+				models.GreeterTable,
+				bson.M{"type": models.GreeterTypeJoin, "guildid": targetChannel.GuildID, "channelid": targetChannel.ID},
+				models.GreeterEntry{
+					GuildID:   targetChannel.GuildID,
+					ChannelID: targetChannel.ID,
+					Type:      models.GreeterTypeJoin,
+					EmbedCode: embedCode,
+				},
+			)
+			helpers.Relax(err)
+
+			_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+				models.EventlogTargetTypeChannel, msg.Author.ID,
+				models.EventlogTypeRobyulGuildAnnouncementsJoinSet, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "join_text",
+						Value: embedCode,
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-edited"))
+			helpers.Relax(err)
+		})
+		// [p]greeter leave <#channel or channel id> <embed code>
+	case "guild_leave", "leave":
+		helpers.RequireAdmin(msg, func() {
+			targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+			if err != nil || targetChannel.ID == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
+
+			var embedCode string
+
+			if len(args) >= 3 {
+				embedCode = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+			}
+
+			if embedCode == "" {
+				var entryBucket models.GreeterEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.GreeterTable).Find(bson.M{
+						"type": models.GreeterTypeLeave, "guildid": targetChannel.GuildID, "channelid": targetChannel.ID,
+					}),
+					&entryBucket,
+				)
+				if err == nil {
+					helpers.MDbDelete(models.GreeterTable, entryBucket.Id)
+				}
+
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-disabled"))
+				helpers.Relax(err)
+				return
+			}
+
+			err = helpers.MDbUpsert(
+				models.GreeterTable,
+				bson.M{"type": models.GreeterTypeLeave, "guildid": targetChannel.GuildID, "channelid": targetChannel.ID},
+				models.GreeterEntry{
+					GuildID:   targetChannel.GuildID,
+					ChannelID: targetChannel.ID,
+					Type:      models.GreeterTypeLeave,
+					EmbedCode: embedCode,
+				},
+			)
+			helpers.Relax(err)
+
+			_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+				models.EventlogTargetTypeChannel, msg.Author.ID,
+				models.EventlogTypeRobyulGuildAnnouncementsLeaveSet, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "leave_text",
+						Value: embedCode,
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-edited"))
+			helpers.Relax(err)
+		})
 	}
 
 }
@@ -175,24 +182,33 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 			return
 		}
 		helpers.Relax(err)
-		for _, guildAnnouncementSetting := range m.GetAnnouncementSettingsFor("guildid", member.GuildID) {
-			if guildAnnouncementSetting.GuildJoinEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
-				guildJoinChannelID := guildAnnouncementSetting.GuildJoinChannelID
-				guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.GuildJoinText, member)
-				if guildJoinText != "" {
-					go func() {
-						_, err := helpers.SendMessage(guildJoinChannelID, guildJoinText)
-						if err != nil {
-							cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Join Message in %s #%s: %s",
-								guild.Name, guild.ID, err.Error())
-						}
-					}()
-				}
+
+		var entryBucket []models.GreeterEntry
+		err = helpers.MDbIter(helpers.MdbCollection(models.GreeterTable).
+			Find(bson.M{"guildid": member.GuildID, "type": models.GreeterTypeJoin})).All(&entryBucket)
+		helpers.Relax(err)
+
+		if entryBucket == nil || len(entryBucket) <= 0 {
+			return
+		}
+
+		for _, guildAnnouncementSetting := range entryBucket {
+			guildJoinChannelID := guildAnnouncementSetting.ChannelID
+			guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.EmbedCode, member)
+			if guildJoinText != "" {
+				go func() {
+					_, err := helpers.SendMessage(guildJoinChannelID, guildJoinText)
+					if err != nil {
+						cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Join Message in %s #%s: %s",
+							guild.Name, guild.ID, err.Error())
+					}
+				}()
 			}
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
 	}()
 }
+
 func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 	go func() {
 		defer helpers.Recover()
@@ -204,53 +220,37 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 			}
 			return
 		}
-		for _, guildAnnouncementSetting := range m.GetAnnouncementSettingsFor("guildid", member.GuildID) {
-			if guildAnnouncementSetting.GuildLeaveEnabled == true && guildAnnouncementSetting.GuildID == guild.ID {
-				guildLeaveChannelID := guildAnnouncementSetting.GuildLeaveChannelID
-				guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.GuildLeaveText, member)
-				if guildLeaveText != "" {
-					go func() {
-						_, err := helpers.SendMessage(guildLeaveChannelID, guildLeaveText)
-						if err != nil {
-							cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Leave Message in %s #%s: %s",
-								guild.Name, guild.ID, err.Error())
-						}
-					}()
-				}
+
+		var entryBucket []models.GreeterEntry
+		err = helpers.MDbIter(helpers.MdbCollection(models.GreeterTable).
+			Find(bson.M{"guildid": member.GuildID, "type": models.GreeterTypeLeave})).All(&entryBucket)
+		helpers.Relax(err)
+
+		if entryBucket == nil || len(entryBucket) <= 0 {
+			return
+		}
+
+		for _, guildAnnouncementSetting := range entryBucket {
+			guildLeaveChannelID := guildAnnouncementSetting.ChannelID
+			guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.EmbedCode, member)
+			if guildLeaveText != "" {
+				go func() {
+					_, err := helpers.SendMessage(guildLeaveChannelID, guildLeaveText)
+					if err != nil {
+						cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Leave Message in %s #%s: %s",
+							guild.Name, guild.ID, err.Error())
+					}
+				}()
 			}
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Infof("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID)
 	}()
 }
 
-func (m *GuildAnnouncements) GetAnnouncementSettings() []Announcement_Setting {
-	var entryBucket []Announcement_Setting
-	cursor, err := rethink.Table("guild_announcements").Run(helpers.GetDB())
-	helpers.Relax(err)
-
-	err = cursor.All(&entryBucket)
-	helpers.Relax(err)
-
-	return entryBucket
-}
-
-func (m *GuildAnnouncements) GetAnnouncementSettingsFor(key string, value string) []Announcement_Setting {
-	var entryBucket []Announcement_Setting
-	cursor, err := rethink.Table("guild_announcements").Filter(
-		rethink.Row.Field(key).Eq(value),
-	).Run(helpers.GetDB())
-	helpers.Relax(err)
-
-	err = cursor.All(&entryBucket)
-	helpers.Relax(err)
-
-	return entryBucket
-}
-
 func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Member) string {
 	guild, err := helpers.GetGuild(member.GuildID)
 	if errD, ok := err.(*discordgo.RESTError); ok {
-		if errD.Message.Code != 50001 { // It's probably Robyul leaving a server :sob:
+		if errD.Message.Code != discordgo.ErrCodeMissingAccess { // It's probably Robyul leaving a server :nayoungpout:
 			return ""
 		} else {
 			helpers.Relax(err)
@@ -279,38 +279,6 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 	return text
 }
 
-func (m *GuildAnnouncements) getEntryByOrCreateEmpty(key string, id string) Announcement_Setting {
-	var entryBucket Announcement_Setting
-	listCursor, err := rethink.Table("guild_announcements").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("guild_announcements").Insert(Announcement_Setting{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *GuildAnnouncements) setEntry(entry Announcement_Setting) {
-	_, err := rethink.Table("guild_announcements").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
 func (m *GuildAnnouncements) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
 
 }
