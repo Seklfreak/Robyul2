@@ -61,6 +61,7 @@ func GetPublicFileLink(filename, filehash string) (link string) {
 	if dots > 1 {
 		filename = strings.Replace(filename, ".", "-", dots-1)
 	}
+	//filename = strings.Replace("_", "-", -1)
 	return fmt.Sprintf(GetConfig().Path("imageproxy.base_url").Data().(string),
 		filehash, filename)
 }

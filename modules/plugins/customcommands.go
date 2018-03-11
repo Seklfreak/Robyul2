@@ -34,7 +34,8 @@ func (cc *CustomCommands) Commands() []string {
 }
 
 var (
-	customCommandsCache []models.CustomCommandsEntry
+	customCommandsCache            []models.CustomCommandsEntry
+	customCommandsAllowedFiletypes = []string{"image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm"}
 )
 
 func (cc *CustomCommands) Init(session *discordgo.Session) {
@@ -128,15 +129,15 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				filetype, err = helpers.SniffMime(data)
 				helpers.Relax(err)
 
-				// is image?
-				if strings.HasPrefix(filetype, "image/") {
+				// filetype allowed? (picture or video)
+				if cc.isAllowedFiletype(filetype) {
 					// user is allowed to upload files?
 					if helpers.UseruploadsIsDisabled(msg.Author.ID) {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
 						return
 					}
-					// <= 8 MB
-					if msg.Attachments[0].Size > 8e+6 {
+					// <= 20 MB
+					if msg.Attachments[0].Size > 20e+6 {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
 						return
 					}
@@ -648,6 +649,17 @@ func (cc *CustomCommands) canAddCommand(guildID, userID string, editCommand *mod
 	}
 	if helpers.GuildSettingsGetCached(guildID).CustomCommandsEveryoneCanAdd {
 		return true
+	}
+	return false
+}
+
+// checks if a filetype is allowed for uploads
+// filetype	: the filetype to check
+func (cc *CustomCommands) isAllowedFiletype(filetype string) (allowed bool) {
+	for _, allowedFiletype := range customCommandsAllowedFiletypes {
+		if allowedFiletype == filetype {
+			return true
+		}
 	}
 	return false
 }
