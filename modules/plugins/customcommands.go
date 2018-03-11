@@ -87,7 +87,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					}
 				}
 
-				var objectName, filetype, filename string
+				var objectName, filetype, filename, hash string
 				if len(msg.Attachments) > 0 {
 					data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
 					helpers.Relax(err)
@@ -125,6 +125,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						})
 						helpers.Relax(err)
 					}
+					hash = helpers.GetMD5Hash(objectName)
 				}
 
 				content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
@@ -145,7 +146,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						StorageMimeType:   filetype,
 						StorageObjectName: objectName,
 						StorageFilename:   filename,
-						StorageHash:       helpers.GetMD5Hash(objectName),
+						StorageHash:       hash,
 						Content:           content,
 					},
 				)
