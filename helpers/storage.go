@@ -15,6 +15,8 @@ import (
 
 	"fmt"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
@@ -55,6 +57,10 @@ func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, er
 // filetype		: the type of the file
 // objectName	: the minio object name of the file
 func GetPublicFileLink(filename, filehash string) (link string) {
+	dots := strings.Count(filename, ".")
+	if dots > 1 {
+		filename = strings.Replace(filename, ".", "-", dots-1)
+	}
 	return fmt.Sprintf(GetConfig().Path("imageproxy.base_url").Data().(string),
 		filehash, filename)
 }

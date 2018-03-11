@@ -645,7 +645,9 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 }
 
 func (cc *CustomCommands) getCommandContent(customCommand models.CustomCommandsEntry) (content, filename string, data []byte) {
-	content += customCommand.Content + "\n"
+	if customCommand.Content != "" {
+		content += customCommand.Content + "\n"
+	}
 	if customCommand.StorageHash != "" {
 		content += helpers.GetPublicFileLink(customCommand.StorageFilename, customCommand.StorageHash)
 		return content, "", nil
