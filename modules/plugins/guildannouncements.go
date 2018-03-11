@@ -193,17 +193,29 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 		}
 
 		for _, guildAnnouncementSetting := range entryBucket {
-			guildJoinChannelID := guildAnnouncementSetting.ChannelID
-			guildJoinText := m.ReplaceMemberText(guildAnnouncementSetting.EmbedCode, member)
-			if guildJoinText != "" {
-				go func() {
-					_, err := helpers.SendMessage(guildJoinChannelID, guildJoinText)
-					if err != nil {
-						cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Join Message in %s #%s: %s",
-							guild.Name, guild.ID, err.Error())
+			ourSetting := guildAnnouncementSetting
+			go func() {
+				defer helpers.Recover()
+				guildJoinText := m.ReplaceMemberText(ourSetting.EmbedCode, member)
+				if guildJoinText == "" {
+					return
+				}
+				messageSend := &discordgo.MessageSend{
+					Content: guildJoinText,
+				}
+				if helpers.IsEmbedCode(guildJoinText) {
+					ptext, embed, err := helpers.ParseEmbedCode(guildJoinText)
+					if err == nil {
+						messageSend.Content = ptext
+						messageSend.Embed = embed
 					}
-				}()
-			}
+				}
+				_, err = helpers.SendComplex(ourSetting.ChannelID, messageSend)
+				if err != nil {
+					cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Join Message in %s #%s: %s",
+						guild.Name, guild.ID, err.Error())
+				}
+			}()
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
 	}()
@@ -231,17 +243,30 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 		}
 
 		for _, guildAnnouncementSetting := range entryBucket {
-			guildLeaveChannelID := guildAnnouncementSetting.ChannelID
-			guildLeaveText := m.ReplaceMemberText(guildAnnouncementSetting.EmbedCode, member)
-			if guildLeaveText != "" {
-				go func() {
-					_, err := helpers.SendMessage(guildLeaveChannelID, guildLeaveText)
-					if err != nil {
-						cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Leave Message in %s #%s: %s",
-							guild.Name, guild.ID, err.Error())
+			ourSetting := guildAnnouncementSetting
+			go func() {
+				defer helpers.Recover()
+
+				guildLeaveText := m.ReplaceMemberText(ourSetting.EmbedCode, member)
+				if guildLeaveText == "" {
+					return
+				}
+				messageSend := &discordgo.MessageSend{
+					Content: guildLeaveText,
+				}
+				if helpers.IsEmbedCode(guildLeaveText) {
+					ptext, embed, err := helpers.ParseEmbedCode(guildLeaveText)
+					if err == nil {
+						messageSend.Content = ptext
+						messageSend.Embed = embed
 					}
-				}()
-			}
+				}
+				_, err = helpers.SendComplex(ourSetting.ChannelID, messageSend)
+				if err != nil {
+					cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Leave Message in %s #%s: %s",
+						guild.Name, guild.ID, err.Error())
+				}
+			}()
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Infof("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID)
 	}()
@@ -274,6 +299,7 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 	text = strings.Replace(text, "{USER_DISCRIMINATOR}", member.User.Discriminator, -1)
 	text = strings.Replace(text, "{USER_NUMBER}", strconv.Itoa(userNumber), -1)
 	text = strings.Replace(text, "{USER_MENTION}", fmt.Sprintf("<@%s>", member.User.ID), -1)
+	text = strings.Replace(text, "{USER_AVATARURL}", member.User.AvatarURL(""), -1)
 	text = strings.Replace(text, "{GUILD_NAME}", guild.Name, -1)
 	text = strings.Replace(text, "{GUILD_ID}", guild.ID, -1)
 	return text
