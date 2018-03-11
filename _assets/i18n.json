@@ -701,7 +701,9 @@
       "success": [
         "MEOW! :smiley_cat:\n%s",
         "MJAU! :cat:\n%s",
-        "MEO! <:googlecat:422343015961591808>\n%s"
+        "MEO! <:googlecat:422343015961591808>\n%s",
+        "MEOW! <:sicacat:422343015722385408>\n%s",
+        "MEO! <:yuricat:422353697310244891\n%s"
       ],
       "error": "I wasn't able to find a cat for you right now! <a:ablobcry:393869333740126219>\nPlease try again later."
     }
