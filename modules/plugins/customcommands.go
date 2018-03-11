@@ -55,124 +55,154 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 	args := strings.Fields(content)
 	if len(args) >= 1 {
 		switch args[0] {
-		case "add": // [p]commands add <command name> <command text>
-			// TODO: videos?
-			helpers.RequireMod(msg, func() {
-				session.ChannelTyping(msg.ChannelID)
-				if len(args) < 3 && (len(msg.Attachments) <= 0 && len(args) < 2) {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					return
-				}
+		case "toggle-permissions", "toggle-permission":
+			helpers.RequireAdmin(msg, func() {
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
-				if helpers.CommandExists(args[1]) {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
-					helpers.Relax(err)
-					return
-				}
+				guildConfig := helpers.GuildSettingsGetCached(channel.GuildID)
 
-				var entryBucket models.CustomCommandsEntry
-				err = helpers.MdbOne(
-					helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
-					&entryBucket,
-				)
-				if err == nil {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-keyword-already-exists"))
-					helpers.Relax(err)
-					return
+				var message string
+
+				if guildConfig.CustomCommandsEveryoneCanAdd {
+					message = helpers.GetText("plugins.customcommands.disabled-everyone-canadd")
+					guildConfig.CustomCommandsEveryoneCanAdd = false
 				} else {
-					if !strings.Contains(err.Error(), "not found") {
-						helpers.Relax(err)
-					}
+					message = helpers.GetText("plugins.customcommands.enabled-everyone-canadd")
+					guildConfig.CustomCommandsEveryoneCanAdd = true
 				}
 
-				var objectName, filetype, filename, hash string
-				if len(msg.Attachments) > 0 {
-					data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
-					helpers.Relax(err)
-
-					filename = msg.Attachments[0].Filename
-
-					filetype, err = helpers.SniffMime(data)
-					helpers.Relax(err)
-
-					// is image?
-					if strings.HasPrefix(filetype, "image/") {
-						// user is allowed to upload files?
-						if helpers.UseruploadsIsDisabled(msg.Author.ID) {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
-							return
-						}
-						// <= 8 MB
-						if msg.Attachments[0].Size > 8e+6 {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
-							return
-						}
-						// picture is safe?
-						metrics.CloudVisionApiRequests.Add(1)
-						if !helpers.PictureIsSafe(bytes.NewReader(data)) {
-							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-not-safe"))
-							return
-						}
-						// get object name
-						objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
-						// upload to object storage
-						err = helpers.UploadFile(objectName, data, map[string]string{
-							"userid":    msg.Author.ID,
-							"channelid": msg.ChannelID,
-							"guildid":   channel.GuildID,
-						})
-						helpers.Relax(err)
-					}
-					hash = helpers.GetMD5Hash(objectName)
-				}
-
-				content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-
-				if content == "" && (filetype == "" || objectName == "") {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					return
-				}
-
-				_, err = helpers.MDbInsert(
-					models.CustomCommandsTable,
-					models.CustomCommandsEntry{
-						GuildID:           channel.GuildID,
-						CreatedByUserID:   msg.Author.ID,
-						CreatedAt:         time.Now(),
-						Triggered:         0,
-						Keyword:           args[1],
-						StorageMimeType:   filetype,
-						StorageObjectName: objectName,
-						StorageFilename:   filename,
-						StorageHash:       hash,
-						Content:           content,
-					},
-				)
+				err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
 				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
-					models.EventlogTargetTypeGuild, msg.Author.ID,
-					models.EventlogTypeRobyulCommandsAdd, "",
-					nil,
-					[]models.ElasticEventlogOption{
-						{
-							Key:   "command_keyword",
-							Value: args[1],
-						},
-						{
-							Key:   "command_content",
-							Value: strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1)),
-						},
-					}, false)
-				helpers.RelaxLog(err)
-
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
-				helpers.Relax(err)
-				customCommandsCache, err = cc.getAllCustomCommands()
-				helpers.Relax(err)
+				_, err = helpers.SendMessage(msg.ChannelID, message)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
 			})
+			return
+		case "add": // [p]commands add <command name> <command text>
+			// TODO: videos?
+			session.ChannelTyping(msg.ChannelID)
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			if !cc.canAddCommand(channel.GuildID, msg.Author.ID, nil) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
+				return
+			}
+
+			if len(args) < 3 && (len(msg.Attachments) <= 0 && len(args) < 2) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+
+			if helpers.CommandExists(args[1]) {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-command-already-exists"))
+				helpers.Relax(err)
+				return
+			}
+
+			var entryBucket models.CustomCommandsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+				&entryBucket,
+			)
+			if err == nil {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-keyword-already-exists"))
+				helpers.Relax(err)
+				return
+			} else {
+				if !strings.Contains(err.Error(), "not found") {
+					helpers.Relax(err)
+				}
+			}
+
+			var objectName, filetype, filename, hash string
+			if len(msg.Attachments) > 0 {
+				data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
+				helpers.Relax(err)
+
+				filename = msg.Attachments[0].Filename
+
+				filetype, err = helpers.SniffMime(data)
+				helpers.Relax(err)
+
+				// is image?
+				if strings.HasPrefix(filetype, "image/") {
+					// user is allowed to upload files?
+					if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
+						return
+					}
+					// <= 8 MB
+					if msg.Attachments[0].Size > 8e+6 {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
+						return
+					}
+					// picture is safe?
+					metrics.CloudVisionApiRequests.Add(1)
+					if !helpers.PictureIsSafe(bytes.NewReader(data)) {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-not-safe"))
+						return
+					}
+					// get object name
+					objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
+					// upload to object storage
+					err = helpers.UploadFile(objectName, data, map[string]string{
+						"userid":    msg.Author.ID,
+						"channelid": msg.ChannelID,
+						"guildid":   channel.GuildID,
+					})
+					helpers.Relax(err)
+				}
+				hash = helpers.GetMD5Hash(objectName)
+			}
+
+			content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+
+			if content == "" && (filetype == "" || objectName == "") {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
+
+			_, err = helpers.MDbInsert(
+				models.CustomCommandsTable,
+				models.CustomCommandsEntry{
+					GuildID:           channel.GuildID,
+					CreatedByUserID:   msg.Author.ID,
+					CreatedAt:         time.Now(),
+					Triggered:         0,
+					Keyword:           args[1],
+					StorageMimeType:   filetype,
+					StorageObjectName: objectName,
+					StorageFilename:   filename,
+					StorageHash:       hash,
+					Content:           content,
+				},
+			)
+			helpers.Relax(err)
+
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+				models.EventlogTargetTypeGuild, msg.Author.ID,
+				models.EventlogTypeRobyulCommandsAdd, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "command_keyword",
+						Value: args[1],
+					},
+					{
+						Key:   "command_content",
+						Value: strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1)),
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
+			helpers.Relax(err)
+			customCommandsCache, err = cc.getAllCustomCommands()
+			helpers.Relax(err)
 			return
 		case "random": // [p]commands random
 			session.ChannelTyping(msg.ChannelID)
@@ -272,114 +302,120 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			}
 			return
 		case "delete", "del", "remove": // [p]commands delete <command name>
-			helpers.RequireMod(msg, func() {
-				session.ChannelTyping(msg.ChannelID)
-				if len(args) < 2 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
-					return
-				}
-				channel, err := helpers.GetChannel(msg.ChannelID)
+			session.ChannelTyping(msg.ChannelID)
+			if len(args) < 2 {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				helpers.Relax(err)
+				return
+			}
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
 
-				var entryBucket models.CustomCommandsEntry
-				err = helpers.MdbOne(
-					helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
-					&entryBucket,
-				)
-				if err != nil && strings.Contains(err.Error(), "not found") {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-not-found"))
-					helpers.Relax(err)
-					return
-				}
+			var entryBucket models.CustomCommandsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+				&entryBucket,
+			)
+			if err != nil && strings.Contains(err.Error(), "not found") {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-not-found"))
 				helpers.Relax(err)
+				return
+			}
+			helpers.Relax(err)
 
-				err = helpers.MDbDelete(models.CustomCommandsTable, entryBucket.ID)
+			if !cc.canAddCommand(channel.GuildID, msg.Author.ID, &entryBucket) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
+				return
+			}
+
+			err = helpers.MDbDelete(models.CustomCommandsTable, entryBucket.ID)
+			helpers.Relax(err)
+
+			if entryBucket.StorageObjectName != "" {
+				err = helpers.DeleteFile(entryBucket.StorageObjectName)
 				helpers.Relax(err)
+			}
 
-				if entryBucket.StorageObjectName != "" {
-					err = helpers.DeleteFile(entryBucket.StorageObjectName)
-					helpers.Relax(err)
-				}
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+				models.EventlogTargetTypeGuild, msg.Author.ID,
+				models.EventlogTypeRobyulCommandsDelete, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "command_keyword",
+						Value: entryBucket.Keyword,
+					},
+					{
+						Key:   "command_content",
+						Value: entryBucket.Content,
+					},
+				}, false)
+			helpers.RelaxLog(err)
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
-					models.EventlogTargetTypeGuild, msg.Author.ID,
-					models.EventlogTypeRobyulCommandsDelete, "",
-					nil,
-					[]models.ElasticEventlogOption{
-						{
-							Key:   "command_keyword",
-							Value: entryBucket.Keyword,
-						},
-						{
-							Key:   "command_content",
-							Value: entryBucket.Content,
-						},
-					}, false)
-				helpers.RelaxLog(err)
-
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
-				helpers.Relax(err)
-				customCommandsCache, err = cc.getAllCustomCommands()
-				helpers.Relax(err)
-			})
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
+			helpers.Relax(err)
+			customCommandsCache, err = cc.getAllCustomCommands()
+			helpers.Relax(err)
 			return
 		case "replace", "edit": // [p]commands edit <command name> <new content>
 			// TODO: add file functionality
-			helpers.RequireMod(msg, func() {
-				session.ChannelTyping(msg.ChannelID)
-				if len(args) < 3 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
-					return
-				}
-				channel, err := helpers.GetChannel(msg.ChannelID)
+			session.ChannelTyping(msg.ChannelID)
+			if len(args) < 3 {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				helpers.Relax(err)
+				return
+			}
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
 
-				var entryBucket models.CustomCommandsEntry
-				err = helpers.MdbOne(
-					helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
-					&entryBucket,
-				)
-				if err != nil && strings.Contains(err.Error(), "not found") {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
-					helpers.Relax(err)
-					return
-				}
+			var entryBucket models.CustomCommandsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
+				&entryBucket,
+			)
+			if err != nil && strings.Contains(err.Error(), "not found") {
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
 				helpers.Relax(err)
+				return
+			}
+			helpers.Relax(err)
 
-				beforeContent := entryBucket.Content
+			if !cc.canAddCommand(channel.GuildID, msg.Author.ID, &entryBucket) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
+				return
+			}
 
-				entryBucket.CreatedByUserID = msg.Author.ID
-				entryBucket.CreatedAt = time.Now().UTC()
-				entryBucket.Triggered = 0
-				entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-				_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
-				helpers.Relax(err)
+			beforeContent := entryBucket.Content
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
-					models.EventlogTargetTypeGuild, msg.Author.ID,
-					models.EventlogTypeRobyulCommandsUpdate, "",
-					[]models.ElasticEventlogChange{
-						{
-							Key:      "command_content",
-							OldValue: beforeContent,
-							NewValue: entryBucket.Content,
-						},
+			entryBucket.CreatedByUserID = msg.Author.ID
+			entryBucket.CreatedAt = time.Now().UTC()
+			entryBucket.Triggered = 0
+			entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+			_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
+			helpers.Relax(err)
+
+			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
+				models.EventlogTargetTypeGuild, msg.Author.ID,
+				models.EventlogTypeRobyulCommandsUpdate, "",
+				[]models.ElasticEventlogChange{
+					{
+						Key:      "command_content",
+						OldValue: beforeContent,
+						NewValue: entryBucket.Content,
 					},
-					[]models.ElasticEventlogOption{
-						{
-							Key:   "command_keyword",
-							Value: entryBucket.Keyword,
-						},
-					}, false)
-				helpers.RelaxLog(err)
+				},
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "command_keyword",
+						Value: entryBucket.Keyword,
+					},
+				}, false)
+			helpers.RelaxLog(err)
 
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
-				helpers.Relax(err)
-				customCommandsCache, err = cc.getAllCustomCommands()
-				helpers.Relax(err)
-			})
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
+			helpers.Relax(err)
+			customCommandsCache, err = cc.getAllCustomCommands()
+			helpers.Relax(err)
 			return
 		case "refresh": // [p]commands refresh
 			helpers.RequireBotAdmin(msg, func() {
@@ -599,6 +635,27 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			return
 		}
 	}
+}
+
+// checks if the user can add or edit a command
+// guildID		: the guild on which the user wants to add a command
+// userID		: the user which wants to add the command
+// editCommand	: if not nil, will check if user is allowed to edit that command
+func (cc *CustomCommands) canAddCommand(guildID, userID string, editCommand *models.CustomCommandsEntry) (allowed bool) {
+	if helpers.IsModByID(guildID, userID) {
+		return true
+	}
+	if editCommand != nil {
+		if editCommand.CreatedByUserID == userID {
+			return true
+		} else {
+			return false
+		}
+	}
+	if helpers.GuildSettingsGetCached(guildID).CustomCommandsEveryoneCanAdd {
+		return true
+	}
+	return false
 }
 
 func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {

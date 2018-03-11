@@ -62,6 +62,8 @@ type Config struct {
 
 	PerspectiveIsParticipating bool   `rethink:"perspective_participation"`
 	PerspectiveChannelID       string `rethink:"perspective_channelid"`
+
+	CustomCommandsEveryoneCanAdd bool `rethink:"customcommands_everyonecanadd"`
 }
 
 type InspectTriggersEnabled struct {
