@@ -353,11 +353,9 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.Relax(err)
 			return
 		case "replace", "edit": // [p]commands edit <command name> <new content>
-			// TODO: add file functionality
 			session.ChannelTyping(msg.ChannelID)
-			if len(args) < 3 {
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-				helpers.Relax(err)
+			if len(args) < 3 && (len(msg.Attachments) <= 0 && len(args) < 2) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 				return
 			}
 			channel, err := helpers.GetChannel(msg.ChannelID)
@@ -380,12 +378,63 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				return
 			}
 
+			var objectName, filetype, filename, hash string
+			if len(msg.Attachments) > 0 {
+				data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
+				helpers.Relax(err)
+
+				filename = msg.Attachments[0].Filename
+
+				filetype, err = helpers.SniffMime(data)
+				helpers.Relax(err)
+
+				// filetype allowed? (picture or video)
+				if cc.isAllowedFiletype(filetype) {
+					// user is allowed to upload files?
+					if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
+						return
+					}
+					// <= 20 MB
+					if msg.Attachments[0].Size > 20e+6 {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
+						return
+					}
+					// get object name
+					objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
+					// upload to object storage
+					err = helpers.UploadFile(objectName, data, map[string]string{
+						"userid":    msg.Author.ID,
+						"channelid": msg.ChannelID,
+						"guildid":   channel.GuildID,
+					})
+					helpers.Relax(err)
+				}
+				hash = helpers.GetMD5Hash(objectName)
+			}
+
 			beforeContent := entryBucket.Content
+
+			if entryBucket.StorageObjectName != "" {
+				err = helpers.DeleteFile(entryBucket.StorageObjectName)
+				helpers.RelaxLog(err)
+			}
+
+			content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+
+			if content == "" && (filetype == "" || objectName == "") {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
 
 			entryBucket.CreatedByUserID = msg.Author.ID
 			entryBucket.CreatedAt = time.Now().UTC()
 			entryBucket.Triggered = 0
-			entryBucket.Content = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+			entryBucket.Content = content
+			entryBucket.StorageFilename = filename
+			entryBucket.StorageObjectName = objectName
+			entryBucket.StorageHash = hash
+			entryBucket.StorageMimeType = filetype
 			_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
 			helpers.Relax(err)
 
