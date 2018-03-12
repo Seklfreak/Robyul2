@@ -2809,18 +2809,21 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 						}
 					}
 
-					_, err = helpers.SendEmbed(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, resultEmbed)
-					if err != nil {
-						cache.GetLogger().WithField("module", "mod").Warnf("Failed to send guild ban inspect to channel #%s on guild #%s: %s",
-							helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, targetGuild.ID, err.Error())
-						if errD, ok := err.(*discordgo.RESTError); ok {
-							if errD.Message.Code != 50001 {
+					targetChannel, err := helpers.GetChannelWithoutApi(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel)
+					if err == nil {
+						_, err = helpers.SendEmbed(targetChannel.ID, resultEmbed)
+						if err != nil {
+							cache.GetLogger().WithField("module", "mod").Warnf("Failed to send guild ban inspect to channel #%s on guild #%s: %s",
+								helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, targetGuild.ID, err.Error())
+							if errD, ok := err.(*discordgo.RESTError); ok {
+								if errD.Message.Code != discordgo.ErrCodeMissingAccess {
+									helpers.RelaxLog(err)
+								}
+							} else {
 								raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 							}
-						} else {
-							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+							continue
 						}
-						continue
 					}
 				}
 			}

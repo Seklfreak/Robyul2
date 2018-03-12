@@ -324,7 +324,9 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				entry, err := m.getEntryBy("id", entryID)
 				if err != nil {
 					m.unlockEntry(entryID)
-					helpers.RelaxLog(err)
+					if !strings.Contains(err.Error(), "The result does not contain any more rows") {
+						helpers.RelaxLog(err)
+					}
 					continue
 				}
 

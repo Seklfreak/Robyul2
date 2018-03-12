@@ -97,6 +97,12 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 	err = m.copyMessages(sourceChannel.ID, args[1], numOfMessagesToMove, targetChannel.ID, true)
 	if err != nil {
 		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMessage {
+				*out = m.newMsg("bot.arguments.invalid")
+				return m.actionFinish
+			}
+		}
 		helpers.Relax(err)
 	}
 
@@ -157,6 +163,12 @@ func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.
 	err = m.copyMessages(sourceChannel.ID, args[1], numOfMessagesToMove, targetChannel.ID, false)
 	if err != nil {
 		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		if err != nil {
+			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMessage {
+				*out = m.newMsg("bot.arguments.invalid")
+				return m.actionFinish
+			}
+		}
 		helpers.Relax(err)
 	}
 
