@@ -637,22 +637,18 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		}
 
-		var allMembers []*discordgo.Member
-		for _, u := range currentGuild.Members {
-			allMembers = append(allMembers, u)
-		}
+		allMembers := currentGuild.Members
 		slice.Sort(allMembers[:], func(i, j int) bool {
 			defer helpers.Recover()
-
-			if allMembers[i].JoinedAt != "" && allMembers[j].JoinedAt != "" {
-				iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
-				helpers.Relax(err)
-				jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
-				helpers.Relax(err)
-				return iMemberTime.Before(jMemberTime)
-			} else {
+			if allMembers[i].JoinedAt == "" || allMembers[j].JoinedAt == "" {
 				return false
 			}
+
+			iMemberTime, err := discordgo.Timestamp(allMembers[i].JoinedAt).Parse()
+			helpers.Relax(err)
+			jMemberTime, err := discordgo.Timestamp(allMembers[j].JoinedAt).Parse()
+			helpers.Relax(err)
+			return iMemberTime.Before(jMemberTime)
 		})
 		userNumber := -1
 		for i, sortedMember := range allMembers[:] {
