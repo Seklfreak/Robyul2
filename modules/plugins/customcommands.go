@@ -248,7 +248,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					},
 				}
 			}
-			_, err = helpers.SendComplex(msg.ChannelID, messageSend)
+			messages, err := helpers.SendComplex(msg.ChannelID, messageSend)
 			helpers.Relax(err)
 
 			// TODO: update triggered in cache
@@ -256,6 +256,67 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, bson.M{"$inc": bson.M{"triggered": 1}})
 			helpers.RelaxLog(err)
 			metrics.CustomCommandsTriggered.Add(1)
+
+			if len(messages) <= 0 {
+				return
+			}
+
+			err = session.MessageReactionAdd(msg.ChannelID, messages[0].ID, "🎲")
+			if err == nil {
+				if err == nil {
+					rerollHandler := session.AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+						defer helpers.Recover()
+
+						if reaction.MessageID == messages[0].ID {
+							if reaction.UserID == session.State.User.ID {
+								return
+							}
+
+							if reaction.UserID == msg.Author.ID && reaction.Emoji.Name == "🎲" {
+								err = helpers.MdbCollection(models.CustomCommandsTable).Pipe(
+									[]bson.M{{"$match": bson.M{"guildid": channel.GuildID}}, {"$sample": bson.M{"size": 1}}},
+								).One(&entryBucket)
+								if err != nil && strings.Contains(err.Error(), "not found") {
+									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
+									helpers.Relax(err)
+									return
+								}
+								helpers.Relax(err)
+
+								author, err := helpers.GetUserWithoutAPI(entryBucket.CreatedByUserID)
+								authorText := "N/A"
+								if err != nil {
+									authorText = "N/A"
+								} else {
+									authorText = "@" + author.Username + "#" + author.Discriminator
+								}
+
+								content, _, _ := cc.getCommandContent(entryBucket)
+								content = fmt.Sprintf("`%s%s` by **%s** triggered **%d times**:\n%s",
+									helpers.GetPrefixForServer(channel.GuildID), entryBucket.Keyword,
+									authorText,
+									entryBucket.Triggered,
+									content,
+								)
+								messageEdit := &discordgo.MessageEdit{
+									Content: &content,
+									ID:      messages[0].ID,
+									Channel: messages[0].ChannelID,
+								}
+
+								helpers.EditComplex(messageEdit)
+								session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+
+								helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, bson.M{"$inc": bson.M{"triggered": 1}})
+								metrics.CustomCommandsTriggered.Add(1)
+							}
+						}
+					})
+					time.Sleep(5 * time.Minute)
+					rerollHandler()
+					session.MessageReactionRemove(msg.ChannelID, messages[0].ID, "🎲", session.State.User.ID)
+				}
+			}
 		case "list": // [p]commands list [top]
 			session.ChannelTyping(msg.ChannelID)
 			channel, err := helpers.GetChannel(msg.ChannelID)
