@@ -133,5 +133,8 @@
     "access_key": "",
     "secret_secret_key": ""
   },
-  "thecatapi-api-key": ""
+  "thecatapi-api-key": "",
+  "sushii-image-server": {
+    "base": "http://localhost:3000"
+  }
 }

@@ -16,7 +16,6 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -127,7 +126,6 @@ var (
 	assetsPath               string
 	htmlTemplateString       string
 	levelsEnv                = os.Environ()
-	webshotBinary            string
 	topCache                 []Cache_Levels_top
 	activeBadgePickerUserIDs map[string]string
 	repCommandLocks          = make(map[string]*sync.Mutex)
@@ -149,8 +147,6 @@ func (m *Levels) Init(session *discordgo.Session) {
 	htmlTemplate, err := ioutil.ReadFile(assetsPath + "profile.html")
 	helpers.Relax(err)
 	htmlTemplateString = string(htmlTemplate)
-	webshotBinary, err = exec.LookPath("webshot")
-	helpers.Relax(err)
 
 	go m.processExpStackLoop()
 	log.WithField("module", "levels").Info("Started processExpStackLoop")
@@ -3780,42 +3776,13 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
 		return []byte{}, "", err
 	}
 
-	tempTemplatePath := cachePath + strconv.FormatInt(time.Now().UnixNano(), 10) + member.User.ID + ".html"
-	err = ioutil.WriteFile(tempTemplatePath, []byte(tempTemplateHtml), 0644)
-	if err != nil {
-		return []byte{}, "", err
-	}
-
 	start := time.Now()
-
-	cmdArgs := []string{
-		tempTemplatePath,
-		"--window-size=400/300",
-		"--stream-type=png",
-		//"--timeout=20000",
-		"--p:disk-cache=true",
-		"--p:disk-cache-path=" + cachePath,
-		"--p:proxy-type=none",
-		"--p:ignore-ssl-errors=false",
-		"--p:ssl-protocol=any",
-		"--p:web-security=false",
-		"--p:debug=true",
-	}
-	// fmt.Println(webshotBinary, strings.Join(cmdArgs, " "))
-	imgCmd := exec.Command(webshotBinary, cmdArgs...)
-	imgCmd.Env = levelsEnv
-	imageBytes, err := imgCmd.Output()
+	imageBytes, err := helpers.TakeHTMLScreenshot(tempTemplateHtml, 400, 300)
 	if err != nil {
 		return []byte{}, "", err
 	}
-
 	elapsed := time.Since(start)
 	cache.GetLogger().WithField("module", "levels").Info(fmt.Sprintf("took screenshot of profile in %s", elapsed.String()))
-
-	err = os.Remove(tempTemplatePath)
-	if err != nil {
-		return []byte{}, "", err
-	}
 
 	metrics.LevelImagesGenerated.Add(1)
 
