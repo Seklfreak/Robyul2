@@ -30,8 +30,6 @@ func (vi VanityInvite) Init(session *discordgo.Session) {
 }
 
 func (vi VanityInvite) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermVanityInvite) {
 		return
 	}

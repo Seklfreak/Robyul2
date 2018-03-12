@@ -31,8 +31,6 @@ func (m *Move) Init(session *discordgo.Session) {
 }
 
 func (m *Move) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermMod) {
 		return
 	}

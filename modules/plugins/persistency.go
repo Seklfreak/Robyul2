@@ -38,8 +38,6 @@ func (p *Persistency) Uninit(session *discordgo.Session) {
 // TODO: Store Nicknames, VC Mute and Deafen state
 
 func (p *Persistency) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermPersistency) {
 		return
 	}

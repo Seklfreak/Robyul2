@@ -71,8 +71,6 @@ func (bs *BotStatus) gameStatusRotationLoop() {
 }
 
 func (bs *BotStatus) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend

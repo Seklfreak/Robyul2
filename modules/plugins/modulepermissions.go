@@ -34,8 +34,6 @@ func (mp *ModulePermissions) Uninit(session *discordgo.Session) {
 }
 
 func (mp *ModulePermissions) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend

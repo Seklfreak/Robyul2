@@ -27,8 +27,6 @@ func (f *Friend) Init(session *discordgo.Session) {
 }
 
 func (f *Friend) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend

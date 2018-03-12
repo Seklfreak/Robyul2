@@ -40,8 +40,6 @@ func (h *Handler) Uninit(session *discordgo.Session) {
 }
 
 func (h *Handler) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermEventlog) {
 		return
 	}

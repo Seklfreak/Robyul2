@@ -51,8 +51,6 @@ func (m *Perspective) Uninit(session *discordgo.Session) {
 }
 
 func (m *Perspective) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend

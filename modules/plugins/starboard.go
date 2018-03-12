@@ -49,8 +49,6 @@ func (s *Starboard) Uninit(session *discordgo.Session) {
 }
 
 func (s *Starboard) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermStarboard) {
 		return
 	}

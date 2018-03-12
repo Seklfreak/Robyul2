@@ -38,8 +38,6 @@ func (m *Crypto) Init(session *discordgo.Session) {
 }
 
 func (m *Crypto) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCrypto) {
 		return
 	}

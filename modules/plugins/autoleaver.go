@@ -38,8 +38,6 @@ func (a *Autoleaver) Uninit(session *discordgo.Session) {
 }
 
 func (a *Autoleaver) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend

@@ -23,8 +23,6 @@ func (m *Useruploads) Init(session *discordgo.Session) {
 }
 
 func (m *Useruploads) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	session.ChannelTyping(msg.ChannelID)
 
 	var result *discordgo.MessageSend
