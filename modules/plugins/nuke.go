@@ -9,19 +9,9 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
 )
 
 type Nuke struct{}
-
-type DBNukeLogEntry struct {
-	ID       string    `gorethink:"id,omitempty"`
-	UserID   string    `gorethink:"userid"`
-	UserName string    `gorethink:"username"`
-	NukerID  string    `gorethink:"nukerid"`
-	Reason   string    `gorethink:"reason"`
-	NukedAt  time.Time `gorethink:"nukedat"`
-}
 
 func (n *Nuke) Commands() []string {
 	return []string{
@@ -58,7 +48,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 					var targetUser *discordgo.User
 					targetUser, err = helpers.GetUserFromMention(strings.Trim(safeArgs[1], "\""))
 					if err != nil {
-						if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == 10013 {
+						if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeUnknownUser {
 							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.user-not-found"))
 							helpers.Relax(err)
 							return
@@ -72,26 +62,17 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.nuke-confirm",
 						targetUser.Username, targetUser.ID, targetUser.ID, reason), "✅", "🚫") == true {
-						var entryBucket DBNukeLogEntry
-						listCursor, err := rethink.Table("nukelog").Filter(
-							rethink.Row.Field("userid").Eq(targetUser.ID),
-						).Run(helpers.GetDB())
+						_, err = helpers.MDbInsert(
+							models.NukelogTable,
+							models.NukelogEntry{
+								UserID:   targetUser.ID,
+								UserName: targetUser.Username + "#" + targetUser.Discriminator,
+								NukerID:  msg.Author.ID,
+								Reason:   strings.TrimSpace(reason),
+								NukedAt:  time.Now(),
+							},
+						)
 						helpers.Relax(err)
-						defer listCursor.Close()
-						err = listCursor.One(&entryBucket)
-						if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
-							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.already-nuked"))
-							helpers.Relax(err)
-							return
-						}
-
-						nukeLogEntry := n.getEntryByOrCreateEmpty("id", "")
-						nukeLogEntry.UserID = targetUser.ID
-						nukeLogEntry.UserName = targetUser.Username
-						nukeLogEntry.NukedAt = time.Now().UTC()
-						nukeLogEntry.NukerID = msg.Author.ID
-						nukeLogEntry.Reason = reason
-						n.setEntry(nukeLogEntry)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.nuke-saved-in-db"))
 						helpers.Relax(err)
@@ -239,58 +220,21 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 			helpers.RequireMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 
-				var entryBucket []DBNukeLogEntry
-				listCursor, err := rethink.Table("nukelog").Run(helpers.GetDB())
-				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&entryBucket)
+				var entryBucket []models.NukelogEntry
+				err := helpers.MDbIter(helpers.MdbCollection(models.NukelogTable).Find(nil).Sort("nukedat")).All(&entryBucket)
 				helpers.Relax(err)
 
-				logMessage := "**Nuke Log:**\n"
+				logMessage := "__**Nuke Log:**__\n"
 				for _, logEntry := range entryBucket {
-					logMessage += fmt.Sprintf("ID: `#%s`, Username: `%s`\n", logEntry.UserID, logEntry.UserName)
+					logMessage += fmt.Sprintf("`%s` `#%s` Reason `%s` at `%s UTC`\n",
+						logEntry.UserName, logEntry.UserID, logEntry.Reason, logEntry.NukedAt.Format(time.ANSIC))
 				}
-				logMessage += "All usernames are from the time they got nuked."
+				logMessage += "_All Usernames are from the time they got nuked._"
 
-				for _, page := range helpers.Pagify(logMessage, "\n") {
-					_, err := helpers.SendMessage(msg.ChannelID, page)
-					helpers.Relax(err)
-				}
+				_, err = helpers.SendMessage(msg.ChannelID, logMessage)
+				helpers.Relax(err)
 			})
 			return
 		}
 	}
-}
-
-func (n *Nuke) getEntryByOrCreateEmpty(key string, id string) DBNukeLogEntry {
-	var entryBucket DBNukeLogEntry
-	listCursor, err := rethink.Table("nukelog").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("nukelog").Insert(DBNukeLogEntry{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return n.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (n *Nuke) setEntry(entry DBNukeLogEntry) {
-	_, err := rethink.Table("nukelog").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
 }

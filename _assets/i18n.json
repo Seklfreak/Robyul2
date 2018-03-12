@@ -505,8 +505,7 @@
       "ban-error": ":warning: Ban on server `%s` failed (`#%s`), Error: `%s`",
       "onserver-banned-success": "<:blobhammer:317035118403387393> **Nuke:**\nUser `%s` (`#%s`) got banned on this server.\nUser issuing the nuke: `%s` (<@%s>)\nReason: `%s`.",
       "onserver-banned-error": ":warning: **Nuke failed:**\nUser `%s` (`#%s`) should get banned on this server, but there was an error.\nError: `%s`.\nUser issuing the nuke: `%s` (<@%s>)\nReason: `%s`.",
-      "nuke-completed": "The user got banned on %d servers. <:blobsalute:317043033004703744>",
-      "already-nuked": "User already got nuked."
+      "nuke-completed": "The user got banned on %d servers. <:blobsalute:317043033004703744>"
     },
     "troublemaker": {
       "participation-disabled": "Troublemakers will no longer get posted here. <:blobugh:317047327443517442>",

@@ -90,6 +90,7 @@ func GetMDbSession() *mgo.Session {
 }
 
 func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.ObjectId, err error) {
+	// TOOD: check if ID field actually exists, will throw weird error if not
 	ptr := reflect.New(reflect.TypeOf(data))
 	temp := ptr.Elem()
 	temp.Set(reflect.ValueOf(data))
