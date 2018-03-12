@@ -548,7 +548,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					}
 
 					// <= 2 MB, 400x300px?
-					if msg.Attachments[0].Size > 2e+6 || msg.Attachments[0].Width != 400 || msg.Attachments[0].Height != 300 {
+					if msg.Attachments[0].Size > 2e+6 || msg.Attachments[0].Width < 400 || msg.Attachments[0].Height < 300 {
 						quitChannel <- 0
 						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-wrong-dimensions"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -562,11 +562,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.Relax(err)
 
 					// check 400x300px again on Robyul
-					if imageConfig.Width != 400 || imageConfig.Height != 300 {
+					if imageConfig.Width < 400 || imageConfig.Height < 300 {
 						quitChannel <- 0
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-wrong-dimensions"))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
+					}
+
+					// scales image if it is too big
+					if imageConfig.Width > 400 || imageConfig.Height > 300 {
+						bytesData, err = helpers.ScaleImage(bytesData, 400, 300)
+						helpers.Relax(err)
 					}
 
 					metrics.CloudVisionApiRequests.Add(1)
@@ -637,11 +643,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						imageConfig, _, err := image.DecodeConfig(bytes.NewReader(bytesData))
 						helpers.Relax(err)
 
-						// check 400x300px again on Robyul
-						if imageConfig.Width != 400 || imageConfig.Height != 300 {
+						// reject smaller than 400x300px
+						if imageConfig.Width < 400 || imageConfig.Height < 300 {
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-wrong-dimensions"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
+						}
+
+						// scales image if it is too big
+						if imageConfig.Width > 400 || imageConfig.Height > 300 {
+							bytesData, err = helpers.ScaleImage(bytesData, 400, 300)
+							helpers.Relax(err)
 						}
 
 						backgroundUrl, err := helpers.UploadImage(bytesData)
