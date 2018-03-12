@@ -23,11 +23,22 @@ func ScaleImage(data []byte, targetWidth, targetHeight int) (result []byte, err 
 	if err != nil {
 		return nil, err
 	}
+	// skip resizing if already correct size
+	if sourceImage.Bounds().Dx() == targetWidth && sourceImage.Bounds().Dy() == targetHeight {
+		// encode unchanged picture to a png
+		var buff bytes.Buffer
+		err = png.Encode(&buff, sourceImage)
+		if err != nil {
+			return nil, err
+		}
 
-	// resizes the image
+		return buff.Bytes(), nil
+	}
+
+	// resize the image
 	targetImage := resize.Resize(uint(targetWidth), uint(targetHeight), sourceImage, resize.Bilinear)
 
-	// encode it to a png
+	// encode target image to a png
 	var buff bytes.Buffer
 	err = png.Encode(&buff, targetImage)
 	if err != nil {

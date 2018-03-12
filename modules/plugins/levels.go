@@ -880,6 +880,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							guild, err := helpers.GetGuild(channel.GuildID)
 							helpers.Relax(err)
 
+							badgeData, err := helpers.NetGetUAWithError(args[4], helpers.DEFAULT_UA)
+							helpers.Relax(err)
+
+							badgeData, err = helpers.ScaleImage(badgeData, 28, 28)
+							helpers.Relax(err)
+
+							imageUrl, err := helpers.UploadImage(badgeData)
+							helpers.Relax(err)
+
 							newBadge := new(DB_Badge)
 
 							newBadge.CreatedByUserID = msg.Author.ID
@@ -887,7 +896,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadge.CreatedAt = time.Now()
 							newBadge.Category = strings.ToLower(args[2])
 							newBadge.Name = strings.ToLower(args[3])
-							newBadge.URL = args[4]                                       // reupload to imgur
+							newBadge.URL = imageUrl                                      // reupload to imgur
 							newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
 							newBadge.LevelRequirement, err = strconv.Atoi(args[6])
 							if err != nil {
