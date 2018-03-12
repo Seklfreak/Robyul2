@@ -705,6 +705,11 @@
         "MEO! <:yuricat:422353697310244891>\n%s"
       ],
       "error": "I wasn't able to find a cat for you right now! <a:ablobcry:393869333740126219>\nPlease try again later."
+    },
+    "crypto": {
+      "embed-footer": "powered by CryptoCompare.com",
+      "embed-footer-imageurl": "https://i.imgur.com/V1SidJ8.jpg",
+      "embed-exchange-title": "Cryptocurrency Exchange Rates"
     }
   }
 }

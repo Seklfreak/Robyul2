@@ -413,6 +413,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/lucazulian/cryptocomparego"
+  packages = [
+    ".",
+    "context"
+  ]
+  revision = "5f5fb237cb6e22a4a26df887dd7fd81b1da51e1f"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mailru/easyjson"
   packages = [
     ".",
@@ -835,6 +844,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a0cf1dd0cddcd63d50282dc0c9682e19648de054ffac8f11554fc401aa3ae336"
+  inputs-digest = "f8edb4193a9b7a4bb05e609609a901026b80e0e6814a0631f7944493dae45461"
   solver-name = "gps-cdcl"
   solver-version = 1

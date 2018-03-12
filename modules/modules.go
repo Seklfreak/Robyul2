@@ -62,6 +62,7 @@ var (
 		&plugins.EmbedPost{},
 		&plugins.Useruploads{},
 		&plugins.Move{},
+		&plugins.Crypto{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

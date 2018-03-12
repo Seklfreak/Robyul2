@@ -209,3 +209,7 @@
 [[constraint]]
   name = "github.com/minio/minio-go"
   version = "4.0.9"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/lucazulian/cryptocomparego"

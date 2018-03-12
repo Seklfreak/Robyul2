@@ -13,7 +13,7 @@ import (
 	"github.com/Seklfreak/Robyul2/version"
 )
 
-var DEFAULT_UA = "Robyul2/" + version.BOT_VERSION + " (https://github.com/Seklfreak/Robyul2)"
+var DEFAULT_UA = "Robyul2/" + version.BOT_VERSION + " (https://robyul.chat)"
 
 // NetGet executes a GET request to url with the Karen/Discord-Bot user-agent
 func NetGet(url string) []byte {
