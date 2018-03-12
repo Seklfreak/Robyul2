@@ -226,6 +226,7 @@ func main() {
 	//discord.LogLevel = discordgo.LogInformational
 	discord.LogLevel = discordgo.LogError
 	discord.StateEnabled = true
+	discord.MaxRestRetries = 5
 	discord.State.MaxMessageCount = 10
 	discord.Unlock()
 
