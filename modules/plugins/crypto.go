@@ -92,6 +92,12 @@ func (m *Crypto) actionExchange(args []string, in *discordgo.Message, out **disc
 		ExtraParams:   helpers.DEFAULT_UA,
 		TryConversion: true,
 	})
+	if err != nil {
+		if strings.Contains(err.Error(), "There is no data for any of the") {
+			*out = m.newMsg(helpers.GetText("bot.arguments.invalid"))
+			return m.actionFinish
+		}
+	}
 	helpers.Relax(err)
 
 	// setup embed
