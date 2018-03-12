@@ -14,11 +14,14 @@ func UpdateBotlists() {
 	defer Recover()
 
 	numOfGuilds := len(cache.GetSession().State.Guilds)
+	_ = numOfGuilds
 
-	err := updateDiscordBotsOrg(numOfGuilds)
-	if err != nil {
-		RelaxLog(err)
-	}
+	/*
+		err := updateDiscordBotsOrg(numOfGuilds)
+		if err != nil {
+			RelaxLog(err)
+		}
+	*/
 }
 
 // https://discordbots.org/bot/283848369250500608
