@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
-
 	"github.com/Jeffail/gabs"
 	"github.com/RichardKnop/machinery/v1/tasks"
 	"github.com/Seklfreak/Robyul2/cache"
@@ -1107,18 +1105,6 @@ func CommandExists(name string) bool {
 	return false
 }
 
-func WebhookExecuteWithResult(webhookID, token string, data *discordgo.WebhookParams) (message *discordgo.Message, err error) {
-	uri := discordgo.EndpointWebhookToken(webhookID, token) + "?wait=true"
-
-	result, err := cache.GetSession().RequestWithBucketID("POST", uri, data, discordgo.EndpointWebhookToken("", ""))
-	if err != nil {
-		return message, err
-	}
-
-	err = json.Unmarshal(result, &message)
-	return message, err
-}
-
 func GuildIsOnWhitelist(GuildID string) (whitelisted bool) {
 	var entryBucket []models.AutoleaverWhitelistEntry
 	listCursor, err := rethink.Table(models.AutoleaverWhitelistTable).Run(GetDB())
@@ -1282,8 +1268,6 @@ func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err e
 func CleanDiscordContent(content string) (output string) {
 	return strings.Replace(content, "@everyone", "@"+ZERO_WIDTH_SPACE+"everyone", -1)
 }
-
-// TODO: Webhook
 
 // Applies Embed Limits to the given Embed
 // Source: https://discordapp.com/developers/docs/resources/channel#embed-limits

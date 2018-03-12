@@ -214,28 +214,13 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 		}
 	}
 	// get two webhooks for target channel (rotation)
-	webhooksToUse := make([]*discordgo.Webhook, 0)
-	existingWebhooks, err := cache.GetSession().ChannelWebhooks(targetChannelID)
+	targetChannel, err := helpers.GetChannel(targetChannelID)
 	if err != nil {
 		return err
 	}
-	if existingWebhooks != nil && len(existingWebhooks) > 0 {
-		for _, existingWebhook := range existingWebhooks {
-			webhooksToUse = append(webhooksToUse, existingWebhook)
-			if len(webhooksToUse) >= 2 {
-				break
-			}
-		}
-	}
-	for {
-		if len(webhooksToUse) >= 2 {
-			break
-		}
-		newWebhook, err := cache.GetSession().WebhookCreate(targetChannelID, "Robyul Webhook", "")
-		if err != nil {
-			return err
-		}
-		webhooksToUse = append(webhooksToUse, newWebhook)
+	webhooksToUse, err := helpers.GetWebhooks(targetChannel.GuildID, targetChannelID, 2)
+	if err != nil {
+		return err
 	}
 	// send new messages
 	var lastUserID string
