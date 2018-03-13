@@ -12,11 +12,12 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/services/youtube"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/shkh/lastfm-go/lastfm"
 )
 
@@ -33,13 +34,8 @@ var (
 	lastfmCombinedGuildStats []LastFMCombinedGuildStats
 )
 
-type DB_LastFmAccount struct {
-	UserID         string `gorethink:"userid,omitempty"`
-	LastFmUsername string `gorethink:"lastfmusername"`
-}
-
 type LastFMAccount_Safe_Entries struct {
-	entries []DB_LastFmAccount
+	entries []models.LastFmEntry
 	mux     sync.Mutex
 }
 
@@ -102,10 +98,7 @@ func (m *LastFm) generateDiscordStats() {
 	}()
 
 	for {
-		cursor, err := rethink.Table("lastfm").Run(helpers.GetDB())
-		helpers.Relax(err)
-
-		err = cursor.All(&safeEntries.entries)
+		err := helpers.MDbIter(helpers.MdbCollection(models.LastFmTable).Find(nil)).All(&safeEntries.entries)
 		helpers.Relax(err)
 
 		// Get Stats from LastFM
@@ -322,7 +315,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 	}
 
 	args := strings.Fields(content)
-	lastfmUsername := m.getLastFmUsername(msg.Author.ID)
+	lastfmUsername := helpers.GetLastFmUsername(msg.Author.ID)
 	subCom := ""
 	if len(args) >= 1 {
 		subCom = args[0]
@@ -333,9 +326,15 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			if len(args) >= 2 {
 				lastfmUsername = args[1]
 
-				lastFmAccount := m.getLastFmAccountOrCreate(msg.Author.ID)
-				lastFmAccount.LastFmUsername = lastfmUsername
-				m.setLastFmAccount(lastFmAccount)
+				err := helpers.MDbUpsert(
+					models.LastFmTable,
+					bson.M{"userid": msg.Author.ID},
+					models.LastFmEntry{
+						UserID:         msg.Author.ID,
+						LastFmUsername: lastfmUsername,
+					},
+				)
+				helpers.Relax(err)
 
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.set-username-success", lastfmUsername))
 			} else {
@@ -349,7 +348,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastfmUsername = args[1]
 				targetUser, err = helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
-					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
 				}
 			}
 
@@ -463,7 +462,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
-					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
 				}
 			}
 
@@ -545,7 +544,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
-					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
 				}
 			}
 
@@ -710,7 +709,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
-					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
 				}
 			}
 
@@ -874,7 +873,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastfmUsername = args[1]
 				targetUser, err := helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
-					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
 				}
 			}
 
@@ -1085,7 +1084,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				lastfmUsername = subCom
 				targetUser, err = helpers.GetUserFromMention(lastfmUsername)
 				if err == nil {
-					lastfmUsername = m.getLastFmUsername(targetUser.ID)
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
 				}
 			}
 			session.ChannelTyping(msg.ChannelID)
@@ -1159,63 +1158,4 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 		return
 	}
 
-}
-
-func (m *LastFm) getLastFmUsername(uid string) string {
-	var lastfmAccountBucket DB_LastFmAccount
-	listCursor, err := rethink.Table("lastfm").Filter(
-		rethink.Row.Field("userid").Eq(uid),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&lastfmAccountBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		return ""
-	} else if err != nil {
-		panic(err)
-	}
-
-	return lastfmAccountBucket.LastFmUsername
-}
-
-func (m *LastFm) getLastFmAccountOrCreate(uid string) DB_LastFmAccount {
-	var lastfmAccountBucket DB_LastFmAccount
-	listCursor, err := rethink.Table("lastfm").Filter(
-		rethink.Row.Field("userid").Eq(uid),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&lastfmAccountBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		_, e := rethink.Table("lastfm").Insert(DB_LastFmAccount{
-			UserID:         uid,
-			LastFmUsername: "",
-		}).RunWrite(helpers.GetDB())
-
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getLastFmAccountOrCreate(uid)
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return lastfmAccountBucket
-}
-
-func (m *LastFm) setLastFmAccount(entry DB_LastFmAccount) {
-	_, err := rethink.Table("lastfm").Filter(
-		rethink.Row.Field("userid").Eq(entry.UserID),
-	).Update(entry).RunWrite(helpers.GetDB())
-	helpers.Relax(err)
 }

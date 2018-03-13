@@ -3,6 +3,10 @@ package helpers
 import (
 	"sync"
 
+	"strings"
+
+	"github.com/Seklfreak/Robyul2/models"
+	"github.com/globalsign/mgo/bson"
 	"github.com/shkh/lastfm-go/lastfm"
 )
 
@@ -26,4 +30,24 @@ func GetLastFmClient() (client *lastfm.Api) {
 	)
 
 	return lastFmClient
+}
+
+// Gets the LastFM Username for a Discord User, returns an empty string if no username has been set
+// userID	: the ID of the discord user
+func GetLastFmUsername(userID string) (username string) {
+	var entryBucket models.LastFmEntry
+	var err error
+	err = MdbOne(
+		MdbCollection(models.LastFmTable).Find(bson.M{"userid": userID}),
+		&entryBucket,
+	)
+
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			RelaxLog(err)
+		}
+		return ""
+	}
+
+	return entryBucket.LastFmUsername
 }
