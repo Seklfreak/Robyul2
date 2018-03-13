@@ -200,14 +200,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		uptime := helpers.HumanizeDuration(time.Now().Sub(time.Unix(bootTime, 0)))
 
-		var activeWorkersText string
-		for _, worker := range cache.GetMachineryActiveWorkers() {
-			activeWorkersText += worker.ConsumerTag + " (" + strconv.Itoa(worker.Concurrency) + ")"
-		}
-		if activeWorkersText == "" {
-			activeWorkersText = "_N/A_"
-		}
-
 		var rethinkDBStatusText string
 
 		rethinkDBServerStatus := make(map[string]interface{}, 0)
@@ -297,6 +289,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		var elasticStatusText, elasticStatsText, elasticProcessText string
 
+		// TODO: not working? too many fields?
 		if cache.HasElastic() {
 			clusterHealth, err := cache.GetElastic().ClusterHealth().Do(context.Background())
 			helpers.Relax(err)
@@ -322,8 +315,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		pendingTasks, err := cache.GetMachineryServer().GetBroker().GetPendingTasks("robyul_tasks")
 		helpers.Relax(err)
 
-		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
-		helpers.Relax(err)
+		machineryText := fmt.Sprintf("Workers %d\nPending/Delay %d/%d",
+			len(cache.GetMachineryActiveWorkers()),
+			len(pendingTasks), int(metrics.MachineryDelayedTasksCount.Value()),
+		)
 
 		statsEmbed := &discordgo.MessageEmbed{
 			Color: 0x0FADED,
@@ -331,12 +326,10 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				// Build
 				{Name: "Build Time", Value: version.BUILD_TIME, Inline: true},
 				{Name: "Build System", Value: version.BUILD_HOST, Inline: true},
-				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
 				// System
 				{Name: "Bot Uptime", Value: uptime, Inline: true},
 				{Name: "Bot Version", Value: version.BOT_VERSION, Inline: true},
-				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
 				// Library
 				{Name: "Go Version", Value: runtime.Version(), Inline: true},
@@ -351,20 +344,17 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				// Discord
 				{Name: "Connected servers", Value: strconv.Itoa(len(guilds)), Inline: true},
 				{Name: "Watching channels", Value: strconv.Itoa(channels), Inline: true},
-				{Name: "Users with access to me", Value: strconv.Itoa(len(users)), Inline: true},
+				{Name: "Users", Value: strconv.Itoa(len(users)), Inline: true},
 
 				// Machinery
-				{Name: "Pending / Delayed Tasks", Value: strconv.Itoa(len(pendingTasks)) + " / " + strconv.Itoa(int(metrics.MachineryDelayedTasksCount.Value())), Inline: true},
-				{Name: "Active Workers", Value: activeWorkersText, Inline: true},
-				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
+				{Name: "Marchinery", Value: machineryText, Inline: true},
 
 				// RethinkDB
-				{Name: "RethinkDB", Value: rethinkDBStatusText, Inline: false},
+				{Name: "RethinkDB", Value: rethinkDBStatusText, Inline: true},
 
 				// MongoDB
 				{Name: "MongoDB Status", Value: mongodbStatusText, Inline: true},
 				{Name: "MongoDB Storage", Value: mongodbStorageText, Inline: true},
-				{Name: zeroWidthWhitespace, Value: zeroWidthWhitespace, Inline: true},
 
 				// Redis
 				{Name: "Redis Uptime", Value: redisUptime, Inline: true},
