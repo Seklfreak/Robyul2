@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://use.fontawesome.com/f5cee3ee4c.css">
+    <script type="text/javascript" src="//twemoji.maxcdn.com/2/twemoji.min.js?2.5"></script>
     <style type="text/css">
         @import url('https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&subset=cyrillic,cyrillic-ext,greek,greek-ext,latin-ext,vietnamese');
         body {
@@ -213,9 +214,20 @@
             top: 0;
             opacity: {USER_EXP_OPACITY};
         }
+        #userbio img {
+            height: 12px;
+            width: 12px;
+        }
+        #usertitle img {
+            height: 14px;
+            width: 14px;
+        }
+        #username img {
+            height: 18px;
+            width: 18px;
+        }
     </style>
 </head>
-
 <body>
 <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div></div>
 <div id="container">
@@ -240,4 +252,7 @@
     <div id="userstats">{USER_TIME} {USER_BIRTHDAY}</div>
 </div>
 </body>
+<script type="text/javascript">
+    twemoji.parse(window.document.body);
+</script>
 </html>
