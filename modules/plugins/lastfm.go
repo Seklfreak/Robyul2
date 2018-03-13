@@ -29,7 +29,6 @@ const (
 )
 
 var (
-	lastfmClient             *lastfm.Api
 	lastfmCachedStats        []LastFMAccountCachedStats
 	lastfmCombinedGuildStats []LastFMCombinedGuildStats
 )
@@ -83,7 +82,6 @@ func (m *LastFm) Commands() []string {
 }
 
 func (m *LastFm) Init(session *discordgo.Session) {
-	lastfmClient = lastfm.New(helpers.GetConfig().Path("lastfm.api_key").Data().(string), helpers.GetConfig().Path("lastfm.api_secret").Data().(string))
 	lastfmCachedStats = make([]LastFMAccountCachedStats, 0)
 	lastfmCombinedGuildStats = make([]LastFMCombinedGuildStats, 0)
 
@@ -119,7 +117,7 @@ func (m *LastFm) generateDiscordStats() {
 			periods := []string{"overall", "7day", "1month", "3month", "6month", "12month"}
 
 			for _, period := range periods {
-				lastfmTopTracks, err := lastfmClient.User.GetTopTracks(lastfm.P{
+				lastfmTopTracks, err := helpers.GetLastFmClient().User.GetTopTracks(lastfm.P{
 					"limit":  50,
 					"user":   safeAccount.LastFmUsername,
 					"period": period,
@@ -363,7 +361,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
-			lastfmRecentTracks, err := lastfmClient.User.GetRecentTracks(lastfm.P{
+			lastfmRecentTracks, err := helpers.GetLastFmClient().User.GetRecentTracks(lastfm.P{
 				"limit": 3,
 				"user":  lastfmUsername,
 			})
@@ -376,7 +374,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 			playcountText := ""
 			lastfmAvatar := targetUser.AvatarURL("64")
-			lastfmUserInfo, err := lastfmClient.User.GetInfo(lastfm.P{
+			lastfmUserInfo, err := helpers.GetLastFmClient().User.GetInfo(lastfm.P{
 				"user": lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -477,7 +475,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
-			lastfmRecentTracks, err := lastfmClient.User.GetRecentTracks(lastfm.P{
+			lastfmRecentTracks, err := helpers.GetLastFmClient().User.GetRecentTracks(lastfm.P{
 				"limit": 2,
 				"user":  lastfmUsername,
 			})
@@ -559,7 +557,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
-			lastfmTopAlbums, err := lastfmClient.User.GetTopAlbums(lastfm.P{
+			lastfmTopAlbums, err := helpers.GetLastFmClient().User.GetTopAlbums(lastfm.P{
 				"limit":  10,
 				"period": timeLookup,
 				"user":   lastfmUsername,
@@ -571,7 +569,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
-			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{
+			lastfmUser, err := helpers.GetLastFmClient().User.GetInfo(lastfm.P{
 				"user": lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -725,7 +723,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 			session.ChannelTyping(msg.ChannelID)
 
-			lastfmTopArtists, err := lastfmClient.User.GetTopArtists(lastfm.P{
+			lastfmTopArtists, err := helpers.GetLastFmClient().User.GetTopArtists(lastfm.P{
 				"limit":  10,
 				"period": timeLookup,
 				"user":   lastfmUsername,
@@ -737,7 +735,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
-			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{
+			lastfmUser, err := helpers.GetLastFmClient().User.GetInfo(lastfm.P{
 				"user": lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -889,7 +887,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 			session.ChannelTyping(msg.ChannelID)
 
-			lastfmTopTracks, err := lastfmClient.User.GetTopTracks(lastfm.P{
+			lastfmTopTracks, err := helpers.GetLastFmClient().User.GetTopTracks(lastfm.P{
 				"limit":  10,
 				"period": timeLookup,
 				"user":   lastfmUsername,
@@ -901,7 +899,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 			}
-			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{
+			lastfmUser, err := helpers.GetLastFmClient().User.GetInfo(lastfm.P{
 				"user": lastfmUsername,
 			})
 			metrics.LastFmRequests.Add(1)
@@ -1091,7 +1089,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				}
 			}
 			session.ChannelTyping(msg.ChannelID)
-			lastfmUser, err := lastfmClient.User.GetInfo(lastfm.P{"user": lastfmUsername})
+			lastfmUser, err := helpers.GetLastFmClient().User.GetInfo(lastfm.P{"user": lastfmUsername})
 			if err != nil {
 				if e, ok := err.(*lastfm.LastfmError); ok {
 					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
