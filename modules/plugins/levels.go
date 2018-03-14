@@ -66,8 +66,7 @@ var (
 	BUCKET_UPPER_BOUND int8 = 1
 
 	// How often new keys drip into the buckets
-	//DROP_INTERVAL = 60 * time.Second TODO
-	DROP_INTERVAL = 1 * time.Second
+	DROP_INTERVAL = 60 * time.Second
 
 	// How many keys may drop at a time
 	DROP_SIZE int8 = 1
