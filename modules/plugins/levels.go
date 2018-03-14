@@ -2061,7 +2061,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				displayRanking := 1
 				offset := 0
 				for i := 0; displayRanking <= 10; i++ {
-					//fmt.Println("displayRanking:", displayRanking, "i:", i, "offset:", offset)
 					if len(levelsServersUsers) <= i-offset {
 						offset += i
 						err = helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"guildid": channel.GuildID}).Skip(offset).Sort("-exp").Limit(5)).All(&levelsServersUsers)
@@ -3127,6 +3126,9 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
 		helpers.Relax(err)
 
+		localExpForLevel := m.getExpForLevel(m.getLevelFromExp(levelThisServerUser.Exp))
+		globalExpForLevel := m.getExpForLevel(m.getLevelFromExp(totalExp))
+
 		userLevelEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
 			Title:       helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
@@ -3141,8 +3143,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					Inline: true,
 				},
 				{
-					Name:   "Level Progress",
-					Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)) + " %",
+					Name: "Level Progress",
+					Value: fmt.Sprintf("%s/%s EXP (%d %%)",
+						humanize.Comma(levelThisServerUser.Exp-localExpForLevel), humanize.Comma(m.getExpForLevel(m.getLevelFromExp(levelThisServerUser.Exp)+1)-localExpForLevel),
+						m.getProgressToNextLevelFromExp(levelThisServerUser.Exp),
+					),
 					Inline: true,
 				},
 				{
@@ -3156,8 +3161,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					Inline: true,
 				},
 				{
-					Name:   "Global Level Progress",
-					Value:  strconv.Itoa(m.getProgressToNextLevelFromExp(totalExp)) + " %",
+					Name: "Global Level Progress",
+					Value: fmt.Sprintf("%s/%s EXP (%d %%)",
+						humanize.Comma(totalExp-globalExpForLevel), humanize.Comma(m.getExpForLevel(m.getLevelFromExp(totalExp)+1)-globalExpForLevel),
+						m.getProgressToNextLevelFromExp(totalExp),
+					),
 					Inline: true,
 				},
 				{
