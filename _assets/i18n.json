@@ -422,7 +422,9 @@
       "background-setlog-success": "I set the background log channel!",
       "user-background-upload-failed": "Something went wrong trying to process your image. <a:ablobcry:393869333740126219>\nPlease try it again in a few minutes.",
       "user-reset-success": "The background for %s has been reset.",
-      "user-force-background-success": "The background for %s has been set."
+      "user-force-background-success": "The background for %s has been set.",
+      "profile-lastfm-hidden": "Last.FM information will no longer be shown on your profile.",
+      "profile-lastfm-shown": "Last.FM information will no longer be shown on your profile."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",

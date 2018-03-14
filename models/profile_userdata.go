@@ -28,4 +28,5 @@ type ProfileUserdataEntry struct {
 	EXPOpacity        string
 	Timezone          string
 	Birthday          string
+	HideLastFm        bool
 }

@@ -213,6 +213,12 @@
             top: 0;
             opacity: {USER_EXP_OPACITY};
         }
+        #song {
+            font-size: 14px;
+            position: absolute;
+            top: 6px;
+            left: 2px;
+        }
         #userbio img {
             height: 12px;
             width: 12px;
@@ -229,6 +235,7 @@
 </head>
 <body>
 <div id="serverexpbar"><div style="width: {USER_SERVER_LEVEL_PERCENT}%;" id="serverexpbarprogress"></div></div>
+<div id="song">{USER_PLAYING}</div>
 <div id="container">
     <div class="avatar fake-bg"></div>
     <div class="avatar avatar-only"></div>

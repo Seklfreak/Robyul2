@@ -32,6 +32,7 @@ import (
 	"github.com/andybons/gogif"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -39,6 +40,7 @@ import (
 	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
+	"github.com/shkh/lastfm-go/lastfm"
 	"gopkg.in/oleiade/lane.v1"
 )
 
@@ -496,6 +498,24 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		args := strings.Fields(content)
 		if len(args) >= 1 && args[0] != "" {
 			switch args[0] {
+			case "toggle-lastfm":
+				userUserdata, err := m.GetUserUserdata(msg.Author)
+				helpers.Relax(err)
+
+				var message string
+				if userUserdata.HideLastFm {
+					userUserdata.HideLastFm = false
+					message = helpers.GetText("plugins.levels.profile-lastfm-shown")
+				} else {
+					userUserdata.HideLastFm = true
+					message = helpers.GetText("plugins.levels.profile-lastfm-hidden")
+				}
+				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				helpers.Relax(err)
+
+				_, err = helpers.SendMessage(msg.ChannelID, message)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
 			case "title":
 				titleText := " "
 				if len(args) >= 2 {
@@ -3733,6 +3753,39 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		}
 	}
 
+	var playingStatus string
+	if !userData.HideLastFm {
+		lastfmUsername := helpers.GetLastFmUsername(member.User.ID)
+		if lastfmUsername != "" {
+			recentTracks, err := helpers.GetLastFmClient().User.GetRecentTracks(lastfm.P{
+				"limit": 1,
+				"user":  lastfmUsername,
+			})
+			helpers.RelaxLog(err)
+			if err == nil && recentTracks.Tracks != nil && len(recentTracks.Tracks) >= 1 && recentTracks.Tracks[0].NowPlaying == "true" {
+				playingStatus += fmt.Sprintf("<i class=\"fa fa-music\" aria-hidden=\"true\"></i> %s by %s",
+					recentTracks.Tracks[0].Name, recentTracks.Tracks[0].Artist.Name)
+			}
+			topArtists, err := helpers.GetLastFmClient().User.GetTopArtists(lastfm.P{
+				"limit":  1,
+				"period": "overall",
+				"user":   lastfmUsername,
+			})
+			helpers.RelaxLog(err)
+			if err == nil && topArtists.Artists != nil && len(topArtists.Artists) >= 1 {
+				if playingStatus != "" {
+					playingStatus += "<br>"
+				}
+				playCountN, err := strconv.Atoi(topArtists.Artists[0].PlayCount)
+				helpers.RelaxLog(err)
+				if err == nil {
+					playingStatus += fmt.Sprintf("<i class=\"fa fa-users\" aria-hidden=\"true\"></i> %s (%s plays)",
+						topArtists.Artists[0].Name, humanize.Comma(int64(playCountN)))
+				}
+			}
+		}
+	}
+
 	expOpacity := m.GetExpOpacity(userData)
 	badgeOpacity := m.GetBadgeOpacity(userData)
 
@@ -3758,6 +3811,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_EXP_OPACITY}", expOpacity, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGE_OPACITY}", badgeOpacity, -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_PLAYING}", playingStatus, -1)
 
 	if web == false { // privacy
 		tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TIME}", userTimeText, -1)
