@@ -609,7 +609,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			case "background", "backgrounds":
 				if len(args) < 2 {
 					if len(msg.Attachments) <= 0 {
-						_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
+						userUserdata, err := m.GetUserUserdata(msg.Author)
+
+						if userUserdata.Background == "" {
+							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-help"))
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							return
+						}
+
+						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-help-withbackground", userUserdata.Background))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 						return
 					}
