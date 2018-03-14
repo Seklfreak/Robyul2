@@ -364,6 +364,7 @@ func (m *Levels) processExpStackLoop() {
 	}()
 
 	for {
+		metrics.LevelsStackSize.Set(int64(expStack.Size()))
 		if !expStack.Empty() {
 			expItem := expStack.Pop().(ProcessExpInfo)
 			levelsServerUser, err := m.getLevelsServerUserOrCreateNewWithoutLogging(expItem.GuildID, expItem.UserID)

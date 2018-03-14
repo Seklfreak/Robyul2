@@ -148,6 +148,9 @@ var (
 
 	// CloudVisionApiRequests counts all google cloud vision api requests made
 	CloudVisionApiRequests = expvar.NewInt("cloudvision_api_requests")
+
+	// LevelsStackSize is the size of the exp processing stack
+	LevelsStackSize = expvar.NewInt("levels_stack_size")
 )
 
 // Init starts a http server on 127.0.0.1:1337
