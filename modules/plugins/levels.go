@@ -51,8 +51,9 @@ type Levels struct {
 }
 
 type ProcessExpInfo struct {
-	GuildID string
-	UserID  string
+	GuildID   string
+	ChannelID string
+	UserID    string
 }
 
 var (
@@ -65,7 +66,8 @@ var (
 	BUCKET_UPPER_BOUND int8 = 1
 
 	// How often new keys drip into the buckets
-	DROP_INTERVAL = 60 * time.Second
+	//DROP_INTERVAL = 60 * time.Second TODO
+	DROP_INTERVAL = 1 * time.Second
 
 	// How many keys may drop at a time
 	DROP_SIZE int8 = 1
@@ -379,17 +381,76 @@ func (m *Levels) processExpStackLoop() {
 			helpers.Relax(err)
 
 			if expBefore <= 0 || levelBefore != levelAfter {
+				// apply roles
 				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
 				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Message != "404: Not Found" &&
 					errD.Message.Code != discordgo.ErrCodeUnknownMember &&
 					errD.Message.Code != discordgo.ErrCodeMissingAccess) {
 					helpers.RelaxLog(err)
 				}
+				guildSettings := helpers.GuildSettingsGetCached(expItem.GuildID)
+				// send level notifications
+				if levelAfter > levelBefore && guildSettings.LevelsNotificationCode != "" {
+					go func() {
+						defer helpers.Recover()
+
+						member, err := helpers.GetGuildMember(expItem.GuildID, expItem.UserID)
+						helpers.RelaxLog(err)
+						if err == nil {
+							levelNotificationText := m.replaceLevelNotificationText(guildSettings.LevelsNotificationCode, member, levelAfter)
+							if levelNotificationText == "" {
+								return
+							}
+							messageSend := &discordgo.MessageSend{
+								Content: levelNotificationText,
+							}
+							if helpers.IsEmbedCode(levelNotificationText) {
+								ptext, embed, err := helpers.ParseEmbedCode(levelNotificationText)
+								if err == nil {
+									messageSend.Content = ptext
+									messageSend.Embed = embed
+								}
+							}
+							messages, err := helpers.SendComplex(expItem.ChannelID, messageSend)
+							helpers.RelaxLog(err)
+							if guildSettings.LevelsNotificationDeleteAfter > 0 {
+								go func() {
+									defer helpers.Recover()
+
+									time.Sleep(time.Duration(guildSettings.LevelsNotificationDeleteAfter) * time.Second)
+
+									for _, message := range messages {
+										cache.GetSession().ChannelMessageDelete(message.ChannelID, message.ID)
+									}
+								}()
+							}
+						}
+						return
+					}()
+				}
 			}
 		} else {
-			time.Sleep(1 * time.Second)
+			time.Sleep(250 * time.Millisecond)
 		}
 	}
+}
+
+func (m *Levels) replaceLevelNotificationText(text string, member *discordgo.Member, newLevel int) string {
+	text = strings.Replace(text, "{USER_USERNAME}", member.User.Username, -1)
+	text = strings.Replace(text, "{USER_ID}", member.User.ID, -1)
+	text = strings.Replace(text, "{USER_DISCRIMINATOR}", member.User.Discriminator, -1)
+	text = strings.Replace(text, "{USER_MENTION}", fmt.Sprintf("<@%s>", member.User.ID), -1)
+	text = strings.Replace(text, "{USER_AVATARURL}", member.User.AvatarURL(""), -1)
+	text = strings.Replace(text, "{USER_NEWLEVEL}", strconv.Itoa(newLevel), -1)
+
+	guild, err := helpers.GetGuild(member.GuildID)
+	helpers.RelaxLog(err)
+	if err == nil {
+		text = strings.Replace(text, "{GUILD_NAME}", guild.Name, -1)
+		text = strings.Replace(text, "{GUILD_ID}", guild.ID, -1)
+	}
+
+	return text
 }
 
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -2947,6 +3008,66 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
+			case "set-level-notification", "set-level-notifications", "set-level-noti", "set-level-notis":
+				helpers.RequireMod(msg, func() {
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
+					var message string
+
+					guildConfig := helpers.GuildSettingsGetCached(channel.GuildID)
+
+					if len(args) >= 3 {
+						embedCode := strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
+						if embedCode != "" {
+							guildConfig.LevelsNotificationCode = embedCode
+							message = helpers.GetText("plugins.levels.level-notification-enabled")
+						}
+					}
+
+					if message == "" {
+						guildConfig.LevelsNotificationCode = ""
+						message = helpers.GetText("plugins.levels.level-notification-disabled")
+					}
+
+					err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
+					helpers.Relax(err)
+
+					_, err = helpers.SendMessage(msg.ChannelID, message)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				})
+				return
+			case "set-level-notification-autodelete", "set-level-notifications-autodelete", "set-level-noti-autodelete", "set-level-notis-autodelete":
+				helpers.RequireMod(msg, func() {
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
+					var message string
+
+					guildConfig := helpers.GuildSettingsGetCached(channel.GuildID)
+
+					if len(args) >= 2 {
+						deleteAfterN, err := strconv.Atoi(args[1])
+						if err == nil && deleteAfterN > 0 {
+							guildConfig.LevelsNotificationDeleteAfter = deleteAfterN
+							message = helpers.GetTextF("plugins.levels.level-notification-autodelete-enabled", deleteAfterN)
+						}
+					}
+
+					if message == "" {
+						guildConfig.LevelsNotificationDeleteAfter = 0
+						message = helpers.GetText("plugins.levels.level-notification-autodelete-disabled")
+					}
+
+					err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
+					helpers.Relax(err)
+
+					_, err = helpers.SendMessage(msg.ChannelID, message)
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				})
+				return
 			}
 			targetUser, err = helpers.GetUserFromMention(args[0])
 			if targetUser == nil || targetUser.ID == "" {
@@ -4079,7 +4200,7 @@ func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Sessi
 	err = m.BucketDrain(1, channel.GuildID+msg.Author.ID)
 	helpers.Relax(err)
 
-	expStack.Push(ProcessExpInfo{UserID: msg.Author.ID, GuildID: channel.GuildID})
+	expStack.Push(ProcessExpInfo{UserID: msg.Author.ID, GuildID: channel.GuildID, ChannelID: msg.ChannelID})
 }
 
 func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {

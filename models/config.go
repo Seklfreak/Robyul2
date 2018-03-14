@@ -32,8 +32,10 @@ type Config struct {
 	NukeIsParticipating bool   `rethink:"nuke_participation"`
 	NukeLogChannel      string `rethink:"nuke_channel"`
 
-	LevelsIgnoredUserIDs    []string `rethink:"levels_ignored_user_ids"`
-	LevelsIgnoredChannelIDs []string `rethink:"levels_ignored_channel_ids"`
+	LevelsIgnoredUserIDs          []string `rethink:"levels_ignored_user_ids"`
+	LevelsIgnoredChannelIDs       []string `rethink:"levels_ignored_channel_ids"`
+	LevelsNotificationCode        string   `rethink:"level_notification_code"`
+	LevelsNotificationDeleteAfter int      `rethink:"level_notification_deleteafter"`
 
 	MutedMembers []string `rethink:"muted_member_ids"` // deprecated
 

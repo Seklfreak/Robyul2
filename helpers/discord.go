@@ -839,6 +839,9 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 			fmt.Sprintf("discord api request: GuildMember: %s, %s", guildID, userID))
 		targetMember, err = cache.GetSession().GuildMember(guildID, userID)
 	}
+	if targetMember != nil {
+		targetMember.GuildID = guildID
+	}
 	return targetMember, err
 }
 
