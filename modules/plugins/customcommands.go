@@ -67,16 +67,38 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
+				guild, err := helpers.GetGuild(channel.GuildID)
+				helpers.Relax(err)
+
 				guildConfig := helpers.GuildSettingsGetCached(channel.GuildID)
 
+				var targetRole *discordgo.Role
 				var message string
 
-				if guildConfig.CustomCommandsEveryoneCanAdd {
-					message = helpers.GetText("plugins.customcommands.disabled-everyone-canadd")
-					guildConfig.CustomCommandsEveryoneCanAdd = false
+				if len(args) >= 2 {
+					// giving ability to add commands to a specific role?
+					for _, guildRole := range guild.Roles {
+						if strings.ToLower(guildRole.Name) == strings.ToLower(args[1]) ||
+							guildRole.ID == strings.ToLower(args[1]) {
+							targetRole = guildRole
+						}
+					}
+				}
+
+				if targetRole == nil {
+					if guildConfig.CustomCommandsEveryoneCanAdd {
+						guildConfig.CustomCommandsEveryoneCanAdd = false
+						guildConfig.CustomCommandsAddRoleID = ""
+						message = helpers.GetText("plugins.customcommands.disabled-everyone-canadd")
+					} else {
+						guildConfig.CustomCommandsEveryoneCanAdd = true
+						guildConfig.CustomCommandsAddRoleID = ""
+						message = helpers.GetText("plugins.customcommands.enabled-everyone-canadd")
+					}
 				} else {
-					message = helpers.GetText("plugins.customcommands.enabled-everyone-canadd")
-					guildConfig.CustomCommandsEveryoneCanAdd = true
+					guildConfig.CustomCommandsEveryoneCanAdd = false
+					guildConfig.CustomCommandsAddRoleID = targetRole.ID
+					message = helpers.GetTextF("plugins.customcommands.role-canadd", targetRole.Name)
 				}
 
 				err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
@@ -753,9 +775,11 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 // userID		: the user which wants to add the command
 // editCommand	: if not nil, will check if user is allowed to edit that command
 func (cc *CustomCommands) canAddCommand(guildID, userID string, editCommand *models.CustomCommandsEntry) (allowed bool) {
+	// is mod or admin?
 	if helpers.IsModByID(guildID, userID) {
 		return true
 	}
+	// created the command in question?
 	if editCommand != nil {
 		if editCommand.CreatedByUserID == userID {
 			return true
@@ -763,9 +787,24 @@ func (cc *CustomCommands) canAddCommand(guildID, userID string, editCommand *mod
 			return false
 		}
 	}
+	// everyone can add commands?
 	if helpers.GuildSettingsGetCached(guildID).CustomCommandsEveryoneCanAdd {
 		return true
 	}
+	// everyone with specific role can add commands, user got specific role?
+	addRoleID := helpers.GuildSettingsGetCached(guildID).CustomCommandsAddRoleID
+	if addRoleID != "" {
+		member, err := helpers.GetGuildMember(guildID, userID)
+		helpers.RelaxLog(err)
+		if err == nil {
+			for _, memberRole := range member.Roles {
+				if memberRole == addRoleID {
+					return true
+				}
+			}
+		}
+	}
+	// not allowed
 	return false
 }
 

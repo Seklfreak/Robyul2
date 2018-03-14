@@ -474,7 +474,8 @@
       "fileupload-too-big": "The file is too big!\nPlease upload a file smaller than 20 MB.",
       "fileupload-not-safe": "The file seems to contain explicit content.",
       "disabled-everyone-canadd": "Only Moderators can add commands now.",
-      "enabled-everyone-canadd": "Everyone can add commands now!"
+      "enabled-everyone-canadd": "Everyone can add commands now!",
+      "role-canadd": "Everyone with the role `%s` can add commands now!"
     },
     "reactionpolls": {
       "create-too-many-reactions": "You can only add up to 20 possible reactions. <:blobnogood:317029275742109706>",
