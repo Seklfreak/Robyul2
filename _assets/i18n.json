@@ -712,6 +712,9 @@
       "embed-footer": "powered by CryptoCompare.com",
       "embed-footer-imageurl": "https://i.imgur.com/V1SidJ8.jpg",
       "embed-exchange-title": "Cryptocurrency Exchange Rates"
+    },
+    "imgur": {
+      "success": "I uploaded the image for you: <%s>. <a:ablobsunglasses:393869335657054210>"
     }
   }
 }

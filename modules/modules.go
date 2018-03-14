@@ -63,6 +63,7 @@ var (
 		&plugins.Useruploads{},
 		&plugins.Move{},
 		&plugins.Crypto{},
+		&plugins.Imgur{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

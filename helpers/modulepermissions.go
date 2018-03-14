@@ -73,6 +73,7 @@ const (
 	ModulePermEmbedPost // embedpost.go
 	ModulePermEventlog  // eventlog/
 	ModulePermCrypto    // crypto.go
+	ModulePermImgur     // imgur.go
 
 	ModulePermAll = ModulePermStats | ModulePermTranslator | ModulePermUrban | ModulePermWeather | ModulePermVLive |
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
@@ -84,7 +85,7 @@ const (
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
 		ModulePermGuildAnnouncements | ModulePermMirror | ModulePermMirror | ModulePermMod | ModulePermNotifications |
 		ModulePermNuke | ModulePermPersistency | ModulePermPing | ModulePermTroublemaker | ModulePermVanityInvite |
-		ModulePerm8ball | ModulePermFeedback | ModulePermEmbedPost | ModulePermEventlog | ModulePermCrypto
+		ModulePerm8ball | ModulePermFeedback | ModulePermEmbedPost | ModulePermEventlog | ModulePermCrypto | ModulePermImgur
 )
 
 var (
@@ -142,6 +143,7 @@ var (
 		{Names: []string{"embed", "embedpost"}, Permission: ModulePermEmbedPost},
 		{Names: []string{"eventlog"}, Permission: ModulePermEventlog},
 		{Names: []string{"crypto"}, Permission: ModulePermCrypto},
+		{Names: []string{"imgur"}, Permission: ModulePermImgur},
 	}
 )
 
