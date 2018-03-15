@@ -136,7 +136,7 @@ func CanInspectBasic(msg *discordgo.Message) bool {
 		return false
 	}
 
-	guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
+	guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 	if e != nil {
 		return false
 	}
@@ -177,7 +177,7 @@ func CanInspectExtended(msg *discordgo.Message) bool {
 		return false
 	}
 
-	guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
+	guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 	if e != nil {
 		return false
 	}
@@ -210,7 +210,7 @@ func IsAdmin(msg *discordgo.Message) bool {
 		return true
 	}
 
-	guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
+	guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 	if e != nil {
 		return false
 	}
@@ -242,7 +242,7 @@ func IsAdminByID(guildID string, userID string) bool {
 		return true
 	}
 
-	guildMember, e := GetGuildMember(guild.ID, userID)
+	guildMember, e := GetGuildMemberWithoutApi(guild.ID, userID)
 	if e != nil {
 		return false
 	}
@@ -274,7 +274,7 @@ func HasPermissionByID(guildID string, userID string, permission int) bool {
 		return true
 	}
 
-	guildMember, e := GetGuildMember(guild.ID, userID)
+	guildMember, e := GetGuildMemberWithoutApi(guild.ID, userID)
 	if e != nil {
 		return false
 	}
@@ -302,7 +302,7 @@ func IsMod(msg *discordgo.Message) bool {
 		if e != nil {
 			return false
 		}
-		guildMember, e := GetGuildMember(guild.ID, msg.Author.ID)
+		guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 		if e != nil {
 			return false
 		}
@@ -330,7 +330,7 @@ func IsModByID(guildID string, userID string) bool {
 		if e != nil {
 			return false
 		}
-		guildMember, e := GetGuildMember(guild.ID, userID)
+		guildMember, e := GetGuildMemberWithoutApi(guild.ID, userID)
 		if e != nil {
 			return false
 		}

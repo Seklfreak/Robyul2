@@ -676,7 +676,7 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 
 	authorName := "N/A"
 	authorDP := ""
-	author, err := helpers.GetGuildMember(starEntry.GuildID, starEntry.AuthorID)
+	author, err := helpers.GetGuildMemberWithoutApi(starEntry.GuildID, starEntry.AuthorID)
 	if err == nil && author != nil && author.User != nil {
 		authorDP = author.User.AvatarURL("256")
 		authorName = author.User.Username
@@ -765,7 +765,7 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 
 func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.MessageEmbed {
 	authorName := "N/A"
-	author, err := helpers.GetGuildMember(starEntry.GuildID, starEntry.AuthorID)
+	author, err := helpers.GetGuildMemberWithoutApi(starEntry.GuildID, starEntry.AuthorID)
 	if err == nil && author != nil && author.User != nil {
 		authorName = author.User.Username
 		if author.Nick != "" {
@@ -779,7 +779,7 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 	var userName string
 	for i, starrerUserID := range starEntry.StarUserIDs {
 		userName = "N/A"
-		author, err := helpers.GetGuildMember(starEntry.GuildID, starrerUserID)
+		author, err := helpers.GetGuildMemberWithoutApi(starEntry.GuildID, starrerUserID)
 		if err == nil && author != nil && author.User != nil {
 			userName = "@" + author.User.Username
 			if author.Nick != "" {
@@ -855,7 +855,7 @@ func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage
 	var sinceLastPage int
 	var starrersEmbed *discordgo.MessageEmbed
 	for _, starMessage := range starEntries {
-		author, err := helpers.GetGuildMember(starMessage.GuildID, starMessage.AuthorID)
+		author, err := helpers.GetGuildMemberWithoutApi(starMessage.GuildID, starMessage.AuthorID)
 		authorName = "N/A"
 		if err == nil && author != nil && author.User != nil {
 			authorName = author.User.Username

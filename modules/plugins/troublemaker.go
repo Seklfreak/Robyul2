@@ -248,11 +248,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 						for _, guildToNotify := range guildsToNotify {
 							guildToNotifySettings := helpers.GuildSettingsGetCached(guildToNotify.ID)
 							if guildToNotifySettings.TroublemakerIsParticipating == true && guildToNotifySettings.TroublemakerLogChannel != "" {
-								targetUserIsOnServer := false
-								_, err := helpers.GetGuildMember(guildToNotify.ID, targetUser.ID)
-								if err == nil {
-									targetUserIsOnServer = true
-								}
+								targetUserIsOnServer := helpers.GetIsInGuild(guildToNotify.ID, targetUser.ID)
 
 								reportEmbed := &discordgo.MessageEmbed{
 									Title:       helpers.GetTextF("plugins.troublemaker.report-embed-title", targetUser.Username, targetUser.Discriminator),

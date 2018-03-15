@@ -794,7 +794,7 @@ func (cc *CustomCommands) canAddCommand(guildID, userID string, editCommand *mod
 	// everyone with specific role can add commands, user got specific role?
 	addRoleID := helpers.GuildSettingsGetCached(guildID).CustomCommandsAddRoleID
 	if addRoleID != "" {
-		member, err := helpers.GetGuildMember(guildID, userID)
+		member, err := helpers.GetGuildMemberWithoutApi(guildID, userID)
 		helpers.RelaxLog(err)
 		if err == nil {
 			for _, memberRole := range member.Roles {

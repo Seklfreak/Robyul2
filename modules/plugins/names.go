@@ -81,7 +81,7 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	}
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
-	member, _ := helpers.GetGuildMember(channel.GuildID, user.ID)
+	member, _ := helpers.GetGuildMemberWithoutApi(channel.GuildID, user.ID)
 
 	var pastUsernamesText, pastNicknamesText string
 

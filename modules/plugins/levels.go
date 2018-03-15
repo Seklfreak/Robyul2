@@ -394,7 +394,7 @@ func (m *Levels) processExpStackLoop() {
 					go func() {
 						defer helpers.Recover()
 
-						member, err := helpers.GetGuildMember(expItem.GuildID, expItem.UserID)
+						member, err := helpers.GetGuildMemberWithoutApi(expItem.GuildID, expItem.UserID)
 						helpers.RelaxLog(err)
 						if err == nil {
 							levelNotificationText := m.replaceLevelNotificationText(guildSettings.LevelsNotificationCode, member, levelAfter)
@@ -1975,7 +1975,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			}
 		}
 
-		targetMember, err := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
+		targetMember, err := helpers.GetGuildMemberWithoutApi(channel.GuildID, targetUser.ID)
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code == 10007 {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -2263,7 +2263,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							ignoredMessage := "**Ignored Users:**"
 							if len(settings.LevelsIgnoredUserIDs) > 0 {
 								for i, ignoredUserID := range settings.LevelsIgnoredUserIDs {
-									ignoredUser, err := helpers.GetGuildMember(channel.GuildID, ignoredUserID)
+									ignoredUser, err := helpers.GetGuildMemberWithoutApi(channel.GuildID, ignoredUserID)
 									if err != nil {
 										ignoredMessage += " N/A"
 									} else {
@@ -3111,7 +3111,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			return
 		}
 
-		currentMember, _ := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
+		currentMember, _ := helpers.GetGuildMemberWithoutApi(channel.GuildID, targetUser.ID)
 		if currentMember == nil || currentMember.User == nil || currentMember.User.ID == "" {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -3628,7 +3628,7 @@ func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string)
 		// Role Check
 		if foundBadge.RoleRequirement != "" { // is there a role requirement?
 			isAllowed = false
-			member, err := helpers.GetGuildMember(foundBadge.GuildID, user.ID)
+			member, err := helpers.GetGuildMemberWithoutApi(foundBadge.GuildID, user.ID)
 			if err == nil {
 				for _, memberRole := range member.Roles { // check if user got role
 					if memberRole == foundBadge.RoleRequirement {
@@ -4504,7 +4504,7 @@ func (l *Levels) getLevelsRoles(guildID string, currentLevel int) (apply []*disc
 
 func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err error) {
 	apply, remove := l.getLevelsRoles(guildID, level)
-	member, err := helpers.GetGuildMember(guildID, userID)
+	member, err := helpers.GetGuildMemberWithoutApi(guildID, userID)
 	if err != nil {
 		cache.GetLogger().WithField("module", "levels").Warnf("failed to get guild member to apply level roles: %s", err.Error())
 		return err

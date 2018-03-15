@@ -329,7 +329,7 @@ func FindMember(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	userID := request.PathParameter("user-id")
 
-	member, _ := helpers.GetGuildMember(guildID, userID)
+	member, _ := helpers.GetGuildMemberWithoutApi(guildID, userID)
 	if member != nil && member.GuildID != "" {
 		joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
 		if err != nil {
@@ -427,7 +427,7 @@ func GetProfile(request *restful.Request, response *restful.Response) {
 			response.WriteError(http.StatusNotFound, errors.New("Profile not found."))
 			return
 		}
-		member, err := helpers.GetGuildMember(guildID, userID)
+		member, err := helpers.GetGuildMemberWithoutApi(guildID, userID)
 		if err != nil || member == nil || member.User == nil || member.User.ID == "" {
 			response.WriteError(http.StatusNotFound, errors.New("Profile not found."))
 			return

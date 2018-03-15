@@ -500,7 +500,7 @@ NextKeyword:
 					cache.GetLogger().WithField("module", "notifications").Warn("member to notify not found")
 					continue NextKeyword
 				}
-				messageAuthor, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
+				messageAuthor, err := helpers.GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 				if err != nil {
 					cache.GetLogger().WithField("module", "notifications").Warn("error getting message author: " + err.Error())
 					continue NextKeyword
