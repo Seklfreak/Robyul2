@@ -6,8 +6,6 @@ import (
 
 	"strconv"
 
-	"regexp"
-
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -17,19 +15,19 @@ import (
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo/bson"
 	rethink "github.com/gorethink/gorethink"
 )
 
 type Notifications struct{}
 
 var (
-	notificationSettingsCache []DB_NotificationSetting
+	notificationSettingsCache []models.NotificationsEntry
 	ignoredChannelsCache      []DB_IgnoredChannel
 	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“"}
 )
 
 const (
-	GlobalKeywordsLimit                  = 3
 	UserConfigNotificationsLayoutModeKey = "notifications:layout-mode"
 )
 
@@ -37,14 +35,6 @@ type DB_IgnoredChannel struct {
 	ID        string `gorethink:"id,omitempty"`
 	GuildID   string `gorethink:"guildid"`
 	ChannelID string `gorethink:"channelid"`
-}
-
-type DB_NotificationSetting struct {
-	ID        string `gorethink:"id,omitempty"`
-	Keyword   string `gorethink:"keyword"`
-	GuildID   string `gorethink:"guildid"` // can be "global" to affect every guild
-	UserID    string `gorethink:"userid"`
-	Triggered int    `gorethink:"triggered"`
 }
 
 func (m *Notifications) Commands() []string {
@@ -57,14 +47,17 @@ func (m *Notifications) Commands() []string {
 }
 
 func (m *Notifications) Init(session *discordgo.Session) {
-	go m.refreshNotificationSettingsCache()
+	go func() {
+		defer helpers.Recover()
+
+		err := m.refreshNotificationSettingsCache()
+		helpers.RelaxLog(err)
+	}()
 }
 
 func (m *Notifications) Uninit(session *discordgo.Session) {
 
 }
-
-// @TODO: add command to make a keyword global (owner only)
 
 func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermNotifications) {
@@ -91,62 +84,47 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				keywordGuild = "global"
 			}
 
-			var entryBucket DB_NotificationSetting
-			listCursor, err := rethink.Table("notifications").Filter(
-				rethink.Or(
-					rethink.Row.Field("guildid").Eq(guild.ID),
-					rethink.Row.Field("guildid").Eq("global"),
-				),
-			).Filter(
-				rethink.Row.Field("userid").Eq(msg.Author.ID),
-			).Filter(func(keywordTerm rethink.Term) rethink.Term {
-				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + regexp.QuoteMeta(keywords) + "$"))
-			}).Run(helpers.GetDB())
-			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.One(&entryBucket)
+			var entryBucket models.NotificationsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.NotificationsTable).Find(
+					bson.M{"userid": msg.Author.ID,
+						"guildid": bson.M{"$in": []string{guild.ID, "global"}},
+						"keyword": bson.M{"$regex": bson.RegEx{Pattern: keywords, Options: "i"}},
+					}),
+				&entryBucket,
+			)
 
-			if err != rethink.ErrEmptyResult || entryBucket.ID != "" {
+			if err == nil {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-error-duplicate", msg.Author.ID))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 				return
-			} else if err != nil && err != rethink.ErrEmptyResult {
+			}
+			if err != nil && !strings.Contains(err.Error(), "not found") {
 				helpers.Relax(err)
 			}
 
-			if keywordGuild == "global" {
-				var globalEntryBucket []DB_NotificationSetting
-				listCursor, err := rethink.Table("notifications").Filter(
-					rethink.Or(
-						rethink.Row.Field("guildid").Eq("global"),
-					),
-				).Filter(
-					rethink.Row.Field("userid").Eq(msg.Author.ID),
-				).Run(helpers.GetDB())
-				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&globalEntryBucket)
-
-				if len(globalEntryBucket) >= GlobalKeywordsLimit {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-add-global-too-many", msg.Author.ID, GlobalKeywordsLimit))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					session.ChannelMessageDelete(msg.ChannelID, msg.ID)
-					return
-				}
-			}
-
-			entry := m.getNotificationSettingByOrCreateEmpty("id", "")
-			entry.Keyword = keywords
-			entry.GuildID = keywordGuild
-			entry.UserID = msg.Author.ID
-			m.setNotificationSetting(entry)
+			err = helpers.MDbUpsert(
+				models.NotificationsTable,
+				bson.M{"userid": msg.Author.ID, "guildid": keywordGuild, "keyword": keywords},
+				models.NotificationsEntry{
+					Keyword: keywords,
+					GuildID: keywordGuild,
+					UserID:  msg.Author.ID,
+				},
+			)
+			helpers.Relax(err)
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-added-success", msg.Author.ID))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", entry.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
+			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", keywords, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
-			go m.refreshNotificationSettingsCache()
+			go func() {
+				defer helpers.Recover()
+
+				err := m.refreshNotificationSettingsCache()
+				helpers.RelaxLog(err)
+			}()
 		case "delete", "del", "remove": // [p]notifications delete <keyword(s)>
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
@@ -163,53 +141,47 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				keywords = strings.TrimSpace(strings.TrimPrefix(keywords, "global "))
 			}
 
-			var entryBucket DB_NotificationSetting
-			listCursor, err := rethink.Table("notifications").Filter(
-				rethink.Or(
-					rethink.Row.Field("guildid").Eq(guild.ID),
-					rethink.Row.Field("guildid").Eq("global"),
-				),
-			).Filter(
-				rethink.Row.Field("userid").Eq(msg.Author.ID),
-			).Filter(func(keywordTerm rethink.Term) rethink.Term {
-				return keywordTerm.Field("keyword").Match(fmt.Sprintf("(?i)^" + regexp.QuoteMeta(keywords) + "$"))
-			}).Run(helpers.GetDB())
-			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.One(&entryBucket)
-
-			if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
+			var entryBucket models.NotificationsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.NotificationsTable).Find(
+					bson.M{"userid": msg.Author.ID,
+						"guildid": bson.M{"$in": []string{guild.ID, "global"}},
+						"keyword": bson.M{"$regex": bson.RegEx{Pattern: keywords, Options: "i"}},
+					}),
+				&entryBucket,
+			)
+			if err != nil && strings.Contains(err.Error(), "not found") {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-not-found-error", msg.Author.ID))
 				return
-			} else if err != nil {
-				helpers.Relax(err)
 			}
-			m.deleteNotificationSettingByID(entryBucket.ID)
+			helpers.Relax(err)
+
+			err = helpers.MDbDelete(models.NotificationsTable, entryBucket.ID)
+			helpers.Relax(err)
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-success", msg.Author.ID))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notification Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
-			go m.refreshNotificationSettingsCache()
+			go func() {
+				defer helpers.Recover()
+
+				err := m.refreshNotificationSettingsCache()
+				helpers.RelaxLog(err)
+			}()
 		case "list": // [p]notifications list
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 			guild, err := helpers.GetGuild(channel.GuildID)
 			helpers.Relax(err)
-			var entryBucket []DB_NotificationSetting
-			listCursor, err := rethink.Table("notifications").Filter(
-				rethink.Or(
-					rethink.Row.Field("guildid").Eq(guild.ID),
-					rethink.Row.Field("guildid").Eq("global"),
-				),
-			).Filter(
-				rethink.Row.Field("userid").Eq(msg.Author.ID),
-			).OrderBy(rethink.Desc("triggered")).Run(helpers.GetDB())
+			var entryBucket []models.NotificationsEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(bson.M{
+				"userid":  msg.Author.ID,
+				"guildid": bson.M{"$in": []string{guild.ID, "global"}},
+			}).Sort("-triggered")).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if entryBucket == nil || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-list-no-keywords-error", msg.Author.ID))
 				return
 			} else if err != nil {
@@ -325,7 +297,12 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
 					}
-					go m.refreshNotificationSettingsCache()
+					go func() {
+						defer helpers.Recover()
+
+						err := m.refreshNotificationSettingsCache()
+						helpers.RelaxLog(err)
+					}()
 				})
 			}
 		case "toggle-mode", "toggle-modes":
@@ -636,7 +613,8 @@ NextKeyword:
 					go func() {
 						defer helpers.Recover()
 
-						m.increaseNotificationEntryById(idToIncrease)
+						_, err = helpers.MDbUpdate(models.NotificationsTable, idToIncrease, bson.M{"$inc": bson.M{"triggered": 1}})
+						helpers.RelaxLog(err)
 					}()
 				}
 			}
@@ -824,78 +802,23 @@ func (m *Notifications) deleteIgnoredChannel(id string) {
 	}
 }
 
-func (m *Notifications) getNotificationSettingBy(key string, id string) DB_NotificationSetting {
-	var entryBucket DB_NotificationSetting
-	listCursor, err := rethink.Table("notifications").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
+func (m *Notifications) refreshNotificationSettingsCache() (err error) {
+	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(nil)).All(&notificationSettingsCache)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Notifications) getNotificationSettingByOrCreateEmpty(key string, id string) DB_NotificationSetting {
-	var entryBucket DB_NotificationSetting
-	listCursor, err := rethink.Table("notifications").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
+	cursor, err := rethink.Table("notifications_ignored_channels").Run(helpers.GetDB())
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("notifications").Insert(DB_NotificationSetting{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getNotificationSettingByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Notifications) setNotificationSetting(entry DB_NotificationSetting) {
-	_, err := rethink.Table("notifications").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Notifications) deleteNotificationSettingByID(id string) {
-	_, err := rethink.Table("notifications").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Notifications) refreshNotificationSettingsCache() {
-	cursor, err := rethink.Table("notifications").Run(helpers.GetDB())
-	helpers.Relax(err)
-	err = cursor.All(&notificationSettingsCache)
-	helpers.Relax(err)
-	cursor, err = rethink.Table("notifications_ignored_channels").Run(helpers.GetDB())
-	helpers.Relax(err)
 	err = cursor.All(&ignoredChannelsCache)
-	helpers.Relax(err)
+	if err != nil {
+		return err
+	}
 
 	cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Refreshed Notification Settings Cache: Got %d keywords and %d ignored channels",
 		len(notificationSettingsCache), len(ignoredChannelsCache)))
+	return nil
 }
 
 type delimiterCombination struct {
@@ -911,25 +834,6 @@ func (m *Notifications) getAllDelimiterCombinations(delimiters []string) []delim
 		}
 	}
 	return result
-}
-
-func (m *Notifications) increaseNotificationEntryById(id string) {
-	var entryBucket DB_NotificationSetting
-	listCursor, err := rethink.Table("notifications").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-	if err != nil {
-		if strings.Contains(err.Error(), "The result does not contain any more rows") {
-			return
-		}
-	}
-	helpers.Relax(err)
-
-	entryBucket.Triggered += 1
-	m.setNotificationSetting(entryBucket)
 }
 
 func (m *Notifications) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
