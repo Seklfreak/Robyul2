@@ -3813,7 +3813,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		userAndNick = fmt.Sprintf("%s (%s)", member.User.Username, member.Nick)
 	}
 	userWithDisc := member.User.Username + "#" + member.User.Discriminator
-	if len(userWithDisc) >= 15 {
+	if helpers.RuneLength(userWithDisc) >= 15 {
 		userWithDisc = member.User.Username
 	}
 	title := userData.Title
@@ -3916,8 +3916,12 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 				playCountN, err := strconv.Atoi(topArtists.Artists[0].PlayCount)
 				helpers.RelaxLog(err)
 				if err == nil {
-					playingStatus += fmt.Sprintf("<i class=\"fa fa-users\" aria-hidden=\"true\"></i> %s (%s plays)",
-						topArtists.Artists[0].Name, humanize.Comma(int64(playCountN)))
+					playingStatus += fmt.Sprintf("<i class=\"fa fa-users\" aria-hidden=\"true\"></i> %s",
+						topArtists.Artists[0].Name)
+					playCountText := fmt.Sprintf("(%s plays)", humanize.Comma(int64(playCountN)))
+					if helpers.RuneLength(topArtists.Artists[0].Name)+1+helpers.RuneLength(playCountText) <= 20 {
+						playingStatus += " " + playCountText
+					}
 				}
 			}
 		}
