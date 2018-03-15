@@ -16,26 +16,19 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
-	rethink "github.com/gorethink/gorethink"
 )
 
 type Notifications struct{}
 
 var (
 	notificationSettingsCache []models.NotificationsEntry
-	ignoredChannelsCache      []DB_IgnoredChannel
+	ignoredChannelsCache      []models.NotificationsIgnoredChannelsEntry
 	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“"}
 )
 
 const (
 	UserConfigNotificationsLayoutModeKey = "notifications:layout-mode"
 )
-
-type DB_IgnoredChannel struct {
-	ID        string `gorethink:"id,omitempty"`
-	GuildID   string `gorethink:"guildid"`
-	ChannelID string `gorethink:"channelid"`
-}
 
 func (m *Notifications) Commands() []string {
 	return []string{
@@ -217,22 +210,15 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			helpers.Relax(err)
 			switch args[1] {
 			case "list": // [p]notifications ignore-channel list
-				var entryBucket []DB_IgnoredChannel
-				listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
-					rethink.Or(
-						rethink.Row.Field("guildid").Eq(commandIssueChannel.GuildID),
-					),
-				).Run(helpers.GetDB())
+				var entryBucket []models.NotificationsIgnoredChannelsEntry
+				err := helpers.MDbIter(helpers.MdbCollection(models.NotificationsIgnoredChannelsTable).Find(bson.M{"guildid": commandIssueChannel.GuildID})).All(&entryBucket)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&entryBucket)
 
-				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+				if entryBucket == nil || len(entryBucket) <= 0 {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.notifications.ignoredchannels-list-no-keywords-error"))
 					return
-				} else if err != nil {
-					helpers.Relax(err)
 				}
+				helpers.Relax(err)
 
 				resultMessage := fmt.Sprintf("Ignored channels on this server:\n")
 				for _, entry := range entryBucket {
@@ -258,13 +244,23 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						return
 					}
 
-					ignoredChannel := m.getIgnoredChannelBy("channelid", targetChannel.ID)
-					if ignoredChannel.ID == "" {
+					var entryBucket models.NotificationsIgnoredChannelsEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.NotificationsIgnoredChannelsTable).Find(bson.M{"channelid": targetChannel.ID}),
+						&entryBucket,
+					)
+
+					if err != nil && strings.Contains(err.Error(), "not found") {
 						// Add to list
-						ignoredChannel := m.getIgnoredChannelByOrCreateEmpty("id", "")
-						ignoredChannel.ChannelID = targetChannel.ID
-						ignoredChannel.GuildID = targetChannel.GuildID
-						m.setIgnoredChannel(ignoredChannel)
+						err = helpers.MDbUpsert(
+							models.NotificationsIgnoredChannelsTable,
+							bson.M{"channelid": targetChannel.ID, "guildid": targetChannel.GuildID},
+							models.NotificationsIgnoredChannelsEntry{
+								GuildID:   targetChannel.GuildID,
+								ChannelID: targetChannel.ID,
+							},
+						)
+						helpers.Relax(err)
 
 						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
 							models.EventlogTargetTypeChannel, msg.Author.ID,
@@ -279,24 +275,35 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						helpers.RelaxLog(err)
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-add-success", targetChannel.ID))
-					} else {
-						// Remove from list
-						m.deleteIgnoredChannel(ignoredChannel.ID)
 
-						_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
-							models.EventlogTargetTypeChannel, msg.Author.ID,
-							models.EventlogTypeRobyulNotificationsChannelIgnore, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "notifications_ignoredchannelids_removed",
-									Value: targetChannel.ID,
-								},
-							}, false)
-						helpers.RelaxLog(err)
+						go func() {
+							defer helpers.Recover()
 
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
+							err := m.refreshNotificationSettingsCache()
+							helpers.RelaxLog(err)
+						}()
+						return
 					}
+					helpers.Relax(err)
+
+					// Remove from list
+					err = helpers.MDbDelete(models.NotificationsIgnoredChannelsTable, entryBucket.ID)
+					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+						models.EventlogTargetTypeChannel, msg.Author.ID,
+						models.EventlogTypeRobyulNotificationsChannelIgnore, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "notifications_ignoredchannelids_removed",
+								Value: targetChannel.ID,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
+
 					go func() {
 						defer helpers.Recover()
 
@@ -740,78 +747,12 @@ func (m *Notifications) OnGuildMemberRemove(member *discordgo.Member, session *d
 
 }
 
-func (m *Notifications) getIgnoredChannelBy(key string, id string) DB_IgnoredChannel {
-	var entryBucket DB_IgnoredChannel
-	listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Notifications) getIgnoredChannelByOrCreateEmpty(key string, id string) DB_IgnoredChannel {
-	var entryBucket DB_IgnoredChannel
-	listCursor, err := rethink.Table("notifications_ignored_channels").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("notifications_ignored_channels").Insert(DB_IgnoredChannel{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getIgnoredChannelByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Notifications) setIgnoredChannel(entry DB_IgnoredChannel) {
-	_, err := rethink.Table("notifications_ignored_channels").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Notifications) deleteIgnoredChannel(id string) {
-	_, err := rethink.Table("notifications_ignored_channels").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-}
-
 func (m *Notifications) refreshNotificationSettingsCache() (err error) {
 	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(nil)).All(&notificationSettingsCache)
 	if err != nil {
 		return err
 	}
-	cursor, err := rethink.Table("notifications_ignored_channels").Run(helpers.GetDB())
-	if err != nil {
-		return err
-	}
-	err = cursor.All(&ignoredChannelsCache)
+	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsIgnoredChannelsTable).Find(nil)).All(&ignoredChannelsCache)
 	if err != nil {
 		return err
 	}

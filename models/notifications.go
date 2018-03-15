@@ -5,7 +5,8 @@ import (
 )
 
 const (
-	NotificationsTable MongoDbCollection = "notifications"
+	NotificationsTable                MongoDbCollection = "notifications"
+	NotificationsIgnoredChannelsTable MongoDbCollection = "notifications_ignored_channels"
 )
 
 type NotificationsEntry struct {
@@ -14,4 +15,10 @@ type NotificationsEntry struct {
 	GuildID   string // can be "global" to affect every guild
 	UserID    string
 	Triggered int
+}
+
+type NotificationsIgnoredChannelsEntry struct {
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	GuildID   string
+	ChannelID string
 }
