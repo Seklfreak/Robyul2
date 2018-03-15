@@ -721,6 +721,11 @@
     },
     "imgur": {
       "success": "I uploaded the image for you: <%s>. <a:ablobsunglasses:393869335657054210>"
+    },
+    "steam": {
+      "embed-footer": "powered by Steam",
+      "embed-footer-imageurl": "https://i.imgur.com/E5id18y.png",
+      "user-not-found": "I wasn't able to find the user with the given Steam ID or Steam Username."
     }
   }
 }

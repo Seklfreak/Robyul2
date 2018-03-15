@@ -136,5 +136,8 @@
   "thecatapi-api-key": "",
   "sushii-image-server": {
     "base": "http://localhost:3000"
+  },
+  "steam": {
+    "api_key": ""
   }
 }

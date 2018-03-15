@@ -64,6 +64,7 @@ var (
 		&plugins.Move{},
 		&plugins.Crypto{},
 		&plugins.Imgur{},
+		&plugins.Steam{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
