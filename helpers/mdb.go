@@ -160,9 +160,9 @@ func MDbInsertWithoutLogging(collection models.MongoDbCollection, data interface
 	return bson.ObjectId(newID), nil
 }
 
-func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
+func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (err error) {
 	if !id.Valid() {
-		return bson.ObjectId(""), errors.New("invalid id")
+		return errors.New("invalid id")
 	}
 
 	start := time.Now()
@@ -188,10 +188,10 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 	}
 
 	if err != nil {
-		return bson.ObjectId(""), err
+		return err
 	}
 
-	return id, nil
+	return nil
 }
 
 func MDbUpdateWithoutLogging(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {

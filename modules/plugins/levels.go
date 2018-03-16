@@ -529,11 +529,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		targetUserData, err := m.GetUserUserdata(targetUser)
 		helpers.Relax(err)
 		targetUserData.Rep += 1
-		_, err = helpers.MDbUpdate(models.ProfileUserdataTable, targetUserData.ID, targetUserData)
+		err = helpers.MDbUpdate(models.ProfileUserdataTable, targetUserData.ID, targetUserData)
 		helpers.Relax(err)
 
 		userData.LastRepped = time.Now()
-		_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+		err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
 		helpers.Relax(err)
 
 		_, err = helpers.SendMessage(msg.ChannelID,
@@ -571,7 +571,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					userUserdata.HideLastFm = true
 					message = helpers.GetText("plugins.levels.profile-lastfm-hidden")
 				}
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, message)
@@ -586,7 +586,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				userUserdata, err := m.GetUserUserdata(msg.Author)
 				helpers.Relax(err)
 				userUserdata.Title = titleText
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-title-set-success"))
@@ -600,7 +600,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 				userUserdata, err := m.GetUserUserdata(msg.Author)
 				userUserdata.Bio = bioText
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
@@ -687,7 +687,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					userUserdata, err := m.GetUserUserdata(msg.Author)
 					helpers.Relax(err)
 					userUserdata.Background = backgroundUrl
-					_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+					err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 					helpers.Relax(err)
 
 					go func() {
@@ -752,7 +752,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						userUserdata, err := m.GetUserUserdata(userToChange)
 						helpers.Relax(err)
 						userUserdata.Background = backgroundUrl
-						_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+						err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 						helpers.Relax(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID,
@@ -775,7 +775,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						userUserdata, err := m.GetUserUserdata(userToReset)
 						helpers.Relax(err)
 						userUserdata.Background = ""
-						_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+						err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 						helpers.Relax(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID,
@@ -934,7 +934,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					userUserdata, err := m.GetUserUserdata(msg.Author)
 					helpers.Relax(err)
 					userUserdata.Background = args[1]
-					_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+					err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 					helpers.Relax(err)
 
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-set-success"))
@@ -1636,7 +1636,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadgeList = append(newBadgeList, idToMove)
 						}
 						userData.ActiveBadgeIDs = newBadgeList
-						_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+						err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
 						helpers.Relax(err)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.move-badge-success"))
@@ -1688,7 +1688,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							if len(loopArgs) > 0 {
 								switch loopArgs[0] {
 								case "stop", "exit":
-									_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+									err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
 									helpers.Relax(err)
 									m.DeleteMessages(msg.ChannelID, lastBotMessageID)
 									_, err = helpers.SendMessage(msg.ChannelID,
@@ -1763,7 +1763,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												loopArgs = []string{"categories"}
 												userData.ActiveBadgeIDs = append(userData.ActiveBadgeIDs, badge.ID)
 												if len(userData.ActiveBadgeIDs) >= BadgeLimt {
-													_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+													err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
 													helpers.Relax(err)
 													m.DeleteMessages(msg.ChannelID, lastBotMessageID)
 													_, err = helpers.SendMessage(msg.ChannelID,
@@ -1804,7 +1804,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				time.Sleep(5 * time.Minute)
 				closeHandler()
 				if stoppedLoop == false {
-					_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
+					err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
 					helpers.Relax(err)
 					newActiveBadgePickerUserIDs := make(map[string]string, 0)
 					for activeBadgePickerUserID, activeBadgePickerChannelID := range activeBadgePickerUserIDs {
@@ -1855,7 +1855,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 					return
 				}
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-color-set-success"))
@@ -1902,7 +1902,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-opacity-set-success"))
@@ -1931,7 +1931,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					timeInTimezone = time.Now().In(loc).Format(TimeAtUserFormat)
 				}
 				userUserdata.Timezone = newTimezoneString
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				if timeInTimezone != "" {
@@ -1959,7 +1959,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				userUserdata, err := m.GetUserUserdata(msg.Author)
 				helpers.Relax(err)
 				userUserdata.Birthday = newBirthday
-				_, err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
+				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-birthday-set-success"))
@@ -2230,7 +2230,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							expBefore := levelsServerUser.Exp
 
 							levelsServerUser.Exp = 0
-							_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+							err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 
 							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
 								models.EventlogTargetTypeUser, msg.Author.ID,
@@ -2475,7 +2475,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					if levelsServersUsers != nil {
 						for _, levelsServerUser := range levelsServersUsers {
 							levelsServerUser.Exp = 0
-							_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+							err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 							helpers.Relax(err)
 						}
 					}
@@ -2536,7 +2536,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							levelsServerUser, err := m.getLevelsServerUserOrCreateNew(guildChannelCurrent.GuildID, userId)
 							helpers.Relax(err)
 							levelsServerUser.Exp += expForuser
-							_, err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+							err = helpers.MDbUpdate(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 							helpers.Relax(err)
 						}
 

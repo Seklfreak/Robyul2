@@ -275,7 +275,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 			// TODO: update triggered in cache
 			// increase triggered in DB by one
-			_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, bson.M{"$inc": bson.M{"triggered": 1}})
+			err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, bson.M{"$inc": bson.M{"triggered": 1}})
 			helpers.RelaxLog(err)
 			metrics.CustomCommandsTriggered.Add(1)
 
@@ -524,7 +524,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			entryBucket.StorageObjectName = objectName
 			entryBucket.StorageHash = hash
 			entryBucket.StorageMimeType = filetype
-			_, err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
+			err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
 			helpers.Relax(err)
 
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
@@ -854,7 +854,7 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 			customCommandsCache[i].Triggered += 1
 
 			// increase triggered in DB by one
-			_, err = helpers.MDbUpdate(models.CustomCommandsTable, customCommandsCache[i].ID, bson.M{"$inc": bson.M{"triggered": 1}})
+			err = helpers.MDbUpdate(models.CustomCommandsTable, customCommandsCache[i].ID, bson.M{"$inc": bson.M{"triggered": 1}})
 			helpers.RelaxLog(err)
 
 			metrics.CustomCommandsTriggered.Add(1)

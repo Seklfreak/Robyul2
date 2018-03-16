@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"strconv"
-
 	"time"
+
+	"regexp"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -14,7 +14,6 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -86,7 +85,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				helpers.MdbCollection(models.NotificationsTable).Find(
 					bson.M{"userid": msg.Author.ID,
 						"guildid": bson.M{"$in": []string{guild.ID, "global"}},
-						"keyword": bson.M{"$regex": bson.RegEx{Pattern: keywords, Options: "i"}},
+						"keyword": bson.M{"$regex": bson.RegEx{Pattern: "^" + regexp.QuoteMeta(keywords) + "$", Options: "i"}},
 					}),
 				&entryBucket,
 			)
@@ -143,7 +142,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				helpers.MdbCollection(models.NotificationsTable).Find(
 					bson.M{"userid": msg.Author.ID,
 						"guildid": bson.M{"$in": []string{guild.ID, "global"}},
-						"keyword": bson.M{"$regex": bson.RegEx{Pattern: keywords, Options: "i"}},
+						"keyword": bson.M{"$regex": bson.RegEx{Pattern: "^" + regexp.QuoteMeta(keywords) + "$", Options: "i"}},
 					}),
 				&entryBucket,
 			)
@@ -205,6 +204,63 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		case "ignore":
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+			session.ChannelTyping(msg.ChannelID)
+
+			keywords := strings.TrimSpace(strings.Replace(content, args[0], "", 1))
+
+			var entryBucket models.NotificationsEntry
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.NotificationsTable).Find(
+					bson.M{"userid": msg.Author.ID,
+						"guildid": "global",
+						"keyword": bson.M{"$regex": bson.RegEx{Pattern: "^" + regexp.QuoteMeta(keywords) + "$", Options: "i"}}}),
+				&entryBucket,
+			)
+			if err != nil && strings.Contains(err.Error(), "not found") {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.notifications.keyword-ignore-not-found-error"))
+				return
+			}
+			helpers.Relax(err)
+
+			ignoredGuildIDsWithout := make([]string, 0)
+			for _, alreadyIgnoredGuildID := range entryBucket.IgnoredGuildIDs {
+				if alreadyIgnoredGuildID != channel.GuildID {
+					ignoredGuildIDsWithout = append(ignoredGuildIDsWithout, alreadyIgnoredGuildID)
+				}
+			}
+
+			var message string
+			if len(ignoredGuildIDsWithout) != len(entryBucket.IgnoredGuildIDs) {
+				// remove ignoring
+				entryBucket.IgnoredGuildIDs = ignoredGuildIDsWithout
+				message = helpers.GetText("plugins.notifications.keyword-ignore-guild-removed")
+			} else {
+				// add ignoring
+				entryBucket.IgnoredGuildIDs = append(entryBucket.IgnoredGuildIDs, channel.GuildID)
+				message = helpers.GetText("plugins.notifications.keyword-ignore-guild-added")
+			}
+
+			err = helpers.MDbUpdate(models.NotificationsTable, entryBucket.ID, entryBucket)
+			helpers.Relax(err)
+
+			go func() {
+				defer helpers.Recover()
+
+				err := m.refreshNotificationSettingsCache()
+				helpers.RelaxLog(err)
+			}()
+
+			_, err = helpers.SendMessage(msg.ChannelID, message)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
 		case "ignore-channel":
 			if len(args) < 2 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
@@ -358,14 +414,7 @@ type PendingNotification struct {
 func (m *Notifications) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 	channel, err := helpers.GetChannelWithoutApi(msg.ChannelID)
 	if err != nil {
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-			"ChannelID":       msg.ChannelID,
-			"Content":         msg.Content,
-			"Timestamp":       string(msg.Timestamp),
-			"TTS":             strconv.FormatBool(msg.Tts),
-			"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-			"IsBot":           strconv.FormatBool(msg.Author.Bot),
-		})
+		helpers.RelaxLog(err)
 		return
 	}
 	if channel.GuildID == "" {
@@ -378,14 +427,7 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 				return
 			}
 		}
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-			"ChannelID":       msg.ChannelID,
-			"Content":         msg.Content,
-			"Timestamp":       string(msg.Timestamp),
-			"TTS":             strconv.FormatBool(msg.Tts),
-			"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
-			"IsBot":           strconv.FormatBool(msg.Author.Bot),
-		})
+		helpers.RelaxLog(err)
 		return
 	}
 
@@ -462,6 +504,14 @@ NextKeyword:
 			// ignore messages by the notification setting author
 			if notificationSetting.UserID == msg.Author.ID {
 				continue NextKeyword
+			}
+			// ignore message if in ignored guild for global keywords
+			if notificationSetting.IgnoredGuildIDs != nil && len(notificationSetting.IgnoredGuildIDs) > 0 {
+				for _, ignoredGuildID := range notificationSetting.IgnoredGuildIDs {
+					if ignoredGuildID == guild.ID {
+						return
+					}
+				}
 			}
 
 			matchContent := strings.ToLower(strings.TrimSpace(content))
@@ -633,7 +683,7 @@ NextKeyword:
 					go func() {
 						defer helpers.Recover()
 
-						_, err = helpers.MDbUpdate(models.NotificationsTable, idToIncrease, bson.M{"$inc": bson.M{"triggered": 1}})
+						err = helpers.MDbUpdate(models.NotificationsTable, idToIncrease, bson.M{"$inc": bson.M{"triggered": 1}})
 						helpers.RelaxLog(err)
 					}()
 				}
