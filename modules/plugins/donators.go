@@ -67,7 +67,7 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 	}
 
 	var donators []models.DonatorEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.DonatorsTable).Find(nil)).All(&donators)
+	err := helpers.MDbIter(helpers.MdbCollection(models.DonatorsTable).Find(nil).Sort("addedat")).All(&donators)
 	helpers.Relax(err)
 
 	if donators == nil || len(donators) <= 0 {
