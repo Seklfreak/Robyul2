@@ -119,7 +119,7 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 				Type:       "insert",
 				Method:     "MDbInsert()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
-				Data:       fmt.Sprintf("%+v", data),
+				Data:       truncateKeenValue(fmt.Sprintf("%+v", data)),
 			})
 			if err != nil {
 				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
@@ -179,7 +179,7 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 				Method:     "MDbUpdate()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Id:         MdbIdToHuman(id),
-				Data:       fmt.Sprintf("%+v", data),
+				Data:       truncateKeenValue(fmt.Sprintf("%+v", data)),
 			})
 			if err != nil {
 				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
@@ -227,7 +227,7 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 				Method:     "MDbUpsertID()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Id:         MdbIdToHuman(id),
-				Data:       fmt.Sprintf("%+v", data),
+				Data:       truncateKeenValue(fmt.Sprintf("%+v", data)),
 			})
 			if err != nil {
 				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
@@ -257,7 +257,7 @@ func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data i
 				Method:     "MDbUpsert()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
 				Query:      fmt.Sprintf("%+v", selector),
-				Data:       fmt.Sprintf("%+v", data),
+				Data:       truncateKeenValue(fmt.Sprintf("%+v", data)),
 			})
 			if err != nil {
 				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
@@ -380,6 +380,13 @@ func HumanToMdbId(text string) (id bson.ObjectId) {
 
 func stripRobyulDatabaseFromCollection(input string) (output string) {
 	return strings.TrimPrefix(input, mDbDatabase+".")
+}
+
+func truncateKeenValue(input string) string {
+	if len(input) < 8000 {
+		return input
+	}
+	return input[0:7999]
 }
 
 type KeenMongoDbEvent struct {
