@@ -42,7 +42,7 @@ type PerspectiveMessageValues struct {
 const (
 	PerspectiveThresholdSevereToxicity = 0.60
 	PerspectiveThresholdInflammatory   = 0.60
-	PerspectiveThresholdObscene        = 0.60
+	PerspectiveThresholdObscene        = 0.70
 	PerspectiveMessagesToEvaluate      = 3
 	PerspectiveEndpointAnalyze         = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
 )
