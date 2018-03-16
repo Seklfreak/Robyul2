@@ -178,7 +178,7 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 				Type:       "update",
 				Method:     "MDbUpdate()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
-				Id:         id.String(),
+				Id:         MdbIdToHuman(id),
 				Data:       fmt.Sprintf("%+v", data),
 			})
 			if err != nil {
@@ -226,7 +226,7 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 				Type:       "upsert",
 				Method:     "MDbUpsertID()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
-				Id:         id.String(),
+				Id:         MdbIdToHuman(id),
 				Data:       fmt.Sprintf("%+v", data),
 			})
 			if err != nil {
@@ -286,7 +286,7 @@ func MDbDelete(collection models.MongoDbCollection, id bson.ObjectId) (err error
 				Type:       "remove",
 				Method:     "MDbDelete()",
 				Collection: stripRobyulDatabaseFromCollection(collection.String()),
-				Id:         id.String(),
+				Id:         MdbIdToHuman(id),
 			})
 			if err != nil {
 				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
