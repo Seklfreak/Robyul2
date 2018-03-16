@@ -9,6 +9,8 @@ import (
 
 	"time"
 
+	"sync"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -20,12 +22,29 @@ import (
 type perspectiveAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next perspectiveAction)
 
 type Perspective struct {
-	googleApiKey  string
-	guildsToCheck []string
+	googleApiKey            string
+	guildsToCheck           []string
+	messageResultsCache     map[string][]PerspectiveMessageResult // map[guildid-channelid-userid][]PerspectiveMessageResult
+	messageResultsCacheLock sync.Mutex
+}
+
+type PerspectiveMessageResult struct {
+	message *discordgo.Message
+	result  PerspectiveMessageValues
+}
+
+type PerspectiveMessageValues struct {
+	SevereToxicity float64
+	Inflammatory   float64
+	Obscene        float64
 }
 
 const (
-	PerspectiveThreshold = 0.75
+	PerspectiveThresholdSevereToxicity = 0.75
+	PerspectiveThresholdInflammatory   = 0.75
+	PerspectiveThresholdObscene        = 0.75
+	PerspectiveMessagesToEvaluate      = 3
+	PerspectiveEndpointAnalyze         = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
 )
 
 func (m *Perspective) Commands() []string {
@@ -83,22 +102,26 @@ func (m *Perspective) actionTest(args []string, in *discordgo.Message, out **dis
 	message := strings.TrimSpace(strings.Replace(in.Content, strings.Split(in.Content, " ")[0], "", 1))
 
 	start := time.Now()
-	severeToxicity, inflammatory, err := m.analyze(message)
+	messageResults, err := m.analyze(message)
 	helpers.Relax(err)
 	took := time.Since(start)
 
-	var severeToxicityWarning, inflammatoryWarning string
-	if severeToxicity >= PerspectiveThreshold {
+	var severeToxicityWarning, inflammatoryWarning, obsceneWarning string
+	if messageResults.SevereToxicity >= PerspectiveThresholdSevereToxicity {
 		severeToxicityWarning = " ⚠"
 	}
-	if inflammatory >= PerspectiveThreshold {
+	if messageResults.Inflammatory >= PerspectiveThresholdInflammatory {
 		inflammatoryWarning = " ⚠"
+	}
+	if messageResults.Obscene >= PerspectiveThresholdObscene {
+		obsceneWarning = " ⚠"
 	}
 
 	*out = m.newMsg(fmt.Sprintf(
-		"Severe Toxicity: %.2f%s, Inflammatory: %.2f%s\nTook %s",
-		severeToxicity, severeToxicityWarning,
-		inflammatory, inflammatoryWarning,
+		"Severe Toxicity: %.2f%s, Inflammatory: %.2f%s, Obscene: %.2f%s\nTook %s",
+		messageResults.SevereToxicity, severeToxicityWarning,
+		messageResults.Inflammatory, inflammatoryWarning,
+		messageResults.Obscene, obsceneWarning,
 		took.String(),
 	))
 	return m.actionFinish
@@ -106,6 +129,7 @@ func (m *Perspective) actionTest(args []string, in *discordgo.Message, out **dis
 
 // [p]perspective participate [<#channel or channel id>]
 func (m *Perspective) actionParticipate(args []string, in *discordgo.Message, out **discordgo.MessageSend) perspectiveAction {
+	// TODO: remove robyul mod check in the future
 	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = m.newMsg("robyulmod.no_permission")
 		return m.actionFinish
@@ -181,78 +205,147 @@ func (m *Perspective) OnMessage(content string, msg *discordgo.Message, session 
 		return
 	}
 	// analyze
-	severeToxicity, inflammatory, err := m.analyze(msg.Content)
+	messageResult, err := m.analyze(msg.Content)
 	helpers.Relax(err)
-	// check threshold
-	if severeToxicity < PerspectiveThreshold &&
-		inflammatory < PerspectiveThreshold {
-		return
-	}
+	// add message + results to cache
+	m.addMessageToCache(channel.GuildID, channel.ID, msg.Author.ID, msg, messageResult)
+	// calculate means
+	meanResults := m.calculatedCachedMessagesMean(channel.GuildID, channel.ID, msg.Author.ID)
 	// debug
-	//m.logger().Debugf("Severe Toxicity: %.2f, Inflammatory: %.2f, message: %s",
-	//	severeToxicity, inflammatory, msg.Content,
-	//)
-	// send warning
-	err = m.sendWarning(channel.GuildID, msg, severeToxicity, inflammatory)
-	helpers.RelaxLog(err)
+	m.logger().Debugf("Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f, message: %s, mean (last %d): Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f",
+		messageResult.SevereToxicity, messageResult.Inflammatory, messageResult.Obscene, msg.Content,
+		PerspectiveMessagesToEvaluate, meanResults.SevereToxicity, meanResults.Inflammatory, meanResults.Obscene,
+	)
+	// check threshold
+	if meanResults.SevereToxicity >= PerspectiveThresholdSevereToxicity ||
+		meanResults.Inflammatory >= PerspectiveThresholdInflammatory ||
+		meanResults.Obscene >= PerspectiveThresholdObscene {
+		// send warning
+		err = m.sendWarning(channel.GuildID, channel.ID, msg.Author.ID, meanResults)
+		helpers.RelaxLog(err)
+	}
 }
 
-func (m *Perspective) sendWarning(guildID string, message *discordgo.Message, severeToxicity, inflammatory float64) (err error) {
+func (m *Perspective) addMessageToCache(guildID, channelID, userID string, msg *discordgo.Message, results PerspectiveMessageValues) {
+	m.messageResultsCacheLock.Lock()
+	defer m.messageResultsCacheLock.Unlock()
+	// init variables
+	key := guildID + "-" + channelID + "-" + userID
+	newEntry := PerspectiveMessageResult{
+		message: msg,
+		result:  results,
+	}
+	// initialize slice if needed
+	if m.messageResultsCache == nil {
+		m.messageResultsCache = make(map[string][]PerspectiveMessageResult, 0)
+	}
+	if _, ok := m.messageResultsCache[key]; !ok || m.messageResultsCache[key] == nil {
+		m.messageResultsCache[key] = make([]PerspectiveMessageResult, 0)
+	}
+	// add to slice
+	m.messageResultsCache[key] = append(m.messageResultsCache[key], newEntry)
+	// truncate slice if too big
+	if len(m.messageResultsCache[key]) > PerspectiveMessagesToEvaluate {
+		m.messageResultsCache[key] = m.messageResultsCache[key][len(m.messageResultsCache[key])-PerspectiveMessagesToEvaluate:]
+	}
+}
+
+func (m *Perspective) calculatedCachedMessagesMean(guildID, channelID, userID string) (meanResults PerspectiveMessageValues) {
+	m.messageResultsCacheLock.Lock()
+	defer m.messageResultsCacheLock.Unlock()
+	// init variables
+	key := guildID + "-" + channelID + "-" + userID
+	// check if cache exists
+	if _, ok := m.messageResultsCache[key]; !ok || m.messageResultsCache[key] == nil || len(m.messageResultsCache[key]) < 1 {
+		return meanResults
+	}
+	// cache big enough?
+	if len(m.messageResultsCache[key]) < PerspectiveMessagesToEvaluate {
+		return meanResults
+	}
+	// calculate means
+	for _, cachedMessage := range m.messageResultsCache[key] {
+		meanResults.SevereToxicity += cachedMessage.result.SevereToxicity
+		meanResults.Inflammatory += cachedMessage.result.Inflammatory
+		meanResults.Obscene += cachedMessage.result.Obscene
+	}
+	meanResults.SevereToxicity = meanResults.SevereToxicity / float64(len(m.messageResultsCache[key]))
+	meanResults.Inflammatory = meanResults.Inflammatory / float64(len(m.messageResultsCache[key]))
+	meanResults.Obscene = meanResults.Obscene / float64(len(m.messageResultsCache[key]))
+	return meanResults
+}
+
+func (m *Perspective) sendWarning(guildID, channelID, userID string, avgResults PerspectiveMessageValues) (err error) {
 	settings := helpers.GuildSettingsGetCached(guildID)
 
 	if !settings.PerspectiveIsParticipating || settings.PerspectiveChannelID == "" {
 		return errors.New("guild is not participating")
 	}
 
-	timestamp, err := message.Timestamp.Parse()
-	if err != nil {
-		timestamp = time.Now()
+	m.messageResultsCacheLock.Lock()
+	defer m.messageResultsCacheLock.Unlock()
+	// init variables
+	key := guildID + "-" + channelID + "-" + userID
+	// check if cache exists
+	if _, ok := m.messageResultsCache[key]; !ok || m.messageResultsCache[key] == nil || len(m.messageResultsCache[key]) < 1 {
+		return nil
 	}
 
-	severeToxicityWarning := "✅ "
-	inflammatoryWarning := "✅ "
-	if severeToxicity >= PerspectiveThreshold {
-		severeToxicityWarning = "⚠ "
-	}
-	if inflammatory >= PerspectiveThreshold {
-		inflammatoryWarning = "⚠ "
+	author := m.messageResultsCache[key][0].message.Author
+	lastMessageTimestamp, err := m.messageResultsCache[key][len(m.messageResultsCache[key])-1].message.Timestamp.Parse()
+	if err != nil {
+		lastMessageTimestamp = time.Now()
 	}
 
 	warningEmbed := &discordgo.MessageEmbed{
-		Title:       "detected a message that possibly requires action",
-		Description: message.Content,
-		Timestamp:   timestamp.Format(time.RFC3339),
-		Color:       helpers.GetDiscordColorFromHex("ffb80a"), // orange
+		Title:       "detected messages by user that possibly requires action",
+		Description: "",
+		Timestamp:   lastMessageTimestamp.Format(time.RFC3339), // TODO: is last message timestamp?
+		Color:       helpers.GetDiscordColorFromHex("ffb80a"),  // orange
 		Footer: &discordgo.MessageEmbedFooter{
-			Text:    helpers.GetText("plugins.perspective.embed-footer"),
+			Text: fmt.Sprintf("Avg Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f | ",
+				avgResults.SevereToxicity, avgResults.Inflammatory, avgResults.Obscene) +
+				helpers.GetText("plugins.perspective.embed-footer"),
 			IconURL: helpers.GetText("plugins.perspective.embed-footer-imageurl"),
 		},
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    message.Author.Username + "#" + message.Author.Discriminator + " (#" + message.Author.ID + ")",
-			IconURL: message.Author.AvatarURL("64"),
+			Name:    author.Username + "#" + author.Discriminator + " (#" + author.ID + ")",
+			IconURL: author.AvatarURL("64"),
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name:   "Severe Toxicity",
-				Value:  fmt.Sprintf("%s%.2f", severeToxicityWarning, severeToxicity),
-				Inline: true,
-			},
-			{
-				Name:   "Inflammatory",
-				Value:  fmt.Sprintf("%s%.2f", inflammatoryWarning, inflammatory),
-				Inline: true,
-			},
-			{
-				Name: "Channel", Value: "<#" + message.ChannelID + ">", Inline: false,
+				Name: "Channel", Value: "<#" + channelID + ">", Inline: false,
 			},
 		},
 	}
+
+	var severeToxicityWarning, inflammatoryWarning, obsceneWarning string
+	for _, cachedMessage := range m.messageResultsCache[key] {
+		severeToxicityWarning = "✅"
+		inflammatoryWarning = "✅"
+		obsceneWarning = "✅"
+		if cachedMessage.result.SevereToxicity >= PerspectiveThresholdSevereToxicity {
+			severeToxicityWarning = "⚠"
+		}
+		if cachedMessage.result.Inflammatory >= PerspectiveThresholdInflammatory {
+			inflammatoryWarning = "⚠"
+		}
+		if cachedMessage.result.Obscene >= PerspectiveThresholdObscene {
+			obsceneWarning = "⚠"
+		}
+		messageTimestamp, err := cachedMessage.message.Timestamp.Parse()
+		if err != nil {
+			messageTimestamp = time.Now()
+		}
+		warningEmbed.Description += severeToxicityWarning + inflammatoryWarning + obsceneWarning + " `" + messageTimestamp.Format(time.ANSIC) + " UTC`: `" + cachedMessage.message.Content + "`\n"
+	}
+	warningEmbed.Description += "`Severe Toxicity` / `Inflammatory` / `Obscene`"
 
 	_, err = helpers.SendEmbed(settings.PerspectiveChannelID, warningEmbed)
 	return err
 }
 
-func (m *Perspective) analyze(message string) (severeToxicity, inflammatory float64, err error) {
+func (m *Perspective) analyze(message string) (results PerspectiveMessageValues, err error) {
 	// TODO: strip emoji
 	requestData := &PerspectiveRequest{}
 	requestData.Comment.Text = message
@@ -260,28 +353,30 @@ func (m *Perspective) analyze(message string) (severeToxicity, inflammatory floa
 
 	marshalled, err := json.Marshal(requestData)
 	if err != nil {
-		return 0, 0, err
+		return results, err
 	}
 
 	resultData, err := helpers.NetPostUAWithError(
-		"https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key="+m.googleApiKey,
+		PerspectiveEndpointAnalyze+"?key="+m.googleApiKey,
 		string(marshalled),
 		helpers.DEFAULT_UA,
 	)
 	metrics.PerspectiveApiRequests.Add(1)
 	if err != nil {
-		return 0, 0, err
+		return results, err
 	}
 
 	var response PerspectiveResponse
 	err = json.Unmarshal(resultData, &response)
 	if err != nil {
-		return 0, 0, err
+		return results, err
 	}
 
-	return response.AttributeScores.SevereToxicity.SummaryScore.Value,
-		response.AttributeScores.Inflammatory.SummaryScore.Value,
-		nil
+	return PerspectiveMessageValues{
+		SevereToxicity: response.AttributeScores.SevereToxicity.SummaryScore.Value,
+		Inflammatory:   response.AttributeScores.Inflammatory.SummaryScore.Value,
+		Obscene:        response.AttributeScores.Obscene.SummaryScore.Value,
+	}, nil
 }
 
 func (m *Perspective) cacheGuildsToCheck() (err error) {
@@ -355,6 +450,7 @@ type PerspectiveRequest struct {
 	RequestedAttributes struct {
 		SevereToxicity struct{} `json:"SEVERE_TOXICITY"`
 		Inflammatory   struct{} `json:"INFLAMMATORY"`
+		Obscene        struct{} `json:"OBSCENE"`
 	} `json:"requestedAttributes"`
 }
 
@@ -372,5 +468,11 @@ type PerspectiveResponse struct {
 				Type  string  `json:"type"`
 			} `json:"summaryScore"`
 		} `json:"INFLAMMATORY"`
+		Obscene struct {
+			SummaryScore struct {
+				Value float64 `json:"value"`
+				Type  string  `json:"type"`
+			} `json:"summaryScore"`
+		} `json:"OBSCENE"`
 	} `json:"attributeScores"`
 }
