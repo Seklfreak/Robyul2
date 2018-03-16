@@ -40,9 +40,9 @@ type PerspectiveMessageValues struct {
 }
 
 const (
-	PerspectiveThresholdSevereToxicity = 0.75
-	PerspectiveThresholdInflammatory   = 0.75
-	PerspectiveThresholdObscene        = 0.75
+	PerspectiveThresholdSevereToxicity = 0.60
+	PerspectiveThresholdInflammatory   = 0.60
+	PerspectiveThresholdObscene        = 0.60
 	PerspectiveMessagesToEvaluate      = 3
 	PerspectiveEndpointAnalyze         = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
 )
@@ -52,6 +52,8 @@ func (m *Perspective) Commands() []string {
 		"perspective",
 	}
 }
+
+// TODO: prevent multiple notifications for the same messages
 
 func (m *Perspective) Init(session *discordgo.Session) {
 	m.googleApiKey = helpers.GetConfig().Path("google.api_key").Data().(string)
@@ -212,10 +214,10 @@ func (m *Perspective) OnMessage(content string, msg *discordgo.Message, session 
 	// calculate means
 	meanResults := m.calculatedCachedMessagesMean(channel.GuildID, channel.ID, msg.Author.ID)
 	// debug
-	m.logger().Debugf("Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f, message: %s, mean (last %d): Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f",
-		messageResult.SevereToxicity, messageResult.Inflammatory, messageResult.Obscene, msg.Content,
-		PerspectiveMessagesToEvaluate, meanResults.SevereToxicity, meanResults.Inflammatory, meanResults.Obscene,
-	)
+	//m.logger().Debugf("Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f, message: %s, mean (last %d): Severe Toxicity: %.2f, Inflammatory: %.2f, Obscene: %.2f",
+	//	messageResult.SevereToxicity, messageResult.Inflammatory, messageResult.Obscene, msg.Content,
+	//	PerspectiveMessagesToEvaluate, meanResults.SevereToxicity, meanResults.Inflammatory, meanResults.Obscene,
+	//)
 	// check threshold
 	if meanResults.SevereToxicity >= PerspectiveThresholdSevereToxicity ||
 		meanResults.Inflammatory >= PerspectiveThresholdInflammatory ||
