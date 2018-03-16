@@ -90,49 +90,52 @@ func (t *Twitter) Init(session *discordgo.Session) {
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			item := <-twitterStream.C
-			switch tweet := item.(type) {
-			case anaconda.Tweet:
-				for _, entry := range twitterEntriesCache {
-					if entry.AccountID != tweet.User.IdStr {
-						continue
-					}
-
-					entryID := entry.ID
-					t.lockEntry(entryID)
-
-					entry, err := t.getEntryBy("id", entry.ID)
-					if err != nil {
-						t.unlockEntry(entryID)
-						helpers.RelaxLog(err)
-						continue
-					}
-
-					changes := false
-					tweetAlreadyPosted := false
-
-					for _, postedTweet := range entry.PostedTweets {
-						if postedTweet.ID == tweet.IdStr {
-							tweetAlreadyPosted = true
+			for event := range twitterStream.C {
+				switch item := event.(type) {
+				case anaconda.Tweet:
+					for _, entry := range twitterEntriesCache {
+						if entry.AccountID != item.User.IdStr {
+							continue
 						}
-					}
-					if tweetAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", tweet.IdStr, entry.ChannelID))
-						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IdStr, CreatedAt: tweet.CreatedAt})
-						changes = true
-						go t.postAnacondaTweetToChannel(entry.ChannelID, &tweet, &tweet.User, entry)
-					}
 
-					if changes == true {
-						err = t.setEntry(entry)
+						entryID := entry.ID
+						t.lockEntry(entryID)
+
+						entry, err := t.getEntryBy("id", entry.ID)
 						if err != nil {
 							t.unlockEntry(entryID)
 							helpers.RelaxLog(err)
 							continue
 						}
-					}
 
-					t.unlockEntry(entryID)
+						changes := false
+						tweetAlreadyPosted := false
+
+						for _, postedTweet := range entry.PostedTweets {
+							if postedTweet.ID == item.IdStr {
+								tweetAlreadyPosted = true
+							}
+						}
+						if tweetAlreadyPosted == false {
+							cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", item.IdStr, entry.ChannelID))
+							entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: item.IdStr, CreatedAt: item.CreatedAt})
+							changes = true
+							go t.postAnacondaTweetToChannel(entry.ChannelID, &item, &item.User, entry)
+						}
+
+						if changes == true {
+							err = t.setEntry(entry)
+							if err != nil {
+								t.unlockEntry(entryID)
+								helpers.RelaxLog(err)
+								continue
+							}
+						}
+
+						t.unlockEntry(entryID)
+					}
+				case anaconda.StallWarning:
+					cache.GetLogger().WithField("module", "twitter").Warn("received stall warning from twitter stream:", item.Message)
 				}
 			}
 		}

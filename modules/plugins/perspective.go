@@ -54,6 +54,7 @@ func (m *Perspective) Commands() []string {
 }
 
 // TODO: prevent multiple notifications for the same messages
+// TODO: add timeout between specific user messages (don't notify for old messages)
 
 func (m *Perspective) Init(session *discordgo.Session) {
 	m.googleApiKey = helpers.GetConfig().Path("google.api_key").Data().(string)
