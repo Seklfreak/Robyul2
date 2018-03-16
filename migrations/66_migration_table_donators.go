@@ -62,7 +62,6 @@ func m66_migration_table_donators() {
 	}
 	bar.Finish()
 
-	return
 	cache.GetLogger().WithField("module", "migrations").Info("dropping rethinkdb donators")
 	_, err = gorethink.TableDrop("donators").Run(helpers.GetDB())
 	if err != nil {
