@@ -21,9 +21,13 @@ import (
 type Notifications struct{}
 
 var (
-	notificationSettingsCache []models.NotificationsEntry
-	ignoredChannelsCache      []models.NotificationsIgnoredChannelsEntry
-	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“"}
+	notificationSettingsCache      []models.NotificationsEntry
+	ignoredChannelsCache           []models.NotificationsIgnoredChannelsEntry
+	ValidTextDelimiters            = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“"}
+	NotificationsWhitelistedBotIDs = []string{
+		"178215222614556673", // Fiscord-IRC (Kakkela)
+		"232927528325611521", // TrelleIRC (Kakkela)
+	}
 )
 
 const (
@@ -393,12 +397,21 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 		}
 	}
 	// ignore music bot prefixes
-	if strings.HasPrefix(content, "__") || strings.HasPrefix(content, "//") {
+	if strings.HasPrefix(content, "__") || strings.HasPrefix(content, "//") ||
+		strings.HasPrefix(content, "___") || strings.HasPrefix(content, "///") {
 		return
 	}
-	// ignore bot messages
-	if msg.Author.Bot == true {
-		return
+	// ignore bot messages except whitelisted bots
+	if msg.Author.Bot {
+		var isWhitelisted bool
+		for _, whitelistedBotID := range NotificationsWhitelistedBotIDs {
+			if msg.Author.ID == whitelistedBotID {
+				isWhitelisted = true
+			}
+		}
+		if !isWhitelisted {
+			return
+		}
 	}
 
 	for _, ignoredChannel := range ignoredChannelsCache {
