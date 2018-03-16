@@ -211,7 +211,7 @@ func CollectRuntimeMetrics() {
 
 		InstagramAccountsCount.Set(entriesCount("instagram"))
 
-		TwitterAccountsCount.Set(entriesCount("twitter"))
+		TwitterAccountsCount.Set(int64(entriesCountMgo(models.TwitterTable)))
 
 		FacebookPagesCount.Set(entriesCount("facebook"))
 
@@ -250,9 +250,17 @@ func CollectRuntimeMetrics() {
 }
 
 func entriesCount(table string) (cnt int64) {
+
 	cursor, err := rethink.Table(table).Count().Run(helpers.GetDB())
 	helpers.Relax(err)
 	cursor.One(&cnt)
 	cursor.Close()
 	return
+}
+
+func entriesCountMgo(table models.MongoDbCollection) (count int) {
+	var err error
+	count, err = helpers.MdbCollection(table).Find(nil).Count()
+	helpers.Relax(err)
+	return count
 }

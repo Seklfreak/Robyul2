@@ -14,7 +14,6 @@ var migrations = []helpers.Callback{
 	m2_create_table_reminders,
 	m3_create_table_music,
 	m4_create_table_vlive,
-	m5_create_table_twitter,
 	m6_create_table_instagram,
 	m7_create_table_facebook,
 	m9_create_table_bias,
@@ -65,6 +64,7 @@ var migrations = []helpers.Callback{
 	m62_migration_table_lastfm,
 	m63_migration_table_notifications,
 	m64_migration_table_notifications_ignored_channels,
+	m65_migration_table_twitter,
 }
 
 // Run executes all registered migrations

@@ -22,34 +22,18 @@ import (
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 )
 
 type Twitter struct{}
-
-type DB_Twitter_Entry struct {
-	ID                string             `gorethink:"id,omitempty"`
-	ServerID          string             `gorethink:"serverid"`
-	ChannelID         string             `gorethink:"channelid"`
-	AccountScreenName string             `gorethink:"account_screen_name"`
-	PostedTweets      []DB_Twitter_Tweet `gorethink:"posted_tweets"`
-	AccountID         string             `gorethink:"account_id"`
-	MentionRoleID     string             `gorethink:"mention_role_id"`
-	PostMode          int                `gorethink:"post_mode"`
-}
-
-type DB_Twitter_Tweet struct {
-	ID        string `gorethink:"id,omitempty"`
-	CreatedAt string `gorethink:"createdat"`
-}
 
 var (
 	anacondaClient           *anaconda.TwitterApi
 	twitterClient            *twitter.Client
 	twitterStream            *anaconda.Stream
 	twitterStreamNeedsUpdate bool
-	twitterEntriesCache      []DB_Twitter_Entry
+	twitterEntriesCache      []models.TwitterEntry
 	twitterStreamIsStarting  sync.Mutex
 	twitterEntryLocks        = make(map[string]*sync.Mutex)
 )
@@ -101,7 +85,10 @@ func (t *Twitter) Init(session *discordgo.Session) {
 						entryID := entry.ID
 						t.lockEntry(entryID)
 
-						entry, err := t.getEntryBy("id", entry.ID)
+						err := helpers.MdbOne(
+							helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": entry.ID}),
+							&entry,
+						)
 						if err != nil {
 							t.unlockEntry(entryID)
 							helpers.RelaxLog(err)
@@ -118,13 +105,17 @@ func (t *Twitter) Init(session *discordgo.Session) {
 						}
 						if tweetAlreadyPosted == false {
 							cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", item.IdStr, entry.ChannelID))
-							entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: item.IdStr, CreatedAt: item.CreatedAt})
+							entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: item.IdStr, CreatedAt: item.CreatedAt})
 							changes = true
 							go t.postAnacondaTweetToChannel(entry.ChannelID, &item, &item.User, entry)
 						}
 
 						if changes == true {
-							err = t.setEntry(entry)
+							err = helpers.MDbUpsertID(
+								models.TwitterTable,
+								entry.ID,
+								entry,
+							)
 							if err != nil {
 								t.unlockEntry(entryID)
 								helpers.RelaxLog(err)
@@ -166,9 +157,7 @@ func (t *Twitter) startTwitterStream() {
 	var err error
 	var accountIDs []string
 
-	cursor, err := rethink.Table("twitter").Run(helpers.GetDB())
-	helpers.Relax(err)
-	err = cursor.All(&twitterEntriesCache)
+	err = helpers.MDbIter(helpers.MdbCollection(models.TwitterTable).Find(nil)).All(&twitterEntriesCache)
 	helpers.Relax(err)
 
 	for _, entry := range twitterEntriesCache {
@@ -188,7 +177,11 @@ func (t *Twitter) startTwitterStream() {
 				idToAdd = user.IDStr
 				if idToAdd != "" && idToAdd != "0" {
 					entry.AccountID = idToAdd
-					err := t.setEntry(entry)
+					err = helpers.MDbUpsertID(
+						models.TwitterTable,
+						entry.ID,
+						entry,
+					)
 					if err != nil {
 						helpers.RelaxLog(err)
 						continue
@@ -258,10 +251,10 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		}()
 	}()
 
-	var bundledEntries map[string][]DB_Twitter_Entry
+	var bundledEntries map[string][]models.TwitterEntry
 
 	for {
-		bundledEntries = make(map[string][]DB_Twitter_Entry, 0)
+		bundledEntries = make(map[string][]models.TwitterEntry, 0)
 
 		for _, entry := range twitterEntriesCache {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
@@ -274,7 +267,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			if _, ok := bundledEntries[entry.AccountScreenName]; ok {
 				bundledEntries[entry.AccountScreenName] = append(bundledEntries[entry.AccountScreenName], entry)
 			} else {
-				bundledEntries[entry.AccountScreenName] = []DB_Twitter_Entry{entry}
+				bundledEntries[entry.AccountScreenName] = []models.TwitterEntry{entry}
 			}
 		}
 
@@ -313,12 +306,13 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				entryID := entry.ID
 				m.lockEntry(entryID)
 
-				entry, err := m.getEntryBy("id", entry.ID)
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": entry.ID}),
+					&entry,
+				)
 				if err != nil {
 					m.unlockEntry(entryID)
-					if !strings.Contains(err.Error(), "The result does not contain any more rows") {
-						helpers.RelaxLog(err)
-					}
+					helpers.RelaxLog(err)
 					continue
 				}
 
@@ -333,7 +327,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 					}
 					if tweetAlreadyPosted == false {
 						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s to: #%s", tweet.IDStr, entry.ChannelID))
-						entry.PostedTweets = append(entry.PostedTweets, DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
+						entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
 						tweetToPost := tweet
 						go m.postTweetToChannel(entry.ChannelID, &tweetToPost, twitterUser, entry)
@@ -341,7 +335,11 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 
 				}
 				if changes == true {
-					err = m.setEntry(entry)
+					err = helpers.MDbUpsertID(
+						models.TwitterTable,
+						entry.ID,
+						entry,
+					)
 					if err != nil {
 						m.unlockEntry(entryID)
 						helpers.RelaxLog(err)
@@ -441,58 +439,61 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						return
 					}
 				}
-				var postMode int
+				postMode := models.TwitterPostModeRobyulEmbed
 				if strings.HasSuffix(content, " discord-embed") {
-					postMode = 1
+					postMode = models.TwitterPostModeDiscordEmbed
 				}
 				// Create DB Entries
-				var dbTweets []DB_Twitter_Tweet
+				var dbTweets []models.TwitterTweetEntry
 				for _, tweet := range twitterUserTweets {
-					tweetEntry := DB_Twitter_Tweet{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt}
+					tweetEntry := models.TwitterTweetEntry{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt}
 					dbTweets = append(dbTweets, tweetEntry)
 
 				}
 				// create new entry in db
-				entry := m.getEntryByOrCreateEmpty("id", "")
-				entry.ServerID = targetChannel.GuildID
-				entry.ChannelID = targetChannel.ID
-				entry.AccountScreenName = twitterUser.ScreenName
-				entry.PostedTweets = dbTweets
-				entry.AccountID = twitterUser.IDStr
-				entry.MentionRoleID = mentionRole.ID
-				entry.PostMode = postMode // TODO
-				err = m.setEntry(entry)
+				newID, err := helpers.MDbInsert(
+					models.TwitterTable,
+					models.TwitterEntry{
+						GuildID:           targetChannel.GuildID,
+						ChannelID:         targetChannel.ID,
+						AccountScreenName: twitterUser.ScreenName,
+						AccountID:         twitterUser.IDStr,
+						PostedTweets:      dbTweets,
+						MentionRoleID:     mentionRole.ID,
+						PostMode:          postMode,
+					},
+				)
 				helpers.Relax(err)
 
 				twitterStreamNeedsUpdate = true
 
 				postModeText := "robyul embed"
-				switch entry.PostMode {
-				case 1:
+				switch postMode {
+				case models.TwitterPostModeDiscordEmbed:
 					postModeText = "discord embed"
 					break
 				}
 
-				_, err = helpers.EventlogLog(time.Now(), entry.ServerID, entry.ID,
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, helpers.MdbIdToHuman(newID),
 					models.EventlogTargetTypeRobyulTwitterFeed, msg.Author.ID,
 					models.EventlogTypeRobyulTwitterFeedAdd, "",
 					nil,
 					[]models.ElasticEventlogOption{
 						{
 							Key:   "twitter_channelid",
-							Value: entry.ChannelID,
+							Value: targetChannel.ID,
 						},
 						{
 							Key:   "twitter_accountscreename",
-							Value: entry.AccountScreenName,
+							Value: twitterUser.ScreenName,
 						},
 						{
 							Key:   "twitter_accountid",
-							Value: entry.AccountID,
+							Value: twitterUser.IDStr,
 						},
 						{
 							Key:   "twitter_mentionroleid",
-							Value: entry.MentionRoleID,
+							Value: mentionRole.ID,
 						},
 						{
 							Key:   "twitter_postmode",
@@ -501,32 +502,42 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					}, false)
 				helpers.RelaxLog(err)
 
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", entry.AccountScreenName, entry.ChannelID))
-				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.AccountScreenName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-added-success", twitterUser.ScreenName, targetChannel.ID))
+				cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("Added Twitter Account @%s to Channel %s (#%s) on Guild %s (#%s)", twitterUser.ScreenName, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]twitter delete <id>
 			helpers.RequireMod(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
 					entryId := args[1]
-					entryBucket, err := m.getEntryBy("id", entryId)
-					if (err != nil && strings.Contains(err.Error(), "The result does not contain any more rows")) || entryBucket.ID == "" {
+					var entryBucket models.TwitterEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": helpers.HumanToMdbId(entryId), "guildid": channel.GuildID}),
+						&entryBucket,
+					)
+					if (err != nil && strings.Contains(err.Error(), "not found")) || entryBucket.ID == "" {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
 						return
 					}
 					helpers.Relax(err)
-					m.deleteEntryById(entryBucket.ID)
+
+					err = helpers.MDbDelete(models.TwitterTable, entryBucket.ID)
+					helpers.Relax(err)
 
 					twitterStreamNeedsUpdate = true
 
 					postModeText := "robyul embed"
 					switch entryBucket.PostMode {
-					case 1:
+					case models.TwitterPostModeDiscordEmbed:
 						postModeText = "discord embed"
 						break
 					}
 
-					_, err = helpers.EventlogLog(time.Now(), entryBucket.ServerID, entryBucket.ID,
+					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
 						models.EventlogTargetTypeRobyulTwitterFeed, msg.Author.ID,
 						models.EventlogTypeRobyulTwitterFeedRemove, "",
 						nil,
@@ -565,26 +576,22 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 		case "list": // [p]twitter list
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			var entryBucket []DB_Twitter_Entry
-			listCursor, err := rethink.Table("twitter").Filter(
-				rethink.Row.Field("serverid").Eq(currentChannel.GuildID),
-			).Run(helpers.GetDB())
-			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			var entryBucket []models.TwitterEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.TwitterTable).Find(bson.M{"guildid": currentChannel.GuildID})).All(&entryBucket)
+			helpers.Relax(err)
+
+			helpers.Relax(err)
+			if entryBucket == nil || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitter.account-list-no-accounts-error"))
 				return
-			} else if err != nil {
-				helpers.Relax(err)
 			}
 
 			resultMessage := ""
 			for _, entry := range entryBucket {
 				var specialText string
 				switch entry.PostMode {
-				case 1:
+				case models.TwitterPostModeDiscordEmbed:
 					specialText += " as discord embed"
 					break
 				}
@@ -597,7 +604,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					}
 				}
 				resultMessage += fmt.Sprintf("`%s`: Twitter Account `@%s` posting to <#%s>%s\n",
-					entry.ID, entry.AccountScreenName, entry.ChannelID, specialText)
+					helpers.MdbIdToHuman(entry.ID), entry.AccountScreenName, entry.ChannelID, specialText)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitter Accounts in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
@@ -673,8 +680,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 	}
 }
 
-func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User, entry DB_Twitter_Entry) {
-	if entry.PostMode == 1 {
+func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User, entry models.TwitterEntry) {
+	if entry.PostMode == models.TwitterPostModeDiscordEmbed {
 		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr))
 		if entry.MentionRoleID != "" {
 			content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
@@ -772,8 +779,8 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 	}
 }
 
-func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.Tweet, twitterUser *anaconda.User, entry DB_Twitter_Entry) {
-	if entry.PostMode == 1 {
+func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.Tweet, twitterUser *anaconda.User, entry models.TwitterEntry) {
+	if entry.PostMode == models.TwitterPostModeDiscordEmbed {
 		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IdStr))
 		if entry.MentionRoleID != "" {
 			content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
@@ -905,64 +912,6 @@ func (t *Twitter) maxQualityMediaUrl(input string) (result string) {
 	return input
 }
 
-func (m *Twitter) getEntryBy(key string, id string) (entryBucket DB_Twitter_Entry, err error) {
-	listCursor, err := rethink.Table("twitter").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	return
-}
-
-func (m *Twitter) getEntryByOrCreateEmpty(key string, id string) DB_Twitter_Entry {
-	var entryBucket DB_Twitter_Entry
-	listCursor, err := rethink.Table("twitter").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("twitter").Insert(DB_Twitter_Entry{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Twitter) setEntry(entry DB_Twitter_Entry) (err error) {
-	if entry.ID != "" {
-		_, err = rethink.Table("twitter").Update(entry).Run(helpers.GetDB())
-		return
-	}
-	return errors.New("invalid entry id")
-}
-
-func (m *Twitter) deleteEntryById(id string) {
-	if id != "" {
-		_, err := rethink.Table("twitter").Filter(
-			rethink.Row.Field("id").Eq(id),
-		).Delete().RunWrite(helpers.GetDB())
-		helpers.Relax(err)
-	}
-}
-
 func (m *Twitter) handleError(err error) string {
 	// Extract 'error code' from dghubble/go-twitter's err message.
 	// Has a dependency with dghubble/go-twitter package.
@@ -994,18 +943,18 @@ func (m *Twitter) handleError(err error) string {
 	panic(err)
 }
 
-func (m *Twitter) lockEntry(entryID string) {
-	if _, ok := twitterEntryLocks[entryID]; ok {
-		twitterEntryLocks[entryID].Lock()
+func (m *Twitter) lockEntry(entryID bson.ObjectId) {
+	if _, ok := twitterEntryLocks[string(entryID)]; ok {
+		twitterEntryLocks[string(entryID)].Lock()
 		return
 	}
-	twitterEntryLocks[entryID] = new(sync.Mutex)
-	twitterEntryLocks[entryID].Lock()
+	twitterEntryLocks[string(entryID)] = new(sync.Mutex)
+	twitterEntryLocks[string(entryID)].Lock()
 }
 
-func (m *Twitter) unlockEntry(entryID string) {
-	if _, ok := twitterEntryLocks[entryID]; ok {
-		twitterEntryLocks[entryID].Unlock()
+func (m *Twitter) unlockEntry(entryID bson.ObjectId) {
+	if _, ok := twitterEntryLocks[string(entryID)]; ok {
+		twitterEntryLocks[string(entryID)].Unlock()
 	}
 }
 

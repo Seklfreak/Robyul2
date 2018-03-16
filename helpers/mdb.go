@@ -208,9 +208,9 @@ func MDbUpdateWithoutLogging(collection models.MongoDbCollection, id bson.Object
 	return id, nil
 }
 
-func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
+func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (err error) {
 	if !id.Valid() {
-		id = bson.NewObjectId()
+		return errors.New("invalid id")
 	}
 
 	start := time.Now()
@@ -236,10 +236,10 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 	}
 
 	if err != nil {
-		return bson.ObjectId(""), err
+		return err
 	}
 
-	return id, nil
+	return nil
 }
 
 func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
@@ -364,6 +364,18 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 func MdbOneWithoutLogging(query *mgo.Query, object interface{}) (err error) {
 	err = query.One(object)
 	return
+}
+
+// Returns a human readable ID version of a ObjectID
+// id	: the ObjectID to convert
+func MdbIdToHuman(id bson.ObjectId) (text string) {
+	return fmt.Sprintf(`%x`, string(id))
+}
+
+// Returns an ObjectID from a human readable ID
+// text	: the human readable ID
+func HumanToMdbId(text string) (id bson.ObjectId) {
+	return bson.ObjectIdHex(text)
 }
 
 func stripRobyulDatabaseFromCollection(input string) (output string) {
