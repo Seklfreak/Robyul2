@@ -1975,7 +1975,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			}
 		}
 
-		targetMember, err := helpers.GetGuildMemberWithoutApi(channel.GuildID, targetUser.ID)
+		targetMember, err := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code == 10007 {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -2073,7 +2073,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						break
 					}
 
-					currentMember, err := helpers.GetGuildMemberWithoutApi(channel.GuildID, levelsServersUsers[i-offset].UserID)
+					currentMember, err := helpers.GetGuildMember(channel.GuildID, levelsServersUsers[i-offset].UserID)
 					if err != nil {
 						cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("error fetching member data for user #%s: %s", levelsServersUsers[i-offset].UserID, err.Error()))
 						continue
@@ -3111,7 +3111,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			return
 		}
 
-		currentMember, _ := helpers.GetGuildMemberWithoutApi(channel.GuildID, targetUser.ID)
+		currentMember, _ := helpers.GetGuildMember(channel.GuildID, targetUser.ID)
 		if currentMember == nil || currentMember.User == nil || currentMember.User.ID == "" {
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
