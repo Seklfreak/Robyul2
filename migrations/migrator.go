@@ -38,7 +38,6 @@ var migrations = []helpers.Callback{
 	m35_create_table_persistency_roles,
 	m36_create_table_levels_roles_overwrites,
 	m38_create_table_weather_last_locations,
-	m39_create_table_donators,
 	m40_create_table_bot_config,
 	m41_create_table_bot_status,
 	m42_create_table_vanity_invites,
@@ -65,6 +64,7 @@ var migrations = []helpers.Callback{
 	m63_migration_table_notifications,
 	m64_migration_table_notifications_ignored_channels,
 	m65_migration_table_twitter,
+	m66_migration_table_donators,
 }
 
 // Run executes all registered migrations

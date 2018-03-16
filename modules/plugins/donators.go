@@ -8,7 +8,6 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
 )
 
 type Donators struct{}
@@ -49,7 +48,14 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 
 				name := strings.TrimSpace(strings.Replace(content, args[0], "", 1))
 
-				err := d.InsertDonator(name, "")
+				_, err := helpers.MDbInsert(
+					models.DonatorsTable,
+					models.DonatorEntry{
+						Name:          name,
+						AddedAt:       time.Now(),
+						HeartOverride: "",
+					},
+				)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.donators.add-success", name))
@@ -60,10 +66,11 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 		}
 	}
 
-	donators, err := d.GetDonators()
+	var donators []models.DonatorEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.DonatorsTable).Find(nil)).All(&donators)
 	helpers.Relax(err)
 
-	if len(donators) <= 0 {
+	if donators == nil || len(donators) <= 0 {
 		helpers.SendMessage(
 			msg.ChannelID,
 			helpers.GetText("plugins.donators.none"),
@@ -89,24 +96,4 @@ func (d *Donators) Action(command string, content string, msg *discordgo.Message
 	for _, page := range helpers.Pagify(donatorsText, "\n") {
 		helpers.SendMessage(msg.ChannelID, page)
 	}
-}
-
-func (d *Donators) InsertDonator(Name string, HeartOverride string) (err error) {
-	insert := rethink.Table(models.DonatorsTable).Insert(models.DonatorEntry{
-		Name:          Name,
-		HeartOverride: HeartOverride,
-		AddedAt:       time.Now(),
-	})
-	_, err = insert.RunWrite(helpers.GetDB())
-	return err
-}
-
-func (d *Donators) GetDonators() (entries []models.DonatorEntry, err error) {
-	listCursor, err := rethink.Table(models.DonatorsTable).OrderBy(rethink.Asc("added_at")).Run(helpers.GetDB())
-	if err != nil {
-		return []models.DonatorEntry{}, err
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entries)
-	return entries, err
 }
