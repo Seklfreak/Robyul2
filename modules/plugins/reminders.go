@@ -30,6 +30,9 @@ type DB_Reminder struct {
 	Timestamp int64  `gorethink:"timestamp"`
 }
 
+// maps guildid => custom message
+var customReminderMsgMap map[string]string
+
 func (r *Reminders) Commands() []string {
 	return []string{
 		"remind",
@@ -91,6 +94,13 @@ func (r *Reminders) Init(session *discordgo.Session) {
 		}
 	}()
 
+	// Setup custom reminder messages.
+	//  Could eventually be loaded from a db if we wanted guilds to set up there own. not an important enough plugin to need that atm
+	customReminderMsgMap = map[string]string{
+		"339227598544568340": "Ok I'll remind you <:nayoungok:424683077793611777>", // nayoung cord
+		"403003926720413699": "Ok I'll remind you <:nayoungok:424683077793611777>", // snakeyesz dev
+	}
+
 	cache.GetLogger().WithField("module", "reminders").Info("Started reminder loop (10s)")
 }
 
@@ -129,7 +139,12 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		})
 		setReminders(msg.Author.ID, reminders)
 
-		helpers.SendMessage(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
+		// Check if guild has a custom message set
+		if customMsg, ok := customReminderMsgMap[channel.GuildID]; ok {
+			helpers.SendMessage(msg.ChannelID, customMsg)
+		} else {
+			helpers.SendMessage(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
+		}
 		break
 
 	case "rms", "reminders": // TODO: better interface
