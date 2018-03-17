@@ -427,7 +427,7 @@
       "user-reset-success": "The background for %s has been reset.",
       "user-force-background-success": "The background for %s has been set.",
       "profile-lastfm-hidden": "Last.FM information will no longer be shown on your profile.",
-      "profile-lastfm-shown": "Last.FM information will no longer be shown on your profile.",
+      "profile-lastfm-shown": "Last.FM information will be visible on your profile.",
       "level-notification-disabled": "I won't display level up notifications anymore.",
       "level-notification-enabled": "I will now display level up notifications.",
       "level-notification-autodelete-enabled": "I will delete level up notifications after %d seconds.",
