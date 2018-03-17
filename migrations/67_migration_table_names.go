@@ -3,6 +3,8 @@ package migrations
 import (
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -33,6 +35,14 @@ func m67_migration_table_names() {
 	}
 	defer cursor.Close()
 
+	var previousEntry struct {
+		ID        bson.ObjectId `bson:"_id,omitempty"`
+		ChangedAt time.Time
+		GuildID   string
+		UserID    string
+		Nickname  string
+		Username  string
+	}
 	var rethinkdbEntry struct {
 		ID        string    `rethink:"id,omitempty"`
 		ChangedAt time.Time `rethink:"changed_at"`
@@ -43,6 +53,42 @@ func m67_migration_table_names() {
 	}
 	bar := pb.StartNew(numberOfElements)
 	for cursor.Next(&rethinkdbEntry) {
+		if rethinkdbEntry.GuildID == "global" {
+			// check for username duplicate first
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": rethinkdbEntry.UserID, "guildid": "global"}).Sort("-changedat"),
+				&previousEntry,
+			)
+			if err == nil {
+				if previousEntry.Username == rethinkdbEntry.Username {
+					cache.GetLogger().WithField("module", "migrations").Infof("skipped username %s for #%s because already in DB", rethinkdbEntry.Username, rethinkdbEntry.UserID)
+					bar.Increment()
+					continue
+				}
+			} else {
+				if !strings.Contains(err.Error(), "not found") {
+					panic(err)
+				}
+			}
+		} else {
+			// check for nickname duplicate first
+			err = helpers.MdbOne(
+				helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": rethinkdbEntry.UserID, "guildid": rethinkdbEntry.GuildID}).Sort("-changedat"),
+				&previousEntry,
+			)
+			if err == nil {
+				if previousEntry.Nickname == rethinkdbEntry.Nickname {
+					cache.GetLogger().WithField("module", "migrations").Infof("skipped nickname %s for #%s because already in DB", rethinkdbEntry.Nickname, rethinkdbEntry.UserID)
+					bar.Increment()
+					continue
+				}
+			} else {
+				if !strings.Contains(err.Error(), "not found") {
+					panic(err)
+				}
+			}
+		}
+
 		err = helpers.MDbUpsert(
 			models.NamesTable,
 			bson.M{"guildid": rethinkdbEntry.GuildID, "userid": rethinkdbEntry.UserID, "changedat": rethinkdbEntry.ChangedAt, "nickname": rethinkdbEntry.Nickname, "username": rethinkdbEntry.Username},
