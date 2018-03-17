@@ -12,7 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,6 +33,8 @@ func (n *Names) Commands() []string {
 		"nicknames",
 	}
 }
+
+// TODO: switch to robyul state
 
 func (n *Names) Init(session *discordgo.Session) {
 	previousNicknamesMutex.Lock()
@@ -191,15 +193,11 @@ func (n *Names) UpdateNickname(guildID string, userID string, newNick string) (e
 	if oldNick != "" && lastSavedNickname != oldNick {
 		err = n.SaveNickname(guildID, userID, oldNick)
 		helpers.RelaxLog(err)
-		//n.logger().WithField("guildID", guildID).WithField("userID", userID).Debug(
-		//	"saved old nickname: ", oldNick) // TODO
 		lastSavedNickname = oldNick
 	}
 
 	if lastSavedNickname != newNick {
 		err = n.SaveNickname(guildID, userID, newNick)
-		//n.logger().WithField("guildID", guildID).WithField("userID", userID).Debug(
-		//	"saved new nickname: ", newNick) // TODO
 		previousNicknames[guildID][userID] = newNick
 		return err
 	}
@@ -220,15 +218,11 @@ func (n *Names) UpdateUsername(userID string, newUsername string) (err error) {
 	if oldUsername != "" && lastSavedUsername != oldUsername {
 		err = n.SaveUsername(userID, oldUsername)
 		helpers.RelaxLog(err)
-		//n.logger().WithField("userID", userID).Debug(
-		//	"saved old username: ", oldUsername) // TODO
 		lastSavedUsername = oldUsername
 	}
 
 	if lastSavedUsername != newUsername {
 		err = n.SaveUsername(userID, newUsername)
-		//n.logger().WithField("userID", userID).Debug(
-		//	"saved new username: ", newUsername) // TODO
 		previousUsernames[userID] = newUsername
 		return err
 	}
@@ -237,76 +231,94 @@ func (n *Names) UpdateUsername(userID string, newUsername string) (err error) {
 
 func (n *Names) GetLastNickname(guildID string, userID string) (nickname string, err error) {
 	var entryBucket models.NamesEntry
-	listCursor, err := rethink.Table(models.NamesTable).GetAllByIndex(
-		"user_id", userID,
-	).Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).OrderBy(rethink.Desc("changed_at")).Limit(1).Run(helpers.GetDB())
-	if err != nil {
-		return "", err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": userID, "guildid": guildID}).Sort("-changedat"),
+		&entryBucket,
+	)
 
-	if err == rethink.ErrEmptyResult {
-		return "", errors.New("no nickname entry")
-	} else if err != nil {
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			return "", errors.New("no nickname entry")
+		}
 		return "", err
 	}
+
 	return entryBucket.Nickname, nil
 }
 
 func (n *Names) SaveNickname(guildID string, userID string, nickname string) (err error) {
-	insert := rethink.Table(models.NamesTable).Insert(models.NamesEntry{
-		ChangedAt: time.Now(),
-		GuildID:   guildID,
-		UserID:    userID,
-		Nickname:  nickname,
-		Username:  "",
-	})
-	_, err = insert.RunWrite(helpers.GetDB())
+	// don't store duplicates
+	lastNickname, err := n.GetLastNickname(guildID, userID)
+	if err == nil {
+		if nickname == lastNickname {
+			return nil
+		}
+	}
+	// insert nickname
+	_, err = helpers.MDbInsert(
+		models.NamesTable,
+		models.NamesEntry{
+			ChangedAt: time.Now(),
+			GuildID:   guildID,
+			UserID:    userID,
+			Nickname:  nickname,
+			Username:  "",
+		},
+	)
 	return err
 }
 
 func (n *Names) GetLastUsername(userID string) (username string, err error) {
 	var entryBucket models.NamesEntry
-	listCursor, err := rethink.Table(models.NamesTable).GetAllByIndex(
-		"user_id", userID,
-	).Filter(
-		rethink.Row.Field("guild_id").Eq("global"),
-	).OrderBy(rethink.Desc("changed_at")).Limit(1).Run(helpers.GetDB())
-	if err != nil {
-		return "", err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": userID, "guildid": "global"}).Sort("-changedat"),
+		&entryBucket,
+	)
 
-	if err == rethink.ErrEmptyResult {
-		return "", errors.New("no username entry")
-	} else if err != nil {
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			return "", errors.New("no username entry")
+		}
 		return "", err
 	}
+
 	return entryBucket.Username, nil
+}
+
+func (n *Names) SaveUsername(userID string, username string) (err error) {
+	// don't store duplicates
+	lastUsername, err := n.GetLastUsername(userID)
+	if err == nil {
+		if username == lastUsername {
+			return nil
+		}
+	}
+	// insert username
+	_, err = helpers.MDbInsert(
+		models.NamesTable,
+		models.NamesEntry{
+			ChangedAt: time.Now(),
+			GuildID:   "global",
+			UserID:    userID,
+			Nickname:  "",
+			Username:  username,
+		},
+	)
+	return err
 }
 
 func (n *Names) GetNicknames(guildID string, userID string) (nicknames []string, err error) {
 	var entryBucket []models.NamesEntry
-	listCursor, err := rethink.Table(models.NamesTable).GetAllByIndex(
-		"user_id", userID,
-	).Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).OrderBy(rethink.Asc("changed_at")).Run(helpers.GetDB())
+	err = helpers.MDbIter(helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": userID, "guildid": guildID}).Sort("changedat")).All(&entryBucket)
+
 	if err != nil {
 		return nicknames, err
 	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
 
-	if err == rethink.ErrEmptyResult {
+	if entryBucket == nil || len(entryBucket) <= 0 {
 		return nicknames, errors.New("no nickname entries")
-	} else if err != nil {
-		return nicknames, err
 	}
+
 	for _, entry := range entryBucket {
 		nicknames = append(nicknames, entry.Nickname)
 	}
@@ -315,38 +327,20 @@ func (n *Names) GetNicknames(guildID string, userID string) (nicknames []string,
 
 func (n *Names) GetUsernames(userID string) (usernames []string, err error) {
 	var entryBucket []models.NamesEntry
-	listCursor, err := rethink.Table(models.NamesTable).GetAllByIndex(
-		"user_id", userID,
-	).Filter(
-		rethink.Row.Field("guild_id").Eq("global"),
-	).OrderBy(rethink.Asc("changed_at")).Run(helpers.GetDB())
+	err = helpers.MDbIter(helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": userID, "guildid": "global"}).Sort("changedat")).All(&entryBucket)
+
 	if err != nil {
 		return usernames, err
 	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
 
-	if err == rethink.ErrEmptyResult {
+	if entryBucket == nil || len(entryBucket) <= 0 {
 		return usernames, errors.New("no username entries")
-	} else if err != nil {
-		return usernames, err
 	}
+
 	for _, entry := range entryBucket {
 		usernames = append(usernames, entry.Username)
 	}
 	return usernames, nil
-}
-
-func (n *Names) SaveUsername(userID string, username string) (err error) {
-	insert := rethink.Table(models.NamesTable).Insert(models.NamesEntry{
-		ChangedAt: time.Now(),
-		GuildID:   "global",
-		UserID:    userID,
-		Nickname:  "",
-		Username:  username,
-	})
-	_, err = insert.RunWrite(helpers.GetDB())
-	return err
 }
 
 func (n *Names) OnGuildMemberListChunk(session *discordgo.Session, members *discordgo.GuildMembersChunk) {

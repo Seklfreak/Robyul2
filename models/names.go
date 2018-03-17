@@ -1,16 +1,20 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/globalsign/mgo/bson"
+)
 
 const (
-	NamesTable = "names"
+	NamesTable MongoDbCollection = "names"
 )
 
 type NamesEntry struct {
-	ID        string    `rethink:"id,omitempty"`
-	ChangedAt time.Time `rethink:"changed_at"`
-	GuildID   string    `rethink:"guild_id"`
-	UserID    string    `rethink:"user_id"`
-	Nickname  string    `rethink:"nickname"`
-	Username  string    `rethink:"username"`
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	ChangedAt time.Time
+	GuildID   string
+	UserID    string
+	Nickname  string
+	Username  string
 }

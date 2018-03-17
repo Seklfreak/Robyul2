@@ -31,7 +31,6 @@ var migrations = []helpers.Callback{
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
 	m30_create_table_autoleaver_whitelist,
-	m31_create_table_names,
 	m32_create_table_reddit_subreddits,
 	m33_create_table_youtube_channels,
 	m34_create_table_levels_roles,
@@ -65,6 +64,7 @@ var migrations = []helpers.Callback{
 	m64_migration_table_notifications_ignored_channels,
 	m65_migration_table_twitter,
 	m66_migration_table_donators,
+	m67_migration_table_names,
 }
 
 // Run executes all registered migrations
