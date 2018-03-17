@@ -179,6 +179,14 @@ func main() {
 	// Run migrations
 	migrations.Run()
 
+	// stop after migrations?
+	for _, arg := range os.Args {
+		if arg == "stop-after-migration" {
+			log.WithField("module", "launcher").Info("stopping after migration")
+			return
+		}
+	}
+
 	// Connecting to redis
 	log.WithField("module", "launcher").Info("Connecting to redis...")
 	redisClient := redis.NewClient(&redis.Options{
