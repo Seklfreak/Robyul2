@@ -312,7 +312,9 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				)
 				if err != nil {
 					m.unlockEntry(entryID)
-					helpers.RelaxLog(err)
+					if !strings.Contains(err.Error(), "not found") {
+						helpers.RelaxLog(err)
+					}
 					continue
 				}
 

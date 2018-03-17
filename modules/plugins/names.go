@@ -237,7 +237,7 @@ func (n *Names) GetLastNickname(guildID string, userID string) (nickname string,
 	)
 
 	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			return "", errors.New("no nickname entry")
 		}
 		return "", err
@@ -276,7 +276,7 @@ func (n *Names) GetLastUsername(userID string) (username string, err error) {
 	)
 
 	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			return "", errors.New("no username entry")
 		}
 		return "", err

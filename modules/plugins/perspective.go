@@ -181,11 +181,15 @@ func (m *Perspective) OnMessage(content string, msg *discordgo.Message, session 
 	if msg.Author.Bot {
 		return
 	}
+	// ignore empty messages
+	if msg.Content == "" {
+		return
+	}
+	// ignore commands
 	channel, err := helpers.GetChannel(msg.ChannelID)
 	if err != nil {
 		return
 	}
-	// ignore commands
 	prefix := helpers.GetPrefixForServer(channel.GuildID)
 	if prefix != "" {
 		if strings.HasPrefix(content, prefix) {

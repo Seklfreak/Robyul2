@@ -380,7 +380,10 @@ func MdbIdToHuman(id bson.ObjectId) (text string) {
 // Returns an ObjectID from a human readable ID
 // text	: the human readable ID
 func HumanToMdbId(text string) (id bson.ObjectId) {
-	return bson.ObjectIdHex(text)
+	if bson.IsObjectIdHex(text) {
+		return bson.ObjectIdHex(text)
+	}
+	return id
 }
 
 func stripRobyulDatabaseFromCollection(input string) (output string) {
