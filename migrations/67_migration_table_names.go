@@ -55,7 +55,7 @@ func m67_migration_table_names() {
 	for cursor.Next(&rethinkdbEntry) {
 		if rethinkdbEntry.GuildID == "global" {
 			// check for username duplicate first
-			err = helpers.MdbOne(
+			err = helpers.MdbOneWithoutLogging(
 				helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": rethinkdbEntry.UserID, "guildid": "global"}).Sort("-changedat"),
 				&previousEntry,
 			)
@@ -72,7 +72,7 @@ func m67_migration_table_names() {
 			}
 		} else {
 			// check for nickname duplicate first
-			err = helpers.MdbOne(
+			err = helpers.MdbOneWithoutLogging(
 				helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": rethinkdbEntry.UserID, "guildid": rethinkdbEntry.GuildID}).Sort("-changedat"),
 				&previousEntry,
 			)
@@ -89,7 +89,7 @@ func m67_migration_table_names() {
 			}
 		}
 
-		err = helpers.MDbUpsert(
+		err = helpers.MDbUpsertWithoutLogging(
 			models.NamesTable,
 			bson.M{"guildid": rethinkdbEntry.GuildID, "userid": rethinkdbEntry.UserID, "changedat": rethinkdbEntry.ChangedAt, "nickname": rethinkdbEntry.Nickname, "username": rethinkdbEntry.Username},
 			models.NamesEntry{

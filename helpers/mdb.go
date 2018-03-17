@@ -366,6 +366,11 @@ func MdbOneWithoutLogging(query *mgo.Query, object interface{}) (err error) {
 	return
 }
 
+func MDbUpsertWithoutLogging(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
+	_, err = GetMDb().C(collection.String()).Upsert(selector, data)
+	return err
+}
+
 // Returns a human readable ID version of a ObjectID
 // id	: the ObjectID to convert
 func MdbIdToHuman(id bson.ObjectId) (text string) {
