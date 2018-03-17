@@ -111,7 +111,7 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	}
 
 	pastNicknames, err := n.GetNicknames(channel.GuildID, user.ID)
-	if err != nil && strings.Contains(err.Error(), "no nickname entries") {
+	if err != nil && !strings.Contains(err.Error(), "no nickname entries") {
 		helpers.Relax(err)
 	}
 
@@ -320,7 +320,9 @@ func (n *Names) GetNicknames(guildID string, userID string) (nicknames []string,
 	}
 
 	for _, entry := range entryBucket {
-		nicknames = append(nicknames, entry.Nickname)
+		if len(nicknames) <= 0 || nicknames[len(nicknames)-1] != entry.Nickname {
+			nicknames = append(nicknames, entry.Nickname)
+		}
 	}
 	return nicknames, nil
 }
@@ -338,7 +340,9 @@ func (n *Names) GetUsernames(userID string) (usernames []string, err error) {
 	}
 
 	for _, entry := range entryBucket {
-		usernames = append(usernames, entry.Username)
+		if len(usernames) <= 0 || usernames[len(usernames)-1] != entry.Username {
+			usernames = append(usernames, entry.Username)
+		}
 	}
 	return usernames, nil
 }
