@@ -40,7 +40,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 	}
 
 	args := strings.Fields(content)
-	if len(args) < 2 {
+	if len(args) < 1 {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 		return
 	}
@@ -49,6 +49,11 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 	// [p]greeter join <#channel or channel id> <embed code>
 	case "guild_join", "join":
 		helpers.RequireAdmin(msg, func() {
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+
 			targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 			if err != nil || targetChannel.ID == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -108,6 +113,11 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 		// [p]greeter leave <#channel or channel id> <embed code>
 	case "guild_leave", "leave":
 		helpers.RequireAdmin(msg, func() {
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+
 			targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
 			if err != nil || targetChannel.ID == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -164,6 +174,40 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-edited"))
 			helpers.Relax(err)
 		})
+	case "list":
+		helpers.RequireMod(msg, func() {
+			session.ChannelTyping(msg.ChannelID)
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			var entryBucket []models.GreeterEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.GreeterTable).Find(bson.M{"guildid": channel.GuildID})).All(&entryBucket)
+			helpers.Relax(err)
+
+			if entryBucket == nil || len(entryBucket) <= 0 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.guildannouncements.list-none")) // TODO
+				return
+			}
+
+			var message string
+			for _, greeting := range entryBucket {
+				switch greeting.Type {
+				case models.GreeterTypeJoin:
+					message += "on join in <#" + greeting.ChannelID + ">: `" + greeting.EmbedCode + "`\n"
+					break
+				case models.GreeterTypeLeave:
+					message += "on leave in <#" + greeting.ChannelID + ">: `" + greeting.EmbedCode + "`\n"
+					break
+				}
+			}
+			message += fmt.Sprintf("_found %d greeter configs in total_\n_To change a config just set a new config for the specific channel, it will replace the old config._", len(entryBucket))
+
+			_, err = helpers.SendMessage(msg.ChannelID, message)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		})
+		return
 	}
 
 }
