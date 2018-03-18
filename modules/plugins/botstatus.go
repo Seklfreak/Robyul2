@@ -137,20 +137,23 @@ func (bs *BotStatus) actionSet(args []string, in *discordgo.Message, out **disco
 		return bs.actionFinish
 	}
 
-	if len(args) <= 0 {
+	if len(args) < 3 {
 		*out = bs.newMsg("bot.arguments.too-few")
 		return bs.actionFinish
 	}
 
-	parts := strings.Split(in.Content, args[0])
-	if len(parts) < 2 {
-		*out = bs.newMsg("bot.arguments.too-few")
-		return bs.actionFinish
-	}
-	statusMessage := strings.TrimSpace(strings.Join(parts[1:], args[0]))
+	statusMessage := strings.TrimSpace(strings.Replace(strings.Join(args, " "), strings.Join(args[:2], " "), "", 1))
+	statusType := bs.textToGameType(args[1])
 
 	newStatus := bs.replaceText(statusMessage)
-	err := cache.GetSession().UpdateStatus(0, newStatus)
+
+	err := cache.GetSession().UpdateStatusComplex(discordgo.UpdateStatusData{
+		Game: &discordgo.Game{
+			Name: newStatus,
+			Type: statusType,
+		},
+		Status: "online",
+	})
 	helpers.Relax(err)
 
 	bs.logger().WithField("UserID", in.Author.ID).Infof("Set the Bot Status to: \"%s\" using the set command", newStatus)
@@ -166,17 +169,13 @@ func (bs *BotStatus) actionAdd(args []string, in *discordgo.Message, out **disco
 		return bs.actionFinish
 	}
 
-	if len(args) <= 0 {
+	if len(args) < 3 {
 		*out = bs.newMsg("bot.arguments.too-few")
 		return bs.actionFinish
 	}
 
-	parts := strings.Split(in.Content, args[0])
-	if len(parts) < 2 {
-		*out = bs.newMsg("bot.arguments.too-few")
-		return bs.actionFinish
-	}
-	statusMessage := strings.TrimSpace(strings.Join(parts[1:], args[0]))
+	statusMessage := strings.TrimSpace(strings.Replace(strings.Join(args, " "), strings.Join(args[:2], " "), "", 1))
+	statusType := bs.textToGameType(args[1])
 
 	_, err := helpers.MDbInsert(
 		models.BotStatusTable,
@@ -184,7 +183,7 @@ func (bs *BotStatus) actionAdd(args []string, in *discordgo.Message, out **disco
 			AddedByUserID: in.Author.ID,
 			AddedAt:       time.Now(),
 			Text:          statusMessage,
-			Type:          discordgo.GameTypeGame,
+			Type:          statusType,
 		},
 	)
 	helpers.Relax(err)
@@ -243,12 +242,37 @@ func (bs *BotStatus) actionList(args []string, in *discordgo.Message, out **disc
 
 	var message string
 	for _, botStatus := range entryBucket {
-		message += fmt.Sprintf("`%s`: `%s`\n", helpers.MdbIdToHuman(botStatus.ID), botStatus.Text)
+		message += fmt.Sprintf("`%s`: %s `%s`\n",
+			helpers.MdbIdToHuman(botStatus.ID), bs.gameTypeToText(botStatus.Type), botStatus.Text)
 	}
 	message += fmt.Sprintf("_found %d statuses in total_\n", len(entryBucket))
 
 	*out = bs.newMsg(message)
 	return bs.actionFinish
+}
+
+func (bs *BotStatus) textToGameType(text string) (gameType discordgo.GameType) {
+	switch strings.ToLower(text) {
+	case "playing", "game":
+		return discordgo.GameTypeGame
+	case "listening":
+		return discordgo.GameTypeListening
+	case "watching":
+		return discordgo.GameTypeWatching
+	}
+	return discordgo.GameTypeGame
+}
+
+func (bs *BotStatus) gameTypeToText(gameType discordgo.GameType) (text string) {
+	switch gameType {
+	case discordgo.GameTypeGame:
+		return "playing"
+	case discordgo.GameTypeListening:
+		return "listening to"
+	case discordgo.GameTypeWatching:
+		return "watching"
+	}
+	return ""
 }
 
 func (bs *BotStatus) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) botStatusAction {
