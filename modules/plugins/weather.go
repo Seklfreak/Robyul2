@@ -1,16 +1,17 @@
 package plugins
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
+
+	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/shawntoffel/darksky"
 )
 
@@ -46,7 +47,18 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	var addressResult string
 
 	if content == "" {
-		latResult, lngResult, addressResult = w.getLastLocation(msg.Author.ID)
+		var entryBucket models.WeatherLastLocationEntry
+		err := helpers.MdbOne(
+			helpers.MdbCollection(models.WeatherLastLocationsTable).Find(bson.M{"userid": msg.Author.ID}),
+			&entryBucket,
+		)
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			helpers.RelaxLog(err)
+		} else {
+			latResult = entryBucket.Lat
+			lngResult = entryBucket.Lng
+			addressResult = entryBucket.Text
+		}
 		if latResult == 0 && lngResult == 0 {
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			return
@@ -97,7 +109,16 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 	}
 
 	go func() {
-		w.setLastLocation(msg.Author.ID, latResult, lngResult, addressResult)
+		err = helpers.MDbUpsert(
+			models.WeatherLastLocationsTable,
+			bson.M{"userid": msg.Author.ID},
+			models.WeatherLastLocationEntry{
+				UserID: msg.Author.ID,
+				Lat:    latResult,
+				Lng:    lngResult,
+				Text:   addressResult,
+			},
+		)
 	}()
 
 	weatherEmbed := &discordgo.MessageEmbed{
@@ -169,46 +190,4 @@ func (w *Weather) getWeatherEmoji(iconName string) (emoji string) {
 		return "🌪"
 	}
 	return ""
-}
-
-func (w *Weather) setLastLocation(userID string, lat float64, lng float64, text string) (err error) {
-	entry, err := w.getLastLocationEntry(userID)
-	if err != nil || entry.ID == "" {
-		_, err = rethink.Table(models.WeatherLastLocationsTable).Insert(models.WeatherLastLocation{
-			UserID: userID,
-			Lat:    lat,
-			Lng:    lng,
-			Text:   text,
-		}).RunWrite(helpers.GetDB())
-		return err
-	}
-	entry.Lat = lat
-	entry.Lng = lng
-	entry.Text = text
-	_, err = rethink.Table(models.WeatherLastLocationsTable).Get(entry.ID).Update(entry).RunWrite(helpers.GetDB())
-	return err
-}
-
-func (w *Weather) getLastLocation(userID string) (lat float64, lng float64, text string) {
-	entry, err := w.getLastLocationEntry(userID)
-	if err != nil {
-		return 0, 0, ""
-	}
-	return entry.Lat, entry.Lng, entry.Text
-}
-
-func (w *Weather) getLastLocationEntry(userID string) (entry models.WeatherLastLocation, err error) {
-	listCursor, err := rethink.Table(models.WeatherLastLocationsTable).Filter(
-		rethink.Row.Field("user_id").Eq(userID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return entry, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entry)
-
-	if err == rethink.ErrEmptyResult {
-		return entry, errors.New("no weather last location entry")
-	}
-	return entry, err
 }

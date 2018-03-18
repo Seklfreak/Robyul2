@@ -1,13 +1,15 @@
 package models
 
+import "github.com/globalsign/mgo/bson"
+
 const (
-	WeatherLastLocationsTable = "weather_last_locations"
+	WeatherLastLocationsTable MongoDbCollection = "weather_last_locations"
 )
 
-type WeatherLastLocation struct {
-	ID     string  `rethink:"id,omitempty"`
-	UserID string  `rethink:"user_id"`
-	Lat    float64 `rethink:"lat"`
-	Lng    float64 `rethink:"lng"`
-	Text   string  `rethink:"text"`
+type WeatherLastLocationEntry struct {
+	ID     bson.ObjectId `bson:"_id,omitempty"`
+	UserID string
+	Lat    float64
+	Lng    float64
+	Text   string
 }
