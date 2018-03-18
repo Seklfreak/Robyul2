@@ -422,11 +422,6 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 	}
 	guild, err := helpers.GetGuild(channel.GuildID)
 	if err != nil {
-		if errD, ok := err.(*discordgo.RESTError); ok {
-			if errD.Message.Code == 0 {
-				return
-			}
-		}
 		helpers.RelaxLog(err)
 		return
 	}
@@ -509,7 +504,7 @@ NextKeyword:
 			if notificationSetting.IgnoredGuildIDs != nil && len(notificationSetting.IgnoredGuildIDs) > 0 {
 				for _, ignoredGuildID := range notificationSetting.IgnoredGuildIDs {
 					if ignoredGuildID == guild.ID {
-						return
+						continue NextKeyword
 					}
 				}
 			}
@@ -537,19 +532,16 @@ NextKeyword:
 			if doesMatch == true {
 				memberToNotify, err := helpers.GetGuildMemberWithoutApi(guild.ID, notificationSetting.UserID)
 				if err != nil {
-					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMember {
-						continue NextKeyword
-					}
 					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
 					continue NextKeyword
 				}
 				if memberToNotify == nil {
-					cache.GetLogger().WithField("module", "notifications").Warn("member to notify not found")
+					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("member to notify not found")
 					continue NextKeyword
 				}
 				messageAuthor, err := helpers.GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").Warn("error getting message author: " + err.Error())
+					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", msg.Author.ID).Warn("error getting message author: " + err.Error())
 					continue NextKeyword
 				}
 				hasReadPermissions := false
@@ -558,11 +550,11 @@ NextKeyword:
 				memberAllPermissions := helpers.GetAllPermissions(guild, memberToNotify)
 				if memberAllPermissions&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 					hasHistoryPermissions = true
-					//fmt.Println("allowed History: A")
+					//fmt.Println(msg.Content, ": allowed History: A")
 				}
 				if memberAllPermissions&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 					hasReadPermissions = true
-					//fmt.Println("allowed Read: B")
+					//fmt.Println(msg.Content, ": allowed Read: B")
 				}
 				// ignore messages if the users roles have no read permission to the channel
 			NextPermOverwriteEveryone:
@@ -578,19 +570,19 @@ NextKeyword:
 						if roleToCheck.Name == "@everyone" {
 							if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 								hasHistoryPermissions = true
-								//fmt.Println("allowed History: C")
+								//fmt.Println(msg.Content, ": allowed History: C")
 							}
 							if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 								hasReadPermissions = true
-								//fmt.Println("allowed Read: D")
+								//fmt.Println(msg.Content, ": allowed Read: D")
 							}
 							if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 								hasHistoryPermissions = false
-								//fmt.Println("rejected History: E")
+								//fmt.Println(msg.Content, ": rejected History: E")
 							}
 							if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 								hasReadPermissions = false
-								//fmt.Println("rejected Read: F")
+								//fmt.Println(msg.Content, ": rejected Read: F")
 							}
 						}
 					}
@@ -610,19 +602,19 @@ NextKeyword:
 								if memberRoleId == overwrite.ID {
 									if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 										hasHistoryPermissions = true
-										//fmt.Println("allowed History: G")
+										//fmt.Println(msg.Content, ": allowed History: G")
 									}
 									if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 										hasReadPermissions = true
-										//fmt.Println("allowed Read: H")
+										//fmt.Println(msg.Content, ": allowed Read: H")
 									}
 									if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 										hasHistoryPermissions = false
-										//fmt.Println("rejected History: I")
+										//fmt.Println(msg.Content, ": rejected History: I")
 									}
 									if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 										hasReadPermissions = false
-										//fmt.Println("rejected Read: J")
+										//fmt.Println(msg.Content, ": rejected Read: J")
 									}
 								}
 							}
@@ -639,19 +631,19 @@ NextKeyword:
 						if memberToNotify.User.ID == overwrite.ID {
 							if overwrite.Allow&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 								hasHistoryPermissions = true
-								//fmt.Println("allowed History: K")
+								//fmt.Println(msg.Content, ": allowed History: K")
 							}
 							if overwrite.Allow&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 								hasReadPermissions = true
-								//fmt.Println("allowed Read: L")
+								//fmt.Println(msg.Content, ": allowed Read: L")
 							}
 							if overwrite.Deny&discordgo.PermissionReadMessageHistory == discordgo.PermissionReadMessageHistory {
 								hasHistoryPermissions = false
-								//fmt.Println("rejected History: M")
+								//fmt.Println(msg.Content, ": rejected History: M")
 							}
 							if overwrite.Deny&discordgo.PermissionReadMessages == discordgo.PermissionReadMessages {
 								hasReadPermissions = false
-								//fmt.Println("rejected Read: N")
+								//fmt.Println(msg.Content, ": rejected Read: N")
 							}
 						}
 					}
@@ -699,7 +691,7 @@ NextKeyword:
 	for _, pendingNotification := range pendingNotifications {
 		dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
 		if err != nil {
-			cache.GetLogger().WithField("module", "notifications").Warn("error creating DM channel: " + err.Error())
+			cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", pendingNotification.Member.User.ID).Warn("error creating DM channel: " + err.Error())
 			continue
 		}
 		keywordsTriggeredText := ""
@@ -713,7 +705,7 @@ NextKeyword:
 		}
 
 		if pendingNotification.Author == nil {
-			cache.GetLogger().WithField("module", "notifications").Warn("notification source member is nil")
+			cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).Warn("notification source member is nil")
 			continue
 		}
 

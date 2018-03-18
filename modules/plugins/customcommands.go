@@ -727,7 +727,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					}, false)
 				helpers.RelaxLog(err)
 
-				_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commnands.", msg.Author.ID, humanize.Comma(int64(i))))
+				_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commands.", msg.Author.ID, humanize.Comma(int64(i))))
 				helpers.Relax(err)
 				customCommandsCache, err = cc.getAllCustomCommands()
 				helpers.Relax(err)
