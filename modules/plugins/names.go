@@ -231,7 +231,7 @@ func (n *Names) UpdateUsername(userID string, newUsername string) (err error) {
 
 func (n *Names) GetLastNickname(guildID string, userID string) (nickname string, err error) {
 	var entryBucket models.NamesEntry
-	err = helpers.MdbOne(
+	err = helpers.MdbOneWithoutLogging(
 		helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": userID, "guildid": guildID}).Sort("-changedat"),
 		&entryBucket,
 	)
@@ -270,7 +270,7 @@ func (n *Names) SaveNickname(guildID string, userID string, nickname string) (er
 
 func (n *Names) GetLastUsername(userID string) (username string, err error) {
 	var entryBucket models.NamesEntry
-	err = helpers.MdbOne(
+	err = helpers.MdbOneWithoutLogging(
 		helpers.MdbCollection(models.NamesTable).Find(bson.M{"userid": userID, "guildid": "global"}).Sort("-changedat"),
 		&entryBucket,
 	)
