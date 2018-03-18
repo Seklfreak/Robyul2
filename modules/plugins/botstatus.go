@@ -1,8 +1,6 @@
 package plugins
 
 import (
-	"errors"
-	"math/rand"
 	"strings"
 
 	"time"
@@ -14,7 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,24 +45,32 @@ func (bs *BotStatus) gameStatusRotationLoop() {
 		}()
 	}()
 
-	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
-
+	var err error
 	var newStatus string
 	for {
-		statuses, err := bs.getAllBotStatuses()
+		var entryBucket models.BotStatusEntry
+		// TODO: pipe aggregation
+		err = helpers.MdbCollection(models.BotStatusTable).Pipe([]bson.M{{"$sample": bson.M{"size": 1}}}).One(&entryBucket)
 		if err != nil {
+			if !strings.Contains(err.Error(), "not found") {
+				helpers.RelaxLog(err)
+			}
 			time.Sleep(60 * time.Second)
 			continue
 		}
 
-		randInt := randGen.Intn(len(statuses))
+		newStatus = bs.replaceText(entryBucket.Text)
 
-		newStatus = bs.replaceText(statuses[randInt].Text)
-
-		err = cache.GetSession().UpdateStatus(0, newStatus)
+		err = cache.GetSession().UpdateStatusComplex(discordgo.UpdateStatusData{
+			Game: &discordgo.Game{
+				Name: newStatus,
+				Type: entryBucket.Type,
+			},
+			Status: "online",
+		})
 		helpers.RelaxLog(err)
 
-		bs.logger().Infof("Set the Bot Status to: \"%s\" using the rotation loop", newStatus)
+		bs.logger().Infof("set the Bot Status to: \"%s\" using the rotation loop", newStatus)
 
 		time.Sleep(45 * time.Minute)
 	}
@@ -172,7 +178,15 @@ func (bs *BotStatus) actionAdd(args []string, in *discordgo.Message, out **disco
 	}
 	statusMessage := strings.TrimSpace(strings.Join(parts[1:], args[0]))
 
-	err := bs.insertBotStatus(in.Author.ID, statusMessage)
+	_, err := helpers.MDbInsert(
+		models.BotStatusTable,
+		models.BotStatusEntry{
+			AddedByUserID: in.Author.ID,
+			AddedAt:       time.Now(),
+			Text:          statusMessage,
+			Type:          discordgo.GameTypeGame,
+		},
+	)
 	helpers.Relax(err)
 
 	*out = bs.newMsg(helpers.GetTextF("plugins.botstatus.add-success", statusMessage))
@@ -191,16 +205,23 @@ func (bs *BotStatus) actionRemove(args []string, in *discordgo.Message, out **di
 		return bs.actionFinish
 	}
 
-	botStatus, err := bs.getBotStatusByID(args[1])
+	var entryBucket models.BotStatusEntry
+	err := helpers.MdbOne(
+		helpers.MdbCollection(models.BotStatusTable).Find(bson.M{"_id": helpers.HumanToMdbId(args[1])}),
+		&entryBucket,
+	)
 	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			helpers.RelaxLog(err)
+		}
 		*out = bs.newMsg("bot.arguments.invalid")
 		return bs.actionFinish
 	}
 
-	err = bs.removeFromBotStatuses(botStatus)
+	err = helpers.MDbDelete(models.BotStatusTable, entryBucket.ID)
 	helpers.Relax(err)
 
-	*out = bs.newMsg(helpers.GetTextF("plugins.botstatus.remove-success", botStatus.Text))
+	*out = bs.newMsg(helpers.GetTextF("plugins.botstatus.remove-success", entryBucket.Text))
 	return bs.actionFinish
 }
 
@@ -211,59 +232,23 @@ func (bs *BotStatus) actionList(args []string, in *discordgo.Message, out **disc
 		return bs.actionFinish
 	}
 
-	botStatuses, err := bs.getAllBotStatuses()
+	var entryBucket []models.BotStatusEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.BotStatusTable).Find(nil)).All(&entryBucket)
 	helpers.Relax(err)
 
-	if len(botStatuses) <= 0 {
+	if entryBucket == nil || len(entryBucket) <= 0 {
 		*out = bs.newMsg("plugins.botstatus.list-empty")
 		return bs.actionFinish
 	}
 
 	var message string
-	for _, botStatus := range botStatuses {
-		message += fmt.Sprintf("`%s`: `%s`\n", botStatus.ID, botStatus.Text)
+	for _, botStatus := range entryBucket {
+		message += fmt.Sprintf("`%s`: `%s`\n", helpers.MdbIdToHuman(botStatus.ID), botStatus.Text)
 	}
-	message += fmt.Sprintf("_found %d statuses in total_\n", len(botStatuses))
+	message += fmt.Sprintf("_found %d statuses in total_\n", len(entryBucket))
 
 	*out = bs.newMsg(message)
 	return bs.actionFinish
-}
-
-func (bs *BotStatus) insertBotStatus(authorID string, text string) (err error) {
-	insert := rethink.Table(models.BotStatusTable).Insert(models.BotStatus{
-		AddedByUserID: authorID,
-		AddedAt:       time.Now(),
-		Text:          text,
-	})
-	_, err = insert.RunWrite(helpers.GetDB())
-	return err
-}
-
-func (bs *BotStatus) getBotStatusByID(id string) (entryBucket models.BotStatus, err error) {
-	listCursor, err := rethink.Table(models.BotStatusTable).Get(id).Run(helpers.GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-	return entryBucket, err
-}
-func (bs *BotStatus) removeFromBotStatuses(botStatusEntry models.BotStatus) error {
-	if botStatusEntry.ID != "" {
-		_, err := rethink.Table(models.BotStatusTable).Get(botStatusEntry.ID).Delete().RunWrite(helpers.GetDB())
-		return err
-	}
-	return errors.New("empty botStatusEntry submitted")
-}
-
-func (bs *BotStatus) getAllBotStatuses() (result []models.BotStatus, err error) {
-	listCursor, err := rethink.Table(models.BotStatusTable).Run(helpers.GetDB())
-	if err != nil {
-		return nil, err
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&result)
-	return result, err
 }
 
 func (bs *BotStatus) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) botStatusAction {

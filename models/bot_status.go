@@ -1,14 +1,20 @@
 package models
 
-import "time"
+import (
+	"time"
 
-const (
-	BotStatusTable = "bot_status"
+	"github.com/bwmarrin/discordgo"
+	"github.com/globalsign/mgo/bson"
 )
 
-type BotStatus struct {
-	ID            string    `rethink:"id,omitempty"`
-	AddedByUserID string    `rethink:"added_by_userid"`
-	AddedAt       time.Time `rethink:"added_at"`
-	Text          string    `rethink:"text"`
+const (
+	BotStatusTable MongoDbCollection = "bot_status"
+)
+
+type BotStatusEntry struct {
+	ID            bson.ObjectId `bson:"_id,omitempty"`
+	AddedByUserID string
+	AddedAt       time.Time
+	Text          string
+	Type          discordgo.GameType
 }
