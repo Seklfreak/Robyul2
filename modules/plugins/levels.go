@@ -1994,13 +1994,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		}
 
 		jpgBytes, ext, err := m.GetProfile(targetMember, guild, gifP)
-		if err != nil && strings.Contains(err.Error(), "exit status 1") {
+		if err != nil {
 			cache.GetLogger().WithField("module", "levels").Error(fmt.Sprintf("Profile generation failed: %#v", err))
 			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-error-exit1"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		}
-		helpers.Relax(err)
 
 		_, err = helpers.SendComplex(
 			msg.ChannelID, &discordgo.MessageSend{
