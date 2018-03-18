@@ -24,7 +24,7 @@ func (m *Dog) Init(session *discordgo.Session) {
 }
 
 func (m *Dog) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermDog) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermAnimals) {
 		return
 	}
 

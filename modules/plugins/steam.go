@@ -37,7 +37,7 @@ func (m *Steam) Init(session *discordgo.Session) {
 }
 
 func (m *Steam) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermCrypto) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermSteam) {
 		return
 	}
 

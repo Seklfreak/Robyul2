@@ -37,7 +37,7 @@ const (
 	ModulePermRandomPictures                                                // randompictures.go
 	ModulePermYouTube                                                       // youtube/
 	ModulePermSpoiler                                                       // spoiler.go
-	ModulePermRandomCat                                                     // random_cat.go
+	ModulePermAnimals                                                       // random_cat.go, dog.go
 	ModulePermRPS                                                           // rps.go
 	ModulePermDig                                                           // dig.go
 	ModulePermStreamable                                                    // streamable.go
@@ -45,7 +45,7 @@ const (
 	ModulePermNames                                                         // names.go
 	ModulePermReddit                                                        // reddit.go
 	ModulePermColor                                                         // color.go
-	ModulePermDog                                                           // dog.go
+	ModulePermSteam                                                         // dog.go
 	ModulePermGoogle                                                        // google/
 	ModulePermWhois                                                         // whois.go
 	ModulePermIsup                                                          // isup.go
@@ -78,9 +78,9 @@ const (
 	ModulePermAll = ModulePermStats | ModulePermTranslator | ModulePermUrban | ModulePermWeather | ModulePermVLive |
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
 		ModulePermTwitch | ModulePermCharts | ModulePermChoice | ModulePermOsu | ModulePermReminders |
-		ModulePermGfycat | ModulePermRandomPictures | ModulePermYouTube | ModulePermSpoiler | ModulePermRandomCat |
+		ModulePermGfycat | ModulePermRandomPictures | ModulePermYouTube | ModulePermSpoiler | ModulePermAnimals |
 		ModulePermRPS | ModulePermDig | ModulePermStreamable | ModulePermLyrics | ModulePermNames | ModulePermReddit |
-		ModulePermColor | ModulePermDog | ModulePermGoogle | ModulePermWhois | ModulePermIsup | ModulePermLevels |
+		ModulePermColor | ModulePermSteam | ModulePermGoogle | ModulePermWhois | ModulePermIsup | ModulePermLevels |
 		ModulePermCustomCommands | ModulePermReactionPolls | ModulePermTwitter | ModulePermStarboard |
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
 		ModulePermGuildAnnouncements | ModulePermMirror | ModulePermMirror | ModulePermMod | ModulePermNotifications |
@@ -108,7 +108,7 @@ var (
 		{Names: []string{"randompictures"}, Permission: ModulePermRandomPictures},
 		{Names: []string{"youtube"}, Permission: ModulePermYouTube},
 		{Names: []string{"spoiler"}, Permission: ModulePermSpoiler},
-		{Names: []string{"cat", "randomcat"}, Permission: ModulePermRandomCat},
+		{Names: []string{"animals", "cat", "randomcat", "dog"}, Permission: ModulePermAnimals},
 		{Names: []string{"rps"}, Permission: ModulePermRPS},
 		{Names: []string{"dig"}, Permission: ModulePermDig},
 		{Names: []string{"streamable"}, Permission: ModulePermStreamable},
@@ -116,7 +116,7 @@ var (
 		{Names: []string{"names"}, Permission: ModulePermNames},
 		{Names: []string{"reddit"}, Permission: ModulePermReddit},
 		{Names: []string{"color"}, Permission: ModulePermColor},
-		{Names: []string{"dog"}, Permission: ModulePermDog},
+		{Names: []string{"steam"}, Permission: ModulePermSteam},
 		{Names: []string{"google"}, Permission: ModulePermGoogle},
 		{Names: []string{"whois"}, Permission: ModulePermWhois},
 		{Names: []string{"isup"}, Permission: ModulePermIsup},
