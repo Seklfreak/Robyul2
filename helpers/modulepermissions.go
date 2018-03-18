@@ -5,7 +5,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 )
 
 type ModulePermissionsModuleInfo struct {
@@ -14,7 +14,7 @@ type ModulePermissionsModuleInfo struct {
 }
 
 var (
-	modulePermissionsCache    []models.ModulePermission
+	modulePermissionsCache    []models.ModulePermissionEntry
 	modulePermissionCacheLock sync.Mutex
 )
 
@@ -148,19 +148,10 @@ var (
 )
 
 func RefreshModulePermissionsCache() (err error) {
-	listCursor, err := gorethink.Table(models.ModulePermissionsTable).Run(GetDB())
-	if err != nil {
-		return err
-	}
-	defer listCursor.Close()
 	modulePermissionCacheLock.Lock()
 	defer modulePermissionCacheLock.Unlock()
-	err = listCursor.All(&modulePermissionsCache)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	err = MDbIter(MdbCollection(models.ModulePermissionsTable).Find(nil)).All(&modulePermissionsCache)
+	return err
 }
 
 func ModuleIsAllowed(channelID, msgID, userID string, module models.ModulePermissionsModule) (isAllowed bool) {
@@ -410,7 +401,7 @@ func GetDeniedForRole(guildID, roleID string) (permissions models.ModulePermissi
 	return 0
 }
 
-func findModulePermissionsEntry(guildID, permType, targetID string) (entry models.ModulePermission) {
+func findModulePermissionsEntry(guildID, permType, targetID string) (entry models.ModulePermissionEntry) {
 	if modulePermissionsCache != nil {
 		modulePermissionCacheLock.Lock()
 		defer modulePermissionCacheLock.Unlock()
@@ -425,23 +416,10 @@ func findModulePermissionsEntry(guildID, permType, targetID string) (entry model
 		entry.TargetID = targetID
 		return entry
 	}
-
-	listCursor, err := gorethink.Table(models.ModulePermissionsTable).Filter(
-		gorethink.Row.Field("guild_id").Eq(guildID),
-	).Filter(
-		gorethink.Row.Field("type").Eq(permType),
-	).Filter(
-		gorethink.Row.Field("target_id").Eq(targetID),
-	).Run(GetDB())
-	if err != nil {
-		entry = models.GetDefaultModulePermission()
-		entry.GuildID = guildID
-		entry.Type = permType
-		entry.TargetID = targetID
-		return entry
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entry)
+	err := MdbOne(
+		MdbCollection(models.ModulePermissionsTable).Find(bson.M{"guildid": guildID, "type": permType, "targetid": targetID}),
+		&entry,
+	)
 	if err != nil {
 		entry = models.GetDefaultModulePermission()
 		entry.GuildID = guildID
@@ -453,7 +431,7 @@ func findModulePermissionsEntry(guildID, permType, targetID string) (entry model
 	return entry
 }
 
-func GetModulePermissionEntries(guildID string) (entries []models.ModulePermission) {
+func GetModulePermissionEntries(guildID string) (entries []models.ModulePermissionEntry) {
 	if modulePermissionsCache != nil {
 		modulePermissionCacheLock.Lock()
 		defer modulePermissionCacheLock.Unlock()
@@ -465,24 +443,17 @@ func GetModulePermissionEntries(guildID string) (entries []models.ModulePermissi
 		return entries
 	}
 
-	listCursor, err := gorethink.Table(models.ModulePermissionsTable).Filter(
-		gorethink.Row.Field("guild_id").Eq(guildID),
-	).Run(GetDB())
-	if err != nil {
-		return entries
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entries)
-	if err != nil {
-		return entries
-	}
-
+	_ = MDbIter(MdbCollection(models.ModulePermissionsTable).Find(bson.M{"guildid": guildID})).All(&entries)
 	return entries
 }
 
-func setModulePermissionsEntry(entry models.ModulePermission) (err error) {
+func setModulePermissionsEntry(entry models.ModulePermissionEntry) (err error) {
 	if entry.ID != "" {
-		_, err = gorethink.Table(models.ModulePermissionsTable).Update(entry).Run(GetDB())
+		err = MDbUpsertID(
+			models.ModulePermissionsTable,
+			entry.ID,
+			entry,
+		)
 		go func() {
 			defer Recover()
 
@@ -491,7 +462,10 @@ func setModulePermissionsEntry(entry models.ModulePermission) (err error) {
 		}()
 		return err
 	}
-	_, err = gorethink.Table(models.ModulePermissionsTable).Insert(entry).RunWrite(GetDB())
+	_, err = MDbInsert(
+		models.ModulePermissionsTable,
+		entry,
+	)
 	go func() {
 		defer Recover()
 

@@ -51,7 +51,6 @@ var migrations = []helpers.Callback{
 	m51_reindex_elasticv5_to_v6,
 	m52_create_elastic_index_voice_sessions,
 	m53_move_rethinkdb_voicesessions_to_elasticsearch,
-	m54_create_table_module_permissions,
 	m55_create_elastic_index_eventlogs,
 	m56_migratetable_profile_userdate,
 	m57_migrate_table_levels_serverusers,
@@ -65,6 +64,7 @@ var migrations = []helpers.Callback{
 	m65_migration_table_twitter,
 	m66_migration_table_donators,
 	m67_migration_table_names,
+	m68_migration_table_module_permission,
 }
 
 // Run executes all registered migrations

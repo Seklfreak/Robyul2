@@ -330,8 +330,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 
 	var permToAdd models.ModulePermissionsModule
 	if "all" == strings.ToLower(args[1]) {
-		//permToAdd = helpers.ModulePermAll | helpers.ModulePermAllPlaceholder // TODO
-		permToAdd = helpers.ModulePermAllPlaceholder
+		permToAdd = helpers.ModulePermAll | helpers.ModulePermAllPlaceholder
 	}
 	for _, module := range helpers.Modules {
 		for _, moduleName := range module.Names {

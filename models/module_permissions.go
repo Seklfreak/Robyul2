@@ -1,22 +1,37 @@
 package models
 
-const (
-	ModulePermissionsTable = "module_permissions"
+import (
+	"github.com/globalsign/mgo/bson"
 )
 
-type ModulePermissionsModule int
+const (
+	ModulePermissionsTable MongoDbCollection = "module_permissions"
+)
 
-type ModulePermission struct {
-	ID       string                  `rethink:"id,omitempty"`
-	GuildID  string                  `rethink:"guild_id"`
-	Type     string                  `rethink:"type"` // "channel" or "role"
-	TargetID string                  `rethink:"target_id"`
-	Allowed  ModulePermissionsModule `rethink:"allowed"` // -1 for unset
-	Denied   ModulePermissionsModule `rethink:"denied"`  // -1 for unset
+type ModulePermissionsModule int64
+
+/*
+func (m *ModulePermissionsModule) SetInt(n int64) {
+	*m = ModulePermissionsModule(strconv.FormatInt(n, 10))
 }
 
-func GetDefaultModulePermission() (defaultEntry ModulePermission) {
-	defaultEntry.Allowed = -1
+func (m *ModulePermissionsModule) GetInt() int64 {
+	n, _ := strconv.ParseInt(string(*m), 10, 64)
+	return n
+}
+*/
+
+type ModulePermissionEntry struct {
+	ID       bson.ObjectId `bson:"_id,omitempty"`
+	GuildID  string
+	Type     string // "channel" or "role"
+	TargetID string
+	Allowed  ModulePermissionsModule // -1 for unset
+	Denied   ModulePermissionsModule // -1 for unset
+}
+
+func GetDefaultModulePermission() (defaultEntry ModulePermissionEntry) {
+	defaultEntry.Allowed = -1 // TODO
 	defaultEntry.Denied = -1
 	return defaultEntry
 }
