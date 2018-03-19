@@ -1,20 +1,19 @@
 package plugins
 
 import (
-	"errors"
 	"strings"
 
 	"fmt"
 
-	"time"
-
 	"bytes"
+
+	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,25 +86,40 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 
 	guildID := args[1]
 
-	if whitelistEntryFound, _ := a.getServerWhitelistEntry(guildID); whitelistEntryFound.ID != "" {
-		guildFound, _ := helpers.GetGuild(whitelistEntryFound.GuildID)
+	var entryBucket models.AutoleaverWhitelistEntry
+	err := helpers.MdbOne(
+		helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(bson.M{"guildid": guildID}),
+		&entryBucket,
+	)
+	if err == nil {
+		guildFound, _ := helpers.GetGuild(guildID)
 		if guildFound == nil || guildFound.ID == "" {
 			guildFound = new(discordgo.Guild)
-			guildFound.ID = whitelistEntryFound.GuildID
+			guildFound.ID = guildID
 			guildFound.Name = "N/A"
 		}
 
 		*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.add-error-duplicate", guildFound.Name, guildFound.ID))
 		return a.actionFinish
 	}
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		helpers.Relax(err)
+	}
 
-	whitelistEntry, err := a.addToServerWhitelist(guildID, in.Author.ID)
-	helpers.Relax(err)
+	err = helpers.MDbUpsert(
+		models.AutoleaverWhitelistTable,
+		bson.M{"guildid": guildID},
+		models.AutoleaverWhitelistEntry{
+			AddedAt:       time.Now(),
+			GuildID:       guildID,
+			AddedByUserID: in.Author.ID,
+		},
+	)
 
-	guildAdded, _ := helpers.GetGuild(whitelistEntry.GuildID)
+	guildAdded, _ := helpers.GetGuild(guildID)
 	if guildAdded == nil || guildAdded.ID == "" {
 		guildAdded = new(discordgo.Guild)
-		guildAdded.ID = whitelistEntry.GuildID
+		guildAdded.ID = guildID
 		guildAdded.Name = "N/A"
 	}
 
@@ -132,17 +146,21 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 
 	var err error
 	var guildID string
-	var whitelistEntry models.AutoleaverWhitelistEntry
 	var guildAdded *discordgo.Guild
 	var guildsAdded int
+	var entryBucket models.AutoleaverWhitelistEntry
 	for _, guildIDLine := range guildIDLines {
 		guildID = strings.TrimSpace(strings.Replace(guildIDLine, "\r", "", -1))
 
-		if whitelistEntryFound, _ := a.getServerWhitelistEntry(guildID); whitelistEntryFound.ID != "" {
-			guildFound, _ := helpers.GetGuild(whitelistEntryFound.GuildID)
+		err = helpers.MdbOne(
+			helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(bson.M{"guildid": guildID}),
+			&entryBucket,
+		)
+		if err == nil {
+			guildFound, _ := helpers.GetGuild(guildID)
 			if guildFound == nil || guildFound.ID == "" {
 				guildFound = new(discordgo.Guild)
-				guildFound.ID = whitelistEntryFound.GuildID
+				guildFound.ID = guildID
 				guildFound.Name = "N/A"
 			}
 
@@ -150,16 +168,24 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 			continue
 		}
 
-		whitelistEntry, err = a.addToServerWhitelist(guildID, in.Author.ID)
+		err = helpers.MDbUpsert(
+			models.AutoleaverWhitelistTable,
+			bson.M{"guildid": guildID},
+			models.AutoleaverWhitelistEntry{
+				AddedAt:       time.Now(),
+				GuildID:       guildID,
+				AddedByUserID: in.Author.ID,
+			},
+		)
 		if err != nil {
 			resultText += fmt.Sprintf(":x: Error adding Guild `#%s`: %s\n", guildID, err.Error())
 			continue
 		}
 
-		guildAdded, _ = helpers.GetGuild(whitelistEntry.GuildID)
+		guildAdded, _ = helpers.GetGuild(guildID)
 		if guildAdded == nil || guildAdded.ID == "" {
 			guildAdded = new(discordgo.Guild)
-			guildAdded.ID = whitelistEntry.GuildID
+			guildAdded.ID = guildID
 			guildAdded.Name = "N/A"
 		}
 
@@ -190,12 +216,20 @@ func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **di
 
 	guildID := args[1]
 
-	var whitelistEntryFound models.AutoleaverWhitelistEntry
-	if whitelistEntryFound, _ = a.getServerWhitelistEntry(guildID); whitelistEntryFound.ID == "" {
-		guildFound, _ := helpers.GetGuild(whitelistEntryFound.ID)
+	var entryBucket models.AutoleaverWhitelistEntry
+	err := helpers.MdbOne(
+		helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(bson.M{"guildid": guildID}),
+		&entryBucket,
+	)
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			helpers.Relax(err)
+		}
+
+		guildFound, _ := helpers.GetGuild(guildID)
 		if guildFound == nil || guildFound.ID == "" {
 			guildFound = new(discordgo.Guild)
-			guildFound.ID = whitelistEntryFound.ID
+			guildFound.ID = guildID
 			guildFound.Name = "N/A"
 		}
 
@@ -203,13 +237,13 @@ func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **di
 		return a.actionFinish
 	}
 
-	err := a.removeFromServerWhitelist(whitelistEntryFound)
+	err = helpers.MDbDelete(models.AutoleaverWhitelistTable, entryBucket.ID)
 	helpers.Relax(err)
 
-	guildRemoved, _ := helpers.GetGuild(whitelistEntryFound.GuildID)
+	guildRemoved, _ := helpers.GetGuild(guildID)
 	if guildRemoved == nil || guildRemoved.ID == "" {
 		guildRemoved = new(discordgo.Guild)
-		guildRemoved.ID = whitelistEntryFound.GuildID
+		guildRemoved.ID = guildID
 		guildRemoved.Name = "N/A"
 	}
 
@@ -223,20 +257,19 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 		return a.actionFinish
 	}
 
-	whitelistEntries, err := a.getServerWhitelist()
-	if err != nil {
-		if strings.Contains(err.Error(), "no whitelist entries") {
-			*out = a.newMsg(helpers.GetText("plugins.autoleaver.check-no-entries"))
-			return a.actionFinish
-		}
-		helpers.Relax(err)
+	var entryBucket []models.AutoleaverWhitelistEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&entryBucket)
+	helpers.Relax(err)
+	if entryBucket == nil || len(entryBucket) < 1 {
+		*out = a.newMsg(helpers.GetText("plugins.autoleaver.check-no-entries"))
+		return a.actionFinish
 	}
 
 	notWhitelistedGuilds := make([]*discordgo.Guild, 0)
 
 	var isWhitelisted bool
 	for _, botGuild := range cache.GetSession().State.Guilds {
-		isWhitelisted, err = a.isOnWhitelist(botGuild.ID, whitelistEntries)
+		isWhitelisted, err = a.isOnWhitelist(botGuild.ID, entryBucket)
 		helpers.Relax(err)
 
 		if !isWhitelisted {
@@ -287,77 +320,21 @@ func (a *Autoleaver) actionSetLog(args []string, in *discordgo.Message, out **di
 func (a *Autoleaver) isOnWhitelist(GuildID string, whitelist []models.AutoleaverWhitelistEntry) (bool, error) {
 	var err error
 	if whitelist == nil {
-		whitelist, err = a.getServerWhitelist()
+		err = helpers.MDbIter(helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&whitelist)
 		if err != nil {
 			return true, err
 		}
 	}
 
-	for _, whitelistEntry := range whitelist {
-		if whitelistEntry.GuildID == GuildID {
-			return true, nil
+	if whitelist != nil && len(whitelist) > 0 {
+		for _, whitelistEntry := range whitelist {
+			if whitelistEntry.GuildID == GuildID {
+				return true, nil
+			}
 		}
 	}
 
 	return false, nil
-}
-
-func (a *Autoleaver) getServerWhitelist() (entryBucket []models.AutoleaverWhitelistEntry, err error) {
-	listCursor, err := rethink.Table(models.AutoleaverWhitelistTable).Run(helpers.GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-	if err == rethink.ErrEmptyResult {
-		return entryBucket, errors.New("no whitelist entries")
-	} else if err != nil {
-		return entryBucket, err
-	}
-
-	return entryBucket, nil
-}
-
-func (a *Autoleaver) getServerWhitelistEntry(guildID string) (entryBucket models.AutoleaverWhitelistEntry, err error) {
-	listCursor, err := rethink.Table(models.AutoleaverWhitelistTable).Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket, errors.New("no whitelist entry")
-	} else if err != nil {
-		return entryBucket, err
-	}
-
-	return entryBucket, nil
-}
-
-func (a *Autoleaver) addToServerWhitelist(guildID string, userID string) (models.AutoleaverWhitelistEntry, error) {
-	insert := rethink.Table(models.AutoleaverWhitelistTable).Insert(models.AutoleaverWhitelistEntry{
-		AddedAt:       time.Now(),
-		AddedByUserID: userID,
-		GuildID:       guildID,
-	})
-	_, err := insert.RunWrite(helpers.GetDB())
-	if err != nil {
-		return models.AutoleaverWhitelistEntry{}, err
-	} else {
-		return a.getServerWhitelistEntry(guildID)
-	}
-}
-
-func (a *Autoleaver) removeFromServerWhitelist(whitelistEntry models.AutoleaverWhitelistEntry) error {
-	if whitelistEntry.ID != "" {
-		_, err := rethink.Table(models.AutoleaverWhitelistTable).Get(whitelistEntry.ID).Delete().RunWrite(helpers.GetDB())
-		return err
-	}
-	return errors.New("empty whitelistEntry submitted")
 }
 
 func (a *Autoleaver) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {

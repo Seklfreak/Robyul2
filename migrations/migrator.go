@@ -30,7 +30,6 @@ var migrations = []helpers.Callback{
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
-	m30_create_table_autoleaver_whitelist,
 	m32_create_table_reddit_subreddits,
 	m33_create_table_youtube_channels,
 	m34_create_table_levels_roles,
@@ -65,6 +64,7 @@ var migrations = []helpers.Callback{
 	m68_migration_table_module_permission,
 	m69_migration_table_bot_status,
 	m70_migration_table_weather_last_locations,
+	m71_migration_table_autoleaver_whitelist,
 }
 
 // Run executes all registered migrations
