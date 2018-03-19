@@ -90,24 +90,32 @@ func GetMDbSession() *mgo.Session {
 }
 
 func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.ObjectId, err error) {
-	ptr := reflect.New(reflect.TypeOf(data))
-	temp := ptr.Elem()
-	temp.Set(reflect.ValueOf(data))
+	var recordData reflect.Value
+	if reflect.ValueOf(data).Kind() != reflect.Ptr {
+		// handle non pointers
+		recordData = reflect.New(reflect.TypeOf(data)).Elem()
+		recordData.Set(reflect.ValueOf(data))
+	} else {
+		// handle pointers
+		// convert the raw interface data to its actual type
+		recordData = reflect.ValueOf(data).Elem()
+	}
 
-	v := temp.FieldByName("ID")
-
-	if !v.IsValid() {
+	// confirm data has an ID field
+	idField := recordData.FieldByName("ID")
+	if !idField.IsValid() {
 		return bson.ObjectId(""), errors.New("invalid data")
 	}
 
-	newID := v.String()
+	// if the records id field isn't empty, give it an id
+	newID := idField.String()
 	if newID == "" {
 		newID = string(bson.NewObjectId())
-		v.SetString(newID)
+		idField.SetString(newID)
 	}
 
 	start := time.Now()
-	err = GetMDb().C(collection.String()).Insert(temp.Interface())
+	err = GetMDb().C(collection.String()).Insert(recordData.Interface())
 	took := time.Since(start)
 
 	if cache.HasKeen() {
@@ -135,23 +143,31 @@ func MDbInsert(collection models.MongoDbCollection, data interface{}) (rid bson.
 }
 
 func MDbInsertWithoutLogging(collection models.MongoDbCollection, data interface{}) (rid bson.ObjectId, err error) {
-	ptr := reflect.New(reflect.TypeOf(data))
-	temp := ptr.Elem()
-	temp.Set(reflect.ValueOf(data))
+	var recordData reflect.Value
+	if reflect.ValueOf(data).Kind() != reflect.Ptr {
+		// handle non pointers
+		recordData = reflect.New(reflect.TypeOf(data)).Elem()
+		recordData.Set(reflect.ValueOf(data))
+	} else {
+		// handle pointers
+		// convert the raw interface data to its actual type
+		recordData = reflect.ValueOf(data).Elem()
+	}
 
-	v := temp.FieldByName("ID")
-
-	if !v.IsValid() {
+	// confirm data has an ID field
+	idField := recordData.FieldByName("ID")
+	if !idField.IsValid() {
 		return bson.ObjectId(""), errors.New("invalid data")
 	}
 
-	newID := v.String()
+	// if the records id field isn't empty, give it an id
+	newID := idField.String()
 	if newID == "" {
 		newID = string(bson.NewObjectId())
-		v.SetString(newID)
+		idField.SetString(newID)
 	}
 
-	err = GetMDb().C(collection.String()).Insert(temp.Interface())
+	err = GetMDb().C(collection.String()).Insert(recordData.Interface())
 
 	if err != nil {
 		return bson.ObjectId(""), err
