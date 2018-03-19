@@ -6,8 +6,9 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
 	"github.com/olebedev/when/rules/en"
@@ -15,19 +16,6 @@ import (
 
 type Reminders struct {
 	parser *when.Parser
-}
-
-type DB_Reminders struct {
-	Id        string        `gorethink:"id,omitempty"`
-	UserID    string        `gorethink:"userid"`
-	Reminders []DB_Reminder `gorethink:"reminders"`
-}
-
-type DB_Reminder struct {
-	Message   string `gorethink:"message"`
-	ChannelID string `gorethink:"channelID"`
-	GuildID   string `gorethink:"guildID"`
-	Timestamp int64  `gorethink:"timestamp"`
 }
 
 // maps guildid => custom message
@@ -52,11 +40,8 @@ func (r *Reminders) Init(session *discordgo.Session) {
 		defer helpers.Recover()
 
 		for {
-			reminderBucket := make([]DB_Reminders, 0)
-			cursor, err := rethink.Table("reminders").Run(helpers.GetDB())
-			helpers.Relax(err)
-
-			err = cursor.All(&reminderBucket)
+			reminderBucket := make([]models.RemindersEntry, 0)
+			err := helpers.MDbIter(helpers.MdbCollection(models.RemindersTable).Find(nil)).All(&reminderBucket)
 			helpers.Relax(err)
 
 			for _, reminders := range reminderBucket {
@@ -86,11 +71,16 @@ func (r *Reminders) Init(session *discordgo.Session) {
 				}
 
 				if changes {
-					setReminders(reminders.UserID, reminders)
+					err = helpers.MDbUpsertID(
+						models.RemindersTable,
+						reminders.ID,
+						reminders,
+					)
+					helpers.Relax(err)
 				}
 			}
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}()
 
@@ -131,13 +121,19 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		}
 
 		reminders := getReminders(msg.Author.ID)
-		reminders.Reminders = append(reminders.Reminders, DB_Reminder{
+		reminders.Reminders = append(reminders.Reminders, models.RemindersReminderEntry{
 			Message:   strings.Replace(content, r.Text, "", 1),
 			ChannelID: channel.ID,
 			GuildID:   channel.GuildID,
 			Timestamp: r.Time.Unix(),
 		})
-		setReminders(msg.Author.ID, reminders)
+
+		err = helpers.MDbUpsertID(
+			models.RemindersTable,
+			reminders.ID,
+			reminders,
+		)
+		helpers.Relax(err)
 
 		// Check if guild has a custom message set
 		if customMsg, ok := customReminderMsgMap[channel.GuildID]; ok {
@@ -189,38 +185,31 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 	}
 }
 
-func getReminders(uid string) DB_Reminders {
-	var reminderBucket DB_Reminders
-	listCursor, err := rethink.Table("reminders").Filter(
-		rethink.Row.Field("userid").Eq(uid),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&reminderBucket)
+func getReminders(userID string) (reminder models.RemindersEntry) {
+	err := helpers.MdbOne(
+		helpers.MdbCollection(models.RemindersTable).Find(bson.M{"userid": userID}),
+		&reminder,
+	)
 
 	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		_, e := rethink.Table("reminders").Insert(DB_Reminders{
-			UserID:    uid,
-			Reminders: make([]DB_Reminder, 0),
-		}).RunWrite(helpers.GetDB())
-
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		err = helpers.MDbUpsert(
+			models.RemindersTable,
+			bson.M{"userid": userID},
+			models.RemindersEntry{
+				UserID:    userID,
+				Reminders: make([]models.RemindersReminderEntry, 0),
+			},
+		)
 		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
+		if err != nil {
+			panic(err)
 		} else {
-			return getReminders(uid)
+			return getReminders(userID)
 		}
 	} else if err != nil {
 		panic(err)
 	}
 
-	return reminderBucket
-}
-
-func setReminders(uid string, reminders DB_Reminders) {
-	_, err := rethink.Table("reminders").Update(reminders).Run(helpers.GetDB())
-	helpers.Relax(err)
+	return reminder
 }

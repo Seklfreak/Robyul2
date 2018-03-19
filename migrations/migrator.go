@@ -11,8 +11,6 @@ import (
 var migrations = []helpers.Callback{
 	m0_create_db,
 	m1_create_table_guild_config,
-	m2_create_table_reminders,
-	m3_create_table_music,
 	m4_create_table_vlive,
 	m6_create_table_instagram,
 	m7_create_table_facebook,
@@ -65,6 +63,7 @@ var migrations = []helpers.Callback{
 	m69_migration_table_bot_status,
 	m70_migration_table_weather_last_locations,
 	m71_migration_table_autoleaver_whitelist,
+	m72_migration_table_reminders,
 }
 
 // Run executes all registered migrations
