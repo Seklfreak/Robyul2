@@ -9,21 +9,15 @@ install:
     - dep ensure
     - go get -u github.com/jteeuwen/go-bindata/...
     - patch vendor/github.com/bwmarrin/discordgo/restapi.go patches/adds_robyul_discord_rest_api_logging.patch -R
-    # update npm
-    - npm install npm -g
-    - npm install -g snyk
-    - snyk test
-    #- go get -v github.com/golang/lint/golint
-    #- go get github.com/mitchellh/gox
+    # snyk (on non pull requests)
+    - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then npm install npm -g && npm install -g snyk && snyk test; fi'
 script:
     - bash format_go.sh
     - go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
     - go test -v -race $(go list ./... | grep -v /vendor/)
-    #- go vet -x ./...
-    #- golint ./...
-    #- gox -output="robyul2-{{.OS}}-{{.Arch}}" -osarch="windows/amd64"
 after_success:
-    - snyk monitor
+    # snyk (on non pull requests)
+    - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then snyk monitor; fi'
 deploy:
   provider: releases
   api_key:
