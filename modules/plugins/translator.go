@@ -82,6 +82,7 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 		&translate.Options{
 			Format: translate.Text,
 			Source: source,
+			Model:  "nmt",
 		},
 	)
 
