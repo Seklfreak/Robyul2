@@ -213,7 +213,7 @@ func CollectRuntimeMetrics() {
 
 		TwitterAccountsCount.Set(int64(entriesCountMgo(models.TwitterTable)))
 
-		FacebookPagesCount.Set(entriesCount("facebook"))
+		FacebookPagesCount.Set(int64(entriesCountMgo(models.FacebookTable)))
 
 		GalleriesCount.Set(entriesCount("galleries"))
 
