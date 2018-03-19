@@ -86,6 +86,17 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 
 	guildID := args[1]
 
+	if !helpers.IsSnowflake(guildID) {
+		inviteCode := helpers.ExtractInviteCode(guildID)
+		invite, err := cache.GetSession().Invite(inviteCode)
+		if err == nil && invite != nil && invite.Guild != nil && invite.Guild.ID != "" {
+			guildID = invite.Guild.ID
+		} else {
+			*out = a.newMsg(helpers.GetText("bot.arguments.invalid"))
+			return a.actionFinish
+		}
+	}
+
 	var entryBucket models.AutoleaverWhitelistEntry
 	err := helpers.MdbOne(
 		helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(bson.M{"guildid": guildID}),

@@ -26,6 +26,10 @@ const (
 	DISCORD_DARK_THEME_BACKGROUND_HEX       = "#36393F"
 )
 
+var (
+	snowflakeRegex = regexp.MustCompile(`^[0-9]+$`)
+)
+
 var botAdmins = []string{
 	"116620585638821891", // Sekl
 	"134298438559858688", // Kakkela
@@ -1474,4 +1478,19 @@ func GetStaffUsernamesText() (text string) {
 
 func EscapeLinkForMarkdown(input string) (result string) {
 	return strings.Replace(strings.Replace(input, ")", "%29", -1), "(", "%28", -1)
+}
+
+func IsSnowflake(input string) (snowflake bool) {
+	if snowflakeRegex.MatchString(input) {
+		return true
+	}
+	return false
+}
+
+func ExtractInviteCode(input string) (inviteCode string) {
+	inviteCode = strings.Replace(input, "https://", "", -1)
+	inviteCode = strings.Replace(inviteCode, "http://", "", -1)
+	inviteCode = strings.Replace(inviteCode, "discord.gg/", "", -1)
+	inviteCode = strings.Replace(inviteCode, "invite/", "", -1)
+	return inviteCode
 }

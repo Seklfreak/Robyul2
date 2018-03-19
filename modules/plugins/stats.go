@@ -1495,11 +1495,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 
-		inviteCode := args[0]
-		inviteCode = strings.Replace(inviteCode, "https://", "", -1)
-		inviteCode = strings.Replace(inviteCode, "http://", "", -1)
-		inviteCode = strings.Replace(inviteCode, "discord.gg/", "", -1)
-		inviteCode = strings.Replace(inviteCode, "invite/", "", -1)
+		inviteCode := helpers.ExtractInviteCode(args[0])
 
 		type InviteWithCounts struct {
 			Guild                    *discordgo.Guild    `json:"guild"`
