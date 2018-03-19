@@ -1,19 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
-
-	"github.com/olivere/elastic"
-
-	"fmt"
-
-	"strings"
-
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/RichardKnop/machinery/v1"
 	marchineryConfig "github.com/RichardKnop/machinery/v1/config"
@@ -34,7 +31,10 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/inconshreveable/go-keen"
 	"github.com/kz/discordrus"
+	"github.com/olivere/elastic"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2/google"
+	drive "google.golang.org/api/drive/v3"
 )
 
 var (
@@ -195,6 +195,26 @@ func main() {
 		DB:       0,  // use default DB
 	})
 	cache.SetRedisClient(redisClient)
+
+	// Set up Google Drive Client
+	driveCtx := context.Background()
+	driveAuthJson, err := ioutil.ReadFile(helpers.GetConfig().Path("google.client_credentials_json_location").Data().(string))
+	if err != nil {
+		panic(err)
+	}
+
+	driveConfigs, err := google.JWTConfigFromJSON(driveAuthJson, drive.DriveReadonlyScope)
+	if err != nil {
+		panic(err)
+	}
+
+	driveClient := driveConfigs.Client(driveCtx)
+	driveService, err := drive.New(driveClient)
+	if err != nil {
+		panic(err)
+	}
+
+	cache.SetGoogleDriveService(driveService)
 
 	// Connect and add event handlers
 	discordgo.Logger = func(msgL, caller int, format string, a ...interface{}) {
