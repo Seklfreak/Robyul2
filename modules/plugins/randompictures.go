@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -23,8 +22,6 @@ import (
 	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/vmihailenco/msgpack"
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
 )
@@ -61,15 +58,10 @@ func (rp *RandomPictures) Commands() []string {
 }
 
 func (rp *RandomPictures) Init(session *discordgo.Session) {
-	// Set up Google Drive Client
-	ctx := context.Background()
-	authJson, err := ioutil.ReadFile(helpers.GetConfig().Path("google.client_credentials_json_location").Data().(string))
-	helpers.Relax(err)
-	config, err := google.JWTConfigFromJSON(authJson, drive.DriveReadonlyScope)
-	helpers.Relax(err)
-	client := config.Client(ctx)
-	driveService, err = drive.New(client)
-	helpers.Relax(err)
+
+	// Get drive service
+	driveService = cache.GetGoogleDriveService()
+
 	// initial random generator
 	rand.Seed(time.Now().Unix())
 
