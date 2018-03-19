@@ -11,25 +11,13 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	"github.com/globalsign/mgo/bson"
 	rethink "github.com/gorethink/gorethink"
 	fb "github.com/huandu/facebook"
 	"github.com/pkg/errors"
 )
 
 type Facebook struct{}
-
-type DB_Facebook_Page struct {
-	ID          string             `gorethink:"id,omitempty"`
-	ServerID    string             `gorethink:"serverid"`
-	ChannelID   string             `gorethink:"channelid"`
-	Username    string             `gorethink:"username"`
-	PostedPosts []DB_Facebook_Post `gorethink:"posted_posts"`
-}
-
-type DB_Facebook_Post struct {
-	ID        string `gorethink:"id,omitempty"`
-	CreatedAt string `gorethink:"CreatedAt"`
-}
 
 type Facebook_Page struct {
 	ID                string
@@ -52,7 +40,7 @@ type Facebook_Post struct {
 }
 
 type Facebook_Safe_Entries struct {
-	entries []DB_Facebook_Page
+	entries []models.FacebookEntry
 	mux     sync.Mutex
 }
 
@@ -83,18 +71,14 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 		}()
 	}()
 
-	var entries []DB_Facebook_Page
-	var bundledEntries map[string][]DB_Facebook_Page
+	var entries []models.FacebookEntry
+	var bundledEntries map[string][]models.FacebookEntry
 
 	for {
-
-		cursor, err := rethink.Table("facebook").Run(helpers.GetDB())
+		err := helpers.MDbIter(helpers.MdbCollection(models.FacebookTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
 
-		err = cursor.All(&entries)
-		helpers.Relax(err)
-
-		bundledEntries = make(map[string][]DB_Facebook_Page, 0)
+		bundledEntries = make(map[string][]models.FacebookEntry, 0)
 
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
@@ -107,13 +91,12 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 			if _, ok := bundledEntries[entry.Username]; ok {
 				bundledEntries[entry.Username] = append(bundledEntries[entry.Username], entry)
 			} else {
-				bundledEntries[entry.Username] = []DB_Facebook_Page{entry}
+				bundledEntries[entry.Username] = []models.FacebookEntry{entry}
 			}
 		}
 
 		cache.GetLogger().WithField("module", "facebook").Infof("checking %d pages for %d feeds", len(bundledEntries), len(entries))
 
-		// TODO: Check multiple entries at once
 		for facebookUsername, entries := range bundledEntries {
 			//log.WithField("module", "facebook").Debug(fmt.Sprintf("checking Facebook Page %s", facebookUsername))
 
@@ -141,14 +124,19 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 					}
 					if postAlreadyPosted == false {
 						log.WithField("module", "facebook").Info(fmt.Sprintf("Posting Post: #%s", post.ID))
-						entry.PostedPosts = append(entry.PostedPosts, DB_Facebook_Post{ID: post.ID, CreatedAt: post.CreatedAt})
+						entry.PostedPosts = append(entry.PostedPosts, models.FacebookPostEntry{ID: post.ID, CreatedAt: post.CreatedAt})
 						changes = true
 						go m.postPostToChannel(entry.ChannelID, post, facebookPage)
 					}
 
 				}
 				if changes == true {
-					m.setEntry(entry)
+					err = helpers.MDbUpsertID(
+						models.FacebookTable,
+						entry.ID,
+						entry,
+					)
+					helpers.Relax(err)
 				}
 			}
 			time.Sleep(1 * time.Second)
@@ -199,38 +187,42 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 					helpers.Relax(err)
 				}
 				// Create DB Entries
-				var dbPosts []DB_Facebook_Post
+				var dbPosts []models.FacebookPostEntry
 				for _, facebookPost := range facebookPage.Posts {
-					facebookPostEntry := DB_Facebook_Post{ID: facebookPost.ID, CreatedAt: facebookPost.CreatedAt}
+					facebookPostEntry := models.FacebookPostEntry{ID: facebookPost.ID, CreatedAt: facebookPost.CreatedAt}
 					dbPosts = append(dbPosts, facebookPostEntry)
 
 				}
 				// create new entry in db
-				entry := m.getEntryByOrCreateEmpty("id", "")
-				entry.ServerID = targetChannel.GuildID
-				entry.ChannelID = targetChannel.ID
-				entry.Username = facebookPage.Username
-				entry.PostedPosts = dbPosts
-				m.setEntry(entry)
+				_, err = helpers.MDbInsert(
+					models.FacebookTable,
+					models.FacebookEntry{
+						GuildID:     targetChannel.GuildID,
+						ChannelID:   targetChannel.ID,
+						Username:    facebookPage.Username,
+						PostedPosts: dbPosts,
+					},
+				)
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.GuildID,
 					models.EventlogTargetTypeRobyulFacebookFeed, msg.Author.ID,
 					models.EventlogTypeRobyulFacebookFeedAdd, "",
 					nil,
 					[]models.ElasticEventlogOption{
 						{
 							Key:   "facebook_channelid",
-							Value: entry.ChannelID,
+							Value: targetChannel.ID,
 						},
 						{
 							Key:   "facebook_facebookusername",
-							Value: entry.Username,
+							Value: facebookPage.Username,
 						},
 					}, false)
 				helpers.RelaxLog(err)
 
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", entry.Username, entry.ChannelID))
-				cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-added-success", facebookPage.Username, targetChannel.ID))
+				cache.GetLogger().WithField("module", "facebook").Info(fmt.Sprintf("Added Facebook Account %s to Channel %s (#%s) on Guild %s (#%s)", facebookPage.Username, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]facebook delete <id>
 			helpers.RequireMod(msg, func() {
@@ -241,11 +233,15 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 					helpers.Relax(err)
 
 					entryId := args[1]
-					entryBucket := m.getEntryBy("id", entryId)
-					if entryBucket.ID != "" {
-						m.deleteEntryById(entryBucket.ID)
+					var entryBucket models.FacebookEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.FacebookTable).Find(bson.M{"_id": helpers.HumanToMdbId(entryId), "guildid": channel.GuildID}),
+						&entryBucket,
+					)
+					if err == nil {
+						err = helpers.MDbDelete(models.FacebookTable, entryBucket.ID)
 
-						_, err := helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+						_, err := helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
 							models.EventlogTargetTypeRobyulFacebookFeed, msg.Author.ID,
 							models.EventlogTypeRobyulFacebookFeedRemove, "",
 							nil,
@@ -275,13 +271,9 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 		case "list": // [p]facebook list
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			var entryBucket []DB_Facebook_Page
-			listCursor, err := rethink.Table("facebook").Filter(
-				rethink.Row.Field("serverid").Eq(currentChannel.GuildID),
-			).Run(helpers.GetDB())
+			var entryBucket []models.FacebookEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.FacebookTable).Find(bson.M{"guildid": currentChannel.GuildID})).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
 			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-list-no-accounts-error"))
@@ -292,7 +284,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 
 			resultMessage := ""
 			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s`: Facebook Page `%s` posting to <#%s>\n", entry.ID, entry.Username, entry.ChannelID)
+				resultMessage += fmt.Sprintf("`%s`: Facebook Page `%s` posting to <#%s>\n", helpers.MdbIdToHuman(entry.ID), entry.Username, entry.ChannelID)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Facebook Pages in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
@@ -468,64 +460,4 @@ func (m *Facebook) postPostToChannel(channelID string, post Facebook_Post, faceb
 	if err != nil {
 		cache.GetLogger().WithField("module", "facebook").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
 	}
-}
-
-func (m *Facebook) getEntryBy(key string, id string) DB_Facebook_Page {
-	var entryBucket DB_Facebook_Page
-	listCursor, err := rethink.Table("facebook").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Facebook) getEntryByOrCreateEmpty(key string, id string) DB_Facebook_Page {
-	var entryBucket DB_Facebook_Page
-	listCursor, err := rethink.Table("facebook").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("facebook").Insert(DB_Facebook_Page{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Facebook) setEntry(entry DB_Facebook_Page) {
-	_, err := rethink.Table("facebook").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Facebook) deleteEntryById(id string) {
-	_, err := rethink.Table("facebook").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
 }
