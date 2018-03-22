@@ -65,6 +65,7 @@ var (
 		&plugins.Crypto{},
 		&plugins.Imgur{},
 		&plugins.Steam{},
+		&plugins.Config{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

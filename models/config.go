@@ -36,13 +36,12 @@ type Config struct {
 	LevelsIgnoredChannelIDs       []string `rethink:"levels_ignored_channel_ids"`
 	LevelsNotificationCode        string   `rethink:"level_notification_code"`
 	LevelsNotificationDeleteAfter int      `rethink:"level_notification_deleteafter"`
+	LevelsMaxBadges               int      `rethink:"levels_maxbadges"`
 
 	MutedMembers []string `rethink:"muted_member_ids"` // deprecated
 
 	TroublemakerIsParticipating bool   `rethink:"troublemaker_participation"`
 	TroublemakerLogChannel      string `rethink:"troublemaker_channel"`
-
-	LevelsMaxBadges int `rethink:"levels_maxbadges"`
 
 	AutoRoleIDs      []string          `rethink:"autorole_roleids"`
 	DelayedAutoRoles []DelayedAutoRole `rethink:"delayed_autoroles"`
@@ -67,6 +66,9 @@ type Config struct {
 
 	CustomCommandsEveryoneCanAdd bool   `rethink:"customcommands_everyonecanadd"`
 	CustomCommandsAddRoleID      string `rethink:"customcommands_add_roleid"`
+
+	AdminRoleIDs []string `rethink:"admin_roleids"`
+	ModRoleIDs   []string `rethink:"mod_roleids"`
 }
 
 type InspectTriggersEnabled struct {
