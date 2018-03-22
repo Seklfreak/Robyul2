@@ -124,9 +124,9 @@ func (m *Dog) Action(command string, content string, msg *discordgo.Message, ses
 func (m *Dog) getRandomDogLink() (link string) {
 	var entryBucket models.DogLinkEntry
 	// TODO: pipe aggregation
-	err := helpers.MdbCollection(models.DogLinksTable).Pipe(
+	err := helpers.MdbPipeOne(models.DogLinksTable,
 		[]bson.M{{"$sample": bson.M{"size": 1}}},
-	).One(&entryBucket)
+		&entryBucket)
 	helpers.RelaxLog(err)
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		return ""

@@ -49,8 +49,7 @@ func (bs *BotStatus) gameStatusRotationLoop() {
 	var newStatus string
 	for {
 		var entryBucket models.BotStatusEntry
-		// TODO: pipe aggregation
-		err = helpers.MdbCollection(models.BotStatusTable).Pipe([]bson.M{{"$sample": bson.M{"size": 1}}}).One(&entryBucket)
+		err = helpers.MdbPipeOneWithoutLogging(models.BotStatusTable, []bson.M{{"$sample": bson.M{"size": 1}}}, &entryBucket)
 		if err != nil {
 			if !strings.Contains(err.Error(), "not found") {
 				helpers.RelaxLog(err)

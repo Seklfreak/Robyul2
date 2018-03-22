@@ -355,7 +355,7 @@ func MDbIter(query *mgo.Query) (iter *mgo.Iter) {
 				Type:       "query",
 				Method:     "MdbIter()",
 				Collection: stripRobyulDatabaseFromCollection(queryOp.FieldByName("collection").String()),
-				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface())),
 				Skip:       queryOp.FieldByName("skip").Int(),
 				Limit:      queryOp.FieldByName("limit").Int(),
 			})
@@ -387,7 +387,7 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 				Type:       "query",
 				Method:     "MdbOne()",
 				Collection: stripRobyulDatabaseFromCollection(queryOp.FieldByName("collection").String()),
-				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface())),
 				Skip:       queryOp.FieldByName("skip").Int(),
 				Limit:      queryOp.FieldByName("limit").Int(),
 			})
@@ -401,6 +401,33 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 
 func MdbOneWithoutLogging(query *mgo.Query, object interface{}) (err error) {
 	return query.One(object)
+}
+
+func MdbPipeOne(collection models.MongoDbCollection, pipeline interface{}, object interface{}) (err error) {
+	start := time.Now()
+	err = MdbCollection(collection).Pipe(pipeline).One(object)
+	took := time.Since(start)
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "pipeline",
+				Method:     "MdbPipeOne()",
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", pipeline)),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
+func MdbPipeOneWithoutLogging(collection models.MongoDbCollection, pipeline interface{}, object interface{}) (err error) {
+	return MdbCollection(collection).Pipe(pipeline).One(object)
 }
 
 // Returns a human readable ID version of a ObjectID
