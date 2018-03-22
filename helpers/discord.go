@@ -200,45 +200,17 @@ func CanInspectExtended(msg *discordgo.Message) bool {
 }
 
 func IsAdmin(msg *discordgo.Message) bool {
-	channel, e := GetChannel(msg.ChannelID)
-	if e != nil {
+	channel, err := GetChannel(msg.ChannelID)
+	if err != nil {
 		return false
 	}
 
-	guild, e := GetGuild(channel.GuildID)
-	if e != nil {
-		return false
-	}
-
-	if msg.Author.ID == guild.OwnerID || IsBotAdmin(msg.Author.ID) {
-		return true
-	}
-
-	guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
-	if e != nil {
-		return false
-	}
-	// Check if role may manage server or a role is in admin role list
-	for _, role := range guild.Roles {
-		for _, userRole := range guildMember.Roles {
-			if userRole == role.ID {
-				if role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
-					return true
-				}
-				for _, adminRoleName := range adminRoleNames {
-					if role.Name == adminRoleName {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
+	return IsAdminByID(channel.GuildID, msg.Author.ID)
 }
 
 func IsAdminByID(guildID string, userID string) bool {
-	guild, e := GetGuild(guildID)
-	if e != nil {
+	guild, err := GetGuild(guildID)
+	if err != nil {
 		return false
 	}
 
@@ -246,20 +218,33 @@ func IsAdminByID(guildID string, userID string) bool {
 		return true
 	}
 
-	guildMember, e := GetGuildMemberWithoutApi(guild.ID, userID)
-	if e != nil {
+	guildMember, err := GetGuildMemberWithoutApi(guild.ID, userID)
+	if err != nil {
 		return false
 	}
-	// Check if role may manage server or a role is in admin role list
+
+	adminRoleIDs := GuildSettingsGetCached(guildID).AdminRoleIDs
+
 	for _, role := range guild.Roles {
 		for _, userRole := range guildMember.Roles {
 			if userRole == role.ID {
+				// Check if role may manage server or a role is in admin role list
 				if role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
 					return true
 				}
-				for _, adminRoleName := range adminRoleNames {
-					if role.Name == adminRoleName {
-						return true
+				if adminRoleIDs == nil || len(adminRoleIDs) <= 0 {
+					// role name matching if no custom role has been set
+					for _, adminRoleName := range adminRoleNames {
+						if role.Name == adminRoleName {
+							return true
+						}
+					}
+				} else {
+					// check for custom role if has been set
+					for _, adminRoleID := range adminRoleIDs {
+						if role.ID == adminRoleID {
+							return true
+						}
 					}
 				}
 			}
@@ -295,39 +280,16 @@ func HasPermissionByID(guildID string, userID string, permission int) bool {
 }
 
 func IsMod(msg *discordgo.Message) bool {
-	if IsAdmin(msg) == true {
-		return true
-	} else {
-		channel, e := GetChannel(msg.ChannelID)
-		if e != nil {
-			return false
-		}
-		guild, e := GetGuild(channel.GuildID)
-		if e != nil {
-			return false
-		}
-		guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
-		if e != nil {
-			return false
-		}
-		// check if a role is in mod role list
-		for _, role := range guild.Roles {
-			for _, userRole := range guildMember.Roles {
-				if userRole == role.ID {
-					for _, modRoleName := range modRoleNames {
-						if role.Name == modRoleName {
-							return true
-						}
-					}
-				}
-			}
-		}
+	channel, err := GetChannel(msg.ChannelID)
+	if err != nil {
+		return false
 	}
-	return false
+
+	return IsModByID(channel.GuildID, msg.Author.ID)
 }
 
 func IsModByID(guildID string, userID string) bool {
-	if IsAdminByID(guildID, userID) == true {
+	if IsAdminByID(guildID, userID) {
 		return true
 	} else {
 		guild, e := GetGuild(guildID)
@@ -338,13 +300,26 @@ func IsModByID(guildID string, userID string) bool {
 		if e != nil {
 			return false
 		}
+
+		modRoleIDs := GuildSettingsGetCached(guildID).ModRoleIDs
+
 		// check if a role is in mod role list
 		for _, role := range guild.Roles {
 			for _, userRole := range guildMember.Roles {
 				if userRole == role.ID {
-					for _, modRoleName := range modRoleNames {
-						if role.Name == modRoleName {
-							return true
+					if modRoleIDs == nil || len(modRoleIDs) <= 0 {
+						// role name matching if no custom role has been set
+						for _, modRoleName := range modRoleNames {
+							if role.Name == modRoleName {
+								return true
+							}
+						}
+					} else {
+						// check for custom role if has been set
+						for _, modRoleID := range modRoleIDs {
+							if role.ID == modRoleID {
+								return true
+							}
 						}
 					}
 				}
