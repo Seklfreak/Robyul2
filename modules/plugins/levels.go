@@ -377,7 +377,7 @@ func (m *Levels) processExpStackLoop() {
 
 			levelAfter := m.getLevelFromExp(levelsServerUser.Exp)
 
-			_, err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+			err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 			helpers.Relax(err)
 
 			if expBefore <= 0 || levelBefore != levelAfter {

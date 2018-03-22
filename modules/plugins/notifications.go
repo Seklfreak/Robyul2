@@ -675,7 +675,7 @@ NextKeyword:
 					go func() {
 						defer helpers.Recover()
 
-						err = helpers.MDbUpdate(models.NotificationsTable, idToIncrease, bson.M{"$inc": bson.M{"triggered": 1}})
+						err = helpers.MDbUpdateWithoutLogging(models.NotificationsTable, idToIncrease, bson.M{"$inc": bson.M{"triggered": 1}})
 						helpers.RelaxLog(err)
 					}()
 				}
