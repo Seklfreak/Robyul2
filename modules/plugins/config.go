@@ -30,8 +30,6 @@ func (m *Config) Action(command string, content string, msg *discordgo.Message, 
 		return
 	}
 
-	session.ChannelTyping(msg.ChannelID)
-
 	var result *discordgo.MessageSend
 	args := strings.Fields(content)
 
@@ -44,9 +42,193 @@ func (m *Config) Action(command string, content string, msg *discordgo.Message, 
 func (m *Config) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) configAction {
 	cache.GetSession().ChannelTyping(in.ChannelID)
 
+	if len(args) > 1 {
+		switch args[0] {
+		case "set":
+			if len(args) < 2 {
+				*out = m.newMsg(helpers.GetText("bot.arguments.too-few"))
+				return m.actionFinish
+			}
+			switch args[1] {
+			case "admin":
+				return m.actionSetAdmin
+			case "mod":
+				return m.actionSetMod
+			}
+			break
+		}
+	}
+
 	return m.actionStatus
 }
 
+// [p]config set admin <role name or id>
+func (m *Config) actionSetAdmin(args []string, in *discordgo.Message, out **discordgo.MessageSend) configAction {
+	if !helpers.IsAdmin(in) {
+		*out = m.newMsg("admin.no_permission")
+		return m.actionFinish
+	}
+
+	if len(args) < 3 {
+		*out = m.newMsg(helpers.GetText("bot.arguments.too-few"))
+		return m.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	guild, err := helpers.GetGuild(channel.GuildID)
+	helpers.Relax(err)
+
+	// look for target role in guild roles
+	var targetRole *discordgo.Role
+	for _, guildRole := range guild.Roles {
+		if guildRole.ID == args[2] || strings.ToLower(guildRole.Name) == strings.ToLower(args[2]) {
+			targetRole = guildRole
+		}
+	}
+
+	var roleAdded, roleRemoved bool
+
+	adminRolesWithout := make([]string, 0)
+
+	// get old guild config
+	guildConfig := helpers.GuildSettingsGetCached(channel.GuildID)
+
+	// should we remove the role?
+	for _, existingAdminRoleID := range guildConfig.AdminRoleIDs {
+		if targetRole == nil || targetRole.ID == "" {
+			if existingAdminRoleID == args[2] {
+				roleRemoved = true
+			} else {
+				adminRolesWithout = append(adminRolesWithout, existingAdminRoleID)
+			}
+		} else {
+			if existingAdminRoleID == targetRole.ID {
+				roleRemoved = true
+			} else {
+				adminRolesWithout = append(adminRolesWithout, existingAdminRoleID)
+			}
+		}
+	}
+	if roleRemoved {
+		guildConfig.AdminRoleIDs = adminRolesWithout
+	}
+
+	// if no role removed, add role
+	if !roleRemoved {
+		if targetRole != nil && targetRole.ID != "" {
+			roleAdded = true
+			guildConfig.AdminRoleIDs = append(guildConfig.AdminRoleIDs, targetRole.ID)
+		}
+	}
+
+	if !roleAdded && !roleRemoved {
+		*out = m.newMsg("bot.arguments.invalid")
+		return m.actionFinish
+	}
+
+	// save new guild config
+	err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
+	helpers.Relax(err)
+
+	// TODO: eventlog
+
+	if roleAdded {
+		*out = m.newMsg("plugins.config.admin-role-added")
+		return m.actionFinish
+	}
+	if roleRemoved {
+		*out = m.newMsg("plugins.config.admin-role-removed")
+		return m.actionFinish
+	}
+	return nil
+}
+
+// [p]config set mod <role name or id>
+func (m *Config) actionSetMod(args []string, in *discordgo.Message, out **discordgo.MessageSend) configAction {
+	if !helpers.IsAdmin(in) {
+		*out = m.newMsg("admin.no_permission")
+		return m.actionFinish
+	}
+
+	if len(args) < 3 {
+		*out = m.newMsg(helpers.GetText("bot.arguments.too-few"))
+		return m.actionFinish
+	}
+
+	channel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	guild, err := helpers.GetGuild(channel.GuildID)
+	helpers.Relax(err)
+
+	// look for target role in guild roles
+	var targetRole *discordgo.Role
+	for _, guildRole := range guild.Roles {
+		if guildRole.ID == args[2] || strings.ToLower(guildRole.Name) == strings.ToLower(args[2]) {
+			targetRole = guildRole
+		}
+	}
+
+	var roleAdded, roleRemoved bool
+
+	modRolesWithout := make([]string, 0)
+
+	// get old guild config
+	guildConfig := helpers.GuildSettingsGetCached(channel.GuildID)
+
+	// should we remove the role?
+	for _, existingModRoleID := range guildConfig.ModRoleIDs {
+		if targetRole == nil || targetRole.ID == "" {
+			if existingModRoleID == args[2] {
+				roleRemoved = true
+			} else {
+				modRolesWithout = append(modRolesWithout, existingModRoleID)
+			}
+		} else {
+			if existingModRoleID == targetRole.ID {
+				roleRemoved = true
+			} else {
+				modRolesWithout = append(modRolesWithout, existingModRoleID)
+			}
+		}
+	}
+	if roleRemoved {
+		guildConfig.ModRoleIDs = modRolesWithout
+	}
+
+	// if no role removed, add role
+	if !roleRemoved {
+		if targetRole != nil && targetRole.ID != "" {
+			roleAdded = true
+			guildConfig.ModRoleIDs = append(guildConfig.ModRoleIDs, targetRole.ID)
+		}
+	}
+
+	if !roleAdded && !roleRemoved {
+		*out = m.newMsg("bot.arguments.invalid")
+		return m.actionFinish
+	}
+
+	// save new guild config
+	err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
+	helpers.Relax(err)
+
+	// TODO: eventlog
+
+	if roleAdded {
+		*out = m.newMsg("plugins.config.mod-role-added")
+		return m.actionFinish
+	}
+	if roleRemoved {
+		*out = m.newMsg("plugins.config.mod-role-removed")
+		return m.actionFinish
+	}
+	return nil
+}
+
+// [p]config
 func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discordgo.MessageSend) configAction {
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
@@ -74,15 +256,15 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 
 	adminsText := "Role Name Matching"
 	if guildConfig.AdminRoleIDs != nil && len(guildConfig.AdminRoleIDs) > 0 {
-		adminsText = "set, <@"
-		adminsText += strings.Join(guildConfig.AdminRoleIDs, ">, <@")
+		adminsText = "Custom Roles, <@&"
+		adminsText += strings.Join(guildConfig.AdminRoleIDs, ">, <@&")
 		adminsText += ">"
 	}
 
 	modsText := "Role Name Matching"
 	if guildConfig.ModRoleIDs != nil && len(guildConfig.ModRoleIDs) > 0 {
-		modsText = "set, <@"
-		modsText += strings.Join(guildConfig.ModRoleIDs, ">, <@")
+		modsText = "Custom Roles, <@&"
+		modsText += strings.Join(guildConfig.ModRoleIDs, ">, <@&")
 		modsText += ">"
 	}
 
@@ -174,11 +356,11 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 		persistencyText += "Disabled"
 	} else {
 		if guildConfig.PersistencyBiasEnabled {
-			persistencyText += "Enabled for Bias Roles"
+			persistencyText += "Enabled, for Bias Roles"
 		}
 		if guildConfig.PersistencyRoleIDs != nil && len(guildConfig.PersistencyRoleIDs) > 0 {
 			if persistencyText == "" {
-				persistencyText += "Enabled for "
+				persistencyText += "Enabled, for "
 			} else {
 				persistencyText += ", and "
 			}
