@@ -129,7 +129,7 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 	levelsText += fmt.Sprintf("\nMax Badges: %d", helpers.GetMaxBadgesForGuild(targetGuild.ID))
 
 	var autoRolesText string
-	if (guildConfig.AutoRoleIDs == nil || len(guildConfig.AutoRoleIDs) <= 0) ||
+	if (guildConfig.AutoRoleIDs == nil || len(guildConfig.AutoRoleIDs) <= 0) &&
 		guildConfig.DelayedAutoRoles == nil || len(guildConfig.DelayedAutoRoles) <= 0 {
 		autoRolesText += "None"
 	} else {
