@@ -130,7 +130,7 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 
 	var autoRolesText string
 	if (guildConfig.AutoRoleIDs == nil || len(guildConfig.AutoRoleIDs) <= 0) &&
-		guildConfig.DelayedAutoRoles == nil || len(guildConfig.DelayedAutoRoles) <= 0 {
+		(guildConfig.DelayedAutoRoles == nil || len(guildConfig.DelayedAutoRoles) <= 0) {
 		autoRolesText += "None"
 	} else {
 		if guildConfig.AutoRoleIDs != nil && len(guildConfig.AutoRoleIDs) > 0 {
