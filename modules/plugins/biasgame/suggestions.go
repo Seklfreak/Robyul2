@@ -416,7 +416,7 @@ func updateCurrentSuggestionEmbed() {
 				},
 				{
 					Name:   "Suggested By",
-					Value:  fmt.Sprintf("%s", suggestedBy.Mention()),
+					Value:  fmt.Sprintf("%s#%s \n(%s)", suggestedBy.Username, suggestedBy.Discriminator, suggestedBy.ID),
 					Inline: true,
 				},
 				{
