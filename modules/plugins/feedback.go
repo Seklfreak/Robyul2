@@ -114,8 +114,18 @@ func (f *Feedback) actionIssue(command string, args []string, in *discordgo.Mess
 	parts := strings.Split(in.Content, command)
 	content := strings.TrimSpace(strings.Join(parts[1:], command))
 
+	cardName := content
+	cardDesc := ""
+
+	// check for description
+	if strings.Contains(content, "|") {
+		cardName = strings.Split(content, "|")[0]
+		cardDesc = strings.Join(strings.Split(content, "|")[1:], "|")
+	}
+
 	_, err := trelloListIssues.AddCard(trello.Card{
-		Name: content,
+		Name: strings.TrimSpace(cardName),
+		Desc: strings.TrimSpace(cardDesc),
 	})
 	helpers.Relax(err)
 
