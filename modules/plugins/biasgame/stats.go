@@ -264,19 +264,19 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 			},
 		}
 
-		// for i := 0; i < len(game.roundWinners); i++ {
-		for i := len(game.roundWinners) - 1; i >= 0; i-- {
+		// for i := 0; i < len(game.RoundWinners); i++ {
+		for i := len(game.RoundWinners) - 1; i >= 0; i-- {
 
 			fieldName := fmt.Sprintf("Round %d:", i+1)
-			if len(game.roundWinners) == i+1 {
+			if len(game.RoundWinners) == i+1 {
 				fieldName = "Last Round:"
 			}
 
 			message := fmt.Sprintf("W: %s %s\nL: %s %s\n",
-				game.roundWinners[i].GroupName,
-				game.roundWinners[i].BiasName,
-				game.roundLosers[i].GroupName,
-				game.roundLosers[i].BiasName)
+				game.RoundWinners[i].GroupName,
+				game.RoundWinners[i].BiasName,
+				game.RoundLosers[i].GroupName,
+				game.RoundLosers[i].BiasName)
 
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   fieldName,
@@ -312,7 +312,7 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 func recordSingleGamesStats(game *singleBiasGame) {
 
 	// get guildID from game channel
-	channel, _ := cache.GetSession().State.Channel(game.channelID)
+	channel, _ := cache.GetSession().State.Channel(game.ChannelID)
 	guild, err := cache.GetSession().State.Guild(channel.GuildID)
 	if err != nil {
 		fmt.Println("Error getting guild when recording stats")
@@ -322,16 +322,16 @@ func recordSingleGamesStats(game *singleBiasGame) {
 	// create a bias game entry
 	biasGameEntry := models.BiasGameEntry{
 		ID:           "",
-		UserID:       game.user.ID,
+		UserID:       game.User.ID,
 		GuildID:      guild.ID,
 		GameType:     "single",
-		Gender:       game.gender,
-		RoundWinners: compileGameWinnersLosers(game.roundWinners),
-		RoundLosers:  compileGameWinnersLosers(game.roundLosers),
+		Gender:       game.Gender,
+		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
+		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
 		GameWinner: models.BiasEntry{
-			Name:      game.gameWinnerBias.BiasName,
-			GroupName: game.gameWinnerBias.GroupName,
-			Gender:    game.gameWinnerBias.Gender,
+			Name:      game.GameWinnerBias.BiasName,
+			GroupName: game.GameWinnerBias.GroupName,
+			Gender:    game.GameWinnerBias.Gender,
 		},
 	}
 
@@ -342,7 +342,7 @@ func recordSingleGamesStats(game *singleBiasGame) {
 func recordMultiGamesStats(game *multiBiasGame) {
 
 	// get guildID from game channel
-	channel, _ := cache.GetSession().State.Channel(game.channelID)
+	channel, _ := cache.GetSession().State.Channel(game.ChannelID)
 	guild, err := cache.GetSession().State.Guild(channel.GuildID)
 	if err != nil {
 		fmt.Println("Error getting guild when recording stats")
@@ -354,13 +354,13 @@ func recordMultiGamesStats(game *multiBiasGame) {
 		ID:           "",
 		GuildID:      guild.ID,
 		GameType:     "multi",
-		Gender:       game.gender,
-		RoundWinners: compileGameWinnersLosers(game.roundWinners),
-		RoundLosers:  compileGameWinnersLosers(game.roundLosers),
+		Gender:       game.Gender,
+		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
+		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
 		GameWinner: models.BiasEntry{
-			Name:      game.gameWinnerBias.BiasName,
-			GroupName: game.gameWinnerBias.GroupName,
-			Gender:    game.gameWinnerBias.Gender,
+			Name:      game.GameWinnerBias.BiasName,
+			GroupName: game.GameWinnerBias.GroupName,
+			Gender:    game.GameWinnerBias.Gender,
 		},
 	}
 

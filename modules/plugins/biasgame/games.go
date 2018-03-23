@@ -39,37 +39,37 @@ type biasChoice struct {
 }
 
 type singleBiasGame struct {
-	user             *discordgo.User
-	channelID        string
-	roundLosers      []*biasChoice
-	roundWinners     []*biasChoice
-	biasQueue        []*biasChoice
-	topEight         []*biasChoice
-	gameWinnerBias   *biasChoice
-	idolsRemaining   int
-	lastRoundMessage *discordgo.Message
-	readyForReaction bool   // used to make sure multiple reactions aren't counted
-	gender           string // girl, boy, mixed
+	User             *discordgo.User
+	ChannelID        string
+	RoundLosers      []*biasChoice
+	RoundWinners     []*biasChoice
+	BiasQueue        []*biasChoice
+	TopEight         []*biasChoice
+	GameWinnerBias   *biasChoice
+	IdolsRemaining   int
+	LastRoundMessage *discordgo.Message
+	ReadyForReaction bool   // used to make sure multiple reactions aren't counted
+	Gender           string // girl, boy, mixed
 
 	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
-	gameImageIndex map[string]int
+	GameImageIndex map[string]int
 }
 
 type multiBiasGame struct {
-	currentRoundMessageId string // used to find game when reactions are added
-	channelID             string
-	roundLosers           []*biasChoice
-	roundWinners          []*biasChoice
-	biasQueue             []*biasChoice
-	topEight              []*biasChoice
-	gameWinnerBias        *biasChoice
-	idolsRemaining        int
-	lastRoundMessage      *discordgo.Message
-	gender                string // girl, boy, mixed
-	userIdsInvolved       []string
+	CurrentRoundMessageId string // used to find game when reactions are added
+	ChannelID             string
+	RoundLosers           []*biasChoice
+	RoundWinners          []*biasChoice
+	BiasQueue             []*biasChoice
+	TopEight              []*biasChoice
+	GameWinnerBias        *biasChoice
+	IdolsRemaining        int
+	LastRoundMessage      *discordgo.Message
+	Gender                string // girl, boy, mixed
+	UserIdsInvolved       []string
 
 	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
-	gameImageIndex map[string]int
+	GameImageIndex map[string]int
 }
 
 const (
@@ -167,13 +167,32 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 	// set up suggestions channel
 	initSuggestionChannel()
 
+	// get any in progress games saved in cache and immediatly delete them
+	getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
+	getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
+
+	// start any multi games
+	for _, multiGame := range currentMultiPlayerGames {
+		go multiGame.processMultiGame()
+	}
+
+	// spew.Dump(currentSinglePlayerGames)
+	delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
+
 	// this line should always be last in this function
 	gameIsReady = true
 }
 
 // Uninit called when bot is shutting down
 func (b *BiasGame) Uninit(session *discordgo.Session) {
-	// todo: save currently running games
+
+	// save any currently running games
+	if len(currentSinglePlayerGames) > 0 {
+		setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
+	}
+	if len(currentMultiPlayerGames) > 0 {
+		setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
+	}
 }
 
 // Will validate if the passed command entered is used for this plugin
@@ -331,7 +350,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 		// 	go utils.DeleteImageWithDelay(msg, time.Second*10)
 		// }
 
-		game.channelID = msg.ChannelID
+		game.ChannelID = msg.ChannelID
 		singleGame = game
 	} else {
 		var biasChoices []*biasChoice
@@ -356,13 +375,13 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 
 		// create new game
 		singleGame = &singleBiasGame{
-			user:             msg.Author,
-			channelID:        msg.ChannelID,
-			idolsRemaining:   gameSize,
-			readyForReaction: false,
-			gender:           gameGender,
+			User:             msg.Author,
+			ChannelID:        msg.ChannelID,
+			IdolsRemaining:   gameSize,
+			ReadyForReaction: false,
+			Gender:           gameGender,
 		}
-		singleGame.gameImageIndex = make(map[string]int)
+		singleGame.GameImageIndex = make(map[string]int)
 
 		// get random biases for the game
 		usedIndexs := make(map[int]bool)
@@ -371,9 +390,9 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 
 			if usedIndexs[randomIndex] == false {
 				usedIndexs[randomIndex] = true
-				singleGame.biasQueue = append(singleGame.biasQueue, biasChoices[randomIndex])
+				singleGame.BiasQueue = append(singleGame.BiasQueue, biasChoices[randomIndex])
 
-				if len(singleGame.biasQueue) == gameSize {
+				if len(singleGame.BiasQueue) == gameSize {
 					break
 				}
 			}
@@ -390,7 +409,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 
 	// check if reaction was added to the message of the game
-	if g.lastRoundMessage.ID == reaction.MessageID && g.readyForReaction == true {
+	if g.LastRoundMessage.ID == reaction.MessageID && g.ReadyForReaction == true {
 
 		winnerIndex := 0
 		loserIndex := 0
@@ -408,34 +427,34 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 		}
 
 		if validReaction == true {
-			g.readyForReaction = false
-			g.idolsRemaining--
+			g.ReadyForReaction = false
+			g.IdolsRemaining--
 
 			// record winners and losers for stats
-			g.roundLosers = append(g.roundLosers, g.biasQueue[loserIndex])
-			g.roundWinners = append(g.roundWinners, g.biasQueue[winnerIndex])
+			g.RoundLosers = append(g.RoundLosers, g.BiasQueue[loserIndex])
+			g.RoundWinners = append(g.RoundWinners, g.BiasQueue[winnerIndex])
 
 			// add winner to end of bias queue and remove first two
-			g.biasQueue = append(g.biasQueue, g.biasQueue[winnerIndex])
-			g.biasQueue = g.biasQueue[2:]
+			g.BiasQueue = append(g.BiasQueue, g.BiasQueue[winnerIndex])
+			g.BiasQueue = g.BiasQueue[2:]
 
 			// if there is only one bias left, they are the winner
-			if len(g.biasQueue) == 1 {
+			if len(g.BiasQueue) == 1 {
 
-				g.gameWinnerBias = g.biasQueue[0]
+				g.GameWinnerBias = g.BiasQueue[0]
 				g.sendWinnerMessage()
 
 				// record game stats
 				go recordSingleGamesStats(g)
 
 				// end the g. delete from current games
-				delete(currentSinglePlayerGames, g.user.ID)
+				delete(currentSinglePlayerGames, g.User.ID)
 
 			} else {
 
 				// save the last 8 for the chart
-				if len(g.biasQueue) == 8 {
-					g.topEight = g.biasQueue
+				if len(g.BiasQueue) == 8 {
+					g.TopEight = g.BiasQueue
 				}
 
 				// Sleep a time bit to allow other users to see what was chosen.
@@ -458,13 +477,13 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	}
 
 	// if a round message has been sent, delete before sending the next one
-	if g.lastRoundMessage != nil {
-		go cache.GetSession().ChannelMessageDelete(g.lastRoundMessage.ChannelID, g.lastRoundMessage.ID)
+	if g.LastRoundMessage != nil {
+		go cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// combine first bias image with the "vs" image, then combine that image with 2nd bias image
-	img1 := g.biasQueue[0].getRandomBiasImage(&g.gameImageIndex)
-	img2 := g.biasQueue[1].getRandomBiasImage(&g.gameImageIndex)
+	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
+	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
 
 	img1 = giveImageShadowBorder(img1, 15, 15)
 	img2 = giveImageShadowBorder(img2, 15, 15)
@@ -474,12 +493,12 @@ func (g *singleBiasGame) sendBiasGameRound() {
 
 	// create round message
 	messageString := fmt.Sprintf("**@%s**\nIdols Remaining: %d\n%s %s vs %s %s",
-		g.user.Username,
-		g.idolsRemaining,
-		g.biasQueue[0].GroupName,
-		g.biasQueue[0].BiasName,
-		g.biasQueue[1].GroupName,
-		g.biasQueue[1].BiasName)
+		g.User.Username,
+		g.IdolsRemaining,
+		g.BiasQueue[0].GroupName,
+		g.BiasQueue[0].BiasName,
+		g.BiasQueue[1].GroupName,
+		g.BiasQueue[1].BiasName)
 
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
@@ -489,31 +508,31 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
-	fileSendMsg, err := helpers.SendFile(g.channelID, "combined_pic.png", myReader, messageString)
+	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
 		return
 	}
 
 	// add reactions
-	cache.GetSession().MessageReactionAdd(g.channelID, fileSendMsg.ID, LEFT_ARROW_EMOJI)
-	go cache.GetSession().MessageReactionAdd(g.channelID, fileSendMsg.ID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, LEFT_ARROW_EMOJI)
+	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, RIGHT_ARROW_EMOJI)
 
 	// update game state
-	g.lastRoundMessage = fileSendMsg
-	g.readyForReaction = true
+	g.LastRoundMessage = fileSendMsg
+	g.ReadyForReaction = true
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
 func (g *singleBiasGame) sendWinnerMessage() {
 
 	// if a round message has been sent, delete before sending the next one
-	if g.lastRoundMessage != nil {
-		cache.GetSession().ChannelMessageDelete(g.lastRoundMessage.ChannelID, g.lastRoundMessage.ID)
+	if g.LastRoundMessage != nil {
+		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// get last 7 from winners array and combine with topEight array
-	winners := g.roundWinners[len(g.roundWinners)-7 : len(g.roundWinners)]
-	bracketInfo := append(g.topEight, winners...)
+	winners := g.RoundWinners[len(g.RoundWinners)-7 : len(g.RoundWinners)]
+	bracketInfo := append(g.TopEight, winners...)
 
 	// create final image with the bounds of the winner bracket
 	bracketImage := image.NewRGBA(winnerBracket.Bounds())
@@ -529,7 +548,7 @@ func (g *singleBiasGame) sendWinnerMessage() {
 			resizeTo = newResizeVal
 		}
 
-		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.gameImageIndex), resize.Lanczos3)
+		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.GameImageIndex), resize.Lanczos3)
 
 		draw.Draw(bracketImage, ri.Bounds().Add(bracketImageOffsets[i]), ri, image.ZP, draw.Over)
 	}
@@ -542,12 +561,12 @@ func (g *singleBiasGame) sendWinnerMessage() {
 	myReader := bytes.NewReader(buf.Bytes())
 
 	messageString := fmt.Sprintf("%s\nWinner: %s %s!",
-		g.user.Mention(),
-		g.gameWinnerBias.GroupName,
-		g.gameWinnerBias.BiasName)
+		g.User.Mention(),
+		g.GameWinnerBias.GroupName,
+		g.GameWinnerBias.BiasName)
 
 	// send message
-	helpers.SendFile(g.channelID, "biasgame_winner.png", myReader, messageString)
+	helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
 }
 
 /////////////////////////////////
@@ -560,7 +579,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 	// check if a multi game is already running in the current channel
 	for _, game := range currentMultiPlayerGames {
-		if game.channelID == msg.ChannelID {
+		if game.ChannelID == msg.ChannelID {
 			helpers.SendMessage(msg.ChannelID, "biasgame.game.multi-game-running")
 			return
 		}
@@ -604,11 +623,11 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 	// create new game
 	multiGame := &multiBiasGame{
-		channelID:      msg.ChannelID,
-		idolsRemaining: 32,
-		gender:         gameGender,
+		ChannelID:      msg.ChannelID,
+		IdolsRemaining: 32,
+		Gender:         gameGender,
 	}
-	multiGame.gameImageIndex = make(map[string]int)
+	multiGame.GameImageIndex = make(map[string]int)
 
 	// get random biases for the game
 	usedIndexs := make(map[int]bool)
@@ -617,9 +636,9 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 		if usedIndexs[randomIndex] == false {
 			usedIndexs[randomIndex] = true
-			multiGame.biasQueue = append(multiGame.biasQueue, biasChoices[randomIndex])
+			multiGame.BiasQueue = append(multiGame.BiasQueue, biasChoices[randomIndex])
 
-			if len(multiGame.biasQueue) == multiGame.idolsRemaining {
+			if len(multiGame.BiasQueue) == multiGame.IdolsRemaining {
 				break
 			}
 		}
@@ -638,13 +657,13 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	}
 
 	// if a round message has been sent, delete before sending the next one
-	if g.lastRoundMessage != nil {
-		cache.GetSession().ChannelMessageDelete(g.lastRoundMessage.ChannelID, g.lastRoundMessage.ID)
+	if g.LastRoundMessage != nil {
+		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// combine first bias image with the "vs" image, then combine that image with 2nd bias image
-	img1 := g.biasQueue[0].getRandomBiasImage(&g.gameImageIndex)
-	img2 := g.biasQueue[1].getRandomBiasImage(&g.gameImageIndex)
+	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
+	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
 
 	img1 = giveImageShadowBorder(img1, 15, 15)
 	img2 = giveImageShadowBorder(img2, 15, 15)
@@ -654,11 +673,11 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 
 	// create round message
 	messageString := fmt.Sprintf("**Multi Game**\nIdols Remaining: %d\n%s %s vs %s %s",
-		g.idolsRemaining,
-		g.biasQueue[0].GroupName,
-		g.biasQueue[0].BiasName,
-		g.biasQueue[1].GroupName,
-		g.biasQueue[1].BiasName)
+		g.IdolsRemaining,
+		g.BiasQueue[0].GroupName,
+		g.BiasQueue[0].BiasName,
+		g.BiasQueue[1].GroupName,
+		g.BiasQueue[1].BiasName)
 
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
@@ -668,31 +687,31 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
-	fileSendMsg, err := helpers.SendFile(g.channelID, "combined_pic.png", myReader, messageString)
+	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
 		return
 	}
 
 	// add reactions
-	cache.GetSession().MessageReactionAdd(g.channelID, fileSendMsg.ID, LEFT_ARROW_EMOJI)
-	cache.GetSession().MessageReactionAdd(g.channelID, fileSendMsg.ID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, LEFT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, RIGHT_ARROW_EMOJI)
 
 	// update game state
-	g.currentRoundMessageId = fileSendMsg.ID
-	g.lastRoundMessage = fileSendMsg
+	g.CurrentRoundMessageId = fileSendMsg.ID
+	g.LastRoundMessage = fileSendMsg
 }
 
 // start multi game loop. every 10 seconds count the number of arrow reactions. whichever side has most wins
 func (g *multiBiasGame) processMultiGame() {
 
-	for g.idolsRemaining != 1 {
+	for g.IdolsRemaining != 1 {
 
 		// send next rounds and sleep
 		g.sendMultiBiasGameRound()
 		time.Sleep(time.Second * MULTIPLAYER_ROUND_DELAY)
 
 		// get current round message
-		message, err := cache.GetSession().ChannelMessage(g.channelID, g.currentRoundMessageId)
+		message, err := cache.GetSession().ChannelMessage(g.ChannelID, g.CurrentRoundMessageId)
 		if err != nil {
 			fmt.Println("multi game error: ", err.Error())
 			return
@@ -743,34 +762,34 @@ func (g *multiBiasGame) processMultiGame() {
 
 		// if a random winner was chosen, display an arrow indication who the random winner was
 		if randomWin == true {
-			cache.GetSession().MessageReactionsRemoveAll(g.channelID, g.currentRoundMessageId)
+			cache.GetSession().MessageReactionsRemoveAll(g.ChannelID, g.CurrentRoundMessageId)
 			if winnerIndex == 1 {
-				cache.GetSession().MessageReactionAdd(g.channelID, g.currentRoundMessageId, ARROW_FORWARD_EMOJI)
+				cache.GetSession().MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_FORWARD_EMOJI)
 			} else {
-				cache.GetSession().MessageReactionAdd(g.channelID, g.currentRoundMessageId, ARROW_BACKWARD_EMOJI)
+				cache.GetSession().MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_BACKWARD_EMOJI)
 			}
 			time.Sleep(time.Millisecond * 1500)
 		}
 
-		g.idolsRemaining--
+		g.IdolsRemaining--
 
-		// fmt.Println("round winner: ", g.biasQueue[winnerIndex].groupName, g.biasQueue[winnerIndex].biasName)
+		// fmt.Println("round winner: ", g.BiasQueue[winnerIndex].groupName, g.BiasQueue[winnerIndex].biasName)
 
 		// record winners and losers for stats
-		g.roundLosers = append(g.roundLosers, g.biasQueue[loserIndex])
-		g.roundWinners = append(g.roundWinners, g.biasQueue[winnerIndex])
+		g.RoundLosers = append(g.RoundLosers, g.BiasQueue[loserIndex])
+		g.RoundWinners = append(g.RoundWinners, g.BiasQueue[winnerIndex])
 
 		// add winner to end of bias queue and remove first two
-		g.biasQueue = append(g.biasQueue, g.biasQueue[winnerIndex])
-		g.biasQueue = g.biasQueue[2:]
+		g.BiasQueue = append(g.BiasQueue, g.BiasQueue[winnerIndex])
+		g.BiasQueue = g.BiasQueue[2:]
 
 		// save the last 8 for the chart
-		if len(g.biasQueue) == 8 {
-			g.topEight = g.biasQueue
+		if len(g.BiasQueue) == 8 {
+			g.TopEight = g.BiasQueue
 		}
 	}
 
-	g.gameWinnerBias = g.biasQueue[0]
+	g.GameWinnerBias = g.BiasQueue[0]
 	g.sendWinnerMessage()
 
 	// record game stats
@@ -778,7 +797,7 @@ func (g *multiBiasGame) processMultiGame() {
 
 	// delete multi game from current multi games
 	for i, game := range currentMultiPlayerGames {
-		if game.currentRoundMessageId == g.currentRoundMessageId {
+		if game.CurrentRoundMessageId == g.CurrentRoundMessageId {
 			currentMultiPlayerGames = append(currentMultiPlayerGames[:i], currentMultiPlayerGames[i+1:]...)
 		}
 	}
@@ -792,13 +811,13 @@ func (g *multiBiasGame) processMultiGame() {
 func (g *multiBiasGame) sendWinnerMessage() {
 
 	// if a round message has been sent, delete before sending the next one
-	if g.lastRoundMessage != nil {
-		cache.GetSession().ChannelMessageDelete(g.lastRoundMessage.ChannelID, g.lastRoundMessage.ID)
+	if g.LastRoundMessage != nil {
+		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// get last 7 from winners array and combine with topEight array
-	winners := g.roundWinners[len(g.roundWinners)-7 : len(g.roundWinners)]
-	bracketInfo := append(g.topEight, winners...)
+	winners := g.RoundWinners[len(g.RoundWinners)-7 : len(g.RoundWinners)]
+	bracketInfo := append(g.TopEight, winners...)
 
 	// create final image with the bounds of the winner bracket
 	bracketImage := image.NewRGBA(winnerBracket.Bounds())
@@ -814,7 +833,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 			resizeTo = newResizeVal
 		}
 
-		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.gameImageIndex), resize.Lanczos3)
+		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.GameImageIndex), resize.Lanczos3)
 
 		draw.Draw(bracketImage, ri.Bounds().Add(bracketImageOffsets[i]), ri, image.ZP, draw.Over)
 	}
@@ -827,11 +846,11 @@ func (g *multiBiasGame) sendWinnerMessage() {
 	myReader := bytes.NewReader(buf.Bytes())
 
 	messageString := fmt.Sprintf("\nWinner: %s %s!",
-		g.gameWinnerBias.GroupName,
-		g.gameWinnerBias.BiasName)
+		g.GameWinnerBias.GroupName,
+		g.GameWinnerBias.BiasName)
 
 	// send message
-	helpers.SendFile(g.channelID, "biasgame_multi_winner.png", myReader, messageString)
+	helpers.SendFile(g.ChannelID, "biasgame_multi_winner.png", myReader, messageString)
 }
 
 //////////////////////////////////
@@ -900,6 +919,14 @@ func setBiasGameCache(key string, data interface{}, time time.Duration) error {
 
 	cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time)
 	return nil
+}
+
+// delBiasGameCache
+func delBiasGameCache(keys ...string) {
+	for _, key := range keys {
+
+		cache.GetRedisClient().Del(fmt.Sprintf("robyul2-discord:biasgame:%s", key))
+	}
 }
 
 ///// Unused functions requried by ExtendedPlugin interface
