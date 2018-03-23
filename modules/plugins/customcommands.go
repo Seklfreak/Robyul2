@@ -146,14 +146,12 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				}
 			}
 
-			var objectName, filetype, filename, hash string
+			var objectName string
 			if len(msg.Attachments) > 0 {
 				data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
 				helpers.Relax(err)
 
-				filename = msg.Attachments[0].Filename
-
-				filetype, err = helpers.SniffMime(data)
+				filetype, err := helpers.SniffMime(data)
 				helpers.Relax(err)
 
 				// filetype allowed? (picture or video)
@@ -168,22 +166,20 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
 						return
 					}
-					// get object name
-					objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
-					// upload to object storage
-					err = helpers.UploadFile(objectName, data, map[string]string{
-						"userid":    msg.Author.ID,
-						"channelid": msg.ChannelID,
-						"guildid":   channel.GuildID,
-					})
+					// upload file
+					objectName, err = helpers.AddFile("", data, helpers.AddFileMetadata{
+						Filename:           msg.Attachments[0].Filename,
+						ChannelID:          msg.ChannelID,
+						UserID:             msg.Author.ID,
+						AdditionalMetadata: nil,
+					}, "customcommands", true)
 					helpers.Relax(err)
 				}
-				hash = helpers.GetMD5Hash(objectName)
 			}
 
 			content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 
-			if content == "" && (filetype == "" || objectName == "") {
+			if content == "" && objectName == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				return
 			}
@@ -196,10 +192,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					CreatedAt:         time.Now(),
 					Triggered:         0,
 					Keyword:           args[1],
-					StorageMimeType:   filetype,
 					StorageObjectName: objectName,
-					StorageFilename:   filename,
-					StorageHash:       hash,
 					Content:           content,
 				},
 			)
@@ -465,14 +458,17 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				return
 			}
 
-			var objectName, filetype, filename, hash string
+			if entryBucket.StorageObjectName != "" {
+				err = helpers.DeleteFile(entryBucket.StorageObjectName)
+				helpers.Relax(err)
+			}
+
+			var objectName string
 			if len(msg.Attachments) > 0 {
 				data, err := helpers.NetGetUAWithError(msg.Attachments[0].URL, helpers.DEFAULT_UA)
 				helpers.Relax(err)
 
-				filename = msg.Attachments[0].Filename
-
-				filetype, err = helpers.SniffMime(data)
+				filetype, err := helpers.SniffMime(data)
 				helpers.Relax(err)
 
 				// filetype allowed? (picture or video)
@@ -487,17 +483,15 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.fileupload-too-big"))
 						return
 					}
-					// get object name
-					objectName = models.CustomCommandsNewObjectName(channel.GuildID, msg.Author.ID)
-					// upload to object storage
-					err = helpers.UploadFile(objectName, data, map[string]string{
-						"userid":    msg.Author.ID,
-						"channelid": msg.ChannelID,
-						"guildid":   channel.GuildID,
-					})
+					// upload file
+					objectName, err = helpers.AddFile("", data, helpers.AddFileMetadata{
+						Filename:           msg.Attachments[0].Filename,
+						ChannelID:          msg.ChannelID,
+						UserID:             msg.Author.ID,
+						AdditionalMetadata: nil,
+					}, "customcommands", true)
 					helpers.Relax(err)
 				}
-				hash = helpers.GetMD5Hash(objectName)
 			}
 
 			beforeContent := entryBucket.Content
@@ -509,7 +503,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 			content := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 
-			if content == "" && (filetype == "" || objectName == "") {
+			if content == "" && objectName == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				return
 			}
@@ -518,10 +512,10 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			entryBucket.CreatedAt = time.Now().UTC()
 			entryBucket.Triggered = 0
 			entryBucket.Content = content
-			entryBucket.StorageFilename = filename
+			entryBucket.StorageFilename = ""
 			entryBucket.StorageObjectName = objectName
-			entryBucket.StorageHash = hash
-			entryBucket.StorageMimeType = filetype
+			entryBucket.StorageHash = ""
+			entryBucket.StorageMimeType = ""
 			err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
 			helpers.Relax(err)
 
@@ -865,11 +859,23 @@ func (cc *CustomCommands) getCommandContent(customCommand models.CustomCommandsE
 	if customCommand.Content != "" {
 		content += customCommand.Content + "\n"
 	}
+	// try old storage hashes
 	if customCommand.StorageHash != "" {
-		content += helpers.GetPublicFileLink(customCommand.StorageFilename, customCommand.StorageHash)
+		content += helpers.GeneratePublicFileLink(customCommand.StorageFilename, customCommand.StorageHash)
 		return content, "", nil
 	}
 	if customCommand.StorageObjectName != "" {
+		// try new global uploads table
+		url, err := helpers.GetFileLink(customCommand.StorageObjectName)
+		if err == nil {
+			content += url
+			return content, "", nil
+		} else {
+			if !strings.Contains(err.Error(), "not found") {
+				return content, "", nil
+			}
+		}
+		// try old object storage
 		data, filename = cc.getCommandFile(customCommand)
 		if data != nil {
 			return content, filename, data
