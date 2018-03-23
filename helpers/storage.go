@@ -23,6 +23,8 @@ import (
 
 	"encoding/binary"
 
+	"mime"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
@@ -228,7 +230,16 @@ func GetFileLink(objectName string) (url string, err error) {
 		return "", errors.New("this file is not available publicly")
 	}
 
-	url = GeneratePublicFileLink(entryBucket.Filename, entryBucket.ObjectNameHash)
+	filename := entryBucket.Filename
+	if filename == "" {
+		filename = "robyul"
+		extensions, err := mime.ExtensionsByType(entryBucket.MimeType)
+		if err == nil && extensions != nil && len(extensions) >= 0 {
+			filename += extensions[0]
+		}
+	}
+
+	url = GeneratePublicFileLink(filename, entryBucket.ObjectNameHash)
 
 	return url, nil
 }
