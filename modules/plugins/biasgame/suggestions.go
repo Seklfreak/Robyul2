@@ -221,6 +221,8 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 				return
 			}
 
+			approvedImage = resize.Resize(0, IMAGE_RESIZE_HEIGHT, approvedImage, resize.Lanczos3)
+
 			buf := new(bytes.Buffer)
 			encoder := new(png.Encoder)
 			encoder.CompressionLevel = -2 // -2 compression is best speed
