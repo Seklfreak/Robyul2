@@ -95,7 +95,7 @@ func (f *Feedback) actionSuggestion(command string, args []string, in *discordgo
 	// check for description
 	if strings.Contains(content, "|") {
 		cardName = strings.Split(content, "|")[0]
-		cardDesc = strings.Split(content, "|")[1]
+		cardDesc = strings.Join(strings.Split(content, "|")[1:], "|")
 	}
 
 	_, err := trelloListSuggestions.AddCard(trello.Card{
