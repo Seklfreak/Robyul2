@@ -94,9 +94,13 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 // listIdolsInGame will list all idols that can show up in the biasgame
 func listIdolsInGame(msg *discordgo.Message) {
 
+	genderCountMap := make(map[string]int)
+
 	// create map of idols and there group
 	groupIdolMap := make(map[string][]string)
 	for _, bias := range allBiasChoices {
+		genderCountMap[bias.Gender]++
+
 		if len(bias.BiasImages) > 1 {
 
 			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s (%d)", bias.BiasName, len(bias.BiasImages)))
@@ -109,7 +113,7 @@ func listIdolsInGame(msg *discordgo.Message) {
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: fmt.Sprintf("All Idols Available In Bias Game (%d total)", len(allBiasChoices)),
+			Name: fmt.Sprintf("All Idols Available In Bias Game (%d total, %d girls, %d boys)", len(allBiasChoices), genderCountMap["girl"], genderCountMap["boy"]),
 		},
 		Title: "*Numbers indicate multi pictures are available for the idol*",
 	}
