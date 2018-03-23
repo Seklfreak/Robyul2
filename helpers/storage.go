@@ -17,11 +17,18 @@ import (
 
 	"strings"
 
+	"time"
+
+	"strconv"
+
+	"encoding/binary"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
 	"github.com/minio/minio-go"
+	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -32,16 +39,163 @@ var (
 
 // TODO: watch cache folder size
 
-// retrieves a file by md5 hash
+type AddFileMetadata struct {
+	Filename           string            // the actual file name, can be empty
+	ChannelID          string            // the source channel ID, can be empty, but should be set if possible
+	UserID             string            // the source user ID, can be empty, but should be set if possible
+	AdditionalMetadata map[string]string // additional metadata attached to the object
+}
+
+// TODO: prevent duplicates
+// Stores a file
+// name		: the name of the new object, can be empty to generate an unique name
+// data		: the file data
+// metadata	: metadata attached to the object
+// source	: the source name for the file, for example the module name, can not be empty
+// public	: if true file will be available via the website proxy
+func AddFile(name string, data []byte, metadata AddFileMetadata, source string, public bool) (objectName string, err error) {
+	// check if source is set
+	if source == "" {
+		return "", errors.New("source can not be empty")
+	}
+	// check if user uploads are disabled for given userID, if userID is given
+	if metadata.UserID != "" && UseruploadsIsDisabled(metadata.UserID) {
+		return "", errors.New("uploads are disabled for this user")
+	}
+	// set new object name
+	objectName = name
+	if objectName == "" {
+		// generate unique filename
+		objectName = uuid.NewV4().String()
+	}
+	// retrieve guildID if channelID is set
+	var guildID string
+	if metadata.ChannelID != "" {
+		channel, err := GetChannel(metadata.ChannelID)
+		RelaxLog(err)
+		if err == nil {
+			guildID = channel.GuildID
+		}
+	}
+	// get filetype
+	filetype, _ := SniffMime(data)
+	// get filesize
+	filesize := binary.Size(data)
+	// update metadata
+	if metadata.AdditionalMetadata == nil {
+		metadata.AdditionalMetadata = make(map[string]string, 0)
+	}
+	metadata.AdditionalMetadata["filename"] = metadata.Filename
+	metadata.AdditionalMetadata["userid"] = metadata.UserID
+	metadata.AdditionalMetadata["guildid"] = guildID
+	metadata.AdditionalMetadata["channelid"] = metadata.ChannelID
+	metadata.AdditionalMetadata["source"] = source
+	metadata.AdditionalMetadata["mimetype"] = filetype
+	metadata.AdditionalMetadata["filesize"] = strconv.Itoa(filesize)
+	metadata.AdditionalMetadata["public"] = "no"
+	if public {
+		metadata.AdditionalMetadata["public"] = "yes"
+	}
+	// upload file
+	err = uploadFile(objectName, data, metadata.AdditionalMetadata)
+	if err != nil {
+		return "", err
+	}
+	// store in database
+	err = MDbUpsert(
+		models.StorageTable,
+		bson.M{"objectname": objectName},
+		models.StorageEntry{
+			ObjectName:     objectName,
+			ObjectNameHash: GetMD5Hash(objectName),
+			UploadDate:     time.Now(),
+			Filename:       metadata.Filename,
+			UserID:         metadata.UserID,
+			GuildID:        guildID,
+			ChannelID:      metadata.ChannelID,
+			Source:         source,
+			MimeType:       filetype,
+			Filesize:       filesize,
+			Public:         public,
+			Metadata:       metadata.AdditionalMetadata,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+	// return new objectName
+	return objectName, nil
+}
+
+// retrieves a file
+// objectName	: the name of the file to retrieve
+func RetrieveFile(objectName string) (data []byte, err error) {
+	// setup minioClient if not yet done
+	if minioClient == nil {
+		err = setupMinioClient()
+		if err != nil {
+			return data, err
+		}
+	}
+
+	// Increase MongoDB RetrievedCount
+	go func() {
+		defer Recover()
+		err := MDbUpdateQuery(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			RelaxLog(err)
+		}
+	}()
+
+	data = getBucketCache(objectName)
+	if data != nil {
+		cache.GetLogger().WithField("module", "storage").Infof("retrieving " + objectName + " from minio cache")
+		return data, nil
+	}
+
+	cache.GetLogger().WithField("module", "storage").Infof("retrieving " + objectName + " from minio storage")
+
+	// retrieve the object
+	minioObject, err := minioClient.GetObject(minioBucket, sanitize.BaseName(objectName), minio.GetObjectOptions{})
+	if err != nil {
+		return data, err
+	}
+
+	// read the object into a byte slice
+	data, err = ioutil.ReadAll(minioObject)
+	if err != nil {
+		return data, err
+	}
+
+	go func() {
+		defer Recover()
+		cache.GetLogger().WithField("module", "storage").Infof("caching " + objectName + " into minio cache")
+		err := setBucketCache(objectName, data)
+		RelaxLog(err)
+	}()
+
+	return data, nil
+}
+
+// Retrieves a file by the object name md5 hash
 // currently supported file sources: custom commands
 // hash	: the md5 hash
 func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, err error) {
-	var entryBucket models.CustomCommandsEntry
+	var entryBucket models.StorageEntry
 	err = MdbOne(
-		MdbCollection(models.CustomCommandsTable).Find(bson.M{"storagehash": hash}),
+		MdbCollection(models.StorageTable).Find(bson.M{"objectnamehash": hash}),
 		&entryBucket,
 	)
-	if err == nil {
+	if err != nil {
+		// try fallback to deprecated custom commands object storage
+		var entryBucket models.CustomCommandsEntry
+		err = MdbOne(
+			MdbCollection(models.CustomCommandsTable).Find(bson.M{"storagehash": hash}),
+			&entryBucket,
+		)
+		if err != nil {
+			return "", "", nil, errors.New("file not found")
+		}
 		data, err = RetrieveFile(entryBucket.StorageObjectName)
 		RelaxLog(err)
 		if err != nil {
@@ -49,28 +203,89 @@ func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, er
 		}
 		return entryBucket.StorageFilename, entryBucket.StorageMimeType, data, nil
 	}
-	return "", "", nil, errors.New("file not found")
+
+	data, err = RetrieveFile(entryBucket.ObjectName)
+	RelaxLog(err)
+	if err != nil {
+		return "", "", nil, err
+	}
+	return entryBucket.Filename, entryBucket.MimeType, data, nil
+}
+
+// Retrieves a file's public url, returns an error if file is not public
+// objectName	:  the name of the object
+func GetFileLink(objectName string) (url string, err error) {
+	var entryBucket models.StorageEntry
+	err = MdbOne(
+		MdbCollection(models.StorageTable).Find(bson.M{"objectname": objectName}),
+		&entryBucket,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if !entryBucket.Public {
+		return "", errors.New("this file is not available publicly")
+	}
+
+	url = GeneratePublicFileLink(entryBucket.Filename, entryBucket.ObjectNameHash)
+
+	return url, nil
+}
+
+// Deletes a file
+// objectName	: the name of the object
+func DeleteFile(objectName string) (err error) {
+	// setup minioClient if not yet done
+	if minioClient == nil {
+		err = setupMinioClient()
+		if err != nil {
+			return err
+		}
+	}
+
+	cache.GetLogger().WithField("module", "storage").Infof("deleting " + objectName + " from minio storage")
+
+	go func() {
+		defer Recover()
+		cache.GetLogger().WithField("module", "storage").Infof("deleting " + objectName + " from minio cache")
+		err = deleteBucketCache(objectName)
+		RelaxLog(err)
+	}()
+
+	// delete the object
+	err = minioClient.RemoveObject(minioBucket, sanitize.BaseName(objectName))
+
+	// delete mongo db entry
+	go func() {
+		defer Recover()
+		err := MdbDeleteQuery(models.StorageTable, bson.M{"objectname": objectName})
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			RelaxLog(err)
+		}
+	}()
+
+	return err
 }
 
 // Gets a public link for a file
 // filename		: the name of the file
 // filetype		: the type of the file
-// objectName	: the minio object name of the file
-func GetPublicFileLink(filename, filehash string) (link string) {
+func GeneratePublicFileLink(filename, filehash string) (link string) {
 	dots := strings.Count(filename, ".")
 	if dots > 1 {
 		filename = strings.Replace(filename, ".", "-", dots-1)
 	}
-	//filename = strings.Replace("_", "-", -1)
 	return fmt.Sprintf(GetConfig().Path("imageproxy.base_url").Data().(string),
 		filehash, filename)
 }
 
+// TODO: prevent overwrites
 // uploads a file to the minio object storage
 // objectName	: the name of the file to upload
 // data			: the data for the new object
 // metadata		: additional metadata attached to the object
-func UploadFile(objectName string, data []byte, metadata map[string]string) (err error) {
+func uploadFile(objectName string, data []byte, metadata map[string]string) (err error) {
 	// setup minioClient if not yet done
 	if minioClient == nil {
 		err = setupMinioClient()
@@ -96,72 +311,6 @@ func UploadFile(objectName string, data []byte, metadata map[string]string) (err
 
 	// upload the data
 	_, err = minioClient.PutObject(minioBucket, sanitize.BaseName(objectName), bytes.NewReader(data), -1, options)
-	return err
-}
-
-// retrieves a file from the minio object storage
-// objectName	: the name of the file to retrieve
-func RetrieveFile(objectName string) (data []byte, err error) {
-	// setup minioClient if not yet done
-	if minioClient == nil {
-		err = setupMinioClient()
-		if err != nil {
-			return data, err
-		}
-	}
-
-	data = getBucketCache(objectName)
-	if data != nil {
-		cache.GetLogger().WithField("module", "storage").Infof("retrieving " + objectName + " from minio cache")
-		return data, nil
-	}
-
-	cache.GetLogger().WithField("module", "storage").Infof("retrieving " + objectName + " from minio storage")
-
-	// retrieve the object
-	minioObject, err := minioClient.GetObject(minioBucket, sanitize.BaseName(objectName), minio.GetObjectOptions{})
-	if err != nil {
-		return data, err
-	}
-
-	// read the object into a byte slice
-	data, err = ioutil.ReadAll(minioObject)
-	if err != nil {
-		return data, err
-	}
-
-	go func() {
-		defer Recover()
-		cache.GetLogger().WithField("module", "storage").Infof("caching " + objectName + " into minio cache")
-		err = setBucketCache(objectName, data)
-		RelaxLog(err)
-	}()
-
-	return data, nil
-}
-
-// deletes a file from the minio object storage
-// objectName	: the file to delete
-func DeleteFile(objectName string) (err error) {
-	// setup minioClient if not yet done
-	if minioClient == nil {
-		err = setupMinioClient()
-		if err != nil {
-			return err
-		}
-	}
-
-	cache.GetLogger().WithField("module", "storage").Infof("deleting " + objectName + " from minio storage")
-
-	go func() {
-		defer Recover()
-		cache.GetLogger().WithField("module", "storage").Infof("deleting " + objectName + " from minio cache")
-		err = deleteBucketCache(objectName)
-		RelaxLog(err)
-	}()
-
-	// delete the object
-	err = minioClient.RemoveObject(minioBucket, sanitize.BaseName(objectName))
 	return err
 }
 

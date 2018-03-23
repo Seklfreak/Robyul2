@@ -218,6 +218,40 @@ func MDbUpdateWithoutLogging(collection models.MongoDbCollection, id bson.Object
 	return GetMDb().C(collection.String()).UpdateId(id, data)
 }
 
+func MDbUpdateQuery(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
+	start := time.Now()
+	err = GetMDb().C(collection.String()).Update(selector, data)
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "update",
+				Method:     "MDbUpdateSelector()",
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", selector)),
+				Data:       truncateKeenValue(fmt.Sprintf("%+v", data)),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MDbUpdateQueryWithoutLogging(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
+	return GetMDb().C(collection.String()).Update(selector, data)
+}
+
 func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (err error) {
 	if !id.Valid() {
 		return errors.New("invalid id")
@@ -333,6 +367,39 @@ func MDbDeleteWithoutLogging(collection models.MongoDbCollection, id bson.Object
 	}
 
 	return GetMDb().C(collection.String()).RemoveId(id)
+}
+
+func MdbDeleteQuery(collection models.MongoDbCollection, selector interface{}) (err error) {
+	start := time.Now()
+	err = GetMDb().C(collection.String()).Remove(selector)
+	took := time.Since(start)
+
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "remove",
+				Method:     "MdbDeleteQuery()",
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", selector)),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MdbDeleteQueryWithoutLogging(collection models.MongoDbCollection, selector interface{}) (err error) {
+	return GetMDb().C(collection.String()).Remove(selector)
 }
 
 func MdbCollection(collection models.MongoDbCollection) (query *mgo.Collection) {
