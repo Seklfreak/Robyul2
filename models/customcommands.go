@@ -21,9 +21,9 @@ type CustomCommandsEntry struct {
 	Keyword           string
 	Content           string
 	StorageObjectName string
-	StorageMimeType   string
-	StorageHash       string
-	StorageFilename   string
+	StorageMimeType   string // deprecated
+	StorageHash       string // deprecated
+	StorageFilename   string // deprecated
 }
 
 func CustomCommandsNewObjectName(guildID, userID string) (objectName string) {

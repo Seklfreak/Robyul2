@@ -56,17 +56,23 @@ func (m *Dog) Action(command string, content string, msg *discordgo.Message, ses
 				image, err := helpers.NetGetUAWithError(url, helpers.DEFAULT_UA)
 				helpers.Relax(err)
 
-				url, err = helpers.UploadImage(image)
-				helpers.Relax(err)
+				objectName, err := helpers.AddFile("", image, helpers.AddFileMetadata{
+					ChannelID:          msg.ChannelID,
+					UserID:             msg.Author.ID,
+					AdditionalMetadata: nil,
+				}, "dog", true)
 
 				_, err = helpers.MDbInsert(
 					models.DogLinksTable,
 					models.DogLinkEntry{
-						URL:           url,
+						ObjectName:    objectName,
 						AddedByUserID: msg.Author.ID,
 						AddedAt:       time.Now(),
 					},
 				)
+				helpers.Relax(err)
+
+				url, err = helpers.GetFileLink(objectName)
 				helpers.Relax(err)
 
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.dog.add-success", url))
@@ -131,5 +137,12 @@ func (m *Dog) getRandomDogLink() (link string) {
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		return ""
 	}
-	return entryBucket.URL
+
+	if entryBucket.URL != "" {
+		return entryBucket.URL
+	}
+
+	link, err = helpers.GetFileLink(entryBucket.ObjectName)
+	helpers.RelaxLog(err)
+	return link
 }
