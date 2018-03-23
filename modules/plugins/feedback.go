@@ -89,8 +89,18 @@ func (f *Feedback) actionSuggestion(command string, args []string, in *discordgo
 	parts := strings.Split(in.Content, command)
 	content := strings.TrimSpace(strings.Join(parts[1:], command))
 
+	cardName := content
+	cardDesc := ""
+
+	// check for description
+	if strings.Contains(content, "|") {
+		cardName = strings.Split(content, "|")[0]
+		cardDesc = strings.Split(content, "|")[1]
+	}
+
 	_, err := trelloListSuggestions.AddCard(trello.Card{
-		Name: content,
+		Name: strings.TrimSpace(cardName),
+		Desc: strings.TrimSpace(cardDesc),
 	})
 	helpers.Relax(err)
 
