@@ -200,8 +200,8 @@ func showSingleGameRankings(msg *discordgo.Message) {
 		return userRankings[i].amountOfGames > userRankings[j].amountOfGames
 	})
 
-	if len(userRankings) > 50 {
-		userRankings = userRankings[:50]
+	if len(userRankings) > 35 {
+		userRankings = userRankings[:35]
 	}
 
 	embed := &discordgo.MessageEmbed{
