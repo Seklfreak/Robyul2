@@ -247,6 +247,18 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 
 		} else if X_EMOJI == reaction.Emoji.Name {
 
+			// confirm a note is set before denying a suggestion
+			if cs.Notes == "" {
+				// remove the x reaction just added
+				cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+
+				// alert user a note is needed and delete message after delay
+				msgs, err := helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, "A note must be set before denying a suggestion. Please use: `!edit notes {reason for denial...}`")
+				helpers.Relax(err)
+				helpers.DeleteMessageWithDelay(msgs[0], time.Second*15)
+				return
+			}
+
 			// image was denied
 			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Denied** <:NotLikeBlob:422163995869315082>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "denied"
