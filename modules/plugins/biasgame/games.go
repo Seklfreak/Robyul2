@@ -2,9 +2,11 @@ package biasgame
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"image"
 	"image/draw"
@@ -112,6 +114,7 @@ var bracketImageResizeMap map[int]uint
 
 // Init when the bot starts up
 func (b *BiasGame) Init(session *discordgo.Session) {
+	defer helpers.Recover()
 
 	// set global variables
 	currentSinglePlayerGames = make(map[string]*singleBiasGame)
@@ -156,11 +159,10 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		11: 60, 10: 60, 9: 60, 8: 60,
 	}
 
-	// load all bias images and information
+	// load all images and information
 	refreshBiasChoices(false)
-
-	// load the verses and winnerBracket image
-	loadMiscImages()
+	loadMiscImages(false)
+	startBiasCacheRefreshLoop()
 
 	// set up suggestions channel
 	initSuggestionChannel()
@@ -184,6 +186,7 @@ func (b *BiasGame) Commands() []string {
 
 // Main Entry point for the plugin
 func (b *BiasGame) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+	defer helpers.Recover()
 
 	// images, suggestions, and stat set up are done async when bot starts up
 	//   make sure game is ready before trying to process any commands
@@ -286,6 +289,8 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 // Called whenever a reaction is added to any message
 func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+	defer helpers.Recover()
+
 	if gameIsReady == false {
 		return
 	}
@@ -479,7 +484,7 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
-	encoder.CompressionLevel = -2 // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
+	encoder.CompressionLevel = -2
 	encoder.Encode(buf, finalImage)
 	myReader := bytes.NewReader(buf.Bytes())
 
@@ -865,6 +870,36 @@ func giveImageShadowBorder(img image.Image, offsetX int, offsetY int) image.Imag
 // bgLog is just a small helper function for logging in the biasgame
 func bgLog() *logrus.Entry {
 	return cache.GetLogger().WithField("module", "biasgame")
+}
+
+// getBiasGameCache
+func getBiasGameCache(key string, data interface{}) error {
+	// get cache with given key
+	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:biasgame:%s", key)).Bytes()
+	if err != nil || err == redis.Nil {
+		return err
+	}
+
+	// if the datas type is already []byte then set it to cache instead of unmarshal
+	switch data.(type) {
+	case []byte:
+		data = cacheResult
+		return nil
+	}
+
+	json.Unmarshal(cacheResult, data)
+	return nil
+}
+
+// setBiasGameCache
+func setBiasGameCache(key string, data interface{}, time time.Duration) error {
+	marshaledData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time)
+	return nil
 }
 
 ///// Unused functions requried by ExtendedPlugin interface

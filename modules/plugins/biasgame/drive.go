@@ -2,9 +2,7 @@ package biasgame
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis"
 	"image"
 	"image/draw"
 	"image/png"
@@ -22,44 +20,109 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-// loadMiscImages handles loading other images besides the idol images
-func loadMiscImages() {
+// startBiasCacheRefreshLoop will refresh the image cache for both misc image and bias images
+func startBiasCacheRefreshLoop() {
+	bgLog().Info("Starting biasgame refresh image cache loop")
 
-	miscFiles := getFilesFromDriveFolder(MISC_FOLDER_ID)
-	bgLog().Info("Loading biasgame misc images...")
+	go func() {
+		defer helpers.Recover()
 
-	for _, file := range miscFiles {
-		res, err := http.Get(file.WebContentLink)
-		if err != nil {
-			return
+		for {
+			// refresh every 12 hours
+			time.Sleep(time.Hour * 12)
+
+			bgLog().Info("Refreshing image cache...")
+			loadMiscImages(true)
+			refreshBiasChoices(true)
+
+			bgLog().Info("Biasgame image cache has been refresh")
 		}
-		img, _, err := image.Decode(res.Body)
-		if err != nil {
+	}()
+}
+
+// loadMiscImages handles loading other images besides the idol images
+func loadMiscImages(skipCache bool) {
+	// skipCache = true
+	bgLog().Info("Loading biasgame misc images")
+	validMiscImages := map[string]bool{
+		"verses16.png":        true,
+		"topEightBracket.png": true,
+		"shadow-border.png":   true,
+		"crown.png":           true,
+	}
+
+	// loop through all the files in the misc folder
+	for _, file := range getFilesFromDriveFolder(MISC_FOLDER_ID) {
+
+		// make sure other files in the misc folder aren't loaded
+		if validMiscImages[file.Name] == false {
 			continue
 		}
 
+		var img image.Image
+		var err error
+
+		// check if image is cached
+		var imgBuf []byte
+		err = getBiasGameCache(file.Name, &imgBuf)
+		if err == nil && skipCache == false {
+
+			// decode image and set the appropriate var
+			img, _, err = image.Decode(bytes.NewReader(imgBuf))
+			if err == nil {
+				switch file.Name {
+				case "verses16.png":
+					versesImage = img
+				case "topEightBracket.png":
+					winnerBracket = img
+				case "shadow-border.png":
+					shadowBorder = img
+				case "crown.png":
+					crown = img
+				}
+				bgLog().Infof("Biasgame misc image loaded from cache: %s", file.Name)
+				continue
+			}
+		}
+
+		// get image and decode it
+		res, err := http.Get(file.WebContentLink)
+		if err != nil {
+			bgLog().Errorf("Error loading misc image '%s'!! Error: %s", err.Error())
+			return
+		}
+		img, _, err = image.Decode(res.Body)
+		if err != nil {
+			bgLog().Errorf("Error decoding misc image '%s'!! Error: %s", err.Error())
+			continue
+		}
+
+		bgLog().Infof("Loading biasgame misc image: %s", file.Name)
 		switch file.Name {
 		case "verses16.png":
-			bgLog().Info("Loaded verses image")
 
 			// resize verses image to match the bias image sizes
-			resizedImage := resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
-			versesImage = resizedImage
-
+			img = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
+			versesImage = img
 		case "topEightBracket.png":
 
-			bgLog().Info("Loaded top eight bracket image")
 			winnerBracket = img
 		case "shadow-border.png":
 
-			bgLog().Info("Loaded shadow border image")
-			resizedImage := resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
-			shadowBorder = resizedImage
+			img = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
+			shadowBorder = img
 		case "crown.png":
 
-			bgLog().Info("Loaded crown image")
-			resizedImage := resize.Resize(IMAGE_RESIZE_HEIGHT/2, 0, img, resize.Lanczos3)
-			crown = resizedImage
+			img = resize.Resize(IMAGE_RESIZE_HEIGHT/2, 0, img, resize.Lanczos3)
+			crown = img
+		}
+
+		// cache misc image
+		buf := new(bytes.Buffer)
+		err = png.Encode(buf, img)
+		if err == nil {
+			bgLog().Infof("Setting cache for: %s", file.Name)
+			setBiasGameCache(file.Name, buf.Bytes(), time.Hour*24*7)
 		}
 	}
 
@@ -74,12 +137,16 @@ func loadMiscImages() {
 //   initially called when bot starts but is also safe to call while bot is running if necessary
 func refreshBiasChoices(skipCache bool) {
 
-	// check if redis cache exists, if so load from cache if not explicitly skipping cache
-	cacheResult, err := cache.GetRedisClient().Get("testbiasgamecache-all").Bytes()
-	if err == nil && err != redis.Nil && skipCache == false {
-		bgLog().Info("Biasgame images loaded from cache")
-		json.Unmarshal(cacheResult, &allBiasChoices)
-		return
+	if skipCache == false {
+
+		// attempt to get redis cache, return if its successful
+		err := getBiasGameCache("allbiaschoices", &allBiasChoices)
+		if err == nil {
+			bgLog().Info("Biasgame images loaded from cache")
+			return
+		}
+
+		bgLog().Info("Bias iamges loading from google drive. Cache not set or expired.")
 	}
 
 	// get idol image from google drive
@@ -105,7 +172,7 @@ func refreshBiasChoices(skipCache bool) {
 				if err != nil {
 					return
 				}
-				bgLog().Infof("Loading bias: Name: %s, Group: %s, File: %s", newBiasChoice.BiasName, newBiasChoice.GroupName, newBiasChoice.FileName)
+				// bgLog().Infof("Loading bias: Name: %s, Group: %s, File: %s", newBiasChoice.BiasName, newBiasChoice.GroupName, newBiasChoice.FileName)
 
 				mux.Lock()
 				defer mux.Unlock()
@@ -127,9 +194,9 @@ func refreshBiasChoices(skipCache bool) {
 		allBiasChoices = tempAllBiases
 
 		// cache all biases
-		marshaledBiasChoices, err := json.Marshal(tempAllBiases)
-		helpers.Relax(err)
-		cache.GetRedisClient().Set("testbiasgamecache-all", marshaledBiasChoices, time.Minute*15)
+		if len(allBiasChoices) > 0 {
+			setBiasGameCache("allbiaschoices", allBiasChoices, time.Hour*24*7)
+		}
 
 	} else {
 		bgLog().Warn("No biasgame file found!")
