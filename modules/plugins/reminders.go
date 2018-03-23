@@ -41,7 +41,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 
 		for {
 			reminderBucket := make([]models.RemindersEntry, 0)
-			err := helpers.MDbIter(helpers.MdbCollection(models.RemindersTable).Find(nil)).All(&reminderBucket)
+			err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.RemindersTable).Find(nil)).All(&reminderBucket)
 			helpers.Relax(err)
 
 			for _, reminders := range reminderBucket {

@@ -90,5 +90,5 @@ func (m *Useruploads) Relax(err error) {
 }
 
 func (m *Useruploads) logger() *logrus.Entry {
-	return cache.GetLogger().WithField("module", "Useruploads")
+	return cache.GetLogger().WithField("module", "useruploads")
 }

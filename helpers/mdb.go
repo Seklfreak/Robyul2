@@ -210,18 +210,12 @@ func MDbUpdate(collection models.MongoDbCollection, id bson.ObjectId, data inter
 	return nil
 }
 
-func MDbUpdateWithoutLogging(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (rid bson.ObjectId, err error) {
+func MDbUpdateWithoutLogging(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (err error) {
 	if !id.Valid() {
-		return bson.ObjectId(""), errors.New("invalid id")
+		return errors.New("invalid id")
 	}
 
-	err = GetMDb().C(collection.String()).UpdateId(id, data)
-
-	if err != nil {
-		return bson.ObjectId(""), err
-	}
-
-	return id, nil
+	return GetMDb().C(collection.String()).UpdateId(id, data)
 }
 
 func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (err error) {
@@ -258,6 +252,16 @@ func MDbUpsertID(collection models.MongoDbCollection, id bson.ObjectId, data int
 	return nil
 }
 
+func MDbUpsertIDWithoutLogging(collection models.MongoDbCollection, id bson.ObjectId, data interface{}) (err error) {
+	if !id.Valid() {
+		return errors.New("invalid id")
+	}
+
+	_, err = GetMDb().C(collection.String()).UpsertId(id, data)
+
+	return err
+}
+
 func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
 	start := time.Now()
 	_, err = GetMDb().C(collection.String()).Upsert(selector, data)
@@ -280,6 +284,12 @@ func MDbUpsert(collection models.MongoDbCollection, selector interface{}, data i
 			}
 		}()
 	}
+
+	return err
+}
+
+func MDbUpsertWithoutLogging(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
+	_, err = GetMDb().C(collection.String()).Upsert(selector, data)
 
 	return err
 }
@@ -317,6 +327,14 @@ func MDbDelete(collection models.MongoDbCollection, id bson.ObjectId) (err error
 	return nil
 }
 
+func MDbDeleteWithoutLogging(collection models.MongoDbCollection, id bson.ObjectId) (err error) {
+	if !id.Valid() {
+		return errors.New("invalid id")
+	}
+
+	return GetMDb().C(collection.String()).RemoveId(id)
+}
+
 func MdbCollection(collection models.MongoDbCollection) (query *mgo.Collection) {
 	return GetMDb().C(collection.String())
 }
@@ -337,7 +355,7 @@ func MDbIter(query *mgo.Query) (iter *mgo.Iter) {
 				Type:       "query",
 				Method:     "MdbIter()",
 				Collection: stripRobyulDatabaseFromCollection(queryOp.FieldByName("collection").String()),
-				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface())),
 				Skip:       queryOp.FieldByName("skip").Int(),
 				Limit:      queryOp.FieldByName("limit").Int(),
 			})
@@ -347,6 +365,10 @@ func MDbIter(query *mgo.Query) (iter *mgo.Iter) {
 		}()
 	}
 	return
+}
+
+func MDbIterWithoutLogging(query *mgo.Query) (iter *mgo.Iter) {
+	return query.Iter()
 }
 
 func MdbOne(query *mgo.Query, object interface{}) (err error) {
@@ -365,7 +387,7 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 				Type:       "query",
 				Method:     "MdbOne()",
 				Collection: stripRobyulDatabaseFromCollection(queryOp.FieldByName("collection").String()),
-				Query:      fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", reflect.ValueOf(queryOp.FieldByName("query")).Interface())),
 				Skip:       queryOp.FieldByName("skip").Int(),
 				Limit:      queryOp.FieldByName("limit").Int(),
 			})
@@ -378,13 +400,34 @@ func MdbOne(query *mgo.Query, object interface{}) (err error) {
 }
 
 func MdbOneWithoutLogging(query *mgo.Query, object interface{}) (err error) {
-	err = query.One(object)
-	return
+	return query.One(object)
 }
 
-func MDbUpsertWithoutLogging(collection models.MongoDbCollection, selector interface{}, data interface{}) (err error) {
-	_, err = GetMDb().C(collection.String()).Upsert(selector, data)
-	return err
+func MdbPipeOne(collection models.MongoDbCollection, pipeline interface{}, object interface{}) (err error) {
+	start := time.Now()
+	err = MdbCollection(collection).Pipe(pipeline).One(object)
+	took := time.Since(start)
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "pipeline",
+				Method:     "MdbPipeOne()",
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", pipeline)),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
+func MdbPipeOneWithoutLogging(collection models.MongoDbCollection, pipeline interface{}, object interface{}) (err error) {
+	return MdbCollection(collection).Pipe(pipeline).One(object)
 }
 
 // Returns a human readable ID version of a ObjectID

@@ -110,7 +110,6 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			})
 			return
 		case "add": // [p]commands add <command name> <command text>
-			// TODO: videos?
 			session.ChannelTyping(msg.ChannelID)
 
 			channel, err := helpers.GetChannel(msg.ChannelID)
@@ -234,10 +233,9 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.Relax(err)
 
 			var entryBucket models.CustomCommandsEntry
-			// TODO: pipe aggregation
-			err = helpers.MdbCollection(models.CustomCommandsTable).Pipe(
+			err = helpers.MdbPipeOne(models.CustomCommandsTable,
 				[]bson.M{{"$match": bson.M{"guildid": channel.GuildID}}, {"$sample": bson.M{"size": 1}}},
-			).One(&entryBucket)
+				&entryBucket)
 			if err != nil && strings.Contains(err.Error(), "not found") {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 				helpers.Relax(err)
@@ -295,9 +293,9 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 							}
 
 							if reaction.UserID == msg.Author.ID && reaction.Emoji.Name == "🎲" {
-								err = helpers.MdbCollection(models.CustomCommandsTable).Pipe(
+								err = helpers.MdbPipeOne(models.CustomCommandsTable,
 									[]bson.M{{"$match": bson.M{"guildid": channel.GuildID}}, {"$sample": bson.M{"size": 1}}},
-								).One(&entryBucket)
+									&entryBucket)
 								if err != nil && strings.Contains(err.Error(), "not found") {
 									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 									helpers.Relax(err)

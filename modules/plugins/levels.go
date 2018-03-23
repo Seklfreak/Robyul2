@@ -377,7 +377,7 @@ func (m *Levels) processExpStackLoop() {
 
 			levelAfter := m.getLevelFromExp(levelsServerUser.Exp)
 
-			_, err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
+			err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 			helpers.Relax(err)
 
 			if expBefore <= 0 || levelBefore != levelAfter {
@@ -1049,10 +1049,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 
 							serverBadges := m.GetServerOnlyBadges(channel.GuildID)
-							badgeLimit := helpers.GuildSettingsGetCached(channel.GuildID).LevelsMaxBadges
-							if badgeLimit == 0 {
-								badgeLimit = 100
-							}
+							badgeLimit := helpers.GetMaxBadgesForGuild(channel.GuildID)
 							if len(serverBadges) >= badgeLimit {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.create-badge-error-too-many", helpers.GetStaffUsernamesText()))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)

@@ -85,7 +85,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 						entryID := entry.ID
 						t.lockEntry(entryID)
 
-						err := helpers.MdbOne(
+						err := helpers.MdbOneWithoutLogging(
 							helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": entry.ID}),
 							&entry,
 						)
@@ -111,7 +111,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 						}
 
 						if changes == true {
-							err = helpers.MDbUpsertID(
+							err = helpers.MDbUpsertIDWithoutLogging(
 								models.TwitterTable,
 								entry.ID,
 								entry,
@@ -157,7 +157,7 @@ func (t *Twitter) startTwitterStream() {
 	var err error
 	var accountIDs []string
 
-	err = helpers.MDbIter(helpers.MdbCollection(models.TwitterTable).Find(nil)).All(&twitterEntriesCache)
+	err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitterTable).Find(nil)).All(&twitterEntriesCache)
 	helpers.Relax(err)
 
 	for _, entry := range twitterEntriesCache {
@@ -306,7 +306,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				entryID := entry.ID
 				m.lockEntry(entryID)
 
-				err = helpers.MdbOne(
+				err = helpers.MdbOneWithoutLogging(
 					helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": entry.ID}),
 					&entry,
 				)
@@ -337,7 +337,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 
 				}
 				if changes == true {
-					err = helpers.MDbUpsertID(
+					err = helpers.MDbUpsertIDWithoutLogging(
 						models.TwitterTable,
 						entry.ID,
 						entry,
