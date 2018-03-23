@@ -676,7 +676,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						return
 					}
 
-					backgroundUrl, err := helpers.UploadImage(bytesData)
+					backgroundObjectName, err := helpers.AddFile("", bytesData, helpers.AddFileMetadata{
+						ChannelID: msg.ChannelID,
+						UserID:    msg.Author.ID,
+					}, "levels", true)
 					if err != nil {
 						helpers.RelaxLog(err)
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-upload-failed"))
@@ -686,15 +689,26 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					userUserdata, err := m.GetUserUserdata(msg.Author)
 					helpers.Relax(err)
-					userUserdata.Background = backgroundUrl
+
+					// delete old background object if set
+					if userUserdata.BackgroundObjectName != "" {
+						err = helpers.DeleteFile(userUserdata.BackgroundObjectName)
+					}
+
+					userUserdata.Background = ""
+					userUserdata.BackgroundObjectName = backgroundObjectName
 					err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 					helpers.Relax(err)
 
 					go func() {
 						logChannelID, _ := helpers.GetBotConfigString(models.UserProfileBackgroundLogChannelKey)
 						if logChannelID != "" {
-							err = m.logUserBackgroundSet(logChannelID, msg.ChannelID, msg.Author.ID, backgroundUrl)
+							backgroundUrl, err := helpers.GetFileLink(userUserdata.BackgroundObjectName)
 							helpers.RelaxLog(err)
+							if err == nil {
+								err = m.logUserBackgroundSet(logChannelID, msg.ChannelID, msg.Author.ID, backgroundUrl)
+								helpers.RelaxLog(err)
+							}
 						}
 					}()
 
@@ -741,7 +755,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							helpers.Relax(err)
 						}
 
-						backgroundUrl, err := helpers.UploadImage(bytesData)
+						backgroundObjectName, err := helpers.AddFile("", bytesData, helpers.AddFileMetadata{
+							ChannelID: msg.ChannelID,
+							UserID:    msg.Author.ID,
+						}, "levels", true)
 						if err != nil {
 							helpers.RelaxLog(err)
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.user-background-upload-failed"))
@@ -751,7 +768,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 						userUserdata, err := m.GetUserUserdata(userToChange)
 						helpers.Relax(err)
-						userUserdata.Background = backgroundUrl
+
+						// delete old background object if set
+						if userUserdata.BackgroundObjectName != "" {
+							err = helpers.DeleteFile(userUserdata.BackgroundObjectName)
+						}
+
+						userUserdata.Background = ""
+						userUserdata.BackgroundObjectName = backgroundObjectName
 						err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 						helpers.Relax(err)
 
@@ -894,7 +918,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-error-not-found"))
 							return
 						}
-						backgroundUrl := m.GetProfileBackgroundUrl(backgroundName)
+						backgroundUrl := m.GetProfileBackgroundUrlByName(backgroundName)
 
 						if helpers.ConfirmEmbed(
 							msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
@@ -933,7 +957,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					userUserdata, err := m.GetUserUserdata(msg.Author)
 					helpers.Relax(err)
+
+					// delete old background object if set
+					if userUserdata.BackgroundObjectName != "" {
+						err = helpers.DeleteFile(userUserdata.BackgroundObjectName)
+					}
+
 					userUserdata.Background = args[1]
+					userUserdata.BackgroundObjectName = ""
 					err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 					helpers.Relax(err)
 
@@ -3362,9 +3393,28 @@ func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
 	return true
 }
 
-func (l *Levels) GetProfileBackgroundUrl(backgroundName string) string {
+func (l *Levels) GetProfileBackgroundUrl(userdata models.ProfileUserdataEntry) (link string) {
+	if userdata.BackgroundObjectName != "" {
+		link, err := helpers.GetFileLink(userdata.BackgroundObjectName)
+		if err == nil && link != "" {
+			return link
+		}
+		helpers.RelaxLog(err)
+	}
+
+	if userdata.Background != "" {
+		link = l.GetProfileBackgroundUrlByName(userdata.Background)
+		if link != "" {
+			return link
+		}
+	}
+
+	return "http://i.imgur.com/I9b74U9.jpg"
+}
+
+func (l *Levels) GetProfileBackgroundUrlByName(backgroundName string) string {
 	if backgroundName == "" {
-		return "http://i.imgur.com/I9b74U9.jpg"
+		return ""
 	}
 
 	var entryBucket DB_Profile_Background
@@ -3938,7 +3988,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_RANK}", globalRank, -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData.Background), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_REP}", strconv.Itoa(userData.Rep), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML_1}", badgesHTML1, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGES_HTML_2}", badgesHTML2, -1)
