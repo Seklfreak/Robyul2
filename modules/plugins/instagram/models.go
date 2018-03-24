@@ -4,30 +4,8 @@ import (
 	"sync"
 
 	"github.com/Seklfreak/Robyul2/helpers"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/Seklfreak/Robyul2/models"
 )
-
-type DB_Instagram_Entry struct {
-	ID               string                   `gorethink:"id,omitempty"`
-	ServerID         string                   `gorethink:"serverid"`
-	ChannelID        string                   `gorethink:"channelid"`
-	Username         string                   `gorethink:"username"`
-	InstagramUserID  int64                    `gorethink:"instagramuserid"`
-	PostedPosts      []DB_Instagram_Post      `gorethink:"posted_posts"`
-	PostedReelMedias []DB_Instagram_ReelMedia `gorethink:"posted_reelmedias"`
-	IsLive           bool                     `gorethink:"islive"`
-	PostDirectLinks  bool                     `gorethink:"post_direct_links"`
-}
-
-type DB_Instagram_Post struct {
-	ID        string `gorethink:"id,omitempty"`
-	CreatedAt int    `gorethink:"createdat"`
-}
-
-type DB_Instagram_ReelMedia struct {
-	ID        string `gorethink:"id,omitempty"`
-	CreatedAt int64  `gorethink:"createdat"`
-}
 
 type Instagram_User struct {
 	Biography      string `json:"biography"`
@@ -172,7 +150,7 @@ type Instagram_Broadcast struct {
 }
 
 type Instagram_Safe_Entries struct {
-	entries []DB_Instagram_Entry
+	entries []models.InstagramEntry
 	mux     sync.Mutex
 }
 
@@ -228,20 +206,12 @@ type Instagram_GraphQl_User_Feed struct {
 	Status string `json:"status"`
 }
 
-func (m *Handler) getBundledEntries() (bundledEntries map[int64][]DB_Instagram_Entry, entriesCount int, err error) {
-	var entries []DB_Instagram_Entry
+func (m *Handler) getBundledEntries() (bundledEntries map[int64][]models.InstagramEntry, entriesCount int, err error) {
+	var entries []models.InstagramEntry
 
-	cursor, err := rethink.Table("instagram").Run(helpers.GetDB())
-	if err != nil {
-		return bundledEntries, 0, err
-	}
+	err = helpers.MDbIter(helpers.MdbCollection(models.InstagramTable).Find(nil)).All(&entries)
 
-	err = cursor.All(&entries)
-	if err != nil {
-		return bundledEntries, 0, err
-	}
-
-	bundledEntries = make(map[int64][]DB_Instagram_Entry, 0)
+	bundledEntries = make(map[int64][]models.InstagramEntry, 0)
 
 	for _, entry := range entries {
 		if entry.InstagramUserID == 0 {
@@ -258,7 +228,7 @@ func (m *Handler) getBundledEntries() (bundledEntries map[int64][]DB_Instagram_E
 		if _, ok := bundledEntries[entry.InstagramUserID]; ok {
 			bundledEntries[entry.InstagramUserID] = append(bundledEntries[entry.InstagramUserID], entry)
 		} else {
-			bundledEntries[entry.InstagramUserID] = []DB_Instagram_Entry{entry}
+			bundledEntries[entry.InstagramUserID] = []models.InstagramEntry{entry}
 		}
 	}
 

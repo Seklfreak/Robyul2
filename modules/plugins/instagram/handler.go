@@ -19,8 +19,7 @@ import (
 	goinstaStore "github.com/ahmdrz/goinsta/store"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
-	"github.com/pkg/errors"
+	"github.com/globalsign/mgo/bson"
 )
 
 type Handler struct{}
@@ -144,40 +143,50 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				}
 				helpers.Relax(err)
 				// Create DB Entries
-				var dbPosts []DB_Instagram_Post
+				dbPosts := make([]models.InstagramPostEntry, 0)
 				for _, post := range feed.Items {
-					postEntry := DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt}
+					postEntry := models.InstagramPostEntry{
+						ID:        post.ID,
+						Type:      models.InstagramPostTypePost,
+						CreatedAt: int64(post.Caption.CreatedAt),
+					}
 					dbPosts = append(dbPosts, postEntry)
 
 				}
-				var dbRealMedias []DB_Instagram_ReelMedia
 				for _, reelMedia := range story.Reel.Items {
-					reelMediaEntry := DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: reelMedia.DeviceTimestamp}
-					dbRealMedias = append(dbRealMedias, reelMediaEntry)
+					postEntry := models.InstagramPostEntry{
+						ID:        reelMedia.ID,
+						Type:      models.InstagramPostTypeReel,
+						CreatedAt: reelMedia.DeviceTimestamp,
+					}
+					dbPosts = append(dbPosts, postEntry)
 
 				}
 				// create new entry in db
 				var specialText string
-				var linkMode bool
+				postMode := models.InstagramSendPostTypeRobyulEmbed
 				if strings.HasSuffix(content, " direct link mode") ||
 					strings.HasSuffix(content, " link mode") ||
 					strings.HasSuffix(content, " links") {
-					linkMode = true
+					postMode = models.InstagramSendPostTypeDirectLinks
 					specialText += " using direct links"
 				}
 
-				entry := m.getEntryByOrCreateEmpty("id", "")
-				entry.ServerID = targetChannel.GuildID
-				entry.ChannelID = targetChannel.ID
-				entry.Username = instagramUser.User.Username
-				entry.PostedPosts = dbPosts
-				entry.PostedReelMedias = dbRealMedias
-				entry.PostDirectLinks = linkMode
-				entry.InstagramUserID = instagramUser.User.ID
-				err = m.setEntry(entry)
+				newID, err := helpers.MDbInsert(
+					models.InstagramTable,
+					models.InstagramEntry{
+						GuildID:         targetChannel.GuildID,
+						ChannelID:       targetChannel.ID,
+						Username:        instagramUser.User.Username,
+						InstagramUserID: instagramUser.User.ID,
+						PostedPosts:     dbPosts,
+						IsLive:          false,
+						SendPostType:    postMode,
+					},
+				)
 				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, helpers.MdbIdToHuman(newID),
 					models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
 					models.EventlogTypeRobyulInstagramFeedAdd, "",
 					nil,
@@ -187,8 +196,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 							Value: targetChannel.ID,
 						},
 						{
-							Key:   "instagram_postdirectlinks",
-							Value: helpers.StoreBoolAsString(linkMode),
+							Key:   "instagram_sendposttype",
+							Value: strconv.Itoa(int(postMode)),
 						},
 						{
 							Key:   "instagram_instagramuserid",
@@ -201,8 +210,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					}, false)
 				helpers.RelaxLog(err)
 
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", entry.Username, entry.ChannelID, specialText))
-				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", entry.Username, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", instagramUser.User.Username, targetChannel.ID, specialText))
+				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", instagramUser.User.Username, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]instagram delete <id>
 			helpers.RequireMod(msg, func() {
@@ -213,40 +222,49 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					helpers.Relax(err)
 
 					entryId := args[1]
-					entryBucket, _ := m.getEntryBy("id", entryId)
-					if entryBucket.ID != "" {
-						m.deleteEntryById(entryBucket.ID)
+					var entryBucket models.InstagramEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.InstagramTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(entryId)}),
+						&entryBucket,
+					)
 
-						_, err := helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
-							models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
-							models.EventlogTypeRobyulInstagramFeedRemove, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "instagram_channelid",
-									Value: entryBucket.ChannelID,
-								},
-								{
-									Key:   "instagram_postdirectlinks",
-									Value: helpers.StoreBoolAsString(entryBucket.PostDirectLinks),
-								},
-								{
-									Key:   "instagram_instagramuserid",
-									Value: strconv.FormatInt(entryBucket.InstagramUserID, 10),
-								},
-								{
-									Key:   "instagram_instagramusername",
-									Value: entryBucket.Username,
-								},
-							}, false)
-						helpers.RelaxLog(err)
-
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-delete-success", entryBucket.Username))
-						cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Deleted Instagram Account @%s", entryBucket.Username))
-					} else {
-						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.instagram.account-delete-not-found-error"))
-						return
+					if err != nil {
+						if strings.Contains(err.Error(), "not found") {
+							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.instagram.account-delete-not-found-error"))
+							return
+						}
+						helpers.Relax(err)
 					}
+
+					err = helpers.MDbDelete(models.InstagramTable, entryBucket.ID)
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
+						models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
+						models.EventlogTypeRobyulInstagramFeedRemove, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "instagram_channelid",
+								Value: entryBucket.ChannelID,
+							},
+							{
+								Key:   "instagram_sendposttype",
+								Value: strconv.Itoa(int(entryBucket.SendPostType)),
+							},
+							{
+								Key:   "instagram_instagramuserid",
+								Value: strconv.FormatInt(entryBucket.InstagramUserID, 10),
+							},
+							{
+								Key:   "instagram_instagramusername",
+								Value: entryBucket.Username,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-delete-success", entryBucket.Username))
+					cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Deleted Instagram Account @%s", entryBucket.Username))
+
 				} else {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
@@ -255,15 +273,11 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 		case "list": // [p]instagram list
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			var entryBucket []DB_Instagram_Entry
-			listCursor, err := rethink.Table("instagram").Filter(
-				rethink.Row.Field("serverid").Eq(currentChannel.GuildID),
-			).Run(helpers.GetDB())
+			var entryBucket []models.InstagramEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.InstagramTable).Find(bson.M{"guildid": currentChannel.GuildID})).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if entryBucket == nil || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-list-no-accounts-error"))
 				return
 			} else if err != nil {
@@ -273,12 +287,12 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 			resultMessage := ""
 			for _, entry := range entryBucket {
 				var directLinkModeText string
-				if entry.PostDirectLinks {
+				if entry.SendPostType == models.InstagramSendPostTypeDirectLinks {
 					directLinkModeText = " (direct link mode)"
 				}
 
 				resultMessage += fmt.Sprintf("`%s`: Instagram Account `@%s` posting to <#%s>%s\n",
-					entry.ID, entry.Username, entry.ChannelID, directLinkModeText)
+					helpers.MdbIdToHuman(entry.ID), entry.Username, entry.ChannelID, directLinkModeText)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Instagram Accounts in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
@@ -296,42 +310,51 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
+
 				entryId := args[1]
-				entryBucket, _ := m.getEntryBy("id", entryId)
-				if entryBucket.ID == "" {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					return
+				var entryBucket models.InstagramEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.InstagramTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(entryId)}),
+					&entryBucket,
+				)
+
+				if err != nil {
+					if strings.Contains(err.Error(), "not found") {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						return
+					}
+					helpers.Relax(err)
 				}
 
-				beforeValue := entryBucket.PostDirectLinks
+				beforeValue := entryBucket.SendPostType
 
 				var messageText string
-				if entryBucket.PostDirectLinks {
-					entryBucket.PostDirectLinks = false
-					messageText = helpers.GetText("plugins.instagram.post-direct-links-disabled")
-				} else {
-					entryBucket.PostDirectLinks = true
+				if entryBucket.SendPostType == models.InstagramSendPostTypeRobyulEmbed {
+					entryBucket.SendPostType = models.InstagramSendPostTypeDirectLinks
 					messageText = helpers.GetText("plugins.instagram.post-direct-links-enabled")
+				} else {
+					entryBucket.SendPostType = models.InstagramSendPostTypeRobyulEmbed
+					messageText = helpers.GetText("plugins.instagram.post-direct-links-disabled")
 				}
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
 					models.EventlogTargetTypeRobyulInstagramFeed, msg.Author.ID,
 					models.EventlogTypeRobyulInstagramFeedUpdate, "",
 					[]models.ElasticEventlogChange{
 						{
-							Key:      "instagram_postdirectlinks",
-							OldValue: helpers.StoreBoolAsString(beforeValue),
-							NewValue: helpers.StoreBoolAsString(entryBucket.PostDirectLinks),
+							Key:      "instagram_sendposttype",
+							OldValue: strconv.Itoa(int(beforeValue)),
+							NewValue: strconv.Itoa(int(entryBucket.SendPostType)),
 						},
 					},
 					[]models.ElasticEventlogOption{
 						{
 							Key:   "instagram_channelid",
-							Value: entryBucket.ID,
+							Value: entryBucket.ChannelID,
 						},
 						{
-							Key:   "instagram_postdirectlinks",
-							Value: helpers.StoreBoolAsString(entryBucket.PostDirectLinks),
+							Key:   "instagram_sendposttype",
+							Value: strconv.Itoa(int(entryBucket.SendPostType)),
 						},
 						{
 							Key:   "instagram_instagramuserid",
@@ -344,7 +367,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					}, false)
 				helpers.RelaxLog(err)
 
-				err = m.setEntry(entryBucket)
+				err = helpers.MDbUpdate(models.InstagramTable, entryBucket.ID, entryBucket)
 				helpers.Relax(err)
 
 				helpers.SendMessage(msg.ChannelID, messageText)
@@ -456,7 +479,7 @@ func (m *Handler) postLiveToChannel(channelID string, instagramUser Instagram_Us
 	}
 }
 
-func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postDirectLinks bool) {
+func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postMode models.InstagramSendPostType) {
 	instagramNameModifier := ""
 	if story.Reel.User.IsVerified {
 		instagramNameModifier += " ☑"
@@ -497,7 +520,7 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 		Description: caption,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
-	if postDirectLinks {
+	if postMode == models.InstagramSendPostTypeDirectLinks {
 		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if caption != "" {
 			content += caption + "\n"
@@ -535,7 +558,7 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 	messageSend := &discordgo.MessageSend{
 		Content: content,
 	}
-	if !postDirectLinks {
+	if postMode != models.InstagramSendPostTypeDirectLinks {
 		messageSend.Content = fmt.Sprintf("<%s>", stripInstagramDirectLink(mediaUrl))
 		messageSend.Embed = channelEmbed
 	}
@@ -546,7 +569,7 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 	}
 }
 
-func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item, postDirectLinks bool) {
+func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item, postType models.InstagramSendPostType) {
 	instagramNameModifier := ""
 	if post.User.IsVerified {
 		instagramNameModifier += " ☑"
@@ -586,7 +609,7 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 		Description: post.Caption.Text,
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
-	if postDirectLinks {
+	if postType == models.InstagramSendPostTypeDirectLinks {
 		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", post.User.FullName, post.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if post.Caption.Text != "" {
 			content += post.Caption.Text + "\n"
@@ -622,7 +645,7 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 	if len(mediaUrls) > 0 {
 		channelEmbed.Description += "\n\n`Links:` "
 		for i, mediaUrl := range mediaUrls {
-			if postDirectLinks {
+			if postType == models.InstagramSendPostTypeDirectLinks {
 				content += "\n" + stripInstagramDirectLink(mediaUrl)
 			}
 			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), stripInstagramDirectLink(mediaUrl))
@@ -632,7 +655,7 @@ func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item,
 	messageSend := &discordgo.MessageSend{
 		Content: content,
 	}
-	if !postDirectLinks {
+	if postType != models.InstagramSendPostTypeDirectLinks {
 		messageSend.Embed = channelEmbed
 	}
 
@@ -737,61 +760,4 @@ func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int
 	}
 
 	return lastBestCandidateURL
-}
-
-func (m *Handler) getEntryBy(key string, id string) (entry DB_Instagram_Entry, err error) {
-	listCursor, err := rethink.Table("instagram").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entry)
-	return
-}
-
-func (m *Handler) getEntryByOrCreateEmpty(key string, id string) DB_Instagram_Entry {
-	var entryBucket DB_Instagram_Entry
-	listCursor, err := rethink.Table("instagram").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("instagram").Insert(DB_Instagram_Entry{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Handler) setEntry(entry DB_Instagram_Entry) (err error) {
-	if entry.ID != "" {
-		_, err = rethink.Table("instagram").Update(entry).Run(helpers.GetDB())
-		return
-	}
-	return errors.New("invalid id submitted")
-}
-
-func (m *Handler) deleteEntryById(id string) {
-	_, err := rethink.Table("instagram").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
 }

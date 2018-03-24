@@ -15,7 +15,9 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	goinstaResponse "github.com/ahmdrz/goinsta/response"
+	"github.com/globalsign/mgo/bson"
 )
 
 var (
@@ -52,13 +54,13 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers)
 		start := time.Now()
 
-		jobs := make(chan map[int64][]DB_Instagram_Entry, 0)
+		jobs := make(chan map[int64][]models.InstagramEntry, 0)
 		results := make(chan int, 0)
 
-		workerEntries := make(map[int]map[int64][]DB_Instagram_Entry, 0)
+		workerEntries := make(map[int]map[int64][]models.InstagramEntry, 0)
 		for w := 1; w <= InstagramGraphQlWorkers; w++ {
 			go m.checkInstagramGraphQlFeedWorker(w, jobs, results)
-			workerEntries[w] = make(map[int64][]DB_Instagram_Entry)
+			workerEntries[w] = make(map[int64][]models.InstagramEntry)
 		}
 
 		lastWorker := 1
@@ -90,7 +92,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 	}
 }
 
-func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64][]DB_Instagram_Entry, results chan<- int) {
+func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64][]models.InstagramEntry, results chan<- int) {
 	defer helpers.Recover()
 
 	var graphQlFeedResult Instagram_GraphQl_User_Feed
@@ -158,7 +160,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 				for _, entry := range entries {
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.ID == fullPostID {
+						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == fullPostID {
 							postAlreadyPosted = true
 						}
 					}
@@ -206,7 +208,11 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					entryID := entry.ID
 					m.lockEntry(entryID)
 
-					entry, err := m.getEntryBy("id", entryID)
+					var entry models.InstagramEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.InstagramTable).Find(bson.M{"_id": entryID}),
+						&entry,
+					)
 					if err != nil {
 						m.unlockEntry(entryID)
 						helpers.RelaxLog(err)
@@ -216,7 +222,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					changes := false
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.ID == fullPostID {
+						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == fullPostID {
 							postAlreadyPosted = true
 						}
 					}
@@ -224,13 +230,17 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					if postAlreadyPosted == false {
 						cache.GetLogger().WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
-							DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
+							models.InstagramPostEntry{
+								ID:        post.ID,
+								Type:      models.InstagramPostTypePost,
+								CreatedAt: int64(post.Caption.CreatedAt),
+							})
 						changes = true
-						go m.postPostToChannel(entry.ChannelID, post, entry.PostDirectLinks)
+						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
 					}
 
 					if changes {
-						err = m.setEntry(entry)
+						err = helpers.MDbUpdate(models.InstagramTable, entry.ID, entry)
 						if err != nil {
 							m.unlockEntry(entryID)
 							helpers.RelaxLog(err)
@@ -321,7 +331,11 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				entryID := entry.ID
 				m.lockEntry(entryID)
 
-				entry, err := m.getEntryBy("id", entryID)
+				var entry models.InstagramEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.InstagramTable).Find(bson.M{"_id": entryID}),
+					&entry,
+				)
 				if err != nil {
 					m.unlockEntry(entryID)
 					if !strings.Contains(err.Error(), "The result does not contain any more rows") {
@@ -333,34 +347,42 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				for _, post := range posts.Items {
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.ID == post.ID {
+						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == post.ID {
 							postAlreadyPosted = true
 						}
 					}
 					if postAlreadyPosted == false {
 						log.WithField("module", "instagram").Infof("Posting Post (Feed and Story): #%s", post.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
-							DB_Instagram_Post{ID: post.ID, CreatedAt: post.Caption.CreatedAt})
+							models.InstagramPostEntry{
+								ID:        post.ID,
+								Type:      models.InstagramPostTypePost,
+								CreatedAt: int64(post.Caption.CreatedAt),
+							})
 						changes = true
-						go m.postPostToChannel(entry.ChannelID, post, entry.PostDirectLinks)
+						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
 					}
 
 				}
 
 				for n, reelMedia := range story.Reel.Items {
 					reelMediaAlreadyPosted := false
-					for _, reelMediaPostPosted := range entry.PostedReelMedias {
-						if reelMediaPostPosted.ID == reelMedia.ID {
+					for _, reelMediaPostPosted := range entry.PostedPosts {
+						if reelMediaPostPosted.Type == models.InstagramPostTypeReel && reelMediaPostPosted.ID == reelMedia.ID {
 							reelMediaAlreadyPosted = true
 						}
 					}
 					if reelMediaAlreadyPosted == false {
 						log.WithField("module", "instagram").Infof(
 							"Posting Reel Media (Feed and Story): #%s", reelMedia.ID)
-						entry.PostedReelMedias = append(entry.PostedReelMedias,
-							DB_Instagram_ReelMedia{ID: reelMedia.ID, CreatedAt: int64(reelMedia.DeviceTimestamp)})
+						entry.PostedPosts = append(entry.PostedPosts,
+							models.InstagramPostEntry{
+								ID:        reelMedia.ID,
+								Type:      models.InstagramPostTypeReel,
+								CreatedAt: int64(reelMedia.DeviceTimestamp),
+							})
 						changes = true
-						go m.postReelMediaToChannel(entry.ChannelID, story, n, entry.PostDirectLinks)
+						go m.postReelMediaToChannel(entry.ChannelID, story, n, entry.SendPostType)
 					}
 
 				}
@@ -382,7 +404,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 				   }*/
 
 				if changes == true {
-					err = m.setEntry(entry)
+					err = helpers.MDbUpdate(models.InstagramTable, entry.ID, entry)
 					if err != nil {
 						m.unlockEntry(entryID)
 						helpers.RelaxLog(err)
@@ -407,17 +429,17 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 	}
 }
 
-func (m *Handler) lockEntry(entryID string) {
-	if _, ok := instagramEntryLocks[entryID]; ok {
-		instagramEntryLocks[entryID].Lock()
+func (m *Handler) lockEntry(entryID bson.ObjectId) {
+	if _, ok := instagramEntryLocks[string(entryID)]; ok {
+		instagramEntryLocks[string(entryID)].Lock()
 		return
 	}
-	instagramEntryLocks[entryID] = new(sync.Mutex)
-	instagramEntryLocks[entryID].Lock()
+	instagramEntryLocks[string(entryID)] = new(sync.Mutex)
+	instagramEntryLocks[string(entryID)].Lock()
 }
 
-func (m *Handler) unlockEntry(entryID string) {
-	if _, ok := instagramEntryLocks[entryID]; ok {
-		instagramEntryLocks[entryID].Unlock()
+func (m *Handler) unlockEntry(entryID bson.ObjectId) {
+	if _, ok := instagramEntryLocks[string(entryID)]; ok {
+		instagramEntryLocks[string(entryID)].Unlock()
 	}
 }

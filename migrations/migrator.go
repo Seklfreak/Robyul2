@@ -12,7 +12,6 @@ var migrations = []helpers.Callback{
 	m0_create_db,
 	m1_create_table_guild_config,
 	m4_create_table_vlive,
-	m6_create_table_instagram,
 	m9_create_table_bias,
 	m11_create_table_twitch,
 	m14_create_table_stats_voicetimes,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m71_migration_table_autoleaver_whitelist,
 	m72_migration_table_reminders,
 	m73_migration_table_facebook,
+	m74_migration_table_instagram,
 }
 
 // Run executes all registered migrations
