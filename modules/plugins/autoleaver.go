@@ -406,6 +406,8 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		}
 
 		if onWhitelist {
+			err = a.sendAllowedJoinMessage(guild.ID)
+			helpers.RelaxLog(err)
 			return
 		}
 
@@ -417,9 +419,33 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 			}
 		}
 
+		// send message to inform before leaving
+		err = a.sendAutoleaveMessage(guild.ID)
+		helpers.RelaxLog(err)
+
 		err = cache.GetSession().GuildLeave(guild.ID)
 		helpers.Relax(err)
 	}()
+}
+
+func (a *Autoleaver) sendAutoleaveMessage(guildID string) (err error) {
+	targetChannelID, err := helpers.GetGuildDefaultChannel(guildID)
+	if err == nil {
+		helpers.SendMessage(targetChannelID, helpers.GetText("plugins.autoleaver.non-whitelisted-leave-message"))
+		return nil
+	}
+
+	return nil
+}
+
+func (a *Autoleaver) sendAllowedJoinMessage(guildID string) (err error) {
+	targetChannelID, err := helpers.GetGuildDefaultChannel(guildID)
+	if err == nil {
+		helpers.SendMessage(targetChannelID, helpers.GetTextF("plugins.autoleaver.yes-whitelisted-join-message", guildID))
+		return nil
+	}
+
+	return nil
 }
 
 func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.GuildDelete) {
