@@ -257,10 +257,19 @@ func makeBiasChoiceFromDriveFile(file *drive.File) (biasChoice, error) {
 		gender = "boy"
 	}
 
+	// encode image with png encoding
 	var imageBuffer bytes.Buffer
 	err = png.Encode(&imageBuffer, resizedImage)
 	helpers.Relax(err)
-	imageBytes := imageBuffer.Bytes()
+	imgBytes := imageBuffer.Bytes()
+
+	// create the first biasImage
+	imgHash, err := helpers.GetImageHashString(resizedImage)
+	helpers.Relax(err)
+	bImg := biasImage{
+		ImageBytes: imgBytes,
+		HashString: imgHash,
+	}
 
 	newBiasChoice := biasChoice{
 		FileName:       file.Name,
@@ -269,7 +278,7 @@ func makeBiasChoiceFromDriveFile(file *drive.File) (biasChoice, error) {
 		WebContentLink: file.WebContentLink,
 		GroupName:      strings.Split(groupBias, "_")[0],
 		BiasName:       strings.Split(groupBias, "_")[1],
-		BiasImages:     [][]byte{imageBytes},
+		BiasImages:     []biasImage{bImg},
 		Gender:         gender,
 	}
 

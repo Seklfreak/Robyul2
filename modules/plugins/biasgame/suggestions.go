@@ -146,6 +146,41 @@ func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
 		return
 	}
 
+	sugImgHashString, err := helpers.GetImageHashString(suggestedImage)
+	helpers.Relax(err)
+
+	// compare the given image to all images currently available in the game
+	for _, bias := range allBiasChoices {
+		for _, curBImage := range bias.BiasImages {
+			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
+			if err != nil {
+				bgLog().Errorf("Comparison error: %s", err.Error())
+				continue
+			}
+
+			// if the difference is 3 or less let the user know the image already exists
+			if compareVal <= 5 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.suggested-image-exists"))
+				return
+			}
+		}
+	}
+
+	// compare the given image to all images currently in the suggestion queue
+	for _, suggestion := range suggestionQueue {
+		compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, suggestion.ImageHashString)
+		if err != nil {
+			bgLog().Errorf("Comparison error: %s", err.Error())
+			continue
+		}
+
+		// if the difference is 3 or less let the user know the image already exists
+		if compareVal <= 5 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.image-is-suggested"))
+			return
+		}
+	}
+
 	// send ty message
 	fmt.Println(msg.Author.Mention())
 	helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.thanks-for-suggestion", msg.Author.Mention()))
@@ -158,6 +193,7 @@ func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
 		GrouopName: suggestionArgs[1],
 		Name:       suggestionArgs[2],
 		ImageURL:   suggestedImageUrl,
+		ImageHashString: sugImgHashString,
 		GroupMatch: false,
 		IdolMatch:  false,
 	}

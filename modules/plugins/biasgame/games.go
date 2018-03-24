@@ -2,12 +2,7 @@ package biasgame
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/go-redis/redis"
-	"github.com/sirupsen/logrus"
 	"image"
 	"image/draw"
 	"image/png"
@@ -16,11 +11,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/helpers"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/nfnt/resize"
 )
 
 type BiasGame struct{}
+
+type biasImage struct {
+	ImageBytes []byte
+	HashString string
+}
 
 type biasChoice struct {
 	// info directly from google drive
@@ -31,7 +34,7 @@ type biasChoice struct {
 	Gender         string
 
 	// image
-	BiasImages [][]byte
+	BiasImages []biasImage
 
 	// bias info
 	BiasName  string
@@ -871,62 +874,9 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 		(*gameImageIndex)[b.FileName] = imageIndex
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex]))
+	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].ImageBytes))
 	helpers.Relax(err)
 	return img
-}
-
-///// MISC HELPER FUNCTIONS
-
-// giveImageShadowBorder give the round image a shadow border
-func giveImageShadowBorder(img image.Image, offsetX int, offsetY int) image.Image {
-	rgba := image.NewRGBA(shadowBorder.Bounds())
-	draw.Draw(rgba, shadowBorder.Bounds(), shadowBorder, image.Point{0, 0}, draw.Src)
-	draw.Draw(rgba, img.Bounds().Add(image.Pt(offsetX, offsetY)), img, image.ZP, draw.Over)
-	return rgba.SubImage(rgba.Rect)
-}
-
-// bgLog is just a small helper function for logging in the biasgame
-func bgLog() *logrus.Entry {
-	return cache.GetLogger().WithField("module", "biasgame")
-}
-
-// getBiasGameCache
-func getBiasGameCache(key string, data interface{}) error {
-	// get cache with given key
-	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:biasgame:%s", key)).Bytes()
-	if err != nil || err == redis.Nil {
-		return err
-	}
-
-	// if the datas type is already []byte then set it to cache instead of unmarshal
-	switch data.(type) {
-	case []byte:
-		data = cacheResult
-		return nil
-	}
-
-	json.Unmarshal(cacheResult, data)
-	return nil
-}
-
-// setBiasGameCache
-func setBiasGameCache(key string, data interface{}, time time.Duration) error {
-	marshaledData, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time)
-	return nil
-}
-
-// delBiasGameCache
-func delBiasGameCache(keys ...string) {
-	for _, key := range keys {
-
-		cache.GetRedisClient().Del(fmt.Sprintf("robyul2-discord:biasgame:%s", key))
-	}
 }
 
 ///// Unused functions requried by ExtendedPlugin interface

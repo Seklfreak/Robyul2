@@ -42,4 +42,5 @@ type BiasGameSuggestionEntry struct {
 	GroupMatch        bool
 	IdolMatch         bool
 	LastModifiedOn    time.Time
+	ImageHashString   string
 }
