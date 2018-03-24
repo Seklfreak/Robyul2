@@ -97,7 +97,8 @@
       "It's at <https://robyul.chat/commands>! <a:ablobsmile:393869335312990209>"
     ],
     "invite": "To get Robyul for your server please join the Robyul Discord Server and contact Staff.\nhttps://discord.gg/s5qZvUV",
-    "about": "I'm the Discord Bot for Kpop Servers written in Golang. You can find out more about me on <https://robyul.chat/>."
+    "about": "I'm the Discord Bot for Kpop Servers written in Golang. You can find out more about me on <https://robyul.chat/>.",
+    "commands": "Sorry, I can't help you here! <a:ablobfrown:394026913292615701>\nRobyul commands only work in servers, not DMs."
   },
   "plugins": {
     "translator": {
