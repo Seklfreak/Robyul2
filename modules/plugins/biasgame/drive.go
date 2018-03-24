@@ -302,4 +302,9 @@ func addDriveFileToAllBiases(file *drive.File) {
 	}
 
 	allBiasChoices = append(allBiasChoices, &newBiasChoice)
+
+	// cache all biases
+	if len(allBiasChoices) > 0 {
+		setBiasGameCache("allbiaschoices", allBiasChoices, time.Hour*24*7)
+	}
 }
