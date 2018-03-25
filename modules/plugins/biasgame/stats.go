@@ -1,6 +1,7 @@
 package biasgame
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/mgutz/str"
 )
 
 // displayBiasGameStats will display stats for the bias game based on the stats message
@@ -139,6 +141,71 @@ func listIdolsInGame(msg *discordgo.Message) {
 	})
 
 	helpers.SendPagedMessage(msg, embed, 10)
+}
+
+// showImagesForIdol will show a embed message with all the available images for an idol
+func showImagesForIdol(msg *discordgo.Message, msgContent string) {
+	defer helpers.Recover()
+
+	commandArgs := str.ToArgv(msgContent)[1:]
+	if len(commandArgs) < 2 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		return
+	}
+
+	// get matching idol to the group and name entered
+	//  if we can't get one display an error
+	groupMatch, nameMatch, matchIdol := getMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
+	if matchIdol == nil || groupMatch == false || nameMatch == false {
+		helpers.SendMessage(msg.ChannelID, "Could not find a matching idol for that group and name.")
+		return
+	}
+
+	// create images embed message
+	imagesMessage := &discordgo.MessageSend{
+		Embed: &discordgo.MessageEmbed{
+			Description: fmt.Sprintf("Total Images: %d", len(matchIdol.BiasImages)),
+			Color:       0x0FADED,
+			Author: &discordgo.MessageEmbedAuthor{
+				Name: fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName),
+			},
+			Image: &discordgo.MessageEmbedImage{},
+		},
+		Files: []*discordgo.File{},
+	}
+
+	// loop through images, make a 2x2 collage and set it as a file
+	var images [][]byte
+	for i, bImag := range matchIdol.BiasImages {
+		images = append(images, bImag.ImageBytes)
+
+		// one page should display 4 images
+		if (i+1)%4 == 0 {
+
+			// make collage and set the image as a file in the embed
+			collageBytes := helpers.CollageFromBytes(images, []string{}, 300, 300, 150, 150, helpers.DISCORD_DARK_THEME_BACKGROUND_HEX)
+			imagesMessage.Files = append(imagesMessage.Files, &discordgo.File{
+				Name:   fmt.Sprintf("image%d.png", i),
+				Reader: bytes.NewReader(collageBytes),
+			})
+
+			// reset images array
+			images = make([][]byte, 0)
+		}
+	}
+
+	// check for any left over images
+	if len(images) > 0 {
+		// make collage and set the image as a file in the embed
+		collageBytes := helpers.CollageFromBytes(images, []string{}, 300, 300, 150, 150, helpers.DISCORD_DARK_THEME_BACKGROUND_HEX)
+		imagesMessage.Files = append(imagesMessage.Files, &discordgo.File{
+			Name:   fmt.Sprintf("image%d.png", len(imagesMessage.Files)+1),
+			Reader: bytes.NewReader(collageBytes),
+		})
+	}
+
+	// send paged embed
+	helpers.SendPagedImageMessage(msg, imagesMessage)
 }
 
 // listIdolsInGame will list all idols that can show up in the biasgame

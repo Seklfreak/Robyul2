@@ -245,8 +245,11 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 			ProcessImageSuggestion(msg, content)
 
-		} else if commandArgs[0] == "current" {
+		} else if commandArgs[0] == "images" {
 
+			showImagesForIdol(msg, content)
+
+		} else if commandArgs[0] == "current" {
 			displayCurrentGameStats(msg)
 
 		} else if commandArgs[0] == "multi" {

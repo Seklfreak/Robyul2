@@ -1,8 +1,10 @@
 package helpers
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -19,14 +21,16 @@ const (
 var pagedEmbededMessages map[string]*pagedEmbedMessage
 
 type pagedEmbedMessage struct {
-	messageID       string
+	files           []*discordgo.File
 	fullEmbed       *discordgo.MessageEmbed
-	channelID       string
 	totalNumOfPages int
 	currentPage     int
 	fieldsPerPage   int
 	color           int
+	messageID       string
+	channelID       string
 	userId          string //user who triggered the message
+	msgType         string // "image" - will cause the embed to page through the files instead of fields
 }
 
 func init() {
@@ -35,6 +39,11 @@ func init() {
 
 // GetPagedMessage will return the paged message if there is one, otherwill will return nil
 func GetPagedMessage(messageID string) *pagedEmbedMessage {
+	cache.GetLogger().Info("Attempt to update messageid: ", messageID)
+	// spew.Dump(pagedEmbededMessages)
+	for k, _ := range pagedEmbededMessages {
+		cache.GetLogger().Infof("Msg id: %s", k)
+	}
 	pagedMessaged, _ := pagedEmbededMessages[messageID]
 	return pagedMessaged
 }
@@ -70,6 +79,39 @@ func SendPagedMessage(msg *discordgo.Message, embed *discordgo.MessageEmbed, fie
 	return nil
 }
 
+// SendPagedImageMessage creates the paged image messages
+func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSend) error {
+	if msgSend.Embed == nil {
+		return errors.New("parameter msgSend must contain an embed")
+	}
+
+	// make sure the image url is set to the name of the first file incease it wasn't set
+	msgSend.Embed.Image.URL = fmt.Sprintf("attachment://%s", msgSend.Files[0].Name)
+
+	// check if there are multiple files, not just send it normally
+	if len(msgSend.Files) < 2 {
+		SendComplex(msg.ChannelID, msgSend)
+		return nil
+	}
+
+	// create paged message
+	pagedMessage := &pagedEmbedMessage{
+		fullEmbed:       msgSend.Embed,
+		channelID:       msg.ChannelID,
+		currentPage:     1,
+		fieldsPerPage:   1,
+		totalNumOfPages: len(msgSend.Files),
+		files:           msgSend.Files,
+		userId:          msg.Author.ID,
+		msgType:         "image",
+	}
+
+	pagedMessage.setupAndSendFirstMessage()
+
+	pagedEmbededMessages[pagedMessage.messageID] = pagedMessage
+	return nil
+}
+
 // UpdateMessagePage will update the page based on the given direction and current page
 //  reactions must be the left or right arrow
 func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactionAdd) {
@@ -80,8 +122,6 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 
 	// check if user who made the embed message is closing it
 	if reaction.UserID == p.userId && X_EMOJI == reaction.Emoji.Name {
-		fmt.Println("delete message")
-		fmt.Println("user id: ", p.userId)
 		delete(pagedEmbededMessages, reaction.MessageID)
 		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
 		return
@@ -104,24 +144,57 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 	tempEmbed := &discordgo.MessageEmbed{}
 	*tempEmbed = *p.fullEmbed
 
-	// get start and end fields based on current page and fields per page
-	startField := (p.currentPage - 1) * p.fieldsPerPage
-	endField := startField + p.fieldsPerPage
-	if endField > len(p.fullEmbed.Fields) {
-		endField = len(p.fullEmbed.Fields)
+	// updated stats
+	if p.msgType == "image" {
+		// image embeds can't be edited, need to delete and remate it
+		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
+
+		// we need to split and reset the reader since a reader can only be used once
+		var buf bytes.Buffer
+		newReader := io.TeeReader(p.files[p.currentPage-1].Reader, &buf)
+		p.files[p.currentPage-1].Reader = &buf
+
+		// change the url of the embed to point to the new image
+		tempEmbed.Image.URL = fmt.Sprintf("attachment://%s", p.files[p.currentPage-1].Name)
+
+		// update footer and send message
+		tempEmbed.Footer = p.getEmbedFooter()
+		sentMessage, _ := SendComplex(p.channelID, &discordgo.MessageSend{
+			Embed: tempEmbed,
+			Files: []*discordgo.File{&discordgo.File{
+				Name:   p.files[p.currentPage-1].Name,
+				Reader: newReader,
+			}},
+		})
+
+		// update map with new message id since
+		originalmsgID := p.messageID
+		p.messageID = sentMessage[0].ID
+		p.addReactionsToMessage()
+		pagedEmbededMessages[sentMessage[0].ID] = p
+		delete(pagedEmbededMessages, originalmsgID)
+	} else {
+
+		// get start and end fields based on current page and fields per page
+		startField := (p.currentPage - 1) * p.fieldsPerPage
+		endField := startField + p.fieldsPerPage
+		if endField > len(p.fullEmbed.Fields) {
+			endField = len(p.fullEmbed.Fields)
+		}
+
+		tempEmbed.Fields = tempEmbed.Fields[startField:endField]
+		tempEmbed.Footer = p.getEmbedFooter()
+		EditEmbed(p.channelID, p.messageID, tempEmbed)
+
+		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 	}
 
-	// updated stats
-	tempEmbed.Fields = tempEmbed.Fields[startField:endField]
-	tempEmbed.Footer = p.getEmbedFooter()
-	EditEmbed(p.channelID, p.messageID, tempEmbed)
-
-	// may return error due to permissions, don't need to catch it
-	cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 }
 
 // setupAndSendFirstMessage
 func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
+	var sentMessage []*discordgo.Message
+	var err error
 
 	// copy the embeded message so changes can be made to it
 	tempEmbed := &discordgo.MessageEmbed{}
@@ -130,19 +203,42 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 	// set footer which will hold information about the page it is on
 	tempEmbed.Footer = p.getEmbedFooter()
 
-	// reduce fields to the fields per page
-	tempEmbed.Fields = tempEmbed.Fields[:p.fieldsPerPage]
+	if p.msgType == "image" {
+		cache.GetLogger().Info("File name: ", p.files[p.currentPage].Name)
+		// tempEmbed.Image.URL = fmt.Sprintf("attachment://%s", p.files[p.currentPage].Name)
 
-	sentMessage, err := SendEmbed(p.channelID, tempEmbed)
+		// sentMessage, _ = SendComplex(p.channelID, &discordgo.MessageSend{
+		// 	Embed: tempEmbed,
+		// 	Files: []*discordgo.File{p.files[p.currentPage]},
+		// })
+
+		var buf bytes.Buffer
+		newReader := io.TeeReader(p.files[p.currentPage-1].Reader, &buf)
+		p.files[p.currentPage-1].Reader = &buf
+
+		tempEmbed.Image.URL = fmt.Sprintf("attachment://%s", p.files[p.currentPage-1].Name)
+		sentMessage, _ = SendComplex(p.channelID, &discordgo.MessageSend{
+			Embed: tempEmbed,
+			Files: []*discordgo.File{&discordgo.File{
+				Name:   p.files[p.currentPage-1].Name,
+				Reader: newReader,
+			}},
+		})
+
+	} else {
+		// reduce fields to the fields per page
+		tempEmbed.Fields = tempEmbed.Fields[:p.fieldsPerPage]
+
+		sentMessage, err = SendEmbed(p.channelID, tempEmbed)
+	}
+
 	if err != nil {
 		// should probably handle this at some point lul
 		return
 	}
 	p.messageID = sentMessage[0].ID
 
-	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, LEFT_ARROW_EMOJI)
-	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, RIGHT_ARROW_EMOJI)
-	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, X_EMOJI)
+	p.addReactionsToMessage()
 }
 
 // getEmbedFooter is a simlple helper function to return the footer for the embed message
@@ -150,4 +246,10 @@ func (p *pagedEmbedMessage) getEmbedFooter() *discordgo.MessageEmbedFooter {
 	return &discordgo.MessageEmbedFooter{
 		Text: fmt.Sprintf("Page: %d / %d", p.currentPage, p.totalNumOfPages),
 	}
+}
+
+func (p *pagedEmbedMessage) addReactionsToMessage() {
+	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, LEFT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, X_EMOJI)
 }
