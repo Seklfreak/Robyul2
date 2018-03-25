@@ -3,6 +3,7 @@ package helpers
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"regexp"
 	"strconv"
@@ -1503,4 +1504,25 @@ func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
 
 	// return an error if no channel is found
 	return "", errors.New("no default channel found")
+}
+
+// DeleteMessageWithDelay will delete the given message after a given time duration
+func DeleteMessageWithDelay(msg *discordgo.Message, delay time.Duration) {
+	if msg == nil {
+		return
+	}
+
+	time.Sleep(delay)
+	cache.GetSession().ChannelMessageDelete(msg.ChannelID, msg.ID)
+}
+
+// SendFile is a simple helper function which will use the correct discordgo function to send a file
+func SendFile(channelID string, filename string, reader io.Reader, message string) (*discordgo.Message, error) {
+	if message != "" {
+
+		return cache.GetSession().ChannelFileSendWithMessage(channelID, message, filename, reader)
+	} else {
+
+		return cache.GetSession().ChannelFileSend(channelID, filename, reader)
+	}
 }
