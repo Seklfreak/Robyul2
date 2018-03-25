@@ -739,6 +739,9 @@
       "admin-role-removed": "I successfully removed the role.",
       "mod-role-added": "I successfully added the role.",
       "mod-role-removed": "I successfully removed the role."
+    },
+    "storage": {
+      "no-stats-for-user": "Looks like you haven't uploaded any files so far. <a:ablobthinkingeyes:427405268603633664>"
     }
   }
 }
