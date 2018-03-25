@@ -1177,6 +1177,10 @@ func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*dis
 	return messages, nil
 }
 
+func SendFile(channelID string, filename string, reader io.Reader, message string) (messages []*discordgo.Message, err error) {
+	return SendComplex(channelID, &discordgo.MessageSend{File: &discordgo.File{Name: filename, Reader: reader}, Content: message})
+}
+
 func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
 	if data.Embed != nil {
@@ -1507,22 +1511,11 @@ func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
 }
 
 // DeleteMessageWithDelay will delete the given message after a given time duration
-func DeleteMessageWithDelay(msg *discordgo.Message, delay time.Duration) {
+func DeleteMessageWithDelay(msg *discordgo.Message, delay time.Duration) (err error) {
 	if msg == nil {
-		return
+		return nil
 	}
 
 	time.Sleep(delay)
-	cache.GetSession().ChannelMessageDelete(msg.ChannelID, msg.ID)
-}
-
-// SendFile is a simple helper function which will use the correct discordgo function to send a file
-func SendFile(channelID string, filename string, reader io.Reader, message string) (*discordgo.Message, error) {
-	if message != "" {
-
-		return cache.GetSession().ChannelFileSendWithMessage(channelID, message, filename, reader)
-	} else {
-
-		return cache.GetSession().ChannelFileSend(channelID, filename, reader)
-	}
+	return cache.GetSession().ChannelMessageDelete(msg.ChannelID, msg.ID)
 }

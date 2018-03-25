@@ -78,6 +78,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/Seklfreak/lastfm-go"
+  packages = ["lastfm"]
+  revision = "ff0cf6912942f8c01351fb8c4fdf2494c82badfa"
+
+[[projects]]
+  branch = "master"
   name = "github.com/VojtechVitek/go-trello"
   packages = ["."]
   revision = "28ebf2756ecc6c69262fba5d5c2f80c0e6dce5e8"
@@ -191,6 +197,16 @@
   packages = ["."]
   revision = "c112833d014c77e8bde723fd0158e3156951639f"
   version = "v2.0.6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/corona10/goimagehash"
+  packages = [
+    ".",
+    "etcs",
+    "transforms"
+  ]
+  revision = "be737c1d73f3bc237ef46561b7b4ac5c32b65788"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -444,6 +460,12 @@
   version = "v0.0.3"
 
 [[projects]]
+  name = "github.com/mgutz/str"
+  packages = ["."]
+  revision = "968bf66e3da857419e4f6e71b2d5c9ae95682dc4"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
@@ -522,16 +544,16 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/sethgrid/pester"
+  packages = ["."]
+  revision = "ed9870dad3170c0b25ab9b11830cc57c3a7798fb"
+
+[[projects]]
   name = "github.com/shawntoffel/darksky"
   packages = ["."]
   revision = "4bf89b49ed59958ce7259a297fc69fc5680d0a29"
   version = "1.2.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/shkh/lastfm-go"
-  packages = ["lastfm"]
-  revision = "125b747251b36e1e4a2f20391d674ff98a09a239"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -844,6 +866,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a9061418c23825fd47d069ede53d5baffd32c8149ca0829fe7ebd48664f4939c"
+  inputs-digest = "cc19f62efe74c4fda2e59fd60bb267c32b30a7f4429cc8c10720c59a3655958d"
   solver-name = "gps-cdcl"
   solver-version = 1

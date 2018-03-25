@@ -67,6 +67,7 @@ var (
 		&plugins.Imgur{},
 		&plugins.Steam{},
 		&plugins.Config{},
+		&plugins.Storage{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

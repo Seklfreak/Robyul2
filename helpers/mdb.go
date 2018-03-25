@@ -17,6 +17,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -495,6 +496,40 @@ func MdbPipeOne(collection models.MongoDbCollection, pipeline interface{}, objec
 
 func MdbPipeOneWithoutLogging(collection models.MongoDbCollection, pipeline interface{}, object interface{}) (err error) {
 	return MdbCollection(collection).Pipe(pipeline).One(object)
+}
+
+func MdbCount(collection models.MongoDbCollection, query interface{}) (count int, err error) {
+	start := time.Now()
+	count, err = MdbCollection(collection).Find(query).Count()
+	took := time.Since(start)
+	spew.Dump(&KeenMongoDbEvent{
+		Seconds:    took.Seconds(),
+		Type:       "count",
+		Method:     "MdbCount()",
+		Collection: stripRobyulDatabaseFromCollection(collection.String()),
+		Query:      truncateKeenValue(fmt.Sprintf("%+v", query)),
+	})
+	if cache.HasKeen() {
+		go func() {
+			defer Recover()
+
+			err := cache.GetKeen().AddEvent("Robyul_MongoDB", &KeenMongoDbEvent{
+				Seconds:    took.Seconds(),
+				Type:       "count",
+				Method:     "MdbCount()",
+				Collection: stripRobyulDatabaseFromCollection(collection.String()),
+				Query:      truncateKeenValue(fmt.Sprintf("%+v", query)),
+			})
+			if err != nil {
+				cache.GetLogger().WithField("module", "mdb").Error("Error logging MongoDB request to keen: ", err.Error())
+			}
+		}()
+	}
+	return count, nil
+}
+
+func MdbCountWithoutLogging(collection models.MongoDbCollection, query interface{}) (count int, err error) {
+	return MdbCollection(collection).Find(query).Count()
 }
 
 // Returns a human readable ID version of a ObjectID
