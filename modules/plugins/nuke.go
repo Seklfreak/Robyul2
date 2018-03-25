@@ -298,14 +298,13 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 						reasonText := fmt.Sprintf("Nuke Apply Ban | Issued by: %s#%s (#%s) | Delete Days: %d | Reason: %s",
 							nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, 0, nukeEntry.Reason)
-						fmt.Println("reason text", reasonText) // TODO
 
 						err = cache.GetSession().GuildBanCreateWithReason(channel.GuildID, nukeEntry.UserID, reasonText, 0)
 						helpers.Relax(err)
 
 						helpers.SendMessage(msg.ChannelID,
 							fmt.Sprintf(":white_check_mark: Banned User `%s#%s` (`#%s`): `%s`",
-								nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, nukeEntry.Reason))
+								nukedUser.Username, nukedUser.Discriminator, nukeEntry.UserID, nukeEntry.Reason))
 						nuked++
 					}
 
