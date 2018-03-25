@@ -54,7 +54,8 @@
   },
   "instagram": {
     "username": "",
-    "password": ""
+    "password": "",
+    "proxy": ""
   },
   "facebook": {
     "access_token": ""

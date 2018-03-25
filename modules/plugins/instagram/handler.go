@@ -51,6 +51,7 @@ func (m *Handler) Init(session *discordgo.Session) {
 
 		var err error
 
+		//cache.GetRedisClient().Del(instagramSessionKey).Result()
 		storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
 		if err == nil {
 			instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
@@ -66,6 +67,10 @@ func (m *Handler) Init(session *discordgo.Session) {
 			cache.GetLogger().WithField("module", "instagram").Infof(
 				"starting new instagram session",
 			)
+		}
+		// set proxy if set
+		if helpers.GetConfig().Path("instagram.proxy").Data().(string) != "" {
+			instagramClient.Proxy = helpers.GetConfig().Path("instagram.proxy").Data().(string)
 		}
 		err = instagramClient.Login()
 		helpers.Relax(err)
