@@ -97,7 +97,8 @@
       "It's at <https://robyul.chat/commands>! <a:ablobsmile:393869335312990209>"
     ],
     "invite": "To get Robyul for your server please join the Robyul Discord Server and contact Staff.\nhttps://discord.gg/s5qZvUV",
-    "about": "I'm the Discord Bot for Kpop Servers written in Golang. You can find out more about me on <https://robyul.chat/>."
+    "about": "I'm the Discord Bot for Kpop Servers written in Golang. You can find out more about me on <https://robyul.chat/>.",
+    "commands": "Sorry, I can't help you here! <a:ablobfrown:394026913292615701>\nRobyul commands only work in servers, not DMs."
   },
   "plugins": {
     "translator": {
@@ -577,7 +578,9 @@
       "remove-success": ":white_check_mark: Removes Guild %s `(#%s)` from the whitelist.",
       "bulk-title": "Added the following Guilds:",
       "bulk-footer": "_added %d Guilds in total._",
-      "setlog-success": "Autoleaver notifications will get posted in the given channel."
+      "setlog-success": "Autoleaver notifications will get posted in the given channel.",
+      "non-whitelisted-leave-message": "**Hello, I'm Robyul!** <:robyulblush:327206930437373952>\nSadly this server has not yet been whitelisted to use Robyul.\nIf you are in charge here you can fix this. Please join the Robyul Discord and follow the instructions there: <https://discord.is/Robyul>.\nGoodbye! <a:ablobwave:393869340975300638>",
+      "yes-whitelisted-join-message": "**Hello, I'm Robyul!** <:robyulblush:327206930437373952>\nGlad to be here. For a list of all commands check out <https://robyul.chat/commands/%s>.\nIn case of any issues or questions the Robyul Team is always happy to help.\nLet's talk a lot! <a:ablobwink:394026912436977665>"
     },
     "names": {
       "list-result": "**Name history for `%s#%s` (`#%s`)**\nUsernames: %s\nNicknames: %s"

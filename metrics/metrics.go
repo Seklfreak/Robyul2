@@ -209,7 +209,7 @@ func CollectRuntimeMetrics() {
 
 		VliveChannelsCount.Set(entriesCount("vlive"))
 
-		InstagramAccountsCount.Set(entriesCount("instagram"))
+		InstagramAccountsCount.Set(int64(entriesCountMgo(models.InstagramTable)))
 
 		TwitterAccountsCount.Set(int64(entriesCountMgo(models.TwitterTable)))
 

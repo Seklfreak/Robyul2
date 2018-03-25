@@ -1089,13 +1089,7 @@ func CommandExists(name string) bool {
 
 func GuildIsOnWhitelist(GuildID string) (whitelisted bool) {
 	var entryBucket []models.AutoleaverWhitelistEntry
-	listCursor, err := rethink.Table(models.AutoleaverWhitelistTable).Run(GetDB())
-	if err != nil {
-		return false
-	}
-
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
+	err := MDbIter(MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&entryBucket)
 	if err != nil {
 		return false
 	}
@@ -1468,4 +1462,45 @@ func ExtractInviteCode(input string) (inviteCode string) {
 	inviteCode = strings.Replace(inviteCode, "discord.gg/", "", -1)
 	inviteCode = strings.Replace(inviteCode, "invite/", "", -1)
 	return inviteCode
+}
+
+// Returns an channelID for bot announcements, if possible the default channel when a guild got created, if not the first channel from the top with chat permission
+// guildID	: the target Guild to get the channel for
+func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
+	// check channel with the same ID as the guild, the default channel when a guild is being created
+	channel, err := GetChannel(guildID)
+	if err == nil {
+		channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+		if err == nil {
+			if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
+				return channel.ID, nil
+			}
+		}
+	}
+
+	// get guild channels
+	guild, err := GetGuild(guildID)
+
+	guildChannels := guild.Channels
+
+	// sort guild channels by position
+	slice.Sort(guildChannels, func(i, j int) bool {
+		return guildChannels[i].Position < guildChannels[j].Position
+	})
+
+	// check each channel from the top for a channel with chat permission
+	for _, guildChannel := range guildChannels {
+		if guildChannel.Type != discordgo.ChannelTypeGuildText {
+			continue
+		}
+		channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, guildChannel.ID)
+		if err == nil {
+			if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
+				return guildChannel.ID, nil
+			}
+		}
+	}
+
+	// return an error if no channel is found
+	return "", errors.New("no default channel found")
 }

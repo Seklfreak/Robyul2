@@ -125,6 +125,16 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 	if err != nil {
 		return "", err
 	}
+	// warm up cache for public files
+	if public {
+		go func() {
+			defer Recover()
+			link, err := GetFileLink(objectName)
+			Relax(err)
+			_, err = NetGetUAWithError(link, DEFAULT_UA)
+			Relax(err)
+		}()
+	}
 	// return new objectName
 	return objectName, nil
 }

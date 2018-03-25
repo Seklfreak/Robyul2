@@ -205,6 +205,9 @@ func (dm *DM) DmResponse(msg *discordgo.Message) (response *discordgo.MessageSen
 	case regexp.MustCompile("(?i)^(.)?ABOUT.*").MatchString(msg.Content):
 		content = helpers.GetText("dm.about")
 		break
+	case regexp.MustCompile("(?i)^(.)?_.*").MatchString(msg.Content):
+		content = helpers.GetText("dm.commands")
+		break
 	}
 
 	if content != "" {
