@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -233,6 +234,86 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 				_, err = helpers.SendMessage(msg.ChannelID, logMessage)
 				helpers.Relax(err)
+			})
+			return
+		case "apply":
+			helpers.RequireAdmin(msg, func() {
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+
+				// bot is allowed to ban?
+				botPermissions := helpers.GetMemberPermissions(channel.GuildID, session.State.User.ID)
+				if botPermissions&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
+					botPermissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.apply-bot-not-allowed"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				}
+				// user is allowed to ban?
+				userPermissions := helpers.GetMemberPermissions(channel.GuildID, msg.Author.ID)
+				if userPermissions&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
+					userPermissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.nuke.apply-user-not-allowed"))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				}
+
+				if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.apply-confirm",
+					helpers.GetPrefixForServer(channel.GuildID)), "✅", "🚫") {
+					// gather bans
+					guildBans, err := cache.GetSession().GuildBans(channel.GuildID)
+					helpers.Relax(err)
+
+					// gather nuked users
+					var entryBucket []models.NukelogEntry
+					err = helpers.MDbIter(helpers.MdbCollection(models.NukelogTable).Find(nil).Sort("nukedat")).All(&entryBucket)
+					helpers.Relax(err)
+
+					// ban users
+					var nuked int
+				NextNukedUser:
+					for _, nukeEntry := range entryBucket {
+						nukedByUser, err := helpers.GetUser(nukeEntry.NukerID)
+						if err != nil {
+							nukedByUser = new(discordgo.User)
+							nukedByUser.Username = "N/A"
+							nukedByUser.Discriminator = "N/A"
+						}
+						nukedUser, err := helpers.GetUser(nukeEntry.UserID)
+						if err != nil {
+							nukedUser = new(discordgo.User)
+							nukedUser.Username = "N/A"
+							nukedUser.Discriminator = "N/A"
+						}
+
+						// already banned?
+						for _, guildBan := range guildBans {
+							if guildBan.User.ID == nukeEntry.UserID {
+								helpers.SendMessage(msg.ChannelID,
+									fmt.Sprintf(":white_check_mark: User `%s#%s` (`#%s`) is already banned",
+										nukedUser.Username, nukedUser.Discriminator, nukeEntry.UserID))
+								continue NextNukedUser
+							}
+						}
+
+						reasonText := fmt.Sprintf("Nuke Apply Ban | Issued by: %s#%s (#%s) | Delete Days: %d | Reason: %s",
+							nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, 0, nukeEntry.Reason)
+						fmt.Println("reason text", reasonText) // TODO
+
+						err = cache.GetSession().GuildBanCreateWithReason(channel.GuildID, nukeEntry.UserID, reasonText, 0)
+						helpers.Relax(err)
+
+						helpers.SendMessage(msg.ChannelID,
+							fmt.Sprintf(":white_check_mark: Banned User `%s#%s` (`#%s`): `%s`",
+								nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, nukeEntry.Reason))
+						nuked++
+					}
+
+					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("banned **%d** nuked users", nuked))
+					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+					return
+				}
+				return
 			})
 			return
 		}
