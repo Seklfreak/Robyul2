@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/globalsign/mgo/bson"
-	"github.com/shkh/lastfm-go/lastfm"
 )
 
 var (

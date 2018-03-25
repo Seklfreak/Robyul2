@@ -29,6 +29,7 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/ratelimits"
+	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/andybons/gogif"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
@@ -40,7 +41,6 @@ import (
 	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
-	"github.com/shkh/lastfm-go/lastfm"
 	"gopkg.in/oleiade/lane.v1"
 )
 

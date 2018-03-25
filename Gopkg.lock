@@ -78,6 +78,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/Seklfreak/lastfm-go"
+  packages = ["lastfm"]
+  revision = "ff0cf6912942f8c01351fb8c4fdf2494c82badfa"
+
+[[projects]]
+  branch = "master"
   name = "github.com/VojtechVitek/go-trello"
   packages = ["."]
   revision = "28ebf2756ecc6c69262fba5d5c2f80c0e6dce5e8"
@@ -528,12 +534,6 @@
   version = "1.2.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/shkh/lastfm-go"
-  packages = ["lastfm"]
-  revision = "125b747251b36e1e4a2f20391d674ff98a09a239"
-
-[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
@@ -844,6 +844,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a9061418c23825fd47d069ede53d5baffd32c8149ca0829fe7ebd48664f4939c"
+  inputs-digest = "a193d1aecc3cc908063866ef7e458fb5d56182284bd1f8a736d45ee59780369b"
   solver-name = "gps-cdcl"
   solver-version = 1

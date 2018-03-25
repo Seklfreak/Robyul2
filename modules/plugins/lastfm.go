@@ -14,11 +14,11 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/services/youtube"
+	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
-	"github.com/shkh/lastfm-go/lastfm"
 )
 
 type LastFm struct{}
@@ -360,7 +360,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
-			lastfmRecentTracks, err := helpers.GetLastFmClient().User.GetRecentTracks(lastfm.P{
+			lastfmRecentTracks, err := helpers.GetLastFmClient().User.GetRecentTracksExtended(lastfm.P{
 				"limit": 3,
 				"user":  lastfmUsername,
 			})
@@ -398,11 +398,16 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				if lastTrack.NowPlaying == "true" {
 					lastTrackEmbedTitle = helpers.GetTextF("plugins.lastfm.lasttrack-embed-title-np", lastfmUsername)
 				}
+				var heartText string
+				if lastTrack.Loved == "1" {
+					heartText = " :heart:"
+				}
 				lastTrackEmbed := &discordgo.MessageEmbed{
 					Description: fmt.Sprintf(
-						"[**%s** by **%s**](%s)",
+						"[**%s** by **%s**](%s)%s",
 						lastTrack.Name, lastTrack.Artist.Name,
-						helpers.EscapeLinkForMarkdown(lastTrack.Url)),
+						helpers.EscapeLinkForMarkdown(lastTrack.Url),
+						heartText),
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    helpers.GetText("plugins.lastfm.embed-footer"),
 						IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
@@ -430,10 +435,15 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					if beforeTrack.Url == lastTrack.Url && lastfmRecentTracks.Total > 2 {
 						beforeTrack = lastfmRecentTracks.Tracks[2]
 					}
+					var heartText string
+					if beforeTrack.Loved == "1" {
+						heartText = " :heart:"
+					}
 					lastTrackEmbed.Fields = append(lastTrackEmbed.Fields, &discordgo.MessageEmbedField{
 						Name: "Listened to before",
-						Value: fmt.Sprintf("[**%s** by **%s**](%s)",
-							beforeTrack.Name, beforeTrack.Artist.Name, helpers.EscapeLinkForMarkdown(beforeTrack.Url)),
+						Value: fmt.Sprintf("[**%s** by **%s**](%s)%s",
+							beforeTrack.Name, beforeTrack.Artist.Name, helpers.EscapeLinkForMarkdown(beforeTrack.Url),
+							heartText),
 						Inline: false,
 					})
 				}

@@ -112,7 +112,7 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/shkh/lastfm-go"
+  name = "github.com/Seklfreak/lastfm-go"
 
 [[constraint]]
   branch = "master"
