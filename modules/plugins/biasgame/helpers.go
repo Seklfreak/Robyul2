@@ -1,6 +1,7 @@
 package biasgame
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 )
@@ -106,4 +109,54 @@ func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasC
 	}
 
 	return groupMatch, nameMatch, matchingBiasChoice
+}
+
+// sendPagedEmbedOfImages takes the given image []byte and sends them in a paged embed
+func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, authorName, description string) {
+
+	// create images embed message
+	imagesMessage := &discordgo.MessageSend{
+		Embed: &discordgo.MessageEmbed{
+			Description: description,
+			Color:       0x0FADED,
+			Author: &discordgo.MessageEmbedAuthor{
+				Name: authorName,
+			},
+			Image: &discordgo.MessageEmbedImage{},
+		},
+		Files: []*discordgo.File{},
+	}
+
+	// loop through images, make a 2x2 collage and set it as a file
+	var images [][]byte
+	for i, imageBytes := range imagesToSend {
+		images = append(images, imageBytes)
+
+		// one page should display 4 images
+		if (i+1)%4 == 0 {
+
+			// make collage and set the image as a file in the embed
+			collageBytes := helpers.CollageFromBytes(images, []string{}, 300, 300, 150, 150, helpers.DISCORD_DARK_THEME_BACKGROUND_HEX)
+			imagesMessage.Files = append(imagesMessage.Files, &discordgo.File{
+				Name:   fmt.Sprintf("image%d.png", i),
+				Reader: bytes.NewReader(collageBytes),
+			})
+
+			// reset images array
+			images = make([][]byte, 0)
+		}
+	}
+
+	// check for any left over images
+	if len(images) > 0 {
+		// make collage and set the image as a file in the embed
+		collageBytes := helpers.CollageFromBytes(images, []string{}, 300, 300, 150, 150, helpers.DISCORD_DARK_THEME_BACKGROUND_HEX)
+		imagesMessage.Files = append(imagesMessage.Files, &discordgo.File{
+			Name:   fmt.Sprintf("image%d.png", len(imagesMessage.Files)+1),
+			Reader: bytes.NewReader(collageBytes),
+		})
+	}
+
+	// send paged embed
+	helpers.SendPagedImageMessage(msg, imagesMessage)
 }

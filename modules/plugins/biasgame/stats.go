@@ -1,7 +1,6 @@
 package biasgame
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -161,51 +160,13 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string) {
 		return
 	}
 
-	// create images embed message
-	imagesMessage := &discordgo.MessageSend{
-		Embed: &discordgo.MessageEmbed{
-			Description: fmt.Sprintf("Total Images: %d", len(matchIdol.BiasImages)),
-			Color:       0x0FADED,
-			Author: &discordgo.MessageEmbedAuthor{
-				Name: fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName),
-			},
-			Image: &discordgo.MessageEmbedImage{},
-		},
-		Files: []*discordgo.File{},
+	// get bytes of all the images
+	var imagesBytes [][]byte
+	for _, bImag := range matchIdol.BiasImages {
+		imagesBytes = append(imagesBytes, bImag.ImageBytes)
 	}
 
-	// loop through images, make a 2x2 collage and set it as a file
-	var images [][]byte
-	for i, bImag := range matchIdol.BiasImages {
-		images = append(images, bImag.ImageBytes)
-
-		// one page should display 4 images
-		if (i+1)%4 == 0 {
-
-			// make collage and set the image as a file in the embed
-			collageBytes := helpers.CollageFromBytes(images, []string{}, 300, 300, 150, 150, helpers.DISCORD_DARK_THEME_BACKGROUND_HEX)
-			imagesMessage.Files = append(imagesMessage.Files, &discordgo.File{
-				Name:   fmt.Sprintf("image%d.png", i),
-				Reader: bytes.NewReader(collageBytes),
-			})
-
-			// reset images array
-			images = make([][]byte, 0)
-		}
-	}
-
-	// check for any left over images
-	if len(images) > 0 {
-		// make collage and set the image as a file in the embed
-		collageBytes := helpers.CollageFromBytes(images, []string{}, 300, 300, 150, 150, helpers.DISCORD_DARK_THEME_BACKGROUND_HEX)
-		imagesMessage.Files = append(imagesMessage.Files, &discordgo.File{
-			Name:   fmt.Sprintf("image%d.png", len(imagesMessage.Files)+1),
-			Reader: bytes.NewReader(collageBytes),
-		})
-	}
-
-	// send paged embed
-	helpers.SendPagedImageMessage(msg, imagesMessage)
+	sendPagedEmbedOfImages(msg, imagesBytes, fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName), fmt.Sprintf("Total Images: %d", len(matchIdol.BiasImages)))
 }
 
 // listIdolsInGame will list all idols that can show up in the biasgame

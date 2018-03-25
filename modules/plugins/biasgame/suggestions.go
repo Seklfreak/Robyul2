@@ -187,15 +187,15 @@ func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
 
 	// create suggetion
 	suggestion := &models.BiasGameSuggestionEntry{
-		UserID:     msg.Author.ID,
-		ChannelID:  msg.ChannelID,
-		Gender:     suggestionArgs[0],
-		GrouopName: suggestionArgs[1],
-		Name:       suggestionArgs[2],
-		ImageURL:   suggestedImageUrl,
+		UserID:          msg.Author.ID,
+		ChannelID:       msg.ChannelID,
+		Gender:          suggestionArgs[0],
+		GrouopName:      suggestionArgs[1],
+		Name:            suggestionArgs[2],
+		ImageURL:        suggestedImageUrl,
 		ImageHashString: sugImgHashString,
-		GroupMatch: false,
-		IdolMatch:  false,
+		GroupMatch:      false,
+		IdolMatch:       false,
 	}
 	checkIdolAndGroupExist(suggestion)
 
@@ -360,6 +360,7 @@ func UpdateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value
 func updateCurrentSuggestionEmbed() {
 	var embed *discordgo.MessageEmbed
 	var msgSend *discordgo.MessageSend
+	var cs *models.BiasGameSuggestionEntry
 
 	if exampleRoundPicId != "" {
 		go cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, exampleRoundPicId)
@@ -378,7 +379,7 @@ func updateCurrentSuggestionEmbed() {
 
 	} else {
 		// current suggestion
-		cs := suggestionQueue[0]
+		cs = suggestionQueue[0]
 		checkIdolAndGroupExist(cs)
 
 		res, err := pester.Get(cs.ImageURL)
@@ -497,24 +498,25 @@ func updateCurrentSuggestionEmbed() {
 			}},
 			Embed: embed,
 		}
+
 	}
 
-	// send or edit embed message
-	var embedMsg *discordgo.Message
+	// delete old embed message
 	cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, suggestionEmbedMessageId)
+
+	// send new embed message
+	var embedMsg *discordgo.Message
 	embedMsg, _ = cache.GetSession().ChannelMessageSendComplex(IMAGE_SUGGESTION_CHANNEL, msgSend)
 	suggestionEmbedMessageId = embedMsg.ID
-	updateSuggestionQueueCount()
-	// if suggestionEmbedMessageId == "" {
-	// embedMsg, _ = utils.SendEmbed(IMAGE_SUGGESTION_CHANNEL, embed)
-	// } else {
-	// embedMsg, _ = cache.GetSession().ChannelMessageEditComplex(m)
-	// embedMsg, _ = utils.EditEmbed(IMAGE_SUGGESTION_CHANNEL, suggestionEmbedMessageId, embed)
-	// }
 
+	updateSuggestionQueueCount()
 	// delete any reactions on message and then reset them if there's another suggestion in queue
 	cache.GetSession().MessageReactionsRemoveAll(IMAGE_SUGGESTION_CHANNEL, embedMsg.ID)
 	if len(suggestionQueue) > 0 {
+
+		// compare the given image to all images currently available in the game
+		sendSimilarImages(embedMsg, cs.ImageHashString)
+
 		cache.GetSession().MessageReactionAdd(IMAGE_SUGGESTION_CHANNEL, embedMsg.ID, CHECKMARK_EMOJI)
 		cache.GetSession().MessageReactionAdd(IMAGE_SUGGESTION_CHANNEL, embedMsg.ID, X_EMOJI)
 	}
@@ -574,5 +576,31 @@ func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 			}
 			break
 		}
+	}
+}
+
+// sendSimilarImages will check for images that are similar to the given images
+//  and send them back in a paged embe
+func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
+	var matchingImagesBytes [][]byte
+
+	// compare the given image to all images currently available in the game
+	for _, bias := range allBiasChoices {
+		for _, curBImage := range bias.BiasImages {
+			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
+			if err != nil {
+				bgLog().Errorf("Comparison error: %s", err.Error())
+				continue
+			}
+
+			// if the difference is 3 or less let the user know the image already exists
+			if compareVal <= 15 {
+				matchingImagesBytes = append(matchingImagesBytes, curBImage.ImageBytes)
+			}
+		}
+	}
+
+	if len(matchingImagesBytes) > 0 {
+		sendPagedEmbedOfImages(msg, matchingImagesBytes, "Possible Matching Images", fmt.Sprintf("Images Found: %d", len(matchingImagesBytes)))
 	}
 }
