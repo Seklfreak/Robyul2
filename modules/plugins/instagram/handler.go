@@ -87,8 +87,8 @@ func (m *Handler) Init(session *discordgo.Session) {
 		instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
 		helpers.Relax(err)
 
-		go m.checkInstagramFeedsAndStoryLoop()
-		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram Feeds and Story loop")
+		go m.checkInstagramStoryLoop()
+		cache.GetLogger().WithField("module", "instagram").Info("Started checkInstagramStoryLoop")
 	}()
 }
 
@@ -144,7 +144,18 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					}
 					dbPosts = append(dbPosts, postEntry)
 				}
-				/*
+				// gather story if logged in
+				if instagramClient != nil && instagramClient.IsLoggedIn {
+					accoundIdInt, err := strconv.Atoi(instagramUser.ID)
+					helpers.Relax(err)
+					story, err := instagramClient.GetUserStories(int64(accoundIdInt))
+					if err != nil {
+						if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+							helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
+							return
+						}
+					}
+					helpers.Relax(err)
 					for _, reelMedia := range story.Reel.Items {
 						postEntry := models.InstagramPostEntry{
 							ID:            reelMedia.ID,
@@ -152,9 +163,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 							CreatedAtTime: time.Unix(int64(reelMedia.DeviceTimestamp), 0),
 						}
 						dbPosts = append(dbPosts, postEntry)
-
 					}
-				*/
+				}
 				// create new entry in db
 				var specialText string
 				postMode := models.InstagramSendPostTypeRobyulEmbed

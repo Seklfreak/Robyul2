@@ -200,21 +200,38 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 					m.unlockEntry(entryID)
 				}
 			}
+
+			err = m.getStory(instagramAccountID, currentProxy)
+			if err != nil {
+				if strings.Contains(err.Error(), "expected status 200; got 429") {
+					cache.GetLogger().WithField("module", "instagram").Infof(
+						"hit rate limit checking Instagram Account %d (GraphQL), "+
+							"sleeping for 1 seconds, switching proxy and then trying again", instagramAccountID)
+					time.Sleep(1 * time.Second)
+					currentProxy, err = helpers.GetRandomProxy()
+					helpers.Relax(err)
+					cache.GetLogger().WithField("module", "instagram").Infof(
+						"switched to random proxy")
+					goto RetryGraphQl
+				}
+				helpers.RelaxLog(err)
+				continue NextEntry
+			}
 		}
 	}
 	results <- len(jobs)
 }
 
-func (m *Handler) checkInstagramFeedsAndStoryLoop() {
+func (m *Handler) checkInstagramStoryLoop() {
 	log := cache.GetLogger()
 
 	defer helpers.Recover()
 	defer func() {
 		go func() {
-			log.WithField("module", "instagram").Error("The checkInstagramFeedsAndStoryLoop died." +
+			log.WithField("module", "instagram").Error("The checkInstagramStoryLoop died." +
 				"Please investigate! Will be restarted in 60 seconds")
 			time.Sleep(60 * time.Second)
-			m.checkInstagramFeedsAndStoryLoop()
+			m.checkInstagramStoryLoop()
 		}()
 	}()
 
@@ -223,7 +240,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 		helpers.Relax(err)
 
 		cache.GetLogger().WithField("module", "instagram").Infof(
-			"checking feed and story on %d accounts for %d feeds", len(bundledEntries), entriesCount)
+			"checking story on %d accounts for %d feeds", len(bundledEntries), entriesCount)
 		start := time.Now()
 
 		for instagramAccountID, entries := range bundledEntries {
@@ -296,24 +313,7 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 						changes = true
 						go m.postReelMediaToChannel(entry.ChannelID, story, n, entry.SendPostType)
 					}
-
 				}
-
-				// TODO: no broadcast information received from story anymore?
-				/*
-				   if entry.IsLive == false {
-				       if story.Broadcast != 0 {
-				           log.WithField("module", "instagram").Info(fmt.Sprintf("Posting Live (Feed and Story): #%s", instagramUser.User.Broadcast.ID))
-				           go m.postLiveToChannel(entry.ChannelID, instagramUser)
-				           entry.IsLive = true
-				           changes = true
-				       }
-				   } else {
-				       if instagramUser.User.Broadcast.ID == 0 {
-				           entry.IsLive = false
-				           changes = true
-				       }
-				   }*/
 
 				if changes == true {
 					err = helpers.MDbUpdate(models.InstagramTable, entry.ID, entry)

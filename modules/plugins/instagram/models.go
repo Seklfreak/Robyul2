@@ -403,6 +403,18 @@ func (m *Handler) graphQlMediaUrl(accountID string) (link string) {
 		"&variables=" + url.QueryEscape(string(jsonData))
 }
 
+func (m *Handler) graphQlStoryUrl(accountID string) (link string) {
+	jsonData, err := json.Marshal(struct {
+		ID    string `json:"id"`
+		First string `json:"first"`
+	}{ID: accountID, First: "10"})
+	helpers.Relax(err)
+
+	return "https://www.instagram.com/graphql/query/" +
+		"?query_id=17890626976041463" +
+		"&variables=" + url.QueryEscape(string(jsonData))
+}
+
 func (m *Handler) getInstagramSharedData(pageContent string) (sharedData InstagramSharedData, err error) {
 	parts := strings.Split(pageContent, "window._sharedData = ")
 

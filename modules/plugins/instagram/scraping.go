@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -36,6 +39,19 @@ func (m *Handler) getPosts(accountID string, proxy http.Transport) (posts []Inst
 	}
 
 	return
+}
+
+func (m *Handler) getStory(accountID string, proxy http.Transport) (err error) {
+	graphQlUrl := m.graphQlStoryUrl(accountID)
+	fmt.Println(graphQlUrl)
+	result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, proxy)
+	if err != nil {
+		return
+	}
+
+	spew.Dump(string(result))
+
+	return nil
 }
 
 func (m *Handler) getPostInformation(shortCode string, proxy http.Transport) (information InstagramPostInformation, err error) {
