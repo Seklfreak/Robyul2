@@ -200,23 +200,6 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 					m.unlockEntry(entryID)
 				}
 			}
-
-			err = m.getStory(instagramAccountID, currentProxy)
-			if err != nil {
-				if strings.Contains(err.Error(), "expected status 200; got 429") {
-					cache.GetLogger().WithField("module", "instagram").Infof(
-						"hit rate limit checking Instagram Account %d (GraphQL), "+
-							"sleeping for 1 seconds, switching proxy and then trying again", instagramAccountID)
-					time.Sleep(1 * time.Second)
-					currentProxy, err = helpers.GetRandomProxy()
-					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "instagram").Infof(
-						"switched to random proxy")
-					goto RetryGraphQl
-				}
-				helpers.RelaxLog(err)
-				continue NextEntry
-			}
 		}
 	}
 	results <- len(jobs)
