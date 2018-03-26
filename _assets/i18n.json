@@ -172,7 +172,7 @@
     "twitter": {
       "account-embed-title": "%s (@%s)%s Twitter Account",
       "embed-footer": "powered by twitter.com",
-      "account-not-found": "User not found!",
+      "account-not-found": "User not found.\nPlease make sure the username is correct and the profile is not private.\nIf everything is correct please try again in a few minutes.",
       "account-has-been-suspended": "User account has been suspended!",
       "rate-limit-exceed": "Twitter API rate limit exceeded, please try again later!",
       "over-capacity": "Twitter servers are overloaded, please try again later!",
@@ -199,7 +199,7 @@
       "post-direct-links-enabled": "I will now post direct links for this account.",
       "embed-footer-imageurl": "https://i.imgur.com/7Pe6sAD.png",
       "ratelimited": "Robyul is currently rate limited by Instagram: Please try again in a few minutes!",
-      "account-embed-footer": "User #%d",
+      "account-embed-footer": "User #%s",
       "logged-in": "Successfully logged in."
     },
     "facebook": {
@@ -364,6 +364,7 @@
       "profile-background-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
       "profile-title-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
       "profile-bio-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
+      "profile-bio-reset-success": "I have reset your bio. Your bio was\n```\n%s\n```.",
       "rep-error-self": "You can't rep yourself! <:blobeyes:317029938568101890>",
       "rep-error-bot": "You can't rep bots! <:robyulblush:327206930437373952>",
       "rep-error-session": "I love you too, but please rep a human instead! <a:ablobkiss:393869334318940160> ",

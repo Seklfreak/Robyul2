@@ -4,11 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
+	"sync"
 
 	"strconv"
-
-	"sync"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -48,13 +46,13 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers)
 		start := time.Now()
 
-		jobs := make(chan map[int64][]models.InstagramEntry, 0)
+		jobs := make(chan map[string][]models.InstagramEntry, 0)
 		results := make(chan int, 0)
 
-		workerEntries := make(map[int]map[int64][]models.InstagramEntry, 0)
+		workerEntries := make(map[int]map[string][]models.InstagramEntry, 0)
 		for w := 1; w <= InstagramGraphQlWorkers; w++ {
 			go m.checkInstagramGraphQlFeedWorker(w, jobs, results)
-			workerEntries[w] = make(map[int64][]models.InstagramEntry)
+			workerEntries[w] = make(map[string][]models.InstagramEntry)
 		}
 
 		lastWorker := 1
@@ -86,10 +84,8 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 	}
 }
 
-func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64][]models.InstagramEntry, results chan<- int) {
+func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string][]models.InstagramEntry, results chan<- int) {
 	defer helpers.Recover()
-
-	var graphQlFeedResult Instagram_GraphQl_User_Feed
 
 	currentProxy, err := helpers.GetRandomProxy()
 	helpers.Relax(err)
@@ -103,8 +99,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 			//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(
 			//	"checking graphql feed for %d for %d channels", instagramAccountID, len(entries))
 		RetryGraphQl:
-			graphQlUrl := m.graphQlMediaUrl(instagramAccountID)
-			result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, currentProxy)
+			receivedPosts, err := m.getPosts(instagramAccountID, currentProxy)
 			if err != nil {
 				if strings.Contains(err.Error(), "expected status 200; got 429") {
 					cache.GetLogger().WithField("module", "instagram").Infof(
@@ -117,36 +112,16 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 						"switched to random proxy")
 					goto RetryGraphQl
 				}
-				cache.GetLogger().WithField("module", "instagram").Infof(
-					"failed to connect to proxy checking Instagram Account %d (GraphQL): %s, "+
-						"proxy dead?, sleeping for 1 second, switching proxy and then trying again",
-					instagramAccountID, err.Error())
-				time.Sleep(1 * time.Second)
-				currentProxy, err = helpers.GetRandomProxy()
-				helpers.Relax(err)
-				cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
-				goto RetryGraphQl
-			}
-
-			err = json.Unmarshal(result, &graphQlFeedResult)
-			helpers.Relax(err)
-
-			receivedPosts := graphQlFeedResult.Data.User.EdgeOwnerToTimelineMedia.Edges
-
-			// https://github.com/golang/go/wiki/SliceTricks#reversing
-			for i := len(receivedPosts)/2 - 1; i >= 0; i-- {
-				opp := len(receivedPosts) - 1 - i
-				receivedPosts[i], receivedPosts[opp] = receivedPosts[opp], receivedPosts[i]
+				helpers.RelaxLog(err)
+				continue NextEntry
 			}
 
 			for _, receivedPost := range receivedPosts {
-				fullPostID := receivedPost.Node.ID + "_" + strconv.Itoa(int(instagramAccountID))
-
 				postHasBeenPostedEverywhere := true
 				for _, entry := range entries {
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == fullPostID {
+						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == receivedPost.ID {
 							postAlreadyPosted = true
 						}
 					}
@@ -161,7 +136,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 
 				// download specific post data
 			RetryPost:
-				post, err := m.getPostInformation(receivedPost.Node.Shortcode, currentProxy)
+				post, err := m.getPostInformation(receivedPost.Shortcode, currentProxy)
 				if err != nil {
 					if strings.Contains(err.Error(), "expected status 200; got 429") {
 						cache.GetLogger().WithField("module", "instagram").Infof(
@@ -196,7 +171,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					changes := false
 					postAlreadyPosted := false
 					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == fullPostID {
+						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == receivedPost.ID {
 							postAlreadyPosted = true
 						}
 					}
@@ -256,7 +231,9 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 			// log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", instagramUsername))
 
 			var posts goinstaResponse.UserFeedResponse
-			story, err := instagramClient.GetUserStories(instagramAccountID)
+			userIdInt, err := strconv.Atoi(instagramAccountID)
+			helpers.Relax(err)
+			story, err := instagramClient.GetUserStories(int64(userIdInt))
 			if err != nil || story.Status != "ok" {
 				if err != nil &&
 					strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {

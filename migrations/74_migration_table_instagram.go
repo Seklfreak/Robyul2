@@ -3,6 +3,8 @@ package migrations
 import (
 	"time"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -77,13 +79,13 @@ func m74_migration_table_instagram() {
 		_, err = helpers.MDbInsertWithoutLogging(
 			models.InstagramTable,
 			models.InstagramEntry{
-				GuildID:         rethinkdbEntry.ServerID,
-				ChannelID:       rethinkdbEntry.ChannelID,
-				Username:        rethinkdbEntry.Username,
-				InstagramUserID: rethinkdbEntry.InstagramUserID,
-				PostedPosts:     instagramPosts,
-				IsLive:          rethinkdbEntry.IsLive,
-				SendPostType:    sendPostType,
+				GuildID:               rethinkdbEntry.ServerID,
+				ChannelID:             rethinkdbEntry.ChannelID,
+				Username:              rethinkdbEntry.Username,
+				InstagramUserIDString: strconv.FormatInt(rethinkdbEntry.InstagramUserID, 10),
+				PostedPosts:           instagramPosts,
+				IsLive:                rethinkdbEntry.IsLive,
+				SendPostType:          sendPostType,
 			},
 		)
 		if err != nil {

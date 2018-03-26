@@ -24,14 +24,15 @@ const (
 )
 
 type InstagramEntry struct {
-	ID              bson.ObjectId `bson:"_id,omitempty"`
-	GuildID         string        // TODO: renamed from ServerID
-	ChannelID       string
-	Username        string
-	InstagramUserID int64
-	PostedPosts     []InstagramPostEntry
-	IsLive          bool
-	SendPostType    InstagramSendPostType
+	ID                    bson.ObjectId `bson:"_id,omitempty"`
+	GuildID               string        // TODO: renamed from ServerID
+	ChannelID             string
+	Username              string
+	InstagramUserID       int64 // deprecated
+	InstagramUserIDString string
+	PostedPosts           []InstagramPostEntry
+	IsLive                bool
+	SendPostType          InstagramSendPostType
 }
 
 type InstagramPostEntry struct {

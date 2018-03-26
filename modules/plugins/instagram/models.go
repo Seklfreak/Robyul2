@@ -163,6 +163,30 @@ type Instagram_Safe_Entries struct {
 	mux     sync.Mutex
 }
 
+type Instagram_GraphQl_User_Profile struct {
+	Graphql struct {
+		User struct {
+			ID             string `json:"id"`
+			Biography      string `json:"biography"`
+			ExternalURL    string `json:"external_url"`
+			EdgeFollowedBy struct {
+				Count int `json:"count"`
+			} `json:"edge_followed_by"`
+			EdgeFollow struct {
+				Count int `json:"count"`
+			} `json:"edge_follow"`
+			FullName                 string `json:"full_name"`
+			IsPrivate                bool   `json:"is_private"`
+			IsVerified               bool   `json:"is_verified"`
+			ProfilePicURLHd          string `json:"profile_pic_url_hd"`
+			Username                 string `json:"username"`
+			EdgeOwnerToTimelineMedia struct {
+				Count int `json:"count"`
+			} `json:"edge_owner_to_timeline_media"`
+		} `json:"user"`
+	} `json:"graphql"`
+}
+
 type Instagram_GraphQl_User_Feed struct {
 	Data struct {
 		User struct {
@@ -296,6 +320,12 @@ type InstagramPostInformation struct {
 	IsVideo   bool
 }
 
+type InstagramShortPostInformation struct {
+	ID        string
+	Shortcode string
+	CreatedAt time.Time
+}
+
 type InstagramAuthorInformations struct {
 	ID            string
 	ProfilePicUrl string
@@ -303,6 +333,11 @@ type InstagramAuthorInformations struct {
 	FullName      string
 	IsPrivate     bool
 	IsVerified    bool
+	Followings    int
+	Followers     int
+	Posts         int
+	Link          string
+	Biography     string
 }
 
 func (m *Handler) getBestDisplayResource(imageCandidates []InstagramDisplayResource) string {
@@ -322,15 +357,15 @@ func (m *Handler) getBestDisplayResource(imageCandidates []InstagramDisplayResou
 	return lastBestCandidate.Src
 }
 
-func (m *Handler) getBundledEntries() (bundledEntries map[int64][]models.InstagramEntry, entriesCount int, err error) {
+func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.InstagramEntry, entriesCount int, err error) {
 	var entries []models.InstagramEntry
 
 	err = helpers.MDbIter(helpers.MdbCollection(models.InstagramTable).Find(nil)).All(&entries)
 
-	bundledEntries = make(map[int64][]models.InstagramEntry, 0)
+	bundledEntries = make(map[string][]models.InstagramEntry, 0)
 
 	for _, entry := range entries {
-		if entry.InstagramUserID == 0 {
+		if entry.InstagramUserID == 0 && entry.InstagramUserIDString == "" {
 			continue
 		}
 
@@ -341,21 +376,26 @@ func (m *Handler) getBundledEntries() (bundledEntries map[int64][]models.Instagr
 			continue
 		}
 
-		if _, ok := bundledEntries[entry.InstagramUserID]; ok {
-			bundledEntries[entry.InstagramUserID] = append(bundledEntries[entry.InstagramUserID], entry)
+		userID := entry.InstagramUserIDString
+		if userID == "" {
+			userID = strconv.FormatInt(entry.InstagramUserID, 10)
+		}
+
+		if _, ok := bundledEntries[userID]; ok {
+			bundledEntries[userID] = append(bundledEntries[userID], entry)
 		} else {
-			bundledEntries[entry.InstagramUserID] = []models.InstagramEntry{entry}
+			bundledEntries[userID] = []models.InstagramEntry{entry}
 		}
 	}
 
 	return bundledEntries, len(entries), nil
 }
 
-func (m *Handler) graphQlMediaUrl(accountID int64) (link string) {
+func (m *Handler) graphQlMediaUrl(accountID string) (link string) {
 	jsonData, err := json.Marshal(struct {
 		ID    string `json:"id"`
 		First string `json:"first"`
-	}{ID: strconv.FormatInt(accountID, 10), First: "10"})
+	}{ID: accountID, First: "10"})
 	helpers.Relax(err)
 
 	return "https://www.instagram.com/graphql/query/" +

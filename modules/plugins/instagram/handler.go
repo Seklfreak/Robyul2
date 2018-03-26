@@ -119,49 +119,42 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
 				helpers.Relax(err)
+				// proxy
+				proxy, err := helpers.GetRandomProxy()
+				helpers.Relax(err)
 				// get instagram account
 				instagramUsername := strings.Replace(args[1], "@", "", 1)
-				instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
-				if err != nil || instagramUser.User.Username == "" {
+				instagramUser, err := m.getUserInformation(instagramUsername, proxy)
+				if err != nil || instagramUser.IsPrivate {
 					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 					return
 				}
-				feed, err := instagramClient.LatestUserFeed(instagramUser.User.ID)
+				instagramPosts, err := m.getPosts(instagramUser.ID, proxy)
 				if err != nil {
-					if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
-						return
-					}
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
+					return
 				}
-				helpers.Relax(err)
-				story, err := instagramClient.GetUserStories(instagramUser.User.ID)
-				if err != nil {
-					if err != nil && strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.ratelimited"))
-						return
-					}
-				}
-				helpers.Relax(err)
 				// Create DB Entries
 				dbPosts := make([]models.InstagramPostEntry, 0)
-				for _, post := range feed.Items {
+				for _, post := range instagramPosts {
 					postEntry := models.InstagramPostEntry{
 						ID:            post.ID,
 						Type:          models.InstagramPostTypePost,
-						CreatedAtTime: time.Unix(int64(post.Caption.CreatedAt), 0),
+						CreatedAtTime: post.CreatedAt,
 					}
 					dbPosts = append(dbPosts, postEntry)
-
 				}
-				for _, reelMedia := range story.Reel.Items {
-					postEntry := models.InstagramPostEntry{
-						ID:            reelMedia.ID,
-						Type:          models.InstagramPostTypeReel,
-						CreatedAtTime: time.Unix(int64(reelMedia.DeviceTimestamp), 0),
+				/*
+					for _, reelMedia := range story.Reel.Items {
+						postEntry := models.InstagramPostEntry{
+							ID:            reelMedia.ID,
+							Type:          models.InstagramPostTypeReel,
+							CreatedAtTime: time.Unix(int64(reelMedia.DeviceTimestamp), 0),
+						}
+						dbPosts = append(dbPosts, postEntry)
+
 					}
-					dbPosts = append(dbPosts, postEntry)
-
-				}
+				*/
 				// create new entry in db
 				var specialText string
 				postMode := models.InstagramSendPostTypeRobyulEmbed
@@ -175,13 +168,13 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				newID, err := helpers.MDbInsert(
 					models.InstagramTable,
 					models.InstagramEntry{
-						GuildID:         targetChannel.GuildID,
-						ChannelID:       targetChannel.ID,
-						Username:        instagramUser.User.Username,
-						InstagramUserID: instagramUser.User.ID,
-						PostedPosts:     dbPosts,
-						IsLive:          false,
-						SendPostType:    postMode,
+						GuildID:               targetChannel.GuildID,
+						ChannelID:             targetChannel.ID,
+						Username:              instagramUser.Username,
+						InstagramUserIDString: instagramUser.ID,
+						PostedPosts:           dbPosts,
+						IsLive:                false,
+						SendPostType:          postMode,
 					},
 				)
 				helpers.Relax(err)
@@ -201,17 +194,17 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 						},
 						{
 							Key:   "instagram_instagramuserid",
-							Value: strconv.FormatInt(instagramUser.User.ID, 10),
+							Value: instagramUser.ID,
 						},
 						{
 							Key:   "instagram_instagramusername",
-							Value: instagramUser.User.Username,
+							Value: instagramUser.Username,
 						},
 					}, false)
 				helpers.RelaxLog(err)
 
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", instagramUser.User.Username, targetChannel.ID, specialText))
-				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", instagramUser.User.Username, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID))
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-added-success", instagramUser.Username, targetChannel.ID, specialText))
+				cache.GetLogger().WithField("module", "instagram").Info(fmt.Sprintf("Added Instagram Account @%s to Channel %s (#%s) on Guild %s (#%s)", instagramUser.Username, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]instagram delete <id>
 			helpers.RequireMod(msg, func() {
@@ -253,7 +246,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 							},
 							{
 								Key:   "instagram_instagramuserid",
-								Value: strconv.FormatInt(entryBucket.InstagramUserID, 10),
+								Value: entryBucket.InstagramUserIDString,
 							},
 							{
 								Key:   "instagram_instagramusername",
@@ -358,7 +351,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 						},
 						{
 							Key:   "instagram_instagramuserid",
-							Value: strconv.FormatInt(entryBucket.InstagramUserID, 10),
+							Value: entryBucket.InstagramUserIDString,
 						},
 						{
 							Key:   "instagram_instagramusername",
@@ -385,52 +378,59 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 		default:
 			session.ChannelTyping(msg.ChannelID)
 			instagramUsername := strings.Replace(args[0], "@", "", 1)
-			instagramUser, err := instagramClient.GetUserByUsername(instagramUsername)
-			if err != nil || instagramUser.User.Username == "" {
+
+			proxy, err := helpers.GetRandomProxy()
+			helpers.Relax(err)
+
+			instagramUser, err := m.getUserInformation(instagramUsername, proxy)
+			if err != nil {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
 
 			instagramNameModifier := ""
-			if instagramUser.User.IsVerified {
+			if instagramUser.IsVerified {
 				instagramNameModifier += " ☑"
 			}
-			if instagramUser.User.IsPrivate {
+			if instagramUser.IsPrivate {
 				instagramNameModifier += " 🔒"
 			}
-			if instagramUser.User.IsBusiness {
-				instagramNameModifier += " 🏢"
-			}
-			if instagramUser.User.IsFavorite {
-				instagramNameModifier += " ⭐"
-			}
+			/*
+				if instagramUser.User.IsBusiness {
+					instagramNameModifier += " 🏢"
+				}
+				if instagramUser.User.IsFavorite {
+					instagramNameModifier += " ⭐"
+				}
+			*/
+
 			accountEmbed := &discordgo.MessageEmbed{
-				Title:     helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.User.FullName, instagramUser.User.Username, instagramNameModifier),
-				URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username),
-				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.User.ProfilePicURL},
+				Title:     helpers.GetTextF("plugins.instagram.account-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
+				URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
+				Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePicUrl},
 				Footer: &discordgo.MessageEmbedFooter{
-					Text: helpers.GetTextF("plugins.instagram.account-embed-footer", instagramUser.User.ID) + " | " +
+					Text: helpers.GetTextF("plugins.instagram.account-embed-footer", instagramUser.ID) + " | " +
 						helpers.GetText("plugins.instagram.embed-footer"),
 					IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
 				},
-				Description: instagramUser.User.Biography,
+				Description: instagramUser.Biography,
 				Fields: []*discordgo.MessageEmbedField{
-					{Name: "Followers", Value: humanize.Comma(int64(instagramUser.User.FollowerCount)), Inline: true},
-					{Name: "Following", Value: humanize.Comma(int64(instagramUser.User.FollowingCount)), Inline: true},
-					{Name: "Posts", Value: humanize.Comma(int64(instagramUser.User.MediaCount)), Inline: true}},
+					{Name: "Followers", Value: humanize.Comma(int64(instagramUser.Followers)), Inline: true},
+					{Name: "Following", Value: humanize.Comma(int64(instagramUser.Followings)), Inline: true},
+					{Name: "Posts", Value: humanize.Comma(int64(instagramUser.Posts)), Inline: true}},
 				Color: helpers.GetDiscordColorFromHex(hexColor),
 			}
-			if instagramUser.User.ExternalURL != "" {
+			if instagramUser.Link != "" {
 				accountEmbed.Fields = append(accountEmbed.Fields, &discordgo.MessageEmbedField{
 					Name:   "Website",
-					Value:  instagramUser.User.ExternalURL,
+					Value:  instagramUser.Link,
 					Inline: true,
 				})
 			}
 			_, err = helpers.SendComplex(
 				msg.ChannelID, &discordgo.MessageSend{
-					Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.User.Username)),
+					Content: fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyUser, instagramUser.Username)),
 					Embed:   accountEmbed,
 				})
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
