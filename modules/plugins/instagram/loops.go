@@ -137,7 +137,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 				if err != nil {
 					if m.retryOnError(err) {
 						cache.GetLogger().WithField("module", "instagram").Infof(
-							"hit rate limit checking Instagram Account %d (GraphQL), "+
+							"hit rate limit checking Instagram Account %s (GraphQL), "+
 								"switching proxy and then trying again", instagramAccountID)
 						currentProxy, err = helpers.GetRandomProxy()
 						helpers.Relax(err)
@@ -231,7 +231,7 @@ func (m *Handler) checkInstagramStoryLoop() {
 			if err != nil || story.Status != "ok" {
 				if m.retryOnError(err) {
 					cache.GetLogger().WithField("module", "instagram").Infof(
-						"hit rate limit checking Instagram Account (Stories) %d, "+
+						"hit rate limit checking Instagram Account (Stories) %s, "+
 							"sleeping for 20 seconds and then trying again", instagramAccountID)
 					time.Sleep(20 * time.Second)
 					goto RetryAccount
@@ -337,6 +337,7 @@ func (m *Handler) retryOnError(err error) (retry bool) {
 		if strings.Contains(err.Error(), "expected status 200; got 429") ||
 			strings.Contains(err.Error(), "request canceled while waiting for connection") ||
 			strings.Contains(err.Error(), "connect: no route to host") ||
+			strings.Contains(err.Error(), "read: connection reset by peer") ||
 			strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 			return true
 		}
