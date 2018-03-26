@@ -599,11 +599,19 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 
 				userUserdata, err := m.GetUserUserdata(msg.Author)
+
+				oldBioText := userUserdata.Bio
+
 				userUserdata.Bio = bioText
 				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
+				message := helpers.GetText("plugins.levels.profile-bio-set-success")
+				if oldBioText != "" && oldBioText != " " && bioText == " " {
+					message = helpers.GetTextF("plugins.levels.profile-bio-reset-success", oldBioText)
+				}
+
+				_, err = helpers.SendMessage(msg.ChannelID, message)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "background", "backgrounds":

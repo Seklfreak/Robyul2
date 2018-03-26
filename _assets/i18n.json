@@ -364,7 +364,7 @@
       "profile-background-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
       "profile-title-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
       "profile-bio-set-success": "I updated your profile! <:blobokhand:317032017164238848>",
-      "profile-bio-reset-success": "I have reset your bio. Your bio was\n```\n%s\n```.",
+      "profile-bio-reset-success": "I have reset your bio. Your bio was\n```\n%s\n```",
       "rep-error-self": "You can't rep yourself! <:blobeyes:317029938568101890>",
       "rep-error-bot": "You can't rep bots! <:robyulblush:327206930437373952>",
       "rep-error-session": "I love you too, but please rep a human instead! <a:ablobkiss:393869334318940160> ",
