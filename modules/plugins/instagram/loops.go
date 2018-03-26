@@ -101,15 +101,12 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 		RetryGraphQl:
 			receivedPosts, err := m.getPosts(instagramAccountID, currentProxy)
 			if err != nil {
-				if strings.Contains(err.Error(), "expected status 200; got 429") {
+				if m.retryOnError(err) {
 					cache.GetLogger().WithField("module", "instagram").Infof(
-						"hit rate limit checking Instagram Account %d (GraphQL), "+
-							"sleeping for 1 seconds, switching proxy and then trying again", instagramAccountID)
-					time.Sleep(1 * time.Second)
+						"proxy error connecting to Instagram Account %d (GraphQL), "+
+							"switching proxy and then trying again", instagramAccountID)
 					currentProxy, err = helpers.GetRandomProxy()
 					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "instagram").Infof(
-						"switched to random proxy")
 					goto RetryGraphQl
 				}
 				helpers.RelaxLog(err)
@@ -138,15 +135,12 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 			RetryPost:
 				post, err := m.getPostInformation(receivedPost.Shortcode, currentProxy)
 				if err != nil {
-					if strings.Contains(err.Error(), "expected status 200; got 429") {
+					if m.retryOnError(err) {
 						cache.GetLogger().WithField("module", "instagram").Infof(
 							"hit rate limit checking Instagram Account %d (GraphQL), "+
-								"sleeping for 1 seconds, switching proxy and then trying again", instagramAccountID)
-						time.Sleep(1 * time.Second)
+								"switching proxy and then trying again", instagramAccountID)
 						currentProxy, err = helpers.GetRandomProxy()
 						helpers.Relax(err)
-						cache.GetLogger().WithField("module", "instagram").Infof(
-							"switched to random proxy")
 						goto RetryPost
 					}
 					helpers.RelaxLog(err)
@@ -235,8 +229,7 @@ func (m *Handler) checkInstagramStoryLoop() {
 			helpers.Relax(err)
 			story, err := instagramClient.GetUserStories(int64(userIdInt))
 			if err != nil || story.Status != "ok" {
-				if err != nil &&
-					strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+				if m.retryOnError(err) {
 					cache.GetLogger().WithField("module", "instagram").Infof(
 						"hit rate limit checking Instagram Account (Stories) %d, "+
 							"sleeping for 20 seconds and then trying again", instagramAccountID)
@@ -286,7 +279,7 @@ func (m *Handler) checkInstagramStoryLoop() {
 					}
 					if reelMediaAlreadyPosted == false {
 						log.WithField("module", "instagram").Infof(
-							"Posting Reel Media (Feed and Story): #%s", reelMedia.ID)
+							"Posting Reel Media (Story): #%s", reelMedia.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
 							models.InstagramPostEntry{
 								ID:            reelMedia.ID,
@@ -314,7 +307,7 @@ func (m *Handler) checkInstagramStoryLoop() {
 
 		elapsed := time.Since(start)
 		cache.GetLogger().WithField("module", "instagram").Infof(
-			"checked feed and story on %d accounts for %d feeds, took %s",
+			"checked story on %d accounts for %d feeds, took %s",
 			len(bundledEntries), entriesCount, elapsed)
 		metrics.InstagramRefreshTime.Set(elapsed.Seconds())
 
@@ -337,4 +330,16 @@ func (m *Handler) unlockEntry(entryID bson.ObjectId) {
 	if _, ok := instagramEntryLocks[string(entryID)]; ok {
 		instagramEntryLocks[string(entryID)].Unlock()
 	}
+}
+
+func (m *Handler) retryOnError(err error) (retry bool) {
+	if err != nil {
+		if strings.Contains(err.Error(), "expected status 200; got 429") ||
+			strings.Contains(err.Error(), "request canceled while waiting for connection") ||
+			strings.Contains(err.Error(), "connect: no route to host") ||
+			strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+			return true
+		}
+	}
+	return false
 }
