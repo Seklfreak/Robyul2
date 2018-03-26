@@ -11,7 +11,6 @@ import (
 	"net/url"
 
 	"github.com/Seklfreak/Robyul2/cache"
-	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/ahmdrz/goinsta"
@@ -27,7 +26,6 @@ type Handler struct{}
 var (
 	instagramClient      *goinsta.Instagram
 	instagramPicUrlRegex *regexp.Regexp
-	useGraphQlQuery      = true
 )
 
 const (
@@ -47,9 +45,11 @@ func (m *Handler) Commands() []string {
 func (m *Handler) Init(session *discordgo.Session) {
 	go func() {
 		defer helpers.Recover()
-		// TODO: add retry
 
 		var err error
+
+		go m.checkInstagramGraphQlFeedLoop()
+		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
 
 		//cache.GetRedisClient().Del(instagramSessionKey).Result()
 		storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
@@ -68,10 +68,8 @@ func (m *Handler) Init(session *discordgo.Session) {
 				"starting new instagram session",
 			)
 		}
-		// set proxy if set
-		if helpers.GetConfig().Path("instagram.proxy").Data().(string) != "" {
-			instagramClient.Proxy = helpers.GetConfig().Path("instagram.proxy").Data().(string)
-		}
+		// set proxy
+		instagramClient.Proxy = helpers.GetConfig().Path("instagram.proxy").Data().(string)
 		err = instagramClient.Login()
 		helpers.Relax(err)
 		cache.GetLogger().WithField("module", "instagram").Infof(
@@ -88,9 +86,6 @@ func (m *Handler) Init(session *discordgo.Session) {
 
 		instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
 		helpers.Relax(err)
-
-		go m.checkInstagramGraphQlFeedLoop()
-		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
 
 		go m.checkInstagramFeedsAndStoryLoop()
 		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram Feeds and Story loop")
@@ -151,18 +146,18 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				dbPosts := make([]models.InstagramPostEntry, 0)
 				for _, post := range feed.Items {
 					postEntry := models.InstagramPostEntry{
-						ID:        post.ID,
-						Type:      models.InstagramPostTypePost,
-						CreatedAt: int64(post.Caption.CreatedAt),
+						ID:            post.ID,
+						Type:          models.InstagramPostTypePost,
+						CreatedAtTime: time.Unix(int64(post.Caption.CreatedAt), 0),
 					}
 					dbPosts = append(dbPosts, postEntry)
 
 				}
 				for _, reelMedia := range story.Reel.Items {
 					postEntry := models.InstagramPostEntry{
-						ID:        reelMedia.ID,
-						Type:      models.InstagramPostTypeReel,
-						CreatedAt: reelMedia.DeviceTimestamp,
+						ID:            reelMedia.ID,
+						Type:          models.InstagramPostTypeReel,
+						CreatedAtTime: time.Unix(int64(reelMedia.DeviceTimestamp), 0),
 					}
 					dbPosts = append(dbPosts, postEntry)
 
@@ -574,102 +569,6 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 	}
 }
 
-func (m *Handler) postPostToChannel(channelID string, post goinstaResponse.Item, postType models.InstagramSendPostType) {
-	instagramNameModifier := ""
-	if post.User.IsVerified {
-		instagramNameModifier += " ☑"
-	}
-	if post.User.IsPrivate {
-		instagramNameModifier += " 🔒"
-	}
-	/*
-		if post.User.IsBusiness {
-			instagramNameModifier += " 🏢"
-		}
-	*/
-	if post.User.IsFavorite {
-		instagramNameModifier += " ⭐"
-	}
-
-	mediaModifier := "Picture"
-	if post.MediaType == 2 {
-		mediaModifier = "Video"
-	}
-	if post.MediaType == 8 {
-		mediaModifier = "Album"
-		if len(post.CarouselMedia) > 0 {
-			mediaModifier = fmt.Sprintf("Album (%d items)", len(post.CarouselMedia))
-		}
-	}
-
-	var content string
-	channelEmbed := &discordgo.MessageEmbed{
-		Title:     helpers.GetTextF("plugins.instagram.post-embed-title", post.User.FullName, post.User.Username, instagramNameModifier, mediaModifier),
-		URL:       fmt.Sprintf(instagramFriendlyPost, post.Code),
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: post.User.ProfilePicURL},
-		Footer: &discordgo.MessageEmbedFooter{
-			Text:    helpers.GetText("plugins.instagram.embed-footer"),
-			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
-		},
-		Description: post.Caption.Text,
-		Color:       helpers.GetDiscordColorFromHex(hexColor),
-	}
-	if postType == models.InstagramSendPostTypeDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", post.User.FullName, post.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
-		if post.Caption.Text != "" {
-			content += post.Caption.Text + "\n"
-		}
-	}
-
-	if len(post.ImageVersions2.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(post.ImageVersions2.Candidates)}
-	}
-	if len(post.CarouselMedia) > 0 && len(post.CarouselMedia[0].ImageVersions.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(post.CarouselMedia[0].ImageVersions.Candidates)}
-	}
-
-	mediaUrls := make([]string, 0)
-	if len(post.CarouselMedia) <= 0 {
-		if len(post.VideoVersions) > 0 {
-			mediaUrls = append(mediaUrls, getBestVideoVersionURL(post))
-		} else {
-			mediaUrls = append(mediaUrls, getBestCandidateURL(post.ImageVersions2.Candidates))
-		}
-	} else {
-		for i, carouselMedia := range post.CarouselMedia {
-			if len(carouselMedia.VideoVersions) > 0 {
-				mediaUrls = append(mediaUrls, getBestCarouselVideoVersionURL(post, i))
-			} else {
-				mediaUrls = append(mediaUrls, getBestCandidateURL(carouselMedia.ImageVersions.Candidates))
-			}
-		}
-	}
-
-	content += fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Code))
-
-	if len(mediaUrls) > 0 {
-		channelEmbed.Description += "\n\n`Links:` "
-		for i, mediaUrl := range mediaUrls {
-			if postType == models.InstagramSendPostTypeDirectLinks {
-				content += "\n" + stripInstagramDirectLink(mediaUrl)
-			}
-			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), stripInstagramDirectLink(mediaUrl))
-		}
-	}
-
-	messageSend := &discordgo.MessageSend{
-		Content: content,
-	}
-	if postType != models.InstagramSendPostTypeDirectLinks {
-		messageSend.Embed = channelEmbed
-	}
-
-	_, err := helpers.SendComplex(channelID, messageSend)
-	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
-	}
-}
-
 func stripInstagramDirectLink(link string) (result string) {
 	url, err := url.Parse(link)
 	if err != nil {
@@ -701,48 +600,6 @@ func getBestCandidateURL(imageCandidates []goinstaResponse.ImageCandidate) strin
 	}
 
 	return lastBestCandidate.URL
-}
-
-func getBestVideoVersionURL(item goinstaResponse.Item) string {
-	var lastBestCandidateURL string
-	var lastBestCandidateWidth, lastBestCandidataHeight int
-	for _, version := range item.VideoVersions {
-		if lastBestCandidateURL == "" {
-			lastBestCandidateURL = version.URL
-			lastBestCandidataHeight = version.Height
-			lastBestCandidateWidth = version.Width
-		} else {
-			if version.Height > lastBestCandidataHeight || version.Width > lastBestCandidateWidth {
-				lastBestCandidateURL = version.URL
-				lastBestCandidataHeight = version.Height
-				lastBestCandidateWidth = version.Width
-			}
-		}
-	}
-
-	return lastBestCandidateURL
-}
-
-func getBestCarouselVideoVersionURL(post goinstaResponse.Item, number int) string {
-	item := post.CarouselMedia[number]
-
-	var lastBestCandidateURL string
-	var lastBestCandidateWidth, lastBestCandidataHeight int
-	for _, version := range item.VideoVersions {
-		if lastBestCandidateURL == "" {
-			lastBestCandidateURL = version.URL
-			lastBestCandidataHeight = version.Height
-			lastBestCandidateWidth = version.Width
-		} else {
-			if version.Height > lastBestCandidataHeight || version.Width > lastBestCandidateWidth {
-				lastBestCandidateURL = version.URL
-				lastBestCandidataHeight = version.Height
-				lastBestCandidateWidth = version.Width
-			}
-		}
-	}
-
-	return lastBestCandidateURL
 }
 
 func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int) string {

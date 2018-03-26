@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -33,7 +35,7 @@ type InstagramEntry struct {
 }
 
 type InstagramPostEntry struct {
-	ID        string
-	Type      InstagramPostType
-	CreatedAt int64
+	ID            string
+	Type          InstagramPostType
+	CreatedAtTime time.Time
 }

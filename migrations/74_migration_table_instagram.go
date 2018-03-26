@@ -1,6 +1,8 @@
 package migrations
 
 import (
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -54,16 +56,16 @@ func m74_migration_table_instagram() {
 		instagramPosts := make([]models.InstagramPostEntry, 0)
 		for _, oldPost := range rethinkdbEntry.PostedPosts {
 			instagramPosts = append(instagramPosts, models.InstagramPostEntry{
-				ID:        oldPost.ID,
-				Type:      models.InstagramPostTypePost,
-				CreatedAt: int64(oldPost.CreatedAt),
+				ID:            oldPost.ID,
+				Type:          models.InstagramPostTypePost,
+				CreatedAtTime: time.Unix(int64(oldPost.CreatedAt), 0),
 			})
 		}
 		for _, oldReel := range rethinkdbEntry.PostedReelMedias {
 			instagramPosts = append(instagramPosts, models.InstagramPostEntry{
-				ID:        oldReel.ID,
-				Type:      models.InstagramPostTypeReel,
-				CreatedAt: oldReel.CreatedAt,
+				ID:            oldReel.ID,
+				Type:          models.InstagramPostTypeReel,
+				CreatedAtTime: time.Unix(int64(oldReel.CreatedAt), 0),
 			})
 		}
 

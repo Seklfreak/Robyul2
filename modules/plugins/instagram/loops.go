@@ -6,8 +6,6 @@ import (
 
 	"encoding/json"
 
-	"net/url"
-
 	"strconv"
 
 	"sync"
@@ -29,16 +27,12 @@ const (
 )
 
 func (m *Handler) checkInstagramGraphQlFeedLoop() {
-	if !useGraphQlQuery {
-		return
-	}
-
-	log := cache.GetLogger()
+	log := cache.GetLogger().WithField("module", "instagram")
 
 	defer helpers.Recover()
 	defer func() {
 		go func() {
-			log.WithField("module", "instagram").Error("The checkInstagramGraphQlFeedLoop died." +
+			log.Error("The checkInstagramGraphQlFeedLoop died." +
 				"Please investigate! Will be restarted in 60 seconds")
 			time.Sleep(60 * time.Second)
 			m.checkInstagramGraphQlFeedLoop()
@@ -49,7 +43,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 		bundledEntries, entriesCount, err := m.getBundledEntries()
 		helpers.Relax(err)
 
-		cache.GetLogger().WithField("module", "instagram").Infof(
+		cache.GetLogger().Infof(
 			"checking graphql feed on %d accounts for %d feeds with %d workers",
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers)
 		start := time.Now()
@@ -81,7 +75,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			<-results
 		}
 		elapsed := time.Since(start)
-		cache.GetLogger().WithField("module", "instagram").Infof(
+		cache.GetLogger().Infof(
 			"checked graphql feed on %d accounts for %d feeds with %d workers, took %s",
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers, elapsed)
 		metrics.InstagramGraphQlFeedRefreshTime.Set(elapsed.Seconds())
@@ -108,16 +102,8 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 		for instagramAccountID, entries := range job {
 			//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(
 			//	"checking graphql feed for %d for %d channels", instagramAccountID, len(entries))
-			jsonData, err := json.Marshal(struct {
-				ID    string `json:"id"`
-				First string `json:"first"`
-			}{ID: strconv.Itoa(int(instagramAccountID)), First: "10"})
-			helpers.Relax(err)
-
 		RetryGraphQl:
-			graphQlUrl := "https://www.instagram.com/graphql/query/" +
-				"?query_id=17888483320059182" +
-				"&variables=" + url.QueryEscape(string(jsonData))
+			graphQlUrl := m.graphQlMediaUrl(instagramAccountID)
 			result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, currentProxy)
 			if err != nil {
 				if strings.Contains(err.Error(), "expected status 200; got 429") {
@@ -173,34 +159,22 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					continue
 				}
 
+				// download specific post data
 			RetryPost:
-				postsData, err := instagramClient.MediaInfo(receivedPost.Node.ID)
-				if err != nil || postsData.Status != "ok" {
-					if err != nil &&
-						strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
+				post, err := m.getPostInformation(receivedPost.Node.Shortcode, currentProxy)
+				if err != nil {
+					if strings.Contains(err.Error(), "expected status 200; got 429") {
 						cache.GetLogger().WithField("module", "instagram").Infof(
-							"hit rate limit checking Instagram Account (Media Info) %d,"+
-								"sleeping for 20 seconds and then trying again", instagramAccountID)
-						time.Sleep(20 * time.Second)
+							"hit rate limit checking Instagram Account %d (GraphQL), "+
+								"sleeping for 1 seconds, switching proxy and then trying again", instagramAccountID)
+						time.Sleep(1 * time.Second)
+						currentProxy, err = helpers.GetRandomProxy()
+						helpers.Relax(err)
+						cache.GetLogger().WithField("module", "instagram").Infof(
+							"switched to random proxy")
 						goto RetryPost
 					}
-					cache.GetLogger().WithField("module", "instagram").Warnf(
-						"failed to get post information for %s account %d failed: %s",
-						receivedPost.Node.ID, instagramAccountID, err)
-					continue
-				}
-
-				var post goinstaResponse.Item
-				for _, postData := range postsData.Items {
-					if postData.ID == fullPostID {
-						post = postData
-					}
-				}
-
-				if post.ID == "" {
-					cache.GetLogger().WithField("module", "instagram").Warnf(
-						"failed to find post information in returned post information for %s account %d",
-						receivedPost.Node.ID, instagramAccountID)
+					helpers.RelaxLog(err)
 					continue NextEntry
 				}
 
@@ -231,9 +205,9 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 						cache.GetLogger().WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
 							models.InstagramPostEntry{
-								ID:        post.ID,
-								Type:      models.InstagramPostTypePost,
-								CreatedAt: int64(post.Caption.CreatedAt),
+								ID:            post.ID,
+								Type:          models.InstagramPostTypePost,
+								CreatedAtTime: post.TakentAt,
 							})
 						changes = true
 						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
@@ -251,8 +225,6 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[int64]
 					m.unlockEntry(entryID)
 				}
 			}
-
-			time.Sleep(10 * time.Millisecond) // 0.01 second
 		}
 	}
 	results <- len(jobs)
@@ -284,22 +256,6 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 			// log.WithField("module", "instagram").Debug(fmt.Sprintf("checking Instagram Account @%s", instagramUsername))
 
 			var posts goinstaResponse.UserFeedResponse
-			if !useGraphQlQuery {
-				posts, err := instagramClient.LatestUserFeed(instagramAccountID)
-				if err != nil || posts.Status != "ok" {
-					if err != nil &&
-						strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
-						cache.GetLogger().WithField("module", "instagram").Infof(
-							"hit rate limit checking Instagram Account (User Feed) %d, "+
-								"sleeping for 20 seconds and then trying again", instagramAccountID)
-						time.Sleep(20 * time.Second)
-						goto RetryAccount
-					}
-					log.WithField("module", "instagram").Warnf(
-						"updating instagram account %d (User Feed) failed: %s", instagramAccountID, err)
-					continue
-				}
-			}
 			story, err := instagramClient.GetUserStories(instagramAccountID)
 			if err != nil || story.Status != "ok" {
 				if err != nil &&
@@ -344,27 +300,6 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 					continue
 				}
 
-				for _, post := range posts.Items {
-					postAlreadyPosted := false
-					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == post.ID {
-							postAlreadyPosted = true
-						}
-					}
-					if postAlreadyPosted == false {
-						log.WithField("module", "instagram").Infof("Posting Post (Feed and Story): #%s", post.ID)
-						entry.PostedPosts = append(entry.PostedPosts,
-							models.InstagramPostEntry{
-								ID:        post.ID,
-								Type:      models.InstagramPostTypePost,
-								CreatedAt: int64(post.Caption.CreatedAt),
-							})
-						changes = true
-						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
-					}
-
-				}
-
 				for n, reelMedia := range story.Reel.Items {
 					reelMediaAlreadyPosted := false
 					for _, reelMediaPostPosted := range entry.PostedPosts {
@@ -377,9 +312,9 @@ func (m *Handler) checkInstagramFeedsAndStoryLoop() {
 							"Posting Reel Media (Feed and Story): #%s", reelMedia.ID)
 						entry.PostedPosts = append(entry.PostedPosts,
 							models.InstagramPostEntry{
-								ID:        reelMedia.ID,
-								Type:      models.InstagramPostTypeReel,
-								CreatedAt: int64(reelMedia.DeviceTimestamp),
+								ID:            reelMedia.ID,
+								Type:          models.InstagramPostTypeReel,
+								CreatedAtTime: time.Unix(int64(reelMedia.DeviceTimestamp), 0),
 							})
 						changes = true
 						go m.postReelMediaToChannel(entry.ChannelID, story, n, entry.SendPostType)
