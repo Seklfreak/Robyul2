@@ -3041,14 +3041,6 @@ func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileU
 	return userdata, err
 }
 
-func (l *Levels) DeleteBadge(badgeID string) {
-	_, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("id").Eq(badgeID),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-	return
-}
-
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
 	var levelsServersUser []models.LevelsServerusersEntry
 	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": member.User.ID})).All(&levelsServersUser)
