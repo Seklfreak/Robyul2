@@ -69,16 +69,12 @@ func initSuggestionChannel() {
 
 // processImageSuggestion
 func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
+	defer helpers.Recover()
+
+	// todo: move this to i18n
 	invalidArgsMessage := "Invalid suggestion arguments. \n\n" +
 		"Suggestion must be done with the following format:\n```!biasgame suggest [boy/girl] \"group name\" \"idol name\" [url to image]```\n" +
 		"For Example:\n```!biasgame suggest girl \"PRISTIN\" \"Nayoung\" https://cdn.discordapp.com/attachments/420049316615553026/420056295618510849/unknown.png```\n\n"
-
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Panic: ", r)
-			helpers.SendMessage(msg.ChannelID, invalidArgsMessage)
-		}
-	}()
 
 	// ToArgv can panic, need to catch that
 	suggestionArgs := str.ToArgv(msgContent)[1:]
@@ -181,8 +177,19 @@ func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
 		}
 	}
 
+	// upload file
+	buf := new(bytes.Buffer)
+	err = png.Encode(buf, suggestedImage)
+	helpers.Relax(err)
+	objectName, err := helpers.AddFile("", buf.Bytes(), helpers.AddFileMetadata{
+		Filename:           suggestedImageUrl,
+		ChannelID:          msg.ChannelID,
+		UserID:             msg.Author.ID,
+		AdditionalMetadata: nil,
+	}, "biasgame", false)
+	helpers.Relax(err)
+
 	// send ty message
-	fmt.Println(msg.Author.Mention())
 	helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.thanks-for-suggestion", msg.Author.Mention()))
 
 	// create suggetion
@@ -196,6 +203,7 @@ func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
 		ImageHashString: sugImgHashString,
 		GroupMatch:      false,
 		IdolMatch:       false,
+		ObjectName:      objectName,
 	}
 	checkIdolAndGroupExist(suggestion)
 
@@ -305,6 +313,9 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 		cs.LastModifiedOn = time.Now()
 		go helpers.MDbUpsertID(models.BiasGameSuggestionsTable, cs.ID, cs)
 
+		// remove file from objectstorage
+		go helpers.DeleteFile(cs.ObjectName)
+
 		// send a message to the user who suggested the image
 		dmChannel, err := cache.GetSession().UserChannelCreate(cs.UserID)
 		if err == nil {
@@ -382,29 +393,16 @@ func updateCurrentSuggestionEmbed() {
 		cs = suggestionQueue[0]
 		checkIdolAndGroupExist(cs)
 
-		res, err := pester.Get(cs.ImageURL)
-		if err != nil {
-			fmt.Println("get error: ", err.Error())
-			return
-		}
+		imgBytes, err := helpers.RetrieveFile(cs.ObjectName)
+		helpers.Relax(err)
 
-		suggestedImage, imgErr := helpers.DecodeImage(res.Body)
-		if imgErr != nil {
-			return
-		}
-
-		resizedImage := resize.Resize(0, IMAGE_RESIZE_HEIGHT, suggestedImage, resize.Lanczos3)
-
-		img1 := giveImageShadowBorder(resizedImage, 15, 15)
-		img2 := giveImageShadowBorder(resizedImage, 15, 15)
-
-		img1 = helpers.CombineTwoImages(img1, versesImage)
-		finalImage := helpers.CombineTwoImages(img1, img2)
+		suggestedImage, _, err := helpers.DecodeImageBytes(imgBytes)
+		helpers.Relax(err)
 
 		buf := new(bytes.Buffer)
 		encoder := new(png.Encoder)
 		encoder.CompressionLevel = -2 // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
-		encoder.Encode(buf, finalImage)
+		encoder.Encode(buf, makeVSImage(suggestedImage, suggestedImage))
 		myReader := bytes.NewReader(buf.Bytes())
 
 		// get info of user who suggested image
@@ -594,7 +592,7 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 			}
 
 			// if the difference is 3 or less let the user know the image already exists
-			if compareVal <= 15 {
+			if compareVal <= 10 {
 				matchingImagesBytes = append(matchingImagesBytes, curBImage.ImageBytes)
 			}
 		}

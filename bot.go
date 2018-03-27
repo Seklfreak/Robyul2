@@ -596,6 +596,11 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
 	}
 
 	modules.CallExtendedPluginOnReactionAdd(reaction)
+
+	// check if the reaction was added to a paged message
+	if pagedMessage := helpers.GetPagedMessage(reaction.MessageID); pagedMessage != nil {
+		pagedMessage.UpdateMessagePage(reaction)
+	}
 }
 
 func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.MessageReactionRemove) {

@@ -213,7 +213,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 	// images, suggestions, and stat set up are done async when bot starts up
 	//   make sure game is ready before trying to process any commands
 	if gameIsReady == false {
-		helpers.SendMessage(msg.ChannelID, "biasgame.game.game-not-ready")
+		helpers.SendMessage(msg.ChannelID, "plugins.biasgame.game.game-not-ready")
 		return
 	}
 
@@ -487,15 +487,9 @@ func (g *singleBiasGame) sendBiasGameRound() {
 		go cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
-	// combine first bias image with the "vs" image, then combine that image with 2nd bias image
+	// get random images
 	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
 	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
-
-	img1 = giveImageShadowBorder(img1, 15, 15)
-	img2 = giveImageShadowBorder(img2, 15, 15)
-
-	img1 = helpers.CombineTwoImages(img1, versesImage)
-	finalImage := helpers.CombineTwoImages(img1, img2)
 
 	// create round message
 	messageString := fmt.Sprintf("**@%s**\nIdols Remaining: %d\n%s %s vs %s %s",
@@ -510,7 +504,7 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
 	encoder.CompressionLevel = -2
-	encoder.Encode(buf, finalImage)
+	encoder.Encode(buf, makeVSImage(img1, img2))
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
@@ -520,11 +514,11 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	}
 
 	// add reactions
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, LEFT_ARROW_EMOJI)
-	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
+	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 
 	// update game state
-	g.LastRoundMessage = fileSendMsg
+	g.LastRoundMessage = fileSendMsg[0]
 	g.ReadyForReaction = true
 }
 
@@ -667,15 +661,9 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
-	// combine first bias image with the "vs" image, then combine that image with 2nd bias image
+	// get random images to use
 	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
 	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
-
-	img1 = giveImageShadowBorder(img1, 15, 15)
-	img2 = giveImageShadowBorder(img2, 15, 15)
-
-	img1 = helpers.CombineTwoImages(img1, versesImage)
-	finalImage := helpers.CombineTwoImages(img1, img2)
 
 	// create round message
 	messageString := fmt.Sprintf("**Multi Game**\nIdols Remaining: %d\n%s %s vs %s %s",
@@ -689,7 +677,7 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
 	encoder.CompressionLevel = -2 // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
-	encoder.Encode(buf, finalImage)
+	encoder.Encode(buf, makeVSImage(img1, img2))
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
@@ -699,12 +687,12 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	}
 
 	// add reactions
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, LEFT_ARROW_EMOJI)
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg.ID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 
 	// update game state
-	g.CurrentRoundMessageId = fileSendMsg.ID
-	g.LastRoundMessage = fileSendMsg
+	g.CurrentRoundMessageId = fileSendMsg[0].ID
+	g.LastRoundMessage = fileSendMsg[0]
 }
 
 // start multi game loop. every 10 seconds count the number of arrow reactions. whichever side has most wins

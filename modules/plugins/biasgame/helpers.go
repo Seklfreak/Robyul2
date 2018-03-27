@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis"
+	"github.com/nfnt/resize"
 	"github.com/sirupsen/logrus"
 )
 
@@ -159,4 +160,19 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, autho
 
 	// send paged embed
 	helpers.SendPagedImageMessage(msg, imagesMessage)
+}
+
+// makeVSImage will make the image that shows for rounds in the biasgame
+func makeVSImage(img1, img2 image.Image) image.Image {
+	// resize images
+	img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)
+	img2 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img2, resize.Lanczos3)
+
+	// give shadow border
+	img1 = giveImageShadowBorder(img1, 15, 15)
+	img2 = giveImageShadowBorder(img2, 15, 15)
+
+	// combind images
+	img1 = helpers.CombineTwoImages(img1, versesImage)
+	return helpers.CombineTwoImages(img1, img2)
 }
