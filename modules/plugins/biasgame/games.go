@@ -325,11 +325,6 @@ func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session
 		game.processVote(reaction)
 	}
 
-	// check if the reaction was added to a paged message
-	if pagedMessage := helpers.GetPagedMessage(reaction.MessageID); pagedMessage != nil {
-		pagedMessage.UpdateMessagePage(reaction)
-	}
-
 	// check if this was a reaction to a idol suggestion.
 	//  if it was accepted an image will be returned to be added to the biasChoices
 	CheckSuggestionReaction(reaction)
