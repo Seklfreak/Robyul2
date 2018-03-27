@@ -9,12 +9,17 @@ import (
 const (
 	BiasGameTable            MongoDbCollection = "biasgame"
 	BiasGameSuggestionsTable MongoDbCollection = "biasgame_suggestions"
+	BiasGameIdolsTable       MongoDbCollection = "biasgame_idols"
 )
 
 type BiasEntry struct {
+	ID        bson.ObjectId `bson:"_id,omitempty"`
 	Name      string
 	GroupName string
 	Gender    string
+
+	ObjectName string // name of file in object storage
+	DriveID    string // this is strictly used for the drive migration. will be used to make sure files migrated before are not remigrated
 }
 
 type BiasGameEntry struct {

@@ -6,11 +6,17 @@ import (
 	"image"
 	"image/draw"
 	"image/png"
-	"net/http"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
+
+	"github.com/Seklfreak/Robyul2/models"
+	"github.com/globalsign/mgo/bson"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -32,7 +38,6 @@ func startBiasCacheRefreshLoop() {
 			time.Sleep(time.Hour * 12)
 
 			bgLog().Info("Refreshing image cache...")
-			loadMiscImages(true)
 			refreshBiasChoices(true)
 
 			bgLog().Info("Biasgame image cache has been refresh")
@@ -41,89 +46,43 @@ func startBiasCacheRefreshLoop() {
 }
 
 // loadMiscImages handles loading other images besides the idol images
-func loadMiscImages(skipCache bool) {
-	// skipCache = true
-	bgLog().Info("Loading biasgame misc images")
-	validMiscImages := map[string]bool{
-		"verses16.png":        true,
-		"topEightBracket.png": true,
-		"shadow-border.png":   true,
-		"crown.png":           true,
+func loadMiscImages() {
+	validMiscImages := []string{
+		"verses.png",
+		"top-eight-bracket.png",
+		"shadow-border.png",
+		"crown.png",
 	}
 
-	// loop through all the files in the misc folder
-	for _, file := range getFilesFromDriveFolder(MISC_FOLDER_ID) {
+	miscImagesFolderPath := helpers.GetConfig().Path("assets_folder").Data().(string) + "biasgame/misc/"
 
-		// make sure other files in the misc folder aren't loaded
-		if validMiscImages[file.Name] == false {
-			continue
+	// load misc images
+	for _, fileName := range validMiscImages {
+
+		// check if file exists
+		filePath := miscImagesFolderPath + fileName
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			helpers.Relax(err)
 		}
 
-		var img image.Image
-		var err error
+		// open file and decode it
+		file, err := os.Open(filePath)
+		helpers.Relax(err)
+		img, _, err := image.Decode(file)
+		helpers.Relax(err)
 
-		// check if image is cached
-		var imgBuf []byte
-		err = getBiasGameCache(file.Name, &imgBuf)
-		if err == nil && skipCache == false {
-
-			// decode image and set the appropriate var
-			img, _, err = image.Decode(bytes.NewReader(imgBuf))
-			if err == nil {
-				switch file.Name {
-				case "verses16.png":
-					versesImage = img
-				case "topEightBracket.png":
-					winnerBracket = img
-				case "shadow-border.png":
-					shadowBorder = img
-				case "crown.png":
-					crown = img
-				}
-				bgLog().Infof("Biasgame misc image loaded from cache: %s", file.Name)
-				continue
-			}
-		}
-
-		// get image and decode it
-		res, err := http.Get(file.WebContentLink)
-		if err != nil {
-			bgLog().Errorf("Error loading misc image '%s'!! Error: %s", err.Error())
-			return
-		}
-		img, _, err = image.Decode(res.Body)
-		if err != nil {
-			bgLog().Errorf("Error decoding misc image '%s'!! Error: %s", err.Error())
-			continue
-		}
-
-		bgLog().Infof("Loading biasgame misc image: %s", file.Name)
-		switch file.Name {
-		case "verses16.png":
-
-			// resize verses image to match the bias image sizes
-			img = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
-			versesImage = img
-		case "topEightBracket.png":
-
-			winnerBracket = img
+		// resize misc images as needed
+		switch fileName {
+		case "verses.png":
+			versesImage = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
 		case "shadow-border.png":
-
-			img = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
-			shadowBorder = img
+			shadowBorder = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
 		case "crown.png":
-
-			img = resize.Resize(IMAGE_RESIZE_HEIGHT/2, 0, img, resize.Lanczos3)
-			crown = img
+			crown = resize.Resize(IMAGE_RESIZE_HEIGHT/2, 0, img, resize.Lanczos3)
+		case "top-eight-bracket.png":
+			winnerBracket = img
 		}
-
-		// cache misc image
-		buf := new(bytes.Buffer)
-		err = png.Encode(buf, img)
-		if err == nil {
-			bgLog().Infof("Setting cache for: %s", file.Name)
-			setBiasGameCache(file.Name, buf.Bytes(), time.Hour*24*7)
-		}
+		bgLog().Infof("Loading biasgame misc image: %s", fileName)
 	}
 
 	// append crown to top eight
@@ -136,6 +95,7 @@ func loadMiscImages(skipCache bool) {
 // refreshBiasChoices refreshes the list of bias choices.
 //   initially called when bot starts but is also safe to call while bot is running if necessary
 func refreshBiasChoices(skipCache bool) {
+	skipCache = true
 
 	if skipCache == false {
 
@@ -151,54 +111,192 @@ func refreshBiasChoices(skipCache bool) {
 		bgLog().Info("Bias iamges loading from google drive. Cache not set or expired.")
 	}
 
-	// get idol image from google drive
+	var biasEntries []models.BiasEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{})).All(&biasEntries)
+	helpers.Relax(err)
+
+	bgLog().Infof("Loading Bias Images. Images found: %d", len(biasEntries))
+
+	var tempAllBiases []*biasChoice
+
+	var wg sync.WaitGroup
+	mux := new(sync.Mutex)
+	for _, biasEntry := range biasEntries {
+		wg.Add(1)
+		go func(biasEntry models.BiasEntry) {
+			defer wg.Done()
+
+			newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
+
+			mux.Lock()
+			defer mux.Unlock()
+
+			// if the bias already exists, then just add this picture to the image array for the idol
+			for _, currentBias := range tempAllBiases {
+				if currentBias.NameAndGroup == newBiasChoice.NameAndGroup {
+					currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
+					return
+				}
+			}
+			tempAllBiases = append(tempAllBiases, &newBiasChoice)
+		}(biasEntry)
+	}
+	wg.Wait()
+
+	bgLog().Info("Amount of idols loaded: ", len(tempAllBiases))
+	setAllBiases(tempAllBiases)
+
+	// cache all biases
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+	}
+}
+
+// addDriveFileToAllBiases will take a drive file, convert it to a bias object,
+//   and add it to allBiasChoices or add a new image if the idol already exists
+func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
+
+	// get suggestion details and add to biasEntry table
+	biasEntry := models.BiasEntry{
+		ID:         "",
+		Gender:     suggestion.Gender,
+		GroupName:  suggestion.GrouopName,
+		Name:       suggestion.Name,
+		ObjectName: suggestion.ObjectName,
+	}
+
+	// insert file to mongodb
+	_, err := helpers.MDbInsert(models.BiasGameIdolsTable, biasEntry)
+	helpers.Relax(err)
+
+	newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
+
+	// if the bias already exists, then just add this picture to the image array for the idol
+	for _, currentBias := range getAllBiases() {
+		if currentBias.NameAndGroup == newBiasChoice.NameAndGroup {
+			currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
+			return
+		}
+	}
+
+	setAllBiases(append(getAllBiases(), &newBiasChoice))
+
+	// cache all biases
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+	}
+}
+
+// makeBiasChoiceFromBiasEntry takes a mdb biasentry and makes a biasChoice to be used in the game
+func makeBiasChoiceFromBiasEntry(entry models.BiasEntry) biasChoice {
+	// get image bytes
+	imgBytes, err := helpers.RetrieveFile(entry.ObjectName)
+	helpers.Relax(err)
+
+	// resize image to the correct size
+	img, _, err := helpers.DecodeImageBytes(imgBytes)
+	img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
+
+	// AFTER resizing, re-encode the bytes
+	resizedImgBytes := new(bytes.Buffer)
+	encoder := new(png.Encoder)
+	encoder.CompressionLevel = -2
+	encoder.Encode(resizedImgBytes, img)
+
+	// get image hash string
+	helpers.Relax(err)
+	imgHash, err := helpers.GetImageHashString(img)
+	helpers.Relax(err)
+
+	bImage := biasImage{
+		ImageBytes: resizedImgBytes.Bytes(),
+		HashString: imgHash,
+		ObjectName: entry.ObjectName,
+	}
+
+	newBiasChoice := biasChoice{
+		BiasName:     entry.Name,
+		GroupName:    entry.GroupName,
+		Gender:       entry.Gender,
+		NameAndGroup: entry.Name + entry.GroupName,
+		BiasImages:   []biasImage{bImage},
+	}
+	return newBiasChoice
+}
+
+// runGoogleDriveMigration Should only be run on rare occasions when issues occur with object storage or setting up a new object storage
+//  note: takes a very long time to complete
+func runGoogleDriveMigration(msg *discordgo.Message) {
+
+	// get files from drive
 	girlFiles := getFilesFromDriveFolder(GIRLS_FOLDER_ID)
 	boyFiles := getFilesFromDriveFolder(BOYS_FOLDER_ID)
 	allFiles := append(girlFiles, boyFiles...)
 
+	amountMigrated := 0
+
+	// confirm files were found
 	if len(allFiles) > 0 {
-		var wg sync.WaitGroup
-		mux := new(sync.Mutex)
 
-		// set up temp array and load that first to avoid issues with a user startin a game while the biases are being refreshed
-		var tempAllBiases []*biasChoice
+		bgLog().Info("--Migrating google drive biasgame images to object storage. Total images found: ", len(allFiles))
+		for _, file := range allFiles {
+			// determine gender from folder
+			var gender string
+			if file.Parents[0] == GIRLS_FOLDER_ID {
+				gender = "girl"
+			} else {
+				gender = "boy"
+			}
 
-		bgLog().Info("Loading Biasgame Images. Total images found: ", len(allFiles))
-		for i, file := range allFiles {
-			wg.Add(1)
+			// get bias name and group name from file name
+			groupBias := strings.TrimSuffix(file.Name, filepath.Ext(file.Name))
 
-			go func(index int, file *drive.File) {
-				defer wg.Done()
+			biasEntry := models.BiasEntry{
+				ID:        "",
+				DriveID:   file.Id,
+				Gender:    gender,
+				GroupName: strings.Split(groupBias, "_")[0],
+				Name:      strings.Split(groupBias, "_")[1],
+			}
 
-				newBiasChoice, err := makeBiasChoiceFromDriveFile(file)
-				if err != nil {
-					return
-				}
-				// bgLog().Infof("Loading bias: Name: %s, Group: %s, File: %s", newBiasChoice.BiasName, newBiasChoice.GroupName, newBiasChoice.FileName)
+			// check if a record with this drive id already exists
+			//  this means its been migrated before and should not be remigrated
+			count, err := helpers.MdbCount(models.BiasGameIdolsTable, bson.M{"driveid": biasEntry.DriveID})
+			if err != nil {
+				bgLog().Errorf("Error getting count for drive id '%s'. Error: %s", biasEntry.DriveID, err.Error())
+				continue
+			}
+			if count != 0 {
+				bgLog().Infof("Drive id '%s' has already been migrated. Skipping", biasEntry.DriveID)
+				continue
+			}
+			bgLog().Infof("Migrating Drive id '%s'. Idol Name: %s | Group Name: %s", biasEntry.DriveID, biasEntry.Name, biasEntry.GroupName)
 
-				mux.Lock()
-				defer mux.Unlock()
+			// get image
+			res, err := pester.Get(file.WebContentLink)
+			helpers.Relax(err)
+			imgBytes, err := ioutil.ReadAll(res.Body)
 
-				// if the bias already exists, then just add this picture to the image array for the idol
-				for _, currentBias := range tempAllBiases {
-					if currentBias.FileName == newBiasChoice.FileName {
-						currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
-						return
-					}
-				}
+			// store file in object storage
+			objectName, err := helpers.AddFile("", imgBytes, helpers.AddFileMetadata{
+				Filename:           file.WebContentLink,
+				ChannelID:          msg.ChannelID,
+				UserID:             msg.Author.ID,
+				AdditionalMetadata: nil,
+			}, "biasgame", false)
 
-				tempAllBiases = append(tempAllBiases, &newBiasChoice)
-			}(i, file)
+			// set object name
+			biasEntry.ObjectName = objectName
+
+			// insert file to mongodb
+			_, err = helpers.MDbInsert(models.BiasGameIdolsTable, biasEntry)
+			if err != nil {
+				bgLog().Errorf("Error migrating drive id '%s'. Error: %s", biasEntry.DriveID, err.Error())
+			}
+			amountMigrated++
 		}
-		wg.Wait()
-
-		bgLog().Info("Amount of idols loaded: ", len(tempAllBiases))
-		setAllBiases(tempAllBiases)
-
-		// cache all biases
-		if len(getAllBiases()) > 0 {
-			setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
-		}
+		bgLog().Info("--Google drive migration complete--")
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Migration Complete. Files Migrated: %d", amountMigrated))
 
 	} else {
 		bgLog().Warn("No biasgame file found!")
@@ -230,83 +328,4 @@ func getFilesFromDriveFolder(folderId string) []*drive.File {
 	}
 
 	return allFiles
-}
-
-// makeBiasChoiceFromDriveFile
-func makeBiasChoiceFromDriveFile(file *drive.File) (biasChoice, error) {
-	res, err := pester.Get(file.WebContentLink)
-	if err != nil {
-		fmt.Println("get error: ", err.Error())
-		return biasChoice{}, err
-	}
-
-	// decode image
-	img, imgErr := helpers.DecodeImage(res.Body)
-	if imgErr != nil {
-		fmt.Printf("error decoding image %s:\n %s", file.Name, imgErr)
-		return biasChoice{}, imgErr
-	}
-
-	resizedImage := resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
-
-	// get bias name and group name from file name
-	groupBias := strings.TrimSuffix(file.Name, filepath.Ext(file.Name))
-
-	var gender string
-	if file.Parents[0] == GIRLS_FOLDER_ID {
-		gender = "girl"
-	} else {
-		gender = "boy"
-	}
-
-	// encode image with png encoding
-	var imageBuffer bytes.Buffer
-	err = png.Encode(&imageBuffer, resizedImage)
-	helpers.Relax(err)
-	imgBytes := imageBuffer.Bytes()
-
-	// create the first biasImage
-	imgHash, err := helpers.GetImageHashString(resizedImage)
-	helpers.Relax(err)
-	bImg := biasImage{
-		ImageBytes: imgBytes,
-		HashString: imgHash,
-	}
-
-	newBiasChoice := biasChoice{
-		FileName:       file.Name,
-		DriveId:        file.Id,
-		WebViewLink:    file.WebViewLink,
-		WebContentLink: file.WebContentLink,
-		GroupName:      strings.Split(groupBias, "_")[0],
-		BiasName:       strings.Split(groupBias, "_")[1],
-		BiasImages:     []biasImage{bImg},
-		Gender:         gender,
-	}
-
-	return newBiasChoice, nil
-}
-
-// addDriveFileToAllBiases will take a drive file, convert it to a bias object,
-//   and add it to allBiasChoices or add a new image if the idol already exists
-func addDriveFileToAllBiases(file *drive.File) {
-	newBiasChoice, err := makeBiasChoiceFromDriveFile(file)
-	if err != nil {
-		return
-	}
-
-	// if the bias already exists, then just add this picture to the image array for the idol
-	for _, currentBias := range getAllBiases() {
-		if currentBias.FileName == newBiasChoice.FileName {
-			currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
-			return
-		}
-	}
-
-	setAllBiases(append(getAllBiases(), &newBiasChoice))
-
-	// cache all biases
-	if len(getAllBiases()) > 0 {
-		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
-	}
 }

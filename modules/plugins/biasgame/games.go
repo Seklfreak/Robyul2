@@ -24,22 +24,15 @@ type BiasGame struct{}
 type biasImage struct {
 	ImageBytes []byte
 	HashString string
+	ObjectName string
 }
 
 type biasChoice struct {
-	// info directly from google drive
-	FileName       string
-	DriveId        string
-	WebViewLink    string
-	WebContentLink string
-	Gender         string
-
-	// image
-	BiasImages []biasImage
-
-	// bias info
-	BiasName  string
-	GroupName string
+	BiasName     string
+	GroupName    string
+	Gender       string
+	NameAndGroup string
+	BiasImages   []biasImage
 }
 
 type singleBiasGame struct {
@@ -80,7 +73,6 @@ const (
 	DRIVE_SEARCH_TEXT       = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
 	GIRLS_FOLDER_ID         = "1CIM6yrvZOKn_R-qWYJ6pISHyq-JQRkja"
 	BOYS_FOLDER_ID          = "1psrhQQaV0kwPhAMtJ7LYT2SWgLoyDb-J"
-	MISC_FOLDER_ID          = "1-HdvH5fiOKuZvPPVkVMILZxkjZKv9x_x"
 	IMAGE_RESIZE_HEIGHT     = 150
 	LEFT_ARROW_EMOJI        = "⬅"
 	RIGHT_ARROW_EMOJI       = "➡"
@@ -166,7 +158,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 
 	// load all images and information
 	refreshBiasChoices(false)
-	loadMiscImages(false)
+	loadMiscImages()
 	startBiasCacheRefreshLoop()
 
 	// set up suggestions channel
@@ -215,7 +207,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 	// images, suggestions, and stat set up are done async when bot starts up
 	//   make sure game is ready before trying to process any commands
 	if gameIsReady == false {
-		helpers.SendMessage(msg.ChannelID, "plugins.biasgame.game.game-not-ready")
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.game-not-ready"))
 		return
 	}
 
@@ -240,6 +232,12 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 		} else if commandArgs[0] == "suggest" {
 
 			processImageSuggestion(msg, content)
+
+		} else if commandArgs[0] == "migrate-drive-images" {
+
+			helpers.RequireBotAdmin(msg, func() {
+				runGoogleDriveMigration(msg)
+			})
 
 		} else if commandArgs[0] == "images" {
 
@@ -849,11 +847,11 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 
 	// check if a random image for the idol has already been chosen for this game
 	//  also make sure that biasimages array contains the index. it may have been changed due to a refresh from googledrive
-	if imagePos, ok := (*gameImageIndex)[b.FileName]; ok && len(b.BiasImages) > imagePos {
+	if imagePos, ok := (*gameImageIndex)[b.NameAndGroup]; ok && len(b.BiasImages) > imagePos {
 		imageIndex = imagePos
 	} else {
 		imageIndex = rand.Intn(len(b.BiasImages))
-		(*gameImageIndex)[b.FileName] = imageIndex
+		(*gameImageIndex)[b.NameAndGroup] = imageIndex
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].ImageBytes))

@@ -17,8 +17,6 @@ import (
 	"github.com/mgutz/str"
 	"github.com/nfnt/resize"
 	"github.com/sethgrid/pester"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 )
 
 const (
@@ -34,7 +32,6 @@ const (
 
 var suggestionQueue []*models.BiasGameSuggestionEntry
 var suggestionEmbedMessageId string // id of the embed message where suggestions are accepted/denied
-var genderFolderMap map[string]string
 var exampleRoundPicId string
 var suggestionQueueCountMessageId string
 
@@ -60,21 +57,11 @@ func initSuggestionChannel() {
 	loadUnresolvedSuggestions()
 	updateSuggestionQueueCount()
 	updateCurrentSuggestionEmbed()
-
-	genderFolderMap = map[string]string{
-		"boy":  BOYS_FOLDER_ID,
-		"girl": GIRLS_FOLDER_ID,
-	}
 }
 
 // processImageSuggestion
 func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	defer helpers.Recover()
-
-	// todo: move this to i18n
-	invalidArgsMessage := "Invalid suggestion arguments. \n\n" +
-		"Suggestion must be done with the following format:\n```!biasgame suggest [boy/girl] \"group name\" \"idol name\" [url to image]```\n" +
-		"For Example:\n```!biasgame suggest girl \"PRISTIN\" \"Nayoung\" https://cdn.discordapp.com/attachments/420049316615553026/420056295618510849/unknown.png```\n\n"
 
 	// ToArgv can panic, need to catch that
 	suggestionArgs := str.ToArgv(msgContent)[1:]
@@ -83,13 +70,13 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	// validate suggestion arg amount.
 	if len(msg.Attachments) == 1 {
 		if len(suggestionArgs) != 3 {
-			helpers.SendMessage(msg.ChannelID, invalidArgsMessage)
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-suggestion"))
 			return
 		}
 		suggestedImageUrl = msg.Attachments[0].URL
 	} else {
 		if len(suggestionArgs) != 4 {
-			helpers.SendMessage(msg.ChannelID, invalidArgsMessage)
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-suggestion"))
 			return
 		}
 		suggestedImageUrl = suggestionArgs[3]
@@ -98,7 +85,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	// set gender to lowercase and check if its valid
 	suggestionArgs[0] = strings.ToLower(suggestionArgs[0])
 	if suggestionArgs[0] != "girl" && suggestionArgs[0] != "boy" {
-		helpers.SendMessage(msg.ChannelID, invalidArgsMessage)
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-suggestion"))
 		return
 	}
 
@@ -177,6 +164,10 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 		}
 	}
 
+	// must resize image when suggestion is made. the same file that
+	//   is created by the suggested will be used by the game if its accepted
+	suggestedImage = resize.Resize(0, IMAGE_RESIZE_HEIGHT, suggestedImage, resize.Lanczos3)
+
 	// upload file
 	buf := new(bytes.Buffer)
 	err = png.Encode(buf, suggestedImage)
@@ -250,40 +241,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 				defer cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, msg[0].ID)
 			}
 
-			// make call to get suggestion image
-			res, err := pester.Get(cs.ImageURL)
-			if err != nil {
-				msg, _ := helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, helpers.GetText("plugins.biasgame.suggestion.could-not-decode"))
-				go helpers.DeleteMessageWithDelay(msg[0], time.Second*15)
-				return
-			}
-
-			approvedImage, err := helpers.DecodeImage(res.Body)
-			if err != nil {
-				msg, _ := helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, helpers.GetText("plugins.biasgame.suggestion.could-not-decode"))
-				go helpers.DeleteMessageWithDelay(msg[0], time.Second*15)
-				return
-			}
-
-			approvedImage = resize.Resize(0, IMAGE_RESIZE_HEIGHT, approvedImage, resize.Lanczos3)
-
-			buf := new(bytes.Buffer)
-			encoder := new(png.Encoder)
-			encoder.CompressionLevel = -2 // -2 compression is best speed
-			encoder.Encode(buf, approvedImage)
-			myReader := bytes.NewReader(buf.Bytes())
-
-			// upload image to google drive
-			go func() {
-
-				file_meta := &drive.File{Name: fmt.Sprintf("%s_%s.png", cs.GrouopName, cs.Name), Parents: []string{genderFolderMap[cs.Gender]}}
-				approvedFiles, err := cache.GetGoogleDriveService().Files.Create(file_meta).Media(myReader).Fields(googleapi.Field("name, id, parents, webViewLink, webContentLink")).Do()
-				if err != nil {
-					fmt.Println("error: ", err.Error())
-					return
-				}
-				addDriveFileToAllBiases(approvedFiles)
-			}()
+			addSuggestionToGame(cs)
 
 			// set image accepted image
 			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Approved** <:SeemsBlob:422158571115905034>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
@@ -306,15 +264,17 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			// image was denied
 			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Denied** <:NotLikeBlob:422163995869315082>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "denied"
+
+			// remove file from objectstorage
+			//  important note: only delete if the image was denied. when an image
+			//                  is accepted the same object storage file is used for the game
+			go helpers.DeleteFile(cs.ObjectName)
 		}
 
 		// update db record
 		cs.ProcessedByUserId = reaction.UserID
 		cs.LastModifiedOn = time.Now()
 		go helpers.MDbUpsertID(models.BiasGameSuggestionsTable, cs.ID, cs)
-
-		// remove file from objectstorage
-		go helpers.DeleteFile(cs.ObjectName)
 
 		// send a message to the user who suggested the image
 		dmChannel, err := cache.GetSession().UserChannelCreate(cs.UserID)
