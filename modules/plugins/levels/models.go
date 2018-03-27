@@ -354,6 +354,10 @@ func (l *Levels) GetProfileBackgroundUrl(userdata models.ProfileUserdataEntry) (
 	}
 
 	if userdata.Background != "" {
+		if strings.HasPrefix(userdata.Background, "http://") ||
+			strings.HasPrefix(userdata.Background, "https://") {
+			return userdata.Background
+		}
 		link = l.GetProfileBackgroundUrlByName(userdata.Background)
 		if link != "" {
 			return link
