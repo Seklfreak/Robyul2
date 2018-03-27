@@ -992,8 +992,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireAdmin(msg, func() {
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 7 {
-								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+								helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 								return
 							}
 
@@ -1016,6 +1015,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							helpers.Relax(err)
 
 							imageUrl, err := helpers.UploadImage(badgeData)
+							if err != nil {
+								if _, ok := err.(*url.Error); ok {
+									helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+									return
+								}
+							}
 							helpers.Relax(err)
 
 							newBadge := new(DB_Badge)
@@ -3957,7 +3962,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 				"limit": 1,
 				"user":  lastfmUsername,
 			})
-			helpers.RelaxLog(err)
+			if err != nil && !strings.Contains(err.Error(), "User not found") {
+				helpers.RelaxLog(err)
+			}
 			if err == nil && recentTracks.Tracks != nil && len(recentTracks.Tracks) >= 1 && recentTracks.Tracks[0].NowPlaying == "true" {
 				playingStatus += fmt.Sprintf("<i class=\"fa fa-music\" aria-hidden=\"true\"></i> %s by %s",
 					recentTracks.Tracks[0].Name, recentTracks.Tracks[0].Artist.Name)
@@ -3967,7 +3974,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 				"period": "overall",
 				"user":   lastfmUsername,
 			})
-			helpers.RelaxLog(err)
+			if err != nil && !strings.Contains(err.Error(), "User not found") {
+				helpers.RelaxLog(err)
+			}
 			if err == nil && topArtists.Artists != nil && len(topArtists.Artists) >= 1 {
 				if playingStatus != "" {
 					playingStatus += "<br>"
