@@ -140,8 +140,10 @@ func refreshBiasChoices(skipCache bool) {
 	if skipCache == false {
 
 		// attempt to get redis cache, return if its successful
-		err := getBiasGameCache("allbiaschoices", &allBiasChoices)
+		var tempAllBiases []*biasChoice
+		err := getBiasGameCache("allbiaschoices", &tempAllBiases)
 		if err == nil {
+			setAllBiases(tempAllBiases)
 			bgLog().Info("Biasgame images loaded from cache")
 			return
 		}
@@ -191,11 +193,11 @@ func refreshBiasChoices(skipCache bool) {
 		wg.Wait()
 
 		bgLog().Info("Amount of idols loaded: ", len(tempAllBiases))
-		allBiasChoices = tempAllBiases
+		setAllBiases(tempAllBiases)
 
 		// cache all biases
-		if len(allBiasChoices) > 0 {
-			setBiasGameCache("allbiaschoices", allBiasChoices, time.Hour*24*7)
+		if len(getAllBiases()) > 0 {
+			setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
 		}
 
 	} else {
@@ -294,17 +296,17 @@ func addDriveFileToAllBiases(file *drive.File) {
 	}
 
 	// if the bias already exists, then just add this picture to the image array for the idol
-	for _, currentBias := range allBiasChoices {
+	for _, currentBias := range getAllBiases() {
 		if currentBias.FileName == newBiasChoice.FileName {
 			currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
 			return
 		}
 	}
 
-	allBiasChoices = append(allBiasChoices, &newBiasChoice)
+	setAllBiases(append(getAllBiases(), &newBiasChoice))
 
 	// cache all biases
-	if len(allBiasChoices) > 0 {
-		setBiasGameCache("allbiaschoices", allBiasChoices, time.Hour*24*7)
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
 	}
 }

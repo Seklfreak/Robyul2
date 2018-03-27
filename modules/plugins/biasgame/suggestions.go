@@ -68,7 +68,7 @@ func initSuggestionChannel() {
 }
 
 // processImageSuggestion
-func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
+func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	defer helpers.Recover()
 
 	// todo: move this to i18n
@@ -146,7 +146,7 @@ func ProcessImageSuggestion(msg *discordgo.Message, msgContent string) {
 	helpers.Relax(err)
 
 	// compare the given image to all images currently available in the game
-	for _, bias := range allBiasChoices {
+	for _, bias := range getAllBiases() {
 		for _, curBImage := range bias.BiasImages {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
 			if err != nil {
@@ -413,7 +413,7 @@ func updateCurrentSuggestionEmbed() {
 		suggestedFromCh, err := cache.GetSession().Channel(cs.ChannelID)
 		suggestedFrom, err := cache.GetSession().Guild(suggestedFromCh.GuildID)
 		if err == nil {
-			suggestedFromText = fmt.Sprintf("%s | #%s", suggestedFrom.Name, suggestedFromCh.Name)
+			suggestedFromText = fmt.Sprintf("G: %s \nC: #%s", suggestedFrom.Name, suggestedFromCh.Name)
 		}
 
 		// if the group name and idol name were matched show a checkmark, otherwise show a question mark
@@ -502,6 +502,9 @@ func updateCurrentSuggestionEmbed() {
 	// delete old embed message
 	cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, suggestionEmbedMessageId)
 
+	// delete any other messages in the suggestions channel
+	clearSuggestionsChannel()
+
 	// send new embed message
 	var embedMsg *discordgo.Message
 	embedMsg, _ = cache.GetSession().ChannelMessageSendComplex(IMAGE_SUGGESTION_CHANNEL, msgSend)
@@ -546,7 +549,7 @@ func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 
 	// create map of group => idols in group
 	groupIdolMap := make(map[string][]string)
-	for _, bias := range allBiasChoices {
+	for _, bias := range getAllBiases() {
 		groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], bias.BiasName)
 	}
 
@@ -583,7 +586,7 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 	var matchingImagesBytes [][]byte
 
 	// compare the given image to all images currently available in the game
-	for _, bias := range allBiasChoices {
+	for _, bias := range getAllBiases() {
 		for _, curBImage := range bias.BiasImages {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
 			if err != nil {
@@ -600,5 +603,23 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 
 	if len(matchingImagesBytes) > 0 {
 		sendPagedEmbedOfImages(msg, matchingImagesBytes, "Possible Matching Images", fmt.Sprintf("Images Found: %d", len(matchingImagesBytes)))
+	}
+}
+
+// clearSuggestionsChannel delete messages in the suggestions channel
+//  that are NOT part of the initial setup or the suggestions embed itself
+func clearSuggestionsChannel() {
+
+	// if a suggestion embed has not been set then do nothing
+	if suggestionEmbedMessageId == "" {
+		return
+	}
+
+	// get newer messages
+	messagesArray, err := cache.GetSession().ChannelMessages(IMAGE_SUGGESTION_CHANNEL, 100, "", suggestionEmbedMessageId, "")
+	helpers.Relax(err)
+
+	for _, msg := range messagesArray {
+		cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, msg.ID)
 	}
 }

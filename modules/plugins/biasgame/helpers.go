@@ -80,7 +80,7 @@ func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasC
 
 	// create map of group => idols in group
 	groupIdolMap := make(map[string][]*biasChoice)
-	for _, bias := range allBiasChoices {
+	for _, bias := range getAllBiases() {
 		groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], bias)
 	}
 
@@ -175,4 +175,24 @@ func makeVSImage(img1, img2 image.Image) image.Image {
 	// combind images
 	img1 = helpers.CombineTwoImages(img1, versesImage)
 	return helpers.CombineTwoImages(img1, img2)
+}
+
+// getAllBiases getter for all biases
+func getAllBiases() []*biasChoice {
+	allBiasesMutex.RLock()
+	defer allBiasesMutex.RUnlock()
+
+	if allBiasChoices == nil {
+		return nil
+	}
+
+	return allBiasChoices
+}
+
+// setAllBiases setter for all biases
+func setAllBiases(biases []*biasChoice) {
+	allBiasesMutex.Lock()
+	defer allBiasesMutex.Unlock()
+
+	allBiasChoices = biases
 }

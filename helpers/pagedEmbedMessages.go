@@ -39,11 +39,6 @@ func init() {
 
 // GetPagedMessage will return the paged message if there is one, otherwill will return nil
 func GetPagedMessage(messageID string) *pagedEmbedMessage {
-	cache.GetLogger().Info("Attempt to update messageid: ", messageID)
-	// spew.Dump(pagedEmbededMessages)
-	for k, _ := range pagedEmbededMessages {
-		cache.GetLogger().Infof("Msg id: %s", k)
-	}
 	pagedMessaged, _ := pagedEmbededMessages[messageID]
 	return pagedMessaged
 }

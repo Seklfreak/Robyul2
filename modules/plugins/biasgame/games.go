@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -106,6 +107,7 @@ var currentMultiPlayerGames []*multiBiasGame
 
 // holds all available idols in the game
 var allBiasChoices []*biasChoice
+var allBiasesMutex sync.RWMutex
 
 // game configs
 var allowedGameSizes map[int]bool
@@ -237,13 +239,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 		} else if commandArgs[0] == "suggest" {
 
-			// // create map of group => idols in group
-			// groupIdolMap := make(map[string][]string)
-			// for _, bias := range allBiasChoices {
-			// 	groupIdolMap[bias.groupName] = append(groupIdolMap[bias.groupName], bias.biasName)
-			// }
-
-			ProcessImageSuggestion(msg, content)
+			processImageSuggestion(msg, content)
 
 		} else if commandArgs[0] == "images" {
 
@@ -359,13 +355,13 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 		// if this isn't a mixed game then filter all choices by the gender
 		if gameGender != "mixed" {
 
-			for _, bias := range allBiasChoices {
+			for _, bias := range getAllBiases() {
 				if bias.Gender == gameGender {
 					biasChoices = append(biasChoices, bias)
 				}
 			}
 		} else {
-			biasChoices = allBiasChoices
+			biasChoices = getAllBiases()
 		}
 
 		// confirm we have enough biases to choose from for the game size this should be
@@ -601,13 +597,13 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	// if this isn't a mixed game then filter all choices by the gender
 	if gameGender != "mixed" {
 
-		for _, bias := range allBiasChoices {
+		for _, bias := range getAllBiases() {
 			if bias.Gender == gameGender {
 				biasChoices = append(biasChoices, bias)
 			}
 		}
 	} else {
-		biasChoices = allBiasChoices
+		biasChoices = getAllBiases()
 	}
 
 	// confirm we have enough biases for a multiplayer game
