@@ -327,3 +327,11 @@ func getBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []string) []mo
 
 	return availableBadges
 }
+
+func getBadgeUrl(badge models.ProfileBadgeEntry) (link string) {
+	if badge.URL != "" {
+		return badge.URL
+	}
+	link, _ = helpers.GetFileLink(badge.ObjectName)
+	return link
+}

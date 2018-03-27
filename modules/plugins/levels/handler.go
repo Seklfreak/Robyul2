@@ -710,8 +710,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							badgeData, err = helpers.ScaleImage(badgeData, 28, 28)
 							helpers.Relax(err)
 
-							// TODO: use object storage
-							imageUrl, err := helpers.UploadImage(badgeData)
+							objectName, err := helpers.AddFile("", badgeData, helpers.AddFileMetadata{
+								Filename:  "",
+								ChannelID: msg.ChannelID,
+								UserID:    msg.Author.ID,
+							}, "levels", true)
 							if err != nil {
 								if _, ok := err.(*url.Error); ok {
 									helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -726,7 +729,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							newBadge.CreatedAt = time.Now()
 							newBadge.Category = strings.ToLower(args[2])
 							newBadge.Name = strings.ToLower(args[3])
-							newBadge.URL = imageUrl
+							newBadge.ObjectName = objectName
 							newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
 							newBadge.LevelRequirement, err = strconv.Atoi(args[6])
 							if err != nil {
@@ -765,26 +768,6 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									}
 								}
 							}
-							picData, err := helpers.NetGetUAWithError(newBadge.URL, helpers.DEFAULT_UA)
-							if err != nil {
-								if _, ok := err.(*url.Error); ok {
-									_, err = helpers.SendMessage(msg.ChannelID, "Invalid url.")
-									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-								} else {
-									helpers.Relax(err)
-								}
-								return
-							}
-							newBadge.URL, err = helpers.UploadImage(picData)
-							if err != nil {
-								if strings.Contains(err.Error(), "Invalid URL") {
-									_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
-									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-								} else {
-									helpers.Relax(err)
-								}
-								return
-							}
 
 							badgeFound := getBadge(newBadge.Category, newBadge.Name, channel.GuildID)
 							if badgeFound.ID != "" {
@@ -821,7 +804,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									},
 									{
 										Key:   "badge_url",
-										Value: newBadge.URL,
+										Value: getBadgeUrl(*newBadge),
 									},
 									{
 										Key:   "badge_bordercolor",
@@ -895,7 +878,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									},
 									{
 										Key:   "badge_url",
-										Value: badgeFound.URL,
+										Value: getBadgeUrl(badgeFound),
 									},
 									{
 										Key:   "badge_bordercolor",
@@ -968,7 +951,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 
 								resultText += fmt.Sprintf("**%s%s**: URL: <%s>, Border Color: #%s, Requirement: %s, Allowed Users: %d, Denied Users %d\n",
-									globalText, badge.Name, badge.URL, badge.BorderColor, requirementText, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
+									globalText, badge.Name, getBadgeUrl(badge), badge.BorderColor, requirementText, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
 								)
 							}
 							resultText += fmt.Sprintf("I found %d badges in this category.\n",
@@ -1084,7 +1067,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToAllow.URL,
+											Value: getBadgeUrl(badgeToAllow),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1145,7 +1128,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToAllow.URL,
+											Value: getBadgeUrl(badgeToAllow),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1242,7 +1225,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToDeny.URL,
+											Value: getBadgeUrl(badgeToDeny),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1303,7 +1286,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToDeny.URL,
+											Value: getBadgeUrl(badgeToDeny),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -3283,9 +3266,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	var badgesHTML1, badgesHTML2 string
 	for i, badge := range badgesToDisplay {
 		if i <= 8 {
-			badgesHTML1 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+			badgesHTML1 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", getBadgeUrl(badge), badge.BorderColor)
 		} else {
-			badgesHTML2 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+			badgesHTML2 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", getBadgeUrl(badge), badge.BorderColor)
 		}
 	}
 
