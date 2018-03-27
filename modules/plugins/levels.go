@@ -4327,7 +4327,7 @@ func (m *Levels) getLevelsServerUserOrCreateNewWithoutLogging(guildid string, us
 		&serveruser,
 	)
 
-	if err != nil && strings.Contains(err.Error(), "not found") {
+	if err != nil && helpers.IsMdbNotFound(err) {
 		serveruser.UserID = userid
 		serveruser.GuildID = guildid
 		newid, err := helpers.MDbInsertWithoutLogging(models.LevelsServerusersTable, serveruser)

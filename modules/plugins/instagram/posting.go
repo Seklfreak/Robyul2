@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	goinstaResponse "github.com/ahmdrz/goinsta/response"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -86,5 +87,133 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 	_, err := helpers.SendComplex(channelID, messageSend)
 	if err != nil {
 		cache.GetLogger().WithField("module", "instagram").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
+	}
+}
+
+func (m *Handler) postLiveToChannel(channelID string, instagramUser Instagram_User) {
+	instagramNameModifier := ""
+	if instagramUser.IsVerified {
+		instagramNameModifier += " ☑"
+	}
+	if instagramUser.IsPrivate {
+		instagramNameModifier += " 🔒"
+	}
+	if instagramUser.IsBusiness {
+		instagramNameModifier += " 🏢"
+	}
+	if instagramUser.IsFavorite {
+		instagramNameModifier += " ⭐"
+	}
+
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:     helpers.GetTextF("plugins.instagram.live-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
+		URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.instagram.embed-footer"),
+			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
+		},
+		Image: &discordgo.MessageEmbedImage{URL: instagramUser.Broadcast.CoverFrameURL},
+		Color: helpers.GetDiscordColorFromHex(hexColor),
+	}
+
+	mediaUrl := channelEmbed.URL
+
+	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
+		Content: fmt.Sprintf("<%s>", mediaUrl),
+		Embed:   channelEmbed,
+	})
+	if err != nil {
+		cache.GetLogger().WithField("module", "instagram").Warnf("posting broadcast: #%d to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err.Error())
+	}
+}
+
+func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postMode models.InstagramSendPostType) {
+	instagramNameModifier := ""
+	if story.Reel.User.IsVerified {
+		instagramNameModifier += " ☑"
+	}
+	if story.Reel.User.IsPrivate {
+		instagramNameModifier += " 🔒"
+	}
+	/*
+		if story.Reel.User.IsBusiness {
+			instagramNameModifier += " 🏢"
+		}
+		if story.Reel.User.IsFavorite {
+			instagramNameModifier += " ⭐"
+		}
+	*/
+
+	reelMedia := story.Reel.Items[number]
+
+	mediaModifier := "Picture"
+	if reelMedia.MediaType == 2 {
+		mediaModifier = "Video"
+	}
+
+	caption := ""
+	if captionData, ok := reelMedia.Caption.(map[string]interface{}); ok {
+		caption, _ = captionData["text"].(string)
+	}
+
+	var content string
+	channelEmbed := &discordgo.MessageEmbed{
+		Title:     helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier),
+		URL:       fmt.Sprintf(instagramFriendlyUser, story.Reel.User.Username),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: story.Reel.User.ProfilePicURL},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    helpers.GetText("plugins.instagram.embed-footer"),
+			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
+		},
+		Description: caption,
+		Color:       helpers.GetDiscordColorFromHex(hexColor),
+	}
+	if postMode == models.InstagramSendPostTypeDirectLinks {
+		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
+		if caption != "" {
+			content += caption + "\n"
+		}
+	}
+
+	mediaUrl := ""
+	thumbnailUrl := ""
+
+	if len(reelMedia.ImageVersions2.Candidates) > 0 {
+		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(reelMedia.ImageVersions2.Candidates)}
+		mediaUrl = getBestCandidateURL(reelMedia.ImageVersions2.Candidates)
+	}
+	if len(reelMedia.VideoVersions) > 0 {
+		channelEmbed.Video = &discordgo.MessageEmbedVideo{
+			URL: getBestStoryVideoVersionURL(story, number),
+		}
+		if mediaUrl != "" {
+			thumbnailUrl = mediaUrl
+		}
+		mediaUrl = getBestStoryVideoVersionURL(story, number)
+	}
+
+	if mediaUrl != "" {
+		channelEmbed.URL = mediaUrl
+	} else {
+		mediaUrl = channelEmbed.URL
+	}
+
+	content += stripInstagramDirectLink(mediaUrl) + "\n"
+	if thumbnailUrl != "" {
+		content += stripInstagramDirectLink(thumbnailUrl) + "\n"
+	}
+
+	messageSend := &discordgo.MessageSend{
+		Content: content,
+	}
+	if postMode != models.InstagramSendPostTypeDirectLinks {
+		messageSend.Content = fmt.Sprintf("<%s>", stripInstagramDirectLink(mediaUrl))
+		messageSend.Embed = channelEmbed
+	}
+
+	_, err := helpers.SendComplex(channelID, messageSend)
+	if err != nil {
+		cache.GetLogger().WithField("module", "instagram").Warnf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
 	}
 }

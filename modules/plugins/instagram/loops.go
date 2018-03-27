@@ -8,6 +8,8 @@ import (
 
 	"strconv"
 
+	"net/url"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -30,6 +32,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 	defer helpers.Recover()
 	defer func() {
 		go func() {
+			defer helpers.Recover()
 			log.Error("The checkInstagramGraphQlFeedLoop died." +
 				"Please investigate! Will be restarted in 60 seconds")
 			time.Sleep(60 * time.Second)
@@ -41,7 +44,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 		bundledEntries, entriesCount, err := m.getBundledEntries()
 		helpers.Relax(err)
 
-		cache.GetLogger().Infof(
+		log.Infof(
 			"checking graphql feed on %d accounts for %d feeds with %d workers",
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers)
 		start := time.Now()
@@ -73,7 +76,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 			<-results
 		}
 		elapsed := time.Since(start)
-		cache.GetLogger().Infof(
+		log.Infof(
 			"checked graphql feed on %d accounts for %d feeds with %d workers, took %s",
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers, elapsed)
 		metrics.InstagramGraphQlFeedRefreshTime.Set(elapsed.Seconds())
@@ -103,7 +106,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 			if err != nil {
 				if m.retryOnError(err) {
 					cache.GetLogger().WithField("module", "instagram").Infof(
-						"proxy error connecting to Instagram Account %d (GraphQL), "+
+						"proxy error connecting to Instagram Account %s (GraphQL), "+
 							"switching proxy and then trying again", instagramAccountID)
 					currentProxy, err = helpers.GetRandomProxy()
 					helpers.Relax(err)
@@ -237,7 +240,7 @@ func (m *Handler) checkInstagramStoryLoop() {
 					goto RetryAccount
 				}
 				log.WithField("module", "instagram").Warnf(
-					"updating instagram account %d (Story) failed: %s", instagramAccountID, err)
+					"updating instagram account %s (Story) failed: %s", instagramAccountID, err)
 				continue
 			}
 
@@ -334,10 +337,7 @@ func (m *Handler) unlockEntry(entryID bson.ObjectId) {
 
 func (m *Handler) retryOnError(err error) (retry bool) {
 	if err != nil {
-		if strings.Contains(err.Error(), "expected status 200; got 429") ||
-			strings.Contains(err.Error(), "request canceled while waiting for connection") ||
-			strings.Contains(err.Error(), "connect: no route to host") ||
-			strings.Contains(err.Error(), "read: connection reset by peer") ||
+		if _, ok := err.(*url.Error); ok ||
 			strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 			return true
 		}

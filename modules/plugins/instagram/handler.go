@@ -8,13 +8,10 @@ import (
 
 	"time"
 
-	"net/url"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/ahmdrz/goinsta"
-	goinstaResponse "github.com/ahmdrz/goinsta/response"
 	goinstaStore "github.com/ahmdrz/goinsta/store"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
@@ -48,7 +45,10 @@ func (m *Handler) Init(session *discordgo.Session) {
 
 		var err error
 
-		go m.checkInstagramGraphQlFeedLoop()
+		go func() {
+			defer helpers.Recover()
+			m.checkInstagramGraphQlFeedLoop()
+		}()
 		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
 
 		//cache.GetRedisClient().Del(instagramSessionKey).Result()
@@ -87,7 +87,10 @@ func (m *Handler) Init(session *discordgo.Session) {
 		instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
 		helpers.Relax(err)
 
-		go m.checkInstagramStoryLoop()
+		go func() {
+			defer helpers.Recover()
+			m.checkInstagramStoryLoop()
+		}()
 		cache.GetLogger().WithField("module", "instagram").Info("Started checkInstagramStoryLoop")
 	}()
 }
@@ -232,7 +235,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					)
 
 					if err != nil {
-						if strings.Contains(err.Error(), "not found") {
+						if helpers.IsMdbNotFound(err) {
 							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.instagram.account-delete-not-found-error"))
 							return
 						}
@@ -322,7 +325,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				)
 
 				if err != nil {
-					if strings.Contains(err.Error(), "not found") {
+					if helpers.IsMdbNotFound(err) {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 						return
 					}
@@ -449,187 +452,4 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 	} else {
 		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 	}
-}
-
-func (m *Handler) postLiveToChannel(channelID string, instagramUser Instagram_User) {
-	instagramNameModifier := ""
-	if instagramUser.IsVerified {
-		instagramNameModifier += " ☑"
-	}
-	if instagramUser.IsPrivate {
-		instagramNameModifier += " 🔒"
-	}
-	if instagramUser.IsBusiness {
-		instagramNameModifier += " 🏢"
-	}
-	if instagramUser.IsFavorite {
-		instagramNameModifier += " ⭐"
-	}
-
-	channelEmbed := &discordgo.MessageEmbed{
-		Title:     helpers.GetTextF("plugins.instagram.live-embed-title", instagramUser.FullName, instagramUser.Username, instagramNameModifier),
-		URL:       fmt.Sprintf(instagramFriendlyUser, instagramUser.Username),
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: instagramUser.ProfilePic.URL},
-		Footer: &discordgo.MessageEmbedFooter{
-			Text:    helpers.GetText("plugins.instagram.embed-footer"),
-			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
-		},
-		Image: &discordgo.MessageEmbedImage{URL: instagramUser.Broadcast.CoverFrameURL},
-		Color: helpers.GetDiscordColorFromHex(hexColor),
-	}
-
-	mediaUrl := channelEmbed.URL
-
-	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
-		Content: fmt.Sprintf("<%s>", mediaUrl),
-		Embed:   channelEmbed,
-	})
-	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Warnf("posting broadcast: #%d to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err.Error())
-	}
-}
-
-func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postMode models.InstagramSendPostType) {
-	instagramNameModifier := ""
-	if story.Reel.User.IsVerified {
-		instagramNameModifier += " ☑"
-	}
-	if story.Reel.User.IsPrivate {
-		instagramNameModifier += " 🔒"
-	}
-	/*
-		if story.Reel.User.IsBusiness {
-			instagramNameModifier += " 🏢"
-		}
-		if story.Reel.User.IsFavorite {
-			instagramNameModifier += " ⭐"
-		}
-	*/
-
-	reelMedia := story.Reel.Items[number]
-
-	mediaModifier := "Picture"
-	if reelMedia.MediaType == 2 {
-		mediaModifier = "Video"
-	}
-
-	caption := ""
-	if captionData, ok := reelMedia.Caption.(map[string]interface{}); ok {
-		caption, _ = captionData["text"].(string)
-	}
-
-	var content string
-	channelEmbed := &discordgo.MessageEmbed{
-		Title:     helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier),
-		URL:       fmt.Sprintf(instagramFriendlyUser, story.Reel.User.Username),
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: story.Reel.User.ProfilePicURL},
-		Footer: &discordgo.MessageEmbedFooter{
-			Text:    helpers.GetText("plugins.instagram.embed-footer"),
-			IconURL: helpers.GetText("plugins.instagram.embed-footer-imageurl"),
-		},
-		Description: caption,
-		Color:       helpers.GetDiscordColorFromHex(hexColor),
-	}
-	if postMode == models.InstagramSendPostTypeDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.reelmedia-embed-title", story.Reel.User.FullName, story.Reel.User.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
-		if caption != "" {
-			content += caption + "\n"
-		}
-	}
-
-	mediaUrl := ""
-	thumbnailUrl := ""
-
-	if len(reelMedia.ImageVersions2.Candidates) > 0 {
-		channelEmbed.Image = &discordgo.MessageEmbedImage{URL: getBestCandidateURL(reelMedia.ImageVersions2.Candidates)}
-		mediaUrl = getBestCandidateURL(reelMedia.ImageVersions2.Candidates)
-	}
-	if len(reelMedia.VideoVersions) > 0 {
-		channelEmbed.Video = &discordgo.MessageEmbedVideo{
-			URL: getBestStoryVideoVersionURL(story, number),
-		}
-		if mediaUrl != "" {
-			thumbnailUrl = mediaUrl
-		}
-		mediaUrl = getBestStoryVideoVersionURL(story, number)
-	}
-
-	if mediaUrl != "" {
-		channelEmbed.URL = mediaUrl
-	} else {
-		mediaUrl = channelEmbed.URL
-	}
-
-	content += stripInstagramDirectLink(mediaUrl) + "\n"
-	if thumbnailUrl != "" {
-		content += stripInstagramDirectLink(thumbnailUrl) + "\n"
-	}
-
-	messageSend := &discordgo.MessageSend{
-		Content: content,
-	}
-	if postMode != models.InstagramSendPostTypeDirectLinks {
-		messageSend.Content = fmt.Sprintf("<%s>", stripInstagramDirectLink(mediaUrl))
-		messageSend.Embed = channelEmbed
-	}
-
-	_, err := helpers.SendComplex(channelID, messageSend)
-	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Warnf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
-	}
-}
-
-func stripInstagramDirectLink(link string) (result string) {
-	url, err := url.Parse(link)
-	if err != nil {
-		return link
-	}
-	queries := strings.Split(url.RawQuery, "&")
-	var newQueryString string
-	for _, query := range queries {
-		if strings.HasPrefix(query, "ig_cache_key") { // strip ig_cache_key
-			continue
-		}
-		newQueryString += query + "&"
-	}
-	newQueryString = strings.TrimSuffix(newQueryString, "&")
-	url.RawQuery = newQueryString
-	return url.String()
-}
-
-func getBestCandidateURL(imageCandidates []goinstaResponse.ImageCandidate) string {
-	var lastBestCandidate goinstaResponse.ImageCandidate
-	for _, candidate := range imageCandidates {
-		if lastBestCandidate.URL == "" {
-			lastBestCandidate = candidate
-		} else {
-			if candidate.Height > lastBestCandidate.Height || candidate.Width > lastBestCandidate.Width {
-				lastBestCandidate = candidate
-			}
-		}
-	}
-
-	return lastBestCandidate.URL
-}
-
-func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int) string {
-	item := story.Reel.Items[number]
-
-	var lastBestCandidateURL string
-	var lastBestCandidateWidth, lastBestCandidataHeight int
-	for _, version := range item.VideoVersions {
-		if lastBestCandidateURL == "" {
-			lastBestCandidateURL = version.URL
-			lastBestCandidataHeight = version.Height
-			lastBestCandidateWidth = version.Width
-		} else {
-			if version.Height > lastBestCandidataHeight || version.Width > lastBestCandidateWidth {
-				lastBestCandidateURL = version.URL
-				lastBestCandidataHeight = version.Height
-				lastBestCandidateWidth = version.Width
-			}
-		}
-	}
-
-	return lastBestCandidateURL
 }

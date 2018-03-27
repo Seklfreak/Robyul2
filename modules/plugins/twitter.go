@@ -312,7 +312,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				)
 				if err != nil {
 					m.unlockEntry(entryID)
-					if !strings.Contains(err.Error(), "not found") {
+					if !helpers.IsMdbNotFound(err) {
 						helpers.RelaxLog(err)
 					}
 					continue
@@ -521,7 +521,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": helpers.HumanToMdbId(entryId), "guildid": channel.GuildID}),
 						&entryBucket,
 					)
-					if (err != nil && strings.Contains(err.Error(), "not found")) || entryBucket.ID == "" {
+					if helpers.IsMdbNotFound(err) || entryBucket.ID == "" {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitter.account-delete-not-found-error"))
 						return
 					}

@@ -134,7 +134,7 @@ func (m *Dog) getRandomDogLink() (link string) {
 		[]bson.M{{"$sample": bson.M{"size": 1}}},
 		&entryBucket)
 	helpers.RelaxLog(err)
-	if err != nil && strings.Contains(err.Error(), "not found") {
+	if err != nil && helpers.IsMdbNotFound(err) {
 		return ""
 	}
 

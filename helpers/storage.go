@@ -154,7 +154,7 @@ func RetrieveFile(objectName string) (data []byte, err error) {
 	go func() {
 		defer Recover()
 		err := MDbUpdateQuery(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
-		if err != nil && !strings.Contains(err.Error(), "not found") {
+		if err != nil && !IsMdbNotFound(err) {
 			RelaxLog(err)
 		}
 	}()
@@ -281,7 +281,7 @@ func DeleteFile(objectName string) (err error) {
 	go func() {
 		defer Recover()
 		err := MdbDeleteQuery(models.StorageTable, bson.M{"objectname": objectName})
-		if err != nil && !strings.Contains(err.Error(), "not found") {
+		if err != nil && !IsMdbNotFound(err) {
 			RelaxLog(err)
 		}
 	}()
