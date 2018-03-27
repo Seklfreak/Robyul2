@@ -338,6 +338,7 @@ func (m *Handler) unlockEntry(entryID bson.ObjectId) {
 func (m *Handler) retryOnError(err error) (retry bool) {
 	if err != nil {
 		if _, ok := err.(*url.Error); ok ||
+			strings.Contains(err.Error(), "expected status 200; got 429") ||
 			strings.Contains(err.Error(), "Please wait a few minutes before you try again.") {
 			return true
 		}
