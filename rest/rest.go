@@ -19,6 +19,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins"
+	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
@@ -470,7 +471,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 	// TODO: i stuff
 	i := 1
 	var keyByRank string
-	var rankingItem plugins.Levels_Cache_Ranking_Item
+	var rankingItem levels.Levels_Cache_Ranking_Item
 	var userItem models.Rest_User
 	var isMember bool
 	for {
@@ -541,7 +542,7 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 	}
 
 	var err error
-	var rankingItem plugins.Levels_Cache_Ranking_Item
+	var rankingItem levels.Levels_Cache_Ranking_Item
 	rankingsKey := fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildID, userID)
 	cacheCodec := cache.GetRedisCacheCodec()
 
@@ -590,7 +591,7 @@ func GetAllUserRanking(request *restful.Request, response *restful.Response) {
 
 	var err error
 
-	var rankingItem plugins.Levels_Cache_Ranking_Item
+	var rankingItem levels.Levels_Cache_Ranking_Item
 	cacheCodec := cache.GetRedisCacheCodec()
 
 	user, _ := helpers.GetUser(userID)

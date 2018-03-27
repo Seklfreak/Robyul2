@@ -5,6 +5,7 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
 	"github.com/Seklfreak/Robyul2/modules/plugins/google"
 	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
+	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 )
 
@@ -73,7 +74,7 @@ var (
 		&plugins.Bias{},
 		&plugins.GuildAnnouncements{},
 		&plugins.Notifications{},
-		&plugins.Levels{},
+		&levels.Levels{},
 		&plugins.Gallery{},
 		&plugins.Mirror{},
 		&plugins.CustomCommands{},

@@ -10,7 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/generator"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
-	"github.com/Seklfreak/Robyul2/modules/plugins"
+	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/Seklfreak/Robyul2/ratelimits"
 	"github.com/bwmarrin/discordgo"
 )
@@ -63,7 +63,7 @@ func Init(session *discordgo.Session) {
 		listeners = ""
 
 		if helpers.Typeof(*ref) == "*Levels" {
-			generator.SetProfileGenerator((*ref).(*plugins.Levels))
+			generator.SetProfileGenerator((*ref).(*levels.Levels))
 		}
 
 		(*ref).Init(session)
