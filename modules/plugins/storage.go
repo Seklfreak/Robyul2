@@ -115,6 +115,9 @@ func (m *Storage) actionStatus(args []string, in *discordgo.Message, out **disco
 		}
 		totalUserGuildBySourceText += fmt.Sprintf("%s: %.1f %%", strings.Title(sourceName), percentage)
 	}
+	if totalUserGuildBySourceText != "" {
+		totalUserGuildBySourceText = "\n" + totalUserGuildBySourceText
+	}
 	// create total stats text
 	var totalUserBySourceText string
 	for sourceName, sourceStorage := range totalUserBySource {
@@ -123,6 +126,9 @@ func (m *Storage) actionStatus(args []string, in *discordgo.Message, out **disco
 			totalUserBySourceText += ", "
 		}
 		totalUserBySourceText += fmt.Sprintf("%s: %.1f %%", strings.Title(sourceName), percentage)
+	}
+	if totalUserBySourceText != "" {
+		totalUserBySourceText = "\n" + totalUserBySourceText
 	}
 
 	// create display embed
@@ -137,14 +143,14 @@ func (m *Storage) actionStatus(args []string, in *discordgo.Message, out **disco
 				Name: "On " + guild.Name,
 				Value: "**Storage:** " + humanize.Bytes(totalUserGuildStorage) +
 					fmt.Sprintf(" (%d files)", totalUserGuildFiles) +
-					"\n" + totalUserGuildBySourceText +
+					totalUserGuildBySourceText +
 					"\n**Traffic:** " + humanize.Bytes(totalUserGuildTraffic),
 			},
 			{
 				Name: "On all Robyul Servers",
 				Value: "**Storage:** " + humanize.Bytes(totalUserStorage) +
 					fmt.Sprintf(" (%d files)", totalUserFiles) +
-					"\n" + totalUserBySourceText +
+					totalUserBySourceText +
 					"\n**Traffic:** " + humanize.Bytes(totalUserTraffic),
 			},
 		},

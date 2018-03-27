@@ -148,6 +148,14 @@ func NewRestServices() []*restful.WebService {
 
 	service.Route(service.GET("/{filehash}").Filter(webkeyAuthenticate).To(GetFileByFilehash))
 	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/backgrounds").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+	service.Route(service.GET("").Filter(webkeyAuthenticate).To(GetAllBackgrounds))
+	services = append(services, service)
 	return services
 }
 
@@ -1661,5 +1669,35 @@ func SetGuildSettings(request *restful.Request, response *restful.Response) {
 		}
 	}
 
+	return
+}
+
+func GetAllBackgrounds(request *restful.Request, response *restful.Response) {
+	var entryBucket []models.ProfileBackgroundEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.ProfileBackgroundsTable).Find(nil)).All(&entryBucket)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	backgrounds := make([]models.Rest_Background, 0)
+	for _, entry := range entryBucket {
+		link := entry.URL
+		if link == "" {
+			link, err = helpers.GetFileLink(entry.ObjectName)
+			if err != nil {
+				helpers.RelaxLog(err)
+				continue
+			}
+		}
+
+		backgrounds = append(backgrounds, models.Rest_Background{
+			Name: entry.Name,
+			URL:  link,
+			Tags: entry.Tags,
+		})
+	}
+
+	response.WriteEntity(backgrounds)
 	return
 }

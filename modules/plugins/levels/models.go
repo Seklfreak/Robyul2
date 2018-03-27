@@ -335,3 +335,56 @@ func getBadgeUrl(badge models.ProfileBadgeEntry) (link string) {
 	link, _ = helpers.GetFileLink(badge.ObjectName)
 	return link
 }
+
+func (l *Levels) ProfileBackgroundSearch(searchText string) (entryBucket []models.ProfileBackgroundEntry) {
+	err := helpers.MDbIter(helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": bson.M{"$regex": bson.RegEx{Pattern: `.*` + searchText + `.*`, Options: "i"}}}).Sort("name")).All(&entryBucket)
+	if err != nil {
+		panic(err)
+	}
+	return entryBucket
+}
+
+func (l *Levels) GetProfileBackgroundUrl(userdata models.ProfileUserdataEntry) (link string) {
+	if userdata.BackgroundObjectName != "" {
+		link, err := helpers.GetFileLink(userdata.BackgroundObjectName)
+		if err == nil && link != "" {
+			return link
+		}
+		helpers.RelaxLog(err)
+	}
+
+	if userdata.Background != "" {
+		link = l.GetProfileBackgroundUrlByName(userdata.Background)
+		if link != "" {
+			return link
+		}
+	}
+
+	return "http://i.imgur.com/I9b74U9.jpg"
+}
+
+func (l *Levels) GetProfileBackgroundUrlByName(backgroundName string) string {
+	if backgroundName == "" {
+		return ""
+	}
+
+	var entryBucket models.ProfileBackgroundEntry
+	err := helpers.MdbOne(
+		helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(backgroundName)}),
+		&entryBucket,
+	)
+	if err != nil && !helpers.IsMdbNotFound(err) {
+		panic(err)
+	}
+
+	if entryBucket.URL != "" {
+		return entryBucket.URL
+	}
+
+	link, err := helpers.GetFileLink(entryBucket.ObjectName)
+	if err == nil && link != "" {
+		return link
+	}
+
+	return ""
+}

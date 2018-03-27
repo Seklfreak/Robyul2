@@ -21,8 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"regexp"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -86,13 +84,6 @@ func (m *Levels) Commands() []string {
 		"ranking",
 		"rankings",
 	}
-}
-
-type DB_Profile_Background struct {
-	Name      string    `gorethink:"id,omitempty"`
-	URL       string    `gorethink:"url"`
-	CreatedAt time.Time `gorethink:"createdat"`
-	Tags      []string  `gorethink:"tags"`
 }
 
 type Cache_Levels_top struct {
@@ -588,26 +579,33 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 							return
 						}
-						backgroundUrl, err = helpers.UploadImage(picData)
-						if err != nil {
-							if strings.Contains(err.Error(), "Invalid URL") {
-								_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							} else {
-								helpers.Relax(err)
-							}
-							return
-						}
+						objectName, err := helpers.AddFile("", picData, helpers.AddFileMetadata{
+							ChannelID: msg.ChannelID,
+							UserID:    msg.Author.ID,
+						}, "levels", true)
+						helpers.Relax(err)
 
-						if m.ProfileBackgroundNameExists(backgroundName) == true {
+						var entryBucket models.ProfileBackgroundEntry
+						err = helpers.MdbOne(
+							helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(backgroundName)}),
+							&entryBucket,
+						)
+						if !helpers.IsMdbNotFound(err) {
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
 							return
 						}
 
-						err = m.InsertNewProfileBackground(backgroundName, backgroundUrl, tags)
-						if err != nil {
-							helpers.Relax(err)
-						}
+						_, err = helpers.MDbInsert(
+							models.ProfileBackgroundsTable,
+							models.ProfileBackgroundEntry{
+								Name:       strings.ToLower(backgroundName),
+								ObjectName: objectName,
+								CreatedAt:  time.Now(),
+								Tags:       tags,
+							},
+						)
+						helpers.Relax(err)
+
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success",
 							backgroundName, strings.Join(tags, ", ")))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -623,7 +621,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 						backgroundName := strings.ToLower(args[2])
 
-						if m.ProfileBackgroundNameExists(backgroundName) == false {
+						var entryBucket models.ProfileBackgroundEntry
+						err = helpers.MdbOne(
+							helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(backgroundName)}),
+							&entryBucket,
+						)
+						if helpers.IsMdbNotFound(err) {
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-error-not-found"))
 							return
 						}
@@ -633,8 +636,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
 								backgroundName, backgroundUrl),
 							"✅", "🚫") == true {
-							err = m.DeleteProfileBackground(backgroundName)
-							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							err = helpers.MDbDelete(models.ProfileBackgroundsTable, entryBucket.ID)
+							helpers.Relax(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -643,7 +646,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					})
 					return
 				default:
-					if m.ProfileBackgroundNameExists(args[1]) == false {
+					var entryBucket models.ProfileBackgroundEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(args[1])}),
+						&entryBucket,
+					)
+					if helpers.IsMdbNotFound(err) {
 						searchResult := m.ProfileBackgroundSearch(args[1])
 
 						if len(searchResult) <= 0 {
@@ -3015,147 +3023,6 @@ func (l *Levels) BadgePickerActiveText(username string, activeBadgeIDs []string,
 
 func (l *Levels) BadgePickerHelpText() string {
 	return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save. To remove a badge from your Profile pick the badge again.\n"
-}
-
-func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string, tags []string) error {
-	newEntry := new(DB_Profile_Background)
-	newEntry.Name = strings.ToLower(backgroundName)
-	newEntry.URL = backgroundUrl
-	newEntry.CreatedAt = time.Now()
-	newEntry.Tags = tags
-
-	insert := rethink.Table("profile_backgrounds").Insert(newEntry)
-	_, err := insert.RunWrite(helpers.GetDB())
-	return err
-}
-
-func (l *Levels) DeleteProfileBackground(backgroundName string) error {
-	if backgroundName != "" {
-		_, err := rethink.Table("profile_backgrounds").Filter(
-			rethink.Row.Field("id").Eq(backgroundName),
-		).Delete().RunWrite(helpers.GetDB())
-		return err
-	}
-	return nil
-}
-
-func (l *Levels) ProfileBackgroundSearch(searchText string) []DB_Profile_Background {
-	var entryBucket []DB_Profile_Background
-	listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-		return profile.Field("id").Match(fmt.Sprintf("(?i)%s", searchText))
-	}).Limit(5).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	return entryBucket
-}
-
-func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
-	var entryBucket DB_Profile_Background
-	listCursor, err := rethink.Table("profile_backgrounds").Filter(
-		rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		var entryBucket DB_Profile_Background
-		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", regexp.QuoteMeta(backgroundName)))
-		}).Run(helpers.GetDB())
-		if err != nil {
-			panic(err)
-		}
-		defer listCursor.Close()
-		err = listCursor.One(&entryBucket)
-
-		if err == rethink.ErrEmptyResult {
-			return false
-		} else if err != nil {
-			helpers.Relax(err)
-		}
-
-		return true
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	return true
-}
-
-func (l *Levels) GetProfileBackgroundUrl(userdata models.ProfileUserdataEntry) (link string) {
-	if userdata.BackgroundObjectName != "" {
-		link, err := helpers.GetFileLink(userdata.BackgroundObjectName)
-		if err == nil && link != "" {
-			return link
-		}
-		helpers.RelaxLog(err)
-	}
-
-	if userdata.Background != "" {
-		link = l.GetProfileBackgroundUrlByName(userdata.Background)
-		if link != "" {
-			return link
-		}
-	}
-
-	return "http://i.imgur.com/I9b74U9.jpg"
-}
-
-func (l *Levels) GetProfileBackgroundUrlByName(backgroundName string) string {
-	if backgroundName == "" {
-		return ""
-	}
-
-	var entryBucket DB_Profile_Background
-	listCursor, err := rethink.Table("profile_backgrounds").Filter(
-		rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		var entryBucket DB_Profile_Background
-		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", regexp.QuoteMeta(backgroundName)))
-		}).Run(helpers.GetDB())
-		if err != nil {
-			panic(err)
-		}
-		defer listCursor.Close()
-		err = listCursor.One(&entryBucket)
-
-		if err == rethink.ErrEmptyResult {
-			if strings.HasPrefix(backgroundName, "http") {
-				return backgroundName
-			}
-
-			return "http://i.imgur.com/I9b74U9.jpg" // Default Robyul Background
-		} else if err != nil {
-			helpers.Relax(err)
-		}
-
-		return entryBucket.URL
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	return entryBucket.URL
 }
 
 func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileUserdataEntry, err error) {
