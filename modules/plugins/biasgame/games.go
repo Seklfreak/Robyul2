@@ -217,7 +217,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 		if len(commandArgs) == 0 {
 			// start default bias game
-			singleGame := createOrGetSinglePlayerGame(msg, "girl", 32)
+			singleGame := createOrGetSinglePlayerGame(msg, "mixed", 32)
 			singleGame.sendBiasGameRound()
 
 		} else if commandArgs[0] == "stats" {
@@ -279,7 +279,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 			// check if the game size the user wants is valid
 			if allowedGameSizes[gameSize] {
-				singleGame := createOrGetSinglePlayerGame(msg, "girl", gameSize)
+				singleGame := createOrGetSinglePlayerGame(msg, "mixed", gameSize)
 				singleGame.sendBiasGameRound()
 			} else {
 				helpers.SendMessage(msg.ChannelID, "biasgame.game.invalid-game-size")
