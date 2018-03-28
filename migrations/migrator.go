@@ -19,7 +19,6 @@ var migrations = []helpers.Callback{
 	m18_create_table_randompictures_sources,
 	m20_create_table_reactionpolls,
 	m22_create_table_troublemakerlog,
-	m26_create_table_mod_joinlog,
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m75_migration_table_profile_badge,
 	m76_migration_table_profile_backgrounds,
 	m77_migration_table_bias,
+	m78_migration_table_mod_joinlog,
 }
 
 // Run executes all registered migrations

@@ -21,6 +21,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/olebedev/when"
@@ -63,17 +64,6 @@ func (m *Mod) Commands() []string {
 		"batch-roles",
 		"set-bot-dp",
 	}
-}
-
-type DB_Mod_JoinLog struct {
-	ID                        string    `gorethink:"id,omitempty"`
-	GuildID                   string    `gorethink:"guildid"`
-	UserID                    string    `gorethink:"userid"`
-	JoinedAt                  time.Time `gorethink:"joinedat"`
-	InviteCodeUsed            string    `gorethink:"invitecode"`
-	InviteCodeCreatedByUserID string    `gorethink:"invitecode_createdbyuserid"`
-	InviteCodeCreatedAt       time.Time `gorethink:"invitecode_createdat"`
-	VanityInviteUsedName      string    `gorethink:"vanityinvite_name"`
 }
 
 type CacheInviteInformation struct {
@@ -2375,19 +2365,19 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				joinedAt = time.Now()
 			}
 			// Save join in DB
-			newJoinLog := DB_Mod_JoinLog{
-				GuildID:                   member.GuildID,
-				UserID:                    member.User.ID,
-				JoinedAt:                  joinedAt,
-				InviteCodeUsed:            usedInvite.Code,
-				InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
-				InviteCodeCreatedAt:       usedInvite.CreatedAt,
-				VanityInviteUsedName:      usedVanityInvite,
-			}
-			err = m.InsertJoinLog(newJoinLog)
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
+			_, err = helpers.MDbInsertWithoutLogging(
+				models.ModJoinlogTable,
+				models.ModJoinlogEntry{
+					GuildID:                   member.GuildID,
+					UserID:                    member.User.ID,
+					JoinedAt:                  joinedAt,
+					InviteCodeUsed:            usedInvite.Code,
+					InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
+					InviteCodeCreatedAt:       usedInvite.CreatedAt,
+					VanityInviteUsedName:      usedVanityInvite,
+				},
+			)
+			helpers.RelaxLog(err)
 			go func() {
 				if member.User.ID == session.State.User.ID { // Don't inspect Robyul
 					return
@@ -2612,37 +2602,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 	}()
 }
 
-func (m *Mod) InsertJoinLog(entry DB_Mod_JoinLog) error {
-	if entry.UserID != "" {
-		insert := rethink.Table("mod_joinlog").Insert(entry)
-		_, err := insert.RunWrite(helpers.GetDB())
-		return err
-	}
-	return nil
-}
-
-func (m *Mod) GetJoins(userID string, guildID string) ([]DB_Mod_JoinLog, error) {
-	var entryBucket []DB_Mod_JoinLog
-	listCursor, err := rethink.Table("mod_joinlog").Filter(
-		rethink.Row.Field("userid").Eq(userID),
-	).Run(helpers.GetDB())
-	defer listCursor.Close()
-	if err != nil {
-		return entryBucket, err
-	}
-	err = listCursor.All(&entryBucket)
-	result := make([]DB_Mod_JoinLog, 0)
-	if err != nil {
-		return result, err
-	}
-
-	for _, logEntry := range entryBucket {
-		if logEntry.GuildID == guildID {
-			result = append(result, logEntry)
-		}
-	}
-
-	return result, nil
+func (m *Mod) GetJoins(userID string, guildID string) (joins []models.ModJoinlogEntry, err error) {
+	err = helpers.MDbIter(helpers.MdbCollection(models.ModJoinlogTable).Find(
+		bson.M{"userid": userID, "guildid": guildID}).Sort("-joinedat")).All(&joins)
+	return joins, err
 }
 
 func (m *Mod) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
