@@ -249,7 +249,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				updateIdolInfo(msg, content)
 			})
 
-		} else if commandArgs[0] == "images" {
+		} else if commandArgs[0] == "images" || commandArgs[0] == "pics" {
 
 			showImagesForIdol(msg, content)
 
