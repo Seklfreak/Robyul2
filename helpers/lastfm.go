@@ -3,8 +3,6 @@ package helpers
 import (
 	"sync"
 
-	"strings"
-
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/globalsign/mgo/bson"
@@ -43,7 +41,7 @@ func GetLastFmUsername(userID string) (username string) {
 	)
 
 	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
+		if !IsMdbNotFound(err) {
 			RelaxLog(err)
 		}
 		return ""

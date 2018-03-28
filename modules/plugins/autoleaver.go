@@ -113,7 +113,7 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 		*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.add-error-duplicate", guildFound.Name, guildFound.ID))
 		return a.actionFinish
 	}
-	if err != nil && !strings.Contains(err.Error(), "not found") {
+	if err != nil && !helpers.IsMdbNotFound(err) {
 		helpers.Relax(err)
 	}
 
@@ -233,7 +233,7 @@ func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **di
 		&entryBucket,
 	)
 	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
+		if !helpers.IsMdbNotFound(err) {
 			helpers.Relax(err)
 		}
 

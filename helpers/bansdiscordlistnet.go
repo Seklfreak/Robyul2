@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/davecgh/go-spew/spew"
 	redisCache "github.com/go-redis/cache"
 	"github.com/pkg/errors"
 )
@@ -50,6 +51,12 @@ func IsBannedOnBansdiscordlistNet(userID string) (isBanned bool, err error) {
 
 	resp, err := client.Do(r)
 	if err != nil {
+		if strings.Contains(err.Error(), "net/http: request canceled") {
+			cache.GetLogger().WithField("module", "bansdiscordlistnet").Errorf(
+				"failed to get status for #%s: %s",
+				userID, spew.Sdump(err))
+			return false, nil
+		}
 		return false, err
 	}
 

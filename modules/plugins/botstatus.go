@@ -51,7 +51,7 @@ func (bs *BotStatus) gameStatusRotationLoop() {
 		var entryBucket models.BotStatusEntry
 		err = helpers.MdbPipeOneWithoutLogging(models.BotStatusTable, []bson.M{{"$sample": bson.M{"size": 1}}}, &entryBucket)
 		if err != nil {
-			if !strings.Contains(err.Error(), "not found") {
+			if !helpers.IsMdbNotFound(err) {
 				helpers.RelaxLog(err)
 			}
 			time.Sleep(60 * time.Second)
@@ -209,7 +209,7 @@ func (bs *BotStatus) actionRemove(args []string, in *discordgo.Message, out **di
 		&entryBucket,
 	)
 	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
+		if !helpers.IsMdbNotFound(err) {
 			helpers.RelaxLog(err)
 		}
 		*out = bs.newMsg("bot.arguments.invalid")

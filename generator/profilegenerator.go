@@ -4,21 +4,21 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Seklfreak/Robyul2/modules/plugins"
+	levelsPlugin "github.com/Seklfreak/Robyul2/modules/plugins/levels"
 )
 
 var (
-	levels      *plugins.Levels
+	levels      *levelsPlugin.Levels
 	levelsMutex sync.RWMutex
 )
 
-func SetProfileGenerator(l *plugins.Levels) {
+func SetProfileGenerator(l *levelsPlugin.Levels) {
 	levelsMutex.Lock()
 	levels = l
 	levelsMutex.Unlock()
 }
 
-func GetProfileGenerator() *plugins.Levels {
+func GetProfileGenerator() *levelsPlugin.Levels {
 	levelsMutex.RLock()
 	defer levelsMutex.RUnlock()
 

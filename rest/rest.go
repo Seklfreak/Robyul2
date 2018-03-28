@@ -19,6 +19,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins"
+	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
@@ -146,6 +147,14 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{filehash}").Filter(webkeyAuthenticate).To(GetFileByFilehash))
+	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.
+		Path("/backgrounds").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+	service.Route(service.GET("").Filter(webkeyAuthenticate).To(GetAllBackgrounds))
 	services = append(services, service)
 	return services
 }
@@ -470,7 +479,7 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 	// TODO: i stuff
 	i := 1
 	var keyByRank string
-	var rankingItem plugins.Levels_Cache_Ranking_Item
+	var rankingItem levels.Levels_Cache_Ranking_Item
 	var userItem models.Rest_User
 	var isMember bool
 	for {
@@ -541,7 +550,7 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 	}
 
 	var err error
-	var rankingItem plugins.Levels_Cache_Ranking_Item
+	var rankingItem levels.Levels_Cache_Ranking_Item
 	rankingsKey := fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildID, userID)
 	cacheCodec := cache.GetRedisCacheCodec()
 
@@ -590,7 +599,7 @@ func GetAllUserRanking(request *restful.Request, response *restful.Response) {
 
 	var err error
 
-	var rankingItem plugins.Levels_Cache_Ranking_Item
+	var rankingItem levels.Levels_Cache_Ranking_Item
 	cacheCodec := cache.GetRedisCacheCodec()
 
 	user, _ := helpers.GetUser(userID)
@@ -1660,5 +1669,35 @@ func SetGuildSettings(request *restful.Request, response *restful.Response) {
 		}
 	}
 
+	return
+}
+
+func GetAllBackgrounds(request *restful.Request, response *restful.Response) {
+	var entryBucket []models.ProfileBackgroundEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.ProfileBackgroundsTable).Find(nil)).All(&entryBucket)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	backgrounds := make([]models.Rest_Background, 0)
+	for _, entry := range entryBucket {
+		link := entry.URL
+		if link == "" {
+			link, err = helpers.GetFileLink(entry.ObjectName)
+			if err != nil {
+				helpers.RelaxLog(err)
+				continue
+			}
+		}
+
+		backgrounds = append(backgrounds, models.Rest_Background{
+			Name: entry.Name,
+			URL:  link,
+			Tags: entry.Tags,
+		})
+	}
+
+	response.WriteEntity(backgrounds)
 	return
 }

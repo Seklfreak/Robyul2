@@ -141,7 +141,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.Relax(err)
 				return
 			} else {
-				if !strings.Contains(err.Error(), "not found") {
+				if !helpers.IsMdbNotFound(err) {
 					helpers.Relax(err)
 				}
 			}
@@ -229,7 +229,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			err = helpers.MdbPipeOne(models.CustomCommandsTable,
 				[]bson.M{{"$match": bson.M{"guildid": channel.GuildID}}, {"$sample": bson.M{"size": 1}}},
 				&entryBucket)
-			if err != nil && strings.Contains(err.Error(), "not found") {
+			if helpers.IsMdbNotFound(err) {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 				helpers.Relax(err)
 				return
@@ -289,7 +289,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 								err = helpers.MdbPipeOne(models.CustomCommandsTable,
 									[]bson.M{{"$match": bson.M{"guildid": channel.GuildID}}, {"$sample": bson.M{"size": 1}}},
 									&entryBucket)
-								if err != nil && strings.Contains(err.Error(), "not found") {
+								if helpers.IsMdbNotFound(err) {
 									_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.list-empty"))
 									helpers.Relax(err)
 									return
@@ -391,7 +391,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
 				&entryBucket,
 			)
-			if err != nil && strings.Contains(err.Error(), "not found") {
+			if helpers.IsMdbNotFound(err) {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-not-found"))
 				helpers.Relax(err)
 				return
@@ -446,7 +446,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
 				&entryBucket,
 			)
-			if err != nil && strings.Contains(err.Error(), "not found") {
+			if helpers.IsMdbNotFound(err) {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-not-found"))
 				helpers.Relax(err)
 				return
@@ -603,7 +603,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.MdbCollection(models.CustomCommandsTable).Find(bson.M{"guildid": channel.GuildID, "keyword": args[1]}),
 				&entryBucket,
 			)
-			if err != nil && strings.Contains(err.Error(), "not found") {
+			if helpers.IsMdbNotFound(err) {
 				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.info-not-found"))
 				helpers.Relax(err)
 				return
@@ -871,7 +871,7 @@ func (cc *CustomCommands) getCommandContent(customCommand models.CustomCommandsE
 			content += url
 			return content, "", nil
 		} else {
-			if !strings.Contains(err.Error(), "not found") {
+			if !helpers.IsMdbNotFound(err) {
 				return content, "", nil
 			}
 		}

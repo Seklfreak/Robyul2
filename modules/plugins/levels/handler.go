@@ -1,4 +1,4 @@
-package plugins
+package levels
 
 import (
 	"bytes"
@@ -13,7 +13,6 @@ import (
 	"image/png"
 	"io/ioutil"
 	"math"
-	"math/rand"
 	"net/url"
 	"os"
 	"sort"
@@ -21,8 +20,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"regexp"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -37,7 +34,6 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
@@ -90,28 +86,6 @@ func (m *Levels) Commands() []string {
 	}
 }
 
-type DB_Profile_Background struct {
-	Name      string    `gorethink:"id,omitempty"`
-	URL       string    `gorethink:"url"`
-	CreatedAt time.Time `gorethink:"createdat"`
-	Tags      []string  `gorethink:"tags"`
-}
-
-type DB_Badge struct {
-	ID               string    `gorethink:"id,omitempty"`
-	CreatedByUserID  string    `gorethink:"createdby_userid"`
-	Name             string    `gorethink:"name"`
-	Category         string    `gorethink:"category"`
-	BorderColor      string    `gorethink:"bordercolor"`
-	GuildID          string    `gorethink:"guildid"`
-	CreatedAt        time.Time `gorethink:"createdat"`
-	URL              string    `gorethink:"url"`
-	LevelRequirement int       `gorethink:"levelrequirement"`
-	RoleRequirement  string    `gorethink:"rolerequirement"`
-	AllowedUserIDs   []string  `gorethinK:"allowed_userids"`
-	DeniedUserIDs    []string  `gorethinK:"allowed_userids"`
-}
-
 type Cache_Levels_top struct {
 	GuildID string
 	Levels  PairList
@@ -151,306 +125,19 @@ func (m *Levels) Init(session *discordgo.Session) {
 	helpers.Relax(err)
 	htmlTemplateString = string(htmlTemplate)
 
-	go m.processExpStackLoop()
+	go processExpStackLoop()
 	log.WithField("module", "levels").Info("Started processExpStackLoop")
 
-	go m.cacheTopLoop()
+	go cacheTopLoop()
 	log.WithField("module", "levels").Info("Started processCacheTopLoop")
 
 	activeBadgePickerUserIDs = make(map[string]string, 0)
 
-	go m.setServerFeaturesLoop()
+	go setServerFeaturesLoop()
 }
 
 func (l *Levels) Uninit(session *discordgo.Session) {
 
-}
-
-func (l *Levels) setServerFeaturesLoop() {
-	log := cache.GetLogger()
-
-	defer helpers.Recover()
-	defer func() {
-		go func() {
-			log.WithField("module", "levels").Error("The setServerFeaturesLoop died. Please investigate! Will be restarted in 60 seconds")
-			time.Sleep(60 * time.Second)
-			l.setServerFeaturesLoop()
-		}()
-	}()
-
-	var badgesBucket []DB_Badge
-	var badgesOnServer []DB_Badge
-	var listCursor *rethink.Cursor
-	var err error
-	var feature models.Rest_Feature_Levels_Badges
-	var key string
-	cacheCodec := cache.GetRedisCacheCodec()
-	for {
-		listCursor, err = rethink.Table("profile_badge").Run(helpers.GetDB())
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			time.Sleep(60 * time.Second)
-			continue
-		}
-		defer listCursor.Close()
-		err = listCursor.All(&badgesBucket)
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			time.Sleep(60 * time.Second)
-			continue
-		}
-
-		for _, guild := range cache.GetSession().State.Guilds {
-			badgesOnServer = make([]DB_Badge, 0)
-			for _, badge := range badgesBucket {
-				if badge.GuildID == guild.ID {
-					badgesOnServer = append(badgesOnServer, badge)
-				}
-			}
-
-			key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
-			feature = models.Rest_Feature_Levels_Badges{
-				Count: len(badgesOnServer),
-			}
-
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        key,
-				Object:     feature,
-				Expiration: time.Minute * 60,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
-
-		}
-
-		time.Sleep(30 * time.Minute)
-	}
-}
-
-func (m *Levels) cacheTopLoop() {
-	log := cache.GetLogger()
-
-	defer helpers.Recover()
-	defer func() {
-		go func() {
-			log.WithField("module", "levels").Error("The cacheTopLoop died. Please investigate! Will be restarted in 60 seconds")
-			time.Sleep(60 * time.Second)
-			m.cacheTopLoop()
-		}()
-	}()
-
-	for {
-		// TODO: cache still required with MongoDB?
-		var newTopCache []Cache_Levels_top
-
-		var levelsUsers []models.LevelsServerusersEntry
-
-		err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(nil)).All(&levelsUsers)
-		helpers.Relax(err)
-
-		if levelsUsers == nil || len(levelsUsers) <= 0 {
-			log.WithField("module", "levels").Error("empty result from levels db")
-			time.Sleep(60 * time.Second)
-			continue
-		} else if err != nil {
-			log.WithField("module", "levels").Error(fmt.Sprintf("db error: %s", err.Error()))
-			time.Sleep(60 * time.Second)
-			continue
-		}
-
-		for _, guild := range cache.GetSession().State.Guilds {
-			guildExpMap := make(map[string]int64, 0)
-			for _, levelsUser := range levelsUsers {
-				if levelsUser.GuildID == guild.ID {
-					guildExpMap[levelsUser.UserID] = levelsUser.Exp
-				}
-			}
-			rankedGuildExpMap := m.rankMapByExp(guildExpMap)
-			newTopCache = append(newTopCache, Cache_Levels_top{
-				GuildID: guild.ID,
-				Levels:  rankedGuildExpMap,
-			})
-		}
-
-		totalExpMap := make(map[string]int64, 0)
-		for _, levelsUser := range levelsUsers {
-			if _, ok := totalExpMap[levelsUser.UserID]; ok {
-				totalExpMap[levelsUser.UserID] += levelsUser.Exp
-			} else {
-				totalExpMap[levelsUser.UserID] = levelsUser.Exp
-			}
-		}
-
-		rankedTotalExpMap := m.rankMapByExp(totalExpMap)
-		newTopCache = append(newTopCache, Cache_Levels_top{
-			GuildID: "global",
-			Levels:  rankedTotalExpMap,
-		})
-
-		topCache = newTopCache
-
-		var keyByRank string
-		var keyByUser string
-		var rankData Levels_Cache_Ranking_Item
-		cacheCodec := cache.GetRedisCacheCodec()
-		for _, guildCache := range newTopCache {
-			i := 0
-			for _, level := range guildCache.Levels {
-				if level.Value > 0 {
-					i += 1
-					keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:%d", guildCache.GuildID, i)
-					keyByUser = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:%s", guildCache.GuildID, level.Key)
-					rankData = Levels_Cache_Ranking_Item{
-						UserID:  level.Key,
-						EXP:     level.Value,
-						Level:   m.getLevelFromExp(level.Value),
-						Ranking: i,
-					}
-
-					err = cacheCodec.Set(&redisCache.Item{
-						Key:        keyByRank,
-						Object:     &rankData,
-						Expiration: 90 * time.Minute,
-					})
-					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					}
-					err = cacheCodec.Set(&redisCache.Item{
-						Key:        keyByUser,
-						Object:     &rankData,
-						Expiration: 90 * time.Minute,
-					})
-					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					}
-				}
-			}
-			keyByRank = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-rank:count", guildCache.GuildID)
-			keyByUser = fmt.Sprintf("robyul2-discord:levels:ranking:%s:by-user:count", guildCache.GuildID)
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        keyByRank,
-				Object:     i,
-				Expiration: 90 * time.Minute,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        keyByUser,
-				Object:     i,
-				Expiration: 90 * time.Minute,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
-		}
-		log.WithField("module", "levels").Info("cached rankings in redis")
-
-		time.Sleep(10 * time.Minute)
-	}
-}
-
-func (m *Levels) processExpStackLoop() {
-	log := cache.GetLogger()
-
-	defer helpers.Recover()
-	defer func() {
-		go func() {
-			log.WithField("module", "levels").Info("The processExpStackLoop died. Please investigate! Will be restarted in 60 seconds")
-			time.Sleep(60 * time.Second)
-			m.processExpStackLoop()
-		}()
-	}()
-
-	for {
-		metrics.LevelsStackSize.Set(int64(expStack.Size()))
-		if !expStack.Empty() {
-			expItem := expStack.Pop().(ProcessExpInfo)
-			levelsServerUser, err := m.getLevelsServerUserOrCreateNewWithoutLogging(expItem.GuildID, expItem.UserID)
-			helpers.Relax(err)
-
-			expBefore := levelsServerUser.Exp
-			levelBefore := m.getLevelFromExp(levelsServerUser.Exp)
-
-			levelsServerUser.Exp += m.getRandomExpForMessage()
-
-			levelAfter := m.getLevelFromExp(levelsServerUser.Exp)
-
-			err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
-			helpers.Relax(err)
-
-			if expBefore <= 0 || levelBefore != levelAfter {
-				// apply roles
-				err := m.applyLevelsRoles(expItem.GuildID, expItem.UserID, levelAfter)
-				if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Message != "404: Not Found" &&
-					errD.Message.Code != discordgo.ErrCodeUnknownMember &&
-					errD.Message.Code != discordgo.ErrCodeMissingAccess) {
-					helpers.RelaxLog(err)
-				}
-				guildSettings := helpers.GuildSettingsGetCached(expItem.GuildID)
-				// send level notifications
-				if levelAfter > levelBefore && guildSettings.LevelsNotificationCode != "" {
-					go func() {
-						defer helpers.Recover()
-
-						member, err := helpers.GetGuildMemberWithoutApi(expItem.GuildID, expItem.UserID)
-						helpers.RelaxLog(err)
-						if err == nil {
-							levelNotificationText := m.replaceLevelNotificationText(guildSettings.LevelsNotificationCode, member, levelAfter)
-							if levelNotificationText == "" {
-								return
-							}
-							messageSend := &discordgo.MessageSend{
-								Content: levelNotificationText,
-							}
-							if helpers.IsEmbedCode(levelNotificationText) {
-								ptext, embed, err := helpers.ParseEmbedCode(levelNotificationText)
-								if err == nil {
-									messageSend.Content = ptext
-									messageSend.Embed = embed
-								}
-							}
-							messages, err := helpers.SendComplex(expItem.ChannelID, messageSend)
-							helpers.RelaxLog(err)
-							if guildSettings.LevelsNotificationDeleteAfter > 0 {
-								go func() {
-									defer helpers.Recover()
-
-									time.Sleep(time.Duration(guildSettings.LevelsNotificationDeleteAfter) * time.Second)
-
-									for _, message := range messages {
-										cache.GetSession().ChannelMessageDelete(message.ChannelID, message.ID)
-									}
-								}()
-							}
-						}
-						return
-					}()
-				}
-			}
-		} else {
-			time.Sleep(250 * time.Millisecond)
-		}
-	}
-}
-
-func (m *Levels) replaceLevelNotificationText(text string, member *discordgo.Member, newLevel int) string {
-	text = strings.Replace(text, "{USER_USERNAME}", member.User.Username, -1)
-	text = strings.Replace(text, "{USER_ID}", member.User.ID, -1)
-	text = strings.Replace(text, "{USER_DISCRIMINATOR}", member.User.Discriminator, -1)
-	text = strings.Replace(text, "{USER_MENTION}", fmt.Sprintf("<@%s>", member.User.ID), -1)
-	text = strings.Replace(text, "{USER_AVATARURL}", member.User.AvatarURL(""), -1)
-	text = strings.Replace(text, "{USER_NEWLEVEL}", strconv.Itoa(newLevel), -1)
-
-	guild, err := helpers.GetGuild(member.GuildID)
-	helpers.RelaxLog(err)
-	if err == nil {
-		text = strings.Replace(text, "{GUILD_NAME}", guild.Name, -1)
-		text = strings.Replace(text, "{GUILD_ID}", guild.ID, -1)
-	}
-
-	return text
 }
 
 func (m *Levels) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -599,11 +286,19 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 
 				userUserdata, err := m.GetUserUserdata(msg.Author)
+
+				oldBioText := userUserdata.Bio
+
 				userUserdata.Bio = bioText
 				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
 				helpers.Relax(err)
 
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-bio-set-success"))
+				message := helpers.GetText("plugins.levels.profile-bio-set-success")
+				if oldBioText != "" && oldBioText != " " && bioText == " " {
+					message = helpers.GetTextF("plugins.levels.profile-bio-reset-success", oldBioText)
+				}
+
+				_, err = helpers.SendMessage(msg.ChannelID, message)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "background", "backgrounds":
@@ -884,26 +579,33 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 							return
 						}
-						backgroundUrl, err = helpers.UploadImage(picData)
-						if err != nil {
-							if strings.Contains(err.Error(), "Invalid URL") {
-								_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							} else {
-								helpers.Relax(err)
-							}
-							return
-						}
+						objectName, err := helpers.AddFile("", picData, helpers.AddFileMetadata{
+							ChannelID: msg.ChannelID,
+							UserID:    msg.Author.ID,
+						}, "levels", true)
+						helpers.Relax(err)
 
-						if m.ProfileBackgroundNameExists(backgroundName) == true {
+						var entryBucket models.ProfileBackgroundEntry
+						err = helpers.MdbOne(
+							helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(backgroundName)}),
+							&entryBucket,
+						)
+						if !helpers.IsMdbNotFound(err) {
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.new-profile-background-add-error-duplicate"))
 							return
 						}
 
-						err = m.InsertNewProfileBackground(backgroundName, backgroundUrl, tags)
-						if err != nil {
-							helpers.Relax(err)
-						}
+						_, err = helpers.MDbInsert(
+							models.ProfileBackgroundsTable,
+							models.ProfileBackgroundEntry{
+								Name:       strings.ToLower(backgroundName),
+								ObjectName: objectName,
+								CreatedAt:  time.Now(),
+								Tags:       tags,
+							},
+						)
+						helpers.Relax(err)
+
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-add-success",
 							backgroundName, strings.Join(tags, ", ")))
 						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -919,7 +621,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						}
 						backgroundName := strings.ToLower(args[2])
 
-						if m.ProfileBackgroundNameExists(backgroundName) == false {
+						var entryBucket models.ProfileBackgroundEntry
+						err = helpers.MdbOne(
+							helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(backgroundName)}),
+							&entryBucket,
+						)
+						if helpers.IsMdbNotFound(err) {
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-error-not-found"))
 							return
 						}
@@ -929,8 +636,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
 								backgroundName, backgroundUrl),
 							"✅", "🚫") == true {
-							err = m.DeleteProfileBackground(backgroundName)
-							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							err = helpers.MDbDelete(models.ProfileBackgroundsTable, entryBucket.ID)
+							helpers.Relax(err)
 
 							_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.profile-background-delete-success"))
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -939,7 +646,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					})
 					return
 				default:
-					if m.ProfileBackgroundNameExists(args[1]) == false {
+					var entryBucket models.ProfileBackgroundEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.ProfileBackgroundsTable).Find(bson.M{"name": strings.ToLower(args[1])}),
+						&entryBucket,
+					)
+					if helpers.IsMdbNotFound(err) {
 						searchResult := m.ProfileBackgroundSearch(args[1])
 
 						if len(searchResult) <= 0 {
@@ -984,8 +696,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						helpers.RequireAdmin(msg, func() {
 							session.ChannelTyping(msg.ChannelID)
 							if len(args) < 7 {
-								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+								helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 								return
 							}
 
@@ -1007,17 +718,26 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							badgeData, err = helpers.ScaleImage(badgeData, 28, 28)
 							helpers.Relax(err)
 
-							imageUrl, err := helpers.UploadImage(badgeData)
+							objectName, err := helpers.AddFile("", badgeData, helpers.AddFileMetadata{
+								Filename:  "",
+								ChannelID: msg.ChannelID,
+								UserID:    msg.Author.ID,
+							}, "levels", true)
+							if err != nil {
+								if _, ok := err.(*url.Error); ok {
+									helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+									return
+								}
+							}
 							helpers.Relax(err)
 
-							newBadge := new(DB_Badge)
-
+							newBadge := new(models.ProfileBadgeEntry)
 							newBadge.CreatedByUserID = msg.Author.ID
 							newBadge.GuildID = channel.GuildID
 							newBadge.CreatedAt = time.Now()
 							newBadge.Category = strings.ToLower(args[2])
 							newBadge.Name = strings.ToLower(args[3])
-							newBadge.URL = imageUrl                                      // reupload to imgur
+							newBadge.ObjectName = objectName
 							newBadge.BorderColor = strings.Replace(args[5], "#", "", -1) // check if valid color
 							newBadge.LevelRequirement, err = strconv.Atoi(args[6])
 							if err != nil {
@@ -1056,35 +776,15 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									}
 								}
 							}
-							picData, err := helpers.NetGetUAWithError(newBadge.URL, helpers.DEFAULT_UA)
-							if err != nil {
-								if _, ok := err.(*url.Error); ok {
-									_, err = helpers.SendMessage(msg.ChannelID, "Invalid url.")
-									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-								} else {
-									helpers.Relax(err)
-								}
-								return
-							}
-							newBadge.URL, err = helpers.UploadImage(picData)
-							if err != nil {
-								if strings.Contains(err.Error(), "Invalid URL") {
-									_, err = helpers.SendMessage(msg.ChannelID, "I wasn't able to reupload the picture. Please make sure it is a direct link to the image.")
-									helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-								} else {
-									helpers.Relax(err)
-								}
-								return
-							}
 
-							badgeFound := m.GetBadge(newBadge.Category, newBadge.Name, channel.GuildID)
+							badgeFound := getBadge(newBadge.Category, newBadge.Name, channel.GuildID)
 							if badgeFound.ID != "" {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.create-badge-error-duplicate"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 								return
 							}
 
-							serverBadges := m.GetServerOnlyBadges(channel.GuildID)
+							serverBadges := getServerOnlyBadges(channel.GuildID)
 							badgeLimit := helpers.GetMaxBadgesForGuild(channel.GuildID)
 							if len(serverBadges) >= badgeLimit {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.create-badge-error-too-many", helpers.GetStaffUsernamesText()))
@@ -1092,10 +792,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								return
 							}
 
-							badgeID, err := m.InsertBadge(*newBadge)
+							badgeID, err := helpers.MDbInsert(
+								models.ProfileBadgesTable,
+								newBadge,
+							)
 							helpers.Relax(err)
 
-							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeID,
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(badgeID),
 								models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
 								models.EventlogTypeRobyulBadgeCreate, "", nil,
 								[]models.ElasticEventlogOption{
@@ -1109,7 +812,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									},
 									{
 										Key:   "badge_url",
-										Value: newBadge.URL,
+										Value: getBadgeUrl(*newBadge),
 									},
 									{
 										Key:   "badge_bordercolor",
@@ -1154,7 +857,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							channel, err := helpers.GetChannel(msg.ChannelID)
 							helpers.Relax(err)
 
-							badgeFound := m.GetBadge(args[2], args[3], channel.GuildID)
+							badgeFound := getBadge(args[2], args[3], channel.GuildID)
 							if badgeFound.ID == "" {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1166,9 +869,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								return
 							}
 
-							m.DeleteBadge(badgeFound.ID)
+							err = helpers.MDbDelete(models.ProfileBadgesTable, badgeFound.ID)
+							helpers.Relax(err)
 
-							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeFound.ID,
+							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(badgeFound.ID),
 								models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
 								models.EventlogTypeRobyulBadgeDelete, "", nil,
 								[]models.ElasticEventlogOption{
@@ -1182,7 +886,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									},
 									{
 										Key:   "badge_url",
-										Value: badgeFound.URL,
+										Value: getBadgeUrl(badgeFound),
 									},
 									{
 										Key:   "badge_bordercolor",
@@ -1224,11 +928,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							channel, err := helpers.GetChannel(msg.ChannelID)
 							helpers.Relax(err)
 
-							categoryBadges := m.GetCategoryBadges(categoryName, channel.GuildID)
+							categoryBadges := getCategoryBadges(categoryName, channel.GuildID)
 
-							if len(categoryBadges) <= 0 {
-								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.list-category-badge-error-none"))
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+							if categoryBadges == nil || len(categoryBadges) <= 0 {
+								helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.list-category-badge-error-none"))
 								return
 							}
 
@@ -1256,23 +959,21 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								}
 
 								resultText += fmt.Sprintf("**%s%s**: URL: <%s>, Border Color: #%s, Requirement: %s, Allowed Users: %d, Denied Users %d\n",
-									globalText, badge.Name, badge.URL, badge.BorderColor, requirementText, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
+									globalText, badge.Name, getBadgeUrl(badge), badge.BorderColor, requirementText, len(badge.AllowedUserIDs), len(badge.DeniedUserIDs),
 								)
 							}
 							resultText += fmt.Sprintf("I found %d badges in this category.\n",
 								len(categoryBadges))
 
-							for _, page := range helpers.Pagify(resultText, "\n") {
-								_, err = helpers.SendMessage(msg.ChannelID, page)
-								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							}
+							_, err = helpers.SendMessage(msg.ChannelID, resultText)
+							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
 						}
 
 						channel, err := helpers.GetChannel(msg.ChannelID)
 						helpers.Relax(err)
 
-						serverBadges := m.GetServerBadges(channel.GuildID)
+						serverBadges := getServerBadges(channel.GuildID)
 
 						if len(serverBadges) <= 0 {
 							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.list-badge-error-none"))
@@ -1327,7 +1028,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							channel, err := helpers.GetChannel(msg.ChannelID)
 							helpers.Relax(err)
 
-							badgeToAllow := m.GetBadge(args[3], args[4], channel.GuildID)
+							badgeToAllow := getBadge(args[3], args[4], channel.GuildID)
 							if badgeToAllow.ID == "" {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1350,9 +1051,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							allowedIDsBefore := badgeToAllow.AllowedUserIDs
 							if isAlreadyAllowed == false {
 								badgeToAllow.AllowedUserIDs = append(badgeToAllow.AllowedUserIDs, targetUser.ID)
-								m.UpdateBadge(badgeToAllow)
+								err = helpers.MDbUpdate(models.ProfileBadgesTable, badgeToAllow.ID, badgeToAllow)
+								helpers.Relax(err)
 
-								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToAllow.ID,
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(badgeToAllow.ID),
 									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
 									models.EventlogTypeRobyulBadgeAllow, "",
 									[]models.ElasticEventlogChange{
@@ -1373,7 +1075,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToAllow.URL,
+											Value: getBadgeUrl(badgeToAllow),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1410,9 +1112,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									}
 								}
 								badgeToAllow.AllowedUserIDs = allowedUserIDsWithout
-								m.UpdateBadge(badgeToAllow)
+								err = helpers.MDbUpdate(models.ProfileBadgesTable, badgeToAllow.ID, badgeToAllow)
+								helpers.Relax(err)
 
-								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToAllow.ID,
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(badgeToAllow.ID),
 									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
 									models.EventlogTypeRobyulBadgeAllow, "",
 									[]models.ElasticEventlogChange{
@@ -1433,7 +1136,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToAllow.URL,
+											Value: getBadgeUrl(badgeToAllow),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1483,7 +1186,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							channel, err := helpers.GetChannel(msg.ChannelID)
 							helpers.Relax(err)
 
-							badgeToDeny := m.GetBadge(args[3], args[4], channel.GuildID)
+							badgeToDeny := getBadge(args[3], args[4], channel.GuildID)
 							if badgeToDeny.ID == "" {
 								_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-not-found"))
 								helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -1506,9 +1209,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							deniedIDsBefore := badgeToDeny.DeniedUserIDs
 							if isAlreadyDenied == false {
 								badgeToDeny.DeniedUserIDs = append(badgeToDeny.DeniedUserIDs, targetUser.ID)
-								m.UpdateBadge(badgeToDeny)
+								err = helpers.MDbUpdate(models.ProfileBadgesTable, badgeToDeny.ID, badgeToDeny)
+								helpers.Relax(err)
 
-								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToDeny.ID,
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(badgeToDeny.ID),
 									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
 									models.EventlogTypeRobyulBadgeDeny, "",
 									[]models.ElasticEventlogChange{
@@ -1529,7 +1233,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToDeny.URL,
+											Value: getBadgeUrl(badgeToDeny),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1566,9 +1270,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									}
 								}
 								badgeToDeny.DeniedUserIDs = deniedUserIDsWithout
-								m.UpdateBadge(badgeToDeny)
+								err = helpers.MDbUpdate(models.ProfileBadgesTable, badgeToDeny.ID, badgeToDeny)
+								helpers.Relax(err)
 
-								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, badgeToDeny.ID,
+								_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(badgeToDeny.ID),
 									models.EventlogTargetTypeRobyulBadge, msg.Author.ID,
 									models.EventlogTypeRobyulBadgeDeny, "",
 									[]models.ElasticEventlogChange{
@@ -1589,7 +1294,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										},
 										{
 											Key:   "badge_url",
-											Value: badgeToDeny.URL,
+											Value: getBadgeUrl(badgeToDeny),
 										},
 										{
 											Key:   "badge_bordercolor",
@@ -1640,11 +1345,11 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						userData, err := m.GetUserUserdata(msg.Author)
 						helpers.Relax(err)
 
-						idToMove := ""
+						var idToMove string
 						for _, badgeID := range userData.ActiveBadgeIDs {
-							badge := m.GetBadgeByID(badgeID)
+							badge := getBadgeByID(badgeID)
 							if badge.Category == categoryName && badge.Name == badgeName {
-								idToMove = badge.ID
+								idToMove = badge.GetID()
 							}
 						}
 
@@ -1680,7 +1385,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 				session.ChannelTyping(msg.ChannelID)
 
-				availableBadges := m.GetBadgesAvailable(msg.Author, channel.GuildID)
+				availableBadges := getBadgesAvailable(msg.Author, channel.GuildID)
 
 				if len(availableBadges) <= 0 {
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.levels.badge-error-none"))
@@ -1693,14 +1398,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				newActiveBadgeIDs := make([]string, 0)
 				for _, activeBadgeID := range userData.ActiveBadgeIDs {
 					for _, availableBadge := range availableBadges {
-						if availableBadge.ID == activeBadgeID {
+						if availableBadge.GetID() == activeBadgeID {
 							newActiveBadgeIDs = append(newActiveBadgeIDs, activeBadgeID)
 						}
 					}
 				}
 				userData.ActiveBadgeIDs = newActiveBadgeIDs
 
-				shownBadges := make([]DB_Badge, 0)
+				shownBadges := make([]models.ProfileBadgeEntry, 0)
 				for _, badge := range availableBadges {
 					if badge.GuildID == "global" || badge.GuildID == channel.GuildID {
 						shownBadges = append(shownBadges, badge)
@@ -1769,10 +1474,10 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										for _, badge := range shownBadges {
 											if badge.Category == inCategory && badge.Name == strings.ToLower(loopArgs[0]) {
 												for _, activeBadgeID := range userData.ActiveBadgeIDs {
-													if activeBadgeID == badge.ID {
+													if activeBadgeID == badge.GetID() {
 														newActiveBadges := make([]string, 0)
 														for _, newActiveBadgeID := range userData.ActiveBadgeIDs {
-															if newActiveBadgeID != badge.ID {
+															if newActiveBadgeID != badge.GetID() {
 																newActiveBadges = append(newActiveBadges, newActiveBadgeID)
 															}
 														}
@@ -1794,7 +1499,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												}
 
 												loopArgs = []string{"categories"}
-												userData.ActiveBadgeIDs = append(userData.ActiveBadgeIDs, badge.ID)
+												userData.ActiveBadgeIDs = append(userData.ActiveBadgeIDs, badge.GetID())
 												if len(userData.ActiveBadgeIDs) >= BadgeLimt {
 													err = helpers.MDbUpdate(models.ProfileUserdataTable, userData.ID, userData)
 													helpers.Relax(err)
@@ -2117,7 +1822,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   fmt.Sprintf("%d. %s", displayRanking, fullUsername),
-						Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(levelsServersUsers[i-offset].Exp)),
+						Value:  fmt.Sprintf("Level: %d", getLevelFromExp(levelsServersUsers[i-offset].Exp)),
 						Inline: false,
 					})
 					displayRanking++
@@ -2149,7 +1854,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   "Your Rank: " + serverRank,
-						Value:  fmt.Sprintf("Level: %d", m.getLevelFromExp(thislevelUser.Exp)),
+						Value:  fmt.Sprintf("Level: %d", getLevelFromExp(thislevelUser.Exp)),
 						Inline: false,
 					})
 
@@ -2198,7 +1903,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					fullUsername := currentUser.Username
 					globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   fmt.Sprintf("%d. %s", i+1, fullUsername),
-						Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(userRanked.Value)),
+						Value:  fmt.Sprintf("Global Level: %d", getLevelFromExp(userRanked.Value)),
 						Inline: false,
 					})
 					i++
@@ -2230,7 +1935,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   "Your Rank: " + globalRank,
-						Value:  fmt.Sprintf("Global Level: %d", m.getLevelFromExp(totalExp)),
+						Value:  fmt.Sprintf("Global Level: %d", getLevelFromExp(totalExp)),
 						Inline: false,
 					})
 				}
@@ -2712,7 +2417,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									continue
 								}
 
-								errRole := m.applyLevelsRoles(guild.ID, member.User.ID, m.GetLevelForUser(member.User.ID, guild.ID))
+								errRole := applyLevelsRoles(guild.ID, member.User.ID, getLevelForUser(member.User.ID, guild.ID))
 								if errRole == nil {
 									success++
 								} else {
@@ -2907,7 +2612,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						if previousGrant {
 							err = m.deleteLevelsRolesOverwriteEntry(grant)
 
-							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+							err = applyLevelsRoles(guild.ID, targetUser.ID, getLevelForUser(targetUser.ID, guild.ID))
 							helpers.Relax(err)
 
 							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
@@ -2931,7 +2636,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, "grant")
 						helpers.Relax(err)
 
-						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+						err = applyLevelsRoles(guild.ID, targetUser.ID, getLevelForUser(targetUser.ID, guild.ID))
 						helpers.Relax(err)
 
 						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
@@ -2997,7 +2702,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						if previousDeny {
 							err = m.deleteLevelsRolesOverwriteEntry(grant)
 
-							err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+							err = applyLevelsRoles(guild.ID, targetUser.ID, getLevelForUser(targetUser.ID, guild.ID))
 							helpers.Relax(err)
 
 							_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
@@ -3021,7 +2726,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, "deny")
 						helpers.Relax(err)
 
-						err = m.applyLevelsRoles(guild.ID, targetUser.ID, m.GetLevelForUser(targetUser.ID, guild.ID))
+						err = applyLevelsRoles(guild.ID, targetUser.ID, getLevelForUser(targetUser.ID, guild.ID))
 						helpers.Relax(err)
 
 						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
@@ -3158,8 +2863,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
 		helpers.Relax(err)
 
-		localExpForLevel := m.getExpForLevel(m.getLevelFromExp(levelThisServerUser.Exp))
-		globalExpForLevel := m.getExpForLevel(m.getLevelFromExp(totalExp))
+		localExpForLevel := getExpForLevel(getLevelFromExp(levelThisServerUser.Exp))
+		globalExpForLevel := getExpForLevel(getLevelFromExp(totalExp))
 
 		userLevelEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
@@ -3171,14 +2876,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			Fields: []*discordgo.MessageEmbedField{
 				{
 					Name:   "Level",
-					Value:  strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)),
+					Value:  strconv.Itoa(getLevelFromExp(levelThisServerUser.Exp)),
 					Inline: true,
 				},
 				{
 					Name: "Level Progress",
 					Value: fmt.Sprintf("%s/%s EXP (%d %%)",
-						humanize.Comma(levelThisServerUser.Exp-localExpForLevel), humanize.Comma(m.getExpForLevel(m.getLevelFromExp(levelThisServerUser.Exp)+1)-localExpForLevel),
-						m.getProgressToNextLevelFromExp(levelThisServerUser.Exp),
+						humanize.Comma(levelThisServerUser.Exp-localExpForLevel), humanize.Comma(getExpForLevel(getLevelFromExp(levelThisServerUser.Exp)+1)-localExpForLevel),
+						getProgressToNextLevelFromExp(levelThisServerUser.Exp),
 					),
 					Inline: true,
 				},
@@ -3189,14 +2894,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				},
 				{
 					Name:   "Global Level",
-					Value:  strconv.Itoa(m.getLevelFromExp(totalExp)),
+					Value:  strconv.Itoa(getLevelFromExp(totalExp)),
 					Inline: true,
 				},
 				{
 					Name: "Global Level Progress",
 					Value: fmt.Sprintf("%s/%s EXP (%d %%)",
-						humanize.Comma(totalExp-globalExpForLevel), humanize.Comma(m.getExpForLevel(m.getLevelFromExp(totalExp)+1)-globalExpForLevel),
-						m.getProgressToNextLevelFromExp(totalExp),
+						humanize.Comma(totalExp-globalExpForLevel), humanize.Comma(getExpForLevel(getLevelFromExp(totalExp)+1)-globalExpForLevel),
+						getProgressToNextLevelFromExp(totalExp),
 					),
 					Inline: true,
 				},
@@ -3229,7 +2934,7 @@ func (l *Levels) DeleteMessages(channelID string, messages []string) {
 	}
 }
 
-func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, allBadges []DB_Badge) []string {
+func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID string, availableBadges []models.ProfileBadgeEntry, activeBadgeIDs []string, allBadges []models.ProfileBadgeEntry) []string {
 	categoriesCount := make(map[string]int, 0)
 	for _, badge := range availableBadges {
 		if _, ok := categoriesCount[badge.Category]; ok {
@@ -3265,7 +2970,7 @@ func (l *Levels) BadgePickerPrintCategories(user *discordgo.User, channeID strin
 	return messageIDs
 }
 
-func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, availableBadges []DB_Badge, activeBadgeIDs []string, categoryName string, allBadges []DB_Badge) []string {
+func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, availableBadges []models.ProfileBadgeEntry, activeBadgeIDs []string, categoryName string, allBadges []models.ProfileBadgeEntry) []string {
 	categoryName = strings.ToLower(categoryName)
 
 	resultText := l.BadgePickerActiveText(user.Username, activeBadgeIDs, allBadges)
@@ -3274,7 +2979,7 @@ func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, a
 		if badge.Category == categoryName {
 			isActive := false
 			for _, activeBadgeID := range activeBadgeIDs {
-				if activeBadgeID == badge.ID {
+				if activeBadgeID == badge.GetID() {
 					isActive = true
 				}
 			}
@@ -3298,13 +3003,13 @@ func (l *Levels) BadgePickerPrintBadges(user *discordgo.User, channeID string, a
 	return messageIDs
 }
 
-func (l *Levels) BadgePickerActiveText(username string, activeBadgeIDs []string, availableBadges []DB_Badge) string {
+func (l *Levels) BadgePickerActiveText(username string, activeBadgeIDs []string, availableBadges []models.ProfileBadgeEntry) string {
 	spaceLeft := BadgeLimt - len(activeBadgeIDs)
 	text := fmt.Sprintf("**@%s** You can pick %d more badge(s) to display on your profile.\nYou are currently displaying:", username, spaceLeft)
 	if len(activeBadgeIDs) > 0 {
 		for _, badgeID := range activeBadgeIDs {
 			for _, badge := range availableBadges {
-				if badge.ID == badgeID {
+				if badge.GetID() == badgeID {
 					text += fmt.Sprintf(" `%s (%s)`", badge.Name, badge.Category)
 				}
 			}
@@ -3318,147 +3023,6 @@ func (l *Levels) BadgePickerActiveText(username string, activeBadgeIDs []string,
 
 func (l *Levels) BadgePickerHelpText() string {
 	return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save. To remove a badge from your Profile pick the badge again.\n"
-}
-
-func (l *Levels) InsertNewProfileBackground(backgroundName string, backgroundUrl string, tags []string) error {
-	newEntry := new(DB_Profile_Background)
-	newEntry.Name = strings.ToLower(backgroundName)
-	newEntry.URL = backgroundUrl
-	newEntry.CreatedAt = time.Now()
-	newEntry.Tags = tags
-
-	insert := rethink.Table("profile_backgrounds").Insert(newEntry)
-	_, err := insert.RunWrite(helpers.GetDB())
-	return err
-}
-
-func (l *Levels) DeleteProfileBackground(backgroundName string) error {
-	if backgroundName != "" {
-		_, err := rethink.Table("profile_backgrounds").Filter(
-			rethink.Row.Field("id").Eq(backgroundName),
-		).Delete().RunWrite(helpers.GetDB())
-		return err
-	}
-	return nil
-}
-
-func (l *Levels) ProfileBackgroundSearch(searchText string) []DB_Profile_Background {
-	var entryBucket []DB_Profile_Background
-	listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-		return profile.Field("id").Match(fmt.Sprintf("(?i)%s", searchText))
-	}).Limit(5).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	return entryBucket
-}
-
-func (l *Levels) ProfileBackgroundNameExists(backgroundName string) bool {
-	var entryBucket DB_Profile_Background
-	listCursor, err := rethink.Table("profile_backgrounds").Filter(
-		rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		var entryBucket DB_Profile_Background
-		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", regexp.QuoteMeta(backgroundName)))
-		}).Run(helpers.GetDB())
-		if err != nil {
-			panic(err)
-		}
-		defer listCursor.Close()
-		err = listCursor.One(&entryBucket)
-
-		if err == rethink.ErrEmptyResult {
-			return false
-		} else if err != nil {
-			helpers.Relax(err)
-		}
-
-		return true
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	return true
-}
-
-func (l *Levels) GetProfileBackgroundUrl(userdata models.ProfileUserdataEntry) (link string) {
-	if userdata.BackgroundObjectName != "" {
-		link, err := helpers.GetFileLink(userdata.BackgroundObjectName)
-		if err == nil && link != "" {
-			return link
-		}
-		helpers.RelaxLog(err)
-	}
-
-	if userdata.Background != "" {
-		link = l.GetProfileBackgroundUrlByName(userdata.Background)
-		if link != "" {
-			return link
-		}
-	}
-
-	return "http://i.imgur.com/I9b74U9.jpg"
-}
-
-func (l *Levels) GetProfileBackgroundUrlByName(backgroundName string) string {
-	if backgroundName == "" {
-		return ""
-	}
-
-	var entryBucket DB_Profile_Background
-	listCursor, err := rethink.Table("profile_backgrounds").Filter(
-		rethink.Row.Field("id").Eq(strings.ToLower(backgroundName)),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		var entryBucket DB_Profile_Background
-		listCursor, err := rethink.Table("profile_backgrounds").Filter(func(profile rethink.Term) rethink.Term {
-			return profile.Field("id").Match(fmt.Sprintf("(?i)^%s$", regexp.QuoteMeta(backgroundName)))
-		}).Run(helpers.GetDB())
-		if err != nil {
-			panic(err)
-		}
-		defer listCursor.Close()
-		err = listCursor.One(&entryBucket)
-
-		if err == rethink.ErrEmptyResult {
-			if strings.HasPrefix(backgroundName, "http") {
-				return backgroundName
-			}
-
-			return "http://i.imgur.com/I9b74U9.jpg" // Default Robyul Background
-		} else if err != nil {
-			helpers.Relax(err)
-		}
-
-		return entryBucket.URL
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	return entryBucket.URL
 }
 
 func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileUserdataEntry, err error) {
@@ -3475,333 +3039,6 @@ func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileU
 	}
 
 	return userdata, err
-}
-
-func (l *Levels) GetServerOnlyBadges(guildID string) []DB_Badge {
-	var entryBucket []DB_Badge
-	listCursor, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("guildid").Eq(guildID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err != nil {
-		if err != rethink.ErrEmptyResult {
-			helpers.Relax(err)
-		}
-	}
-
-	return entryBucket
-}
-
-func (l *Levels) GetServerBadges(guildID string) []DB_Badge {
-	var entryBucket []DB_Badge
-	var globalEntryBucket []DB_Badge
-	listCursor, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("guildid").Eq(guildID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-	if err != nil {
-		panic(err)
-	}
-
-	listCursor, err = rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("guildid").Eq("global"),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&globalEntryBucket)
-
-	for _, globalEntry := range globalEntryBucket {
-		entryBucket = append(entryBucket, globalEntry)
-	}
-
-	if err != nil {
-		if err != rethink.ErrEmptyResult {
-			helpers.Relax(err)
-		}
-	}
-
-	return entryBucket
-}
-
-func (l *Levels) GetCategoryBadges(category string, guildID string) []DB_Badge {
-	var entryBucket []DB_Badge
-	result := make([]DB_Badge, 0)
-	listCursor, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("category").Eq(category),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return result
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	for _, badge := range entryBucket {
-		if badge.GuildID == guildID || badge.GuildID == "global" {
-			result = append(result, badge)
-		}
-	}
-
-	return result
-}
-
-func (l *Levels) GetBadge(category string, name string, guildID string) DB_Badge {
-	var entryBucket []DB_Badge
-	var emptyBadge DB_Badge
-	listCursor, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("category").Eq(strings.ToLower(category)),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return emptyBadge
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	for _, badge := range entryBucket {
-		if strings.ToLower(badge.Name) == strings.ToLower(name) && (badge.GuildID == guildID || badge.GuildID == "global") {
-			return badge
-		}
-	}
-
-	return emptyBadge
-}
-
-func (l *Levels) GetBadgeByID(badgeID string) DB_Badge {
-	var badgeBucket DB_Badge
-	listCursor, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("id").Eq(badgeID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&badgeBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return badgeBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return badgeBucket
-}
-
-func (l *Levels) GetBadgesAvailable(user *discordgo.User, sourceServerID string) []DB_Badge {
-	guildsToCheck := make([]string, 0)
-	guildsToCheck = append(guildsToCheck, "global")
-
-	session := cache.GetSession()
-
-	for _, guild := range session.State.Guilds {
-		if helpers.GetIsInGuild(guild.ID, user.ID) {
-			guildsToCheck = append(guildsToCheck, guild.ID)
-		}
-	}
-
-	sourceServerAlreadyIn := false
-	for _, guild := range guildsToCheck {
-		if guild == sourceServerID {
-			sourceServerAlreadyIn = true
-		}
-	}
-	if sourceServerAlreadyIn == false {
-		guildsToCheck = append(guildsToCheck, sourceServerID)
-	}
-
-	var allBadges []DB_Badge
-	for _, guildToCheck := range guildsToCheck {
-		var entryBucket []DB_Badge
-		listCursor, err := rethink.Table("profile_badge").Filter(
-			rethink.Row.Field("guildid").Eq(guildToCheck),
-		).Run(helpers.GetDB())
-		defer listCursor.Close()
-		if err != nil {
-			continue
-		}
-		err = listCursor.All(&entryBucket)
-		if err != nil {
-			continue
-		}
-		for _, entryBadge := range entryBucket {
-			allBadges = append(allBadges, entryBadge)
-		}
-	}
-
-	levelCache := make(map[string]int, 0)
-
-	var availableBadges []DB_Badge
-	for _, foundBadge := range allBadges {
-		isAllowed := false
-
-		// Level Check
-		if foundBadge.LevelRequirement < 0 { // Available for no one?
-			isAllowed = false
-		} else if foundBadge.LevelRequirement == 0 { // Available for everyone?
-			isAllowed = true
-		} else if foundBadge.LevelRequirement > 0 { // Meets min level?
-			if _, ok := levelCache[foundBadge.GuildID]; ok {
-				if foundBadge.LevelRequirement <= levelCache[foundBadge.GuildID] {
-					isAllowed = true
-				} else {
-					isAllowed = false
-				}
-			} else {
-				levelCache[foundBadge.GuildID] = l.GetLevelForUser(user.ID, foundBadge.GuildID)
-				if foundBadge.LevelRequirement <= levelCache[foundBadge.GuildID] {
-					isAllowed = true
-				} else {
-					isAllowed = false
-				}
-			}
-		}
-		// Role Check
-		if foundBadge.RoleRequirement != "" { // is there a role requirement?
-			isAllowed = false
-			member, err := helpers.GetGuildMemberWithoutApi(foundBadge.GuildID, user.ID)
-			if err == nil {
-				for _, memberRole := range member.Roles { // check if user got role
-					if memberRole == foundBadge.RoleRequirement {
-						isAllowed = true
-					}
-				}
-			}
-		}
-
-		// User is in allowed user list?
-		for _, allowedUserID := range foundBadge.AllowedUserIDs {
-			if allowedUserID == user.ID {
-				isAllowed = true
-			}
-		}
-
-		// User is in denied user list?
-		for _, deniedUserID := range foundBadge.DeniedUserIDs {
-			if deniedUserID == user.ID {
-				isAllowed = false
-			}
-		}
-
-		if isAllowed == true {
-			availableBadges = append(availableBadges, foundBadge)
-		}
-	}
-
-	return availableBadges
-}
-
-func (l *Levels) GetBadgesAvailableQuick(user *discordgo.User, activeBadgeIDs []string) []DB_Badge {
-	activeBadges := make([]DB_Badge, 0)
-	for _, activeBadgeID := range activeBadgeIDs {
-		badge := l.GetBadgeByID(activeBadgeID)
-		if badge.ID != "" {
-			if badge.GuildID == "global" {
-				activeBadges = append(activeBadges, badge)
-			} else {
-				if helpers.GetIsInGuild(badge.GuildID, user.ID) {
-					activeBadges = append(activeBadges, badge)
-				}
-			}
-		}
-	}
-
-	var availableBadges []DB_Badge
-	for _, foundBadge := range activeBadges {
-		isAllowed := true
-
-		// User is in allowed user list?
-		for _, allowedUserID := range foundBadge.AllowedUserIDs {
-			if allowedUserID == user.ID {
-				isAllowed = true
-			}
-		}
-
-		// User is in denied user list?
-		for _, deniedUserID := range foundBadge.DeniedUserIDs {
-			if deniedUserID == user.ID {
-				isAllowed = false
-			}
-		}
-
-		if isAllowed == true {
-			availableBadges = append(availableBadges, foundBadge)
-		}
-	}
-
-	return availableBadges
-}
-
-func (l *Levels) GetLevelForUser(userID string, guildID string) int {
-	var levelsServersUser []models.LevelsServerusersEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": userID})).All(&levelsServersUser)
-	helpers.Relax(err)
-
-	if levelsServersUser == nil {
-		return 0
-	} else if err != nil {
-		helpers.Relax(err)
-	}
-
-	if guildID == "global" {
-		totalExp := int64(0)
-		for _, levelsServerUser := range levelsServersUser {
-			totalExp += levelsServerUser.Exp
-		}
-		return l.getLevelFromExp(totalExp)
-	} else {
-		for _, levelsServerUser := range levelsServersUser {
-			if levelsServerUser.GuildID == guildID {
-				return l.getLevelFromExp(levelsServerUser.Exp)
-			}
-		}
-	}
-
-	return 0
-}
-
-func (l *Levels) InsertBadge(entry DB_Badge) (badgeID string, err error) {
-	insert := rethink.Table("profile_badge").Insert(entry)
-	res, err := insert.RunWrite(helpers.GetDB())
-	if err != nil {
-		return "", err
-	}
-	return res.GeneratedKeys[0], nil
-}
-
-func (l *Levels) UpdateBadge(entry DB_Badge) {
-	if entry.ID != "" {
-		_, err := rethink.Table("profile_badge").Update(entry).Run(helpers.GetDB())
-		helpers.Relax(err)
-	}
-}
-
-func (l *Levels) DeleteBadge(badgeID string) {
-	_, err := rethink.Table("profile_badge").Filter(
-		rethink.Row.Field("id").Eq(badgeID),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-	return
 }
 
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
@@ -3876,11 +3113,11 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		bio = "Robyul would like to know more about me!"
 	}
 
-	badgesToDisplay := make([]DB_Badge, 0)
-	availableBadges := m.GetBadgesAvailableQuick(member.User, userData.ActiveBadgeIDs)
+	badgesToDisplay := make([]models.ProfileBadgeEntry, 0)
+	availableBadges := getBadgesAvailableQuick(member.User, userData.ActiveBadgeIDs)
 	for _, activeBadgeID := range userData.ActiveBadgeIDs {
 		for _, availableBadge := range availableBadges {
-			if activeBadgeID == availableBadge.ID {
+			if activeBadgeID == availableBadge.GetID() {
 				badgesToDisplay = append(badgesToDisplay, availableBadge)
 			}
 		}
@@ -3888,9 +3125,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	var badgesHTML1, badgesHTML2 string
 	for i, badge := range badgesToDisplay {
 		if i <= 8 {
-			badgesHTML1 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+			badgesHTML1 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", getBadgeUrl(badge), badge.BorderColor)
 		} else {
-			badgesHTML2 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", badge.URL, badge.BorderColor)
+			badgesHTML2 += fmt.Sprintf("<img src=\"%s\" style=\"border: 2px solid #%s;\">", getBadgeUrl(badge), badge.BorderColor)
 		}
 	}
 
@@ -3949,7 +3186,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 				"limit": 1,
 				"user":  lastfmUsername,
 			})
-			helpers.RelaxLog(err)
+			if err != nil && !strings.Contains(err.Error(), "User not found") {
+				helpers.RelaxLog(err)
+			}
 			if err == nil && recentTracks.Tracks != nil && len(recentTracks.Tracks) >= 1 && recentTracks.Tracks[0].NowPlaying == "true" {
 				playingStatus += fmt.Sprintf("<i class=\"fa fa-music\" aria-hidden=\"true\"></i> %s by %s",
 					recentTracks.Tracks[0].Name, recentTracks.Tracks[0].Artist.Name)
@@ -3959,7 +3198,9 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 				"period": "overall",
 				"user":   lastfmUsername,
 			})
-			helpers.RelaxLog(err)
+			if err != nil && !strings.Contains(err.Error(), "User not found") {
+				helpers.RelaxLog(err)
+			}
 			if err == nil && topArtists.Artists != nil && len(topArtists.Artists) >= 1 {
 				if playingStatus != "" {
 					playingStatus += "<br>"
@@ -3988,10 +3229,10 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_URL}", html.EscapeString(avatarUrl), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TITLE}", html.EscapeString(title), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", html.EscapeString(bio), -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL}", strconv.Itoa(m.getLevelFromExp(levelThisServerUser.Exp)), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL}", strconv.Itoa(getLevelFromExp(levelThisServerUser.Exp)), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_RANK}", serverRank, -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(m.getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_LEVEL}", strconv.Itoa(m.getLevelFromExp(totalExp)), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_LEVEL}", strconv.Itoa(getLevelFromExp(totalExp)), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_RANK}", globalRank, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_REP}", strconv.Itoa(userData.Rep), -1)
@@ -4282,7 +3523,7 @@ func (m *Levels) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.S
 			return
 		}
 
-		err := m.applyLevelsRoles(member.GuildID, member.User.ID, m.GetLevelForUser(member.User.ID, member.GuildID))
+		err := applyLevelsRoles(member.GuildID, member.User.ID, getLevelForUser(member.User.ID, member.GuildID))
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeUnknownMember && errD.Message.Code != discordgo.ErrCodeMissingAccess) {
 				helpers.RelaxLog(err)
@@ -4311,81 +3552,6 @@ func (m *Levels) getLevelsServerUserOrCreateNew(guildid string, userid string) (
 	}
 
 	return serveruser, err
-}
-
-func (m *Levels) getLevelsServerUserOrCreateNewWithoutLogging(guildid string, userid string) (serveruser models.LevelsServerusersEntry, err error) {
-	err = helpers.MdbOneWithoutLogging(
-		helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": userid, "guildid": guildid}),
-		&serveruser,
-	)
-
-	if err != nil && strings.Contains(err.Error(), "not found") {
-		serveruser.UserID = userid
-		serveruser.GuildID = guildid
-		newid, err := helpers.MDbInsertWithoutLogging(models.LevelsServerusersTable, serveruser)
-		serveruser.ID = newid
-		return serveruser, err
-	}
-
-	return serveruser, err
-}
-
-func (m *Levels) getLevelFromExp(exp int64) int {
-	calculatedLevel := 0.1 * math.Sqrt(float64(exp))
-
-	return int(math.Floor(calculatedLevel))
-}
-
-func (m *Levels) getExpForLevel(level int) int64 {
-	if level <= 0 {
-		return 0
-	}
-
-	calculatedExp := math.Pow(float64(level)/0.1, 2)
-	return int64(calculatedExp)
-}
-
-func (m *Levels) getProgressToNextLevelFromExp(exp int64) int {
-	expLevelCurrently := exp - m.getExpForLevel(m.getLevelFromExp(exp))
-	expLevelNext := m.getExpForLevel(m.getLevelFromExp(exp)+1) - m.getExpForLevel(m.getLevelFromExp(exp))
-	return int(expLevelCurrently / (expLevelNext / 100))
-}
-
-func (m *Levels) getRandomExpForMessage() int64 {
-	min := 10
-	max := 15
-	rand.Seed(time.Now().Unix())
-	return int64(rand.Intn(max-min) + min)
-}
-
-func (m *Levels) rankMapByExp(exp map[string]int64) PairList {
-	pl := make(PairList, len(exp))
-	i := 0
-	for k, v := range exp {
-		pl[i] = Pair{k, v}
-		i++
-	}
-	sort.Sort(sort.Reverse(pl))
-	return pl
-}
-
-type Pair struct {
-	Key   string
-	Value int64
-}
-
-type PairList []Pair
-
-func (p PairList) Len() int           { return len(p) }
-func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
-func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-func (b *Levels) BucketInit() {
-	b.Lock()
-	b.buckets = make(map[string]int8)
-	b.Unlock()
-
-	go b.BucketRefiller()
 }
 
 // Refills user buckets in a set interval
@@ -4518,155 +3684,6 @@ func (l *Levels) createLevelsRoleEntry(
 	}
 }
 
-func (l *Levels) getLevelsRoles(guildID string, currentLevel int) (apply []*discordgo.Role, remove []*discordgo.Role) {
-	apply = make([]*discordgo.Role, 0)
-	remove = make([]*discordgo.Role, 0)
-
-	var entryBucket []models.LevelsRoleEntry
-	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		helpers.RelaxLog(err)
-		return
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return
-	}
-
-	for _, entry := range entryBucket {
-		role, err := cache.GetSession().State.Role(guildID, entry.RoleID)
-		if err != nil {
-			continue
-		}
-
-		if currentLevel >= entry.StartLevel && (entry.LastLevel < 0 || currentLevel <= entry.LastLevel) {
-			apply = append(apply, role)
-		} else {
-			remove = append(remove, role)
-		}
-	}
-
-	return
-}
-
-func (l *Levels) applyLevelsRoles(guildID string, userID string, level int) (err error) {
-	apply, remove := l.getLevelsRoles(guildID, level)
-	member, err := helpers.GetGuildMemberWithoutApi(guildID, userID)
-	if err != nil {
-		cache.GetLogger().WithField("module", "levels").Warnf("failed to get guild member to apply level roles: %s", err.Error())
-		return err
-	}
-
-	toRemove := make([]*discordgo.Role, 0)
-	toApply := make([]*discordgo.Role, 0)
-
-	for _, removeRole := range remove {
-		for _, memberRole := range member.Roles {
-			if removeRole.ID == memberRole {
-				toRemove = append(toRemove, removeRole)
-			}
-		}
-	}
-	for _, applyRole := range apply {
-		hasRoleAlready := false
-		for _, memberRole := range member.Roles {
-			if applyRole.ID == memberRole {
-				hasRoleAlready = true
-			}
-		}
-		if !hasRoleAlready {
-			toApply = append(toApply, applyRole)
-		}
-	}
-
-	session := cache.GetSession()
-
-	overwrites := l.getLevelsRolesUserOverwrites(guildID, userID)
-	for _, overwrite := range overwrites {
-		switch overwrite.Type {
-		case "grant":
-			hasRoleAlready := false
-			for _, memberRole := range member.Roles {
-				if overwrite.RoleID == memberRole {
-					hasRoleAlready = true
-				}
-			}
-			if !hasRoleAlready {
-				applyingAlready := false
-				for _, applyingRole := range toApply {
-					if applyingRole.ID == overwrite.RoleID {
-						applyingAlready = true
-					}
-				}
-
-				if !applyingAlready {
-					applyRole, err := session.State.Role(guildID, overwrite.RoleID)
-
-					if err == nil {
-						toApply = append(toApply, applyRole)
-					}
-				}
-			}
-
-			newToRemove := make([]*discordgo.Role, 0)
-			for _, role := range toRemove {
-				if role.ID != overwrite.RoleID {
-					newToRemove = append(newToRemove, role)
-				}
-			}
-			toRemove = newToRemove
-
-			break
-		case "deny":
-			hasRole := false
-			for _, memberRole := range member.Roles {
-				if overwrite.RoleID == memberRole {
-					hasRole = true
-				}
-			}
-
-			if hasRole {
-				removeRole, err := session.State.Role(guildID, overwrite.RoleID)
-				if err == nil {
-					toRemove = append(toRemove, removeRole)
-				}
-			}
-
-			newToApply := make([]*discordgo.Role, 0)
-			for _, role := range toApply {
-				if role.ID != overwrite.RoleID {
-					newToApply = append(newToApply, role)
-				}
-			}
-			toApply = newToApply
-
-			break
-		}
-	}
-
-	for _, toApplyRole := range toApply {
-		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
-		if errRole != nil {
-			cache.GetLogger().WithField("module", "levels").Warnf("failed to add role applying level roles: %s", errRole.Error())
-			err = errRole
-		}
-	}
-
-	for _, toRemoveRole := range toRemove {
-		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
-		if errRole != nil {
-			cache.GetLogger().WithField("module", "levels").Warnf("failed to remove role applying level roles: %s", errRole.Error())
-			err = errRole
-		}
-	}
-
-	return
-}
-
 func (l *Levels) getLevelsRoleEntryBy(key string, value string) (result models.LevelsRoleEntry, err error) {
 	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
 		rethink.Row.Field(key).Eq(value),
@@ -4777,27 +3794,6 @@ func (l *Levels) getLevelsRolesUserRoleOverwrite(guildID string, roleID string, 
 	}
 
 	return false, false, overwrite
-}
-
-func (l *Levels) getLevelsRolesUserOverwrites(guildID string, userID string) (overwrites []models.LevelsRoleOverwriteEntry) {
-	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(guildID),
-			rethink.Row.Field("user_id").Eq(userID),
-		),
-	).Run(helpers.GetDB())
-	if err != nil {
-		helpers.RelaxLog(err)
-		return make([]models.LevelsRoleOverwriteEntry, 0)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&overwrites)
-
-	if err == rethink.ErrEmptyResult {
-		return make([]models.LevelsRoleOverwriteEntry, 0)
-	}
-
-	return
 }
 
 func (l *Levels) getLevelsRolesGuildOverwrites(guildID string) (overwrites []models.LevelsRoleOverwriteEntry) {

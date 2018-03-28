@@ -250,6 +250,12 @@ type Rest_File struct {
 	Data     string // as base64
 }
 
+type Rest_Background struct {
+	Name string
+	URL  string
+	Tags []string
+}
+
 const (
 	Redis_Key_Feature_Levels_Badges  = "robyul2-discord:feature:levels-badges:server:%s"
 	Redis_Key_Feature_RandomPictures = "robyul2-discord:feature:randompictures:server:%s"

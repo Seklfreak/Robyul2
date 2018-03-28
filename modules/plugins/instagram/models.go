@@ -1,10 +1,19 @@
 package instagram
 
 import (
+	"encoding/json"
 	"sync"
+
+	"net/url"
+	"strconv"
+
+	"strings"
+
+	"time"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/pkg/errors"
 )
 
 type Instagram_User struct {
@@ -154,6 +163,30 @@ type Instagram_Safe_Entries struct {
 	mux     sync.Mutex
 }
 
+type Instagram_GraphQl_User_Profile struct {
+	Graphql struct {
+		User struct {
+			ID             string `json:"id"`
+			Biography      string `json:"biography"`
+			ExternalURL    string `json:"external_url"`
+			EdgeFollowedBy struct {
+				Count int `json:"count"`
+			} `json:"edge_followed_by"`
+			EdgeFollow struct {
+				Count int `json:"count"`
+			} `json:"edge_follow"`
+			FullName                 string `json:"full_name"`
+			IsPrivate                bool   `json:"is_private"`
+			IsVerified               bool   `json:"is_verified"`
+			ProfilePicURLHd          string `json:"profile_pic_url_hd"`
+			Username                 string `json:"username"`
+			EdgeOwnerToTimelineMedia struct {
+				Count int `json:"count"`
+			} `json:"edge_owner_to_timeline_media"`
+		} `json:"user"`
+	} `json:"graphql"`
+}
+
 type Instagram_GraphQl_User_Feed struct {
 	Data struct {
 		User struct {
@@ -184,20 +217,15 @@ type Instagram_GraphQl_User_Feed struct {
 							Height int `json:"height"`
 							Width  int `json:"width"`
 						} `json:"dimensions"`
-						DisplayURL           string `json:"display_url"`
-						EdgeMediaPreviewLike struct {
+						DisplayURL  string `json:"display_url"`
+						EdgeLikedBy struct {
 							Count int `json:"count"`
-						} `json:"edge_media_preview_like"`
+						} `json:"edge_liked_by"`
 						Owner struct {
 							ID string `json:"id"`
 						} `json:"owner"`
-						ThumbnailSrc       string `json:"thumbnail_src"`
-						ThumbnailResources []struct {
-							Src          string `json:"src"`
-							ConfigWidth  int    `json:"config_width"`
-							ConfigHeight int    `json:"config_height"`
-						} `json:"thumbnail_resources"`
-						IsVideo bool `json:"is_video"`
+						ThumbnailSrc string `json:"thumbnail_src"`
+						IsVideo      bool   `json:"is_video"`
 					} `json:"node"`
 				} `json:"edges"`
 			} `json:"edge_owner_to_timeline_media"`
@@ -206,15 +234,121 @@ type Instagram_GraphQl_User_Feed struct {
 	Status string `json:"status"`
 }
 
-func (m *Handler) getBundledEntries() (bundledEntries map[int64][]models.InstagramEntry, entriesCount int, err error) {
+type InstagramSharedData struct {
+	EntryData struct {
+		PostPage []struct {
+			Graphql struct {
+				ShortcodeMedia struct {
+					Typename   string `json:"__typename"`
+					ID         string `json:"id"`
+					Shortcode  string `json:"shortcode"`
+					Dimensions struct {
+						Height int `json:"height"`
+						Width  int `json:"width"`
+					} `json:"dimensions"`
+					GatingInfo           interface{}                `json:"gating_info"`
+					MediaPreview         interface{}                `json:"media_preview"`
+					DisplayURL           string                     `json:"display_url"`
+					DisplayResources     []InstagramDisplayResource `json:"display_resources"`
+					VideoURL             string                     `json:"video_url"`
+					IsVideo              bool                       `json:"is_video"`
+					ShouldLogClientEvent bool                       `json:"should_log_client_event"`
+					TrackingToken        string                     `json:"tracking_token"`
+					EdgeMediaToCaption   struct {
+						Edges []struct {
+							Node struct {
+								Text string `json:"text"`
+							} `json:"node"`
+						} `json:"edges"`
+					} `json:"edge_media_to_caption"`
+					CaptionIsEdited  bool        `json:"caption_is_edited"`
+					CommentsDisabled bool        `json:"comments_disabled"`
+					TakenAtTimestamp int         `json:"taken_at_timestamp"`
+					Location         interface{} `json:"location"`
+					Owner            struct {
+						ID                string `json:"id"`
+						ProfilePicURL     string `json:"profile_pic_url"`
+						Username          string `json:"username"`
+						BlockedByViewer   bool   `json:"blocked_by_viewer"`
+						FollowedByViewer  bool   `json:"followed_by_viewer"`
+						FullName          string `json:"full_name"`
+						HasBlockedViewer  bool   `json:"has_blocked_viewer"`
+						IsPrivate         bool   `json:"is_private"`
+						IsUnpublished     bool   `json:"is_unpublished"`
+						IsVerified        bool   `json:"is_verified"`
+						RequestedByViewer bool   `json:"requested_by_viewer"`
+					} `json:"owner"`
+					IsAd                  bool `json:"is_ad"`
+					EdgeSidecarToChildren struct {
+						Edges []struct {
+							Node struct {
+								Typename   string `json:"__typename"`
+								ID         string `json:"id"`
+								Shortcode  string `json:"shortcode"`
+								Dimensions struct {
+									Height int `json:"height"`
+									Width  int `json:"width"`
+								} `json:"dimensions"`
+								GatingInfo       interface{}                `json:"gating_info"`
+								MediaPreview     string                     `json:"media_preview"`
+								DisplayURL       string                     `json:"display_url"`
+								DisplayResources []InstagramDisplayResource `json:"display_resources"`
+								VideoURL         string                     `json:"video_url"`
+								IsVideo          bool                       `json:"is_video"`
+							} `json:"node"`
+						} `json:"edges"`
+					} `json:"edge_sidecar_to_children"`
+				} `json:"shortcode_media"`
+			} `json:"graphql"`
+		} `json:"PostPage"`
+	} `json:"entry_data"`
+}
+
+type InstagramDisplayResource struct {
+	Src          string `json:"src"`
+	ConfigWidth  int    `json:"config_width"`
+	ConfigHeight int    `json:"config_height"`
+}
+
+type InstagramPostInformation struct {
+	ID        string // ID_Owner.ID
+	Shortcode string
+	Author    InstagramAuthorInformations
+	MediaUrls []string
+	Caption   string
+	TakentAt  time.Time
+	IsVideo   bool
+}
+
+type InstagramShortPostInformation struct {
+	ID        string
+	Shortcode string
+	CreatedAt time.Time
+}
+
+type InstagramAuthorInformations struct {
+	ID            string
+	ProfilePicUrl string
+	Username      string
+	FullName      string
+	IsPrivate     bool
+	IsVerified    bool
+	Followings    int
+	Followers     int
+	Posts         int
+	Link          string
+	Biography     string
+}
+
+func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.InstagramEntry, entriesCount int, err error) {
 	var entries []models.InstagramEntry
 
 	err = helpers.MDbIter(helpers.MdbCollection(models.InstagramTable).Find(nil)).All(&entries)
 
-	bundledEntries = make(map[int64][]models.InstagramEntry, 0)
+	bundledEntries = make(map[string][]models.InstagramEntry, 0)
 
 	for _, entry := range entries {
-		if entry.InstagramUserID == 0 {
+		if entry.InstagramUserID == 0 && entry.InstagramUserIDString == "" {
 			continue
 		}
 
@@ -225,12 +359,46 @@ func (m *Handler) getBundledEntries() (bundledEntries map[int64][]models.Instagr
 			continue
 		}
 
-		if _, ok := bundledEntries[entry.InstagramUserID]; ok {
-			bundledEntries[entry.InstagramUserID] = append(bundledEntries[entry.InstagramUserID], entry)
+		userID := entry.InstagramUserIDString
+		if userID == "" {
+			userID = strconv.FormatInt(entry.InstagramUserID, 10)
+		}
+
+		if _, ok := bundledEntries[userID]; ok {
+			bundledEntries[userID] = append(bundledEntries[userID], entry)
 		} else {
-			bundledEntries[entry.InstagramUserID] = []models.InstagramEntry{entry}
+			bundledEntries[userID] = []models.InstagramEntry{entry}
 		}
 	}
 
 	return bundledEntries, len(entries), nil
+}
+
+func (m *Handler) graphQlMediaUrl(accountID string) (link string) {
+	jsonData, err := json.Marshal(struct {
+		ID    string `json:"id"`
+		First string `json:"first"`
+	}{ID: accountID, First: "10"})
+	helpers.Relax(err)
+
+	return "https://www.instagram.com/graphql/query/" +
+		"?query_id=17880160963012870" +
+		"&variables=" + url.QueryEscape(string(jsonData))
+}
+
+func (m *Handler) getInstagramSharedData(pageContent string) (sharedData InstagramSharedData, err error) {
+	parts := strings.Split(pageContent, "window._sharedData = ")
+
+	if len(parts) < 2 {
+		return sharedData, errors.New("unable to parse shared data")
+	}
+
+	subParts := strings.Split(parts[1], ";</script>")
+
+	if len(subParts) < 1 {
+		return sharedData, errors.New("unable to parse shared data")
+	}
+
+	err = json.Unmarshal([]byte(subParts[0]), &sharedData)
+	return
 }

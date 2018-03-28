@@ -17,7 +17,6 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -502,13 +501,6 @@ func MdbCount(collection models.MongoDbCollection, query interface{}) (count int
 	start := time.Now()
 	count, err = MdbCollection(collection).Find(query).Count()
 	took := time.Since(start)
-	spew.Dump(&KeenMongoDbEvent{
-		Seconds:    took.Seconds(),
-		Type:       "count",
-		Method:     "MdbCount()",
-		Collection: stripRobyulDatabaseFromCollection(collection.String()),
-		Query:      truncateKeenValue(fmt.Sprintf("%+v", query)),
-	})
 	if cache.HasKeen() {
 		go func() {
 			defer Recover()
@@ -545,6 +537,18 @@ func HumanToMdbId(text string) (id bson.ObjectId) {
 		return bson.ObjectIdHex(text)
 	}
 	return id
+}
+
+// Returns true if the given error is a not found error from MongoDB
+// includes errors from invalid object IDs
+func IsMdbNotFound(err error) (notFound bool) {
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "ObjectIDs must be exactly 12 bytes long") {
+			return true
+		}
+	}
+	return false
 }
 
 func stripRobyulDatabaseFromCollection(input string) (output string) {

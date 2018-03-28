@@ -192,7 +192,7 @@ func getReminders(userID string) (reminder models.RemindersEntry) {
 	)
 
 	// If user has no DB entries create an empty document
-	if err != nil && strings.Contains(err.Error(), "not found") {
+	if helpers.IsMdbNotFound(err) {
 		err = helpers.MDbUpsert(
 			models.RemindersTable,
 			bson.M{"userid": userID},

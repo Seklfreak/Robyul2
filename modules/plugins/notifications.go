@@ -96,7 +96,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 				return
 			}
-			if err != nil && !strings.Contains(err.Error(), "not found") {
+			if err != nil && !helpers.IsMdbNotFound(err) {
 				helpers.Relax(err)
 			}
 
@@ -146,7 +146,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 					}),
 				&entryBucket,
 			)
-			if err != nil && strings.Contains(err.Error(), "not found") {
+			if helpers.IsMdbNotFound(err) {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-delete-not-found-error", msg.Author.ID))
 				return
 			}
@@ -224,7 +224,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						"keyword": bson.M{"$regex": bson.RegEx{Pattern: "^" + regexp.QuoteMeta(keywords) + "$", Options: "i"}}}),
 				&entryBucket,
 			)
-			if err != nil && strings.Contains(err.Error(), "not found") {
+			if helpers.IsMdbNotFound(err) {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.notifications.keyword-ignore-not-found-error"))
 				return
 			}
@@ -310,7 +310,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						&entryBucket,
 					)
 
-					if err != nil && strings.Contains(err.Error(), "not found") {
+					if helpers.IsMdbNotFound(err) {
 						// Add to list
 						err = helpers.MDbUpsert(
 							models.NotificationsIgnoredChannelsTable,
