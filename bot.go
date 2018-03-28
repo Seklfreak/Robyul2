@@ -114,6 +114,7 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 
 func BotDestroy() {
 	modules.Uninit(cache.GetSession())
+	helpers.RemoveReactionsFromPagedEmbeds()
 }
 
 func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {

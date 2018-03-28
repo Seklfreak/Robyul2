@@ -37,6 +37,14 @@ func init() {
 	pagedEmbededMessages = make(map[string]*pagedEmbedMessage)
 }
 
+// will remove all reactions from all paged embed messages.
+//  mainly used on bot uninit to clean embeds
+func RemoveReactionsFromPagedEmbeds() {
+	for _, pagedEmbed := range pagedEmbededMessages {
+		go cache.GetSession().MessageReactionsRemoveAll(pagedEmbed.channelID, pagedEmbed.messageID)
+	}
+}
+
 // GetPagedMessage will return the paged message if there is one, otherwill will return nil
 func GetPagedMessage(messageID string) *pagedEmbedMessage {
 	pagedMessaged, _ := pagedEmbededMessages[messageID]
@@ -199,13 +207,6 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 	tempEmbed.Footer = p.getEmbedFooter()
 
 	if p.msgType == "image" {
-		cache.GetLogger().Info("File name: ", p.files[p.currentPage].Name)
-		// tempEmbed.Image.URL = fmt.Sprintf("attachment://%s", p.files[p.currentPage].Name)
-
-		// sentMessage, _ = SendComplex(p.channelID, &discordgo.MessageSend{
-		// 	Embed: tempEmbed,
-		// 	Files: []*discordgo.File{p.files[p.currentPage]},
-		// })
 
 		var buf bytes.Buffer
 		newReader := io.TeeReader(p.files[p.currentPage-1].Reader, &buf)
