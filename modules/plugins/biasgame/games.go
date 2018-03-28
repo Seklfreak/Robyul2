@@ -239,6 +239,12 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				runGoogleDriveMigration(msg)
 			})
 
+		} else if commandArgs[0] == "update" {
+
+			helpers.RequireBotAdmin(msg, func() {
+				updateIdolInfo(msg, content)
+			})
+
 		} else if commandArgs[0] == "images" {
 
 			showImagesForIdol(msg, content)

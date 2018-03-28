@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/mgutz/str"
 
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
@@ -95,7 +96,6 @@ func loadMiscImages() {
 // refreshBiasChoices refreshes the list of bias choices.
 //   initially called when bot starts but is also safe to call while bot is running if necessary
 func refreshBiasChoices(skipCache bool) {
-	skipCache = true
 
 	if skipCache == false {
 
@@ -222,6 +222,78 @@ func makeBiasChoiceFromBiasEntry(entry models.BiasEntry) biasChoice {
 		BiasImages:   []biasImage{bImage},
 	}
 	return newBiasChoice
+}
+
+// updateIdolInfo updates a idols group, name, and/or gender depending on args
+func updateIdolInfo(msg *discordgo.Message, content string) {
+	contentArgs := str.ToArgv(content)[1:]
+
+	// confirm amount of args
+	if len(contentArgs) < 4 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		return
+	}
+
+	targetGroup := contentArgs[0]
+	targetName := contentArgs[1]
+	newGroup := contentArgs[2]
+	newName := contentArgs[3]
+
+	// if a gender was passed, make sure its valid
+	if len(contentArgs) == 5 {
+		if contentArgs[4] != "boy" && contentArgs[4] != "girl" {
+			helpers.SendMessage(msg.ChannelID, "Invalid gender. Gender must be exactly 'girl' or 'boy'. No information was updated.")
+			return
+		}
+	}
+
+	// update biases in memory
+	recordsFound := 0
+	allBiases := getAllBiases()
+	allBiasesMutex.Lock()
+	for _, bias := range allBiases {
+		if bias.BiasName != targetName || bias.GroupName != targetGroup {
+			continue
+		}
+		recordsFound++
+
+		bias.BiasName = newName
+		bias.GroupName = newGroup
+		if len(contentArgs) == 5 && (contentArgs[4] == "boy" || contentArgs[4] == "girl") {
+			bias.Gender = contentArgs[4]
+		}
+	}
+	allBiasesMutex.Unlock()
+
+	// check if nothing was found
+	if recordsFound == 0 {
+		helpers.SendMessage(msg.ChannelID, "No Idols found with that exact group and name.")
+		return
+	}
+
+	// update database
+	var biasesToUpdate []models.BiasEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&biasesToUpdate)
+	helpers.Relax(err)
+
+	for _, bias := range biasesToUpdate {
+		bias.Name = newName
+		bias.GroupName = newGroup
+
+		if len(contentArgs) == 5 && (contentArgs[4] == "boy" || contentArgs[4] == "girl") {
+			bias.Gender = contentArgs[4]
+		}
+
+		err := helpers.MDbUpsertID(models.BiasGameIdolsTable, bias.ID, bias)
+		helpers.Relax(err)
+	}
+
+	// update cache
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+	}
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Idol Information updated. Old: %s %s | New: %s %s", targetGroup, targetName, newGroup, newName))
 }
 
 // runGoogleDriveMigration Should only be run on rare occasions when issues occur with object storage or setting up a new object storage
