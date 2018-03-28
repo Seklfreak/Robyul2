@@ -204,6 +204,10 @@ func (b *BiasGame) Commands() []string {
 func (b *BiasGame) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	defer helpers.Recover()
 
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGames) {
+		return
+	}
+
 	// images, suggestions, and stat set up are done async when bot starts up
 	//   make sure game is ready before trying to process any commands
 	if gameIsReady == false {
