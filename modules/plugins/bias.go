@@ -3,7 +3,6 @@ package plugins
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,34 +11,11 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
 )
 
 type Bias struct{}
-
-type AssignableRole_Channel struct {
-	ID         string                    `gorethink:"id,omitempty"`
-	ServerID   string                    `gorethink:"serverid"`
-	ChannelID  string                    `gorethink:"channelid"`
-	Categories []AssignableRole_Category `gorethink:"categories"`
-}
-
-type AssignableRole_Category struct {
-	Label   string
-	Message string
-	Pool    string
-	Hidden  bool
-	Limit   int
-	Roles   []AssignableRole_Role
-}
-
-type AssignableRole_Role struct {
-	Name      string
-	Print     string
-	Aliases   []string
-	Reactions []string
-}
 
 func (m *Bias) Commands() []string {
 	return []string{
@@ -48,11 +24,13 @@ func (m *Bias) Commands() []string {
 }
 
 var (
-	biasChannels []AssignableRole_Channel
+	biasChannels []models.BiasEntry
 )
 
 func (m *Bias) Init(session *discordgo.Session) {
-	biasChannels = m.GetBiasChannels()
+	// refresh cache
+	err := helpers.MDbIter(helpers.MdbCollection(models.BiasTable).Find(nil)).All(&biasChannels)
+	helpers.Relax(err)
 }
 
 func (m *Bias) Uninit(session *discordgo.Session) {
@@ -124,8 +102,12 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 		case "refresh":
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
-				biasChannels = m.GetBiasChannels()
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
+
+				// refresh cache
+				err := helpers.MDbIter(helpers.MdbCollection(models.BiasTable).Find(nil)).All(&biasChannels)
+				helpers.Relax(err)
+
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.refreshed-config"))
 				helpers.Relax(err)
 			})
 		case "set-config":
@@ -150,7 +132,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					return
 				}
 
-				var channelConfig []AssignableRole_Category
+				var channelConfig []models.BiasEntryCategory
 				channelConfigJson := helpers.NetGet(msg.Attachments[0].URL)
 				channelConfigJson = bytes.TrimPrefix(channelConfigJson, []byte("\xef\xbb\xbf")) // removes BOM
 				err = json.Unmarshal(channelConfigJson, &channelConfig)
@@ -160,22 +142,30 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					return
 				}
 
-				previousConfig := m.getChannelConfigBy("channelid", targetChannel.ID)
-
-				newBiasConfigBytes, err := json.Marshal(channelConfig)
-				helpers.Relax(err)
-
+				var previousConfig models.BiasEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.BiasTable).Find(bson.M{"channelid": targetChannel.ID}),
+					&previousConfig,
+				)
 				var previousConfigBytes []byte
-				if previousConfig.ID != "" {
+				if !helpers.IsMdbNotFound(err) {
 					previousConfigBytes, err = json.Marshal(previousConfig.Categories)
 					helpers.Relax(err)
 				}
 
-				channelDb := m.getChannelConfigByOrCreateEmpty("channelid", targetChannel.ID)
-				channelDb.ServerID = targetChannel.GuildID
-				channelDb.ChannelID = targetChannel.ID
-				channelDb.Categories = channelConfig
-				m.setChannelConfig(channelDb)
+				newBiasConfigBytes, err := json.Marshal(channelConfig)
+				helpers.Relax(err)
+
+				err = helpers.MDbUpsert(
+					models.BiasTable,
+					bson.M{"channelid": targetChannel.ID},
+					models.BiasEntry{
+						GuildID:    targetChannel.GuildID,
+						ChannelID:  targetChannel.ID,
+						Categories: channelConfig,
+					},
+				)
+				helpers.Relax(err)
 
 				if previousConfig.ID == "" {
 					_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
@@ -204,7 +194,10 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					helpers.RelaxLog(err)
 				}
 
-				biasChannels = m.GetBiasChannels()
+				// refresh cache
+				err = helpers.MDbIter(helpers.MdbCollection(models.BiasTable).Find(nil)).All(&biasChannels)
+				helpers.Relax(err)
+
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.updated-config"))
 				helpers.Relax(err)
 				return
@@ -227,14 +220,18 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 				targetGuild, err := helpers.GetGuild(targetChannel.GuildID)
 				helpers.Relax(err)
 
-				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
-				if channelDb.ChannelID == "" {
+				var channelConfig models.BiasEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.BiasTable).Find(bson.M{"channelid": targetChannel.ID}),
+					&channelConfig,
+				)
+				if helpers.IsMdbNotFound(err) {
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
 					helpers.Relax(err)
 					return
 				}
 
-				channelConfigJson, err := json.MarshalIndent(channelDb.Categories, "", "    ")
+				channelConfigJson, err := json.MarshalIndent(channelConfig.Categories, "", "    ")
 				helpers.Relax(err)
 
 				_, err = session.ChannelFileSend(msg.ChannelID, sanitize.Path(targetGuild.Name)+"-"+sanitize.Path(targetChannel.Name)+"-robyul-bias-config.json", bytes.NewReader(channelConfigJson))
@@ -258,19 +255,26 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 					return
 				}
 
-				channelDb := m.getChannelConfigBy("channelid", targetChannel.ID)
-				if channelDb.ChannelID == "" {
+				var channelConfig models.BiasEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.BiasTable).Find(bson.M{"channelid": targetChannel.ID}),
+					&channelConfig,
+				)
+				if helpers.IsMdbNotFound(err) {
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.bias.no-bias-config"))
 					helpers.Relax(err)
 					return
 				}
 
-				previousConfigBytes, err := json.Marshal(channelDb.Categories)
+				previousConfigBytes, err := json.Marshal(channelConfig.Categories)
 				helpers.Relax(err)
 
-				err = m.deleteChannelConfig(channelDb)
+				err = helpers.MDbDelete(models.BiasTable, channelConfig.ID)
 				helpers.Relax(err)
-				biasChannels = m.GetBiasChannels()
+
+				// refresh cache
+				err = helpers.MDbIter(helpers.MdbCollection(models.BiasTable).Find(nil)).All(&biasChannels)
+				helpers.Relax(err)
 
 				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
 					models.EventlogTargetTypeChannel, msg.Author.ID,
@@ -309,7 +313,7 @@ func (m *Bias) Action(command string, content string, msg *discordgo.Message, se
 
 			statsPrinted := 0
 			for _, biasChannel := range biasChannels {
-				if biasChannel.ServerID == channel.GuildID {
+				if biasChannel.GuildID == channel.GuildID {
 					biasDiscordChannel, err := helpers.GetChannel(biasChannel.ChannelID)
 					if err != nil || biasDiscordChannel == nil {
 						continue
@@ -574,80 +578,8 @@ func (m *Bias) OnMessage(content string, msg *discordgo.Message, session *discor
 	}()
 }
 
-func (m *Bias) getChannelConfigByOrCreateEmpty(key string, id string) AssignableRole_Channel {
-	var entryBucket AssignableRole_Channel
-	listCursor, err := rethink.Table("bias").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("bias").Insert(AssignableRole_Channel{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getChannelConfigByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Bias) getChannelConfigBy(key string, id string) AssignableRole_Channel {
-	var entryBucket AssignableRole_Channel
-	listCursor, err := rethink.Table("bias").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Bias) setChannelConfig(entry AssignableRole_Channel) {
-	_, err := rethink.Table("bias").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Bias) deleteChannelConfig(entry AssignableRole_Channel) error {
-	if entry.ID != "" {
-		_, err := rethink.Table("bias").Get(entry.ID).Delete().RunWrite(helpers.GetDB())
-		return err
-	}
-	return errors.New("empty starEntry submitted")
-}
-
-func (m *Bias) GetBiasChannels() []AssignableRole_Channel {
-	var entryBucket []AssignableRole_Channel
-	cursor, err := rethink.Table("bias").Run(helpers.GetDB())
-	helpers.Relax(err)
-
-	err = cursor.All(&entryBucket)
-	helpers.Relax(err)
-
-	return entryBucket
-}
-
-func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildRoles []*discordgo.Role, category AssignableRole_Category) []AssignableRole_Role {
-	var rolesAssigned []AssignableRole_Role
+func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildRoles []*discordgo.Role, category models.BiasEntryCategory) []models.BiasEntryRole {
+	var rolesAssigned []models.BiasEntryRole
 	for _, discordRoleId := range member.Roles {
 		for _, discordGuildRole := range guildRoles {
 			if discordRoleId == discordGuildRole.ID {
@@ -663,7 +595,7 @@ func (m *Bias) CategoryRolesAssigned(member *discordgo.Member, guildRoles []*dis
 	return rolesAssigned
 }
 
-func (m *Bias) GetDiscordRole(role AssignableRole_Role, guild *discordgo.Guild) *discordgo.Role {
+func (m *Bias) GetDiscordRole(role models.BiasEntryRole, guild *discordgo.Guild) *discordgo.Role {
 	for _, discordRole := range guild.Roles {
 		if strings.ToLower(role.Name) == strings.ToLower(discordRole.Name) || role.Name == discordRole.ID {
 			return discordRole
