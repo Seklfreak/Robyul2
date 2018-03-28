@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/png"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,8 +21,6 @@ import (
 )
 
 const (
-	IMAGE_SUGGESTION_CHANNEL = "424701783596728340"
-
 	CHECKMARK_EMOJI    = "✅"
 	X_EMOJI            = "❌"
 	QUESTIONMARK_EMOJI = "❓"
@@ -30,6 +29,7 @@ const (
 	MIN_IMAGE_SIZE = 150  // 150x150px
 )
 
+var imageSuggestionChannlId string
 var suggestionQueue []*models.BiasGameSuggestionEntry
 var suggestionEmbedMessageId string // id of the embed message where suggestions are accepted/denied
 var exampleRoundPicId string
@@ -37,21 +37,22 @@ var suggestionQueueCountMessageId string
 
 func initSuggestionChannel() {
 
+	imageSuggestionChannlId = helpers.GetConfig().Path("biasgame.suggestion_channel_id").Data().(string)
 	// when the bot starts, delete any past bot messages from the suggestion channel and make the embed
 	var messagesToDelete []string
-	messagesInChannel, _ := cache.GetSession().ChannelMessages(IMAGE_SUGGESTION_CHANNEL, 100, "", "", "")
+	messagesInChannel, _ := cache.GetSession().ChannelMessages(imageSuggestionChannlId, 100, "", "", "")
 	for _, msg := range messagesInChannel {
 		messagesToDelete = append(messagesToDelete, msg.ID)
 	}
 
-	err := cache.GetSession().ChannelMessagesBulkDelete(IMAGE_SUGGESTION_CHANNEL, messagesToDelete)
+	err := cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
 	if err != nil {
 		fmt.Println("Error deleting messages: ", err.Error())
 	}
 
 	// make a message on how to edit suggestions
 	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: !edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
-	helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, helpMessage)
+	helpers.SendMessage(imageSuggestionChannlId, helpMessage)
 
 	// load unresolved suggestions and create the first embed
 	loadUnresolvedSuggestions()
@@ -142,7 +143,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 			}
 
 			// if the difference is 3 or less let the user know the image already exists
-			if compareVal <= 5 {
+			if compareVal <= 3 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.suggested-image-exists"))
 				return
 			}
@@ -208,7 +209,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 		updateCurrentSuggestionEmbed()
 
 		// make a message and delete it immediatly. just to show that a new suggestion has come in
-		msg, err := helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, "New Suggestion Ping")
+		msg, err := helpers.SendMessage(imageSuggestionChannlId, "New Suggestion Ping")
 		helpers.Relax(err)
 		go helpers.DeleteMessageWithDelay(msg[0], time.Second*2)
 	}
@@ -236,9 +237,9 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 		if CHECKMARK_EMOJI == reaction.Emoji.Name {
 
 			// send processing image message
-			msg, err := helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, "Uploading image to google drive...")
+			msg, err := helpers.SendMessage(imageSuggestionChannlId, "Uploading image to google drive...")
 			if err == nil {
-				defer cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, msg[0].ID)
+				defer cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg[0].ID)
 			}
 
 			addSuggestionToGame(cs)
@@ -255,7 +256,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 				cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 
 				// alert user a note is needed and delete message after delay
-				msgs, err := helpers.SendMessage(IMAGE_SUGGESTION_CHANNEL, "A note must be set before denying a suggestion. Please use: `!edit notes {reason for denial...}`")
+				msgs, err := helpers.SendMessage(imageSuggestionChannlId, "A note must be set before denying a suggestion. Please use: `!edit notes {reason for denial...}`")
 				helpers.Relax(err)
 				helpers.DeleteMessageWithDelay(msgs[0], time.Second*15)
 				return
@@ -296,7 +297,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 
 // UpdateSuggestionDetails
 func UpdateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value string) {
-	if msg.ChannelID != IMAGE_SUGGESTION_CHANNEL {
+	if msg.ChannelID != imageSuggestionChannlId {
 		return
 	}
 
@@ -334,7 +335,7 @@ func updateCurrentSuggestionEmbed() {
 	var cs *models.BiasGameSuggestionEntry
 
 	if exampleRoundPicId != "" {
-		go cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, exampleRoundPicId)
+		go cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, exampleRoundPicId)
 	}
 
 	if len(suggestionQueue) == 0 {
@@ -460,38 +461,38 @@ func updateCurrentSuggestionEmbed() {
 	}
 
 	// delete old embed message
-	cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, suggestionEmbedMessageId)
+	cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, suggestionEmbedMessageId)
 
 	// delete any other messages in the suggestions channel
 	clearSuggestionsChannel()
 
 	// send new embed message
 	var embedMsg *discordgo.Message
-	embedMsg, _ = cache.GetSession().ChannelMessageSendComplex(IMAGE_SUGGESTION_CHANNEL, msgSend)
+	embedMsg, _ = cache.GetSession().ChannelMessageSendComplex(imageSuggestionChannlId, msgSend)
 	suggestionEmbedMessageId = embedMsg.ID
 
 	updateSuggestionQueueCount()
 	// delete any reactions on message and then reset them if there's another suggestion in queue
-	cache.GetSession().MessageReactionsRemoveAll(IMAGE_SUGGESTION_CHANNEL, embedMsg.ID)
+	cache.GetSession().MessageReactionsRemoveAll(imageSuggestionChannlId, embedMsg.ID)
 	if len(suggestionQueue) > 0 {
 
 		// compare the given image to all images currently available in the game
 		sendSimilarImages(embedMsg, cs.ImageHashString)
 
-		cache.GetSession().MessageReactionAdd(IMAGE_SUGGESTION_CHANNEL, embedMsg.ID, CHECKMARK_EMOJI)
-		cache.GetSession().MessageReactionAdd(IMAGE_SUGGESTION_CHANNEL, embedMsg.ID, X_EMOJI)
+		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, CHECKMARK_EMOJI)
+		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, X_EMOJI)
 	}
 }
 
 func updateSuggestionQueueCount() {
 	// update suggestion count message
 	if suggestionQueueCountMessageId == "" {
-		msg, err := cache.GetSession().ChannelMessageSend(IMAGE_SUGGESTION_CHANNEL, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
+		msg, err := cache.GetSession().ChannelMessageSend(imageSuggestionChannlId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
 		if err == nil {
 			suggestionQueueCountMessageId = msg.ID
 		}
 	} else {
-		cache.GetSession().ChannelMessageEdit(IMAGE_SUGGESTION_CHANNEL, suggestionQueueCountMessageId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
+		cache.GetSession().ChannelMessageEdit(imageSuggestionChannlId, suggestionQueueCountMessageId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
 	}
 }
 
@@ -543,7 +544,8 @@ func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 // sendSimilarImages will check for images that are similar to the given images
 //  and send them back in a paged embe
 func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
-	var matchingImagesBytes [][]byte
+	matchingImagesBytes := make(map[int][]byte, 0)
+	var compareValues []int
 
 	// compare the given image to all images currently available in the game
 	for _, bias := range getAllBiases() {
@@ -554,15 +556,22 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 				continue
 			}
 
-			// if the difference is 3 or less let the user know the image already exists
 			if compareVal <= 10 {
-				matchingImagesBytes = append(matchingImagesBytes, curBImage.ImageBytes)
+				compareValues = append(compareValues, compareVal)
+				matchingImagesBytes[compareVal] = curBImage.ImageBytes
 			}
 		}
 	}
 
+	// sort the images by the best match first
+	var sortedMatchingImages [][]byte
+	sort.Ints(compareValues)
+	for _, val := range compareValues {
+		sortedMatchingImages = append(sortedMatchingImages, matchingImagesBytes[val])
+	}
+
 	if len(matchingImagesBytes) > 0 {
-		sendPagedEmbedOfImages(msg, matchingImagesBytes, "Possible Matching Images", fmt.Sprintf("Images Found: %d", len(matchingImagesBytes)))
+		sendPagedEmbedOfImages(msg, sortedMatchingImages, "Possible Matching Images", fmt.Sprintf("Images Found: %d", len(sortedMatchingImages)))
 	}
 }
 
@@ -576,10 +585,10 @@ func clearSuggestionsChannel() {
 	}
 
 	// get newer messages
-	messagesArray, err := cache.GetSession().ChannelMessages(IMAGE_SUGGESTION_CHANNEL, 100, "", suggestionEmbedMessageId, "")
+	messagesArray, err := cache.GetSession().ChannelMessages(imageSuggestionChannlId, 100, "", suggestionEmbedMessageId, "")
 	helpers.Relax(err)
 
 	for _, msg := range messagesArray {
-		cache.GetSession().ChannelMessageDelete(IMAGE_SUGGESTION_CHANNEL, msg.ID)
+		cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg.ID)
 	}
 }
