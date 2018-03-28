@@ -172,14 +172,19 @@ func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
 	newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
 
 	// if the bias already exists, then just add this picture to the image array for the idol
+	biasExists := false
 	for _, currentBias := range getAllBiases() {
 		if currentBias.NameAndGroup == newBiasChoice.NameAndGroup {
 			currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
-			return
+			biasExists = true
+			break
 		}
 	}
 
-	setAllBiases(append(getAllBiases(), &newBiasChoice))
+	// if its a new bias, update all biases array
+	if biasExists == false {
+		setAllBiases(append(getAllBiases(), &newBiasChoice))
+	}
 
 	// cache all biases
 	if len(getAllBiases()) > 0 {
