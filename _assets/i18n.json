@@ -746,6 +746,40 @@
     },
     "storage": {
       "no-stats-for-user": "Looks like you haven't uploaded any files so far. <a:ablobthinkingeyes:427405268603633664>"
+    },
+    "biasgame": {
+      "stats": {
+        "no-stats": "No stats were found."
+      },
+      "game": {
+        "invalid-game-size": "Sorry, that game size is not valid. Valid sizes are: 32, 64, 128, or 256",
+        "not-enough-idols": "There are not enough idols for a game of that size",
+        "game-not-ready": "Game is still loading after a bot restart. Please check again in a minute.",
+        "resuming-game": "Looks like you already had a game going. Please finish this game before starting another one. <:SeemsBlob:422158571115905034>",
+        "multi-game-running": "There is a multi game already running in the current channel."
+      },
+      "suggestion": {
+        "image-not-square": "The suggested image must be a perfect square. Please crop the image and try again.",
+        "invalid-url": "Could not retrieve image from the given url.",
+        "thanks-for-suggestion": "%s \nThanks for the suggestion! <:SeemsBlob:422158571115905034>\nWe'll review it and let you know if we add it to the game.",
+        "not-png-or-jpeg": "Images must be in png or jpg format.",
+        "invalid-image-size": "Invalid image size. Images must between 150x150px and 2000x2000px",
+        "drive-upload-failed": "Upload to google drive failed. Suggestion not accepted and user was not notified. Please try again.",
+        "could-not-decode": "Unable to decode iamge. Suggestion not accepted and user was not notified. Please try again.",
+        "invalid-group-or-idol": "The group and idol names must not contain any double quotes or underscores. Please try again.",
+        "suggested-image-exists": "Looks like someone else got to it first, the image you suggested already exists in the game. <a:ablobshocked:394026914076950539>",
+        "image-is-suggested": "That image has already been suggested and is awaiting approval. <a:ablobsalute:427216467319062538>",
+        "invalid-suggestion": "Invalid suggestion arguments. \n\nSuggestion must be done with the following format:\n```!biasgame suggest [boy/girl] \"group name\" \"idol name\" [url to image]```\nFor Example:\n```!biasgame suggest girl \"PRISTIN\" \"Nayoung\" https://cdn.discordapp.com/attachments/420049316615553026/420056295618510849/unknown.png```\n\n"
+      },
+      "current": {
+        "no-running-game": "No currently running game found.",
+        "no-rounds-played": "No rounds have been played."
+      },
+      "refresh": {
+        "not-bot-owner": "Sorry, this command can only be run by the bot owner :(",
+        "refresing": "Refreshing biasgame images...",
+        "refresh-done": "Biasgame images have been refreshed."
+      }
     }
   }
 }
