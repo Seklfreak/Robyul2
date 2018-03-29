@@ -545,7 +545,7 @@ NextGuildRole:
 		// Look for bias roles (if enabled)
 		if guildSettings.PersistencyBiasEnabled {
 			for _, biasChannel := range biasChannels { // TODO: better access (through cache)
-				if biasChannel.ServerID == guildID {
+				if biasChannel.GuildID == guildID {
 					for _, category := range biasChannel.Categories {
 						for _, biasRole := range category.Roles {
 							if strings.ToLower(biasRole.Name) == strings.ToLower(guildRole.Name) || biasRole.Name == guildRole.ID {

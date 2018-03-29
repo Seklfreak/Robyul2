@@ -3,6 +3,8 @@ package migrations
 import (
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -43,7 +45,7 @@ func m76_migration_table_profile_backgrounds() {
 		_, err = helpers.MDbInsertWithoutLogging(
 			models.ProfileBackgroundsTable,
 			models.ProfileBackgroundEntry{
-				Name:      rethinkdbEntry.Name,
+				Name:      strings.ToLower(rethinkdbEntry.Name),
 				URL:       rethinkdbEntry.URL,
 				CreatedAt: rethinkdbEntry.CreatedAt,
 				Tags:      rethinkdbEntry.Tags,

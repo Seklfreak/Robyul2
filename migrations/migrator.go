@@ -12,7 +12,6 @@ var migrations = []helpers.Callback{
 	m0_create_db,
 	m1_create_table_guild_config,
 	m4_create_table_vlive,
-	m9_create_table_bias,
 	m11_create_table_twitch,
 	m14_create_table_stats_voicetimes,
 	m16_create_table_galleries,
@@ -20,7 +19,6 @@ var migrations = []helpers.Callback{
 	m18_create_table_randompictures_sources,
 	m20_create_table_reactionpolls,
 	m22_create_table_troublemakerlog,
-	m26_create_table_mod_joinlog,
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
@@ -64,6 +62,8 @@ var migrations = []helpers.Callback{
 	m74_migration_table_instagram,
 	m75_migration_table_profile_badge,
 	m76_migration_table_profile_backgrounds,
+	m77_migration_table_bias,
+	m78_migration_table_mod_joinlog,
 }
 
 // Run executes all registered migrations
