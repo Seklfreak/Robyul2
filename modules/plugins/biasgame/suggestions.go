@@ -45,10 +45,7 @@ func initSuggestionChannel() {
 		messagesToDelete = append(messagesToDelete, msg.ID)
 	}
 
-	err := cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
-	if err != nil {
-		fmt.Println("Error deleting messages: ", err.Error())
-	}
+	cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
 
 	// make a message on how to edit suggestions
 	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: !edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
@@ -108,7 +105,6 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	suggestedImage, _, errr := image.Decode(resp.Body)
 	if errr != nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-url"))
-		fmt.Println("image decode error: ", err)
 		return
 	}
 
@@ -400,9 +396,6 @@ func updateCurrentSuggestionEmbed() {
 
 		embed = &discordgo.MessageEmbed{
 			Color: 0x0FADED, // blueish
-			// Author: &discordgo.MessageEmbedAuthor{
-			// 	Name: fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)),
-			// },
 			Image: &discordgo.MessageEmbedImage{
 				URL: "attachment://example_round.png",
 			},

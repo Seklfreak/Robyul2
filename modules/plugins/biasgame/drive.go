@@ -389,7 +389,6 @@ func getFilesFromDriveFolder(folderId string) []*drive.File {
 	// get girls image from google drive
 	results, err := driveService.Files.List().Q(fmt.Sprintf(DRIVE_SEARCH_TEXT, folderId)).Fields(googleapi.Field("nextPageToken, files(name, id, parents, webViewLink, webContentLink)")).PageSize(1000).Do()
 	if err != nil {
-		fmt.Printf("Error getting google drive files from folderid: %s\n%s\n", folderId, err.Error())
 		return nil
 	}
 	allFiles := results.Files

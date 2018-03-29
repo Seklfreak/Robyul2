@@ -567,7 +567,6 @@ func (g *singleBiasGame) sendWinnerMessage() {
 
 // startMultiPlayerGame will create and start a multiplayer game
 func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
-	fmt.Println("starting multi game")
 
 	// check if a multi game is already running in the current channel
 	for _, game := range currentMultiPlayerGames {
@@ -699,7 +698,6 @@ func (g *multiBiasGame) processMultiGame() {
 		// get current round message
 		message, err := cache.GetSession().ChannelMessage(g.ChannelID, g.CurrentRoundMessageId)
 		if err != nil {
-			fmt.Println("multi game error: ", err.Error())
 			return
 		}
 
@@ -736,7 +734,7 @@ func (g *multiBiasGame) processMultiGame() {
 			// if votes are even, choose one at random
 			randomNumber := rand.Intn(100)
 			randomWin = true
-			// fmt.Println("random number: ", randomNumber)
+
 			if randomNumber >= 50 {
 				winnerIndex = 1
 				loserIndex = 0
@@ -758,8 +756,6 @@ func (g *multiBiasGame) processMultiGame() {
 		}
 
 		g.IdolsRemaining--
-
-		// fmt.Println("round winner: ", g.BiasQueue[winnerIndex].groupName, g.BiasQueue[winnerIndex].biasName)
 
 		// record winners and losers for stats
 		g.RoundLosers = append(g.RoundLosers, g.BiasQueue[loserIndex])
