@@ -12,7 +12,7 @@ const (
 	BiasGameIdolsTable       MongoDbCollection = "biasgame_idols"
 )
 
-type BiasEntry struct {
+type BiasGameIdolEntry struct {
 	ID        bson.ObjectId `bson:"_id,omitempty"`
 	Name      string
 	GroupName string
@@ -26,9 +26,9 @@ type BiasGameEntry struct {
 	ID           bson.ObjectId `bson:"_id,omitempty"`
 	UserID       string
 	GuildID      string
-	GameWinner   BiasEntry
-	RoundWinners []BiasEntry
-	RoundLosers  []BiasEntry
+	GameWinner   BiasGameIdolEntry
+	RoundWinners []BiasGameIdolEntry
+	RoundLosers  []BiasGameIdolEntry
 	Gender       string // girl, boy, mixed
 	GameType     string // single, multi
 }

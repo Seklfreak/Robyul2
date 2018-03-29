@@ -111,7 +111,7 @@ func refreshBiasChoices(skipCache bool) {
 		bgLog().Info("Bias iamges loading from google drive. Cache not set or expired.")
 	}
 
-	var biasEntries []models.BiasEntry
+	var biasEntries []models.BiasGameIdolEntry
 	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{})).All(&biasEntries)
 	helpers.Relax(err)
 
@@ -123,7 +123,7 @@ func refreshBiasChoices(skipCache bool) {
 	mux := new(sync.Mutex)
 	for _, biasEntry := range biasEntries {
 		wg.Add(1)
-		go func(biasEntry models.BiasEntry) {
+		go func(biasEntry models.BiasGameIdolEntry) {
 			defer wg.Done()
 
 			newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
@@ -157,7 +157,7 @@ func refreshBiasChoices(skipCache bool) {
 func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
 
 	// get suggestion details and add to biasEntry table
-	biasEntry := models.BiasEntry{
+	biasEntry := models.BiasGameIdolEntry{
 		ID:         "",
 		Gender:     suggestion.Gender,
 		GroupName:  suggestion.GrouopName,
@@ -193,7 +193,7 @@ func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
 }
 
 // makeBiasChoiceFromBiasEntry takes a mdb biasentry and makes a biasChoice to be used in the game
-func makeBiasChoiceFromBiasEntry(entry models.BiasEntry) biasChoice {
+func makeBiasChoiceFromBiasEntry(entry models.BiasGameIdolEntry) biasChoice {
 	// get image bytes
 	imgBytes, err := helpers.RetrieveFile(entry.ObjectName)
 	helpers.Relax(err)
@@ -277,7 +277,7 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 	}
 
 	// update database
-	var biasesToUpdate []models.BiasEntry
+	var biasesToUpdate []models.BiasGameIdolEntry
 	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&biasesToUpdate)
 	helpers.Relax(err)
 
@@ -330,7 +330,7 @@ func runGoogleDriveMigration(msg *discordgo.Message) {
 			// get bias name and group name from file name
 			groupBias := strings.TrimSuffix(file.Name, filepath.Ext(file.Name))
 
-			biasEntry := models.BiasEntry{
+			biasEntry := models.BiasGameIdolEntry{
 				ID:        "",
 				DriveID:   file.Id,
 				Gender:    gender,
