@@ -769,7 +769,7 @@
         "invalid-group-or-idol": "The group and idol names must not contain any double quotes or underscores. Please try again.",
         "suggested-image-exists": "Looks like someone else got to it first, the image you suggested already exists in the game. <a:ablobshocked:394026914076950539>",
         "image-is-suggested": "That image has already been suggested and is awaiting approval. <a:ablobsalute:427216467319062538>",
-        "invalid-suggestion": "Invalid suggestion arguments. \n\nSuggestion must be done with the following format:\n```!biasgame suggest [boy/girl] \"group name\" \"idol name\" [url to image]```\nFor Example:\n```!biasgame suggest girl \"PRISTIN\" \"Nayoung\" https://cdn.discordapp.com/attachments/420049316615553026/420056295618510849/unknown.png```\n\n"
+        "invalid-suggestion": "Invalid suggestion arguments.\nSuggestion must be done with the following format:\n```%sbiasgame suggest <boy/girl> \"group name\" \"idol name\" <url to image/attachment>```\nFor Example:\n```%sbiasgame suggest girl \"PRISTIN\" \"Nayoung\" https://cdn.discordapp.com/attachments/420049316615553026/420056295618510849/unknown.png```"
       },
       "current": {
         "no-running-game": "No currently running game found.",

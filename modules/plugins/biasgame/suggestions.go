@@ -61,6 +61,9 @@ func initSuggestionChannel() {
 func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	defer helpers.Recover()
 
+	channel, err := helpers.GetChannel(msg.ChannelID)
+	helpers.Relax(err)
+
 	// ToArgv can panic, need to catch that
 	suggestionArgs := str.ToArgv(msgContent)[1:]
 	var suggestedImageUrl string
@@ -68,13 +71,15 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	// validate suggestion arg amount.
 	if len(msg.Attachments) == 1 {
 		if len(suggestionArgs) != 3 {
-			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-suggestion"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.invalid-suggestion",
+				helpers.GetPrefixForServer(channel.GuildID), helpers.GetPrefixForServer(channel.GuildID)))
 			return
 		}
 		suggestedImageUrl = msg.Attachments[0].URL
 	} else {
 		if len(suggestionArgs) != 4 {
-			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-suggestion"))
+			helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.invalid-suggestion",
+				helpers.GetPrefixForServer(channel.GuildID), helpers.GetPrefixForServer(channel.GuildID)))
 			return
 		}
 		suggestedImageUrl = suggestionArgs[3]
@@ -83,7 +88,8 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	// set gender to lowercase and check if its valid
 	suggestionArgs[0] = strings.ToLower(suggestionArgs[0])
 	if suggestionArgs[0] != "girl" && suggestionArgs[0] != "boy" {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-suggestion"))
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.invalid-suggestion",
+			helpers.GetPrefixForServer(channel.GuildID), helpers.GetPrefixForServer(channel.GuildID)))
 		return
 	}
 
