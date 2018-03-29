@@ -203,7 +203,7 @@ func main() {
 		panic(err)
 	}
 
-	driveConfigs, err := google.JWTConfigFromJSON(driveAuthJson, drive.DriveScope)
+	driveConfigs, err := google.JWTConfigFromJSON(driveAuthJson, drive.DriveReadonlyScope)
 	if err != nil {
 		panic(err)
 	}
