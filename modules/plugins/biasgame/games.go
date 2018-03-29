@@ -285,7 +285,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				singleGame := createOrGetSinglePlayerGame(msg, "mixed", gameSize)
 				singleGame.sendBiasGameRound()
 			} else {
-				helpers.SendMessage(msg.ChannelID, "biasgame.game.invalid-game-size")
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("biasgame.game.invalid-game-size"))
 				return
 			}
 
@@ -299,7 +299,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 					singleGame := createOrGetSinglePlayerGame(msg, gameGender, gameSize)
 					singleGame.sendBiasGameRound()
 				} else {
-					helpers.SendMessage(msg.ChannelID, "biasgame.game.invalid-game-size")
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("biasgame.game.invalid-game-size"))
 					return
 				}
 			} else {
@@ -373,7 +373,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 
 		// confirm we have enough biases to choose from for the game size this should be
 		if len(biasChoices) < gameSize {
-			helpers.SendMessage(msg.ChannelID, "biasgame.game.not-enough-idols")
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("biasgame.game.not-enough-idols"))
 			return nil
 		}
 
@@ -580,7 +580,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	// check if a multi game is already running in the current channel
 	for _, game := range currentMultiPlayerGames {
 		if game.ChannelID == msg.ChannelID {
-			helpers.SendMessage(msg.ChannelID, "biasgame.game.multi-game-running")
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("biasgame.game.multi-game-running"))
 			return
 		}
 	}
@@ -617,7 +617,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 	// confirm we have enough biases for a multiplayer game
 	if len(biasChoices) < 32 {
-		helpers.SendMessage(msg.ChannelID, "biasgame.game.not-enough-idols")
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("biasgame.game.not-enough-idols"))
 		return
 	}
 
