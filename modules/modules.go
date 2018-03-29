@@ -2,6 +2,7 @@ package modules
 
 import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
+	"github.com/Seklfreak/Robyul2/modules/plugins/biasgame"
 	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
 	"github.com/Seklfreak/Robyul2/modules/plugins/google"
 	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
@@ -87,5 +88,6 @@ var (
 		&plugins.Twitter{},
 		&eventlog.Handler{},
 		&plugins.Perspective{},
+		&biasgame.BiasGame{},
 	}
 )

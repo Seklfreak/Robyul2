@@ -199,6 +199,16 @@
   version = "v2.0.6"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/corona10/goimagehash"
+  packages = [
+    ".",
+    "etcs",
+    "transforms"
+  ]
+  revision = "be737c1d73f3bc237ef46561b7b4ac5c32b65788"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -450,6 +460,12 @@
   version = "v0.0.3"
 
 [[projects]]
+  name = "github.com/mgutz/str"
+  packages = ["."]
+  revision = "968bf66e3da857419e4f6e71b2d5c9ae95682dc4"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
@@ -526,6 +542,12 @@
   packages = ["."]
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/sethgrid/pester"
+  packages = ["."]
+  revision = "ed9870dad3170c0b25ab9b11830cc57c3a7798fb"
 
 [[projects]]
   name = "github.com/shawntoffel/darksky"
@@ -844,6 +866,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a193d1aecc3cc908063866ef7e458fb5d56182284bd1f8a736d45ee59780369b"
+  inputs-digest = "cc19f62efe74c4fda2e59fd60bb267c32b30a7f4429cc8c10720c59a3655958d"
   solver-name = "gps-cdcl"
   solver-version = 1
