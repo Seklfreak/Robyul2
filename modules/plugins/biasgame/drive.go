@@ -304,10 +304,12 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 // runGoogleDriveMigration Should only be run on rare occasions when issues occur with object storage or setting up a new object storage
 //  note: takes a very long time to complete
 func runGoogleDriveMigration(msg *discordgo.Message) {
+	girlFolderId := helpers.GetConfig().Path("biasgame.girl_folder_id").Data().(string)
+	boyFolderId := helpers.GetConfig().Path("biasgame.boy_folder_id").Data().(string)
 
 	// get files from drive
-	girlFiles := getFilesFromDriveFolder(GIRLS_FOLDER_ID)
-	boyFiles := getFilesFromDriveFolder(BOYS_FOLDER_ID)
+	girlFiles := getFilesFromDriveFolder(girlFolderId)
+	boyFiles := getFilesFromDriveFolder(boyFolderId)
 	allFiles := append(girlFiles, boyFiles...)
 
 	amountMigrated := 0
@@ -319,7 +321,7 @@ func runGoogleDriveMigration(msg *discordgo.Message) {
 		for _, file := range allFiles {
 			// determine gender from folder
 			var gender string
-			if file.Parents[0] == GIRLS_FOLDER_ID {
+			if file.Parents[0] == girlFolderId {
 				gender = "girl"
 			} else {
 				gender = "boy"

@@ -71,15 +71,12 @@ type multiBiasGame struct {
 
 const (
 	DRIVE_SEARCH_TEXT       = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
-	GIRLS_FOLDER_ID         = "1CIM6yrvZOKn_R-qWYJ6pISHyq-JQRkja"
-	BOYS_FOLDER_ID          = "1psrhQQaV0kwPhAMtJ7LYT2SWgLoyDb-J"
 	IMAGE_RESIZE_HEIGHT     = 150
 	LEFT_ARROW_EMOJI        = "⬅"
 	RIGHT_ARROW_EMOJI       = "➡"
 	ARROW_FORWARD_EMOJI     = "▶"
 	ARROW_BACKWARD_EMOJI    = "◀"
 	ZERO_WIDTH_SPACE        = "\u200B"
-	BOT_OWNER_ID            = "273639623324991489"
 	MULTIPLAYER_ROUND_DELAY = 5
 )
 
