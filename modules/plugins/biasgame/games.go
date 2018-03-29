@@ -236,13 +236,13 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 		} else if commandArgs[0] == "migrate-drive-images" {
 
-			helpers.RequireBotAdmin(msg, func() {
+			helpers.RequireRobyulMod(msg, func() {
 				runGoogleDriveMigration(msg)
 			})
 
 		} else if commandArgs[0] == "update" {
 
-			helpers.RequireBotAdmin(msg, func() {
+			helpers.RequireRobyulMod(msg, func() {
 				updateIdolInfo(msg, content)
 			})
 
@@ -263,18 +263,14 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 		} else if commandArgs[0] == "refresh-images" {
 
-			// check if the user is the bot owner
-			if msg.Author.ID == BOT_OWNER_ID {
-
+			helpers.RequireRobyulMod(msg, func() {
 				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))
 				helpers.Relax(err)
 				refreshBiasChoices(true)
 
 				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
-			} else {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.not-bot-owner"))
-			}
+			})
 
 		} else if gameSize, err := strconv.Atoi(commandArgs[0]); err == nil {
 
