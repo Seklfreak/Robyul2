@@ -108,84 +108,90 @@ var bracketImageResizeMap map[int]uint
 
 // Init when the bot starts up
 func (b *BiasGame) Init(session *discordgo.Session) {
-	defer helpers.Recover()
+	go func() {
+		defer helpers.Recover()
 
-	// set global variables
-	currentSinglePlayerGames = make(map[string]*singleBiasGame)
-	allowedGameSizes = map[int]bool{
-		10:  true, // for dev only, remove when game is live
-		32:  true,
-		64:  true,
-		128: true,
-		256: true,
-	}
-	biasGameGenders = map[string]string{
-		"boy":   "boy",
-		"boys":  "boy",
-		"girl":  "girl",
-		"girls": "girl",
-		"mixed": "mixed",
-	}
-	// offsets of where bias images need to be placed on bracket image
-	bracketImageOffsets = map[int]image.Point{
-		14: image.Pt(182, 53),
+		// set global variables
+		currentSinglePlayerGames = make(map[string]*singleBiasGame)
+		allowedGameSizes = map[int]bool{
+			//10:  true, // for dev only, remove when game is live
+			32:  true,
+			64:  true,
+			128: true,
+			256: true,
+		}
+		biasGameGenders = map[string]string{
+			"boy":   "boy",
+			"boys":  "boy",
+			"girl":  "girl",
+			"girls": "girl",
+			"mixed": "mixed",
+		}
+		// offsets of where bias images need to be placed on bracket image
+		bracketImageOffsets = map[int]image.Point{
+			14: image.Pt(182, 53),
 
-		13: image.Pt(358, 271),
-		12: image.Pt(81, 271),
+			13: image.Pt(358, 271),
+			12: image.Pt(81, 271),
 
-		11: image.Pt(443, 409),
-		10: image.Pt(305, 409),
-		9:  image.Pt(167, 409),
-		8:  image.Pt(29, 409),
+			11: image.Pt(443, 409),
+			10: image.Pt(305, 409),
+			9:  image.Pt(167, 409),
+			8:  image.Pt(29, 409),
 
-		7: image.Pt(478, 517),
-		6: image.Pt(419, 517),
-		5: image.Pt(340, 517),
-		4: image.Pt(281, 517),
-		3: image.Pt(202, 517),
-		2: image.Pt(143, 517),
-		1: image.Pt(64, 517),
-		0: image.Pt(5, 517),
-	}
-	bracketImageResizeMap = map[int]uint{
-		14: 165,
-		13: 90, 12: 90,
-		11: 60, 10: 60, 9: 60, 8: 60,
-	}
+			7: image.Pt(478, 517),
+			6: image.Pt(419, 517),
+			5: image.Pt(340, 517),
+			4: image.Pt(281, 517),
+			3: image.Pt(202, 517),
+			2: image.Pt(143, 517),
+			1: image.Pt(64, 517),
+			0: image.Pt(5, 517),
+		}
+		bracketImageResizeMap = map[int]uint{
+			14: 165,
+			13: 90, 12: 90,
+			11: 60, 10: 60, 9: 60, 8: 60,
+		}
 
-	// load all images and information
-	refreshBiasChoices(false)
-	loadMiscImages()
-	startBiasCacheRefreshLoop()
+		// load all images and information
+		refreshBiasChoices(false)
+		loadMiscImages()
+		startBiasCacheRefreshLoop()
 
-	// set up suggestions channel
-	initSuggestionChannel()
+		// set up suggestions channel
+		initSuggestionChannel()
 
-	// get any in progress games saved in cache and immediatly delete them
-	getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
-	getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
+		// get any in progress games saved in cache and immediatly delete them
+		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
+		getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
 
-	// start any multi games
-	for _, multiGame := range currentMultiPlayerGames {
-		go multiGame.processMultiGame()
-	}
+		// start any multi games
+		for _, multiGame := range currentMultiPlayerGames {
+			go func(multiGame *multiBiasGame) {
+				defer helpers.Recover()
+				multiGame.processMultiGame()
+			}(multiGame)
+		}
 
-	// spew.Dump(currentSinglePlayerGames)
-	delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
+		// spew.Dump(currentSinglePlayerGames)
+		delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
 
-	// this line should always be last in this function
-	gameIsReady = true
+		// this line should always be last in this function
+		gameIsReady = true
+	}()
 }
 
 // Uninit called when bot is shutting down
 func (b *BiasGame) Uninit(session *discordgo.Session) {
-
 	// save any currently running games
 	if len(currentSinglePlayerGames) > 0 {
-		setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
+		err := setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
+		helpers.Relax(err)
 	}
 	if len(currentMultiPlayerGames) > 0 {
-		setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
+		err := setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
+		helpers.Relax(err)
 	}
 }
 
@@ -443,7 +449,10 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 				g.sendWinnerMessage()
 
 				// record game stats
-				go recordSingleGamesStats(g)
+				go func(g *singleBiasGame) {
+					defer helpers.Recover()
+					recordSingleGamesStats(g)
+				}(g)
 
 				// end the g. delete from current games
 				delete(currentSinglePlayerGames, g.User.ID)
@@ -588,8 +597,8 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		}
 	} else {
 
-		// set gender to girl
-		gameGender = "girl"
+		// set gender to mixed
+		gameGender = "mixed"
 	}
 
 	var biasChoices []*biasChoice
@@ -775,7 +784,10 @@ func (g *multiBiasGame) processMultiGame() {
 	g.sendWinnerMessage()
 
 	// record game stats
-	go recordMultiGamesStats(g)
+	go func(g *multiBiasGame) {
+		defer helpers.Recover()
+		recordMultiGamesStats(g)
+	}(g)
 
 	// delete multi game from current multi games
 	for i, game := range currentMultiPlayerGames {

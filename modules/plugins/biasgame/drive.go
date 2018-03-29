@@ -97,7 +97,7 @@ func loadMiscImages() {
 //   initially called when bot starts but is also safe to call while bot is running if necessary
 func refreshBiasChoices(skipCache bool) {
 
-	if skipCache == false {
+	if !skipCache {
 
 		// attempt to get redis cache, return if its successful
 		var tempAllBiases []*biasChoice
@@ -108,7 +108,7 @@ func refreshBiasChoices(skipCache bool) {
 			return
 		}
 
-		bgLog().Info("Bias iamges loading from google drive. Cache not set or expired.")
+		bgLog().Info("Bias images loading from google drive. Cache not set or expired.")
 	}
 
 	var biasEntries []models.BiasGameIdolEntry
@@ -119,12 +119,14 @@ func refreshBiasChoices(skipCache bool) {
 
 	var tempAllBiases []*biasChoice
 
-	var wg sync.WaitGroup
+	// run limited amount of goroutines at the same time
 	mux := new(sync.Mutex)
+	sem := make(chan bool, 50)
 	for _, biasEntry := range biasEntries {
-		wg.Add(1)
+		sem <- true
 		go func(biasEntry models.BiasGameIdolEntry) {
-			defer wg.Done()
+			defer func() { <-sem }()
+			defer helpers.Recover()
 
 			newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
 
@@ -141,14 +143,17 @@ func refreshBiasChoices(skipCache bool) {
 			tempAllBiases = append(tempAllBiases, &newBiasChoice)
 		}(biasEntry)
 	}
-	wg.Wait()
+	for i := 0; i < cap(sem); i++ {
+		sem <- true
+	}
 
 	bgLog().Info("Amount of idols loaded: ", len(tempAllBiases))
 	setAllBiases(tempAllBiases)
 
 	// cache all biases
 	if len(getAllBiases()) > 0 {
-		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+		err = setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+		helpers.RelaxLog(err)
 	}
 }
 
@@ -200,6 +205,7 @@ func makeBiasChoiceFromBiasEntry(entry models.BiasGameIdolEntry) biasChoice {
 
 	// resize image to the correct size
 	img, _, err := helpers.DecodeImageBytes(imgBytes)
+	helpers.Relax(err)
 	img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
 
 	// AFTER resizing, re-encode the bytes

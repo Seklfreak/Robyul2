@@ -43,6 +43,10 @@ func Recover() {
 		}
 
 		fmt.Printf("Recover: %s\n", spew.Sdump(err))
+		buf := make([]byte, 1<<16)
+		stackSize := runtime.Stack(buf, false)
+
+		fmt.Println(string(buf[0:stackSize]))
 
 		//raven.SetUserContext(&raven.User{})
 		if errE, ok := err.(*elastic.Error); ok {

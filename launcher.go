@@ -193,6 +193,8 @@ func main() {
 		Addr:     config.Path("redis.address").Data().(string),
 		Password: "", // no password set
 		DB:       0,  // use default DB
+		//DialTimeout: 5 * time.Minute,
+		//ReadTimeout: 5 * time.Minute,
 	})
 	cache.SetRedisClient(redisClient)
 

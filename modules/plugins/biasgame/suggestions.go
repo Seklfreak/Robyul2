@@ -241,7 +241,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			addSuggestionToGame(cs)
 
 			// set image accepted image
-			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Approved** <:SeemsBlob:422158571115905034>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
+			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Approved** <:blobthumbsup:317043177028714497>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "approved"
 
 		} else if X_EMOJI == reaction.Emoji.Name {
@@ -259,7 +259,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			}
 
 			// image was denied
-			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Denied** <:NotLikeBlob:422163995869315082>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
+			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Denied** <:notlikeblob:349342777978519562>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "denied"
 
 			// remove file from objectstorage
@@ -285,7 +285,10 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 
 		// delete first suggestion and process queue again
 		suggestionQueue = suggestionQueue[1:]
-		go updateCurrentSuggestionEmbed()
+		go func() {
+			defer helpers.Recover()
+			updateCurrentSuggestionEmbed()
+		}()
 	}
 
 	return

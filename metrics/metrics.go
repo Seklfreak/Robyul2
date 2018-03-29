@@ -151,6 +151,12 @@ var (
 
 	// LevelsStackSize is the size of the exp processing stack
 	LevelsStackSize = expvar.NewInt("levels_stack_size")
+
+	// BiasgameImagesCount is the number of images in the biasgame
+	BiasgameImagesCount = expvar.NewInt("biasgame_images_count")
+
+	// BiasgameGamesCount is the number of games completed
+	BiasgameGamesCount = expvar.NewInt("biasgame_games_count")
 )
 
 // Init starts a http server on 127.0.0.1:1337
@@ -209,11 +215,11 @@ func CollectRuntimeMetrics() {
 
 		VliveChannelsCount.Set(entriesCount("vlive"))
 
-		InstagramAccountsCount.Set(int64(entriesCountMgo(models.InstagramTable)))
+		InstagramAccountsCount.Set(entriesCountMgo(models.InstagramTable))
 
-		TwitterAccountsCount.Set(int64(entriesCountMgo(models.TwitterTable)))
+		TwitterAccountsCount.Set(entriesCountMgo(models.TwitterTable))
 
-		FacebookPagesCount.Set(int64(entriesCountMgo(models.FacebookTable)))
+		FacebookPagesCount.Set(entriesCountMgo(models.FacebookTable))
 
 		GalleriesCount.Set(entriesCount("galleries"))
 
@@ -228,6 +234,10 @@ func CollectRuntimeMetrics() {
 		TwitchChannelsCount.Set(entriesCount("twitch"))
 
 		VanityInvitesCount.Set(entriesCount(models.VanityInvitesTable))
+
+		BiasgameImagesCount.Set(entriesCountMgo(models.BiasGameIdolsTable))
+
+		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
@@ -258,9 +268,8 @@ func entriesCount(table string) (cnt int64) {
 	return
 }
 
-func entriesCountMgo(table models.MongoDbCollection) (count int) {
-	var err error
-	count, err = helpers.MdbCollection(table).Find(nil).Count()
+func entriesCountMgo(table models.MongoDbCollection) (count int64) {
+	countT, err := helpers.MdbCollection(table).Find(nil).Count()
 	helpers.Relax(err)
-	return count
+	return int64(countT)
 }

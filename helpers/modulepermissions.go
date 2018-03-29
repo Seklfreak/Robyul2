@@ -38,7 +38,7 @@ const (
 	ModulePermYouTube                                                       // youtube/
 	ModulePermSpoiler                                                       // spoiler.go
 	ModulePermAnimals                                                       // random_cat.go, dog.go
-	ModulePermGames                                                         // rps.go
+	ModulePermGames                                                         // rps.go, biasgame/
 	ModulePermDig                                                           // dig.go
 	ModulePermStreamable                                                    // streamable.go
 	ModulePermLyrics                                                        // lyrics.go

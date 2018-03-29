@@ -170,6 +170,16 @@ func RetrieveFile(objectName string) (data []byte, err error) {
 	// retrieve the object
 	minioObject, err := minioClient.GetObject(minioBucket, sanitize.BaseName(objectName), minio.GetObjectOptions{})
 	if err != nil {
+		if strings.Contains(err.Error(), "Please reduce your request rate.") {
+			cache.GetLogger().WithField("module", "storage").Infof("object storage ratelimited, waiting for one second, then retrying")
+			time.Sleep(1 * time.Second)
+			return RetrieveFile(objectName)
+		}
+		if strings.Contains(err.Error(), "net/http") || strings.Contains(err.Error(), "timeout") {
+			cache.GetLogger().WithField("module", "storage").Infof("network error retrieving, waiting for one second, then retrying")
+			time.Sleep(1 * time.Second)
+			return RetrieveFile(objectName)
+		}
 		return data, err
 	}
 

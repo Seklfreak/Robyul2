@@ -46,8 +46,8 @@ func getBiasGameCache(key string, data interface{}) error {
 		return nil
 	}
 
-	json.Unmarshal(cacheResult, data)
-	return nil
+	err = json.Unmarshal(cacheResult, data)
+	return err
 }
 
 // setBiasGameCache
@@ -57,15 +57,15 @@ func setBiasGameCache(key string, data interface{}, time time.Duration) error {
 		return err
 	}
 
-	cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time)
-	return nil
+	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time).Result()
+	return err
 }
 
 // delBiasGameCache
 func delBiasGameCache(keys ...string) {
 	for _, key := range keys {
 
-		cache.GetRedisClient().Del(fmt.Sprintf("robyul2-discord:biasgame:%s", key))
+		cache.GetRedisClient().Del(fmt.Sprintf("robyul2-discord:biasgame:%s", key)).Result()
 	}
 }
 

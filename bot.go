@@ -600,7 +600,11 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
 
 	// check if the reaction was added to a paged message
 	if pagedMessage := helpers.GetPagedMessage(reaction.MessageID); pagedMessage != nil {
-		pagedMessage.UpdateMessagePage(reaction)
+		go func() {
+			defer helpers.Recover()
+
+			pagedMessage.UpdateMessagePage(reaction)
+		}()
 	}
 }
 
