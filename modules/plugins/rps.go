@@ -20,7 +20,7 @@ func (r *RPS) Init(session *discordgo.Session) {
 }
 
 func (r *RPS) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermRPS) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGames) {
 		return
 	}
 

@@ -38,7 +38,7 @@ const (
 	ModulePermYouTube                                                       // youtube/
 	ModulePermSpoiler                                                       // spoiler.go
 	ModulePermAnimals                                                       // random_cat.go, dog.go
-	ModulePermRPS                                                           // rps.go
+	ModulePermGames                                                         // rps.go
 	ModulePermDig                                                           // dig.go
 	ModulePermStreamable                                                    // streamable.go
 	ModulePermLyrics                                                        // lyrics.go
@@ -79,7 +79,7 @@ const (
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
 		ModulePermTwitch | ModulePermCharts | ModulePermChoice | ModulePermOsu | ModulePermReminders |
 		ModulePermGfycat | ModulePermRandomPictures | ModulePermYouTube | ModulePermSpoiler | ModulePermAnimals |
-		ModulePermRPS | ModulePermDig | ModulePermStreamable | ModulePermLyrics | ModulePermNames | ModulePermReddit |
+		ModulePermGames | ModulePermDig | ModulePermStreamable | ModulePermLyrics | ModulePermNames | ModulePermReddit |
 		ModulePermColor | ModulePermSteam | ModulePermGoogle | ModulePermWhois | ModulePermIsup | ModulePermLevels |
 		ModulePermCustomCommands | ModulePermReactionPolls | ModulePermTwitter | ModulePermStarboard |
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
@@ -109,7 +109,7 @@ var (
 		{Names: []string{"youtube"}, Permission: ModulePermYouTube},
 		{Names: []string{"spoiler"}, Permission: ModulePermSpoiler},
 		{Names: []string{"animals", "cat", "randomcat", "dog"}, Permission: ModulePermAnimals},
-		{Names: []string{"rps"}, Permission: ModulePermRPS},
+		{Names: []string{"games", "rps", "biasgame"}, Permission: ModulePermGames},
 		{Names: []string{"dig"}, Permission: ModulePermDig},
 		{Names: []string{"streamable"}, Permission: ModulePermStreamable},
 		{Names: []string{"lyrics"}, Permission: ModulePermLyrics},

@@ -114,6 +114,7 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 
 func BotDestroy() {
 	modules.Uninit(cache.GetSession())
+	helpers.RemoveReactionsFromPagedEmbeds()
 }
 
 func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
@@ -596,6 +597,11 @@ func BotOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageRea
 	}
 
 	modules.CallExtendedPluginOnReactionAdd(reaction)
+
+	// check if the reaction was added to a paged message
+	if pagedMessage := helpers.GetPagedMessage(reaction.MessageID); pagedMessage != nil {
+		pagedMessage.UpdateMessagePage(reaction)
+	}
 }
 
 func BotOnReactionRemove(session *discordgo.Session, reaction *discordgo.MessageReactionRemove) {
