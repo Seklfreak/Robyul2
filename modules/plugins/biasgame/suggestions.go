@@ -37,9 +37,10 @@ var exampleRoundPicId string
 var suggestionQueueCountMessageId string
 
 func initSuggestionChannel() {
+	var err error
 
 	imageSuggestionChannlId = helpers.GetConfig().Path("biasgame.suggestion_channel_id").Data().(string)
-	imageSuggestionChannel, err := helpers.GetChannel(imageSuggestionChannlId)
+	imageSuggestionChannel, err = helpers.GetChannel(imageSuggestionChannlId)
 	helpers.Relax(err)
 
 	// when the bot starts, delete any past bot messages from the suggestion channel and make the embed
