@@ -185,12 +185,16 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 	// check if its server rankings
 	if isServerRanks {
 		rankType = "server"
-		embedTitle = "Single Bias Game Server Rankings"
+		embedTitle = "Bias Game Server Rankings"
+		gameType = "all"
 
 		// check for game type
 		if strings.Contains(msg.Content, "multi") {
 			gameType = "multi"
 			embedTitle = "Multi Bias Game Server Rankings"
+		} else if strings.Contains(msg.Content, "single") {
+			gameType = "single"
+			embedTitle = "Single Bias Game Server Rankings"
 		}
 
 		// check if filtering user ranks by server
@@ -219,7 +223,13 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 	}
 
 	var games []models.BiasGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType})).All(&games)
+	if gameType == "all" {
+
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})).All(&games)
+	} else {
+
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType})).All(&games)
+	}
 
 	// check if any stats were returned
 	totalGames := len(games)
