@@ -285,8 +285,8 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 
 	// find currently running game for the user or a mention if one exists
 	userPlayingGame := msg.Author
-	if len(msg.Mentions) > 0 {
-		userPlayingGame = msg.Mentions[0]
+	if user, err := helpers.GetUserFromMention(msg.Content); err == nil {
+		userPlayingGame = user
 	}
 
 	if game, ok := currentSinglePlayerGames[userPlayingGame.ID]; ok {
@@ -433,10 +433,6 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 		// user/server/global checks
 		if strings.Contains(statsMessage, "server") {
 
-			if err != nil {
-				// todo: a message here or something i guess?
-			}
-
 			iconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
 			targetName = "Server"
 			queryParams["guildid"] = guild.ID
@@ -444,11 +440,12 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 			iconURL = cache.GetSession().State.User.AvatarURL("512")
 			targetName = "Global"
 
-		} else if strings.Contains(statsMessage, "@") {
-			iconURL = msg.Mentions[0].AvatarURL("512")
-			targetName = msg.Mentions[0].Username
+		} else if user, err := helpers.GetUserFromMention(statsMessage); err == nil {
 
-			queryParams["userid"] = msg.Mentions[0].ID
+			iconURL = user.AvatarURL("512")
+			targetName = user.Username
+			queryParams["userid"] = user.ID
+
 		} else {
 			iconURL = msg.Author.AvatarURL("512")
 			targetName = msg.Author.Username
