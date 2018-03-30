@@ -155,6 +155,9 @@ var (
 	// BiasgameImagesCount is the number of images in the biasgame
 	BiasgameImagesCount = expvar.NewInt("biasgame_images_count")
 
+	// BiasgameSuggestionsCount is the number of images in the biasgame
+	BiasgameSuggestionsCount = expvar.NewInt("biasgame_suggestions_count")
+
 	// BiasgameGamesCount is the number of games completed
 	BiasgameGamesCount = expvar.NewInt("biasgame_games_count")
 )
@@ -236,6 +239,8 @@ func CollectRuntimeMetrics() {
 		VanityInvitesCount.Set(entriesCount(models.VanityInvitesTable))
 
 		BiasgameImagesCount.Set(entriesCountMgo(models.BiasGameIdolsTable))
+
+		BiasgameSuggestionsCount.Set(entriesCountMgo(models.BiasGameSuggestionsTable))
 
 		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable))
 
