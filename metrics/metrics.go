@@ -11,6 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	rethink "github.com/gorethink/gorethink"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var (
@@ -218,11 +219,11 @@ func CollectRuntimeMetrics() {
 
 		VliveChannelsCount.Set(entriesCount("vlive"))
 
-		InstagramAccountsCount.Set(entriesCountMgo(models.InstagramTable))
+		InstagramAccountsCount.Set(entriesCountMgo(models.InstagramTable, nil))
 
-		TwitterAccountsCount.Set(entriesCountMgo(models.TwitterTable))
+		TwitterAccountsCount.Set(entriesCountMgo(models.TwitterTable, nil))
 
-		FacebookPagesCount.Set(entriesCountMgo(models.FacebookTable))
+		FacebookPagesCount.Set(entriesCountMgo(models.FacebookTable, nil))
 
 		GalleriesCount.Set(entriesCount("galleries"))
 
@@ -238,11 +239,11 @@ func CollectRuntimeMetrics() {
 
 		VanityInvitesCount.Set(entriesCount(models.VanityInvitesTable))
 
-		BiasgameImagesCount.Set(entriesCountMgo(models.BiasGameIdolsTable))
+		BiasgameImagesCount.Set(entriesCountMgo(models.BiasGameIdolsTable, nil))
 
-		BiasgameSuggestionsCount.Set(entriesCountMgo(models.BiasGameSuggestionsTable))
+		BiasgameSuggestionsCount.Set(entriesCountMgo(models.BiasGameSuggestionsTable, bson.M{"status": ""}))
 
-		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable))
+		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable, nil))
 
 		key := "delayed_tasks"
 		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
@@ -273,8 +274,8 @@ func entriesCount(table string) (cnt int64) {
 	return
 }
 
-func entriesCountMgo(table models.MongoDbCollection) (count int64) {
-	countT, err := helpers.MdbCollection(table).Find(nil).Count()
+func entriesCountMgo(table models.MongoDbCollection, query interface{}) (count int64) {
+	countT, err := helpers.MdbCollection(table).Find(query).Count()
 	helpers.Relax(err)
 	return int64(countT)
 }
