@@ -139,6 +139,16 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 	return objectName, nil
 }
 
+// retrieves information about a file
+// objectName	: the name of the file to retrieve
+func RetrieveFileInformation(objectName string) (info models.StorageEntry, err error) {
+	err = MdbOne(
+		MdbCollection(models.StorageTable).Find(bson.M{"objectname": objectName}),
+		&info,
+	)
+	return info, err
+}
+
 // retrieves a file
 // objectName	: the name of the file to retrieve
 func RetrieveFile(objectName string) (data []byte, err error) {
