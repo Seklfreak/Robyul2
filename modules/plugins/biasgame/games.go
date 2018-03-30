@@ -207,8 +207,6 @@ func (b *BiasGame) Commands() []string {
 
 // Main Entry point for the plugin
 func (b *BiasGame) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	defer helpers.Recover()
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGames) {
 		return
 	}
