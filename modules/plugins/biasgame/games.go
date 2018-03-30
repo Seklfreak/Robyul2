@@ -232,7 +232,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			// stats
 			displayBiasGameStats(msg, content)
 
-		} else if commandArgs[0] == "rankings" {
+		} else if isCommandAlias(commandArgs[0], "rankings") {
 
 			showSingleGameRankings(msg)
 
@@ -252,14 +252,14 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				updateIdolInfo(msg, content)
 			})
 
-		} else if commandArgs[0] == "images" || commandArgs[0] == "pics" {
+		} else if isCommandAlias(commandArgs[0], "images") {
 
 			showImagesForIdol(msg, content)
 
-		} else if commandArgs[0] == "current" {
+		} else if isCommandAlias(commandArgs[0], "current") {
 			displayCurrentGameStats(msg)
 
-		} else if commandArgs[0] == "multi" {
+		} else if isCommandAlias(commandArgs[0], "multi") {
 
 			startMultiPlayerGame(msg, commandArgs)
 

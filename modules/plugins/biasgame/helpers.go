@@ -196,3 +196,37 @@ func setAllBiases(biases []*biasChoice) {
 
 	allBiasChoices = biases
 }
+
+// holds aliases for commands
+func isCommandAlias(input, targetCommand string) bool {
+	// if input is already the same as target command no need to check aliases
+	if input == targetCommand {
+		return true
+	}
+
+	var aliasMap = map[string]string{
+		"images": "images",
+		"image":  "images",
+		"pic":    "images",
+		"pics":   "images",
+		"img":    "images",
+		"imgs":   "images",
+
+		"rankings": "rankings",
+		"ranking":  "rankings",
+		"rank":     "rankings",
+		"ranks":    "rankings",
+
+		"current": "current",
+		"cur":     "current",
+
+		"multi":       "multi",
+		"multiplayer": "multi",
+	}
+
+	if attemptedCommand, ok := aliasMap[input]; ok {
+		return attemptedCommand == targetCommand
+	}
+
+	return false
+}
