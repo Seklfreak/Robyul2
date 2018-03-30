@@ -133,9 +133,11 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 	}
 
 	// check if user who made the embed message is closing it
-	if reaction.UserID == p.userId && X_EMOJI == reaction.Emoji.Name {
-		delete(pagedEmbededMessages, reaction.MessageID)
-		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
+	if X_EMOJI == reaction.Emoji.Name {
+		if reaction.UserID == p.userId {
+			delete(pagedEmbededMessages, reaction.MessageID)
+			cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
+		}
 		return
 	}
 

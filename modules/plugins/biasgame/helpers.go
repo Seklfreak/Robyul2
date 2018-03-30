@@ -164,9 +164,11 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, autho
 
 // makeVSImage will make the image that shows for rounds in the biasgame
 func makeVSImage(img1, img2 image.Image) image.Image {
-	// resize images
-	img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)
-	img2 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img2, resize.Lanczos3)
+	// resize images if needed
+	if img1.Bounds().Dy() != IMAGE_RESIZE_HEIGHT || img2.Bounds().Dy() != IMAGE_RESIZE_HEIGHT {
+		img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)
+		img2 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img2, resize.Lanczos3)
+	}
 
 	// give shadow border
 	img1 = giveImageShadowBorder(img1, 15, 15)
@@ -195,4 +197,38 @@ func setAllBiases(biases []*biasChoice) {
 	defer allBiasesMutex.Unlock()
 
 	allBiasChoices = biases
+}
+
+// holds aliases for commands
+func isCommandAlias(input, targetCommand string) bool {
+	// if input is already the same as target command no need to check aliases
+	if input == targetCommand {
+		return true
+	}
+
+	var aliasMap = map[string]string{
+		"images": "images",
+		"image":  "images",
+		"pic":    "images",
+		"pics":   "images",
+		"img":    "images",
+		"imgs":   "images",
+
+		"rankings": "rankings",
+		"ranking":  "rankings",
+		"rank":     "rankings",
+		"ranks":    "rankings",
+
+		"current": "current",
+		"cur":     "current",
+
+		"multi":       "multi",
+		"multiplayer": "multi",
+	}
+
+	if attemptedCommand, ok := aliasMap[input]; ok {
+		return attemptedCommand == targetCommand
+	}
+
+	return false
 }

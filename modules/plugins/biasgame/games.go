@@ -22,7 +22,7 @@ import (
 type BiasGame struct{}
 
 type biasImage struct {
-	ImageBytes []byte
+	// ImageBytes []byte
 	HashString string
 	ObjectName string
 }
@@ -232,7 +232,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			// stats
 			displayBiasGameStats(msg, content)
 
-		} else if commandArgs[0] == "rankings" {
+		} else if isCommandAlias(commandArgs[0], "rankings") {
 
 			showSingleGameRankings(msg)
 
@@ -252,14 +252,14 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				updateIdolInfo(msg, content)
 			})
 
-		} else if commandArgs[0] == "images" || commandArgs[0] == "pics" {
+		} else if isCommandAlias(commandArgs[0], "images") {
 
 			showImagesForIdol(msg, content)
 
-		} else if commandArgs[0] == "current" {
+		} else if isCommandAlias(commandArgs[0], "current") {
 			displayCurrentGameStats(msg)
 
-		} else if commandArgs[0] == "multi" {
+		} else if isCommandAlias(commandArgs[0], "multi") {
 
 			startMultiPlayerGame(msg, commandArgs)
 
@@ -318,14 +318,19 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 // Called whenever a reaction is added to any message
 func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
 	defer helpers.Recover()
-
-	if gameIsReady == false {
+	if gameIsReady == false || reaction == nil {
 		return
 	}
 
 	// confirm the reaction was added to a message for one bias games
-	if game, ok := currentSinglePlayerGames[reaction.UserID]; ok == true {
-		game.processVote(reaction)
+	if game, ok := currentSinglePlayerGames[reaction.UserID]; ok {
+
+		// if game was somehow set to nil, remove it from current games
+		if game == nil {
+			delete(currentSinglePlayerGames, reaction.UserID)
+		} else {
+			game.processVote(reaction)
+		}
 	}
 
 	// check if this was a reaction to a idol suggestion.
@@ -464,10 +469,10 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 					g.TopEight = g.BiasQueue
 				}
 
-				// Sleep a time bit to allow other users to see what was chosen.
+				// Sleep a bit to allow other users to see what was chosen.
 				// This creates conversation while the game is going and makes it a overall better experience
 				//
-				//   This will also allow me to call out and harshly judge players who don't choose nayoung.
+				//   This will also allow me to call out and harshly judge players who don't choose nayoung <3
 				time.Sleep(time.Second / 5)
 
 				g.sendBiasGameRound()
@@ -755,7 +760,6 @@ func (g *multiBiasGame) processMultiGame() {
 
 		// if a random winner was chosen, display an arrow indication who the random winner was
 		if randomWin == true {
-			cache.GetSession().MessageReactionsRemoveAll(g.ChannelID, g.CurrentRoundMessageId)
 			if winnerIndex == 1 {
 				cache.GetSession().MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_FORWARD_EMOJI)
 			} else {
@@ -865,9 +869,41 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 		(*gameImageIndex)[b.NameAndGroup] = imageIndex
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].ImageBytes))
+	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].getImgBytes()))
 	helpers.Relax(err)
 	return img
+}
+
+//////////////////////////////////
+//     BIAS IMAGE FUNCTIONS     //
+//////////////////////////////////
+
+// will get the bytes to the correctly sized image bytes
+func (b biasImage) getImgBytes() []byte {
+
+	// get image bytes
+	imgBytes, err := helpers.RetrieveFile(b.ObjectName)
+	helpers.Relax(err)
+
+	img, _, err := helpers.DecodeImageBytes(imgBytes)
+	helpers.Relax(err)
+
+	// check if the image is already the correct size, otherwise resize it
+	if img.Bounds().Dx() == IMAGE_RESIZE_HEIGHT && img.Bounds().Dy() == IMAGE_RESIZE_HEIGHT {
+		return imgBytes
+	} else {
+
+		// resize image to the correct size
+		img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
+
+		// AFTER resizing, re-encode the bytes
+		resizedImgBytes := new(bytes.Buffer)
+		encoder := new(png.Encoder)
+		encoder.CompressionLevel = -2
+		encoder.Encode(resizedImgBytes, img)
+
+		return resizedImgBytes.Bytes()
+	}
 }
 
 ///// Unused functions requried by ExtendedPlugin interface
