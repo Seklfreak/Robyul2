@@ -176,18 +176,60 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string) {
 }
 
 // listIdolsInGame will list all idols that can show up in the biasgame
-func showSingleGameRankings(msg *discordgo.Message) {
+func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bool) {
+	rankType := "user"
+	gameType := "single"
+	embedTitle := "Bias Game User Rankings"
+	var filterGuild *discordgo.Guild
 
-	//fmt.Println("Getting Rankings...")
+	// check if its server rankings
+	if isServerRanks {
+		rankType = "server"
+		embedTitle = "Bias Game Server Rankings"
+		gameType = "all"
+
+		// check for game type
+		if strings.Contains(msg.Content, "multi") {
+			gameType = "multi"
+			embedTitle = "Multi Bias Game Server Rankings"
+		} else if strings.Contains(msg.Content, "single") {
+			gameType = "single"
+			embedTitle = "Single Bias Game Server Rankings"
+		}
+
+		// check if filtering user ranks by server
+	} else if strings.Contains(msg.Content, "server") {
+
+		// if last arg is a valid guild id, use that. otherwise get for current guild
+		if guild, err := helpers.GetGuild(commandArgs[len(commandArgs)-1]); err == nil {
+
+			filterGuild = guild
+		} else {
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			guild, err := helpers.GetGuild(channel.GuildID)
+			helpers.Relax(err)
+
+			filterGuild = guild
+		}
+	}
+
 	type rankingStruct struct {
 		userId           string
+		guildId          string
 		amountOfGames    int
 		idolWithMostWins string
 		userName         string
 	}
 
 	var games []models.BiasGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": "single"})).All(&games)
+	if gameType == "all" {
+
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})).All(&games)
+	} else {
+
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType})).All(&games)
+	}
 
 	// check if any stats were returned
 	totalGames := len(games)
@@ -196,20 +238,32 @@ func showSingleGameRankings(msg *discordgo.Message) {
 		return
 	}
 
-	//fmt.Println("Result Count: ", totalGames)
-
 	// loop through the results and compile a map of userids => gameWinner group+name
 	rankingsInfo := make(map[string][]string)
 	for _, game := range games {
-		rankingsInfo[game.UserID] = append(rankingsInfo[game.UserID], fmt.Sprintf("%s %s", game.GameWinner.GroupName, game.GameWinner.Name))
+		if rankType == "user" {
+
+			// check if filtering user ranks by server
+			if filterGuild != nil && filterGuild.ID != game.GuildID {
+				continue
+			}
+
+			rankingsInfo[game.UserID] = append(rankingsInfo[game.UserID], fmt.Sprintf("%s %s", game.GameWinner.GroupName, game.GameWinner.Name))
+		} else {
+			rankingsInfo[game.GuildID] = append(rankingsInfo[game.GuildID], fmt.Sprintf("%s %s", game.GameWinner.GroupName, game.GameWinner.Name))
+		}
 	}
 
 	// get the amount of wins and idol with most wins for each user
-	userRankings := []*rankingStruct{}
-	for userId, gameWinners := range rankingsInfo {
-		userRankingInfo := &rankingStruct{
-			userId:        userId,
+	rankings := []*rankingStruct{}
+	for rankTypeId, gameWinners := range rankingsInfo {
+		rankInfo := &rankingStruct{
 			amountOfGames: len(gameWinners),
+		}
+		if rankType == "user" {
+			rankInfo.userId = rankTypeId
+		} else {
+			rankInfo.guildId = rankTypeId
 		}
 
 		// get idol with most wins for this user
@@ -221,52 +275,66 @@ func showSingleGameRankings(msg *discordgo.Message) {
 		for idol, amountOfGames := range idolCountMap {
 			if amountOfGames > highestWins {
 				highestWins = amountOfGames
-				userRankingInfo.idolWithMostWins = idol
+				rankInfo.idolWithMostWins = idol
 			}
 		}
 
-		userRankings = append(userRankings, userRankingInfo)
+		rankings = append(rankings, rankInfo)
 	}
 
 	// sort rankings by most wins and get top 50
 	// sort fields by group name
-	sort.Slice(userRankings, func(i, j int) bool {
-		return userRankings[i].amountOfGames > userRankings[j].amountOfGames
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].amountOfGames > rankings[j].amountOfGames
 	})
 
-	if len(userRankings) > 35 {
-		userRankings = userRankings[:35]
+	if len(rankings) > 35 {
+		rankings = rankings[:35]
 	}
 
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: "Bias Game User Rankings",
+			Name:    embedTitle,
+			IconURL: cache.GetSession().State.User.AvatarURL("512"),
 		},
 	}
 
-	// make fields for each group and the idols in the group.
-	for i, userRankingInfo := range userRankings {
+	if rankType == "user" && filterGuild != nil {
+		embed.Author.Name = fmt.Sprintf("%s - %s\n", filterGuild.Name, embedTitle)
+		embed.Author.IconURL = discordgo.EndpointGuildIcon(filterGuild.ID, filterGuild.Icon)
+	}
 
-		userName := "*Unknown User*"
-		user, err := helpers.GetUser(userRankingInfo.userId)
-		if err == nil {
-			userName = user.Username
+	// make fields for each group and the idols in the group.
+	for i, rankInfo := range rankings {
+
+		displayName := "*Unknown*"
+		if rankType == "user" {
+
+			user, err := helpers.GetUser(rankInfo.userId)
+			if err == nil {
+				displayName = user.Username
+			}
+		} else {
+			guildInfo, err := helpers.GetGuild(rankInfo.guildId)
+			if err == nil {
+				displayName = guildInfo.Name
+			}
 		}
 
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   fmt.Sprintf("Rank #%d", i+1),
-			Value:  userName,
+			Value:  displayName,
 			Inline: true,
 		})
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "Total Games",
-			Value:  humanize.Comma(int64(userRankingInfo.amountOfGames)),
+			Value:  humanize.Comma(int64(rankInfo.amountOfGames)),
 			Inline: true,
 		})
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "Most Winning Idol",
-			Value:  userRankingInfo.idolWithMostWins,
+			Value:  rankInfo.idolWithMostWins,
 			Inline: true,
 		})
 	}
@@ -285,8 +353,8 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 
 	// find currently running game for the user or a mention if one exists
 	userPlayingGame := msg.Author
-	if len(msg.Mentions) > 0 {
-		userPlayingGame = msg.Mentions[0]
+	if user, err := helpers.GetUserFromMention(msg.Content); err == nil {
+		userPlayingGame = user
 	}
 
 	if game, ok := currentSinglePlayerGames[userPlayingGame.ID]; ok {
@@ -433,10 +501,6 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 		// user/server/global checks
 		if strings.Contains(statsMessage, "server") {
 
-			if err != nil {
-				// todo: a message here or something i guess?
-			}
-
 			iconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
 			targetName = "Server"
 			queryParams["guildid"] = guild.ID
@@ -444,11 +508,12 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 			iconURL = cache.GetSession().State.User.AvatarURL("512")
 			targetName = "Global"
 
-		} else if strings.Contains(statsMessage, "@") {
-			iconURL = msg.Mentions[0].AvatarURL("512")
-			targetName = msg.Mentions[0].Username
+		} else if user, err := helpers.GetUserFromMention(statsMessage); err == nil {
 
-			queryParams["userid"] = msg.Mentions[0].ID
+			iconURL = user.AvatarURL("512")
+			targetName = user.Username
+			queryParams["userid"] = user.ID
+
 		} else {
 			iconURL = msg.Author.AvatarURL("512")
 			targetName = msg.Author.Username
