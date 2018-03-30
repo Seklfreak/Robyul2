@@ -494,6 +494,23 @@ func (g *singleBiasGame) sendBiasGameRound() {
 		return
 	}
 
+	// if a game only has one bias in queue, they are the winner and a round should not be attempted
+	if len(g.BiasQueue) == 1 {
+
+		g.GameWinnerBias = g.BiasQueue[0]
+		g.sendWinnerMessage()
+
+		// record game stats
+		go func(g *singleBiasGame) {
+			defer helpers.Recover()
+			recordSingleGamesStats(g)
+		}(g)
+
+		// end the g. delete from current games
+		delete(currentSinglePlayerGames, g.User.ID)
+		return
+	}
+
 	// if a round message has been sent, delete before sending the next one
 	if g.LastRoundMessage != nil {
 		go cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
