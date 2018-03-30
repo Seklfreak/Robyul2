@@ -318,14 +318,19 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 // Called whenever a reaction is added to any message
 func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
 	defer helpers.Recover()
-
-	if gameIsReady == false {
+	if gameIsReady == false || reaction == nil {
 		return
 	}
 
 	// confirm the reaction was added to a message for one bias games
-	if game, ok := currentSinglePlayerGames[reaction.UserID]; ok == true {
-		game.processVote(reaction)
+	if game, ok := currentSinglePlayerGames[reaction.UserID]; ok {
+
+		// if game was somehow set to nil, remove it from current games
+		if game == nil {
+			delete(currentSinglePlayerGames, reaction.UserID)
+		} else {
+			game.processVote(reaction)
+		}
 	}
 
 	// check if this was a reaction to a idol suggestion.
@@ -464,10 +469,10 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 					g.TopEight = g.BiasQueue
 				}
 
-				// Sleep a time bit to allow other users to see what was chosen.
+				// Sleep a bit to allow other users to see what was chosen.
 				// This creates conversation while the game is going and makes it a overall better experience
 				//
-				//   This will also allow me to call out and harshly judge players who don't choose nayoung.
+				//   This will also allow me to call out and harshly judge players who don't choose nayoung <3
 				time.Sleep(time.Second / 5)
 
 				g.sendBiasGameRound()
