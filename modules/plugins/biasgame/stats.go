@@ -185,7 +185,7 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 	// check if its server rankings
 	if isServerRanks {
 		rankType = "server"
-		embedTitle = "Bias Game Server Rankings"
+		embedTitle = "Single Bias Game Server Rankings"
 
 		// check for game type
 		if strings.Contains(msg.Content, "multi") {
