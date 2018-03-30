@@ -199,7 +199,7 @@ func (b *BiasGame) Uninit(session *discordgo.Session) {
 func (b *BiasGame) Commands() []string {
 	return []string{
 		"biasgame",
-		"edit",
+		"biasgame-edit",
 	}
 }
 
@@ -308,7 +308,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			}
 
 		}
-	} else if command == "edit" { // edit is used for changing details of suggestions
+	} else if command == "biasgame-edit" { // edit is used for changing details of suggestions
 		fieldToUpdate := commandArgs[0]
 		fieldValue := strings.Join(commandArgs[1:], " ")
 		UpdateSuggestionDetails(msg, fieldToUpdate, fieldValue)
