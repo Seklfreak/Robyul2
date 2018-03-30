@@ -59,7 +59,7 @@ func (m *Storage) actionStatus(args []string, in *discordgo.Message, out **disco
 	helpers.Relax(err)
 
 	if len(args) >= 1 && helpers.IsRobyulMod(in.Author.ID) {
-		targetUser, err = helpers.GetUser(args[0])
+		targetUser, err = helpers.GetUserFromMention(args[0])
 		helpers.Relax(err)
 	}
 

@@ -138,6 +138,34 @@ func (d *Debug) Action(command string, content string, msg *discordgo.Message, s
 				safeData.String()))
 			helpers.Relax(err)
 			return
+		case "storage":
+			session.ChannelTyping(msg.ChannelID)
+
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+
+			info, err := helpers.RetrieveFileInformation(args[1])
+			helpers.Relax(err)
+
+			author, err := helpers.GetUser(info.UserID)
+			if err != nil {
+				author = new(discordgo.User)
+				author.Username = "N/A"
+				author.ID = info.UserID
+			}
+
+			file, err := helpers.RetrieveFile(args[1])
+			helpers.Relax(err)
+
+			_, err = helpers.SendFile(msg.ChannelID, info.Filename, bytes.NewReader(file), fmt.Sprintf(
+				"`%s` (`%s`) `%s` by `%s#%s` (`#%s`)\nRetrieved %d times:",
+				info.Filename, args[1], info.MimeType, author.Username, author.Discriminator, author.ID,
+				info.RetrievedCount,
+			))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
 		}
 
 		return
