@@ -7,8 +7,6 @@ import (
 	"io"
 	"math"
 
-	"sync"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 )
@@ -42,16 +40,12 @@ func init() {
 // will remove all reactions from all paged embed messages.
 //  mainly used on bot uninit to clean embeds
 func RemoveReactionsFromPagedEmbeds() {
-	var syncGroup sync.WaitGroup
+	// TODO: sync group? Without blocking bot shutdown
 	for _, pagedEmbed := range pagedEmbededMessages {
-		syncGroup.Add(1)
 		go func() {
 			cache.GetSession().MessageReactionsRemoveAll(pagedEmbed.channelID, pagedEmbed.messageID)
-			syncGroup.Done()
 		}()
 	}
-	// make sure all reactions get removed before bot exits
-	syncGroup.Wait()
 }
 
 // GetPagedMessage will return the paged message if there is one, otherwill will return nil
