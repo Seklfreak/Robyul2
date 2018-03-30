@@ -234,9 +234,13 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			// stats
 			displayBiasGameStats(msg, content)
 
+		} else if isCommandAlias(commandArgs[0], "server-rankings") {
+
+			showRankings(msg, commandArgs, true)
+
 		} else if isCommandAlias(commandArgs[0], "rankings") {
 
-			showSingleGameRankings(msg)
+			showRankings(msg, commandArgs, false)
 
 		} else if commandArgs[0] == "suggest" {
 

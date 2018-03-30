@@ -224,6 +224,11 @@ func isCommandAlias(input, targetCommand string) bool {
 
 		"multi":       "multi",
 		"multiplayer": "multi",
+
+		"server-rankings": "server-rankings",
+		"server-ranking":  "server-rankings",
+		"server-ranks":    "server-rankings",
+		"server-rank":     "server-rankings",
 	}
 
 	if attemptedCommand, ok := aliasMap[input]; ok {
