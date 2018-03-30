@@ -760,7 +760,6 @@ func (g *multiBiasGame) processMultiGame() {
 
 		// if a random winner was chosen, display an arrow indication who the random winner was
 		if randomWin == true {
-			cache.GetSession().MessageReactionsRemoveAll(g.ChannelID, g.CurrentRoundMessageId)
 			if winnerIndex == 1 {
 				cache.GetSession().MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_FORWARD_EMOJI)
 			} else {
