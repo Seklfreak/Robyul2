@@ -30,6 +30,7 @@ const (
 )
 
 var imageSuggestionChannlId string
+var imageSuggestionChannel *discordgo.Channel
 var suggestionQueue []*models.BiasGameSuggestionEntry
 var suggestionEmbedMessageId string // id of the embed message where suggestions are accepted/denied
 var exampleRoundPicId string
@@ -38,6 +39,9 @@ var suggestionQueueCountMessageId string
 func initSuggestionChannel() {
 
 	imageSuggestionChannlId = helpers.GetConfig().Path("biasgame.suggestion_channel_id").Data().(string)
+	imageSuggestionChannel, err := helpers.GetChannel(imageSuggestionChannlId)
+	helpers.Relax(err)
+
 	// when the bot starts, delete any past bot messages from the suggestion channel and make the embed
 	var messagesToDelete []string
 	messagesInChannel, _ := cache.GetSession().ChannelMessages(imageSuggestionChannlId, 100, "", "", "")
@@ -48,7 +52,7 @@ func initSuggestionChannel() {
 	cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
 
 	// make a message on how to edit suggestions
-	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: !edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
+	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
 	helpers.SendMessage(imageSuggestionChannlId, helpMessage)
 
 	// load unresolved suggestions and create the first embed
@@ -239,7 +243,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 		if CHECKMARK_EMOJI == reaction.Emoji.Name {
 
 			// send processing image message
-			msg, err := helpers.SendMessage(imageSuggestionChannlId, "Uploading image to google drive...")
+			msg, err := helpers.SendMessage(imageSuggestionChannlId, "Uploading image...")
 			if err == nil {
 				defer cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg[0].ID)
 			}
@@ -258,7 +262,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 				cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 
 				// alert user a note is needed and delete message after delay
-				msgs, err := helpers.SendMessage(imageSuggestionChannlId, "A note must be set before denying a suggestion. Please use: `!edit notes {reason for denial...}`")
+				msgs, err := helpers.SendMessage(imageSuggestionChannlId, "A note must be set before denying a suggestion. Please use: `"+helpers.GetPrefixForServer(imageSuggestionChannel.GuildID)+"edit notes {reason for denial...}`")
 				helpers.Relax(err)
 				helpers.DeleteMessageWithDelay(msgs[0], time.Second*15)
 				return
