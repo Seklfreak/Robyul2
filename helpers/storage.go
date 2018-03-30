@@ -199,6 +199,62 @@ func RetrieveFile(objectName string) (data []byte, err error) {
 	return data, nil
 }
 
+// retrieves a file without logging
+// objectName	: the name of the file to retrieve
+func RetrieveFileWithoutLogging(objectName string) (data []byte, err error) {
+	// setup minioClient if not yet done
+	if minioClient == nil {
+		err = setupMinioClient()
+		if err != nil {
+			return data, err
+		}
+	}
+
+	// Increase MongoDB RetrievedCount
+	go func() {
+		defer Recover()
+		err := MDbUpdateQuery(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
+		if err != nil && !IsMdbNotFound(err) {
+			RelaxLog(err)
+		}
+	}()
+
+	data = getBucketCache(objectName)
+	if data != nil {
+		return data, nil
+	}
+
+	// retrieve the object
+	minioObject, err := minioClient.GetObject(minioBucket, sanitize.BaseName(objectName), minio.GetObjectOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "Please reduce your request rate.") {
+			cache.GetLogger().WithField("module", "storage").Infof("object storage ratelimited, waiting for one second, then retrying")
+			time.Sleep(1 * time.Second)
+			return RetrieveFileWithoutLogging(objectName)
+		}
+		if strings.Contains(err.Error(), "net/http") || strings.Contains(err.Error(), "timeout") {
+			cache.GetLogger().WithField("module", "storage").Infof("network error retrieving, waiting for one second, then retrying")
+			time.Sleep(1 * time.Second)
+			return RetrieveFileWithoutLogging(objectName)
+		}
+		return data, err
+	}
+
+	// read the object into a byte slice
+	data, err = ioutil.ReadAll(minioObject)
+	if err != nil {
+		return data, err
+	}
+
+	go func() {
+		defer Recover()
+		err := setBucketCache(objectName, data)
+		RelaxLog(err)
+	}()
+
+	return data, nil
+}
+
 // Retrieves a file by the object name md5 hash
 // currently supported file sources: custom commands
 // hash	: the md5 hash

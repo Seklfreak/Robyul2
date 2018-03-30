@@ -9,6 +9,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 	"github.com/mgutz/str"
 )
@@ -87,7 +88,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	}
 
 	// add total games to the stats header message
-	statsTitle = fmt.Sprintf("%s (%d games)", statsTitle, totalGames)
+	statsTitle = fmt.Sprintf("%s (%s games)", statsTitle, humanize.Comma(int64(totalGames)))
 
 	sendStatsMessage(msg, statsTitle, countsHeader, biasCounts, iconURL, targetName)
 }
@@ -104,7 +105,8 @@ func listIdolsInGame(msg *discordgo.Message) {
 
 		if len(bias.BiasImages) > 1 {
 
-			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s (%d)", bias.BiasName, len(bias.BiasImages)))
+			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s (%s)",
+				bias.BiasName, humanize.Comma(int64(len(bias.BiasImages)))))
 		} else {
 
 			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s", bias.BiasName))
@@ -114,7 +116,9 @@ func listIdolsInGame(msg *discordgo.Message) {
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: fmt.Sprintf("All Idols Available In Bias Game (%d total, %d girls, %d boys)", len(getAllBiases()), genderCountMap["girl"], genderCountMap["boy"]),
+			Name: fmt.Sprintf("All Idols Available In Bias Game (%s total, %s girls, %s boys)",
+				humanize.Comma(int64(len(getAllBiases()))),
+				humanize.Comma(int64(genderCountMap["girl"])), humanize.Comma(int64(genderCountMap["boy"]))),
 		},
 		Title: "*Numbers indicate multi pictures are available for the idol*",
 	}
@@ -166,13 +170,15 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string) {
 		imagesBytes = append(imagesBytes, bImag.getImgBytes())
 	}
 
-	sendPagedEmbedOfImages(msg, imagesBytes, fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName), fmt.Sprintf("Total Images: %d", len(matchIdol.BiasImages)))
+	sendPagedEmbedOfImages(msg, imagesBytes,
+		fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName),
+		fmt.Sprintf("Total Images: %s", humanize.Comma(int64(len(matchIdol.BiasImages)))))
 }
 
 // listIdolsInGame will list all idols that can show up in the biasgame
 func showSingleGameRankings(msg *discordgo.Message) {
 
-	fmt.Println("Getting Rankings...")
+	//fmt.Println("Getting Rankings...")
 	type rankingStruct struct {
 		userId           string
 		amountOfGames    int
@@ -190,7 +196,7 @@ func showSingleGameRankings(msg *discordgo.Message) {
 		return
 	}
 
-	fmt.Println("Result Count: ", totalGames)
+	//fmt.Println("Result Count: ", totalGames)
 
 	// loop through the results and compile a map of userids => gameWinner group+name
 	rankingsInfo := make(map[string][]string)
@@ -255,7 +261,7 @@ func showSingleGameRankings(msg *discordgo.Message) {
 		})
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "Total Games",
-			Value:  fmt.Sprintf("%d", userRankingInfo.amountOfGames),
+			Value:  humanize.Comma(int64(userRankingInfo.amountOfGames)),
 			Inline: true,
 		})
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -523,7 +529,7 @@ func sendStatsMessage(msg *discordgo.Message, title string, countLabel string, d
 
 		if len(joinedNames) < 1024 {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   fmt.Sprintf("%s - %d", countLabel, count),
+				Name:   fmt.Sprintf("%s - %s", countLabel, humanize.Comma(int64(count))),
 				Value:  joinedNames,
 				Inline: false,
 			})
@@ -546,7 +552,7 @@ func sendStatsMessage(msg *discordgo.Message, title string, countLabel string, d
 				}
 
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   fmt.Sprintf("%s - %d", countLabel, count),
+					Name:   fmt.Sprintf("%s - %s", countLabel, humanize.Comma(int64(count))),
 					Value:  namesForField,
 					Inline: false,
 				})

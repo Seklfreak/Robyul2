@@ -189,10 +189,12 @@ func (b *BiasGame) Uninit(session *discordgo.Session) {
 		err := setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
 		helpers.Relax(err)
 	}
+	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(currentSinglePlayerGames))
 	if len(currentMultiPlayerGames) > 0 {
 		err := setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
 		helpers.Relax(err)
 	}
+	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(currentMultiPlayerGames))
 }
 
 // Will validate if the passed command entered is used for this plugin
@@ -882,7 +884,7 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 func (b biasImage) getImgBytes() []byte {
 
 	// get image bytes
-	imgBytes, err := helpers.RetrieveFile(b.ObjectName)
+	imgBytes, err := helpers.RetrieveFileWithoutLogging(b.ObjectName)
 	helpers.Relax(err)
 
 	img, _, err := helpers.DecodeImageBytes(imgBytes)

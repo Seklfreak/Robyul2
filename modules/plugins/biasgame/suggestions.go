@@ -53,7 +53,7 @@ func initSuggestionChannel() {
 	cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
 
 	// make a message on how to edit suggestions
-	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "biasgame-	edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
+	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "biasgame-edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
 	helpers.SendMessage(imageSuggestionChannlId, helpMessage)
 
 	// load unresolved suggestions and create the first embed
