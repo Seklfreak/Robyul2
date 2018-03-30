@@ -163,7 +163,7 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string) {
 	// get bytes of all the images
 	var imagesBytes [][]byte
 	for _, bImag := range matchIdol.BiasImages {
-		imagesBytes = append(imagesBytes, bImag.ImageBytes)
+		imagesBytes = append(imagesBytes, bImag.getImgBytes())
 	}
 
 	sendPagedEmbedOfImages(msg, imagesBytes, fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName), fmt.Sprintf("Total Images: %d", len(matchIdol.BiasImages)))

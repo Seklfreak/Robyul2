@@ -565,7 +565,7 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 
 			if compareVal <= 10 {
 				compareValues = append(compareValues, compareVal)
-				matchingImagesBytes[compareVal] = append(matchingImagesBytes[compareVal], curBImage.ImageBytes)
+				matchingImagesBytes[compareVal] = append(matchingImagesBytes[compareVal], curBImage.getImgBytes())
 			}
 		}
 	}

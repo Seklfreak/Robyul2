@@ -164,9 +164,11 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, autho
 
 // makeVSImage will make the image that shows for rounds in the biasgame
 func makeVSImage(img1, img2 image.Image) image.Image {
-	// resize images
-	img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)
-	img2 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img2, resize.Lanczos3)
+	// resize images if needed
+	if img1.Bounds().Dy() != IMAGE_RESIZE_HEIGHT || img2.Bounds().Dy() != IMAGE_RESIZE_HEIGHT {
+		img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)
+		img2 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img2, resize.Lanczos3)
+	}
 
 	// give shadow border
 	img1 = giveImageShadowBorder(img1, 15, 15)

@@ -1,11 +1,9 @@
 package biasgame
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"image/draw"
-	"image/png"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -199,31 +197,16 @@ func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
 
 // makeBiasChoiceFromBiasEntry takes a mdb biasentry and makes a biasChoice to be used in the game
 func makeBiasChoiceFromBiasEntry(entry models.BiasGameIdolEntry) biasChoice {
-	// get image bytes
-	imgBytes, err := helpers.RetrieveFile(entry.ObjectName)
-	helpers.Relax(err)
-
-	// resize image to the correct size
-	img, _, err := helpers.DecodeImageBytes(imgBytes)
-	helpers.Relax(err)
-	img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
-
-	// AFTER resizing, re-encode the bytes
-	resizedImgBytes := new(bytes.Buffer)
-	encoder := new(png.Encoder)
-	encoder.CompressionLevel = -2
-	encoder.Encode(resizedImgBytes, img)
+	bImage := biasImage{
+		ObjectName: entry.ObjectName,
+	}
 
 	// get image hash string
+	img, _, err := helpers.DecodeImageBytes(bImage.getImgBytes())
 	helpers.Relax(err)
 	imgHash, err := helpers.GetImageHashString(img)
 	helpers.Relax(err)
-
-	bImage := biasImage{
-		ImageBytes: resizedImgBytes.Bytes(),
-		HashString: imgHash,
-		ObjectName: entry.ObjectName,
-	}
+	bImage.HashString = imgHash
 
 	newBiasChoice := biasChoice{
 		BiasName:     entry.Name,

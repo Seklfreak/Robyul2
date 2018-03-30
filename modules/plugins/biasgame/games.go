@@ -22,7 +22,7 @@ import (
 type BiasGame struct{}
 
 type biasImage struct {
-	ImageBytes []byte
+	// ImageBytes []byte
 	HashString string
 	ObjectName string
 }
@@ -869,9 +869,41 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 		(*gameImageIndex)[b.NameAndGroup] = imageIndex
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].ImageBytes))
+	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].getImgBytes()))
 	helpers.Relax(err)
 	return img
+}
+
+//////////////////////////////////
+//     BIAS IMAGE FUNCTIONS     //
+//////////////////////////////////
+
+// will get the bytes to the correctly sized image bytes
+func (b biasImage) getImgBytes() []byte {
+
+	// get image bytes
+	imgBytes, err := helpers.RetrieveFile(b.ObjectName)
+	helpers.Relax(err)
+
+	img, _, err := helpers.DecodeImageBytes(imgBytes)
+	helpers.Relax(err)
+
+	// check if the image is already the correct size, otherwise resize it
+	if img.Bounds().Dx() == IMAGE_RESIZE_HEIGHT && img.Bounds().Dy() == IMAGE_RESIZE_HEIGHT {
+		return imgBytes
+	} else {
+
+		// resize image to the correct size
+		img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
+
+		// AFTER resizing, re-encode the bytes
+		resizedImgBytes := new(bytes.Buffer)
+		encoder := new(png.Encoder)
+		encoder.CompressionLevel = -2
+		encoder.Encode(resizedImgBytes, img)
+
+		return resizedImgBytes.Bytes()
+	}
 }
 
 ///// Unused functions requried by ExtendedPlugin interface
