@@ -186,7 +186,7 @@
     },
     "instagram": {
       "account-embed-title": "%s (@%s)%s Instagram Account",
-      "account-not-found": "User not found!",
+      "account-not-found": "User not found.\nPlease make sure the username is correct and the profile is not private.\nIf everything is correct please try again in a few minutes.",
       "embed-footer": "powered by instagram.com",
       "account-added-success": "I will now post new stuff from the Instagram account `@%s` to the Channel <#%s>%s!",
       "account-delete-not-found-error": "Unable to find Instagram Account in the Database!",

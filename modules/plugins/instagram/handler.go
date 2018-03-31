@@ -127,13 +127,25 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				helpers.Relax(err)
 				// get instagram account
 				instagramUsername := strings.Replace(args[1], "@", "", 1)
+			RetryUserInfo:
 				instagramUser, err := m.getUserInformation(instagramUsername, proxy)
 				if err != nil || instagramUser.IsPrivate {
+					if strings.Contains(err.Error(), "expected status 200; got 429") {
+						proxy, err = helpers.GetRandomProxy()
+						helpers.Relax(err)
+						goto RetryUserInfo
+					}
 					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 					return
 				}
+			RetryPosts:
 				instagramPosts, err := m.getPosts(instagramUser.ID, proxy)
 				if err != nil {
+					if strings.Contains(err.Error(), "expected status 200; got 429") {
+						proxy, err = helpers.GetRandomProxy()
+						helpers.Relax(err)
+						goto RetryPosts
+					}
 					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 					return
 				}
