@@ -43,55 +43,55 @@ func (m *Handler) Init(session *discordgo.Session) {
 	go func() {
 		defer helpers.Recover()
 
-		var err error
-
 		go func() {
 			defer helpers.Recover()
 			m.checkInstagramGraphQlFeedLoop()
 		}()
 		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
 
-		//cache.GetRedisClient().Del(instagramSessionKey).Result()
-		storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
-		if err == nil {
-			instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
+		if helpers.GetConfig().Path("instagram.username").Data().(string) != "" &&
+			helpers.GetConfig().Path("instagram.password").Data().(string) != "" {
+			storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
+			if err == nil {
+				instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
+				helpers.Relax(err)
+				cache.GetLogger().WithField("module", "instagram").Infof(
+					"restoring instagram session from redis",
+				)
+			} else {
+				instagramClient = goinsta.New(
+					helpers.GetConfig().Path("instagram.username").Data().(string),
+					helpers.GetConfig().Path("instagram.password").Data().(string),
+				)
+				cache.GetLogger().WithField("module", "instagram").Infof(
+					"starting new instagram session",
+				)
+			}
+			// set proxy
+			instagramClient.Proxy = helpers.GetConfig().Path("instagram.proxy").Data().(string)
+			err = instagramClient.Login()
 			helpers.Relax(err)
 			cache.GetLogger().WithField("module", "instagram").Infof(
-				"restoring instagram session from redis",
+				"logged in to instagram as @%s",
+				instagramClient.Informations.Username,
 			)
-		} else {
-			instagramClient = goinsta.New(
-				helpers.GetConfig().Path("instagram.username").Data().(string),
-				helpers.GetConfig().Path("instagram.password").Data().(string),
-			)
+			storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
+			helpers.Relax(err)
+			err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
+			helpers.Relax(err)
 			cache.GetLogger().WithField("module", "instagram").Infof(
-				"starting new instagram session",
+				"stored instagram session in redis",
 			)
+
+			instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
+			helpers.Relax(err)
+
+			go func() {
+				defer helpers.Recover()
+				m.checkInstagramStoryLoop()
+			}()
+			cache.GetLogger().WithField("module", "instagram").Info("Started checkInstagramStoryLoop")
 		}
-		// set proxy
-		instagramClient.Proxy = helpers.GetConfig().Path("instagram.proxy").Data().(string)
-		err = instagramClient.Login()
-		helpers.Relax(err)
-		cache.GetLogger().WithField("module", "instagram").Infof(
-			"logged in to instagram as @%s",
-			instagramClient.Informations.Username,
-		)
-		storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
-		helpers.Relax(err)
-		err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
-		helpers.Relax(err)
-		cache.GetLogger().WithField("module", "instagram").Infof(
-			"stored instagram session in redis",
-		)
-
-		instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
-		helpers.Relax(err)
-
-		go func() {
-			defer helpers.Recover()
-			m.checkInstagramStoryLoop()
-		}()
-		cache.GetLogger().WithField("module", "instagram").Info("Started checkInstagramStoryLoop")
 	}()
 }
 
@@ -138,27 +138,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
 					return
 				}
-			RetryPosts:
-				instagramPosts, err := m.getPosts(instagramUser.ID, proxy)
-				if err != nil {
-					if strings.Contains(err.Error(), "expected status 200; got 429") {
-						proxy, err = helpers.GetRandomProxy()
-						helpers.Relax(err)
-						goto RetryPosts
-					}
-					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.instagram.account-not-found"))
-					return
-				}
 				// Create DB Entries
 				dbPosts := make([]models.InstagramPostEntry, 0)
-				for _, post := range instagramPosts {
-					postEntry := models.InstagramPostEntry{
-						ID:            post.ID,
-						Type:          models.InstagramPostTypePost,
-						CreatedAtTime: post.CreatedAt,
-					}
-					dbPosts = append(dbPosts, postEntry)
-				}
 				// gather story if logged in
 				if instagramClient != nil && instagramClient.IsLoggedIn {
 					accoundIdInt, err := strconv.Atoi(instagramUser.ID)
@@ -200,6 +181,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 						PostedPosts:           dbPosts,
 						IsLive:                false,
 						SendPostType:          postMode,
+						LastPostCheck:         time.Now(),
 					},
 				)
 				helpers.Relax(err)

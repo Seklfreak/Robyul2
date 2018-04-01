@@ -86,6 +86,7 @@ func m74_migration_table_instagram() {
 				PostedPosts:           instagramPosts,
 				IsLive:                rethinkdbEntry.IsLive,
 				SendPostType:          sendPostType,
+				LastPostCheck:         time.Now(),
 			},
 		)
 		if err != nil {

@@ -107,7 +107,8 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 				if m.retryOnError(err) {
 					cache.GetLogger().WithField("module", "instagram").Infof(
 						"proxy error connecting to Instagram Account %s (GraphQL), "+
-							"switching proxy and then trying again", instagramAccountID)
+							"waiting 5 seconds, switching proxy and then trying again", instagramAccountID)
+					time.Sleep(5 * time.Second)
 					currentProxy, err = helpers.GetRandomProxy()
 					helpers.Relax(err)
 					goto RetryGraphQl
@@ -120,10 +121,8 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 				postHasBeenPostedEverywhere := true
 				for _, entry := range entries {
 					postAlreadyPosted := false
-					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == receivedPost.ID {
-							postAlreadyPosted = true
-						}
+					if receivedPost.CreatedAt.Before(entry.LastPostCheck) {
+						postAlreadyPosted = true
 					}
 					if !postAlreadyPosted {
 						postHasBeenPostedEverywhere = false
@@ -141,7 +140,8 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 					if m.retryOnError(err) {
 						cache.GetLogger().WithField("module", "instagram").Infof(
 							"hit rate limit checking Instagram Account %s (GraphQL), "+
-								"switching proxy and then trying again", instagramAccountID)
+								"waiting 5 seconds, switching proxy and then trying again", instagramAccountID)
+						time.Sleep(5 * time.Second)
 						currentProxy, err = helpers.GetRandomProxy()
 						helpers.Relax(err)
 						goto RetryPost
@@ -154,8 +154,12 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 					entryID := entry.ID
 					m.lockEntry(entryID)
 
+					if entry.LastPostCheck.IsZero() { // prevent spam
+						entry.LastPostCheck = time.Now()
+					}
+
 					var entry models.InstagramEntry
-					err = helpers.MdbOne(
+					err = helpers.MdbOneWithoutLogging(
 						helpers.MdbCollection(models.InstagramTable).Find(bson.M{"_id": entryID}),
 						&entry,
 					)
@@ -165,33 +169,22 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 						continue
 					}
 
-					changes := false
 					postAlreadyPosted := false
-					for _, postedPosts := range entry.PostedPosts {
-						if postedPosts.Type == models.InstagramPostTypePost && postedPosts.ID == receivedPost.ID {
-							postAlreadyPosted = true
-						}
+					if receivedPost.CreatedAt.Before(entry.LastPostCheck) {
+						postAlreadyPosted = true
 					}
 
 					if postAlreadyPosted == false {
 						cache.GetLogger().WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
-						entry.PostedPosts = append(entry.PostedPosts,
-							models.InstagramPostEntry{
-								ID:            post.ID,
-								Type:          models.InstagramPostTypePost,
-								CreatedAtTime: post.TakentAt,
-							})
-						changes = true
 						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
 					}
 
-					if changes {
-						err = helpers.MDbUpdate(models.InstagramTable, entry.ID, entry)
-						if err != nil {
-							m.unlockEntry(entryID)
-							helpers.RelaxLog(err)
-							continue
-						}
+					entry.LastPostCheck = time.Now()
+					err = helpers.MDbUpdateWithoutLogging(models.InstagramTable, entry.ID, entry)
+					if err != nil {
+						m.unlockEntry(entryID)
+						helpers.RelaxLog(err)
+						continue
 					}
 
 					m.unlockEntry(entryID)

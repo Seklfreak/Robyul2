@@ -33,6 +33,7 @@ type InstagramEntry struct {
 	PostedPosts           []InstagramPostEntry
 	IsLive                bool
 	SendPostType          InstagramSendPostType
+	LastPostCheck         time.Time
 }
 
 type InstagramPostEntry struct {
