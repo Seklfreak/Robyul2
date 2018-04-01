@@ -142,7 +142,7 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 // retrieves information about a file
 // objectName	: the name of the file to retrieve
 func RetrieveFileInformation(objectName string) (info models.StorageEntry, err error) {
-	err = MdbOne(
+	err = MdbOneWithoutLogging(
 		MdbCollection(models.StorageTable).Find(bson.M{"objectname": objectName}),
 		&info,
 	)
@@ -163,7 +163,7 @@ func RetrieveFile(objectName string) (data []byte, err error) {
 	// Increase MongoDB RetrievedCount
 	go func() {
 		defer Recover()
-		err := MDbUpdateQuery(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
+		err := MDbUpdateQueryWithoutLogging(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
 		if err != nil && !IsMdbNotFound(err) {
 			RelaxLog(err)
 		}
@@ -223,7 +223,7 @@ func RetrieveFileWithoutLogging(objectName string) (data []byte, err error) {
 	// Increase MongoDB RetrievedCount
 	go func() {
 		defer Recover()
-		err := MDbUpdateQuery(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
+		err := MDbUpdateQueryWithoutLogging(models.StorageTable, bson.M{"objectname": objectName}, bson.M{"$inc": bson.M{"retrievedcount": 1}})
 		if err != nil && !IsMdbNotFound(err) {
 			RelaxLog(err)
 		}
@@ -270,14 +270,14 @@ func RetrieveFileWithoutLogging(objectName string) (data []byte, err error) {
 // hash	: the md5 hash
 func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, err error) {
 	var entryBucket models.StorageEntry
-	err = MdbOne(
+	err = MdbOneWithoutLogging(
 		MdbCollection(models.StorageTable).Find(bson.M{"objectnamehash": hash}),
 		&entryBucket,
 	)
 	if err != nil {
 		// try fallback to deprecated custom commands object storage
 		var entryBucket models.CustomCommandsEntry
-		err = MdbOne(
+		err = MdbOneWithoutLogging(
 			MdbCollection(models.CustomCommandsTable).Find(bson.M{"storagehash": hash}),
 			&entryBucket,
 		)
@@ -304,7 +304,7 @@ func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, er
 // objectName	:  the name of the object
 func GetFileLink(objectName string) (url string, err error) {
 	var entryBucket models.StorageEntry
-	err = MdbOne(
+	err = MdbOneWithoutLogging(
 		MdbCollection(models.StorageTable).Find(bson.M{"objectname": objectName}),
 		&entryBucket,
 	)
