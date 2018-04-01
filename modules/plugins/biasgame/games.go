@@ -166,7 +166,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
 		bgLog().Infof("restored %d singleplayer biasgames on launch", len(currentSinglePlayerGames))
 		getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
-		bgLog().Infof("restored %d multiplayer biasgames on launch", len(currentSinglePlayerGames))
+		bgLog().Infof("restored %d multiplayer biasgames on launch", len(currentMultiPlayerGames))
 
 		// start any multi games
 		for _, multiGame := range currentMultiPlayerGames {
