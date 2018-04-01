@@ -154,15 +154,16 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 					entryID := entry.ID
 					m.lockEntry(entryID)
 
-					if entry.LastPostCheck.IsZero() { // prevent spam
-						entry.LastPostCheck = time.Now()
-					}
-
 					var entry models.InstagramEntry
 					err = helpers.MdbOneWithoutLogging(
 						helpers.MdbCollection(models.InstagramTable).Find(bson.M{"_id": entryID}),
 						&entry,
 					)
+
+					if entry.LastPostCheck.IsZero() { // prevent spam
+						entry.LastPostCheck = time.Now()
+					}
+
 					if err != nil {
 						m.unlockEntry(entryID)
 						helpers.RelaxLog(err)
