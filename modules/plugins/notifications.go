@@ -24,8 +24,17 @@ var (
 	ignoredChannelsCache           []models.NotificationsIgnoredChannelsEntry
 	ValidTextDelimiters            = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“"}
 	NotificationsWhitelistedBotIDs = []string{
+		"430101373397368842", // Test Webhook (Sekl)
+
 		"178215222614556673", // Fiscord-IRC (Kakkela)
 		"232927528325611521", // TrelleIRC (Kakkela)
+
+		"309026207104761858", // Fiscord (Kakkela, Webhook)
+		"426398711896080384", // Fiscord (Kakkela, Webhook)
+		"308942631696859148", // TrelleIRC (Kakkela, Webhook)
+		"426685461793341451", // TrelleIRC (Kakkela, Webhook)
+		"308942526570561536", // TrelleIRC (Kakkela, Webhook)
+		"430089364417150976", // TrelleIRC (Kakkela, Webhook)
 	}
 )
 
@@ -43,6 +52,7 @@ func (m *Notifications) Commands() []string {
 }
 
 func (m *Notifications) Init(session *discordgo.Session) {
+	session.AddHandler(m.OnMessage)
 	go func() {
 		defer helpers.Recover()
 
@@ -411,7 +421,15 @@ type PendingNotification struct {
 	Keywords []string
 }
 
-func (m *Notifications) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Notifications) OnMessage(session *discordgo.Session, msg *discordgo.MessageCreate) {
+	if msg == nil || msg.Content == "" {
+		return
+	}
+
+	if helpers.IsBlacklisted(msg.Author.ID) {
+		return
+	}
+
 	channel, err := helpers.GetChannelWithoutApi(msg.ChannelID)
 	if err != nil {
 		helpers.RelaxLog(err)
@@ -429,13 +447,13 @@ func (m *Notifications) OnMessage(content string, msg *discordgo.Message, sessio
 	// ignore commands
 	prefix := helpers.GetPrefixForServer(guild.ID)
 	if prefix != "" {
-		if strings.HasPrefix(content, prefix) {
+		if strings.HasPrefix(msg.Content, prefix) {
 			return
 		}
 	}
 	// ignore music bot prefixes
-	if strings.HasPrefix(content, "__") || strings.HasPrefix(content, "//") ||
-		strings.HasPrefix(content, "___") || strings.HasPrefix(content, "///") {
+	if strings.HasPrefix(msg.Content, "__") || strings.HasPrefix(msg.Content, "//") ||
+		strings.HasPrefix(msg.Content, "___") || strings.HasPrefix(msg.Content, "///") {
 		return
 	}
 	// ignore bot messages except whitelisted bots
@@ -509,7 +527,7 @@ NextKeyword:
 				}
 			}
 
-			matchContent := strings.ToLower(strings.TrimSpace(content))
+			matchContent := strings.ToLower(strings.TrimSpace(msg.Content))
 			doesMatch := false
 			for _, combination := range m.getAllDelimiterCombinations(ValidTextDelimiters) {
 				if strings.Contains(matchContent, strings.ToLower(combination.Start+notificationSetting.Keyword+combination.End)) {
@@ -541,8 +559,8 @@ NextKeyword:
 				}
 				messageAuthor, err := helpers.GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
 				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", msg.Author.ID).Warn("error getting message author: " + err.Error())
-					continue NextKeyword
+					messageAuthor = new(discordgo.Member)
+					messageAuthor.User = msg.Author
 				}
 				hasReadPermissions := false
 				hasHistoryPermissions := false
@@ -712,7 +730,7 @@ NextKeyword:
 		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
 		case 2:
 			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.\n\u200B",
-				content,
+				msg.Content,
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
@@ -762,7 +780,7 @@ NextKeyword:
 			}
 			notificationEmbed.Fields = append(notificationEmbed.Fields, &discordgo.MessageEmbedField{
 				Name:   "🔔 @" + msg.Author.Username + "#" + msg.Author.Discriminator + " at " + messageTime.UTC().Format("15:04:05") + " UTC",
-				Value:  content,
+				Value:  msg.Content,
 				Inline: false,
 			})
 			if guild.Icon != "" {
@@ -780,7 +798,7 @@ NextKeyword:
 				fmt.Sprintf("<#%s>", channel.ID),
 				guild.Name,
 				messageTime.UTC().Format("15:04:05"),
-				content,
+				msg.Content,
 			), "\n") {
 				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 				if err != nil {
@@ -792,14 +810,6 @@ NextKeyword:
 		}
 		metrics.KeywordNotificationsSentCount.Add(1)
 	}
-}
-
-func (m *Notifications) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-
-}
-
-func (m *Notifications) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
-
 }
 
 func (m *Notifications) refreshNotificationSettingsCache() (err error) {
@@ -830,20 +840,4 @@ func (m *Notifications) getAllDelimiterCombinations(delimiters []string) []delim
 		}
 	}
 	return result
-}
-
-func (m *Notifications) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
-
-}
-func (m *Notifications) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
-
-}
-func (m *Notifications) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-
-}
-func (m *Notifications) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
-
-}
-func (m *Notifications) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
-
 }

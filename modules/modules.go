@@ -15,6 +15,7 @@ var (
 	extendedPluginCache map[string]*ExtendedPlugin
 
 	PluginList = []Plugin{
+		&plugins.Notifications{},
 		&plugins.About{},
 		&plugins.Stats{},
 		&plugins.Uptime{},
@@ -74,7 +75,6 @@ var (
 	PluginExtendedList = []ExtendedPlugin{
 		&plugins.Bias{},
 		&plugins.GuildAnnouncements{},
-		&plugins.Notifications{},
 		&levels.Levels{},
 		&plugins.Gallery{},
 		&plugins.Mirror{},
