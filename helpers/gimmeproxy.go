@@ -14,7 +14,7 @@ import (
 
 const (
 	PROXIES_KEY       = "robyul-discord:gimmeproxy:proxies"
-	NUMBER_OF_PROXIES = 150
+	NUMBER_OF_PROXIES = 240
 )
 
 var (
@@ -66,25 +66,6 @@ func GimmeProxy() (proxyUrl string, err error) {
 
 func GetRandomProxy() (proxy http.Transport, err error) {
 	redis := cache.GetRedisClient()
-	length, err := redis.SCard(PROXIES_KEY).Result()
-	if err != nil {
-		return proxy, err
-	}
-
-	if length < NUMBER_OF_PROXIES {
-		cache.GetLogger().WithField("module", "gimmeproxy").Infof(
-			"found %d cached proxies, which is less than %d, adding one", length, NUMBER_OF_PROXIES,
-		)
-		proxyUrlString, err := GimmeProxy()
-		if err != nil {
-			if !strings.Contains(err.Error(), "expected status 200; got 429") {
-				RelaxLog(err)
-			}
-		} else {
-			_, err = redis.SAdd(PROXIES_KEY, proxyUrlString).Result()
-			RelaxLog(err)
-		}
-	}
 
 	randomProxyUrlString, err := redis.SRandMember(PROXIES_KEY).Result()
 	if err != nil {
@@ -191,6 +172,7 @@ func FillProxies() {
 				_, err = redis.SAdd(PROXIES_KEY, proxyUrlString).Result()
 				Relax(err)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
