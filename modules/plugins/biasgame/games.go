@@ -164,7 +164,9 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 
 		// get any in progress games saved in cache and immediatly delete them
 		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
+		bgLog().Infof("restored %d singleplayer biasgames on launch", len(currentSinglePlayerGames))
 		getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
+		bgLog().Infof("restored %d multiplayer biasgames on launch", len(currentSinglePlayerGames))
 
 		// start any multi games
 		for _, multiGame := range currentMultiPlayerGames {
