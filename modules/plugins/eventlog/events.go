@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -269,6 +270,11 @@ func (h *Handler) OnGuildRoleDelete(session *discordgo.Session, role *discordgo.
 }
 
 func (h *Handler) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+	if helpers.GetMemberPermissions(user.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
+		helpers.GetMemberPermissions(user.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+		return
+	}
+
 	go func() {
 		defer helpers.Recover()
 

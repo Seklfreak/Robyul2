@@ -2621,13 +2621,18 @@ func (m *Mod) OnReactionRemove(reaction *discordgo.MessageReactionRemove, sessio
 
 }
 func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+	if helpers.GetMemberPermissions(user.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
+		helpers.GetMemberPermissions(user.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+		return
+	}
+
 	go func() {
 		bannedOnGuild, err := helpers.GetGuild(user.GuildID)
 		if err != nil {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			return
 		}
-		// don't post if bot can't access the ban list of the server the user got banned on
+
 		updated := m.addBanToCache(user)
 		if !updated {
 			return
