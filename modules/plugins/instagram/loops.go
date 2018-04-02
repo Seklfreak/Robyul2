@@ -105,9 +105,9 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 			receivedPosts, err := m.getPosts(instagramAccountID, currentProxy)
 			if err != nil {
 				if m.retryOnError(err) {
-					cache.GetLogger().WithField("module", "instagram").Infof(
-						"proxy error connecting to Instagram Account %s (GraphQL), "+
-							"waiting 5 seconds, switching proxy and then trying again", instagramAccountID)
+					//cache.GetLogger().WithField("module", "instagram").Infof(
+					//	"proxy error connecting to Instagram Account %s (GraphQL), "+
+					//		"waiting 5 seconds, switching proxy and then trying again", instagramAccountID)
 					time.Sleep(5 * time.Second)
 					currentProxy, err = helpers.GetRandomProxy()
 					helpers.Relax(err)
@@ -138,9 +138,9 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 				post, err := m.getPostInformation(receivedPost.Shortcode, currentProxy)
 				if err != nil {
 					if m.retryOnError(err) {
-						cache.GetLogger().WithField("module", "instagram").Infof(
-							"hit rate limit checking Instagram Account %s (GraphQL), "+
-								"waiting 5 seconds, switching proxy and then trying again", instagramAccountID)
+						//cache.GetLogger().WithField("module", "instagram").Infof(
+						//	"hit rate limit checking Instagram Account %s (GraphQL), "+
+						//		"waiting 5 seconds, switching proxy and then trying again", instagramAccountID)
 						time.Sleep(5 * time.Second)
 						currentProxy, err = helpers.GetRandomProxy()
 						helpers.Relax(err)
