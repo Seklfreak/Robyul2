@@ -157,7 +157,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 			helpers.Relax(err)
 			settings := helpers.GuildSettingsGetCached(channel.GuildID)
 
-			if len(settings.AutoRoleIDs) <= 0 || len(settings.DelayedAutoRoles) <= 0 {
+			if len(settings.AutoRoleIDs) <= 0 && len(settings.DelayedAutoRoles) <= 0 {
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.role-list-none"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
