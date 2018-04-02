@@ -1,8 +1,6 @@
 package plugins
 
 import (
-	"fmt"
-
 	"encoding/xml"
 
 	"time"
@@ -26,7 +24,6 @@ func (rc RandomCat) Init(session *discordgo.Session) {
 	RandomCatEndpoint = "https://thecatapi.com/api/images/get?api_key=" +
 		helpers.GetConfig().Path("thecatapi-api-key").Data().(string) +
 		"&format=xml&results_per_page=1&type=jpg,gif,png"
-	fmt.Println("set endpoint to", RandomCatEndpoint)
 }
 
 func (rc RandomCat) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

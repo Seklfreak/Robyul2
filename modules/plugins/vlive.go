@@ -15,8 +15,8 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
-	rethink "github.com/gorethink/gorethink"
 )
 
 var (
@@ -41,67 +41,6 @@ const (
 
 type VLive struct{}
 
-type DB_VLive_Entry struct {
-	ID             string            `gorethink:"id,omitempty"`
-	ServerID       string            `gorethink:"serverid"`
-	ChannelID      string            `gorethink:"channelid"`
-	VLiveChannel   DB_VLive_Channel  `gorethink:"vlivechannel"`
-	PostedUpcoming []DB_VLive_Video  `gorethink:"posted_upcoming"`
-	PostedLive     []DB_VLive_Video  `gorethink:"posted_live"`
-	PostedVOD      []DB_VLive_Video  `gorethink:"posted_vod"`
-	PostedNotices  []DB_VLive_Notice `gorethink:"posted_notices"`
-	PostedCelebs   []DB_VLive_Celeb  `gorethink:"posted_celebs"`
-	MentionRoleID  string            `gorethink:"mention_role_id"`
-}
-
-type DB_VLive_Channel struct {
-	Seq           int64  `gorethink:"seq,omitempty" json:"channel_seq"`
-	Code          string `gorethink:"code,omitempty" json:"channel_code"`
-	Type          string `json:"type"`
-	Name          string `json:"channel_name"`
-	Followers     int64  `json:"fan_count"`
-	CoverImgUrl   string `json:"channel_cover_img"`
-	ProfileImgUrl string `json:"channel_profile_img"`
-	Color         string `json:"representative_color"`
-	TotalVideos   int64  `json:"-"`
-	CelebBoard    struct {
-		BoardID int64 `json:"board_id"`
-	} `json:"celeb_board"`
-	Upcoming []DB_VLive_Video  `gorethink:"upcoming" json:"-"`
-	Live     []DB_VLive_Video  `gorethink:"live" json:"-"`
-	VOD      []DB_VLive_Video  `gorethink:"vod" json:"-"`
-	Notices  []DB_VLive_Notice `gorethink:"notices" json:"-"`
-	Celebs   []DB_VLive_Celeb  `gorethink:"celebs" json:"-"`
-	Url      string            `json:"-"`
-}
-
-type DB_VLive_Video struct {
-	Seq       int64  `gorethink:"seq,omitempty" json:"videoSeq"`
-	Title     string `json:"title"`
-	Plays     int64  `json:"playCount"`
-	Likes     int64  `json:"likeCount"`
-	Comments  int64  `json:"commentCount"`
-	Thumbnail string `json:"thumbnail"`
-	Date      string `json:"onAirStartAt"`
-	Playtime  int64  `json:"playTime"`
-	Type      string `json:"videoType"`
-	Url       string `json:"-"`
-}
-
-type DB_VLive_Notice struct {
-	Number   int64  `gorethink:"number,omitempty" json:"noticeNo"`
-	Title    string `json:"title"`
-	ImageUrl string `json:"listImageUrl"`
-	Summary  string `json:"summary"`
-	Url      string `json:"-"`
-}
-
-type DB_VLive_Celeb struct {
-	ID      string `gorethink:"id,omitempty" json:"post_id"`
-	Summary string `json:"body_summary"`
-	Url     string `json:"-"`
-}
-
 func (r *VLive) Commands() []string {
 	return []string{
 		"vlive",
@@ -113,8 +52,8 @@ func (r *VLive) Init(session *discordgo.Session) {
 	cache.GetLogger().WithField("module", "vlive").Info("Started vlive loop (0s)")
 }
 func (r *VLive) checkVliveFeedsLoop() {
-	var entries []DB_VLive_Entry
-	var bundledEntries map[string][]DB_VLive_Entry
+	var entries []models.VliveEntry
+	var bundledEntries map[string][]models.VliveEntry
 
 	defer helpers.Recover()
 	defer func() {
@@ -126,32 +65,29 @@ func (r *VLive) checkVliveFeedsLoop() {
 	}()
 
 	for {
-		bundledEntries = make(map[string][]DB_VLive_Entry, 0)
+		bundledEntries = make(map[string][]models.VliveEntry, 0)
 
-		cursor, err := rethink.Table("vlive").Run(helpers.GetDB())
-		helpers.Relax(err)
-
-		err = cursor.All(&entries)
+		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.VliveTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
 
 		for _, entry := range entries {
 			if _, ok := bundledEntries[entry.VLiveChannel.Code]; ok {
 				bundledEntries[entry.VLiveChannel.Code] = append(bundledEntries[entry.VLiveChannel.Code], entry)
 			} else {
-				bundledEntries[entry.VLiveChannel.Code] = []DB_VLive_Entry{entry}
+				bundledEntries[entry.VLiveChannel.Code] = []models.VliveEntry{entry}
 			}
 		}
 
 		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking %d channels for %d feeds with %d workers", len(bundledEntries), len(entries), VLiveWorkers))
 		start := time.Now()
 
-		jobs := make(chan map[string][]DB_VLive_Entry, 0)
+		jobs := make(chan map[string][]models.VliveEntry, 0)
 		results := make(chan int, 0)
 
-		workerEntries := make(map[int]map[string][]DB_VLive_Entry, 0)
+		workerEntries := make(map[int]map[string][]models.VliveEntry, 0)
 		for w := 1; w <= VLiveWorkers; w++ {
 			go r.feedWorker(w, jobs, results)
-			workerEntries[w] = make(map[string][]DB_VLive_Entry)
+			workerEntries[w] = make(map[string][]models.VliveEntry)
 		}
 
 		lastWorker := 1
@@ -181,7 +117,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 	}
 }
 
-func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, results chan<- int) {
+func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, results chan<- int) {
 	defer helpers.Recover()
 
 	for job := range jobs {
@@ -267,7 +203,8 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]DB_VLive_Entry, resu
 					}
 				}
 				if changes == true {
-					r.setEntry(entry)
+					err = helpers.MDbUpdateWithoutLogging(models.VliveTable, entry.ID, entry)
+					helpers.Relax(err)
 				}
 			}
 		}
@@ -345,19 +282,20 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					return
 				}
 				// create new entry in db
-				entry := r.getEntryByOrCreateEmpty("id", "")
-				entry.ServerID = targetChannel.GuildID
-				entry.ChannelID = targetChannel.ID
-				entry.VLiveChannel = vliveChannel
-				entry.PostedVOD = vliveChannel.VOD
-				entry.PostedUpcoming = vliveChannel.Upcoming
-				entry.PostedLive = vliveChannel.Live
-				entry.PostedCelebs = vliveChannel.Celebs
-				entry.PostedNotices = vliveChannel.Notices
-				entry.MentionRoleID = mentionRole.ID
-				r.setEntry(entry)
+				newID, err := helpers.MDbInsert(models.VliveTable, models.VliveEntry{
+					GuildID:        targetChannel.GuildID,
+					ChannelID:      targetChannel.ID,
+					VLiveChannel:   vliveChannel,
+					PostedVOD:      vliveChannel.VOD,
+					PostedUpcoming: vliveChannel.Upcoming,
+					PostedLive:     vliveChannel.Live,
+					PostedNotices:  vliveChannel.Notices,
+					PostedCelebs:   vliveChannel.Celebs,
+					MentionRoleID:  mentionRole.ID,
+				})
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, helpers.MdbIdToHuman(newID),
 					models.EventlogTargetTypeRobyulVliveFeed, msg.Author.ID,
 					models.EventlogTypeRobyulVliveFeedAdd, "",
 					nil,
@@ -381,13 +319,13 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					}, false)
 				helpers.RelaxLog(err)
 
-				successMessage := helpers.GetTextF("plugins.vlive.channel-added-success", entry.VLiveChannel.Name, entry.ChannelID)
+				successMessage := helpers.GetTextF("plugins.vlive.channel-added-success", vliveChannel.Name, targetChannel.ID)
 				if mentionRole.ID != "" {
 					successMessage += helpers.GetTextF("plugins.vlive.channel-added-success-additional-role", mentionRole.Name)
 				}
 				helpers.SendMessage(msg.ChannelID, successMessage)
 				cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Added V Live Channel %s (%s) to Channel %s (#%s) on Guild %s (#%s) Mention @%s (#%s)",
-					entry.VLiveChannel.Name, entry.VLiveChannel.Code, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID,
+					vliveChannel.Name, vliveChannel.Code, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID,
 					mentionRole.Name, mentionRole.ID))
 			})
 		case "delete", "del", "remove": // [p]vlive delete <id>
@@ -399,41 +337,47 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					helpers.Relax(err)
 
 					entryId := args[1]
-					entryBucket := r.getEntryBy("id", entryId)
-					if entryBucket.ID != "" {
-						r.deleteEntryById(entryBucket.ID)
 
-						_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryId,
-							models.EventlogTargetTypeRobyulVliveFeed, msg.Author.ID,
-							models.EventlogTypeRobyulVliveFeedRemove, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "vlive_feed_channelid",
-									Value: entryBucket.ID,
-								},
-								{
-									Key:   "vlive_feed_vlivechannel_name",
-									Value: entryBucket.VLiveChannel.Name,
-								},
-								{
-									Key:   "vlive_feed_vlivechannel_code",
-									Value: entryBucket.VLiveChannel.Code,
-								},
-								{
-									Key:   "vlive_feed_mentionroleid",
-									Value: entryBucket.MentionRoleID,
-								},
-							}, false)
-						helpers.RelaxLog(err)
-
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
-						cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))
-					} else {
+					var entryBucket models.VliveEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.VliveTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(entryId)}),
+						&entryBucket,
+					)
+					if helpers.IsMdbNotFound(err) {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.vlive.channel-delete-not-found-error"))
 						return
 					}
+					helpers.Relax(err)
 
+					err = helpers.MDbDelete(models.VliveTable, entryBucket.ID)
+					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryId,
+						models.EventlogTargetTypeRobyulVliveFeed, msg.Author.ID,
+						models.EventlogTypeRobyulVliveFeedRemove, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "vlive_feed_channelid",
+								Value: helpers.MdbIdToHuman(entryBucket.ID),
+							},
+							{
+								Key:   "vlive_feed_vlivechannel_name",
+								Value: entryBucket.VLiveChannel.Name,
+							},
+							{
+								Key:   "vlive_feed_vlivechannel_code",
+								Value: entryBucket.VLiveChannel.Code,
+							},
+							{
+								Key:   "vlive_feed_mentionroleid",
+								Value: entryBucket.MentionRoleID,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-delete-success", entryBucket.VLiveChannel.Name))
+					cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("Deleted V Live Channel %s (%s)", entryBucket.VLiveChannel.Name, entryBucket.VLiveChannel.Code))
 				} else {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
@@ -442,19 +386,13 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 		case "list": // [p]vlive list
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			var entryBucket []DB_VLive_Entry
-			listCursor, err := rethink.Table("vlive").Filter(
-				rethink.Row.Field("serverid").Eq(currentChannel.GuildID),
-			).Run(helpers.GetDB())
+			var entryBucket []models.VliveEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.VliveTable).Find(bson.M{"guildid": currentChannel.GuildID})).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if entryBucket == nil || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.vlive.channel-list-no-channels-error"))
 				return
-			} else if err != nil {
-				helpers.Relax(err)
 			}
 
 			resultMessage := ""
@@ -465,7 +403,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 					helpers.Relax(err)
 					mentionText += fmt.Sprintf(" mentioning `@%s`", role.Name)
 				}
-				resultMessage += fmt.Sprintf("`%s`: V Live Channel `%s` posting to <#%s>%s\n", entry.ID, entry.VLiveChannel.Name, entry.ChannelID, mentionText)
+				resultMessage += fmt.Sprintf("`%s`: V Live Channel `%s` posting to <#%s>%s\n", helpers.MdbIdToHuman(entry.ID), entry.VLiveChannel.Name, entry.ChannelID, mentionText)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** V Live Channels in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
@@ -565,7 +503,7 @@ func (r *VLive) getVliveChannelIdFromChannelName(channelSearchName string) (stri
 
 func (r *VLive) getChannelSeqFromChannelID(channelID string) (channelSeq int, err error) {
 	cacheCodec := cache.GetRedisCacheCodec()
-	key := "robyul2-discord:vlive:channelseq-by-channelid:" + channelID
+	key := "robyul2-discord:vlive:channelseq-by-channelid:v2:" + channelID
 
 	if err = cacheCodec.Get(key, &channelSeq); err == nil {
 		return channelSeq, nil
@@ -591,15 +529,15 @@ func (r *VLive) getChannelSeqFromChannelID(channelID string) (channelSeq int, er
 	return int(resN), nil
 }
 
-func (r *VLive) getChannelFromChannelID(channelID string) (channel DB_VLive_Channel, err error) {
+func (r *VLive) getChannelFromChannelID(channelID string) (channel models.VliveChannelInfo, err error) {
 	cacheCodec := cache.GetRedisCacheCodec()
-	key := "robyul2-discord:vlive:channel-by-channelid:" + channelID
+	key := "robyul2-discord:vlive:channel-by-channelid:v2:" + channelID
 
 	if err = cacheCodec.Get(key, &channel); err == nil {
 		return channel, nil
 	}
 
-	var vliveChannel DB_VLive_Channel
+	var vliveChannel models.VliveChannelInfo
 
 	channelSeq, err := r.getChannelSeqFromChannelID(channelID)
 	if err != nil {
@@ -628,8 +566,8 @@ func (r *VLive) getChannelFromChannelID(channelID string) (channel DB_VLive_Chan
 	return vliveChannel, nil
 }
 
-func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Channel, error) {
-	var vliveChannel DB_VLive_Channel
+func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (models.VliveChannelInfo, error) {
+	var vliveChannel models.VliveChannelInfo
 
 	if channelId == "" {
 		return vliveChannel, errors.New("invalid channel ID")
@@ -649,7 +587,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 	}
 
 	// Get VODs and LIVEs
-	var vliveVideo DB_VLive_Video
+	var vliveVideo models.VliveVideoInfo
 	endpointChannelVideoList := fmt.Sprintf(VliveEndpointChannelVideoList, VliveAppId, vliveChannel.Seq, 10)
 	jsonGabs := helpers.GetJSON(endpointChannelVideoList)
 	metrics.VLiveRequests.Add(1)
@@ -690,7 +628,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 
 	}
 	// Get Notices
-	var vliveNotice DB_VLive_Notice
+	var vliveNotice models.VliveNoticeInfo
 	endpointNotices := fmt.Sprintf(VliveEndpointNotices, vliveChannel.Seq)
 	jsonGabs = helpers.GetJSON(endpointNotices)
 	metrics.VLiveRequests.Add(1)
@@ -707,7 +645,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 	}
 	// Get Celeb
 	if vliveChannel.CelebBoard.BoardID != 0 {
-		var vliveCeleb DB_VLive_Celeb
+		var vliveCeleb models.VliveCelebInfo
 		endpointCeleb := fmt.Sprintf(VliveEndpointCeleb, vliveChannel.CelebBoard.BoardID, VliveAppId)
 		jsonGabs = helpers.GetJSON(endpointCeleb)
 		metrics.VLiveRequests.Add(1)
@@ -727,7 +665,7 @@ func (r *VLive) getVLiveChannelByVliveChannelId(channelId string) (DB_VLive_Chan
 	return vliveChannel, nil
 }
 
-func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postVodToChannel(entry models.VliveEntry, vod models.VliveVideoInfo, vliveChannel models.VliveChannelInfo) {
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-vod", vliveChannel.Name),
 		URL:       vod.Url,
@@ -753,7 +691,7 @@ func (r *VLive) postVodToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vlive
 	}
 }
 
-func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postUpcomingToChannel(entry models.VliveEntry, vod models.VliveVideoInfo, vliveChannel models.VliveChannelInfo) {
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-upcoming", vliveChannel.Name, vod.Date),
 		URL:       vliveChannel.Url,
@@ -780,7 +718,7 @@ func (r *VLive) postUpcomingToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, 
 	}
 }
 
-func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postLiveToChannel(entry models.VliveEntry, vod models.VliveVideoInfo, vliveChannel models.VliveChannelInfo) {
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-live", vliveChannel.Name),
 		URL:       vod.Url,
@@ -806,7 +744,7 @@ func (r *VLive) postLiveToChannel(entry DB_VLive_Entry, vod DB_VLive_Video, vliv
 	}
 }
 
-func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postNoticeToChannel(entry models.VliveEntry, notice models.VliveNoticeInfo, vliveChannel models.VliveChannelInfo) {
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-notice", vliveChannel.Name),
 		URL:       notice.Url,
@@ -832,7 +770,7 @@ func (r *VLive) postNoticeToChannel(entry DB_VLive_Entry, notice DB_VLive_Notice
 	}
 }
 
-func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, vliveChannel DB_VLive_Channel) {
+func (r *VLive) postCelebToChannel(entry models.VliveEntry, celeb models.VliveCelebInfo, vliveChannel models.VliveChannelInfo) {
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:     helpers.GetTextF("plugins.vlive.channel-embed-title-celeb", vliveChannel.Name),
 		URL:       celeb.Url,
@@ -855,64 +793,4 @@ func (r *VLive) postCelebToChannel(entry DB_VLive_Entry, celeb DB_VLive_Celeb, v
 	if err != nil {
 		cache.GetLogger().WithField("module", "vlive").Warnf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err)
 	}
-}
-
-func (r *VLive) getEntryBy(key string, id string) DB_VLive_Entry {
-	var entryBucket DB_VLive_Entry
-	listCursor, err := rethink.Table("vlive").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (r *VLive) getEntryByOrCreateEmpty(key string, id string) DB_VLive_Entry {
-	var entryBucket DB_VLive_Entry
-	listCursor, err := rethink.Table("vlive").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("vlive").Insert(DB_VLive_Entry{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return r.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (r *VLive) setEntry(entry DB_VLive_Entry) {
-	_, err := rethink.Table("vlive").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (r *VLive) deleteEntryById(id string) {
-	_, err := rethink.Table("vlive").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
 }

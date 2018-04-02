@@ -217,7 +217,7 @@ func CollectRuntimeMetrics() {
 
 		CoroutineCount.Set(int64(runtime.NumGoroutine()))
 
-		VliveChannelsCount.Set(entriesCount("vlive"))
+		VliveChannelsCount.Set(entriesCountMgo(models.VliveTable, nil))
 
 		InstagramAccountsCount.Set(entriesCountMgo(models.InstagramTable, nil))
 
