@@ -63,6 +63,7 @@ func (m *Mod) Commands() []string {
 		"pending-mutes",
 		"batch-roles",
 		"set-bot-dp",
+		"pin",
 	}
 }
 
@@ -2170,6 +2171,75 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			helpers.Relax(err)
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.set-bot-dp-success"))
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		})
+		return
+	case "pin": // [p]pin <channel> <message id>
+		helpers.RequireMod(msg, func() {
+			args := strings.Fields(content)
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
+				return
+			}
+
+			sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+			targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+			if err != nil || targetChannel.ID == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
+			if sourceChannel.GuildID != targetChannel.GuildID {
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.echo-error-wrong-server"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+				return
+			}
+			targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == discordgo.ErrCodeUnknownMessage || errD.Message.Code == discordgo.ErrCodeMissingAccess {
+						_, err = helpers.SendMessage(sourceChannel.ID, helpers.GetText("plugins.mod.edit-error-not-found"))
+						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+						return
+					}
+				}
+				helpers.Relax(err)
+			}
+
+			var alreadyPinned bool
+			pinnedMessages, err := session.ChannelMessagesPinned(targetMessage.ChannelID)
+			if err == nil {
+				for _, pinnedMessage := range pinnedMessages {
+					if pinnedMessage.ID == targetMessage.ID {
+						alreadyPinned = true
+					}
+				}
+			}
+
+			var message string
+			if !alreadyPinned {
+				err = session.ChannelMessagePin(targetMessage.ChannelID, targetMessage.ID)
+				message = helpers.GetText("plugins.mod.pin-success")
+			} else {
+				err = session.ChannelMessageUnpin(targetMessage.ChannelID, targetMessage.ID)
+				message = helpers.GetText("plugins.mod.unpin-success")
+			}
+			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.pin-error-permissions"))
+						return
+					}
+					if errD.Message.Code == discordgo.ErrCodeMaximumPinsReached {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.pin-error-limit"))
+						return
+					}
+				}
+			}
+			helpers.Relax(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, message)
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		})
