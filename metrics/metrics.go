@@ -235,7 +235,7 @@ func CollectRuntimeMetrics() {
 
 		YoutubeChannelsCount.Set(entriesCount(models.YoutubeChannelTable))
 
-		TwitchChannelsCount.Set(entriesCount("twitch"))
+		TwitchChannelsCount.Set(entriesCountMgo(models.TwitchTable, nil))
 
 		VanityInvitesCount.Set(entriesCount(models.VanityInvitesTable))
 

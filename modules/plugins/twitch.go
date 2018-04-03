@@ -19,7 +19,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 )
 
 type Twitch struct{}
@@ -28,14 +28,6 @@ const (
 	twitchStatsEndpoint = "https://api.twitch.tv/kraken/streams/%s"
 	twitchHexColor      = "#6441a5"
 )
-
-type DB_TwitchChannel struct {
-	ID                string `gorethink:"id,omitempty"`
-	ServerID          string `gorethink:"serverid"`
-	ChannelID         string `gorethink:"channelid"`
-	TwitchChannelName string `gorethink:"twitchchannelname"`
-	IsLive            bool   `gorethink:"islive"`
-}
 
 type TwitchStatus struct {
 	Stream struct {
@@ -118,17 +110,14 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 		}()
 	}()
 
-	var entries []DB_TwitchChannel
-	var bundledEntries map[string][]DB_TwitchChannel
+	var entries []models.TwitchEntry
+	var bundledEntries map[string][]models.TwitchEntry
 
 	for {
-		cursor, err := rethink.Table("twitch").Run(helpers.GetDB())
+		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitchTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
 
-		err = cursor.All(&entries)
-		helpers.Relax(err)
-
-		bundledEntries = make(map[string][]DB_TwitchChannel, 0)
+		bundledEntries = make(map[string][]models.TwitchEntry, 0)
 
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
@@ -141,7 +130,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 			if _, ok := bundledEntries[entry.TwitchChannelName]; ok {
 				bundledEntries[entry.TwitchChannelName] = append(bundledEntries[entry.TwitchChannelName], entry)
 			} else {
-				bundledEntries[entry.TwitchChannelName] = []DB_TwitchChannel{entry}
+				bundledEntries[entry.TwitchChannelName] = []models.TwitchEntry{entry}
 			}
 		}
 
@@ -171,7 +160,8 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 				}
 
 				if changes == true {
-					m.setEntry(entry)
+					err = helpers.MDbUpdateWithoutLogging(models.TwitchTable, entry.ID, entry)
+					helpers.Relax(err)
 				}
 			}
 		}
@@ -214,13 +204,18 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
 				helpers.Relax(err)
 				// create new entry in db
-				entry := m.getEntryByOrCreateEmpty("id", "")
-				entry.ServerID = targetChannel.GuildID
-				entry.ChannelID = targetChannel.ID
-				entry.TwitchChannelName = targetTwitchChannelName
-				m.setEntry(entry)
+				newID, err := helpers.MDbInsert(
+					models.TwitchTable,
+					models.TwitchEntry{
+						GuildID:           targetChannel.GuildID,
+						ChannelID:         targetChannel.ID,
+						TwitchChannelName: targetTwitchChannelName,
+						IsLive:            false,
+					},
+				)
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, entry.ID,
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, helpers.MdbIdToHuman(newID),
 					models.EventlogTargetTypeRobyulTwitchFeed, msg.Author.ID,
 					models.EventlogTypeRobyulTwitchFeedAdd, "",
 					nil,
@@ -232,37 +227,48 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 					}, false)
 				helpers.RelaxLog(err)
 
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, entry.ChannelID))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-added-success", targetTwitchChannelName, targetChannel.ID))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-				cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, entry.ChannelID, targetGuild.Name, targetGuild.ID))
+				cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Added Twitch Channel %s to Channel %s (#%s) on Guild %s (#%s)", targetTwitchChannelName, targetChannel.Name, targetChannel.ID, targetGuild.Name, targetGuild.ID))
 			})
 		case "delete", "del", "remove": // [p]twitch delete <id>
 			helpers.RequireMod(msg, func() {
 				if len(args) >= 2 {
 					session.ChannelTyping(msg.ChannelID)
+
+					channel, err := helpers.GetChannel(msg.ChannelID)
+					helpers.Relax(err)
+
 					entryId := args[1]
-					entryBucket := m.getEntryBy("id", entryId)
-					if entryBucket.ID != "" {
-						m.deleteEntryById(entryBucket.ID)
 
-						_, err := helpers.EventlogLog(time.Now(), entryBucket.ServerID, entryBucket.ID,
-							models.EventlogTargetTypeRobyulTwitchFeed, msg.Author.ID,
-							models.EventlogTypeRobyulTwitchFeedRemove, "",
-							nil,
-							[]models.ElasticEventlogOption{
-								{
-									Key:   "twitch_feed_channelname",
-									Value: entryBucket.TwitchChannelName,
-								},
-							}, false)
-						helpers.RelaxLog(err)
-
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-delete-success", entryBucket.TwitchChannelName))
-						cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Deleted Twitch Channel %s", entryBucket.TwitchChannelName))
-					} else {
+					var entryBucket models.TwitchEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.TwitchTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(entryId)}),
+						&entryBucket,
+					)
+					if helpers.IsMdbNotFound(err) {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.channel-delete-not-found-error"))
 						return
 					}
+					helpers.Relax(err)
+
+					err = helpers.MDbDelete(models.TwitchTable, entryBucket.ID)
+					helpers.Relax(err)
+
+					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
+						models.EventlogTargetTypeRobyulTwitchFeed, msg.Author.ID,
+						models.EventlogTypeRobyulTwitchFeedRemove, "",
+						nil,
+						[]models.ElasticEventlogOption{
+							{
+								Key:   "twitch_feed_channelname",
+								Value: entryBucket.TwitchChannelName,
+							},
+						}, false)
+					helpers.RelaxLog(err)
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-delete-success", entryBucket.TwitchChannelName))
+					cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("Deleted Twitch Channel %s", entryBucket.TwitchChannelName))
 
 				} else {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
@@ -272,15 +278,11 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 		case "list": // [p]twitch list
 			currentChannel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			var entryBucket []DB_TwitchChannel
-			listCursor, err := rethink.Table("twitch").Filter(
-				rethink.Row.Field("serverid").Eq(currentChannel.GuildID),
-			).Run(helpers.GetDB())
+			var entryBucket []models.TwitchEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.TwitchTable).Find(bson.M{"guildid": currentChannel.GuildID})).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if entryBucket == nil || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.twitch.channel-list-no-channels-error"))
 				return
 			} else if err != nil {
@@ -289,7 +291,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 
 			resultMessage := ""
 			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s`: Twitch Channel `%s` posting to <#%s>\n", entry.ID, entry.TwitchChannelName, entry.ChannelID)
+				resultMessage += fmt.Sprintf("`%s`: Twitch Channel `%s` posting to <#%s>\n", helpers.MdbIdToHuman(entry.ID), entry.TwitchChannelName, entry.ChannelID)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitch Channels in total.", len(entryBucket))
 			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
@@ -379,66 +381,6 @@ func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 
 	json.Unmarshal(buf.Bytes(), &twitchStatus)
 	return twitchStatus
-}
-
-func (m *Twitch) getEntryBy(key string, id string) DB_TwitchChannel {
-	var entryBucket DB_TwitchChannel
-	listCursor, err := rethink.Table("twitch").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Twitch) getEntryByOrCreateEmpty(key string, id string) DB_TwitchChannel {
-	var entryBucket DB_TwitchChannel
-	listCursor, err := rethink.Table("twitch").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	// If user has no DB entries create an empty document
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("twitch").Insert(DB_TwitchChannel{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		// If the creation was successful read the document
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Twitch) setEntry(entry DB_TwitchChannel) {
-	_, err := rethink.Table("twitch").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Twitch) deleteEntryById(id string) {
-	_, err := rethink.Table("twitch").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
 }
 
 func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchStatus) {

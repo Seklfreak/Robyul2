@@ -11,7 +11,6 @@ import (
 var migrations = []helpers.Callback{
 	m0_create_db,
 	m1_create_table_guild_config,
-	m11_create_table_twitch,
 	m14_create_table_stats_voicetimes,
 	m16_create_table_galleries,
 	m17_create_table_mirrors,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m77_migration_table_bias,
 	m78_migration_table_mod_joinlog,
 	m79_migration_table_vlive,
+	m80_migration_table_twitch,
 }
 
 // Run executes all registered migrations
