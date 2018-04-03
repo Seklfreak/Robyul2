@@ -1148,7 +1148,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			continue
 		}
 
-		author, _ := helpers.GetUser(m.UserID)
+		author, _ := helpers.GetUserWithoutAPI(m.UserID)
 		if author == nil || author.ID == "" {
 			author = new(discordgo.User)
 			author.Username = "N/A"
@@ -1193,7 +1193,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			continue
 		}
 
-		author, _ := helpers.GetUser(m.UserID)
+		author, _ := helpers.GetUserWithoutAPI(m.UserID)
 		if author == nil || author.ID == "" {
 			author = new(discordgo.User)
 			author.Username = "N/A"
@@ -1236,7 +1236,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			continue
 		}
 
-		author, _ := helpers.GetUser(m.UserID)
+		author, _ := helpers.GetUserWithoutAPI(m.UserID)
 		if author == nil || author.ID == "" {
 			author = new(discordgo.User)
 			author.Username = "N/A"
