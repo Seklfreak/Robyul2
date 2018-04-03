@@ -551,7 +551,7 @@ func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 // sendSimilarImages will check for images that are similar to the given images
 //  and send them back in a paged embe
 func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
-	matchingImagesBytes := make(map[int][][]byte, 0)
+	matchingImages := make(map[int][]biasImage, 0)
 	var compareValues []int
 
 	// compare the given image to all images currently available in the game
@@ -565,21 +565,21 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 
 			if compareVal <= 10 {
 				compareValues = append(compareValues, compareVal)
-				matchingImagesBytes[compareVal] = append(matchingImagesBytes[compareVal], curBImage.getImgBytes())
+				matchingImages[compareVal] = append(matchingImages[compareVal], curBImage)
 			}
 		}
 	}
 
 	// sort the images by the best match first
-	sortedMatchingImages := make([][]byte, 0)
+	sortedMatchingImages := make([]biasImage, 0)
 	sort.Ints(compareValues)
 	for _, val := range compareValues {
-		sortedMatchingImages = append(sortedMatchingImages, matchingImagesBytes[val]...)
-		delete(matchingImagesBytes, val)
+		sortedMatchingImages = append(sortedMatchingImages, matchingImages[val]...)
+		delete(matchingImages, val)
 	}
 
 	if len(sortedMatchingImages) > 0 {
-		sendPagedEmbedOfImages(msg, sortedMatchingImages, "Possible Matching Images", fmt.Sprintf("Images Found: %d", len(sortedMatchingImages)))
+		sendPagedEmbedOfImages(msg, sortedMatchingImages, false, "Possible Matching Images", fmt.Sprintf("Images Found: %d", len(sortedMatchingImages)))
 	}
 }
 

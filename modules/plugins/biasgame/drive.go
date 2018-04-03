@@ -396,3 +396,117 @@ func getFilesFromDriveFolder(folderId string) []*drive.File {
 
 	return allFiles
 }
+
+// updateImageInfo updates a specific image and its related bias info
+func updateImageInfo(msg *discordgo.Message, content string) {
+	contentArgs := str.ToArgv(content)[1:]
+
+	// confirm amount of args
+	if len(contentArgs) < 4 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		return
+	}
+
+	targetObjectName := contentArgs[0]
+	newGroup := contentArgs[1]
+	newName := contentArgs[2]
+	newGender := strings.ToLower(contentArgs[3])
+
+	// if a gender was passed, make sure its valid
+	if newGender != "boy" && newGender != "girl" {
+		helpers.SendMessage(msg.ChannelID, "Invalid gender. Gender must be exactly 'girl' or 'boy'. No information was updated.")
+		return
+	}
+
+	allBiases := getAllBiases()
+	allBiasesMutex.Lock()
+	imageFound := false
+
+	// find and delete target image by object name
+BiasLoop:
+	for biasIndex, bias := range allBiases {
+
+		// check if image has not been found and deleted, no need to loop through images if it has
+		for i, bImg := range bias.BiasImages {
+			if bImg.ObjectName == targetObjectName {
+
+				// IMPORTANT: it is important that we do not delete the last image from the bias AND the bias from the all biases array. it MUST be one OR the other.
+
+				// if that was the last image for the idol, delete idol from all biases
+				if len(bias.BiasImages) == 1 {
+					allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
+				} else {
+					// delete image
+					bias.BiasImages = append(bias.BiasImages[:i], bias.BiasImages[i+1:]...)
+				}
+				imageFound = true
+				break BiasLoop
+			}
+		}
+	}
+	allBiasesMutex.Unlock()
+	// update biases
+	setAllBiases(allBiases)
+
+	// confirm an image was found and deleted
+	if !imageFound {
+		helpers.SendMessage(msg.ChannelID, "No image with that object name was found. No information was updated.")
+		return
+	}
+
+	// create new image with given object name
+	newBImg := biasImage{
+		ObjectName: targetObjectName,
+	}
+
+	// get image hash from object name
+	img, _, err := helpers.DecodeImageBytes(newBImg.getImgBytes())
+	helpers.Relax(err)
+	imgHash, err := helpers.GetImageHashString(img)
+	helpers.Relax(err)
+	newBImg.HashString = imgHash
+
+	// attempt to get matching idol
+	groupCheck, nameCheck, biasToUpdate := getMatchingIdolAndGroup(newGroup, newName)
+
+	// update database
+	var biasesToUpdate []models.BiasGameIdolEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&biasesToUpdate)
+	helpers.Relax(err)
+
+	// if a database entry were found, update it
+	if len(biasesToUpdate) == 1 {
+		updateBias := biasesToUpdate[0]
+		updateBias.Name = newName
+		updateBias.GroupName = newGroup
+		updateBias.Gender = newGender
+		err := helpers.MDbUpsertID(models.BiasGameIdolsTable, updateBias.ID, updateBias)
+		helpers.Relax(err)
+
+		// if the new group/name already exists in memory, add image to that bias. otherwise create it
+		if groupCheck && nameCheck && biasToUpdate != nil {
+			allBiasesMutex.Lock()
+			biasToUpdate.BiasImages = append(biasToUpdate.BiasImages, newBImg)
+			allBiasesMutex.Unlock()
+		} else {
+			newBiasChoice := makeBiasChoiceFromBiasEntry(updateBias)
+			setAllBiases(append(getAllBiases(), &newBiasChoice))
+		}
+	} else {
+		// oh boy... these should not happen
+		if len(biasesToUpdate) == 0 {
+			helpers.SendMessage(msg.ChannelID, "No image with that object name was found IN MONGO, but the image was found memory. Data is out of sync, please refresh-images.")
+		} else {
+			helpers.SendMessage(msg.ChannelID, "To many images with that object name were found IN MONGO. This should never occur, please clean up the extra records manually and refresh-images")
+		}
+		return
+	}
+
+	// update cache
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+	}
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Image Update. Object Name: %s | Idol: %s %s", targetObjectName, newGroup, newName))
+
+}

@@ -114,7 +114,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		// set global variables
 		currentSinglePlayerGames = make(map[string]*singleBiasGame)
 		allowedGameSizes = map[int]bool{
-			//10:  true, // for dev only, remove when game is live
+			// 10:  true, // for dev only, remove when game is live
 			32:  true,
 			64:  true,
 			128: true,
@@ -252,15 +252,28 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				runGoogleDriveMigration(msg)
 			})
 
+		} else if commandArgs[0] == "update-image" {
+
+			helpers.RequireRobyulMod(msg, func() {
+				updateImageInfo(msg, content)
+			})
+
 		} else if commandArgs[0] == "update" {
 
 			helpers.RequireRobyulMod(msg, func() {
 				updateIdolInfo(msg, content)
 			})
 
+		} else if isCommandAlias(commandArgs[0], "image-ids") {
+
+			// shows images with object ids
+			helpers.RequireRobyulMod(msg, func() {
+				showImagesForIdol(msg, content, true)
+			})
+
 		} else if isCommandAlias(commandArgs[0], "images") {
 
-			showImagesForIdol(msg, content)
+			showImagesForIdol(msg, content, false)
 
 		} else if isCommandAlias(commandArgs[0], "current") {
 			displayCurrentGameStats(msg)
@@ -595,7 +608,13 @@ func (g *singleBiasGame) sendWinnerMessage() {
 		g.GameWinnerBias.BiasName)
 
 	// send message
-	helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
+	winnerMsgs, err := helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
+	helpers.Relax(err)
+
+	// if the winner is nayoung, add a nayoung emoji <3 <3 <3
+	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.BiasName) == "nayoung" {
+		cache.GetSession().MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
+	}
 }
 
 /////////////////////////////////
@@ -884,7 +903,7 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 	var imageIndex int
 
 	// check if a random image for the idol has already been chosen for this game
-	//  also make sure that biasimages array contains the index. it may have been changed due to a refresh from googledrive
+	//  also make sure that biasimages array contains the index. it may have been changed due to a refresh
 	if imagePos, ok := (*gameImageIndex)[b.NameAndGroup]; ok && len(b.BiasImages) > imagePos {
 		imageIndex = imagePos
 	} else {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"math/rand"
 	"regexp"
 	"strings"
 	"time"
@@ -113,7 +114,8 @@ func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasC
 }
 
 // sendPagedEmbedOfImages takes the given image []byte and sends them in a paged embed
-func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, authorName, description string) {
+func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []biasImage, displayObjectIds bool, authorName, description string) {
+	positionMap := []string{"Top Left", "Top Right", "Bottom Left", "Bottom Right"}
 
 	// create images embed message
 	imagesMessage := &discordgo.MessageSend{
@@ -123,15 +125,24 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, autho
 			Author: &discordgo.MessageEmbedAuthor{
 				Name: authorName,
 			},
-			Image: &discordgo.MessageEmbedImage{},
+			Image:  &discordgo.MessageEmbedImage{},
+			Fields: []*discordgo.MessageEmbedField{},
 		},
 		Files: []*discordgo.File{},
 	}
 
 	// loop through images, make a 2x2 collage and set it as a file
 	var images [][]byte
-	for i, imageBytes := range imagesToSend {
-		images = append(images, imageBytes)
+	for i, img := range imagesToSend {
+		images = append(images, img.getImgBytes())
+
+		if displayObjectIds {
+
+			imagesMessage.Embed.Fields = append(imagesMessage.Embed.Fields, &discordgo.MessageEmbedField{
+				Name:  positionMap[i%4],
+				Value: img.ObjectName,
+			})
+		}
 
 		// one page should display 4 images
 		if (i+1)%4 == 0 {
@@ -159,7 +170,7 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend [][]byte, autho
 	}
 
 	// send paged embed
-	helpers.SendPagedImageMessage(msg, imagesMessage)
+	helpers.SendPagedImageMessage(msg, imagesMessage, 4)
 }
 
 // makeVSImage will make the image that shows for rounds in the biasgame
@@ -214,6 +225,11 @@ func isCommandAlias(input, targetCommand string) bool {
 		"img":    "images",
 		"imgs":   "images",
 
+		"image-ids":  "image-ids",
+		"images-ids": "image-ids",
+		"pic-ids":    "image-ids",
+		"pics-ids":   "image-ids",
+
 		"rankings": "rankings",
 		"ranking":  "rankings",
 		"rank":     "rankings",
@@ -236,4 +252,20 @@ func isCommandAlias(input, targetCommand string) bool {
 	}
 
 	return false
+}
+
+// <3
+func getRandomNayoungEmoji() string {
+	nayoungEmojiArray := []string{
+		":nayoungthumbsup:430592739839705091",
+		":nayoungsalute:430592737340030979",
+		":nayounghype:430592740066066433",
+		":nayoungheart6:430592739868934164",
+		":nayoungheart2:430592737004224514",
+		":nayoungheart:430592736496713738",
+		"a:anayoungminnie:430592552610299924",
+	}
+
+	randomIndex := rand.Intn(len(nayoungEmojiArray))
+	return nayoungEmojiArray[randomIndex]
 }
