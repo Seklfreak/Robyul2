@@ -233,7 +233,7 @@ func CollectRuntimeMetrics() {
 
 		RedditSubredditsCount.Set(entriesCount(models.RedditSubredditsTable))
 
-		YoutubeChannelsCount.Set(entriesCount(models.YoutubeChannelTable))
+		YoutubeChannelsCount.Set(entriesCountMgo(models.YoutubeChannelTable, nil))
 
 		TwitchChannelsCount.Set(entriesCountMgo(models.TwitchTable, nil))
 

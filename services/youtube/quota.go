@@ -8,7 +8,6 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	redisCache "github.com/go-redis/cache"
-	rethink "github.com/gorethink/gorethink"
 )
 
 // quota contains information for calculating
@@ -129,18 +128,12 @@ func (q *quota) DailyLimitExceeded() {
 // readEntryCount reads how many entries in database
 // and this will use in check time calculation.
 func (q *quota) readEntryCount() (int64, error) {
-	query := rethink.Table(models.YoutubeChannelTable).Count()
-
-	c, err := query.Run(helpers.GetDB())
+	c, err := helpers.MdbCollection(models.YoutubeChannelTable).Find(nil).Count()
 	if err != nil {
 		return 0, err
 	}
-	defer c.Close()
 
-	cnt := int64(0)
-	c.One(&cnt)
-
-	return cnt, nil
+	return int64(c), nil
 }
 
 // get previous quota information from redis.

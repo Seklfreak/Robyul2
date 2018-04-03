@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/mgo.v2/bson"
+
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	youtubeService "github.com/Seklfreak/Robyul2/services/youtube"
@@ -208,7 +210,7 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 	}
 
 	entry := models.YoutubeChannelEntry{
-		ServerID:                dc.GuildID,
+		GuildID:                 dc.GuildID,
 		ChannelID:               dc.ID,
 		NextCheckTime:           time.Now().Unix(),
 		LastSuccessfulCheckTime: time.Now().Unix(),
@@ -229,7 +231,7 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 	}
 
 	// insert entry into the db
-	entryID, err := createEntry(entry)
+	entryID, err := helpers.MDbInsert(models.YoutubeChannelTable, entry)
 	if err != nil {
 		logger().Error(err)
 		*out = h.newMsg(err.Error())
@@ -238,7 +240,7 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 
 	h.service.IncQuotaEntryCount()
 
-	_, err = helpers.EventlogLog(time.Now(), dc.GuildID, entryID,
+	_, err = helpers.EventlogLog(time.Now(), dc.GuildID, helpers.MdbIdToHuman(entryID),
 		models.EventlogTargetTypeRobyulYouTubeChannelFeed, in.Author.ID,
 		models.EventlogTypeRobyulYouTubeChannelFeedAdd, "",
 		nil,
@@ -281,15 +283,25 @@ func (h *Handler) actionDeleteChannel(args []string, in *discordgo.Message, out 
 		return h.actionFinish
 	}
 
-	n, err := deleteEntry(args[2])
+	var entryBucket models.YoutubeChannelEntry
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.YoutubeChannelTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(args[2])}),
+		&entryBucket,
+	)
+	if helpers.IsMdbNotFound(err) {
+		*out = h.newMsg("plugins.youtube.channel-delete-not-found-error")
+		return h.actionFinish
+	}
 	if err != nil {
 		logger().Error(err)
 		*out = h.newMsg(err.Error())
 		return h.actionFinish
 	}
 
-	if n < 1 {
-		*out = h.newMsg("plugins.youtube.channel-delete-not-found-error")
+	err = helpers.MDbDelete(models.YoutubeChannelTable, entryBucket.ID)
+	if err != nil {
+		logger().Error(err)
+		*out = h.newMsg(err.Error())
 		return h.actionFinish
 	}
 
@@ -319,24 +331,22 @@ func (h *Handler) actionListChannel(args []string, in *discordgo.Message, out **
 		return h.actionFinish
 	}
 
-	entries, err := readEntries(map[string]interface{}{
-		"server_id": ch.GuildID,
-	})
+	var entries []models.YoutubeChannelEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.YoutubeChannelTable).Find(bson.M{"guildid": ch.GuildID})).All(&entries)
 	if err != nil {
 		logger().Error(err)
 		*out = h.newMsg(err.Error())
 		return h.actionFinish
 	}
 
-	if len(entries) < 1 {
+	if entries == nil || len(entries) < 1 {
 		*out = h.newMsg("plugins.youtube.no-entry")
 		return h.actionFinish
 	}
 
-	// TODO: pagify
 	msg := ""
 	for _, e := range entries {
-		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", e.ID, e.YoutubeChannelName, e.ChannelID)
+		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", helpers.MdbIdToHuman(e.ID), e.YoutubeChannelName, e.ChannelID)
 	}
 
 	for _, resultPage := range helpers.Pagify(msg, "\n") {

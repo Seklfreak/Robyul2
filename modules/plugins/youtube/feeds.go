@@ -5,12 +5,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"gopkg.in/mgo.v2/bson"
+
 	youtubeService "github.com/Seklfreak/Robyul2/services/youtube"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
 	"github.com/sirupsen/logrus"
 )
 
@@ -60,15 +61,19 @@ func (f *feeds) run() {
 
 func (f *feeds) check() {
 	t := time.Now().Unix()
-	entries, err := readEntries(rethink.Row.Field("next_check_time").Le(t))
+	var entries []models.YoutubeChannelEntry
+	err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.YoutubeChannelTable).Find(
+		bson.M{"nextchecktime": bson.M{"$lte": t}},
+	)).All(&entries)
 	helpers.Relax(err)
+	// TODO: test
 
 	for _, e := range entries {
 		e = f.checkChannelFeeds(e)
 
 		// update next check time
 		e = f.setNextCheckTime(e)
-		err := updateEntry(e)
+		err = helpers.MDbUpdateWithoutLogging(models.YoutubeChannelTable, e.ID, e)
 		helpers.Relax(err)
 	}
 }
