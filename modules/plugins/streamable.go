@@ -107,6 +107,12 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	request.SetBasicAuth(helpers.GetConfig().Path("streamable.username").Data().(string),
 		helpers.GetConfig().Path("streamable.password").Data().(string))
 	response, err := httpClient.Do(request)
+	if err != nil {
+		if strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers") {
+			helpers.SendMessage(msg.ChannelID, "I wasn't able to talk to streamable. <a:ablobfrown:394026913292615701>\nPlease try again in a few minutes.")
+			return
+		}
+	}
 	helpers.Relax(err)
 	defer response.Body.Close()
 	buf := bytes.NewBuffer(nil)
