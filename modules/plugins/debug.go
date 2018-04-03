@@ -33,7 +33,7 @@ func (d *Debug) Init(session *discordgo.Session) {
 }
 
 func (d *Debug) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	helpers.RequireBotAdmin(msg, func() {
+	helpers.RequireRobyulMod(msg, func() {
 		args := strings.Fields(content)
 
 		if len(args) <= 0 {
