@@ -86,7 +86,7 @@ func SendPagedMessage(msg *discordgo.Message, embed *discordgo.MessageEmbed, fie
 }
 
 // SendPagedImageMessage creates the paged image messages
-func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSend) error {
+func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSend, fieldsPerPage int) error {
 	if msgSend.Embed == nil {
 		return errors.New("parameter msgSend must contain an embed")
 	}
@@ -105,7 +105,7 @@ func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSen
 		fullEmbed:       msgSend.Embed,
 		channelID:       msg.ChannelID,
 		currentPage:     1,
-		fieldsPerPage:   1,
+		fieldsPerPage:   fieldsPerPage,
 		totalNumOfPages: len(msgSend.Files),
 		files:           msgSend.Files,
 		userId:          msg.Author.ID,
@@ -156,6 +156,19 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 	if p.msgType == "image" {
 		// image embeds can't be edited, need to delete and remate it
 		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
+
+		// if fields were sent with image embed, handle those
+		if len(p.fullEmbed.Fields) > 0 {
+
+			// get start and end fields based on current page and fields per page
+			startField := (p.currentPage - 1) * p.fieldsPerPage
+			endField := startField + p.fieldsPerPage
+			if endField > len(p.fullEmbed.Fields) {
+				endField = len(p.fullEmbed.Fields)
+			}
+
+			tempEmbed.Fields = tempEmbed.Fields[startField:endField]
+		}
 
 		// we need to split and reset the reader since a reader can only be used once
 		var buf bytes.Buffer
@@ -212,6 +225,19 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 	tempEmbed.Footer = p.getEmbedFooter()
 
 	if p.msgType == "image" {
+
+		// if fields were sent with image embed, handle those
+		if len(p.fullEmbed.Fields) > 0 {
+
+			// get start and end fields based on current page and fields per page
+			startField := (p.currentPage - 1) * p.fieldsPerPage
+			endField := startField + p.fieldsPerPage
+			if endField > len(p.fullEmbed.Fields) {
+				endField = len(p.fullEmbed.Fields)
+			}
+
+			tempEmbed.Fields = tempEmbed.Fields[startField:endField]
+		}
 
 		var buf bytes.Buffer
 		newReader := io.TeeReader(p.files[p.currentPage-1].Reader, &buf)

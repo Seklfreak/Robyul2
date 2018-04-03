@@ -147,7 +147,7 @@ func listIdolsInGame(msg *discordgo.Message) {
 }
 
 // showImagesForIdol will show a embed message with all the available images for an idol
-func showImagesForIdol(msg *discordgo.Message, msgContent string) {
+func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectNames bool) {
 	defer helpers.Recover()
 
 	commandArgs := str.ToArgv(msgContent)[1:]
@@ -165,12 +165,12 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string) {
 	}
 
 	// get bytes of all the images
-	var imagesBytes [][]byte
+	var idolImages []biasImage
 	for _, bImag := range matchIdol.BiasImages {
-		imagesBytes = append(imagesBytes, bImag.getImgBytes())
+		idolImages = append(idolImages, bImag)
 	}
 
-	sendPagedEmbedOfImages(msg, imagesBytes,
+	sendPagedEmbedOfImages(msg, idolImages, showObjectNames,
 		fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName),
 		fmt.Sprintf("Total Images: %s", humanize.Comma(int64(len(matchIdol.BiasImages)))))
 }
