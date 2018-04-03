@@ -595,7 +595,13 @@ func (g *singleBiasGame) sendWinnerMessage() {
 		g.GameWinnerBias.BiasName)
 
 	// send message
-	helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
+	winnerMsgs, err := helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
+	helpers.Relax(err)
+
+	// if the winner is nayoung, add a nayoung emoji <3 <3 <3
+	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.BiasName) == "nayoung" {
+		cache.GetSession().MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
+	}
 }
 
 /////////////////////////////////
