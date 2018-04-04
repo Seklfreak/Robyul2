@@ -420,8 +420,6 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 			return game
 		}
 
-		return nil
-
 		// create new game
 		singleGame = &singleBiasGame{
 			User:             msg.Author,
