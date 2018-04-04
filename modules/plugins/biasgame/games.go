@@ -22,7 +22,7 @@ import (
 type BiasGame struct{}
 
 type biasImage struct {
-	// ImageBytes []byte
+	ImageBytes []byte
 	HashString string
 	ObjectName string
 }
@@ -250,6 +250,12 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 			helpers.RequireRobyulMod(msg, func() {
 				runGoogleDriveMigration(msg)
+			})
+
+		} else if commandArgs[0] == "delete-image" {
+
+			helpers.RequireRobyulMod(msg, func() {
+				deleteBiasImage(msg, content)
 			})
 
 		} else if commandArgs[0] == "update-image" {
@@ -929,6 +935,11 @@ func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Im
 
 // will get the bytes to the correctly sized image bytes
 func (b biasImage) getImgBytes() []byte {
+
+	// image bytes is sometimes loaded if the object needs to be deleted
+	if b.ImageBytes != nil {
+		return b.ImageBytes
+	}
 
 	// get image bytes
 	imgBytes, err := helpers.RetrieveFileWithoutLogging(b.ObjectName)
