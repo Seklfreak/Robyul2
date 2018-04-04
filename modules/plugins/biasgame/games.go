@@ -115,10 +115,12 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		currentSinglePlayerGames = make(map[string]*singleBiasGame)
 		allowedGameSizes = map[int]bool{
 			// 10:  true, // for dev only, remove when game is live
-			32:  true,
-			64:  true,
-			128: true,
-			256: true,
+			32:   true,
+			64:   true,
+			128:  true,
+			256:  true,
+			512:  true,
+			1024: true,
 		}
 		biasGameGenders = map[string]string{
 			"boy":   "boy",
@@ -406,6 +408,19 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.not-enough-idols"))
 			return nil
 		}
+		// show a warning if the game size is >= 256, wait for confirm
+		if gameSize >= 256 {
+			if !helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetText("plugins.biasgame.game.size-warning"), "✅", "🚫") {
+				return nil
+			}
+		}
+		// recheck if a game is still going on, see above
+		if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+			game.ChannelID = msg.ChannelID
+			return game
+		}
+
+		return nil
 
 		// create new game
 		singleGame = &singleBiasGame{

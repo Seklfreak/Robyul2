@@ -756,11 +756,12 @@
         "no-stats": "No stats were found."
       },
       "game": {
-        "invalid-game-size": "Sorry, that game size is not valid. Valid sizes are: 32, 64, 128, or 256",
+        "invalid-game-size": "Sorry, that game size is not valid. Valid sizes are: 32, 64, 128, 256, 512, or 1024",
         "not-enough-idols": "There are not enough idols for a game of that size",
         "game-not-ready": "Game is still loading after a bot restart. Please check again in a minute.",
         "resuming-game": "Looks like you already had a game going. Please finish this game before starting another one. <:blobthumbsup:317043177028714497>",
-        "multi-game-running": "There is a multi game already running in the current channel."
+        "multi-game-running": "There is a multi game already running in the current channel.",
+        "size-warning": "**Wow, you are about to start a long game!** <a:ablobdizzy:431148029454712832>\nBiasgames must be completed before you can start a new one. If you are sure you want to start a long game please use the reaction below to start the game."
       },
       "suggestion": {
         "image-not-square": "The suggested image must be a perfect square. Please crop the image and try again.",
