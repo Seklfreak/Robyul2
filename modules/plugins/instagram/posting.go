@@ -8,7 +8,6 @@ import (
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	goinstaResponse "github.com/ahmdrz/goinsta/response"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -128,6 +127,7 @@ func (m *Handler) postLiveToChannel(channelID string, instagramUser Instagram_Us
 	}
 }
 
+/*
 func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postMode models.InstagramSendPostType) {
 	instagramNameModifier := ""
 	if story.Reel.User.IsVerified {
@@ -143,7 +143,7 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 		if story.Reel.User.IsFavorite {
 			instagramNameModifier += " ⭐"
 		}
-	*/
+*/ /*
 
 	reelMedia := story.Reel.Items[number]
 
@@ -217,3 +217,4 @@ func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse
 		cache.GetLogger().WithField("module", "instagram").Warnf("posting reel media: #%s to channel: #%s failed: %s", reelMedia.ID, channelID, err.Error())
 	}
 }
+*/

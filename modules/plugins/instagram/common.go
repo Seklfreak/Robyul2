@@ -40,6 +40,7 @@ func getBestCandidateURL(imageCandidates []goinstaResponse.ImageCandidate) strin
 	return lastBestCandidate.URL
 }
 
+/*
 func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int) string {
 	item := story.Reel.Items[number]
 
@@ -61,6 +62,7 @@ func getBestStoryVideoVersionURL(story goinstaResponse.StoryResponse, number int
 
 	return lastBestCandidateURL
 }
+*/
 
 func (m *Handler) getBestDisplayResource(imageCandidates []InstagramDisplayResource) string {
 	var lastBestCandidate InstagramDisplayResource

@@ -6,15 +6,12 @@ import (
 
 	"sync"
 
-	"strconv"
-
 	"net/url"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
-	goinstaResponse "github.com/ahmdrz/goinsta/response"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -196,6 +193,7 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 	results <- len(jobs)
 }
 
+/*
 func (m *Handler) checkInstagramStoryLoop() {
 	log := cache.GetLogger()
 
@@ -313,6 +311,7 @@ func (m *Handler) checkInstagramStoryLoop() {
 		}
 	}
 }
+*/
 
 func (m *Handler) lockEntry(entryID bson.ObjectId) {
 	if _, ok := instagramEntryLocks[string(entryID)]; ok {
