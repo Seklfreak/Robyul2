@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,10 +17,8 @@ import (
 type Charts struct{}
 
 const (
-	melonEndpointCharts         = "http://apis.skplanetx.com/melon/charts/%s?version=1&page=1&count=10"
-	melonEndpointSongSearch     = "http://apis.skplanetx.com/melon/songs?version=1&page=1&count=2&searchKeyword=%s"
-	melonEndpointArtistSearch   = "http://apis.skplanetx.com/melon/artists?version=1&page=1&count=2&searchKeyword=%s"
-	melonEndpointAlbumSearch    = "http://apis.skplanetx.com/melon/albums?version=1&page=1&count=2&searchKeyword=%s"
+	melonEndpointRealtimeCharts = "http://www.melon.com/chart/index.htm"
+	melonEndpointDailyCharts    = "http://www.melon.com/chart/day/index.htm"
 	melonFriendlyRealtimeStats  = "http://www.melon.com/chart/index.htm"
 	melonFriendlyDailyStats     = "http://www.melon.com/chart/day/index.htm"
 	melonFriendlySongDetails    = "http://www.melon.com/song/detail.htm?songId=%s"
@@ -218,25 +215,15 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 			switch args[0] {
 			case "realtime":
 				session.ChannelTyping(msg.ChannelID)
-				realtimeStats := m.GetMelonRealtimeStats()
+				time, realtimeStats := m.GetMelonRealtimeStats()
 				chartsEmbed := &discordgo.MessageEmbed{
-					Title:  helpers.GetTextF("plugins.charts.realtime-melon-embed-title", realtimeStats.Melon.RankDay, realtimeStats.Melon.RankHour),
+					Title:  helpers.GetTextF("plugins.charts.realtime-melon-embed-title", time),
 					URL:    melonFriendlyRealtimeStats,
 					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
 					Fields: []*discordgo.MessageEmbedField{},
 					Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
 				}
-				for _, song := range realtimeStats.Melon.Songs.Song {
-					artistText := ""
-					for i, artist := range song.Artists.Artist {
-						artistText += fmt.Sprintf("[%s](%s)",
-							artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
-						if i+1 < len(song.Artists.Artist) {
-							artistText += ", "
-						} else if (len(song.Artists.Artist) - (i + 1)) > 0 {
-							artistText += " and "
-						}
-					}
+				for _, song := range realtimeStats {
 					rankChange := ""
 					rankChangeN := song.PastRank - song.CurrentRank
 					if rankChangeN > 0 {
@@ -244,13 +231,18 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 					} else if rankChangeN < 0 {
 						rankChange = fmt.Sprintf(":arrow_down:  %d", rankChangeN*-1)
 					}
+					if song.IsNew == true {
+						rankChange += ":new:"
+					}
+
+					chartsFieldValue := fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album)
+					if song.MusicVideoUrl != "" {
+						chartsFieldValue = fmt.Sprintf("[%s](%s)", chartsFieldValue, song.MusicVideoUrl)
+					}
 
 					chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
-						Name: fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-						Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))",
-							song.SongName, fmt.Sprintf(melonFriendlySongDetails, strconv.Itoa(song.SongID)),
-							artistText,
-							song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
+						Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
+						Value: chartsFieldValue,
 					})
 				}
 				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
@@ -258,25 +250,15 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 				return
 			case "daily":
 				session.ChannelTyping(msg.ChannelID)
-				dailyStats := m.GetMelonDailyStats()
+				time, dailyStats := m.GetMelonDailyStats()
 				chartsEmbed := &discordgo.MessageEmbed{
-					Title:  helpers.GetText("plugins.charts.daily-melon-embed-title"),
+					Title:  helpers.GetTextF("plugins.charts.daily-melon-embed-title", time),
 					URL:    melonFriendlyDailyStats,
 					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
 					Fields: []*discordgo.MessageEmbedField{},
 					Color:  helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
 				}
-				for _, song := range dailyStats.Melon.Songs.Song {
-					artistText := ""
-					for i, artist := range song.Artists.Artist {
-						artistText += fmt.Sprintf("[%s](%s)",
-							artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
-						if i+1 < len(song.Artists.Artist) {
-							artistText += ", "
-						} else if (len(song.Artists.Artist) - (i + 1)) > 0 {
-							artistText += " and "
-						}
-					}
+				for _, song := range dailyStats {
 					rankChange := ""
 					rankChangeN := song.PastRank - song.CurrentRank
 					if rankChangeN > 0 {
@@ -284,169 +266,21 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 					} else if rankChangeN < 0 {
 						rankChange = fmt.Sprintf(":arrow_down:  %d", rankChangeN*-1)
 					}
+					if song.IsNew == true {
+						rankChange += ":new:"
+					}
+
+					chartsFieldValue := fmt.Sprintf("**%s** by **%s** (on %s)", song.Title, song.Artist, song.Album)
+					if song.MusicVideoUrl != "" {
+						chartsFieldValue = fmt.Sprintf("[%s](%s)", chartsFieldValue, song.MusicVideoUrl)
+					}
 
 					chartsEmbed.Fields = append(chartsEmbed.Fields, &discordgo.MessageEmbedField{
-						Name: fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
-						Value: fmt.Sprintf("[**%s**](%s) by **%s** (on [%s](%s))",
-							song.SongName, fmt.Sprintf(melonFriendlySongDetails, strconv.Itoa(song.SongID)),
-							artistText,
-							song.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, song.AlbumID)),
+						Name:  fmt.Sprintf("**#%s** %s", strconv.Itoa(song.CurrentRank), rankChange),
+						Value: chartsFieldValue,
 					})
 				}
 				_, err := helpers.SendEmbed(msg.ChannelID, chartsEmbed)
-				helpers.Relax(err)
-				return
-			case "song":
-				session.ChannelTyping(msg.ChannelID)
-				searchString, err := helpers.UrlEncode(strings.Join(args[1:], " "))
-				helpers.Relax(err)
-
-				var searchResult MelonSearchSongResults
-				result := m.DoMelonRequest(fmt.Sprintf(melonEndpointSongSearch, searchString))
-
-				json.Unmarshal(result, &searchResult)
-
-				if searchResult.Melon.Count <= 0 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
-					helpers.Relax(err)
-					return
-				}
-
-				melonSong := searchResult.Melon.Songs.Song[0]
-
-				artistText := ""
-				for i, artist := range melonSong.Artists.Artist {
-					artistText += fmt.Sprintf("[%s](%s)",
-						artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
-					if i+1 < len(melonSong.Artists.Artist) {
-						artistText += ", "
-					} else if (len(melonSong.Artists.Artist) - (i + 1)) > 0 {
-						artistText += " and "
-					}
-				}
-
-				durationText := strconv.Itoa(melonSong.PlayTime) + "s"
-				if melonSong.PlayTime >= 60 {
-					minutes := melonSong.PlayTime / 60
-					seconds := melonSong.PlayTime % 60
-					durationText = fmt.Sprintf("%dm%ds", minutes, seconds)
-				}
-
-				songEmbed := &discordgo.MessageEmbed{
-					Title: helpers.GetText("plugins.charts.search-melon-embed-title"),
-					Description: fmt.Sprintf("[**%s**](%s) by **%s**",
-						melonSong.SongName, fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID),
-						artistText),
-					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
-					Fields: []*discordgo.MessageEmbedField{
-						{Name: "Album", Value: fmt.Sprintf("[%s](%s)", melonSong.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, melonSong.AlbumID)), Inline: true},
-						{Name: "Duration", Value: durationText, Inline: true},
-					},
-					Color: helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
-				}
-
-				_, err = helpers.SendComplex(msg.ChannelID,
-					&discordgo.MessageSend{
-						Content: "<" + fmt.Sprintf(melonFriendlySongDetails, melonSong.SongID) + ">",
-						Embed:   songEmbed,
-					})
-				helpers.Relax(err)
-				return
-			case "artist":
-				session.ChannelTyping(msg.ChannelID)
-				searchString, err := helpers.UrlEncode(strings.Join(args[1:], " "))
-				helpers.Relax(err)
-
-				var searchResult MelonSearchArtistsResults
-				result := m.DoMelonRequest(fmt.Sprintf(melonEndpointArtistSearch, searchString))
-
-				json.Unmarshal(result, &searchResult)
-
-				if searchResult.Melon.Count <= 0 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
-					helpers.Relax(err)
-					return
-				}
-
-				melonArtist := searchResult.Melon.Artists.Artist[0]
-
-				genderText := "Not specified"
-				if melonArtist.Sex != "" {
-					genderText = melonArtist.Sex
-					if melonArtist.Sex == "M" {
-						genderText = "Male"
-					} else if melonArtist.Sex == "F" {
-						genderText = "Female"
-					}
-				}
-				genreText := "Not specified"
-				if melonArtist.GenreNames != "" {
-					genreText = melonArtist.GenreNames
-				}
-
-				artistEmbed := &discordgo.MessageEmbed{
-					Title: helpers.GetText("plugins.charts.search-melon-embed-title"),
-					Description: fmt.Sprintf("[**%s**](%s)",
-						melonArtist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID)),
-					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
-					Fields: []*discordgo.MessageEmbedField{
-						{Name: "Gender", Value: genderText, Inline: true},
-						{Name: "Genres", Value: genreText, Inline: true},
-					},
-					Color: helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
-				}
-
-				_, err = helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
-					Content: "<" + fmt.Sprintf(melonFriendlyArtistDetails, melonArtist.ArtistID) + ">",
-					Embed:   artistEmbed,
-				})
-				helpers.Relax(err)
-				return
-			case "album":
-				session.ChannelTyping(msg.ChannelID)
-				searchString, err := helpers.UrlEncode(strings.Join(args[1:], " "))
-				helpers.Relax(err)
-
-				var searchResult MelonSearchAlbumsResults
-				result := m.DoMelonRequest(fmt.Sprintf(melonEndpointAlbumSearch, searchString))
-
-				json.Unmarshal(result, &searchResult)
-
-				if searchResult.Melon.Count <= 0 {
-					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.charts.search-no-result"))
-					helpers.Relax(err)
-					return
-				}
-
-				melonAlbum := searchResult.Melon.Albums.Album[0]
-
-				artistText := ""
-				for i, artist := range melonAlbum.Artists.Artist {
-					artistText += fmt.Sprintf("[%s](%s)",
-						artist.ArtistName, fmt.Sprintf(melonFriendlyArtistDetails, artist.ArtistID))
-					if i+1 < len(melonAlbum.Artists.Artist) {
-						artistText += ", "
-					} else if (len(melonAlbum.Artists.Artist) - (i + 1)) > 0 {
-						artistText += " and "
-					}
-				}
-
-				artistEmbed := &discordgo.MessageEmbed{
-					Title: helpers.GetText("plugins.charts.search-melon-embed-title"),
-					Description: fmt.Sprintf("[**%s**](%s)",
-						melonAlbum.AlbumName, fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID)),
-					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.charts.melon-embed-footer")},
-					Fields: []*discordgo.MessageEmbedField{
-						{Name: "Artists", Value: artistText, Inline: true},
-						{Name: "Date", Value: melonAlbum.IssueDate, Inline: true},
-					},
-					Color: helpers.GetDiscordColorFromHex(helpers.GetText("plugins.charts.melon-embed-hex-color")),
-				}
-
-				_, err = helpers.SendComplex(msg.ChannelID, &discordgo.MessageSend{
-					Content: "<" + fmt.Sprintf(melonFriendlyAlbumDetails, melonAlbum.AlbumID) + ">",
-					Embed:   artistEmbed,
-				})
 				helpers.Relax(err)
 				return
 			}
@@ -642,20 +476,74 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 	}
 }
 
-func (m *Charts) GetMelonRealtimeStats() MelonRealTimeStats {
-	var realtimeStats MelonRealTimeStats
-	result := m.DoMelonRequest(fmt.Sprintf(melonEndpointCharts, "realtime"))
+func (m *Charts) GetMelonRealtimeStats() (time string, ranks []GenericSongScore) {
+	doc, err := goquery.NewDocument(melonEndpointRealtimeCharts)
+	helpers.Relax(err)
 
-	json.Unmarshal(result, &realtimeStats)
-	return realtimeStats
+	ranks = make([]GenericSongScore, 0)
+
+	time = doc.Find(".calendar_prid > .yyyymmdd > .year").Text() + " " + doc.Find(".calendar_prid > .hhmm > .hour").Text()
+
+	for i := 0; i < 10; i++ {
+		currentRank := GenericSongScore{}
+		node := goquery.NewDocumentFromNode(doc.Find(".lst50").Get(i))
+
+		currentRank.Title = node.Find(".rank01 > span > a").Text()
+		currentRank.Artist = node.Find(".rank02 > a").Text()
+		currentRank.Album = node.Find(".rank03 > a").Text()
+		currentRankN, _ := strconv.Atoi(node.Find(".rank").Text())
+		currentRank.CurrentRank = currentRankN
+		currentRank.PastRank = currentRank.CurrentRank
+
+		rankingChangeDoc := goquery.NewDocumentFromNode(node.Find("td").Get(2))
+		if len(rankingChangeDoc.Find(".up").Nodes) > 0 {
+			rankUpChangeN, _ := strconv.Atoi(rankingChangeDoc.Find(".up").Text())
+			currentRank.PastRank += rankUpChangeN
+		}
+		if len(rankingChangeDoc.Find(".down").Nodes) > 0 {
+			rankDownChangeN, _ := strconv.Atoi(rankingChangeDoc.Find(".down").Text())
+			currentRank.PastRank -= rankDownChangeN
+		}
+
+		ranks = append(ranks, currentRank)
+	}
+
+	return time, ranks
 }
 
-func (m *Charts) GetMelonDailyStats() MelonDailyStats {
-	var dailyStats MelonDailyStats
-	result := m.DoMelonRequest(fmt.Sprintf(melonEndpointCharts, "todaytopsongs"))
+func (m *Charts) GetMelonDailyStats() (time string, ranks []GenericSongScore) {
+	doc, err := goquery.NewDocument(melonEndpointDailyCharts)
+	helpers.Relax(err)
 
-	json.Unmarshal(result, &dailyStats)
-	return dailyStats
+	ranks = make([]GenericSongScore, 0)
+
+	time = doc.Find(".calendar_prid > .yyyymmdd > .year").Text()
+
+	for i := 0; i < 10; i++ {
+		currentRank := GenericSongScore{}
+		node := goquery.NewDocumentFromNode(doc.Find(".lst50").Get(i))
+
+		currentRank.Title = node.Find(".rank01 > span > a").Text()
+		currentRank.Artist = node.Find(".rank02 > a").Text()
+		currentRank.Album = node.Find(".rank03 > a").Text()
+		currentRankN, _ := strconv.Atoi(node.Find(".rank").Text())
+		currentRank.CurrentRank = currentRankN
+		currentRank.PastRank = currentRank.CurrentRank
+
+		rankingChangeDoc := goquery.NewDocumentFromNode(node.Find("td").Get(2))
+		if len(rankingChangeDoc.Find(".up").Nodes) > 0 {
+			rankUpChangeN, _ := strconv.Atoi(rankingChangeDoc.Find(".up").Text())
+			currentRank.PastRank += rankUpChangeN
+		}
+		if len(rankingChangeDoc.Find(".down").Nodes) > 0 {
+			rankDownChangeN, _ := strconv.Atoi(rankingChangeDoc.Find(".down").Text())
+			currentRank.PastRank -= rankDownChangeN
+		}
+
+		ranks = append(ranks, currentRank)
+	}
+
+	return time, ranks
 }
 
 func (m *Charts) DoMelonRequest(url string) []byte {

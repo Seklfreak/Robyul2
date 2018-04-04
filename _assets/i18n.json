@@ -293,8 +293,8 @@
       "channel-list-no-channels-error": "No Twitch Channels found on this server!"
     },
     "charts": {
-      "realtime-melon-embed-title": "**%s %s:00 KST** | Melon Realtime Charts",
-      "daily-melon-embed-title": "Melon Daily Charts",
+      "realtime-melon-embed-title": "**%s KST** | Melon Realtime Charts",
+      "daily-melon-embed-title": "**%s** | Melon Daily Charts",
       "melon-embed-footer": "powered by melon.com",
       "melon-embed-hex-color": "#43C85D",
       "realtime-ichart-embed-title": "**%s KST** | iChart Realtime Charts",
