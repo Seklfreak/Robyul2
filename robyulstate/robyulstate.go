@@ -87,10 +87,12 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 
 		s.RLock()
 		if _, ok := s.guildMap[t.GuildID]; !ok || s.guildMap[t.GuildID] == nil {
+			s.RUnlock()
 			return
 		}
 
 		if t.User == nil {
+			s.RUnlock()
 			return
 		}
 
