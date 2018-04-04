@@ -435,6 +435,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 
 // processVote is called when a valid reaction is added to a game
 func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
+	defer g.recoverGame()
 
 	// check if reaction was added to the message of the game
 	if g.LastRoundMessage.ID == reaction.MessageID && g.ReadyForReaction == true {
@@ -469,18 +470,7 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 			// if there is only one bias left, they are the winner
 			if len(g.BiasQueue) == 1 {
 
-				g.GameWinnerBias = g.BiasQueue[0]
-				g.sendWinnerMessage()
-
-				// record game stats
-				go func(g *singleBiasGame) {
-					defer helpers.Recover()
-					recordSingleGamesStats(g)
-				}(g)
-
-				// end the g. delete from current games
-				delete(currentSinglePlayerGames, g.User.ID)
-
+				g.finishSingleGame()
 			} else {
 
 				// save the last 8 for the chart
@@ -506,21 +496,11 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	if g == nil {
 		return
 	}
+	defer g.recoverGame()
 
 	// if a game only has one bias in queue, they are the winner and a round should not be attempted
 	if len(g.BiasQueue) == 1 {
-
-		g.GameWinnerBias = g.BiasQueue[0]
-		g.sendWinnerMessage()
-
-		// record game stats
-		go func(g *singleBiasGame) {
-			defer helpers.Recover()
-			recordSingleGamesStats(g)
-		}(g)
-
-		// end the g. delete from current games
-		delete(currentSinglePlayerGames, g.User.ID)
+		g.finishSingleGame()
 		return
 	}
 
@@ -614,6 +594,33 @@ func (g *singleBiasGame) sendWinnerMessage() {
 	// if the winner is nayoung, add a nayoung emoji <3 <3 <3
 	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.BiasName) == "nayoung" {
 		cache.GetSession().MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
+	}
+}
+
+// finishSingleGame sends the winner message, records stats, and deletes game
+func (g *singleBiasGame) finishSingleGame() {
+	g.GameWinnerBias = g.BiasQueue[0]
+	g.sendWinnerMessage()
+
+	// record game stats
+	go func(g *singleBiasGame) {
+		defer helpers.Recover()
+		recordSingleGamesStats(g)
+	}(g)
+
+	// end the g. delete from current games
+	delete(currentSinglePlayerGames, g.User.ID)
+}
+
+// recoverGame if a panic was caused during the game, delete from current games
+func (g *singleBiasGame) recoverGame() {
+	if r := recover(); r != nil {
+
+		// end the g. delete from current games
+		delete(currentSinglePlayerGames, g.User.ID)
+
+		// re-panic so it gets handled and logged correctly
+		panic(r)
 	}
 }
 
