@@ -1475,9 +1475,40 @@ func ExtractInviteCode(input string) (inviteCode string) {
 // Returns an channelID for bot announcements, if possible the default channel when a guild got created, if not the first channel from the top with chat permission
 // guildID	: the target Guild to get the channel for
 func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
+	// get guild
+	guild, err := GetGuild(guildID)
+
+	// try System Channel (builtin join and leave messages)
+	if guild.SystemChannelID != "" {
+		channel, err := GetChannel(guild.SystemChannelID)
+		if err == nil && channel.Type == discordgo.ChannelTypeGuildText {
+			channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+			if err == nil {
+				if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
+					return channel.ID, nil
+				}
+			}
+		}
+	}
+
+	/*
+		// try Widget Channel
+		if guild.WidgetChannelID != "" {
+			channel, err := GetChannel(guild.WidgetChannelID)
+			if err == nil && channel.Type == discordgo.ChannelTypeGuildText {
+				channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+				if err == nil {
+					if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
+						return channel.ID, nil
+					}
+				}
+			}
+		}
+	*/
+
 	// check channel with the same ID as the guild, the default channel when a guild is being created
 	channel, err := GetChannel(guildID)
-	if err == nil {
+	if err == nil && channel.Type == discordgo.ChannelTypeGuildText {
 		channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
 		if err == nil {
 			if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
@@ -1485,9 +1516,6 @@ func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
 			}
 		}
 	}
-
-	// get guild channels
-	guild, err := GetGuild(guildID)
 
 	guildChannels := guild.Channels
 
