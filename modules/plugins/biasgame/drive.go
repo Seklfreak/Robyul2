@@ -434,6 +434,8 @@ BiasLoop:
 
 				// if that was the last image for the idol, delete idol from all biases
 				if len(bias.BiasImages) == 1 {
+
+					// remove pointer from array. struct will be garbage collected when not used by a game
 					allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
 				} else {
 					// delete image
@@ -508,5 +510,84 @@ BiasLoop:
 	}
 
 	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Image Update. Object Name: %s | Idol: %s %s", targetObjectName, newGroup, newName))
+
+}
+
+// updateImageInfo updates a specific image and its related bias info
+func deleteBiasImage(msg *discordgo.Message, content string) {
+	contentArgs := str.ToArgv(content)[1:]
+
+	// confirm amount of args
+	if len(contentArgs) != 1 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+
+	targetObjectName := contentArgs[0]
+
+	allBiases := getAllBiases()
+	allBiasesMutex.Lock()
+	imageFound := false
+
+	// find and delete target image by object name
+BiasLoop:
+	for biasIndex, bias := range allBiases {
+
+		// check if image has not been found and deleted, no need to loop through images if it has
+		for i, bImg := range bias.BiasImages {
+			if bImg.ObjectName == targetObjectName {
+
+				// IMPORTANT: it is important that we do not delete the last image from the bias AND the bias from the all biases array. it MUST be one OR the other.
+
+				// if that was the last image for the idol, delete idol from all biases
+				if len(bias.BiasImages) == 1 {
+
+					// if the whole bias is getting deleted, we need to load image
+					//   bytes incase the image is being used by a game currently
+					bias.BiasImages[i].ImageBytes = bias.BiasImages[i].getImgBytes()
+
+					// remove pointer from array. struct will be garbage collected when not used by a game
+					allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
+				} else {
+					// delete image
+					bias.BiasImages = append(bias.BiasImages[:i], bias.BiasImages[i+1:]...)
+				}
+				imageFound = true
+				break BiasLoop
+			}
+		}
+	}
+	allBiasesMutex.Unlock()
+	// update biases
+	setAllBiases(allBiases)
+
+	// confirm an image was found and deleted
+	if !imageFound {
+		helpers.SendMessage(msg.ChannelID, "No image with that object name was found.")
+		return
+	}
+
+	// update database
+	var biasToDelete []models.BiasGameIdolEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&biasToDelete)
+	helpers.Relax(err)
+
+	// if a database entry were found, update it
+	if len(biasToDelete) == 1 {
+
+		// delete from database
+		err := helpers.MDbDelete(models.BiasGameIdolsTable, biasToDelete[0].ID)
+		helpers.Relax(err)
+
+		// delete object
+		helpers.DeleteFile(targetObjectName)
+	}
+
+	// update cache
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+	}
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Deleted image with object name: %s", targetObjectName))
 
 }

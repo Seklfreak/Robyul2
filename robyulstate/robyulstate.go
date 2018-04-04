@@ -84,6 +84,8 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 		}
 	case *discordgo.PresenceUpdate:
 		//s.PresenceAdd(t.GuildID, &t.Presence)
+
+		s.RLock()
 		if _, ok := s.guildMap[t.GuildID]; !ok || s.guildMap[t.GuildID] == nil {
 			return
 		}
@@ -102,6 +104,7 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 				m = possibleMember
 			}
 		}
+		s.RUnlock()
 
 		if m == nil {
 			// Member not found; this is a user coming online
@@ -113,6 +116,8 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 			}
 
 		} else {
+			s.Lock()
+
 			if t.Nick != "" {
 				m.Nick = t.Nick
 			}
@@ -127,6 +132,7 @@ func (s *Robyulstate) OnInterface(_ *discordgo.Session, i interface{}) {
 			// PresenceUpdates always contain a list of roles, so there's no need to check for an empty list here
 			m.Roles = t.Roles
 
+			s.Unlock()
 		}
 
 		err = s.MemberAdd(m)
