@@ -41,7 +41,6 @@ var NukeMods = []string{
 	"68661361537712128",  // Berk
 }
 var RobyulMod = []string{
-	"132633380628987904", // sunny
 	"273639623324991489", // Snakeyez
 }
 var Blacklisted = []string{
