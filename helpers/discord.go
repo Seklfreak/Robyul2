@@ -409,27 +409,29 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 	cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID)
 	cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID)
 
-	// check every second if a reaction has been clicked
-	for {
-		confirmes, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID, 100)
-		for _, confirm := range confirmes {
-			if confirm.ID == author.ID {
-				cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
-				// user has confirmed the call
-				return true
-			}
-		}
-		aborts, _ := cache.GetSession().MessageReactions(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID, 100)
-		for _, abort := range aborts {
-			if abort.ID == author.ID {
-				cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
-				// User has aborted the call
-				return false
-			}
+	responseChannel := make(chan bool, 1)
+	stopHandler := cache.GetSession().AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+		if reaction == nil || reaction.MessageID != confirmMessage.ID || reaction.UserID != author.ID {
+			return
 		}
 
-		time.Sleep(1 * time.Second)
-	}
+		if reaction.Emoji.Name == confirmEmojiID { // has confirmed
+			responseChannel <- true
+		}
+		if reaction.Emoji.Name == abortEmojiID { // has denied
+			responseChannel <- false
+		}
+	})
+
+	go func() {
+		time.Sleep(3 * time.Hour)
+		responseChannel <- false
+	}()
+
+	response := <-responseChannel
+	stopHandler()
+	cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
+	return response
 }
 
 func GetMuteRole(guildID string) (*discordgo.Role, error) {
