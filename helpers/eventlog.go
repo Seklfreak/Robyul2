@@ -61,11 +61,12 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		createdAt = time.Now()
 	}
 
-	// TODO: remove me
-	cache.GetLogger().WithField("module", "helpers/eventlog").Debugf(
-		"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",
-		createdAt.Format(time.RFC3339), guildID, targetID, userID, actionType, reason, changes, options,
-	)
+	/*
+		cache.GetLogger().WithField("module", "helpers/eventlog").Debugf(
+			"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",
+			createdAt.Format(time.RFC3339), guildID, targetID, userID, actionType, reason, changes, options,
+		)
+	*/
 
 	messageIDs := make([]string, 0)
 	eventlogChannelIDs := GuildSettingsGetCached(guildID).EventlogChannelIDs
@@ -124,6 +125,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 			Value: reason,
 		},
 		},
+		Footer: &discordgo.MessageEmbedFooter{Text: "Robyul Eventlog is currently in Beta"},
 	}
 
 	embed.Color = GetDiscordColorFromHex("#73d016") // lime green

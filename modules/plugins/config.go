@@ -215,8 +215,6 @@ func (m *Config) actionSetMod(args []string, in *discordgo.Message, out **discor
 	err = helpers.GuildSettingsSet(channel.GuildID, guildConfig)
 	helpers.Relax(err)
 
-	// TODO: eventlog
-
 	if roleAdded {
 		*out = m.newMsg("plugins.config.mod-role-added")
 		return m.actionFinish
