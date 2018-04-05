@@ -176,7 +176,7 @@
     "twitter": {
       "account-embed-title": "%s (@%s)%s Twitter Account",
       "embed-footer": "powered by twitter.com",
-      "account-not-found": "User not found.\nPlease make sure the username is correct and the profile is not private.\nIf everything is correct please try again in a few minutes.",
+      "account-not-found": "User not found.\nPlease make sure the username is correct and the account is not private.",
       "account-has-been-suspended": "User account has been suspended!",
       "rate-limit-exceed": "Twitter API rate limit exceeded, please try again later!",
       "over-capacity": "Twitter servers are overloaded, please try again later!",

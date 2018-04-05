@@ -351,13 +351,12 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 
 				m.unlockEntry(entryID)
 			}
+			time.Sleep(10 * time.Second)
 		}
 
 		elapsed := time.Since(start)
 		cache.GetLogger().WithField("module", "twitter").Infof("checked %d accounts for %d feeds, took %s", len(bundledEntries), len(twitterEntriesCache), elapsed)
 		metrics.TwitterRefreshTime.Set(elapsed.Seconds())
-
-		time.Sleep(10 * time.Minute)
 	}
 }
 
@@ -389,7 +388,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
 				helpers.Relax(err)
 				// get twitter account and tweets
-				twitterUsername := strings.Replace(args[1], "@", "", 1)
+				twitterUsername := strings.TrimSpace(strings.Replace(args[1], "@", "", 1))
 				twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
 					ScreenName: twitterUsername,
 				})
@@ -615,7 +614,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 			}
 		default:
 			session.ChannelTyping(msg.ChannelID)
-			twitterUsername := strings.Replace(args[0], "@", "", 1)
+			twitterUsername := strings.TrimSpace(strings.Replace(args[0], "@", "", 1))
 			twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
 				ScreenName: twitterUsername,
 			})
