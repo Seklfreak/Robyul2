@@ -174,6 +174,69 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-edited"))
 			helpers.Relax(err)
 		})
+	case "ban": // [p]greeter ban <#channel or channel id> <embed code>
+		helpers.RequireAdmin(msg, func() {
+			if len(args) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+				return
+			}
+
+			targetChannel, err := helpers.GetChannelFromMention(msg, args[1])
+			if err != nil || targetChannel.ID == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
+
+			var embedCode string
+
+			if len(args) >= 3 {
+				embedCode = strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
+			}
+
+			if embedCode == "" {
+				var entryBucket models.GreeterEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.GreeterTable).Find(bson.M{
+						"type": models.GreeterTypeBan, "guildid": targetChannel.GuildID, "channelid": targetChannel.ID,
+					}),
+					&entryBucket,
+				)
+				if err == nil {
+					helpers.MDbDelete(models.GreeterTable, entryBucket.Id)
+				}
+
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-disabled"))
+				helpers.Relax(err)
+				return
+			}
+
+			err = helpers.MDbUpsert(
+				models.GreeterTable,
+				bson.M{"type": models.GreeterTypeBan, "guildid": targetChannel.GuildID, "channelid": targetChannel.ID},
+				models.GreeterEntry{
+					GuildID:   targetChannel.GuildID,
+					ChannelID: targetChannel.ID,
+					Type:      models.GreeterTypeBan,
+					EmbedCode: embedCode,
+				},
+			)
+			helpers.Relax(err)
+
+			_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, targetChannel.ID,
+				models.EventlogTargetTypeChannel, msg.Author.ID,
+				models.EventlogTypeRobyulGuildAnnouncementsBanSet, "",
+				nil,
+				[]models.ElasticEventlogOption{
+					{
+						Key:   "ban_text",
+						Value: embedCode,
+					},
+				}, false)
+			helpers.RelaxLog(err)
+
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.message-edited"))
+			helpers.Relax(err)
+		})
 	case "list":
 		helpers.RequireMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
@@ -198,6 +261,9 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 					break
 				case models.GreeterTypeLeave:
 					message += "on leave in <#" + greeting.ChannelID + ">: `" + greeting.EmbedCode + "`\n"
+					break
+				case models.GreeterTypeBan:
+					message += "on ban in <#" + greeting.ChannelID + ">: `" + greeting.EmbedCode + "`\n"
 					break
 				}
 			}
@@ -228,7 +294,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 		helpers.Relax(err)
 
 		var entryBucket []models.GreeterEntry
-		err = helpers.MDbIter(helpers.MdbCollection(models.GreeterTable).
+		err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.GreeterTable).
 			Find(bson.M{"guildid": member.GuildID, "type": models.GreeterTypeJoin})).All(&entryBucket)
 		helpers.Relax(err)
 
@@ -278,7 +344,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 		}
 
 		var entryBucket []models.GreeterEntry
-		err = helpers.MDbIter(helpers.MdbCollection(models.GreeterTable).
+		err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.GreeterTable).
 			Find(bson.M{"guildid": member.GuildID, "type": models.GreeterTypeLeave})).All(&entryBucket)
 		helpers.Relax(err)
 
@@ -349,13 +415,62 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 	return text
 }
 
+func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+
+		guild, err := helpers.GetGuild(user.GuildID)
+		if err != nil {
+			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			return
+		}
+		helpers.Relax(err)
+
+		var entryBucket []models.GreeterEntry
+		err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.GreeterTable).
+			Find(bson.M{"guildid": user.GuildID, "type": models.GreeterTypeBan})).All(&entryBucket)
+		helpers.Relax(err)
+
+		if entryBucket == nil || len(entryBucket) <= 0 {
+			return
+		}
+
+		for _, guildAnnouncementSetting := range entryBucket {
+			ourSetting := guildAnnouncementSetting
+			go func() {
+				defer helpers.Recover()
+				member := new(discordgo.Member)
+				member.User = user.User
+				member.GuildID = user.GuildID
+				guildBanText := m.ReplaceMemberText(ourSetting.EmbedCode, member)
+				if guildBanText == "" {
+					return
+				}
+				messageSend := &discordgo.MessageSend{
+					Content: guildBanText,
+				}
+				if helpers.IsEmbedCode(guildBanText) {
+					ptext, embed, err := helpers.ParseEmbedCode(guildBanText)
+					if err == nil {
+						messageSend.Content = ptext
+						messageSend.Embed = embed
+					}
+				}
+				_, err = helpers.SendComplex(ourSetting.ChannelID, messageSend)
+				if err != nil {
+					cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Ban Message in %s #%s: %s",
+						guild.Name, guild.ID, err.Error())
+				}
+			}()
+		}
+		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) banned on Guild %s (#%s)", user.User.Username, user.User.ID, guild.Name, guild.ID))
+	}()
+}
+
 func (m *GuildAnnouncements) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
 
 }
 func (m *GuildAnnouncements) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
-
-}
-func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
 
 }
 func (m *GuildAnnouncements) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {

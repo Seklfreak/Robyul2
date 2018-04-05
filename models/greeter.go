@@ -7,6 +7,7 @@ const (
 
 	GreeterTypeJoin GreeterType = iota
 	GreeterTypeLeave
+	GreeterTypeBan
 )
 
 type GreeterType int
