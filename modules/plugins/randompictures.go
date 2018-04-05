@@ -442,7 +442,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				})
 				return
 			case "list": // [p]randompictures list
-				helpers.RequireRobyulMod(msg, func() {
+				helpers.RequireMod(msg, func() {
 					session.ChannelTyping(msg.ChannelID)
 
 					channel, err := helpers.GetChannel(msg.ChannelID)
@@ -501,7 +501,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 				})
 				return
 			case "delete-config", "remove-config": // [p]randompictures delete-config <source id>
-				helpers.RequireAdminOrStaff(msg, func() {
+				helpers.RequireMod(msg, func() {
 					if len(args) < 2 {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 						return
