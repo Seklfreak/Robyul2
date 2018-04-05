@@ -253,7 +253,7 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 							webhooks[0].ID,
 							webhooks[0].Token,
 							&discordgo.WebhookParams{
-								Content:   fmt.Sprintf("posted %s", linkToRepost),
+								Content:   fmt.Sprintf("posted %s in <#%s>", linkToRepost, gallery.SourceChannelID),
 								Username:  msg.Author.Username,
 								AvatarURL: helpers.GetAvatarUrl(msg.Author),
 							},
