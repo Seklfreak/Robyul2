@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"errors"
 	"strings"
 
 	"fmt"
@@ -18,7 +17,7 @@ import (
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/jzelinskie/geddit"
 	"github.com/sirupsen/logrus"
 )
@@ -76,10 +75,7 @@ func (r *Reddit) checkSubredditLoop() {
 	var newPost bool
 
 	for {
-		cursor, err := rethink.Table(models.RedditSubredditsTable).Run(helpers.GetDB())
-		helpers.Relax(err)
-
-		err = cursor.All(&entries)
+		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.RedditSubredditsTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
 
 		bundledEntries = make(map[string][]models.RedditSubredditEntry, 0)
@@ -155,7 +151,7 @@ func (r *Reddit) checkSubredditLoop() {
 				}
 				if newPost {
 					entry.LastChecked = hasToBeBefore
-					err = r.setSubredditEntry(entry)
+					err = helpers.MDbUpdateWithoutLogging(models.RedditSubredditsTable, entry.ID, entry)
 					helpers.Relax(err)
 				}
 			}
@@ -321,29 +317,39 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 		return r.actionFinish
 	}
 
-	subredditEntry, err := r.addSubredditEntry(subredditData.Name, targetChannel.GuildID, targetChannel.ID, in.Author.ID, postDelay, linkMode)
+	newID, err := helpers.MDbInsert(models.RedditSubredditsTable,
+		models.RedditSubredditEntry{
+			SubredditName:   subredditData.Name,
+			LastChecked:     time.Now().Add(-(time.Duration(postDelay) * time.Minute)),
+			GuildID:         targetChannel.GuildID,
+			ChannelID:       targetChannel.ID,
+			AddedByUserID:   in.Author.ID,
+			AddedAt:         time.Now(),
+			PostDelay:       postDelay,
+			PostDirectLinks: linkMode,
+		})
 	helpers.Relax(err)
 
-	_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, subredditEntry.ID,
+	_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, helpers.MdbIdToHuman(newID),
 		models.EventlogTargetTypeRobyulRedditFeed, in.Author.ID,
 		models.EventlogTypeRobyulRedditFeedAdd, "",
 		nil,
 		[]models.ElasticEventlogOption{
 			{
 				Key:   "reddit_channelid",
-				Value: subredditEntry.ChannelID,
+				Value: targetChannel.ID,
 			},
 			{
 				Key:   "reddit_postdirectlinks",
-				Value: helpers.StoreBoolAsString(subredditEntry.PostDirectLinks),
+				Value: helpers.StoreBoolAsString(linkMode),
 			},
 			{
 				Key:   "reddit_postdelay",
-				Value: strconv.Itoa(subredditEntry.PostDelay),
+				Value: strconv.Itoa(postDelay),
 			},
 			{
 				Key:   "reddit_subredditname",
-				Value: subredditEntry.SubredditName,
+				Value: subredditData.Name,
 			},
 		}, false)
 	helpers.RelaxLog(err)
@@ -358,9 +364,11 @@ func (r *Reddit) actionList(args []string, in *discordgo.Message, out **discordg
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
 
-	subredditEntries, _ := r.getAllSubredditEntriesBy("guild_id", channel.GuildID)
+	var subredditEntries []models.RedditSubredditEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.RedditSubredditsTable).Find(bson.M{"guildid": channel.GuildID})).All(&subredditEntries)
+	helpers.Relax(err)
 
-	if len(subredditEntries) <= 0 {
+	if subredditEntries == nil || len(subredditEntries) <= 0 {
 		*out = r.newMsg("plugins.reddit.list-none")
 		return r.actionFinish
 	}
@@ -373,7 +381,7 @@ func (r *Reddit) actionList(args []string, in *discordgo.Message, out **discordg
 		}
 
 		subredditListText += fmt.Sprintf("`%s`: Subreddit `r/%s` posting to <#%s> (Delay: %d minutes%s)\n",
-			subredditEntry.ID, subredditEntry.SubredditName, subredditEntry.ChannelID,
+			helpers.MdbIdToHuman(subredditEntry.ID), subredditEntry.SubredditName, subredditEntry.ChannelID,
 			subredditEntry.PostDelay, directLinkModeText)
 	}
 	subredditListText += fmt.Sprintf("Found **%d** Subreddits in total.", len(subredditEntries))
@@ -396,16 +404,21 @@ func (r *Reddit) actionRemove(args []string, in *discordgo.Message, out **discor
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
 
-	subredditEntry, err := r.getSubredditEntryBy("id", args[1])
-	if err != nil || subredditEntry.ID == "" {
+	var subredditEntry models.RedditSubredditEntry
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.RedditSubredditsTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(args[1])}),
+		&subredditEntry,
+	)
+	if helpers.IsMdbNotFound(err) {
 		*out = r.newMsg("plugins.reddit.remove-subreddit-error-not-found")
 		return r.actionFinish
 	}
-
-	err = r.removeSubredditEntry(subredditEntry)
 	helpers.Relax(err)
 
-	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, subredditEntry.ID,
+	err = helpers.MDbDelete(models.RedditSubredditsTable, subredditEntry.ID)
+	helpers.Relax(err)
+
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(subredditEntry.ID),
 		models.EventlogTargetTypeRobyulRedditFeed, in.Author.ID,
 		models.EventlogTypeRobyulRedditFeedRemove, "",
 		nil,
@@ -463,11 +476,16 @@ func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, o
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)
 
-	subredditEntry, err := r.getSubredditEntryBy("id", args[1])
-	if err != nil || subredditEntry.ID == "" {
+	var subredditEntry models.RedditSubredditEntry
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.RedditSubredditsTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(args[1])}),
+		&subredditEntry,
+	)
+	if helpers.IsMdbNotFound(err) {
 		*out = r.newMsg("plugins.reddit.toggledirectlinks-error-subreddit-not-found")
 		return r.actionFinish
 	}
+	helpers.Relax(err)
 
 	beforeValue := subredditEntry.PostDirectLinks
 
@@ -479,7 +497,7 @@ func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, o
 		*out = r.newMsg("plugins.reddit.toggledirectlinks-enabled", subredditEntry.SubredditName)
 	}
 
-	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, subredditEntry.ID,
+	_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(subredditEntry.ID),
 		models.EventlogTargetTypeRobyulRedditFeed, in.Author.ID,
 		models.EventlogTypeRobyulRedditFeedUpdate, "",
 		[]models.ElasticEventlogChange{
@@ -509,7 +527,7 @@ func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, o
 		}, false)
 	helpers.RelaxLog(err)
 
-	err = r.setSubredditEntry(subredditEntry)
+	err = helpers.MDbUpdate(models.RedditSubredditsTable, subredditEntry.ID, subredditEntry)
 	helpers.Relax(err)
 
 	return r.actionFinish
@@ -602,79 +620,6 @@ func (r *Reddit) getRedditorInfo(username string) (data *discordgo.MessageSend) 
 	}
 
 	return
-}
-
-func (r *Reddit) addSubredditEntry(subreddit string, guildID string, channelID string, userID string, postDelay int, linkMode bool) (subredditEntry models.RedditSubredditEntry, err error) {
-	insert := rethink.Table(models.RedditSubredditsTable).Insert(models.RedditSubredditEntry{
-		SubredditName:   subreddit,
-		GuildID:         guildID,
-		ChannelID:       channelID,
-		AddedByUserID:   userID,
-		AddedAt:         time.Now(),
-		LastChecked:     time.Now().Add(-(time.Duration(postDelay) * time.Minute)),
-		PostDelay:       postDelay,
-		PostDirectLinks: linkMode,
-	})
-	res, err := insert.RunWrite(helpers.GetDB())
-	if err != nil {
-		return subredditEntry, err
-	} else {
-		return r.getSubredditEntryBy("id", res.GeneratedKeys[0])
-	}
-}
-
-func (r *Reddit) setSubredditEntry(subredditEntry models.RedditSubredditEntry) (err error) {
-	if subredditEntry.ID != "" {
-		_, err := rethink.Table(models.RedditSubredditsTable).Update(subredditEntry).Run(helpers.GetDB())
-		return err
-	}
-	return errors.New("empty subreddit entry submitted")
-}
-
-func (r *Reddit) getSubredditEntryBy(key string, value string) (subredditEntry models.RedditSubredditEntry, err error) {
-	listCursor, err := rethink.Table(models.RedditSubredditsTable).Filter(
-		rethink.Row.Field(key).Eq(value),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return subredditEntry, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&subredditEntry)
-
-	if err == rethink.ErrEmptyResult {
-		return subredditEntry, errors.New("no subreddit entry")
-	} else if err != nil {
-		return subredditEntry, err
-	}
-
-	return subredditEntry, nil
-}
-
-func (r *Reddit) getAllSubredditEntriesBy(key string, value string) (subredditEntry []models.RedditSubredditEntry, err error) {
-	listCursor, err := rethink.Table(models.RedditSubredditsTable).Filter(
-		rethink.Row.Field(key).Eq(value),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return subredditEntry, err
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&subredditEntry)
-
-	if err == rethink.ErrEmptyResult {
-		return subredditEntry, errors.New("no subreddit entries")
-	} else if err != nil {
-		return subredditEntry, err
-	}
-
-	return subredditEntry, nil
-}
-
-func (r *Reddit) removeSubredditEntry(subredditEntry models.RedditSubredditEntry) error {
-	if subredditEntry.ID != "" {
-		_, err := rethink.Table(models.RedditSubredditsTable).Get(subredditEntry.ID).Delete().RunWrite(helpers.GetDB())
-		return err
-	}
-	return errors.New("empty subreddit entry submitted")
 }
 
 func (r *Reddit) actionFinish(args []string, in *discordgo.Message, out **discordgo.MessageSend) redditAction {

@@ -20,7 +20,6 @@ var migrations = []helpers.Callback{
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
-	m32_create_table_reddit_subreddits,
 	m34_create_table_levels_roles,
 	m35_create_table_persistency_roles,
 	m36_create_table_levels_roles_overwrites,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m79_migration_table_vlive,
 	m80_migration_table_twitch,
 	m81_migration_table_youtube_channels,
+	m82_migration_table_reddit_subreddits,
 }
 
 // Run executes all registered migrations

@@ -231,7 +231,7 @@ func CollectRuntimeMetrics() {
 
 		RandomPictureSourcesCount.Set(entriesCount("randompictures_sources"))
 
-		RedditSubredditsCount.Set(entriesCount(models.RedditSubredditsTable))
+		RedditSubredditsCount.Set(entriesCountMgo(models.RedditSubredditsTable, nil))
 
 		YoutubeChannelsCount.Set(entriesCountMgo(models.YoutubeChannelTable, nil))
 
