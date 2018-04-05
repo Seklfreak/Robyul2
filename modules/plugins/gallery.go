@@ -13,22 +13,12 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack"
 )
 
 type Gallery struct{}
-
-type DB_Gallery_Entry struct {
-	ID                        string `gorethink:"id,omitempty"`
-	SourceChannelID           string `gorethink:"source_channel_id"`
-	TargetChannelID           string `gorethink:"target_channel_id"`
-	TargetChannelWebhookID    string `gorethink:"target_channel_webhook_id"`
-	TargetChannelWebhookToken string `gorethink:"target_channel_webhook_token"`
-	GuildID                   string `gorethink:"guild_id"`
-	AddedByUserID             string `gorethink:"addedby_user_id"`
-}
 
 func (g *Gallery) Commands() []string {
 	return []string{
@@ -42,12 +32,14 @@ const (
 
 var (
 	galleryUrlRegex *regexp.Regexp
-	galleries       []DB_Gallery_Entry
+	galleries       []models.GalleryEntry
 )
 
 func (g *Gallery) Init(session *discordgo.Session) {
 	galleryUrlRegex = regexp.MustCompile(galleryUrlRegexText)
-	galleries = g.GetGalleries()
+	var err error
+	galleries, err = g.GetGalleries()
+	helpers.Relax(err)
 }
 
 func (g *Gallery) Uninit(session *discordgo.Session) {
@@ -62,135 +54,93 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 	args := strings.Fields(content)
 	if len(args) >= 1 {
 		switch args[0] {
-		case "add": // [p]gallery add <source channel> <target channel> <webhook id> <webhook token>
-			// @TODO: more secure way to exchange token: create own webhook if no arguments passed
-			helpers.RequireAdmin(msg, func() {
-				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
-				progressMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.add-progress"))
-				helpers.Relax(err)
-				if len(progressMessages) <= 0 {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.generic-nomessage"))
-					return
-				}
-				progressMessage := progressMessages[0]
+		case "add": // [p]gallery add <source channel> <target channel>
+			helpers.RequireMod(msg, func() {
 				if len(args) < 3 {
-					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.too-few"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 					return
 				}
+
+				session.ChannelTyping(msg.ChannelID)
+
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
 				sourceChannel, err := helpers.GetChannelFromMention(msg, args[1])
 				if err != nil || sourceChannel.ID == "" || sourceChannel.GuildID != channel.GuildID {
-					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 				if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
-					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
 
-				var targetChannelWebhookId, targetChannelWebhookToken string
-				if len(args) >= 5 {
-					targetChannelWebhookId = args[3]
-					targetChannelWebhookToken = args[4]
-
-					webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
-					if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
-						_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-						helpers.Relax(err)
-						return
-					}
-				} else {
-					newWebhook, err := session.WebhookCreate(targetChannel.ID, "Robyul Gallery Webhook", "")
-					if err != nil {
-						if errD, ok := err.(*discordgo.RESTError); ok {
-							if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
-								_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
-								helpers.Relax(err)
-								return
-							}
-						}
-					}
-					helpers.Relax(err)
-
-					targetChannelWebhookId = newWebhook.ID
-					targetChannelWebhookToken = newWebhook.Token
-				}
-
-				if targetChannelWebhookId == "" || targetChannelWebhookToken == "" {
-					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+				targetChannelPermission, err := session.State.UserChannelPermissions(session.State.User.ID, targetChannel.ID)
+				helpers.Relax(err)
+				if targetChannelPermission&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator &&
+					targetChannelPermission&discordgo.PermissionManageWebhooks != discordgo.PermissionManageWebhooks {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
 					return
 				}
 
-				newGalleryEntry := g.getEntryByOrCreateEmpty("id", "")
-				newGalleryEntry.SourceChannelID = sourceChannel.ID
-				newGalleryEntry.TargetChannelID = targetChannel.ID
-				newGalleryEntry.TargetChannelWebhookID = targetChannelWebhookId
-				newGalleryEntry.TargetChannelWebhookToken = targetChannelWebhookToken
-				newGalleryEntry.AddedByUserID = msg.Author.ID
-				newGalleryEntry.GuildID = channel.GuildID
-				g.setEntry(newGalleryEntry)
+				newID, err := helpers.MDbInsert(models.GalleryTable, models.GalleryEntry{
+					SourceChannelID: sourceChannel.ID,
+					TargetChannelID: targetChannel.ID,
+					GuildID:         channel.GuildID,
+					AddedByUserID:   msg.Author.ID,
+				})
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), newGalleryEntry.GuildID, newGalleryEntry.ID,
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(newID),
 					models.EventlogTargetTypeRobyulGallery, msg.Author.ID,
 					models.EventlogTypeRobyulGalleryAdd, "",
 					nil,
 					[]models.ElasticEventlogOption{
 						{
 							Key:   "gallery_sourcechannelid",
-							Value: newGalleryEntry.SourceChannelID,
+							Value: sourceChannel.ID,
 						},
 						{
 							Key:   "gallery_targetchannelid",
-							Value: newGalleryEntry.TargetChannelID,
+							Value: targetChannel.ID,
 						},
 					}, false)
 				helpers.RelaxLog(err)
 
 				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Added Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
 					guild.Name, guild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
-				_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.gallery.add-success"))
-				helpers.Relax(err)
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.add-success"))
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 
-				galleries = g.GetGalleries()
+				galleries, err = g.GetGalleries()
+				helpers.RelaxLog(err)
 				return
 			})
 		case "list": // [p]gallery list
 			session.ChannelTyping(msg.ChannelID)
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
-			var entryBucket []DB_Gallery_Entry
-			listCursor, err := rethink.Table("galleries").Filter(
-				rethink.Row.Field("guild_id").Eq(channel.GuildID),
-			).Run(helpers.GetDB())
+			var entryBucket []models.GalleryEntry
+			err = helpers.MDbIter(helpers.MdbCollection(models.GalleryTable).Find(bson.M{"guildid": channel.GuildID})).All(&entryBucket)
 			helpers.Relax(err)
-			defer listCursor.Close()
-			err = listCursor.All(&entryBucket)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if entryBucket == nil || len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.list-empty"))
 				return
 			}
-			helpers.Relax(err)
 
 			resultMessage := ":frame_photo: Galleries on this server:\n"
 			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s`: posting from <#%s> to <#%s> (Webhook ID: `%s`)\n",
-					entry.ID, entry.SourceChannelID, entry.TargetChannelID, entry.TargetChannelWebhookID)
+				resultMessage += fmt.Sprintf("`%s`: posting from <#%s> to <#%s>\n",
+					helpers.MdbIdToHuman(entry.ID), entry.SourceChannelID, entry.TargetChannelID)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Galleries in total.", len(entryBucket))
 
-			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err = helpers.SendMessage(msg.ChannelID, resultPage)
-				helpers.Relax(err)
-			}
+			_, err = helpers.SendMessage(msg.ChannelID, resultMessage)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
 		case "delete", "del", "remove": // [p]gallery delete <gallery id>
 			helpers.RequireAdmin(msg, func() {
@@ -200,28 +150,25 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 					helpers.Relax(err)
 					return
 				}
-				entryId := args[1]
-				entryBucket := g.getEntryBy("id", entryId)
-				if entryBucket.ID == "" {
+
+				channel, err := helpers.GetChannel(msg.ChannelID)
+				helpers.Relax(err)
+
+				var entryBucket models.GalleryEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.GalleryTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(args[1])}),
+					&entryBucket,
+				)
+				if helpers.IsMdbNotFound(err) {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.delete-not-found"))
 					return
 				}
-				galleryGuild, _ := helpers.GetGuild(entryBucket.GuildID)
-				sourceChannel, _ := helpers.GetChannel(entryBucket.SourceChannelID)
-				if sourceChannel == nil {
-					sourceChannel = new(discordgo.Channel)
-					sourceChannel.Name = "N/A"
-					sourceChannel.ID = "N/A"
-				}
-				targetChannel, _ := helpers.GetChannel(entryBucket.TargetChannelID)
-				if targetChannel == nil {
-					targetChannel = new(discordgo.Channel)
-					targetChannel.Name = "N/A"
-					targetChannel.ID = "N/A"
-				}
-				g.deleteEntryById(entryBucket.ID)
+				helpers.Relax(err)
 
-				_, err := helpers.EventlogLog(time.Now(), entryBucket.GuildID, entryBucket.ID,
+				err = helpers.MDbDelete(models.GalleryTable, entryBucket.ID)
+				helpers.Relax(err)
+
+				_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
 					models.EventlogTargetTypeRobyulGallery, msg.Author.ID,
 					models.EventlogTypeRobyulGalleryRemove, "",
 					nil,
@@ -237,19 +184,22 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 					}, false)
 				helpers.RelaxLog(err)
 
-				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Deleted Gallery on Server %s (%s) posting from #%s (%s) to #%s (%s)",
-					galleryGuild.Name, galleryGuild.ID, sourceChannel.Name, sourceChannel.ID, targetChannel.Name, targetChannel.ID))
+				cache.GetLogger().WithField("module", "galleries").Info(fmt.Sprintf("Deleted Gallery on Server #%s posting from #%s to #%s",
+					channel.GuildID, entryBucket.SourceChannelID, entryBucket.TargetChannelID))
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.delete-success"))
 				helpers.Relax(err)
 
-				galleries = g.GetGalleries()
+				galleries, err = g.GetGalleries()
+				helpers.RelaxLog(err)
 				return
 			})
 		case "refresh": // [p]gallery refresh
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
-				galleries = g.GetGalleries()
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.refreshed-config"))
+				var err error
+				galleries, err = g.GetGalleries()
+				helpers.RelaxLog(err)
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.gallery.refreshed-config"))
 				helpers.Relax(err)
 			})
 		}
@@ -293,12 +243,15 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 						}
 					}
 				}
+				// get webhook
+				webhooks, err := helpers.GetWebhooks(gallery.GuildID, gallery.TargetChannelID, 1)
+				helpers.Relax(err)
 				// post mirror links
 				if len(linksToRepost) > 0 {
 					for _, linkToRepost := range linksToRepost {
 						result, err := helpers.WebhookExecuteWithResult(
-							gallery.TargetChannelWebhookID,
-							gallery.TargetChannelWebhookToken,
+							webhooks[0].ID,
+							webhooks[0].Token,
 							&discordgo.WebhookParams{
 								Content:   fmt.Sprintf("posted %s", linkToRepost),
 								Username:  msg.Author.Username,
@@ -391,73 +344,9 @@ func (g *Gallery) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.
 func (g *Gallery) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 }
 
-func (g *Gallery) getEntryBy(key string, id string) DB_Gallery_Entry {
-	var entryBucket DB_Gallery_Entry
-	listCursor, err := rethink.Table("galleries").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (g *Gallery) getEntryByOrCreateEmpty(key string, id string) DB_Gallery_Entry {
-	var entryBucket DB_Gallery_Entry
-	listCursor, err := rethink.Table("galleries").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("galleries").Insert(DB_Gallery_Entry{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		if e != nil {
-			panic(e)
-		} else {
-			return g.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (g *Gallery) setEntry(entry DB_Gallery_Entry) {
-	_, err := rethink.Table("galleries").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (g *Gallery) deleteEntryById(id string) {
-	_, err := rethink.Table("galleries").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (g *Gallery) GetGalleries() []DB_Gallery_Entry {
-	var entryBucket []DB_Gallery_Entry
-	listCursor, err := rethink.Table("galleries").Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	helpers.Relax(err)
-	return entryBucket
+func (g *Gallery) GetGalleries() (galleries []models.GalleryEntry, err error) {
+	err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.GalleryTable).Find(nil)).All(&galleries)
+	return
 }
 
 func (g *Gallery) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {

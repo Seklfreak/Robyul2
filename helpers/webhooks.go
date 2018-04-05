@@ -58,9 +58,14 @@ func GetWebhooks(guildID, channelID string, amount int) (webhooks []*discordgo.W
 		return webhooks, nil
 	}
 
+	channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channelID)
+	if err != nil {
+		return webhooks, err
+	}
+
 	// checks if we are allowed to manage webhooks
-	if GetMemberPermissions(guildID, cache.GetSession().State.User.ID)&discordgo.PermissionManageWebhooks != discordgo.PermissionManageWebhooks &&
-		GetMemberPermissions(guildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+	if channelPermissions&discordgo.PermissionManageWebhooks != discordgo.PermissionManageWebhooks &&
+		channelPermissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
 		return webhooks, errors.New("no permission to manage webhooks")
 	}
 

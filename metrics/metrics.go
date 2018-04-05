@@ -225,7 +225,7 @@ func CollectRuntimeMetrics() {
 
 		FacebookPagesCount.Set(entriesCountMgo(models.FacebookTable, nil))
 
-		GalleriesCount.Set(entriesCount("galleries"))
+		GalleriesCount.Set(entriesCountMgo(models.GalleryTable, nil))
 
 		MirrorsCount.Set(entriesCount("mirrors"))
 

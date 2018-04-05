@@ -351,7 +351,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 
 				m.unlockEntry(entryID)
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 
 		elapsed := time.Since(start)
