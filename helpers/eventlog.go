@@ -115,10 +115,60 @@ func EventlogLogUpdate(elasticID string, UserID string,
 
 func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (embed *discordgo.MessageEmbed) {
+
+	targetNames := ""
+	targetIDs := strings.Split(targetID, ",")
+	for _, targetIDSplit := range targetIDs {
+		var targetName string
+		switch targetType {
+		case models.EventlogTargetTypeUser:
+			targetUser, err := GetUserWithoutAPI(targetIDSplit)
+			if err == nil {
+				targetName = targetUser.Username + "#" + targetUser.Discriminator
+			}
+			break
+		case models.EventlogTargetTypeChannel:
+			targetChannel, err := GetChannelWithoutApi(targetIDSplit)
+			if err == nil {
+				targetName = "#" + targetChannel.Name
+				if targetChannel.ParentID != "" {
+					targetParentChannel, err := GetChannelWithoutApi(targetChannel.ParentID)
+					if err == nil {
+						targetName = "#" + targetParentChannel.Name + " / " + targetName
+					}
+				}
+			}
+			break
+		case models.EventlogTargetTypeRole:
+			targetRole, err := cache.GetSession().State.Role(guildID, targetIDSplit)
+			if err == nil {
+				targetName = "@" + targetRole.Name
+			}
+			break
+		case models.EventlogTargetTypeEmoji:
+			targetEmoji, err := cache.GetSession().State.Emoji(guildID, targetIDSplit)
+			if err == nil {
+				targetName = targetEmoji.Name
+			}
+			break
+		case models.EventlogTargetTypeGuild:
+			targetGuild, err := GetGuildWithoutApi(targetIDSplit)
+			if err == nil {
+				targetName = targetGuild.Name
+			}
+			break
+		case models.EventlogTargetTypeMessage:
+			break
+		}
+		if targetName != "" {
+			targetNames += targetName + ", "
+		}
+	}
+
 	embed = &discordgo.MessageEmbed{
 		URL:       "",
 		Type:      "",
-		Title:     actionType + ": #" + targetID + " (" + targetType + ")",
+		Title:     actionType + ": #" + targetID + " (" + targetNames + targetType + ")",
 		Timestamp: createdAt.Format(time.RFC3339),
 		Fields: []*discordgo.MessageEmbedField{{
 			Name:  "Reason",
