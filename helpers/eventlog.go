@@ -258,6 +258,7 @@ const (
 	AuditLogBackfillTypeEmojiUpdate
 	AuditLogBackfillTypeGuildUpdate
 	AuditLogBackfillTypeRoleUpdate
+	AuditlogBackfillTypeMemberRoleUpdate
 )
 
 func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
@@ -318,6 +319,10 @@ func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) 
 	case AuditLogBackfillTypeRoleUpdate:
 		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role update")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleUpdateRedisSet, guildID).Result()
+		return err
+	case AuditlogBackfillTypeMemberRoleUpdate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member role update")
+		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberRoleUpdateRedisSet, guildID).Result()
 		return err
 	}
 	return errors.New("unknown backfill type")
@@ -783,15 +788,13 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 		})
 	}
 
-	_, err := EventlogLog(leftAt, guildID, newMember.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberUpdate, "", changes, options, false)
+	// backfill? lots of requests because of bot role changes
+	added, err := EventlogLog(leftAt, guildID, newMember.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberUpdate, "", changes, options, true)
 	RelaxLog(err)
-	/*
-		backfill? lots of requests because of bot role changes
-		if added {
-			err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeChannelUpdate)
-			RelaxLog(err)
-		}
-	*/
+	if added {
+		err := RequestAuditLogBackfill(guildID, AuditlogBackfillTypeMemberRoleUpdate)
+		RelaxLog(err)
+	}
 }
 
 func OnEventlogRoleUpdate(guildID string, oldRole, newRole *discordgo.Role) {
