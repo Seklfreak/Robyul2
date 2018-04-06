@@ -621,6 +621,13 @@ func (g *singleBiasGame) sendWinnerMessage() {
 
 // finishSingleGame sends the winner message, records stats, and deletes game
 func (g *singleBiasGame) finishSingleGame() {
+	defer g.recoverGame()
+
+	// used to make sure the game finish isn't triggered twice
+	if g.GameWinnerBias != nil {
+		return
+	}
+
 	g.GameWinnerBias = g.BiasQueue[0]
 	g.sendWinnerMessage()
 
