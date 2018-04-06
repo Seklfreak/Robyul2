@@ -408,16 +408,19 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.not-enough-idols"))
 			return nil
 		}
+
 		// show a warning if the game size is >= 256, wait for confirm
 		if gameSize >= 256 {
+
 			if !helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetText("plugins.biasgame.game.size-warning"), "✅", "🚫") {
 				return nil
 			}
-		}
-		// recheck if a game is still going on, see above
-		if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
-			game.ChannelID = msg.ChannelID
-			return game
+
+			// recheck if a game is still going on, see above
+			if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+				game.ChannelID = msg.ChannelID
+				return game
+			}
 		}
 
 		// create new game
