@@ -921,7 +921,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 	encoder.Encode(buf, bracketImage)
 	myReader := bytes.NewReader(buf.Bytes())
 
-	messageString := fmt.Sprintf("\nWinner: %s %s!",
+	messageString := fmt.Sprintf("**Multi Game**\nWinner: %s %s!",
 		g.GameWinnerBias.GroupName,
 		g.GameWinnerBias.BiasName)
 
