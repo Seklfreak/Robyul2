@@ -113,22 +113,20 @@ func EventlogLogUpdate(elasticID string, UserID string,
 	return
 }
 
-func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
-	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (embed *discordgo.MessageEmbed) {
-
-	targetNames := ""
-	targetIDs := strings.Split(targetID, ",")
-	for _, targetIDSplit := range targetIDs {
-		var targetName string
+func eventlogTargetsToText(guildID, targetType, idsText string) (names []string) {
+	names = make([]string, 0)
+	ids := strings.Split(idsText, ",")
+	for _, id := range ids {
+		targetName := id
 		switch targetType {
 		case models.EventlogTargetTypeUser:
-			targetUser, err := GetUserWithoutAPI(targetIDSplit)
+			targetUser, err := GetUserWithoutAPI(id)
 			if err == nil {
 				targetName = targetUser.Username + "#" + targetUser.Discriminator
 			}
 			break
 		case models.EventlogTargetTypeChannel:
-			targetChannel, err := GetChannelWithoutApi(targetIDSplit)
+			targetChannel, err := GetChannelWithoutApi(id)
 			if err == nil {
 				targetName = "#" + targetChannel.Name
 				if targetChannel.ParentID != "" {
@@ -140,19 +138,19 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 			}
 			break
 		case models.EventlogTargetTypeRole:
-			targetRole, err := cache.GetSession().State.Role(guildID, targetIDSplit)
+			targetRole, err := cache.GetSession().State.Role(guildID, id)
 			if err == nil {
 				targetName = "@" + targetRole.Name
 			}
 			break
 		case models.EventlogTargetTypeEmoji:
-			targetEmoji, err := cache.GetSession().State.Emoji(guildID, targetIDSplit)
+			targetEmoji, err := cache.GetSession().State.Emoji(guildID, id)
 			if err == nil {
 				targetName = targetEmoji.Name
 			}
 			break
 		case models.EventlogTargetTypeGuild:
-			targetGuild, err := GetGuildWithoutApi(targetIDSplit)
+			targetGuild, err := GetGuildWithoutApi(id)
 			if err == nil {
 				targetName = targetGuild.Name
 			}
@@ -160,9 +158,19 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		case models.EventlogTargetTypeMessage:
 			break
 		}
-		if targetName != "" {
-			targetNames += targetName + ", "
-		}
+		names = append(names, targetName)
+	}
+	return names
+}
+
+func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
+	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (embed *discordgo.MessageEmbed) {
+
+	targetNames := strings.Join(eventlogTargetsToText(guildID, targetType, targetID), ", ")
+	if targetNames == targetID {
+		targetNames = ""
+	} else {
+		targetNames += ", "
 	}
 
 	embed = &discordgo.MessageEmbed{
@@ -188,10 +196,14 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 			oldValueText := "`" + change.OldValue + "`"
 			if change.OldValue == "" {
 				oldValueText = "_/_"
+			} else {
+				oldValueText = strings.Join(eventlogTargetsToText(guildID, change.Type, change.OldValue), ", ")
 			}
 			newValueText := "`" + change.NewValue + "`"
 			if change.NewValue == "" {
 				newValueText = "_/_"
+			} else {
+				newValueText = strings.Join(eventlogTargetsToText(guildID, change.Type, change.NewValue), ", ")
 			}
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:  change.Key,
@@ -205,6 +217,8 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 			valueText := "`" + option.Value + "`"
 			if option.Value == "" {
 				valueText = "_/_"
+			} else {
+				valueText = strings.Join(eventlogTargetsToText(guildID, option.Type, option.Value), ", ")
 			}
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:  option.Key,
@@ -342,6 +356,7 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
 		Value: strings.Join(emoji.Roles, ","),
+		Type:  models.EventlogTargetTypeRole,
 	})
 
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
@@ -385,6 +400,7 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
 		Value: strings.Join(emoji.Roles, ","),
+		Type:  models.EventlogTargetTypeRole,
 	})
 
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
@@ -428,6 +444,7 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
 		Value: strings.Join(newEmoji.Roles, ","),
+		Type:  models.EventlogTargetTypeRole,
 	})
 
 	rolesAdded, rolesRemoved := StringSliceDiff(oldEmoji.Roles, newEmoji.Roles)
@@ -435,12 +452,14 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "emoji_roleids_added",
 			Value: strings.Join(rolesAdded, ","),
+			Type:  models.EventlogTargetTypeRole,
 		})
 	}
 	if len(rolesRemoved) >= 0 {
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "emoji_roleids_removed",
 			Value: strings.Join(rolesRemoved, ","),
+			Type:  models.EventlogTargetTypeRole,
 		})
 	}
 
@@ -491,6 +510,7 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 			Key:      "emoji_roleids",
 			OldValue: strings.Join(oldEmoji.Roles, ","),
 			NewValue: strings.Join(newEmoji.Roles, ","),
+			Type:     models.EventlogTargetTypeRole,
 		})
 	}
 
@@ -535,6 +555,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 			Key:      "guild_afkchannelid",
 			OldValue: oldGuild.AfkChannelID,
 			NewValue: newGuild.AfkChannelID,
+			Type:     models.EventlogTargetTypeChannel,
 		})
 	}
 
@@ -543,6 +564,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 			Key:      "guild_embedchannelid",
 			OldValue: oldGuild.EmbedChannelID,
 			NewValue: newGuild.EmbedChannelID,
+			Type:     models.EventlogTargetTypeChannel,
 		})
 	}
 
@@ -551,6 +573,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 			Key:      "guild_ownerid",
 			OldValue: oldGuild.OwnerID,
 			NewValue: newGuild.OwnerID,
+			Type:     models.EventlogTargetTypeUser,
 		})
 	}
 
@@ -681,6 +704,7 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 			Key:      "channel_parentid",
 			OldValue: oldChannel.ParentID,
 			NewValue: newChannel.ParentID,
+			Type:     models.EventlogTargetTypeChannel,
 		})
 	}
 
@@ -717,12 +741,14 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 			Key:      "member_roles",
 			OldValue: strings.Join(oldMember.Roles, ","),
 			NewValue: strings.Join(newMember.Roles, ","),
+			Type:     models.EventlogTargetTypeRole,
 		})
 
 		if len(rolesAdded) > 0 {
 			options = append(options, models.ElasticEventlogOption{
 				Key:   "member_roles_added",
 				Value: strings.Join(rolesAdded, ","),
+				Type:  models.EventlogTargetTypeRole,
 			})
 		}
 
@@ -730,6 +756,7 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 			options = append(options, models.ElasticEventlogOption{
 				Key:   "member_roles_removed",
 				Value: strings.Join(rolesRemoved, ","),
+				Type:  models.EventlogTargetTypeRole,
 			})
 		}
 	}

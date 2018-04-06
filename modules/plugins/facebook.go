@@ -213,6 +213,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 						{
 							Key:   "facebook_channelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "facebook_facebookusername",

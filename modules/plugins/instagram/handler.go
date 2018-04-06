@@ -197,6 +197,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 						{
 							Key:   "instagram_channelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "instagram_sendposttype",
@@ -249,6 +250,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 							{
 								Key:   "instagram_channelid",
 								Value: entryBucket.ChannelID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 							{
 								Key:   "instagram_sendposttype",
@@ -354,6 +356,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 						{
 							Key:   "instagram_channelid",
 							Value: entryBucket.ChannelID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "instagram_sendposttype",

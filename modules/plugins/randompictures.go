@@ -421,6 +421,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompicture_source_posttochannelids",
 								Value: strings.Join(postToChannelIDs, ","),
+								Type:  models.EventlogTargetTypeChannel,
 							},
 							{
 								Key:   "randompicture_source_drivefolderids",
@@ -433,6 +434,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompicture_source_blacklistedroleids",
 								Value: strings.Join(blacklistedRoleIDs, ","),
+								Type:  models.EventlogTargetTypeRole,
 							},
 						}, false)
 					helpers.RelaxLog(err)
@@ -540,6 +542,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompicture_source_posttochannelids",
 								Value: strings.Join(entryBucket.PostToChannelIDs, ","),
+								Type:  models.EventlogTargetTypeChannel,
 							},
 							{
 								Key:   "randompicture_source_drivefolderids",
@@ -552,6 +555,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompicture_source_blacklistedroleids",
 								Value: strings.Join(entryBucket.BlacklistedRoleIDs, ","),
+								Type:  models.EventlogTargetTypeRole,
 							},
 						}, false)
 					helpers.RelaxLog(err)
@@ -729,6 +733,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompictures_config_ignoredchannelids_removed",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}
 					} else {
@@ -737,6 +742,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							{
 								Key:   "randompictures_config_ignoredchannelids_added",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}
 					}
@@ -749,6 +755,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 								Key:      "randompictures_config_ignoredchannelids",
 								OldValue: strings.Join(beforeChannelIDs, ","),
 								NewValue: strings.Join(guildSettings.RandomPicturesPicDelayIgnoredChannelIDs, ","),
+								Type:     models.EventlogTargetTypeChannel,
 							},
 						},
 						options, false)

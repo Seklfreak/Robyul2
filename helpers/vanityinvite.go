@@ -73,6 +73,7 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 					Key:      "vanityinvite_channelid",
 					OldValue: oldVanityInvite.ChannelID,
 					NewValue: vanityEntryByGuildID.ChannelID,
+					Type:     models.EventlogTargetTypeChannel,
 				},
 			},
 			nil, false)
@@ -121,6 +122,7 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 			{
 				Key:   "vanityinvite_channelid",
 				Value: channelID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 		}, false)
 	RelaxLog(err)

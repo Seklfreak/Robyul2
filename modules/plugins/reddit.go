@@ -338,6 +338,7 @@ func (r *Reddit) actionAdd(args []string, in *discordgo.Message, out **discordgo
 			{
 				Key:   "reddit_channelid",
 				Value: targetChannel.ID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 			{
 				Key:   "reddit_postdirectlinks",
@@ -426,6 +427,7 @@ func (r *Reddit) actionRemove(args []string, in *discordgo.Message, out **discor
 			{
 				Key:   "reddit_channelid",
 				Value: subredditEntry.ChannelID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 			{
 				Key:   "reddit_postdirectlinks",
@@ -511,6 +513,7 @@ func (r *Reddit) actionToggleDirectLinks(args []string, in *discordgo.Message, o
 			{
 				Key:   "reddit_channelid",
 				Value: subredditEntry.ChannelID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 			{
 				Key:   "reddit_postdirectlinks",

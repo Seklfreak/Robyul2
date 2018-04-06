@@ -168,6 +168,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 									Key:      "nuke_participate_channel",
 									OldValue: previousChannel,
 									NewValue: settings.NukeLogChannel,
+									Type:     models.EventlogTargetTypeChannel,
 								},
 							}
 						}
@@ -186,6 +187,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 								{
 									Key:   "nuke_participate_channel",
 									Value: targetChannel.ID,
+									Type:  models.EventlogTargetTypeChannel,
 								},
 							}, false)
 						helpers.RelaxLog(err)

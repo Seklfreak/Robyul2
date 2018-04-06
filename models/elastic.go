@@ -109,9 +109,11 @@ type ElasticEventlogChange struct {
 	Key      string
 	OldValue string
 	NewValue string
+	Type     string
 }
 
 type ElasticEventlogOption struct {
 	Key   string
 	Value string
+	Type  string
 }

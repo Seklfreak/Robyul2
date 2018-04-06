@@ -248,10 +248,13 @@ func CollectRuntimeMetrics() {
 
 		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable, nil))
 
-		key := "delayed_tasks"
-		delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
-		helpers.Relax(err)
-		MachineryDelayedTasksCount.Set(delayedTasks)
+		var key string
+		if cache.HasMachineryRedisClient() {
+			key = "delayed_tasks"
+			delayedTasks, err := cache.GetMachineryRedisClient().ZCard(key).Result()
+			helpers.Relax(err)
+			MachineryDelayedTasksCount.Set(delayedTasks)
+		}
 
 		key = models.YoutubeQuotaRedisKey
 		codec := cache.GetRedisCacheCodec()

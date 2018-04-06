@@ -248,6 +248,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 						{
 							Key:   "mirror_channelids_added",
 							Value: newMirrorChannel.ChannelID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 					}, false)
 				helpers.RelaxLog(err)

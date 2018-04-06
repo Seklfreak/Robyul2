@@ -272,10 +272,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 										{
 											Key:   "cleanup_aftermessageid",
 											Value: afterMessageId,
+											Type:  models.EventlogTargetTypeMessage,
 										},
 										{
 											Key:   "cleanup_untilmessageid",
 											Value: untilMessageId,
+											Type:  models.EventlogTargetTypeMessage,
 										},
 										{
 											Key:   "cleanup_deleted_messages",
@@ -316,10 +318,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 												{
 													Key:   "cleanup_aftermessageid",
 													Value: afterMessageId,
+													Type:  models.EventlogTargetTypeMessage,
 												},
 												{
 													Key:   "cleanup_untilmessageid",
 													Value: untilMessageId,
+													Type:  models.EventlogTargetTypeMessage,
 												},
 												{
 													Key:   "cleanup_deleted_messages",
@@ -911,6 +915,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							{
 								Key:   "post_channelid",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}, false)
 					helpers.RelaxLog(err)
@@ -971,6 +976,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							{
 								Key:   "post_channelid",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}, false)
 					helpers.RelaxLog(err)
@@ -1017,6 +1023,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							{
 								Key:   "post_channelid",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}, false)
 					helpers.RelaxLog(err)
@@ -1599,6 +1606,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							Key:      "autoinspectschannel_channelid",
 							OldValue: channelIDBefore,
 							NewValue: targetChannel.ID,
+							Type:     models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:      "autoinspectschannel_userbannedonotherservers",
@@ -1663,6 +1671,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							Key:      "autoinspectschannel_channelid",
 							OldValue: channelIDBefore,
 							NewValue: "",
+							Type:     models.EventlogTargetTypeChannel,
 						},
 					},
 					nil, false)
@@ -2120,6 +2129,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				options = append(options, models.ElasticEventlogOption{
 					Key:   "batchroles_afteroleid",
 					Value: afterRole.ID,
+					Type:  models.EventlogTargetTypeRole,
 				})
 			}
 

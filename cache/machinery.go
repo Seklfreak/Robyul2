@@ -50,6 +50,16 @@ func GetMachineryRedisClient() *redis.Client {
 	return machineryRedisClient
 }
 
+func HasMachineryRedisClient() bool {
+	machineryServerMutex.RLock()
+	defer machineryServerMutex.RUnlock()
+
+	if machineryRedisClient == nil {
+		return false
+	}
+	return true
+}
+
 func AddMachineryActiveWorker(worker *machinery.Worker) {
 	machineryActiveWorkers = append(machineryActiveWorkers, worker)
 }

@@ -147,12 +147,14 @@ func (p *Persistency) roleAddAction(args []string, in *discordgo.Message, out **
 				Key:      "persistency_roleids",
 				OldValue: strings.Join(beforeValue, ","),
 				NewValue: strings.Join(guildSettings.PersistencyRoleIDs, ","),
+				Type:     models.EventlogTargetTypeChannel,
 			},
 		},
 		[]models.ElasticEventlogOption{
 			{
 				Key:   "persistency_roleids_added",
 				Value: roleToAdd.ID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 		}, false)
 	helpers.RelaxLog(err)
@@ -218,12 +220,14 @@ func (p *Persistency) roleRemoveAction(args []string, in *discordgo.Message, out
 				Key:      "persistency_roleids",
 				OldValue: strings.Join(beforeValue, ","),
 				NewValue: strings.Join(guildSettings.PersistencyRoleIDs, ","),
+				Type:     models.EventlogTargetTypeChannel,
 			},
 		},
 		[]models.ElasticEventlogOption{
 			{
 				Key:   "persistency_roleids_removed",
 				Value: roleToRemove.ID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 		}, false)
 	helpers.RelaxLog(err)

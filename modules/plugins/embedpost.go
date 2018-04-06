@@ -139,6 +139,7 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 						{
 							Key:   "post_channelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "post_embedcode",
@@ -173,6 +174,7 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 						{
 							Key:   "post_channelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 					}, false)
 				helpers.RelaxLog(err)

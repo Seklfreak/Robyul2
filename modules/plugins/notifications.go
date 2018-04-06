@@ -340,6 +340,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 								{
 									Key:   "notifications_ignoredchannelids_added",
 									Value: targetChannel.ID,
+									Type:  models.EventlogTargetTypeChannel,
 								},
 							}, false)
 						helpers.RelaxLog(err)
@@ -368,6 +369,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 							{
 								Key:   "notifications_ignoredchannelids_removed",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}, false)
 					helpers.RelaxLog(err)

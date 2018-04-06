@@ -248,6 +248,7 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 			{
 				Key:   "youtube_channel_channelid",
 				Value: dc.ID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 			{
 				Key:   "youtube_channel_ytchannelid",

@@ -105,6 +105,7 @@ func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "channel_parentid",
 			Value: channel.ParentID,
+			Type:  models.EventlogTargetTypeChannel,
 		})
 
 		/*
@@ -184,6 +185,7 @@ func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "channel_parentid",
 			Value: channel.ParentID,
+			Type:  models.EventlogTargetTypeChannel,
 		})
 
 		/*

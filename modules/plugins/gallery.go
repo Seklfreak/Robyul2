@@ -102,10 +102,12 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 						{
 							Key:   "gallery_sourcechannelid",
 							Value: sourceChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "gallery_targetchannelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 					}, false)
 				helpers.RelaxLog(err)

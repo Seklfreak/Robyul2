@@ -590,6 +590,7 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 			elasticEventlog.Options = append(elasticEventlog.Options, models.ElasticEventlogOption{
 				Key:   options[newI].Key,
 				Value: options[newI].Value,
+				Type:  options[newI].Type,
 			})
 		}
 	}
@@ -605,6 +606,7 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 				if elasticEventlog.Changes[oldI].Key == changes[newI].Key {
 					elasticEventlog.Changes[oldI].OldValue = changes[newI].OldValue
 					elasticEventlog.Changes[oldI].NewValue = changes[newI].NewValue
+					elasticEventlog.Changes[oldI].Type = changes[newI].Type
 					continue UpdateNextChange
 				}
 			}
@@ -613,6 +615,7 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 				Key:      changes[newI].Key,
 				OldValue: changes[newI].OldValue,
 				NewValue: changes[newI].NewValue,
+				Type:     changes[newI].Type,
 			})
 		}
 	}

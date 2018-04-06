@@ -825,18 +825,22 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									{
 										Key:   "badge_rolerequirement",
 										Value: newBadge.RoleRequirement,
+										Type:  models.EventlogTargetTypeRole,
 									},
 									{
 										Key:   "badge_guildid",
 										Value: newBadge.GuildID,
+										Type:  models.EventlogTargetTypeGuild,
 									},
 									{
 										Key:   "badge_alloweduserids",
 										Value: strings.Join(newBadge.AllowedUserIDs, ","),
+										Type:  models.EventlogTargetTypeUser,
 									},
 									{
 										Key:   "badge_denieduserids",
 										Value: strings.Join(newBadge.DeniedUserIDs, ","),
+										Type:  models.EventlogTargetTypeUser,
 									},
 								}, false)
 							helpers.RelaxLog(err)
@@ -899,18 +903,22 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									{
 										Key:   "badge_rolerequirement",
 										Value: badgeFound.RoleRequirement,
+										Type:  models.EventlogTargetTypeRole,
 									},
 									{
 										Key:   "badge_guildid",
 										Value: badgeFound.GuildID,
+										Type:  models.EventlogTargetTypeGuild,
 									},
 									{
 										Key:   "badge_alloweduserids",
 										Value: strings.Join(badgeFound.AllowedUserIDs, ","),
+										Type:  models.EventlogTargetTypeUser,
 									},
 									{
 										Key:   "badge_denieduserids",
 										Value: strings.Join(badgeFound.DeniedUserIDs, ","),
+										Type:  models.EventlogTargetTypeUser,
 									},
 								}, false)
 							helpers.RelaxLog(err)
@@ -1062,6 +1070,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											Key:      "badge_alloweduserids",
 											OldValue: strings.Join(allowedIDsBefore, ","),
 											NewValue: strings.Join(badgeToAllow.AllowedUserIDs, ","),
+											Type:     models.EventlogTargetTypeUser,
 										},
 									},
 									[]models.ElasticEventlogOption{
@@ -1088,14 +1097,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										{
 											Key:   "badge_rolerequirement",
 											Value: badgeToAllow.RoleRequirement,
+											Type:  models.EventlogTargetTypeRole,
 										},
 										{
 											Key:   "badge_guildid",
 											Value: badgeToAllow.GuildID,
+											Type:  models.EventlogTargetTypeGuild,
 										},
 										{
 											Key:   "badge_alloweduserids_added",
 											Value: targetUser.ID,
+											Type:  models.EventlogTargetTypeUser,
 										},
 									}, false)
 								helpers.RelaxLog(err)
@@ -1123,6 +1135,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											Key:      "badge_alloweduserids",
 											OldValue: strings.Join(allowedIDsBefore, ","),
 											NewValue: strings.Join(badgeToAllow.AllowedUserIDs, ","),
+											Type:     models.EventlogTargetTypeUser,
 										},
 									},
 									[]models.ElasticEventlogOption{
@@ -1149,14 +1162,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										{
 											Key:   "badge_rolerequirement",
 											Value: badgeToAllow.RoleRequirement,
+											Type:  models.EventlogTargetTypeRole,
 										},
 										{
 											Key:   "badge_guildid",
 											Value: badgeToAllow.GuildID,
+											Type:  models.EventlogTargetTypeGuild,
 										},
 										{
 											Key:   "badge_alloweduserids_removed",
 											Value: targetUser.ID,
+											Type:  models.EventlogTargetTypeUser,
 										},
 									}, false)
 								helpers.RelaxLog(err)
@@ -1220,6 +1236,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											Key:      "badge_denieduserids",
 											OldValue: strings.Join(deniedIDsBefore, ","),
 											NewValue: strings.Join(badgeToDeny.DeniedUserIDs, ","),
+											Type:     models.EventlogTargetTypeUser,
 										},
 									},
 									[]models.ElasticEventlogOption{
@@ -1246,14 +1263,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										{
 											Key:   "badge_rolerequirement",
 											Value: badgeToDeny.RoleRequirement,
+											Type:  models.EventlogTargetTypeRole,
 										},
 										{
 											Key:   "badge_guildid",
 											Value: badgeToDeny.GuildID,
+											Type:  models.EventlogTargetTypeGuild,
 										},
 										{
 											Key:   "badge_denieduserids_added",
 											Value: targetUser.ID,
+											Type:  models.EventlogTargetTypeUser,
 										},
 									}, false)
 								helpers.RelaxLog(err)
@@ -1281,6 +1301,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 											Key:      "badge_denieduserids",
 											OldValue: strings.Join(deniedIDsBefore, ","),
 											NewValue: strings.Join(badgeToDeny.DeniedUserIDs, ","),
+											Type:     models.EventlogTargetTypeUser,
 										},
 									},
 									[]models.ElasticEventlogOption{
@@ -1307,14 +1328,17 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										{
 											Key:   "badge_rolerequirement",
 											Value: badgeToDeny.RoleRequirement,
+											Type:  models.EventlogTargetTypeRole,
 										},
 										{
 											Key:   "badge_guildid",
 											Value: badgeToDeny.GuildID,
+											Type:  models.EventlogTargetTypeGuild,
 										},
 										{
 											Key:   "badge_denieduserids_removed",
 											Value: targetUser.ID,
+											Type:  models.EventlogTargetTypeUser,
 										},
 									}, false)
 								helpers.RelaxLog(err)
@@ -2066,12 +2090,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												Key:      "levels_ignoreduserids",
 												OldValue: strings.Join(ignoredUserIDsBefore, ","),
 												NewValue: strings.Join(settings.LevelsIgnoredUserIDs, ","),
+												Type:     models.EventlogTargetTypeUser,
 											},
 										},
 										[]models.ElasticEventlogOption{
 											{
 												Key:   "levels_ignoreduserids_removed",
 												Value: targetUser.ID,
+												Type:  models.EventlogTargetTypeUser,
 											},
 										}, false)
 									helpers.RelaxLog(err)
@@ -2094,12 +2120,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										Key:      "levels_ignoreduserids",
 										OldValue: strings.Join(ignoredUserIDsBefore, ","),
 										NewValue: strings.Join(settings.LevelsIgnoredUserIDs, ","),
+										Type:     models.EventlogTargetTypeUser,
 									},
 								},
 								[]models.ElasticEventlogOption{
 									{
 										Key:   "levels_ignoreduserids_added",
 										Value: targetUser.ID,
+										Type:  models.EventlogTargetTypeUser,
 									},
 								}, false)
 							helpers.RelaxLog(err)
@@ -2143,12 +2171,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 												Key:      "levels_ignoredchannelids",
 												OldValue: strings.Join(ignoredChannelIDsBefore, ","),
 												NewValue: strings.Join(settings.LevelsIgnoredChannelIDs, ","),
+												Type:     models.EventlogTargetTypeChannel,
 											},
 										},
 										[]models.ElasticEventlogOption{
 											{
 												Key:   "levels_ignoredchannelids_removed",
 												Value: targetChannel.ID,
+												Type:  models.EventlogTargetTypeChannel,
 											},
 										}, false)
 									helpers.RelaxLog(err)
@@ -2171,12 +2201,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 										Key:      "levels_ignoredchannelids",
 										OldValue: strings.Join(ignoredChannelIDsBefore, ","),
 										NewValue: strings.Join(settings.LevelsIgnoredChannelIDs, ","),
+										Type:     models.EventlogTargetTypeChannel,
 									},
 								},
 								[]models.ElasticEventlogOption{
 									{
 										Key:   "levels_ignoredchannelids_added",
 										Value: targetChannel.ID,
+										Type:  models.EventlogTargetTypeChannel,
 									},
 								}, false)
 							helpers.RelaxLog(err)
@@ -2623,6 +2655,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									{
 										Key:   "levels_role_grant_roleid_removed",
 										Value: targetRole.ID,
+										Type:  models.EventlogTargetTypeRole,
 									},
 								}, false)
 							helpers.RelaxLog(err)
@@ -2647,6 +2680,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								{
 									Key:   "levels_role_grant_roleid_added",
 									Value: targetRole.ID,
+									Type:  models.EventlogTargetTypeRole,
 								},
 							}, false)
 						helpers.RelaxLog(err)
@@ -2713,6 +2747,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									{
 										Key:   "levels_role_deny_roleid_removed",
 										Value: targetRole.ID,
+										Type:  models.EventlogTargetTypeRole,
 									},
 								}, false)
 							helpers.RelaxLog(err)
@@ -2737,6 +2772,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 								{
 									Key:   "levels_role_deny_roleid_added",
 									Value: targetRole.ID,
+									Type:  models.EventlogTargetTypeRole,
 								},
 							}, false)
 						helpers.RelaxLog(err)

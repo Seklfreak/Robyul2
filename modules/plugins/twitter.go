@@ -487,6 +487,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						{
 							Key:   "twitter_channelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "twitter_accountscreename",
@@ -499,6 +500,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						{
 							Key:   "twitter_mentionroleid",
 							Value: mentionRole.ID,
+							Type:  models.EventlogTargetTypeRole,
 						},
 						{
 							Key:   "twitter_postmode",
@@ -550,6 +552,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 							{
 								Key:   "twitter_channelid",
 								Value: entryBucket.ChannelID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 							{
 								Key:   "twitter_accountscreename",
@@ -562,6 +565,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 							{
 								Key:   "twitter_mentionroleid",
 								Value: entryBucket.MentionRoleID,
+								Type:  models.EventlogTargetTypeRole,
 							},
 							{
 								Key:   "twitter_postmode",

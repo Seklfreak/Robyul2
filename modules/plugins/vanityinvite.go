@@ -184,6 +184,7 @@ func (vi VanityInvite) actionRemove(args []string, in *discordgo.Message, out **
 			{
 				Key:   "vanityinvite_channelid",
 				Value: vanityInvite.ChannelID,
+				Type:  models.EventlogTargetTypeChannel,
 			},
 		}, false)
 	helpers.RelaxLog(err)

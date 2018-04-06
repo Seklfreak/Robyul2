@@ -303,6 +303,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 						{
 							Key:   "vlive_feed_channelid",
 							Value: targetChannel.ID,
+							Type:  models.EventlogTargetTypeChannel,
 						},
 						{
 							Key:   "vlive_feed_vlivechannel_name",
@@ -315,6 +316,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 						{
 							Key:   "vlive_feed_mentionroleid",
 							Value: mentionRole.ID,
+							Type:  models.EventlogTargetTypeRole,
 						},
 					}, false)
 				helpers.RelaxLog(err)
@@ -360,6 +362,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 							{
 								Key:   "vlive_feed_channelid",
 								Value: helpers.MdbIdToHuman(entryBucket.ID),
+								Type:  models.EventlogTargetTypeChannel,
 							},
 							{
 								Key:   "vlive_feed_vlivechannel_name",
@@ -372,6 +375,7 @@ func (r *VLive) Action(command string, content string, msg *discordgo.Message, s
 							{
 								Key:   "vlive_feed_mentionroleid",
 								Value: entryBucket.MentionRoleID,
+								Type:  models.EventlogTargetTypeRole,
 							},
 						}, false)
 					helpers.RelaxLog(err)

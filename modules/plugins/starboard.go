@@ -201,6 +201,7 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 					{
 						Key:   "starboard_emoji",
 						Value: strings.Join(s.getEmoji(channel.GuildID), ","),
+						Type:  models.EventlogTargetTypeEmoji,
 					},
 					{
 						Key:   "starboard_minimum",
@@ -238,6 +239,7 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 				Key:      "starboard_channelid",
 				OldValue: previousChannelID,
 				NewValue: guildSettings.StarboardChannelID,
+				Type:     models.EventlogTargetTypeChannel,
 			},
 		}
 	}
@@ -250,6 +252,7 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 			{
 				Key:   "starboard_emoji",
 				Value: strings.Join(s.getEmoji(channel.GuildID), ","),
+				Type:  models.EventlogTargetTypeEmoji,
 			},
 			{
 				Key:   "starboard_minimum",
@@ -360,6 +363,7 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 			{
 				Key:   "starboard_emoji_added",
 				Value: newEmoji,
+				Type:  models.EventlogTargetTypeEmoji,
 			},
 		}
 	} else {
@@ -367,6 +371,7 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 			{
 				Key:   "starboard_emoji_removed",
 				Value: newEmoji,
+				Type:  models.EventlogTargetTypeEmoji,
 			},
 		}
 	}

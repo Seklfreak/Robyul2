@@ -74,6 +74,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 								Key:      "troublemaker_participate_channel",
 								OldValue: previousChannel,
 								NewValue: settings.TroublemakerLogChannel,
+								Type:     models.EventlogTargetTypeChannel,
 							},
 						}
 					}
@@ -92,6 +93,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 							{
 								Key:   "troublemaker_participate_channel",
 								Value: targetChannel.ID,
+								Type:  models.EventlogTargetTypeChannel,
 							},
 						}, false)
 					helpers.RelaxLog(err)
