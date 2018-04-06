@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
@@ -15,26 +18,37 @@ const (
 	LEFT_ARROW_EMOJI  = "⬅"
 	RIGHT_ARROW_EMOJI = "➡"
 	X_EMOJI           = "🇽"
+	NAV_NUMBERS       = "🔢"
 )
 
 // map of messageID to pagedEmbedMessage
 var pagedEmbededMessages map[string]*pagedEmbedMessage
+var validReactions map[string]bool
 
 type pagedEmbedMessage struct {
-	files           []*discordgo.File
-	fullEmbed       *discordgo.MessageEmbed
-	totalNumOfPages int
-	currentPage     int
-	fieldsPerPage   int
-	color           int
-	messageID       string
-	channelID       string
-	userId          string //user who triggered the message
-	msgType         string // "image" - will cause the embed to page through the files instead of fields
+	files               []*discordgo.File
+	fullEmbed           *discordgo.MessageEmbed
+	totalNumOfPages     int
+	currentPage         int
+	fieldsPerPage       int
+	color               int
+	messageID           string
+	channelID           string
+	userId              string //user who triggered the message
+	msgType             string // "image" - will cause the embed to page through the files instead of fields
+	waitingForPageInput bool
 }
 
 func init() {
 	pagedEmbededMessages = make(map[string]*pagedEmbedMessage)
+
+	validReactions = map[string]bool{
+		LEFT_ARROW_EMOJI:  true,
+		RIGHT_ARROW_EMOJI: true,
+		X_EMOJI:           true,
+		NAV_NUMBERS:       true,
+	}
+
 }
 
 // will remove all reactions from all paged embed messages.
@@ -42,9 +56,9 @@ func init() {
 func RemoveReactionsFromPagedEmbeds() {
 	// TODO: sync group? Without blocking bot shutdown
 	for _, pagedEmbed := range pagedEmbededMessages {
-		go func() {
+		go func(pagedEmbed *pagedEmbedMessage) {
 			cache.GetSession().MessageReactionsRemoveAll(pagedEmbed.channelID, pagedEmbed.messageID)
-		}()
+		}(pagedEmbed)
 	}
 }
 
@@ -71,12 +85,13 @@ func SendPagedMessage(msg *discordgo.Message, embed *discordgo.MessageEmbed, fie
 
 	// create paged message
 	pagedMessage := &pagedEmbedMessage{
-		fullEmbed:       embed,
-		channelID:       msg.ChannelID,
-		currentPage:     1,
-		fieldsPerPage:   fieldsPerPage,
-		totalNumOfPages: int(math.Ceil(float64(len(embed.Fields)) / float64(fieldsPerPage))),
-		userId:          msg.Author.ID,
+		waitingForPageInput: false,
+		fullEmbed:           embed,
+		channelID:           msg.ChannelID,
+		currentPage:         1,
+		fieldsPerPage:       fieldsPerPage,
+		totalNumOfPages:     int(math.Ceil(float64(len(embed.Fields)) / float64(fieldsPerPage))),
+		userId:              msg.Author.ID,
 	}
 
 	pagedMessage.setupAndSendFirstMessage()
@@ -102,14 +117,15 @@ func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSen
 
 	// create paged message
 	pagedMessage := &pagedEmbedMessage{
-		fullEmbed:       msgSend.Embed,
-		channelID:       msg.ChannelID,
-		currentPage:     1,
-		fieldsPerPage:   fieldsPerPage,
-		totalNumOfPages: len(msgSend.Files),
-		files:           msgSend.Files,
-		userId:          msg.Author.ID,
-		msgType:         "image",
+		waitingForPageInput: false,
+		fullEmbed:           msgSend.Embed,
+		channelID:           msg.ChannelID,
+		currentPage:         1,
+		fieldsPerPage:       fieldsPerPage,
+		totalNumOfPages:     len(msgSend.Files),
+		files:               msgSend.Files,
+		userId:              msg.Author.ID,
+		msgType:             "image",
 	}
 
 	pagedMessage.setupAndSendFirstMessage()
@@ -121,18 +137,31 @@ func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSen
 // UpdateMessagePage will update the page based on the given direction and current page
 //  reactions must be the left or right arrow
 func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactionAdd) {
+
 	// check for valid reaction
-	if LEFT_ARROW_EMOJI != reaction.Emoji.Name && RIGHT_ARROW_EMOJI != reaction.Emoji.Name && X_EMOJI != reaction.Emoji.Name {
+	if !validReactions[reaction.Emoji.Name] || reaction.UserID != p.userId {
 		return
 	}
 
 	// check if user who made the embed message is closing it
 	if X_EMOJI == reaction.Emoji.Name {
-		if reaction.UserID == p.userId {
-			delete(pagedEmbededMessages, reaction.MessageID)
-			cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
-		}
+		delete(pagedEmbededMessages, reaction.MessageID)
+		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
 		return
+	}
+
+	// check if user wants to navigate to a specific page
+	if NAV_NUMBERS == reaction.Emoji.Name {
+		if p.waitingForPageInput {
+			return
+		}
+
+		// if the page entered is valid and not already the current page, then update
+		if page, err := p.getUserInputPage(); err == nil && p.currentPage != page {
+			p.currentPage = page
+		} else {
+			return
+		}
 	}
 
 	// update current page based on direction
@@ -209,7 +238,6 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 
 		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 	}
-
 }
 
 // setupAndSendFirstMessage
@@ -278,5 +306,67 @@ func (p *pagedEmbedMessage) getEmbedFooter() *discordgo.MessageEmbedFooter {
 func (p *pagedEmbedMessage) addReactionsToMessage() {
 	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, LEFT_ARROW_EMOJI)
 	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, RIGHT_ARROW_EMOJI)
+
+	if p.totalNumOfPages > 5 {
+		cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, NAV_NUMBERS)
+	}
+
 	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, X_EMOJI)
+}
+
+// getUserInputPage waits for the user to enter a page
+func (p *pagedEmbedMessage) getUserInputPage() (int, error) {
+	queryMsg, err := SendMessage(p.channelID, "<@"+p.userId+"> Which page would you like to open? <:blobidea:317047867036663809>")
+	if err != nil {
+		return 0, err
+	}
+
+	defer cache.GetSession().ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
+
+	timeoutChan := make(chan int)
+	go func() {
+		time.Sleep(time.Second * 45)
+		timeoutChan <- 0
+	}()
+
+	p.waitingForPageInput = true
+	for {
+		select {
+		case userMsg := <-waitForUserMessage():
+
+			// check for user who opened embed
+			if userMsg.Author.ID != p.userId {
+				continue
+			}
+
+			// get page number from user text
+			re := regexp.MustCompile("[0-9]+")
+			if userEnteredNum, err := strconv.Atoi(re.FindString(userMsg.Content)); err == nil {
+
+				// delete user message and remove reaction
+				go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
+				go cache.GetSession().MessageReactionRemove(p.channelID, p.messageID, NAV_NUMBERS, p.userId)
+
+				p.waitingForPageInput = false
+				if userEnteredNum > 0 && userEnteredNum <= p.totalNumOfPages {
+
+					return userEnteredNum, nil
+				} else {
+					return 0, errors.New("Page out of embed message range")
+				}
+			}
+		case <-timeoutChan:
+			go cache.GetSession().MessageReactionRemove(p.channelID, p.messageID, NAV_NUMBERS, p.userId)
+			p.waitingForPageInput = false
+			return 0, errors.New("Timed out")
+		}
+	}
+}
+
+func waitForUserMessage() chan *discordgo.MessageCreate {
+	out := make(chan *discordgo.MessageCreate)
+	cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
+		out <- e
+	})
+	return out
 }

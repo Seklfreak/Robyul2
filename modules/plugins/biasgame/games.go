@@ -408,16 +408,19 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.not-enough-idols"))
 			return nil
 		}
+
 		// show a warning if the game size is >= 256, wait for confirm
 		if gameSize >= 256 {
+
 			if !helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetText("plugins.biasgame.game.size-warning"), "✅", "🚫") {
 				return nil
 			}
-		}
-		// recheck if a game is still going on, see above
-		if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
-			game.ChannelID = msg.ChannelID
-			return game
+
+			// recheck if a game is still going on, see above
+			if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+				game.ChannelID = msg.ChannelID
+				return game
+			}
 		}
 
 		// create new game
@@ -618,6 +621,13 @@ func (g *singleBiasGame) sendWinnerMessage() {
 
 // finishSingleGame sends the winner message, records stats, and deletes game
 func (g *singleBiasGame) finishSingleGame() {
+	defer g.recoverGame()
+
+	// used to make sure the game finish isn't triggered twice
+	if g.GameWinnerBias != nil {
+		return
+	}
+
 	g.GameWinnerBias = g.BiasQueue[0]
 	g.sendWinnerMessage()
 
@@ -665,7 +675,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	if len(commandArgs) >= 2 {
 
 		if gameGender, ok = biasGameGenders[commandArgs[1]]; ok == false {
-			// todo: some message probably
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			return
 		}
 	} else {
@@ -911,7 +921,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 	encoder.Encode(buf, bracketImage)
 	myReader := bytes.NewReader(buf.Bytes())
 
-	messageString := fmt.Sprintf("\nWinner: %s %s!",
+	messageString := fmt.Sprintf("**Multi Game**\nWinner: %s %s!",
 		g.GameWinnerBias.GroupName,
 		g.GameWinnerBias.BiasName)
 

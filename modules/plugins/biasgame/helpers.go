@@ -263,6 +263,7 @@ func getRandomNayoungEmoji() string {
 		":nayoungheart6:430592739868934164",
 		":nayoungheart2:430592737004224514",
 		":nayoungheart:430592736496713738",
+		":nayoungok:424683077793611777",
 		"a:anayoungminnie:430592552610299924",
 	}
 

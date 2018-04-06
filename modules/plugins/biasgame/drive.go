@@ -232,32 +232,48 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 	targetName := contentArgs[1]
 	newGroup := contentArgs[2]
 	newName := contentArgs[3]
+	updateGender := false
 
 	// if a gender was passed, make sure its valid
 	if len(contentArgs) == 5 {
+		updateGender = true
 		if contentArgs[4] != "boy" && contentArgs[4] != "girl" {
 			helpers.SendMessage(msg.ChannelID, "Invalid gender. Gender must be exactly 'girl' or 'boy'. No information was updated.")
 			return
 		}
 	}
 
+	// attempt to find a matching idol of the new group and name,
+	_, _, matchingBias := getMatchingIdolAndGroup(newGroup, newName)
+
 	// update biases in memory
 	recordsFound := 0
 	allBiases := getAllBiases()
 	allBiasesMutex.Lock()
-	for _, bias := range allBiases {
-		if bias.BiasName != targetName || bias.GroupName != targetGroup {
+	for biasIndex, targetBias := range allBiases {
+		if targetBias.BiasName != targetName || targetBias.GroupName != targetGroup {
 			continue
 		}
 		recordsFound++
 
-		bias.BiasName = newName
-		bias.GroupName = newGroup
-		if len(contentArgs) == 5 && (contentArgs[4] == "boy" || contentArgs[4] == "girl") {
-			bias.Gender = contentArgs[4]
+		// if a matching idol was is found, just assign the targets images to it and delete
+		if matchingBias != nil {
+
+			matchingBias.BiasImages = append(matchingBias.BiasImages, targetBias.BiasImages...)
+			allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
+
+		} else {
+
+			// update targetbias name and group
+			targetBias.BiasName = newName
+			targetBias.GroupName = newGroup
+			if updateGender {
+				targetBias.Gender = contentArgs[4]
+			}
 		}
 	}
 	allBiasesMutex.Unlock()
+	setAllBiases(allBiases)
 
 	// check if nothing was found
 	if recordsFound == 0 {

@@ -165,8 +165,8 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 			continue
 		}
 
-		// if the difference is 3 or less let the user know the image already exists
-		if compareVal <= 5 {
+		// if the difference is 1 or less let the user know the image already exists
+		if compareVal <= 1 {
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.image-is-suggested"))
 			return
 		}
@@ -563,7 +563,7 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 				continue
 			}
 
-			if compareVal <= 10 {
+			if compareVal <= 3 {
 				compareValues = append(compareValues, compareVal)
 				matchingImages[compareVal] = append(matchingImages[compareVal], curBImage)
 			}
