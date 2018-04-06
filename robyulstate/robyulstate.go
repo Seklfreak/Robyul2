@@ -528,7 +528,7 @@ func (s *Robyulstate) RoleAdd(guildID string, role *discordgo.Role) error {
 				oldRole.Mentionable != role.Mentionable ||
 				oldRole.Hoist != role.Hoist ||
 				oldRole.Color != role.Color ||
-				oldRole.Position != role.Position ||
+				//oldRole.Position != role.Position ||
 				oldRole.Permissions != role.Permissions {
 				helpers.OnEventlogRoleUpdate(guildID, oldRole, role)
 			}

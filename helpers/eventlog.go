@@ -693,13 +693,15 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 		backfill = true
 	}
 
-	if oldChannel.Position != newChannel.Position {
-		changes = append(changes, models.ElasticEventlogChange{
-			Key:      "channel_position",
-			OldValue: strconv.Itoa(oldChannel.Position),
-			NewValue: strconv.Itoa(newChannel.Position),
-		})
-	}
+	/*
+		if oldChannel.Position != newChannel.Position {
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "channel_position",
+				OldValue: strconv.Itoa(oldChannel.Position),
+				NewValue: strconv.Itoa(newChannel.Position),
+			})
+		}
+	*/
 
 	if oldChannel.Bitrate != newChannel.Bitrate {
 		changes = append(changes, models.ElasticEventlogChange{
@@ -842,13 +844,15 @@ func OnEventlogRoleUpdate(guildID string, oldRole, newRole *discordgo.Role) {
 		})
 	}
 
-	if oldRole.Position != newRole.Position {
-		changes = append(changes, models.ElasticEventlogChange{
-			Key:      "role_position",
-			OldValue: strconv.Itoa(oldRole.Position),
-			NewValue: strconv.Itoa(newRole.Position),
-		})
-	}
+	/*
+		if oldRole.Position != newRole.Position {
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "role_position",
+				OldValue: strconv.Itoa(oldRole.Position),
+				NewValue: strconv.Itoa(newRole.Position),
+			})
+		}
+	*/
 
 	if oldRole.Permissions != newRole.Permissions {
 		changes = append(changes, models.ElasticEventlogChange{
