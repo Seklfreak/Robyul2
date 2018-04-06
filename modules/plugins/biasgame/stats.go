@@ -16,6 +16,8 @@ import (
 
 // displayBiasGameStats will display stats for the bias game based on the stats message
 func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
 	queryParams, iconURL, targetName := getStatsQueryInfo(msg, statsMessage)
 
 	var games []models.BiasGameEntry
@@ -95,6 +97,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 
 // listIdolsInGame will list all idols that can show up in the biasgame
 func listIdolsInGame(msg *discordgo.Message) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	genderCountMap := make(map[string]int)
 
@@ -149,6 +152,7 @@ func listIdolsInGame(msg *discordgo.Message) {
 // showImagesForIdol will show a embed message with all the available images for an idol
 func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectNames bool) {
 	defer helpers.Recover()
+	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	commandArgs := str.ToArgv(msgContent)[1:]
 	if len(commandArgs) < 2 {
@@ -177,6 +181,8 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 
 // listIdolsInGame will list all idols that can show up in the biasgame
 func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bool) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
 	rankType := "user"
 	gameType := "single"
 	embedTitle := "Bias Game User Rankings"
