@@ -727,12 +727,12 @@ func auditlogBackfillLoop() {
 
 		elapsed := time.Since(start)
 		logger().Infof("did %d audit log backfills, %d entries backfilled, took %s",
-			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs)+len(channelCreateBackfillGuildIDs)+
-				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+len(roleUpdateBackfillGuildIDs)+
+			len(channelCreateBackfillGuildIDs)+len(channelDeleteBackfillGuildIDs)+
+				len(roleCreateBackfillGuildIDs)+len(roleDeleteBackfillGuildIDs)+
 				len(banAddBackfillGuildIDs)+len(banRemoveBackfillGuildIDs)+
 				len(memberRemoveBackfillGuildIDs)+
 				len(emojiCreateBackfillGuildIDs)+len(emojiDeleteBackfillGuildIDs)+len(emojiUpdateBackfillGuildIDs)+
-				len(guildUpdateBackfillGuildIDs),
+				len(guildUpdateBackfillGuildIDs)+len(channelUpdateBackfillGuildIDs)+len(roleUpdateBackfillGuildIDs),
 			successfulBackfills, elapsed)
 		metrics.EventlogAuditLogBackfillTime.Set(elapsed.Seconds())
 	}

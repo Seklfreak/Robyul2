@@ -657,6 +657,8 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.Channel) {
 	leftAt := time.Now()
 
+	var backfill bool
+
 	changes := make([]models.ElasticEventlogChange, 0)
 
 	if oldChannel.Name != newChannel.Name {
@@ -665,6 +667,7 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 			OldValue: oldChannel.Name,
 			NewValue: newChannel.Name,
 		})
+		backfill = true
 	}
 
 	if oldChannel.Topic != newChannel.Topic {
@@ -673,6 +676,7 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 			OldValue: oldChannel.Topic,
 			NewValue: newChannel.Topic,
 		})
+		backfill = true
 	}
 
 	if oldChannel.NSFW != newChannel.NSFW {
@@ -681,6 +685,7 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 			OldValue: StoreBoolAsString(oldChannel.NSFW),
 			NewValue: StoreBoolAsString(newChannel.NSFW),
 		})
+		backfill = true
 	}
 
 	if oldChannel.Position != newChannel.Position {
@@ -711,17 +716,18 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 	if !ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
 		// TODO: handle permission overwrites
 		/*
-			changes = append(changes, models.ElasticEventlogChange{
-				Key:      "channel_permissionoverwrites",
-				OldValue: oldChannel.PermissionOverwrites,
-				NewValue: newChannel.PermissionOverwrites,
-			})
+				changes = append(changes, models.ElasticEventlogChange{
+					Key:      "channel_permissionoverwrites",
+					OldValue: oldChannel.PermissionOverwrites,
+					NewValue: newChannel.PermissionOverwrites,
+				})
+			backfill = true
 		*/
 	}
 
-	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, true)
+	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, backfill)
 	RelaxLog(err)
-	if added {
+	if added && backfill {
 		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeChannelUpdate)
 		RelaxLog(err)
 	}
