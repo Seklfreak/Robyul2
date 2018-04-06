@@ -12,7 +12,6 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack"
@@ -75,14 +74,6 @@ func (g *Gallery) Action(command string, content string, msg *discordgo.Message,
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 				if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					return
-				}
-
-				targetChannelPermission, err := session.State.UserChannelPermissions(session.State.User.ID, targetChannel.ID)
-				helpers.Relax(err)
-				if targetChannelPermission&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator &&
-					targetChannelPermission&discordgo.PermissionManageWebhooks != discordgo.PermissionManageWebhooks {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
 					return
 				}
 
@@ -247,33 +238,38 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 				}
 				// get webhook
 				webhooks, err := helpers.GetWebhooks(gallery.GuildID, gallery.TargetChannelID, 1)
-				helpers.Relax(err)
+				if err != nil && !strings.Contains(err.Error(), "no permission to manage webhooks") {
+					helpers.Relax(err)
+				}
 				// post mirror links
 				if len(linksToRepost) > 0 {
 					for _, linkToRepost := range linksToRepost {
-						result, err := helpers.WebhookExecuteWithResult(
-							webhooks[0].ID,
-							webhooks[0].Token,
-							&discordgo.WebhookParams{
-								Content:   fmt.Sprintf("posted %s in <#%s>", linkToRepost, gallery.SourceChannelID),
-								Username:  msg.Author.Username,
-								AvatarURL: helpers.GetAvatarUrl(msg.Author),
-							},
-						)
-						if err != nil {
-							if errD, ok := err.(*discordgo.RESTError); ok {
-								if errD.Message.Code == 10015 {
-									cache.GetLogger().WithField("module", "gallery").Warnf("Webhook for gallery #%s not found", gallery.ID)
-									continue
-								}
+						var newMessage *discordgo.Message
+						if webhooks != nil && len(webhooks) > 0 {
+							newMessage, err = helpers.WebhookExecuteWithResult(
+								webhooks[0].ID,
+								webhooks[0].Token,
+								&discordgo.WebhookParams{
+									Content:   fmt.Sprintf("posted %s in <#%s>", linkToRepost, gallery.SourceChannelID),
+									Username:  msg.Author.Username,
+									AvatarURL: helpers.GetAvatarUrl(msg.Author),
+								},
+							)
+							if err != nil {
+								helpers.RelaxLog(err)
+								continue
 							}
-							helpers.RelaxLog(err)
-							continue
+						} else {
+							newMessages, err := helpers.SendMessage(gallery.TargetChannelID,
+								fmt.Sprintf("%s posted %s in <#%s>", msg.Author.Username, linkToRepost, gallery.SourceChannelID))
+							if err != nil {
+								helpers.RelaxLog(err)
+								continue
+							}
+							newMessage = newMessages[0]
 						}
-						err = g.rememberPostedMessage(msg, result)
-						if err != nil {
-							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-						}
+						err = g.rememberPostedMessage(msg, newMessage)
+						helpers.RelaxLog(err)
 						metrics.GalleryPostsSent.Add(1)
 					}
 				}
