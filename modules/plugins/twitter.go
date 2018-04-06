@@ -357,6 +357,10 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		elapsed := time.Since(start)
 		cache.GetLogger().WithField("module", "twitter").Infof("checked %d accounts for %d feeds, took %s", len(bundledEntries), len(twitterEntriesCache), elapsed)
 		metrics.TwitterRefreshTime.Set(elapsed.Seconds())
+
+		if len(bundledEntries) <= 10 {
+			time.Sleep(10 * time.Minute)
+		}
 	}
 }
 
