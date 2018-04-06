@@ -184,20 +184,22 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				return
 			}
 
+			newEntry := models.CustomCommandsEntry{
+				GuildID:           channel.GuildID,
+				CreatedByUserID:   msg.Author.ID,
+				CreatedAt:         time.Now(),
+				Triggered:         0,
+				Keyword:           args[1],
+				StorageObjectName: objectName,
+				Content:           content,
+			}
 			_, err = helpers.MDbInsert(
 				models.CustomCommandsTable,
-				models.CustomCommandsEntry{
-					GuildID:           channel.GuildID,
-					CreatedByUserID:   msg.Author.ID,
-					CreatedAt:         time.Now(),
-					Triggered:         0,
-					Keyword:           args[1],
-					StorageObjectName: objectName,
-					Content:           content,
-				},
+				newEntry,
 			)
 			helpers.Relax(err)
 
+			addedContent, _, _ := cc.getCommandContent(newEntry)
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 				models.EventlogTargetTypeGuild, msg.Author.ID,
 				models.EventlogTypeRobyulCommandsAdd, "",
@@ -209,7 +211,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					},
 					{
 						Key:   "command_content",
-						Value: strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1)),
+						Value: addedContent,
 					},
 				}, false)
 			helpers.RelaxLog(err)
@@ -411,6 +413,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.Relax(err)
 			}
 
+			removedContent, _, _ := cc.getCommandContent(entryBucket)
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 				models.EventlogTargetTypeGuild, msg.Author.ID,
 				models.EventlogTypeRobyulCommandsDelete, "",
@@ -422,7 +425,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					},
 					{
 						Key:   "command_content",
-						Value: entryBucket.Content,
+						Value: removedContent,
 					},
 				}, false)
 			helpers.RelaxLog(err)
@@ -457,6 +460,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
 				return
 			}
+
+			beforeContent, _, _ := cc.getCommandContent(entryBucket)
 
 			if entryBucket.StorageObjectName != "" {
 				err = helpers.DeleteFile(entryBucket.StorageObjectName)
@@ -494,8 +499,6 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 				}
 			}
 
-			beforeContent := entryBucket.Content
-
 			if entryBucket.StorageObjectName != "" {
 				err = helpers.DeleteFile(entryBucket.StorageObjectName)
 				helpers.RelaxLog(err)
@@ -519,6 +522,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			err = helpers.MDbUpdate(models.CustomCommandsTable, entryBucket.ID, entryBucket)
 			helpers.Relax(err)
 
+			afterContent, _, _ := cc.getCommandContent(entryBucket)
+
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, channel.GuildID,
 				models.EventlogTargetTypeGuild, msg.Author.ID,
 				models.EventlogTypeRobyulCommandsUpdate, "",
@@ -526,7 +531,7 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 					{
 						Key:      "command_content",
 						OldValue: beforeContent,
-						NewValue: entryBucket.Content,
+						NewValue: afterContent,
 					},
 				},
 				[]models.ElasticEventlogOption{
