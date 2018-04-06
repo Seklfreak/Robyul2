@@ -675,7 +675,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	if len(commandArgs) >= 2 {
 
 		if gameGender, ok = biasGameGenders[commandArgs[1]]; ok == false {
-			// todo: some message probably
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			return
 		}
 	} else {
