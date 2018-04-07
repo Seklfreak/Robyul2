@@ -102,6 +102,10 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 				*out = m.newMsg("bot.arguments.invalid")
 				return m.actionFinish
 			}
+			if strings.Contains(err.Error(), "no permission to manage webhooks") {
+				*out = m.newMsg("plugins.move.no-webhook-permissions")
+				return m.actionFinish
+			}
 		}
 		helpers.Relax(err)
 	}
@@ -166,6 +170,10 @@ func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMessage {
 				*out = m.newMsg("bot.arguments.invalid")
+				return m.actionFinish
+			}
+			if strings.Contains(err.Error(), "no permission to manage webhooks") {
+				*out = m.newMsg("plugins.move.no-webhook-permissions")
 				return m.actionFinish
 			}
 		}
@@ -295,10 +303,7 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 		for _, messageToDelete := range messagesToMove {
 			bulkDeleteMessageIDs = append(bulkDeleteMessageIDs, messageToDelete.ID)
 		}
-		err := cache.GetSession().ChannelMessagesBulkDelete(sourceChannelID, bulkDeleteMessageIDs)
-		if err != nil {
-			return err
-		}
+		cache.GetSession().ChannelMessagesBulkDelete(sourceChannelID, bulkDeleteMessageIDs)
 	}
 
 	return nil
