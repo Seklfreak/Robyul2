@@ -270,3 +270,15 @@ func getRandomNayoungEmoji() string {
 	randomIndex := rand.Intn(len(nayoungEmojiArray))
 	return nayoungEmojiArray[randomIndex]
 }
+
+// checks if the error is a permissions error and notifies the user
+func checkPermissionError(err error, channelID string) {
+	if err == nil {
+		return
+	}
+
+	// check if error is a permissions error
+	if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeMissingPermissions {
+		helpers.SendMessage(channelID, helpers.GetText("bot.errors.no-file"))
+	}
+}

@@ -2,6 +2,7 @@ package biasgame
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/draw"
@@ -161,9 +162,6 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		loadMiscImages()
 		startBiasCacheRefreshLoop()
 
-		// set up suggestions channel
-		initSuggestionChannel()
-
 		// get any in progress games saved in cache and immediatly delete them
 		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
 		bgLog().Infof("restored %d singleplayer biasgames on launch", len(currentSinglePlayerGames))
@@ -181,8 +179,10 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		// spew.Dump(currentSinglePlayerGames)
 		delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
 
-		// this line should always be last in this function
 		gameIsReady = true
+
+		// set up suggestions channel
+		initSuggestionChannel()
 	}()
 }
 
@@ -460,7 +460,7 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 	defer g.recoverGame()
 
 	// check if reaction was added to the message of the game
-	if g.LastRoundMessage.ID == reaction.MessageID && g.ReadyForReaction == true {
+	if g.ReadyForReaction == true && g.LastRoundMessage.ID == reaction.MessageID {
 
 		winnerIndex := 0
 		loserIndex := 0
@@ -554,16 +554,17 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	// send round message
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
+		checkPermissionError(err, g.ChannelID)
 		return
 	}
-
-	// add reactions
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
-	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 
 	// update game state
 	g.LastRoundMessage = fileSendMsg[0]
 	g.ReadyForReaction = true
+
+	// add reactions
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
+	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
@@ -734,9 +735,9 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 }
 
 // sendMultiBiasGameRound sends the next round for the multi game
-func (g *multiBiasGame) sendMultiBiasGameRound() {
+func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	if g == nil {
-		return
+		return errors.New("Game is nil")
 	}
 
 	// if a round message has been sent, delete before sending the next one
@@ -766,7 +767,9 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	// send round message
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
-		return
+		checkPermissionError(err, g.ChannelID)
+		g.deleteMultiGame()
+		return errors.New("Could not send round")
 	}
 
 	// add reactions
@@ -776,6 +779,7 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	// update game state
 	g.CurrentRoundMessageId = fileSendMsg[0].ID
 	g.LastRoundMessage = fileSendMsg[0]
+	return nil
 }
 
 // start multi game loop. every 10 seconds count the number of arrow reactions. whichever side has most wins
@@ -784,7 +788,10 @@ func (g *multiBiasGame) processMultiGame() {
 	for g.IdolsRemaining != 1 {
 
 		// send next rounds and sleep
-		g.sendMultiBiasGameRound()
+		err := g.sendMultiBiasGameRound()
+		if err != nil {
+			return
+		}
 		time.Sleep(time.Second * MULTIPLAYER_ROUND_DELAY)
 
 		// get current round message
@@ -870,6 +877,12 @@ func (g *multiBiasGame) processMultiGame() {
 		defer helpers.Recover()
 		recordMultiGamesStats(g)
 	}(g)
+
+	g.deleteMultiGame()
+}
+
+// removes game from current multi games
+func (g *multiBiasGame) deleteMultiGame() {
 
 	// delete multi game from current multi games
 	for i, game := range currentMultiPlayerGames {

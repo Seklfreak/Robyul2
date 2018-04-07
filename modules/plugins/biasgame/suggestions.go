@@ -474,8 +474,8 @@ func updateCurrentSuggestionEmbed() {
 	clearSuggestionsChannel()
 
 	// send new embed message
-	var embedMsg *discordgo.Message
-	embedMsg, _ = cache.GetSession().ChannelMessageSendComplex(imageSuggestionChannlId, msgSend)
+	embedMsg, err := cache.GetSession().ChannelMessageSendComplex(imageSuggestionChannlId, msgSend)
+	helpers.Relax(err)
 	suggestionEmbedMessageId = embedMsg.ID
 
 	updateSuggestionQueueCount()

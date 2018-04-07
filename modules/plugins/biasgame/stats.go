@@ -14,6 +14,14 @@ import (
 	"github.com/mgutz/str"
 )
 
+type rankingStruct struct {
+	userId           string
+	guildId          string
+	amountOfGames    int
+	idolWithMostWins string
+	userName         string
+}
+
 // displayBiasGameStats will display stats for the bias game based on the stats message
 func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
@@ -218,14 +226,6 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 
 			filterGuild = guild
 		}
-	}
-
-	type rankingStruct struct {
-		userId           string
-		guildId          string
-		amountOfGames    int
-		idolWithMostWins string
-		userName         string
 	}
 
 	var games []models.BiasGameEntry
