@@ -101,6 +101,9 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 		RetryGraphQl:
 			_, receivedPosts, err := m.getInformationAndPosts(instagramUsername, currentProxy)
 			if err != nil {
+				if strings.Contains(err.Error(), "expected status 200; got 404") {
+					continue NextEntry
+				}
 				if m.retryOnError(err) {
 					//cache.GetLogger().WithField("module", "instagram").Infof(
 					//	"proxy error connecting to Instagram Account %s (GraphQL), "+
