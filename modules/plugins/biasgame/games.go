@@ -2,6 +2,7 @@ package biasgame
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/draw"
@@ -553,6 +554,7 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	// send round message
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
+		checkPermissionError(err, g.ChannelID)
 		return
 	}
 
@@ -733,9 +735,9 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 }
 
 // sendMultiBiasGameRound sends the next round for the multi game
-func (g *multiBiasGame) sendMultiBiasGameRound() {
+func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	if g == nil {
-		return
+		return errors.New("Game is nil")
 	}
 
 	// if a round message has been sent, delete before sending the next one
@@ -765,7 +767,9 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	// send round message
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
-		return
+		checkPermissionError(err, g.ChannelID)
+		g.deleteMultiGame()
+		return errors.New("Could not send round")
 	}
 
 	// add reactions
@@ -775,6 +779,7 @@ func (g *multiBiasGame) sendMultiBiasGameRound() {
 	// update game state
 	g.CurrentRoundMessageId = fileSendMsg[0].ID
 	g.LastRoundMessage = fileSendMsg[0]
+	return nil
 }
 
 // start multi game loop. every 10 seconds count the number of arrow reactions. whichever side has most wins
@@ -783,7 +788,10 @@ func (g *multiBiasGame) processMultiGame() {
 	for g.IdolsRemaining != 1 {
 
 		// send next rounds and sleep
-		g.sendMultiBiasGameRound()
+		err := g.sendMultiBiasGameRound()
+		if err != nil {
+			return
+		}
 		time.Sleep(time.Second * MULTIPLAYER_ROUND_DELAY)
 
 		// get current round message
@@ -869,6 +877,12 @@ func (g *multiBiasGame) processMultiGame() {
 		defer helpers.Recover()
 		recordMultiGamesStats(g)
 	}(g)
+
+	g.deleteMultiGame()
+}
+
+// removes game from current multi games
+func (g *multiBiasGame) deleteMultiGame() {
 
 	// delete multi game from current multi games
 	for i, game := range currentMultiPlayerGames {
