@@ -460,7 +460,7 @@ func (g *singleBiasGame) processVote(reaction *discordgo.MessageReactionAdd) {
 	defer g.recoverGame()
 
 	// check if reaction was added to the message of the game
-	if g.LastRoundMessage.ID == reaction.MessageID && g.ReadyForReaction == true {
+	if g.ReadyForReaction == true && g.LastRoundMessage.ID == reaction.MessageID {
 
 		winnerIndex := 0
 		loserIndex := 0
@@ -557,13 +557,13 @@ func (g *singleBiasGame) sendBiasGameRound() {
 		return
 	}
 
-	// add reactions
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
-	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
-
 	// update game state
 	g.LastRoundMessage = fileSendMsg[0]
 	g.ReadyForReaction = true
+
+	// add reactions
+	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
+	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
