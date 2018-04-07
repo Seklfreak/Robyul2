@@ -161,9 +161,6 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		loadMiscImages()
 		startBiasCacheRefreshLoop()
 
-		// set up suggestions channel
-		initSuggestionChannel()
-
 		// get any in progress games saved in cache and immediatly delete them
 		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
 		bgLog().Infof("restored %d singleplayer biasgames on launch", len(currentSinglePlayerGames))
@@ -181,8 +178,10 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		// spew.Dump(currentSinglePlayerGames)
 		delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
 
-		// this line should always be last in this function
 		gameIsReady = true
+
+		// set up suggestions channel
+		initSuggestionChannel()
 	}()
 }
 
