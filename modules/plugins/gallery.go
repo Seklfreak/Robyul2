@@ -236,6 +236,11 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 						}
 					}
 				}
+				// check if we have target channel
+				_, err = helpers.GetChannelWithoutApi(gallery.TargetChannelID)
+				if err != nil {
+					continue TryNextGallery
+				}
 				// get webhook
 				webhooks, err := helpers.GetWebhooks(gallery.GuildID, gallery.TargetChannelID, 1)
 				if err != nil && !strings.Contains(err.Error(), "no permission to manage webhooks") {
