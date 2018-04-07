@@ -249,7 +249,7 @@ func (m *GuildAnnouncements) Action(command string, content string, msg *discord
 			helpers.Relax(err)
 
 			if entryBucket == nil || len(entryBucket) <= 0 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.guildannouncements.list-none")) // TODO
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.guildannouncements.list-none")) // TODO
 				return
 			}
 
