@@ -19,6 +19,9 @@ const (
 	RIGHT_ARROW_EMOJI = "➡"
 	X_EMOJI           = "🇽"
 	NAV_NUMBERS       = "🔢"
+
+	FIELD_MESSAGE_TYPE = iota
+	IMAGE_MESSAGE_TYPE
 )
 
 // map of messageID to pagedEmbedMessage
@@ -35,7 +38,7 @@ type pagedEmbedMessage struct {
 	messageID           string
 	channelID           string
 	userId              string //user who triggered the message
-	msgType             string // "image" - will cause the embed to page through the files instead of fields
+	msgType             int
 	waitingForPageInput bool
 }
 
@@ -125,7 +128,7 @@ func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSen
 		totalNumOfPages:     len(msgSend.Files),
 		files:               msgSend.Files,
 		userId:              msg.Author.ID,
-		msgType:             "image",
+		msgType:             IMAGE_MESSAGE_TYPE,
 	}
 
 	pagedMessage.setupAndSendFirstMessage()
@@ -182,7 +185,7 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 	*tempEmbed = *p.fullEmbed
 
 	// updated stats
-	if p.msgType == "image" {
+	if p.msgType == IMAGE_MESSAGE_TYPE {
 		// image embeds can't be edited, need to delete and remate it
 		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
 
@@ -252,7 +255,7 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 	// set footer which will hold information about the page it is on
 	tempEmbed.Footer = p.getEmbedFooter()
 
-	if p.msgType == "image" {
+	if p.msgType == IMAGE_MESSAGE_TYPE {
 
 		// if fields were sent with image embed, handle those
 		if len(p.fullEmbed.Fields) > 0 {
@@ -272,27 +275,28 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 		p.files[p.currentPage-1].Reader = &buf
 
 		tempEmbed.Image.URL = fmt.Sprintf("attachment://%s", p.files[p.currentPage-1].Name)
-		sentMessage, _ = SendComplex(p.channelID, &discordgo.MessageSend{
+		sentMessage, err = SendComplex(p.channelID, &discordgo.MessageSend{
 			Embed: tempEmbed,
 			Files: []*discordgo.File{&discordgo.File{
 				Name:   p.files[p.currentPage-1].Name,
 				Reader: newReader,
 			}},
 		})
+		if p.hasError(err) {
+			return
+		}
 
 	} else {
 		// reduce fields to the fields per page
 		tempEmbed.Fields = tempEmbed.Fields[:p.fieldsPerPage]
 
 		sentMessage, err = SendEmbed(p.channelID, tempEmbed)
+		if p.hasError(err) {
+			return
+		}
 	}
 
-	if err != nil {
-		// should probably handle this at some point lul
-		return
-	}
 	p.messageID = sentMessage[0].ID
-
 	p.addReactionsToMessage()
 }
 
@@ -361,6 +365,30 @@ func (p *pagedEmbedMessage) getUserInputPage() (int, error) {
 			return 0, errors.New("Timed out")
 		}
 	}
+}
+
+// simple helper to check error, returns true if an error occured
+//  helps with checking specifically for permissions errors
+func (p *pagedEmbedMessage) hasError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// delete from current embeds
+	delete(pagedEmbededMessages, p.messageID)
+
+	// check if error is a permissions error
+	if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeMissingPermissions {
+		if p.msgType == IMAGE_MESSAGE_TYPE {
+			SendMessage(p.channelID, GetText("bot.errors.no-embed-or-file"))
+		} else {
+			SendMessage(p.channelID, GetText("bot.errors.no-embed"))
+		}
+	} else {
+		Relax(err)
+	}
+
+	return true
 }
 
 func waitForUserMessage() chan *discordgo.MessageCreate {
