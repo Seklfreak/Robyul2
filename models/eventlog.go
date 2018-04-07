@@ -135,4 +135,5 @@ const (
 	AuditLogBackfillTypeGuildUpdateRedisSet      = "robyul-discord:eventlog:auditlog-backfill:guild-update"
 	AuditLogBackfillTypeRoleUpdateRedisSet       = "robyul-discord:eventlog:auditlog-backfill:role-update"
 	AuditLogBackfillTypeMemberRoleUpdateRedisSet = "robyul-discord:eventlog:auditlog-backfill:member-role-update"
+	AuditLogBackfillTypeMemberUpdateRedisSet     = "robyul-discord:eventlog:auditlog-backfill:member-update"
 )

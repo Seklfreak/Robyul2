@@ -259,6 +259,7 @@ const (
 	AuditLogBackfillTypeGuildUpdate
 	AuditLogBackfillTypeRoleUpdate
 	AuditlogBackfillTypeMemberRoleUpdate
+	AuditlogBackfillTypeMemberUpdate
 )
 
 func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
@@ -323,6 +324,10 @@ func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) 
 	case AuditlogBackfillTypeMemberRoleUpdate:
 		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member role update")
 		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberRoleUpdateRedisSet, guildID).Result()
+		return err
+	case AuditlogBackfillTypeMemberUpdate:
+		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member update")
+		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberUpdateRedisSet, guildID).Result()
 		return err
 	}
 	return errors.New("unknown backfill type")
@@ -749,6 +754,8 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 
 	rolesAdded, rolesRemoved := StringSliceDiff(oldMember.Roles, newMember.Roles)
 
+	var memberUpdateBackfill, memberRoleUpdateBackfill bool
+
 	if len(rolesAdded) > 0 || len(rolesRemoved) > 0 {
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "member_roles",
@@ -772,6 +779,8 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 				Type:  models.EventlogTargetTypeRole,
 			})
 		}
+
+		memberRoleUpdateBackfill = true
 	}
 
 	if oldMember.User.Username+"#"+oldMember.User.Discriminator != newMember.User.Username+"#"+newMember.User.Discriminator {
@@ -780,6 +789,8 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 			OldValue: oldMember.User.Username + "#" + oldMember.User.Discriminator,
 			NewValue: newMember.User.Username + "#" + newMember.User.Discriminator,
 		})
+
+		memberUpdateBackfill = true
 	}
 
 	if oldMember.Nick != newMember.Nick {
@@ -788,14 +799,22 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 			OldValue: oldMember.Nick,
 			NewValue: newMember.Nick,
 		})
+
+		memberUpdateBackfill = true
 	}
 
 	// backfill? lots of requests because of bot role changes
 	added, err := EventlogLog(leftAt, guildID, newMember.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberUpdate, "", changes, options, true)
 	RelaxLog(err)
 	if added {
-		err := RequestAuditLogBackfill(guildID, AuditlogBackfillTypeMemberRoleUpdate)
-		RelaxLog(err)
+		if memberRoleUpdateBackfill {
+			err := RequestAuditLogBackfill(guildID, AuditlogBackfillTypeMemberRoleUpdate)
+			RelaxLog(err)
+		}
+		if memberUpdateBackfill {
+			err := RequestAuditLogBackfill(guildID, AuditlogBackfillTypeMemberUpdate)
+			RelaxLog(err)
+		}
 	}
 }
 
