@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	"net/url"
-	"strconv"
-
 	"strings"
 
 	"time"
@@ -163,33 +160,27 @@ type Instagram_Safe_Entries struct {
 	mux     sync.Mutex
 }
 
-type Instagram_GraphQl_User_Profile struct {
+type InstagramPublicProfileFeed struct {
 	Graphql struct {
 		User struct {
-			ID             string `json:"id"`
-			Biography      string `json:"biography"`
-			ExternalURL    string `json:"external_url"`
-			EdgeFollowedBy struct {
+			Biography              string `json:"biography"`
+			BlockedByViewer        bool   `json:"blocked_by_viewer"`
+			CountryBlock           bool   `json:"country_block"`
+			ExternalURL            string `json:"external_url"`
+			ExternalURLLinkshimmed string `json:"external_url_linkshimmed"`
+			EdgeFollowedBy         struct {
 				Count int `json:"count"`
 			} `json:"edge_followed_by"`
 			EdgeFollow struct {
 				Count int `json:"count"`
 			} `json:"edge_follow"`
 			FullName                 string `json:"full_name"`
+			ID                       string `json:"id"`
 			IsPrivate                bool   `json:"is_private"`
 			IsVerified               bool   `json:"is_verified"`
+			ProfilePicURL            string `json:"profile_pic_url"`
 			ProfilePicURLHd          string `json:"profile_pic_url_hd"`
 			Username                 string `json:"username"`
-			EdgeOwnerToTimelineMedia struct {
-				Count int `json:"count"`
-			} `json:"edge_owner_to_timeline_media"`
-		} `json:"user"`
-	} `json:"graphql"`
-}
-
-type Instagram_GraphQl_User_Feed struct {
-	Data struct {
-		User struct {
 			EdgeOwnerToTimelineMedia struct {
 				Count    int `json:"count"`
 				PageInfo struct {
@@ -230,8 +221,7 @@ type Instagram_GraphQl_User_Feed struct {
 				} `json:"edges"`
 			} `json:"edge_owner_to_timeline_media"`
 		} `json:"user"`
-	} `json:"data"`
-	Status string `json:"status"`
+	} `json:"graphql"`
 }
 
 type InstagramSharedData struct {
@@ -348,7 +338,7 @@ func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.Instag
 	bundledEntries = make(map[string][]models.InstagramEntry, 0)
 
 	for _, entry := range entries {
-		if entry.InstagramUserID == 0 && entry.InstagramUserIDString == "" {
+		if entry.Username == "" {
 			continue
 		}
 
@@ -359,31 +349,18 @@ func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.Instag
 			continue
 		}
 
-		userID := entry.InstagramUserIDString
-		if userID == "" {
-			userID = strconv.FormatInt(entry.InstagramUserID, 10)
-		}
-
-		if _, ok := bundledEntries[userID]; ok {
-			bundledEntries[userID] = append(bundledEntries[userID], entry)
+		if _, ok := bundledEntries[entry.Username]; ok {
+			bundledEntries[entry.Username] = append(bundledEntries[entry.Username], entry)
 		} else {
-			bundledEntries[userID] = []models.InstagramEntry{entry}
+			bundledEntries[entry.Username] = []models.InstagramEntry{entry}
 		}
 	}
 
 	return bundledEntries, len(entries), nil
 }
 
-func (m *Handler) graphQlMediaUrl(accountID string) (link string) {
-	jsonData, err := json.Marshal(struct {
-		ID    string `json:"id"`
-		First string `json:"first"`
-	}{ID: accountID, First: "10"})
-	helpers.Relax(err)
-
-	return "https://www.instagram.com/graphql/query/" +
-		"?query_id=17880160963012870" +
-		"&variables=" + url.QueryEscape(string(jsonData))
+func (m *Handler) publicMediaUrl(username string) (link string) {
+	return "https://www.instagram.com/" + username + "/?__a=1"
 }
 
 func (m *Handler) getInstagramSharedData(pageContent string) (sharedData InstagramSharedData, err error) {

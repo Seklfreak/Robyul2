@@ -95,11 +95,11 @@ func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string
 		//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(
 		//	"worker %d started for %d accounts", id, len(job))
 	NextEntry:
-		for instagramAccountID, entries := range job {
+		for instagramUsername, entries := range job {
 			//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(
 			//	"checking graphql feed for %d for %d channels", instagramAccountID, len(entries))
 		RetryGraphQl:
-			receivedPosts, err := m.getPosts(instagramAccountID, currentProxy)
+			_, receivedPosts, err := m.getInformationAndPosts(instagramUsername, currentProxy)
 			if err != nil {
 				if m.retryOnError(err) {
 					//cache.GetLogger().WithField("module", "instagram").Infof(
