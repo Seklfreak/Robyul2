@@ -1846,7 +1846,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   fmt.Sprintf("%d. %s", displayRanking, fullUsername),
-						Value:  fmt.Sprintf("Level: %d", getLevelFromExp(levelsServersUsers[i-offset].Exp)),
+						Value:  fmt.Sprintf("Level: %d", GetLevelFromExp(levelsServersUsers[i-offset].Exp)),
 						Inline: false,
 					})
 					displayRanking++
@@ -1878,7 +1878,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					topLevelEmbed.Fields = append(topLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   "Your Rank: " + serverRank,
-						Value:  fmt.Sprintf("Level: %d", getLevelFromExp(thislevelUser.Exp)),
+						Value:  fmt.Sprintf("Level: %d", GetLevelFromExp(thislevelUser.Exp)),
 						Inline: false,
 					})
 
@@ -1927,7 +1927,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					fullUsername := currentUser.Username
 					globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   fmt.Sprintf("%d. %s", i+1, fullUsername),
-						Value:  fmt.Sprintf("Global Level: %d", getLevelFromExp(userRanked.Value)),
+						Value:  fmt.Sprintf("Global Level: %d", GetLevelFromExp(userRanked.Value)),
 						Inline: false,
 					})
 					i++
@@ -1959,7 +1959,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 					globalTopLevelEmbed.Fields = append(globalTopLevelEmbed.Fields, &discordgo.MessageEmbedField{
 						Name:   "Your Rank: " + globalRank,
-						Value:  fmt.Sprintf("Global Level: %d", getLevelFromExp(totalExp)),
+						Value:  fmt.Sprintf("Global Level: %d", GetLevelFromExp(totalExp)),
 						Inline: false,
 					})
 				}
@@ -2899,8 +2899,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		zeroWidthWhitespace, err := strconv.Unquote(`'\u200b'`)
 		helpers.Relax(err)
 
-		localExpForLevel := getExpForLevel(getLevelFromExp(levelThisServerUser.Exp))
-		globalExpForLevel := getExpForLevel(getLevelFromExp(totalExp))
+		localExpForLevel := GetExpForLevel(GetLevelFromExp(levelThisServerUser.Exp))
+		globalExpForLevel := GetExpForLevel(GetLevelFromExp(totalExp))
 
 		userLevelEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
@@ -2912,14 +2912,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			Fields: []*discordgo.MessageEmbedField{
 				{
 					Name:   "Level",
-					Value:  strconv.Itoa(getLevelFromExp(levelThisServerUser.Exp)),
+					Value:  strconv.Itoa(GetLevelFromExp(levelThisServerUser.Exp)),
 					Inline: true,
 				},
 				{
 					Name: "Level Progress",
 					Value: fmt.Sprintf("%s/%s EXP (%d %%)",
-						humanize.Comma(levelThisServerUser.Exp-localExpForLevel), humanize.Comma(getExpForLevel(getLevelFromExp(levelThisServerUser.Exp)+1)-localExpForLevel),
-						getProgressToNextLevelFromExp(levelThisServerUser.Exp),
+						humanize.Comma(levelThisServerUser.Exp-localExpForLevel), humanize.Comma(GetExpForLevel(GetLevelFromExp(levelThisServerUser.Exp)+1)-localExpForLevel),
+						GetProgressToNextLevelFromExp(levelThisServerUser.Exp),
 					),
 					Inline: true,
 				},
@@ -2930,14 +2930,14 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				},
 				{
 					Name:   "Global Level",
-					Value:  strconv.Itoa(getLevelFromExp(totalExp)),
+					Value:  strconv.Itoa(GetLevelFromExp(totalExp)),
 					Inline: true,
 				},
 				{
 					Name: "Global Level Progress",
 					Value: fmt.Sprintf("%s/%s EXP (%d %%)",
-						humanize.Comma(totalExp-globalExpForLevel), humanize.Comma(getExpForLevel(getLevelFromExp(totalExp)+1)-globalExpForLevel),
-						getProgressToNextLevelFromExp(totalExp),
+						humanize.Comma(totalExp-globalExpForLevel), humanize.Comma(GetExpForLevel(GetLevelFromExp(totalExp)+1)-globalExpForLevel),
+						GetProgressToNextLevelFromExp(totalExp),
 					),
 					Inline: true,
 				},
@@ -3265,10 +3265,10 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_URL}", html.EscapeString(avatarUrl), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TITLE}", html.EscapeString(title), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BIO}", html.EscapeString(bio), -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL}", strconv.Itoa(getLevelFromExp(levelThisServerUser.Exp)), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL}", strconv.Itoa(GetLevelFromExp(levelThisServerUser.Exp)), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_RANK}", serverRank, -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(getProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
-	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_LEVEL}", strconv.Itoa(getLevelFromExp(totalExp)), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_SERVER_LEVEL_PERCENT}", strconv.Itoa(GetProgressToNextLevelFromExp(levelThisServerUser.Exp)), -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_LEVEL}", strconv.Itoa(GetLevelFromExp(totalExp)), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_GLOBAL_RANK}", globalRank, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BACKGROUND_URL}", m.GetProfileBackgroundUrl(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_REP}", strconv.Itoa(userData.Rep), -1)

@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-func getLevelFromExp(exp int64) int {
+func GetLevelFromExp(exp int64) int {
 	calculatedLevel := 0.1 * math.Sqrt(float64(exp))
 
 	return int(math.Floor(calculatedLevel))
 }
 
-func getExpForLevel(level int) int64 {
+func GetExpForLevel(level int) int64 {
 	if level <= 0 {
 		return 0
 	}
@@ -21,9 +21,9 @@ func getExpForLevel(level int) int64 {
 	return int64(calculatedExp)
 }
 
-func getProgressToNextLevelFromExp(exp int64) int {
-	expLevelCurrently := exp - getExpForLevel(getLevelFromExp(exp))
-	expLevelNext := getExpForLevel(getLevelFromExp(exp)+1) - getExpForLevel(getLevelFromExp(exp))
+func GetProgressToNextLevelFromExp(exp int64) int {
+	expLevelCurrently := exp - GetExpForLevel(GetLevelFromExp(exp))
+	expLevelNext := GetExpForLevel(GetLevelFromExp(exp)+1) - GetExpForLevel(GetLevelFromExp(exp))
 	return int(expLevelCurrently / (expLevelNext / 100))
 }
 

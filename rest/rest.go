@@ -496,10 +496,10 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 			if member != nil && member.User != nil && member.User.ID != "" {
 				user = member.User
 			} else {
-				user, _ = helpers.GetUser(rankingItem.UserID)
+				user, _ = helpers.GetUserWithoutAPI(rankingItem.UserID)
 			}
 		} else {
-			user, _ = helpers.GetUser(rankingItem.UserID)
+			user, _ = helpers.GetUserWithoutAPI(rankingItem.UserID)
 		}
 		if user != nil && user.ID != "" {
 			userItem = models.Rest_User{
@@ -519,13 +519,18 @@ func GetRankings(request *restful.Request, response *restful.Response) {
 				}
 			}
 
+			expForLevel := levels.GetExpForLevel(levels.GetLevelFromExp(rankingItem.EXP))
+
 			result.Ranks = append(result.Ranks, models.Rest_Ranking_Rank_Item{
-				User:     userItem,
-				EXP:      rankingItem.EXP,
-				Level:    rankingItem.Level,
-				Ranking:  i,
-				IsMember: isMember,
-				GuildID:  guildID,
+				User:                userItem,
+				GuildID:             guildID,
+				IsMember:            isMember,
+				EXP:                 rankingItem.EXP,
+				Level:               rankingItem.Level,
+				Ranking:             i,
+				NextLevelCurrentEXP: rankingItem.EXP - expForLevel,
+				NextLevelTotalEXP:   levels.GetExpForLevel(levels.GetLevelFromExp(rankingItem.EXP)+1) - expForLevel,
+				Progress:            levels.GetProgressToNextLevelFromExp(rankingItem.EXP),
 			})
 		}
 		i += 1
@@ -582,13 +587,19 @@ func GetUserRanking(request *restful.Request, response *restful.Response) {
 		Discriminator: user.Discriminator,
 		Bot:           user.Bot,
 	}
+
+	expForLevel := levels.GetExpForLevel(levels.GetLevelFromExp(rankingItem.EXP))
+
 	result := models.Rest_Ranking_Rank_Item{
-		User:     userItem,
-		EXP:      rankingItem.EXP,
-		Level:    rankingItem.Level,
-		Ranking:  rankingItem.Ranking,
-		IsMember: isMember,
-		GuildID:  guildID,
+		User:                userItem,
+		EXP:                 rankingItem.EXP,
+		Level:               rankingItem.Level,
+		Ranking:             rankingItem.Ranking,
+		IsMember:            isMember,
+		GuildID:             guildID,
+		NextLevelCurrentEXP: rankingItem.EXP - expForLevel,
+		NextLevelTotalEXP:   levels.GetExpForLevel(levels.GetLevelFromExp(rankingItem.EXP)+1) - expForLevel,
+		Progress:            levels.GetProgressToNextLevelFromExp(rankingItem.EXP),
 	}
 
 	response.WriteEntity(result)
@@ -627,13 +638,18 @@ func GetAllUserRanking(request *restful.Request, response *restful.Response) {
 			continue
 		}
 
+		expForLevel := levels.GetExpForLevel(levels.GetLevelFromExp(rankingItem.EXP))
+
 		result = append(result, models.Rest_Ranking_Rank_Item{
-			User:     userItem,
-			GuildID:  guild.ID,
-			IsMember: true,
-			EXP:      rankingItem.EXP,
-			Level:    rankingItem.Level,
-			Ranking:  rankingItem.Ranking,
+			User:                userItem,
+			GuildID:             guild.ID,
+			IsMember:            true,
+			EXP:                 rankingItem.EXP,
+			Level:               rankingItem.Level,
+			Ranking:             rankingItem.Ranking,
+			NextLevelCurrentEXP: rankingItem.EXP - expForLevel,
+			NextLevelTotalEXP:   levels.GetExpForLevel(levels.GetLevelFromExp(rankingItem.EXP)+1) - expForLevel,
+			Progress:            levels.GetProgressToNextLevelFromExp(rankingItem.EXP),
 		})
 	}
 

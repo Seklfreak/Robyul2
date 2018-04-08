@@ -146,7 +146,7 @@ func cacheTopLoop() {
 					rankData = Levels_Cache_Ranking_Item{
 						UserID:  level.Key,
 						EXP:     level.Value,
-						Level:   getLevelFromExp(level.Value),
+						Level:   GetLevelFromExp(level.Value),
 						Ranking: i,
 					}
 
@@ -213,11 +213,11 @@ func processExpStackLoop() {
 			helpers.Relax(err)
 
 			expBefore := levelsServerUser.Exp
-			levelBefore := getLevelFromExp(levelsServerUser.Exp)
+			levelBefore := GetLevelFromExp(levelsServerUser.Exp)
 
 			levelsServerUser.Exp += getRandomExpForMessage()
 
-			levelAfter := getLevelFromExp(levelsServerUser.Exp)
+			levelAfter := GetLevelFromExp(levelsServerUser.Exp)
 
 			err = helpers.MDbUpdateWithoutLogging(models.LevelsServerusersTable, levelsServerUser.ID, levelsServerUser)
 			helpers.Relax(err)

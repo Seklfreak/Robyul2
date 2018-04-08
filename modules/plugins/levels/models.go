@@ -100,11 +100,11 @@ func getLevelForUser(userID string, guildID string) int {
 		for _, levelsServerUser := range levelsServersUser {
 			totalExp += levelsServerUser.Exp
 		}
-		return getLevelFromExp(totalExp)
+		return GetLevelFromExp(totalExp)
 	} else {
 		for _, levelsServerUser := range levelsServersUser {
 			if levelsServerUser.GuildID == guildID {
-				return getLevelFromExp(levelsServerUser.Exp)
+				return GetLevelFromExp(levelsServerUser.Exp)
 			}
 		}
 	}

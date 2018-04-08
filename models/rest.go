@@ -131,12 +131,15 @@ type Rest_Ranking struct {
 }
 
 type Rest_Ranking_Rank_Item struct {
-	User     Rest_User
-	GuildID  string
-	IsMember bool
-	EXP      int64
-	Level    int
-	Ranking  int
+	User                Rest_User
+	GuildID             string
+	IsMember            bool
+	EXP                 int64
+	Level               int
+	Ranking             int
+	NextLevelTotalEXP   int64
+	NextLevelCurrentEXP int64
+	Progress            int
 }
 
 type Rest_Feature_Levels_Badges struct {
