@@ -7,12 +7,10 @@ import (
 )
 
 func SniffMime(data []byte) (mimetype string, err error) {
-	if len(data) < 512 {
-		return mimetype, errors.New("file too small to sniff mime type")
+	mimetype = http.DetectContentType(data)
+	if mimetype == "application/octet-stream" {
+		return mimetype, errors.New("unable to sniff filetype")
 	}
 
-	// sniff filetype from first 512 bytes
-	contentType := http.DetectContentType(data[0:511])
-
-	return contentType, nil
+	return mimetype, nil
 }
