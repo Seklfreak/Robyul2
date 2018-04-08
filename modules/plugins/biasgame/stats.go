@@ -28,8 +28,17 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 
 	queryParams, iconURL, targetName := getStatsQueryInfo(msg, statsMessage)
 
+	// check if round information is required
+	fieldsToExclude := make(map[string]int)
+	if !strings.Contains(statsMessage, "rounds") {
+		fieldsToExclude = map[string]int{
+			"roundwinners": 0,
+			"roundlosers":  0,
+		}
+	}
+
 	var games []models.BiasGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&games)
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams).Select(fieldsToExclude)).All(&games)
 
 	// check if any stats were returned
 	totalGames := len(games)
@@ -228,13 +237,19 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 		}
 	}
 
+	// exclude rounds from rankings query for better performance
+	fieldsToExclude := map[string]int{
+		"roundwinners": 0,
+		"roundlosers":  0,
+	}
+
 	var games []models.BiasGameEntry
 	if gameType == "all" {
 
-		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})).All(&games)
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{}).Select(fieldsToExclude)).All(&games)
 	} else {
 
-		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType})).All(&games)
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType}).Select(fieldsToExclude)).All(&games)
 	}
 
 	// check if any stats were returned
