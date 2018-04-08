@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"encoding/json"
 	"time"
 
 	"sync"
@@ -12,7 +13,6 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -242,95 +242,22 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 	return embed
 }
 
-type AuditLogBackfillType int
-
-const (
-	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = 1 << iota
-	AuditLogBackfillTypeChannelDelete
-	AuditLogBackfillTypeChannelUpdate
-	AuditLogBackfillTypeRoleCreate
-	AuditLogBackfillTypeRoleDelete
-	AuditLogBackfillTypeBanAdd
-	AuditLogBackfillTypeBanRemove
-	AuditLogBackfillTypeMemberRemove
-	AuditLogBackfillTypeEmojiCreate
-	AuditLogBackfillTypeEmojiDelete
-	AuditLogBackfillTypeEmojiUpdate
-	AuditLogBackfillTypeGuildUpdate
-	AuditLogBackfillTypeRoleUpdate
-	AuditlogBackfillTypeMemberRoleUpdate
-	AuditlogBackfillTypeMemberUpdate
-)
-
-func RequestAuditLogBackfill(guildID string, backfillType AuditLogBackfillType) (err error) {
+func RequestAuditLogBackfill(guildID string, backfillType models.AuditLogBackfillType) (err error) {
 	AuditLogBackfillRequestsLock.Lock()
 	defer AuditLogBackfillRequestsLock.Unlock()
 
-	redis := cache.GetRedisClient()
-
-	switch backfillType {
-	case AuditLogBackfillTypeChannelCreate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel create")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelCreateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeChannelDelete:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel delete")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelDeleteRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeChannelUpdate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "channel update")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeChannelUpdateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeRoleCreate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role create")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleCreateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeRoleDelete:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role delete")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleDeleteRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeBanAdd:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "ban add")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeBanAddRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeBanRemove:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "ban remove")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeBanRemoveRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeMemberRemove:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member remove")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberRemoveRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeEmojiCreate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "emoji create")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeEmojiCreateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeEmojiDelete:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "emoji delete")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeEmojiDeleteRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeEmojiUpdate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "emoji update")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeEmojiUpdateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeGuildUpdate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "guild update")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeGuildUpdateRedisSet, guildID).Result()
-		return err
-	case AuditLogBackfillTypeRoleUpdate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "role update")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeRoleUpdateRedisSet, guildID).Result()
-		return err
-	case AuditlogBackfillTypeMemberRoleUpdate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member role update")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberRoleUpdateRedisSet, guildID).Result()
-		return err
-	case AuditlogBackfillTypeMemberUpdate:
-		cache.GetLogger().Infof("requested backfill for %s: %s", guildID, "member update")
-		_, err := redis.SAdd(models.AuditLogBackfillTypeMemberUpdateRedisSet, guildID).Result()
+	marshaledData, err := json.Marshal(models.AuditLogBackfillRequest{
+		GuildID: guildID,
+		Type:    backfillType,
+	})
+	if err != nil {
 		return err
 	}
-	return errors.New("unknown backfill type")
+
+	redis := cache.GetRedisClient()
+
+	_, err = redis.SAdd(models.AuditLogBackfillRedisSet, marshaledData).Result()
+	return
 }
 
 func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
@@ -372,7 +299,7 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
 	RelaxLog(err)
 	if added {
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiCreate)
+		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeEmojiCreate)
 		RelaxLog(err)
 	}
 }
@@ -416,7 +343,7 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
 	RelaxLog(err)
 	if added {
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiDelete)
+		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeEmojiDelete)
 		RelaxLog(err)
 	}
 }
@@ -527,7 +454,7 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	added, err := EventlogLog(leftAt, guildID, newEmoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiUpdate, "", changes, options, true)
 	RelaxLog(err)
 	if added {
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeEmojiUpdate)
+		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeEmojiUpdate)
 		RelaxLog(err)
 	}
 }
@@ -659,7 +586,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	added, err := EventlogLog(leftAt, guildID, newGuild.ID, models.EventlogTargetTypeGuild, "", models.EventlogTypeGuildUpdate, "", changes, nil, true)
 	RelaxLog(err)
 	if added {
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeGuildUpdate)
+		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeGuildUpdate)
 		RelaxLog(err)
 	}
 }
@@ -740,7 +667,7 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, backfill)
 	RelaxLog(err)
 	if added && backfill {
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeChannelUpdate)
+		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelUpdate)
 		RelaxLog(err)
 	}
 }
@@ -808,11 +735,11 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 	RelaxLog(err)
 	if added {
 		if memberRoleUpdateBackfill {
-			err := RequestAuditLogBackfill(guildID, AuditlogBackfillTypeMemberRoleUpdate)
+			err := RequestAuditLogBackfill(guildID, models.AuditlogBackfillTypeMemberRoleUpdate)
 			RelaxLog(err)
 		}
 		if memberUpdateBackfill {
-			err := RequestAuditLogBackfill(guildID, AuditlogBackfillTypeMemberUpdate)
+			err := RequestAuditLogBackfill(guildID, models.AuditlogBackfillTypeMemberUpdate)
 			RelaxLog(err)
 		}
 	}
@@ -884,7 +811,7 @@ func OnEventlogRoleUpdate(guildID string, oldRole, newRole *discordgo.Role) {
 	added, err := EventlogLog(leftAt, guildID, newRole.ID, models.EventlogTargetTypeRole, "", models.EventlogTypeRoleUpdate, "", changes, nil, true)
 	RelaxLog(err)
 	if added {
-		err := RequestAuditLogBackfill(guildID, AuditLogBackfillTypeRoleUpdate)
+		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeRoleUpdate)
 		RelaxLog(err)
 	}
 }

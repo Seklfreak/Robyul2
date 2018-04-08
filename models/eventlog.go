@@ -121,19 +121,30 @@ const (
 	EventlogTargetTypeRobyulTwitchFeed          = "robyul-twitch-feed"
 	EventlogTargetTypeRobyulTwitterFeed         = "robyul-twitter-feed"
 
-	AuditLogBackfillTypeChannelCreateRedisSet    = "robyul-discord:eventlog:auditlog-backfill:channel-create"
-	AuditLogBackfillTypeChannelDeleteRedisSet    = "robyul-discord:eventlog:auditlog-backfill:channel-delete"
-	AuditLogBackfillTypeChannelUpdateRedisSet    = "robyul-discord:eventlog:auditlog-backfill:channel-update"
-	AuditLogBackfillTypeRoleCreateRedisSet       = "robyul-discord:eventlog:auditlog-backfill:role-create"
-	AuditLogBackfillTypeRoleDeleteRedisSet       = "robyul-discord:eventlog:auditlog-backfill:role-delete"
-	AuditLogBackfillTypeBanAddRedisSet           = "robyul-discord:eventlog:auditlog-backfill:ban-add"
-	AuditLogBackfillTypeBanRemoveRedisSet        = "robyul-discord:eventlog:auditlog-backfill:ban-remove"
-	AuditLogBackfillTypeMemberRemoveRedisSet     = "robyul-discord:eventlog:auditlog-backfill:member-remove"
-	AuditLogBackfillTypeEmojiCreateRedisSet      = "robyul-discord:eventlog:auditlog-backfill:emoji-create"
-	AuditLogBackfillTypeEmojiDeleteRedisSet      = "robyul-discord:eventlog:auditlog-backfill:emoji-delete"
-	AuditLogBackfillTypeEmojiUpdateRedisSet      = "robyul-discord:eventlog:auditlog-backfill:emoji-update"
-	AuditLogBackfillTypeGuildUpdateRedisSet      = "robyul-discord:eventlog:auditlog-backfill:guild-update"
-	AuditLogBackfillTypeRoleUpdateRedisSet       = "robyul-discord:eventlog:auditlog-backfill:role-update"
-	AuditLogBackfillTypeMemberRoleUpdateRedisSet = "robyul-discord:eventlog:auditlog-backfill:member-role-update"
-	AuditLogBackfillTypeMemberUpdateRedisSet     = "robyul-discord:eventlog:auditlog-backfill:member-update"
+	AuditLogBackfillRedisSet = "robyul-discord:eventlog:auditlog-backfills"
 )
+
+type AuditLogBackfillType int
+
+const (
+	AuditLogBackfillTypeChannelCreate AuditLogBackfillType = iota
+	AuditLogBackfillTypeChannelDelete
+	AuditLogBackfillTypeChannelUpdate
+	AuditLogBackfillTypeRoleCreate
+	AuditLogBackfillTypeRoleDelete
+	AuditLogBackfillTypeBanAdd
+	AuditLogBackfillTypeBanRemove
+	AuditLogBackfillTypeMemberRemove
+	AuditLogBackfillTypeEmojiCreate
+	AuditLogBackfillTypeEmojiDelete
+	AuditLogBackfillTypeEmojiUpdate
+	AuditLogBackfillTypeGuildUpdate
+	AuditLogBackfillTypeRoleUpdate
+	AuditlogBackfillTypeMemberRoleUpdate
+	AuditlogBackfillTypeMemberUpdate
+)
+
+type AuditLogBackfillRequest struct {
+	GuildID string
+	Type    AuditLogBackfillType
+}
