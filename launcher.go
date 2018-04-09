@@ -199,24 +199,26 @@ func main() {
 	cache.SetRedisClient(redisClient)
 
 	// Set up Google Drive Client
-	driveCtx := context.Background()
-	driveAuthJson, err := ioutil.ReadFile(helpers.GetConfig().Path("google.client_credentials_json_location").Data().(string))
-	if err != nil {
-		panic(err)
-	}
+	if helpers.GetConfig().Path("google.client_credentials_json_location").Data().(string) != "" {
+		driveCtx := context.Background()
+		driveAuthJson, err := ioutil.ReadFile(helpers.GetConfig().Path("google.client_credentials_json_location").Data().(string))
+		if err != nil {
+			panic(err)
+		}
 
-	driveConfigs, err := google.JWTConfigFromJSON(driveAuthJson, drive.DriveReadonlyScope)
-	if err != nil {
-		panic(err)
-	}
+		driveConfigs, err := google.JWTConfigFromJSON(driveAuthJson, drive.DriveReadonlyScope)
+		if err != nil {
+			panic(err)
+		}
 
-	driveClient := driveConfigs.Client(driveCtx)
-	driveService, err := drive.New(driveClient)
-	if err != nil {
-		panic(err)
-	}
+		driveClient := driveConfigs.Client(driveCtx)
+		driveService, err := drive.New(driveClient)
+		if err != nil {
+			panic(err)
+		}
 
-	cache.SetGoogleDriveService(driveService)
+		cache.SetGoogleDriveService(driveService)
+	}
 
 	// Connect and add event handlers
 	discordgo.Logger = func(msgL, caller int, format string, a ...interface{}) {
