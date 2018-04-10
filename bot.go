@@ -295,7 +295,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 	*/
 
 	// Check if the message contains @mentions for us
-	if (strings.HasPrefix(message.Content, "<@") || strings.HasPrefix(message.Content, "<!@")) && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
+	if strings.HasPrefix(message.Content, "<@") && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
 		// Consume a key for this action
 		e := ratelimits.Container.Drain(1, message.Author.ID)
 		if e != nil {
@@ -305,8 +305,9 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 		// Prepare content for editing
 		msg := message.Content
 
-		/// Remove our @mention
+		/// Remove our @mention and @nickname mention
 		msg = strings.Replace(msg, "<@"+session.State.User.ID+">", "", -1)
+		msg = strings.Replace(msg, "<@!"+session.State.User.ID+">", "", -1)
 
 		// Trim message
 		msg = strings.TrimSpace(msg)
