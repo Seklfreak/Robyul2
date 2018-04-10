@@ -670,6 +670,7 @@ func compileGameWinnersLosers(biases []*biasChoice) []models.BiasGameIdolEntry {
 
 // displayIdolStats sends an embed for stats on a specific idol
 func displayIdolStats(msg *discordgo.Message, content string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	// make sure there are enough arguments
 	commandArgs := str.ToArgv(content)[1:]
