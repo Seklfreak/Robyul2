@@ -1122,16 +1122,37 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 	}
 
 	if messageID == "last" {
-		lastMessages, err := cache.GetSession().ChannelMessages(channelID, 1, "", "", "")
+		termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND ChannelID:" + channelID)
+		searchResult, err := cache.GetElastic().Search().
+			Index(models.ElasticIndexMessages).
+			Type("doc").
+			Query(termQuery).
+			Size(1).
+			Sort("CreatedAt", false).
+			Do(context.Background())
 		if err != nil {
 			response.WriteError(http.StatusInternalServerError, err)
 			return
 		}
-		if lastMessages == nil || len(lastMessages) <= 0 {
-			response.WriteError(http.StatusInternalServerError, errors.New("unable to get last message"))
-			return
+
+		for _, item := range searchResult.Hits.Hits {
+			if item == nil {
+				continue
+			}
+
+			m := helpers.UnmarshalElasticMessage(item)
+
+			if m.MessageID == "" {
+				continue
+			}
+
+			messageID = m.MessageID
 		}
-		messageID = lastMessages[0].ID
+	}
+
+	if messageID == "" {
+		response.WriteError(http.StatusNoContent, errors.New("Message not found"))
+		return
 	}
 
 	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID + " AND ChannelID:" + channelID + " AND MessageID:" + messageID)
