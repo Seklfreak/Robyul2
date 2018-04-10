@@ -693,10 +693,16 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 		bson.M{"roundlosers": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.BiasName}}},
 	}}
 
+	// exclude rounds from rankings query for better performance
+	fieldsToExclude := map[string]int{
+		"roundwinners": 0,
+		"roundlosers":  0,
+	}
+
 	// query db for information on this
 	var allGames []models.BiasGameEntry
 	var targetIdolGames []models.BiasGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})).All(&allGames)
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{}).Select(fieldsToExclude)).All(&allGames)
 	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&targetIdolGames)
 
 	// get idol win counts
