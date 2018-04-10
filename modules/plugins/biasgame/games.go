@@ -176,6 +176,9 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			}(multiGame)
 		}
 
+		// spew.Dump(currentSinglePlayerGames)
+		delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
+
 		gameIsReady = true
 
 		// set up suggestions channel
@@ -566,10 +569,6 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	// add reactions
 	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
 	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
-
-	// save games after every round
-	err = setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
-	helpers.Relax(err)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
@@ -645,10 +644,6 @@ func (g *singleBiasGame) finishSingleGame() {
 
 	// end the g. delete from current games
 	delete(currentSinglePlayerGames, g.User.ID)
-
-	// update cache after game is finished
-	err := setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
-	helpers.Relax(err)
 }
 
 // recoverGame if a panic was caused during the game, delete from current games
@@ -788,11 +783,6 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	// update game state
 	g.CurrentRoundMessageId = fileSendMsg[0].ID
 	g.LastRoundMessage = fileSendMsg[0]
-
-	// save games after every round
-	err = setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
-	helpers.Relax(err)
-
 	return nil
 }
 
@@ -904,10 +894,6 @@ func (g *multiBiasGame) deleteMultiGame() {
 			currentMultiPlayerGames = append(currentMultiPlayerGames[:i], currentMultiPlayerGames[i+1:]...)
 		}
 	}
-
-	// update cache after game is finished
-	err := setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
-	helpers.Relax(err)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
