@@ -228,6 +228,10 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			singleGame := createOrGetSinglePlayerGame(msg, "mixed", 32)
 			singleGame.sendBiasGameRound()
 
+		} else if commandArgs[0] == "idol-stats" {
+
+			displayIdolStats(msg, content)
+
 		} else if commandArgs[0] == "stats" {
 
 			// stats

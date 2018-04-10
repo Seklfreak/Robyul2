@@ -755,7 +755,8 @@
     },
     "biasgame": {
       "stats": {
-        "no-stats": "No stats were found."
+        "no-stats": "No stats were found.",
+        "no-matching-idol": "Could not find a matching idol for that group and name."
       },
       "game": {
         "invalid-game-size": "Sorry, that game size is not valid. Valid sizes are: 32, 64, 128, 256, 512, or 1024",
