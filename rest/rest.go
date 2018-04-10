@@ -20,6 +20,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
+	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
@@ -1140,6 +1141,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		Query(termQuery).
 		Size(1).
 		Sort("CreatedAt", true).
+		//Sort("MessageID.keyword", true).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
@@ -1192,6 +1194,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		Size(50).
 		SearchAfter(sortValues[0]).
 		Sort("CreatedAt", true).
+		//Sort("MessageID.keyword", true).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
@@ -1235,6 +1238,7 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 		Size(50).
 		SearchAfter(sortValues[0]).
 		Sort("CreatedAt", false).
+		//Sort("MessageID.keyword", false).
 		Do(context.Background())
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, err)
@@ -1269,6 +1273,16 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 			Deleted:        m.Deleted,
 		}}, result...)
 	}
+
+	// TODO: replace with MessageID.keyword sort, need ElasticSearch reindex
+	// sort by timestamp, if timestamp equal sort by message ID
+	slice.Sort(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].CreatedAt.Before(result[j].CreatedAt)
+	})
+
 	response.WriteEntity(result)
 }
 

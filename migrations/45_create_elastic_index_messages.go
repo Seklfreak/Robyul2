@@ -29,6 +29,11 @@ func m45_create_elastic_index_messages() {
 					},
 					"MessageID": map[string]interface{}{
 						"type": "text",
+						"fields": map[string]interface{}{
+							"keyword": map[string]interface{}{
+								"type": "keyword",
+							},
+						},
 					},
 					"Content": map[string]interface{}{
 						"type":  "text",
