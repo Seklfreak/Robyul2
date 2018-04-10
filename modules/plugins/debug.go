@@ -166,6 +166,17 @@ func (d *Debug) Action(command string, content string, msg *discordgo.Message, s
 			))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
+		case "mock-discord-500-error":
+			session.ChannelTyping(msg.ChannelID)
+
+			err := &discordgo.RESTError{
+				Message: &discordgo.APIErrorMessage{
+					Code:    0,
+					Message: "500: Internal Server Error",
+				},
+			}
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
 		}
 
 		return

@@ -48,7 +48,14 @@ func Recover() {
 
 		fmt.Println(string(buf[0:stackSize]))
 
-		//raven.SetUserContext(&raven.User{})
+		if errD, ok := err.(*discordgo.RESTError); ok && errD != nil {
+			if strings.Contains(errD.Message.Message, "500: Internal Server Error") {
+				cache.GetLogger().WithField("module", "except").Error("discord internal error: " + fmt.Sprintf("%+#v", err))
+				return
+			}
+		}
+
+		raven.SetUserContext(&raven.User{})
 		if errE, ok := err.(*elastic.Error); ok {
 			raven.CaptureError(fmt.Errorf(spew.Sdump(err)), map[string]string{
 				"Type":     errE.Details.Type,
@@ -175,6 +182,13 @@ func RelaxAssertUnequal(a interface{}, b interface{}, err error) {
 
 // SendError Takes an error and sends it to discord and sentry.io
 func SendError(msg *discordgo.Message, err interface{}) {
+	if errR, ok := err.(*discordgo.RESTError); ok && errR != nil && errR.Message != nil {
+		if strings.Contains(errR.Message.Message, "500: Internal Server Error") {
+			cache.GetLogger().WithField("module", "except").Error("discord internal error sending message to #" + msg.ChannelID + ": " + fmt.Sprintf("%+#v", err))
+			return
+		}
+	}
+
 	if DEBUG_MODE == true {
 		buf := make([]byte, 1<<16)
 		stackSize := runtime.Stack(buf, false)
