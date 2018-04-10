@@ -3,6 +3,7 @@ package biasgame
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -181,7 +182,7 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 	//  if we can't get one display an error
 	groupMatch, nameMatch, matchIdol := getMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
 	if matchIdol == nil || groupMatch == false || nameMatch == false {
-		helpers.SendMessage(msg.ChannelID, "Could not find a matching idol for that group and name.")
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
 	}
 
@@ -665,4 +666,195 @@ func compileGameWinnersLosers(biases []*biasChoice) []models.BiasGameIdolEntry {
 	}
 
 	return biasEntries
+}
+
+// displayIdolStats sends an embed for stats on a specific idol
+func displayIdolStats(msg *discordgo.Message, content string) {
+
+	// make sure there are enough arguments
+	commandArgs := str.ToArgv(content)[1:]
+	if len(commandArgs) < 2 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		return
+	}
+
+	// find matching idol
+	_, _, bias := getMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
+	if bias == nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
+		return
+	}
+
+	// get all the games that the target idol has been in
+	queryParams := bson.M{"$or": []bson.M{
+		// check if idol is in round winner or losers array
+		bson.M{"roundwinners": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.BiasName}}},
+		bson.M{"roundlosers": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.BiasName}}},
+	}}
+
+	// query db for information on this
+	var allGames []models.BiasGameEntry
+	var targetIdolGames []models.BiasGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})).All(&allGames)
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&targetIdolGames)
+
+	// get idol win counts
+	allGamesIdolWinCounts := make(map[string]int)
+	singleGamesIdolWinCounts := make(map[string]int)
+	multiGamesIdolWinCounts := make(map[string]int)
+	for _, game := range allGames {
+		groupAndName := fmt.Sprintf("%s %s", game.GameWinner.GroupName, game.GameWinner.Name)
+		allGamesIdolWinCounts[groupAndName] += 1
+		if game.GameType == "multi" {
+			multiGamesIdolWinCounts[groupAndName] += 1
+		} else {
+			singleGamesIdolWinCounts[groupAndName] += 1
+		}
+	}
+
+	biasGroupName := fmt.Sprintf("%s %s", bias.GroupName, bias.BiasName)
+
+	// get overall win rank
+	compiledData, uniqueCounts := complieGameStats(allGamesIdolWinCounts)
+	idolWinRank := 0
+OverallWinLoop:
+	for i, count := range uniqueCounts {
+		for _, idolGroupName := range compiledData[count] {
+			if idolGroupName == biasGroupName {
+				idolWinRank = i + 1
+				break OverallWinLoop
+			}
+		}
+	}
+
+	// get single win rank
+	compiledData, uniqueCounts = complieGameStats(singleGamesIdolWinCounts)
+	idolSingleWinRank := 0
+SingleWinLoop:
+	for i, count := range uniqueCounts {
+		for _, idolGroupName := range compiledData[count] {
+			if idolGroupName == biasGroupName {
+				idolSingleWinRank = i + 1
+				break SingleWinLoop
+			}
+		}
+	}
+
+	// get multi win rank
+	compiledData, uniqueCounts = complieGameStats(multiGamesIdolWinCounts)
+	idolMultiWinRank := 0
+MultiWinLoop:
+	for i, count := range uniqueCounts {
+		for _, idolGroupName := range compiledData[count] {
+			if idolGroupName == biasGroupName {
+				idolMultiWinRank = i + 1
+				break MultiWinLoop
+			}
+		}
+	}
+
+	totalGames := len(targetIdolGames)
+	totalGameWins := 0
+	totalRounds := 0
+	totalRoundWins := 0
+	userGameWinMap := make(map[string]int)
+	guildGameWinMap := make(map[string]int)
+
+	for _, game := range targetIdolGames {
+
+		// win game
+		if game.GameWinner.GroupName == bias.GroupName && game.GameWinner.Name == bias.BiasName {
+			userGameWinMap[game.UserID]++
+			guildGameWinMap[game.GuildID]++
+			totalGameWins++
+		}
+
+		// round win
+		for _, round := range game.RoundWinners {
+			if round.GroupName == bias.GroupName && round.Name == bias.BiasName {
+				totalRounds++
+				totalRoundWins++
+			}
+		}
+		// round lose
+		for _, round := range game.RoundLosers {
+			if round.GroupName == bias.GroupName && round.Name == bias.BiasName {
+				totalRounds++
+			}
+		}
+	}
+
+	// get most winning user
+	highestUserWins := 0
+	var userId string
+	for k, v := range userGameWinMap {
+		if v > highestUserWins {
+			highestUserWins = v
+			userId = k
+		}
+	}
+	userNameMostWins := "*Unknown*"
+	userMostWins, err := helpers.GetUser(userId)
+	if err == nil {
+		userNameMostWins = userMostWins.Username
+	}
+
+	// get most winning server
+	highestServerWins := 0
+	var guildId string
+	for k, v := range guildGameWinMap {
+		if v > highestServerWins {
+			highestServerWins = v
+			guildId = k
+		}
+	}
+	guildNameMostWins := "*Unknown*"
+	guildMostWins, err := helpers.GetGuild(guildId)
+	if err == nil {
+		guildNameMostWins = guildMostWins.Name
+	}
+
+	// make embed
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: fmt.Sprintf("Stats for %s %s", bias.GroupName, bias.BiasName),
+		},
+	}
+
+	// group name, idol name, gender
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolSingleWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolMultiWinRank), Inline: true})
+
+	// overall game and game win info
+	var gameWinPercentage float64
+	if totalGames > 0 {
+		gameWinPercentage = (float64(totalGameWins) / float64(totalGames)) * 100
+	} else {
+		gameWinPercentage = 0
+	}
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: strconv.Itoa(totalGameWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: strconv.Itoa(totalGames), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
+
+	// overall round and round win info
+	var roundWinPercentage float64
+	if totalGames > 0 {
+		roundWinPercentage = (float64(totalRoundWins) / float64(totalRounds)) * 100
+	} else {
+		roundWinPercentage = 0
+	}
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: strconv.Itoa(totalRoundWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: strconv.Itoa(totalRounds), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
+
+	// user and server info
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%d wins)", userNameMostWins, highestUserWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%d wins)", guildNameMostWins, highestServerWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(bias.BiasImages)), Inline: true})
+
+	helpers.SendEmbed(msg.ChannelID, embed)
+	allGames = nil
+	targetIdolGames = nil
 }
