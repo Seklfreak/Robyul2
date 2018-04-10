@@ -269,20 +269,8 @@ func CollectRuntimeMetrics() {
 		numberOfProxies, _ := redis.SCard(helpers.PROXIES_KEY).Result()
 		GimmeProxyCachedProxies.Set(numberOfProxies)
 
-		n1, _ := redis.SCard(models.AuditLogBackfillTypeChannelCreateRedisSet).Result()
-		n2, _ := redis.SCard(models.AuditLogBackfillTypeChannelDeleteRedisSet).Result()
-		n3, _ := redis.SCard(models.AuditLogBackfillTypeChannelUpdateRedisSet).Result()
-		n4, _ := redis.SCard(models.AuditLogBackfillTypeRoleCreateRedisSet).Result()
-		n5, _ := redis.SCard(models.AuditLogBackfillTypeRoleDeleteRedisSet).Result()
-		n6, _ := redis.SCard(models.AuditLogBackfillTypeBanAddRedisSet).Result()
-		n7, _ := redis.SCard(models.AuditLogBackfillTypeBanRemoveRedisSet).Result()
-		n8, _ := redis.SCard(models.AuditLogBackfillTypeMemberRemoveRedisSet).Result()
-		n9, _ := redis.SCard(models.AuditLogBackfillTypeEmojiCreateRedisSet).Result()
-		n10, _ := redis.SCard(models.AuditLogBackfillTypeEmojiDeleteRedisSet).Result()
-		n11, _ := redis.SCard(models.AuditLogBackfillTypeEmojiUpdateRedisSet).Result()
-		n12, _ := redis.SCard(models.AuditLogBackfillTypeGuildUpdateRedisSet).Result()
-		n13, _ := redis.SCard(models.AuditLogBackfillTypeRoleUpdateRedisSet).Result()
-		EventlogPendingAuditlogBackfills.Set(n1 + n2 + n3 + n4 + n5 + n6 + n7 + n8 + n9 + n10 + n11 + n12 + n13)
+		auditLogBackfills, _ := redis.SCard(models.AuditLogBackfillRedisSet).Result()
+		EventlogPendingAuditlogBackfills.Set(auditLogBackfills)
 	}
 }
 
