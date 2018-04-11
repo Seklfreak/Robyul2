@@ -379,7 +379,7 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 		userPlayingGame = user
 	}
 
-	if game := getCurrentSinglePlayerGameByUserID(userPlayingGame.ID); game != nil {
+	if game, ok := currentSinglePlayerGames[userPlayingGame.ID]; ok {
 
 		embed := &discordgo.MessageEmbed{
 			Color: 0x0FADED, // blueish
