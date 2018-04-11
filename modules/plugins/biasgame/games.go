@@ -91,7 +91,7 @@ var winnerBracket image.Image
 var shadowBorder image.Image
 var crown image.Image
 
-// currently running single or multiplyer games
+// currently running single or multiplayer games
 var currentSinglePlayerGames map[string]*singleBiasGame
 var currentMultiPlayerGames []*multiBiasGame
 
@@ -115,7 +115,6 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		// set global variables
 		currentSinglePlayerGames = make(map[string]*singleBiasGame)
 		allowedGameSizes = map[int]bool{
-			// 10:  true, // for dev only, remove when game is live
 			32:   true,
 			64:   true,
 			128:  true,
@@ -155,6 +154,11 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			14: 165,
 			13: 90, 12: 90,
 			11: 60, 10: 60, 9: 60, 8: 60,
+		}
+
+		// allow games with the size of 10 in debug mode
+		if helpers.DEBUG_MODE {
+			allowedGameSizes[10] = true
 		}
 
 		// load all images and information
