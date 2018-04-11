@@ -91,9 +91,11 @@ var winnerBracket image.Image
 var shadowBorder image.Image
 var crown image.Image
 
-// currently running single or multiplyer games
+// currently running single or multipalyer games
 var currentSinglePlayerGames map[string]*singleBiasGame
+var currentSinglePlayerGamesMutex sync.RWMutex
 var currentMultiPlayerGames []*multiBiasGame
+var currentMultiPlayerGamesMutex sync.RWMutex
 
 // holds all available idols in the game
 var allBiasChoices []*biasChoice
@@ -169,7 +171,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		bgLog().Infof("restored %d multiplayer biasgames on launch", len(currentMultiPlayerGames))
 
 		// start any multi games
-		for _, multiGame := range currentMultiPlayerGames {
+		for _, multiGame := range getCurrentMultiPlayerGames() {
 			go func(multiGame *multiBiasGame) {
 				defer helpers.Recover()
 				multiGame.processMultiGame()
@@ -189,16 +191,18 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 // Uninit called when bot is shutting down
 func (b *BiasGame) Uninit(session *discordgo.Session) {
 	// save any currently running games
-	if len(currentSinglePlayerGames) > 0 {
-		err := setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
+	singlePlayerGames := getCurrentSinglePlayerGames()
+	if len(singlePlayerGames) > 0 {
+		err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
 		helpers.Relax(err)
 	}
-	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(currentSinglePlayerGames))
-	if len(currentMultiPlayerGames) > 0 {
-		err := setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
+	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(singlePlayerGames))
+	multiPlayerGames := getCurrentMultiPlayerGames()
+	if len(multiPlayerGames) > 0 {
+		err := setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
 		helpers.Relax(err)
 	}
-	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(currentMultiPlayerGames))
+	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(multiPlayerGames))
 }
 
 // Will validate if the passed command entered is used for this plugin
@@ -354,11 +358,11 @@ func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session
 	}
 
 	// confirm the reaction was added to a message for one bias games
-	if game, ok := currentSinglePlayerGames[reaction.UserID]; ok {
+	if game := getCurrentSinglePlayerGameByUserID(reaction.UserID); game != nil {
 
 		// if game was somehow set to nil, remove it from current games
 		if game == nil {
-			delete(currentSinglePlayerGames, reaction.UserID)
+			deleteCurrentSinglePlayerGameByUserID(reaction.UserID)
 		} else {
 			game.processVote(reaction)
 		}
@@ -379,7 +383,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 
 	// check if the user has a current game already going.
 	// if so update the channel id for the game incase the user tried starting the game from another server
-	if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+	if game := getCurrentSinglePlayerGameByUserID(msg.Author.ID); game != nil {
 
 		// if the user already had a game going, let them know to avoid confusion if they
 		//   tried starting another game a long time after the first
@@ -421,7 +425,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 			}
 
 			// recheck if a game is still going on, see above
-			if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+			if game := getCurrentSinglePlayerGameByUserID(msg.Author.ID); game != nil {
 				game.ChannelID = msg.ChannelID
 				return game
 			}
@@ -453,7 +457,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 		}
 
 		// save game to current running games
-		currentSinglePlayerGames[msg.Author.ID] = singleGame
+		setCurrentSinglePlayerGame(singleGame)
 	}
 
 	return singleGame
@@ -643,7 +647,7 @@ func (g *singleBiasGame) finishSingleGame() {
 	}(g)
 
 	// end the g. delete from current games
-	delete(currentSinglePlayerGames, g.User.ID)
+	deleteCurrentSinglePlayerGameByUserID(g.User.ID)
 }
 
 // recoverGame if a panic was caused during the game, delete from current games
@@ -651,7 +655,7 @@ func (g *singleBiasGame) recoverGame() {
 	if r := recover(); r != nil {
 
 		// end the g. delete from current games
-		delete(currentSinglePlayerGames, g.User.ID)
+		deleteCurrentSinglePlayerGameByUserID(g.User.ID)
 
 		// re-panic so it gets handled and logged correctly
 		panic(r)
@@ -666,7 +670,7 @@ func (g *singleBiasGame) recoverGame() {
 func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 	// check if a multi game is already running in the current channel
-	for _, game := range currentMultiPlayerGames {
+	for _, game := range getCurrentMultiPlayerGames() {
 		if game.ChannelID == msg.ChannelID {
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.multi-game-running"))
 			return
@@ -733,7 +737,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	// save game to current running games
-	currentMultiPlayerGames = append(currentMultiPlayerGames, multiGame)
+	addCurrentMultiPlayerGame(multiGame)
 
 	multiGame.processMultiGame()
 }
@@ -772,7 +776,6 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
 		checkPermissionError(err, g.ChannelID)
-		g.deleteMultiGame()
 		return errors.New("Could not send round")
 	}
 
@@ -889,11 +892,7 @@ func (g *multiBiasGame) processMultiGame() {
 func (g *multiBiasGame) deleteMultiGame() {
 
 	// delete multi game from current multi games
-	for i, game := range currentMultiPlayerGames {
-		if game.CurrentRoundMessageId == g.CurrentRoundMessageId {
-			currentMultiPlayerGames = append(currentMultiPlayerGames[:i], currentMultiPlayerGames[i+1:]...)
-		}
-	}
+	deleteCurrentMultiPlayerGameByCurrentRoundMessageID(g.CurrentRoundMessageId)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
