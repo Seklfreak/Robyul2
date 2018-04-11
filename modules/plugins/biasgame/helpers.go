@@ -278,7 +278,9 @@ func checkPermissionError(err error, channelID string) {
 	}
 
 	// check if error is a permissions error
-	if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeMissingPermissions {
-		helpers.SendMessage(channelID, helpers.GetText("bot.errors.no-file"))
+	if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
+		if err.Message.Code == discordgo.ErrCodeMissingPermissions {
+			helpers.SendMessage(channelID, helpers.GetText("bot.errors.no-file"))
+		}
 	}
 }
