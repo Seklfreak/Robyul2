@@ -160,17 +160,27 @@ func (h *Handler) actionChannel(args []string, in *discordgo.Message, out **disc
 		return h.actionFinish
 	}
 
+	var channelId string
+
 	if item == nil {
+		directItem, err := h.service.GetChannelSingle(args[1])
+		if err == nil && directItem != nil {
+			channelId = directItem.Id
+		}
+	} else {
+		// Very few channels only have snippet.ChannelID
+		// Maybe it's youtube API bug.
+		channelId = item.Id.ChannelId
+		if channelId == "" {
+			channelId = item.Snippet.ChannelId
+		}
+	}
+
+	if channelId == "" {
 		*out = h.newMsg("plugins.youtube.channel-not-found")
 		return h.actionFinish
 	}
 
-	// Very few channels only have snippet.ChannelID
-	// Maybe it's youtube API bug.
-	channelId := item.Id.ChannelId
-	if channelId == "" {
-		channelId = item.Snippet.ChannelId
-	}
 	*out = h.getChannelInfo(channelId)
 
 	return h.actionFinish
@@ -204,9 +214,22 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 		return h.actionFinish
 	}
 
+	var channelId, channelTitle string
+
 	if yc == nil {
-		*out = h.newMsg("plugins.youtube.channel-not-found")
-		return h.actionFinish
+		directItem, err := h.service.GetChannelSingle(args[2])
+		if err == nil && directItem != nil {
+			channelId = directItem.Id
+			channelTitle = directItem.Snippet.Title
+		}
+	} else {
+		// Very few channels only have snippet.ChannelID
+		// Maybe it's youtube API bug.
+		channelId = yc.Id.ChannelId
+		if channelId == "" {
+			channelId = yc.Snippet.ChannelId
+		}
+		channelTitle = yc.Snippet.ChannelTitle
 	}
 
 	entry := models.YoutubeChannelEntry{
@@ -215,14 +238,8 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 		NextCheckTime:           time.Now().Unix(),
 		LastSuccessfulCheckTime: time.Now().Unix(),
 
-		YoutubeChannelID:   yc.Id.ChannelId,
-		YoutubeChannelName: yc.Snippet.ChannelTitle,
-	}
-
-	// Very few channels only have snippet.ChannelID
-	// Maybe it's youtube API bug.
-	if entry.YoutubeChannelID == "" {
-		entry.YoutubeChannelID = yc.Snippet.ChannelId
+		YoutubeChannelID:   channelId,
+		YoutubeChannelName: channelTitle,
 	}
 
 	if entry.YoutubeChannelID == "" || entry.YoutubeChannelName == "" {
@@ -252,16 +269,16 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 			},
 			{
 				Key:   "youtube_channel_ytchannelid",
-				Value: yc.Id.ChannelId,
+				Value: channelId,
 			},
 			{
 				Key:   "youtube_channel_ytchannelname",
-				Value: yc.Snippet.ChannelTitle,
+				Value: channelTitle,
 			},
 		}, false)
 	helpers.RelaxLog(err)
 
-	*out = h.newMsg("plugins.youtube.channel-added-success", yc.Snippet.ChannelTitle, dc.ID)
+	*out = h.newMsg("plugins.youtube.channel-added-success", channelTitle, dc.ID)
 	return h.actionFinish
 }
 
