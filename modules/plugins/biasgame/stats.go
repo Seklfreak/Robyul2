@@ -1,7 +1,9 @@
 package biasgame
 
 import (
+	"bytes"
 	"fmt"
+	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -827,12 +829,10 @@ MultiWinLoop:
 		Author: &discordgo.MessageEmbedAuthor{
 			Name: fmt.Sprintf("Stats for %s %s", bias.GroupName, bias.BiasName),
 		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "attachment://idol_stats_thumbnail.png",
+		},
 	}
-
-	// group name, idol name, gender
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolSingleWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolMultiWinRank), Inline: true})
 
 	// overall game and game win info
 	var gameWinPercentage float64
@@ -841,9 +841,6 @@ MultiWinLoop:
 	} else {
 		gameWinPercentage = 0
 	}
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: strconv.Itoa(totalGameWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: strconv.Itoa(totalGames), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
 
 	// overall round and round win info
 	var roundWinPercentage float64
@@ -852,16 +849,31 @@ MultiWinLoop:
 	} else {
 		roundWinPercentage = 0
 	}
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: strconv.Itoa(totalRoundWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: strconv.Itoa(totalRounds), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
 
-	// user and server info
+	// add fields
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(bias.BiasImages)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolSingleWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolMultiWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: strconv.Itoa(totalGameWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: strconv.Itoa(totalRoundWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: strconv.Itoa(totalGames), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: strconv.Itoa(totalRounds), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%d wins)", userNameMostWins, highestUserWins), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%d wins)", guildNameMostWins, highestServerWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(bias.BiasImages)), Inline: true})
 
-	helpers.SendEmbed(msg.ChannelID, embed)
-	allGames = nil
-	targetIdolGames = nil
+	// get random image from the thumbnail
+	imageIndex := rand.Intn(len(bias.BiasImages))
+	thumbnailReader := bytes.NewReader(bias.BiasImages[imageIndex].getImgBytes())
+
+	msgSend := &discordgo.MessageSend{
+		Files: []*discordgo.File{{
+			Name:   "idol_stats_thumbnail.png",
+			Reader: thumbnailReader,
+		}},
+		Embed: embed,
+	}
+	helpers.SendComplex(msg.ChannelID, msgSend)
 }
