@@ -42,13 +42,11 @@ func (m *Handler) Init(session *discordgo.Session) {
 	go func() {
 		defer helpers.Recover()
 
-		/*
-			go func() {
-				defer helpers.Recover()
-				m.checkInstagramGraphQlFeedLoop()
-			}()
-			cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
-		*/
+		go func() {
+			defer helpers.Recover()
+			m.checkInstagramPublicFeedLoop()
+		}()
+		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
 
 		/*
 			if helpers.GetConfig().Path("instagram.username").Data().(string) != "" &&

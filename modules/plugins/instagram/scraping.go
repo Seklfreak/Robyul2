@@ -10,47 +10,56 @@ import (
 )
 
 func (m *Handler) getInformationAndPosts(username string, proxy http.Transport) (information InstagramAuthorInformations, posts []InstagramShortPostInformation, err error) {
-	graphQlUrl := m.publicMediaUrl(username)
-	result, err := helpers.NetGetUAWithErrorAndTransport(graphQlUrl, helpers.DEFAULT_UA, proxy)
+	pageUrl := "https://www.instagram.com/" + username + "/"
+	pageContent, err := helpers.NetGetUAWithErrorAndTransport(pageUrl, helpers.DEFAULT_UA, proxy)
 	if err != nil {
 		return
 	}
 
-	var graphQlFeedResult InstagramPublicProfileFeed
-	err = json.Unmarshal(result, &graphQlFeedResult)
+	var sharedDataText string
+	sharedDataText, err = m.extractInstagramSharedData(string(pageContent))
+	if err != nil {
+		return
+	}
+
+	var graphQlFeedResult InstagramPublicProfileFeed // TODO: new struct
+	err = json.Unmarshal([]byte(sharedDataText), &graphQlFeedResult)
 	helpers.Relax(err)
 
-	if graphQlFeedResult.Graphql.User.ID == "" {
+	if graphQlFeedResult.EntryData.ProfilePage == nil || len(graphQlFeedResult.EntryData.ProfilePage) < 0 ||
+		graphQlFeedResult.EntryData.ProfilePage[0].Graphql.User.ID == "" {
 		return information, posts, errors.New("failed to find user information")
 	}
 
-	receivedPosts := graphQlFeedResult.Graphql.User.EdgeOwnerToTimelineMedia.Edges
+	feed := graphQlFeedResult.EntryData.ProfilePage[0].Graphql
+
+	receivedPosts := feed.User.EdgeOwnerToTimelineMedia.Edges
 
 	for i := len(receivedPosts)/2 - 1; i >= 0; i-- {
 		opp := len(receivedPosts) - 1 - i
 		receivedPosts[i], receivedPosts[opp] = receivedPosts[opp], receivedPosts[i]
 	}
 
-	for _, receivedPost := range graphQlFeedResult.Graphql.User.EdgeOwnerToTimelineMedia.Edges {
+	for _, receivedPost := range feed.User.EdgeOwnerToTimelineMedia.Edges {
 		posts = append(posts, InstagramShortPostInformation{
-			ID:        receivedPost.Node.ID + "_" + graphQlFeedResult.Graphql.User.ID,
+			ID:        receivedPost.Node.ID + "_" + feed.User.ID,
 			Shortcode: receivedPost.Node.Shortcode,
 			CreatedAt: time.Unix(int64(receivedPost.Node.TakenAtTimestamp), 0),
 		})
 	}
 
 	information = InstagramAuthorInformations{
-		ID:            graphQlFeedResult.Graphql.User.ID,
-		ProfilePicUrl: graphQlFeedResult.Graphql.User.ProfilePicURLHd,
-		Username:      graphQlFeedResult.Graphql.User.Username,
-		FullName:      graphQlFeedResult.Graphql.User.FullName,
-		Link:          graphQlFeedResult.Graphql.User.ExternalURL,
-		IsPrivate:     graphQlFeedResult.Graphql.User.IsPrivate,
-		IsVerified:    graphQlFeedResult.Graphql.User.IsVerified,
-		Followings:    graphQlFeedResult.Graphql.User.EdgeFollow.Count,
-		Followers:     graphQlFeedResult.Graphql.User.EdgeFollowedBy.Count,
-		Posts:         graphQlFeedResult.Graphql.User.EdgeOwnerToTimelineMedia.Count,
-		Biography:     graphQlFeedResult.Graphql.User.Biography,
+		ID:            feed.User.ID,
+		ProfilePicUrl: feed.User.ProfilePicURLHd,
+		Username:      feed.User.Username,
+		FullName:      feed.User.FullName,
+		Link:          feed.User.ExternalURL,
+		IsPrivate:     feed.User.IsPrivate,
+		IsVerified:    feed.User.IsVerified,
+		Followings:    feed.User.EdgeFollow.Count,
+		Followers:     feed.User.EdgeFollowedBy.Count,
+		Posts:         feed.User.EdgeOwnerToTimelineMedia.Count,
+		Biography:     feed.User.Biography,
 	}
 
 	return
@@ -62,8 +71,18 @@ func (m *Handler) getPostInformation(shortCode string, proxy http.Transport) (in
 	if err != nil {
 		return
 	}
-	sharedData, err := m.getInstagramSharedData(string(postSite))
-	helpers.Relax(err)
+
+	var sharedDataText string
+	sharedDataText, err = m.extractInstagramSharedData(string(postSite))
+	if err != nil {
+		return
+	}
+
+	var sharedData InstagramSharedData
+	err = json.Unmarshal([]byte(sharedDataText), &sharedData)
+	if err != nil {
+		return
+	}
 
 	for _, postData := range sharedData.EntryData.PostPage {
 		if postData.Graphql.ShortcodeMedia.Shortcode == shortCode {

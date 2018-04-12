@@ -1,7 +1,6 @@
 package instagram
 
 import (
-	"encoding/json"
 	"sync"
 
 	"strings"
@@ -161,67 +160,73 @@ type Instagram_Safe_Entries struct {
 }
 
 type InstagramPublicProfileFeed struct {
-	Graphql struct {
-		User struct {
-			Biography              string `json:"biography"`
-			BlockedByViewer        bool   `json:"blocked_by_viewer"`
-			CountryBlock           bool   `json:"country_block"`
-			ExternalURL            string `json:"external_url"`
-			ExternalURLLinkshimmed string `json:"external_url_linkshimmed"`
-			EdgeFollowedBy         struct {
-				Count int `json:"count"`
-			} `json:"edge_followed_by"`
-			EdgeFollow struct {
-				Count int `json:"count"`
-			} `json:"edge_follow"`
-			FullName                 string `json:"full_name"`
-			ID                       string `json:"id"`
-			IsPrivate                bool   `json:"is_private"`
-			IsVerified               bool   `json:"is_verified"`
-			ProfilePicURL            string `json:"profile_pic_url"`
-			ProfilePicURLHd          string `json:"profile_pic_url_hd"`
-			Username                 string `json:"username"`
-			EdgeOwnerToTimelineMedia struct {
-				Count    int `json:"count"`
-				PageInfo struct {
-					HasNextPage bool   `json:"has_next_page"`
-					EndCursor   string `json:"end_cursor"`
-				} `json:"page_info"`
-				Edges []struct {
-					Node struct {
-						ID                 string `json:"id"`
-						Typename           string `json:"__typename"`
-						EdgeMediaToCaption struct {
-							Edges []struct {
-								Node struct {
-									Text string `json:"text"`
-								} `json:"node"`
-							} `json:"edges"`
-						} `json:"edge_media_to_caption"`
-						Shortcode          string `json:"shortcode"`
-						EdgeMediaToComment struct {
-							Count int `json:"count"`
-						} `json:"edge_media_to_comment"`
-						CommentsDisabled bool `json:"comments_disabled"`
-						TakenAtTimestamp int  `json:"taken_at_timestamp"`
-						Dimensions       struct {
-							Height int `json:"height"`
-							Width  int `json:"width"`
-						} `json:"dimensions"`
-						DisplayURL  string `json:"display_url"`
-						EdgeLikedBy struct {
-							Count int `json:"count"`
-						} `json:"edge_liked_by"`
-						Owner struct {
-							ID string `json:"id"`
-						} `json:"owner"`
-						ThumbnailSrc string `json:"thumbnail_src"`
-						IsVideo      bool   `json:"is_video"`
-					} `json:"node"`
-				} `json:"edges"`
-			} `json:"edge_owner_to_timeline_media"`
-		} `json:"user"`
-	} `json:"graphql"`
+	EntryData struct {
+		ProfilePage []struct {
+			LoggingPageID         string `json:"logging_page_id"`
+			ShowSuggestedProfiles bool   `json:"show_suggested_profiles"`
+			Graphql               struct {
+				User struct {
+					Biography              string `json:"biography"`
+					BlockedByViewer        bool   `json:"blocked_by_viewer"`
+					CountryBlock           bool   `json:"country_block"`
+					ExternalURL            string `json:"external_url"`
+					ExternalURLLinkshimmed string `json:"external_url_linkshimmed"`
+					EdgeFollowedBy         struct {
+						Count int `json:"count"`
+					} `json:"edge_followed_by"`
+					EdgeFollow struct {
+						Count int `json:"count"`
+					} `json:"edge_follow"`
+					FullName                 string `json:"full_name"`
+					ID                       string `json:"id"`
+					IsPrivate                bool   `json:"is_private"`
+					IsVerified               bool   `json:"is_verified"`
+					ProfilePicURL            string `json:"profile_pic_url"`
+					ProfilePicURLHd          string `json:"profile_pic_url_hd"`
+					Username                 string `json:"username"`
+					EdgeOwnerToTimelineMedia struct {
+						Count    int `json:"count"`
+						PageInfo struct {
+							HasNextPage bool   `json:"has_next_page"`
+							EndCursor   string `json:"end_cursor"`
+						} `json:"page_info"`
+						Edges []struct {
+							Node struct {
+								ID                 string `json:"id"`
+								Typename           string `json:"__typename"`
+								EdgeMediaToCaption struct {
+									Edges []struct {
+										Node struct {
+											Text string `json:"text"`
+										} `json:"node"`
+									} `json:"edges"`
+								} `json:"edge_media_to_caption"`
+								Shortcode          string `json:"shortcode"`
+								EdgeMediaToComment struct {
+									Count int `json:"count"`
+								} `json:"edge_media_to_comment"`
+								CommentsDisabled bool `json:"comments_disabled"`
+								TakenAtTimestamp int  `json:"taken_at_timestamp"`
+								Dimensions       struct {
+									Height int `json:"height"`
+									Width  int `json:"width"`
+								} `json:"dimensions"`
+								DisplayURL  string `json:"display_url"`
+								EdgeLikedBy struct {
+									Count int `json:"count"`
+								} `json:"edge_liked_by"`
+								Owner struct {
+									ID string `json:"id"`
+								} `json:"owner"`
+								ThumbnailSrc string `json:"thumbnail_src"`
+								IsVideo      bool   `json:"is_video"`
+							} `json:"node"`
+						} `json:"edges"`
+					} `json:"edge_owner_to_timeline_media"`
+				} `json:"user"`
+			} `json:"graphql"`
+		} `json:"ProfilePage"`
+	} `json:"entry_data"`
 }
 
 type InstagramSharedData struct {
@@ -359,11 +364,7 @@ func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.Instag
 	return bundledEntries, len(entries), nil
 }
 
-func (m *Handler) publicMediaUrl(username string) (link string) {
-	return "https://www.instagram.com/" + username + "/?__a=1"
-}
-
-func (m *Handler) getInstagramSharedData(pageContent string) (sharedData InstagramSharedData, err error) {
+func (m *Handler) extractInstagramSharedData(pageContent string) (sharedData string, err error) {
 	parts := strings.Split(pageContent, "window._sharedData = ")
 
 	if len(parts) < 2 {
@@ -376,6 +377,5 @@ func (m *Handler) getInstagramSharedData(pageContent string) (sharedData Instagr
 		return sharedData, errors.New("unable to parse shared data")
 	}
 
-	err = json.Unmarshal([]byte(subParts[0]), &sharedData)
-	return
+	return subParts[0], nil
 }

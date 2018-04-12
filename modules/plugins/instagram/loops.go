@@ -23,17 +23,17 @@ const (
 	InstagramGraphQlWorkers = 15
 )
 
-func (m *Handler) checkInstagramGraphQlFeedLoop() {
+func (m *Handler) checkInstagramPublicFeedLoop() {
 	log := cache.GetLogger().WithField("module", "instagram")
 
 	defer helpers.Recover()
 	defer func() {
 		go func() {
 			defer helpers.Recover()
-			log.Error("The checkInstagramGraphQlFeedLoop died." +
+			log.Error("The checkInstagramPublicFeedLoop died." +
 				"Please investigate! Will be restarted in 60 seconds")
 			time.Sleep(60 * time.Second)
-			m.checkInstagramGraphQlFeedLoop()
+			m.checkInstagramPublicFeedLoop()
 		}()
 	}()
 
@@ -51,7 +51,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 
 		workerEntries := make(map[int]map[string][]models.InstagramEntry, 0)
 		for w := 1; w <= InstagramGraphQlWorkers; w++ {
-			go m.checkInstagramGraphQlFeedWorker(w, jobs, results)
+			go m.checkInstagramPublicFeedLoopWorker(w, jobs, results)
 			workerEntries[w] = make(map[string][]models.InstagramEntry)
 		}
 
@@ -84,7 +84,7 @@ func (m *Handler) checkInstagramGraphQlFeedLoop() {
 	}
 }
 
-func (m *Handler) checkInstagramGraphQlFeedWorker(id int, jobs <-chan map[string][]models.InstagramEntry, results chan<- int) {
+func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[string][]models.InstagramEntry, results chan<- int) {
 	defer helpers.Recover()
 
 	currentProxy, err := helpers.GetRandomProxy()
