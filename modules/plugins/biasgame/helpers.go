@@ -284,3 +284,55 @@ func checkPermissionError(err error, channelID string) {
 		}
 	}
 }
+
+// gets a specific single player game for a UserID
+//  if the User currently has no game ongoing it will return nil
+//  will delete the game if a nil game is found
+func getSinglePlayerGameByUserID(userID string) *singleBiasGame {
+	if userID == "" {
+		return nil
+	}
+
+	currentSinglePlayerGamesMutex.RLock()
+	game, ok := currentSinglePlayerGames[userID]
+	currentSinglePlayerGamesMutex.RUnlock()
+
+	// if a game is found and is nil, delete it
+	if ok && game == nil {
+		currentSinglePlayerGamesMutex.Lock()
+		delete(currentSinglePlayerGames, userID)
+		currentSinglePlayerGamesMutex.Unlock()
+	}
+
+	return game
+}
+
+// gets a specific multi player game for a channelID
+//  returns nil if no games were found in the channel
+func getMultiPlayerGameByChannelID(channelID string) *multiBiasGame {
+	if channelID == "" {
+		return nil
+	}
+
+	for _, game := range getCurrentMultiPlayerGames() {
+		if game.ChannelID == channelID {
+			return game
+		}
+	}
+
+	return nil
+}
+
+// gets all currently ongoing single player games
+func getCurrentSinglePlayerGames() map[string]*singleBiasGame {
+	currentSinglePlayerGamesMutex.RLock()
+	defer currentSinglePlayerGamesMutex.RUnlock()
+	return currentSinglePlayerGames
+}
+
+// gets all currently ongoing multi player games
+func getCurrentMultiPlayerGames() []*multiBiasGame {
+	currentMultiPlayerGamesMutex.RLock()
+	defer currentMultiPlayerGamesMutex.RUnlock()
+	return currentMultiPlayerGames
+}

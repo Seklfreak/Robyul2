@@ -93,7 +93,9 @@ var crown image.Image
 
 // currently running single or multiplayer games
 var currentSinglePlayerGames map[string]*singleBiasGame
+var currentSinglePlayerGamesMutex sync.RWMutex
 var currentMultiPlayerGames []*multiBiasGame
+var currentMultiPlayerGamesMutex sync.RWMutex
 
 // holds all available idols in the game
 var allBiasChoices []*biasChoice
@@ -122,6 +124,11 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			512:  true,
 			1024: true,
 		}
+		// allow games with the size of 10 in debug mode
+		if helpers.DEBUG_MODE {
+			allowedGameSizes[10] = true
+		}
+
 		biasGameGenders = map[string]string{
 			"boy":   "boy",
 			"boys":  "boy",
@@ -156,24 +163,23 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			11: 60, 10: 60, 9: 60, 8: 60,
 		}
 
-		// allow games with the size of 10 in debug mode
-		if helpers.DEBUG_MODE {
-			allowedGameSizes[10] = true
-		}
-
 		// load all images and information
 		refreshBiasChoices(false)
 		loadMiscImages()
 		startBiasCacheRefreshLoop()
 
 		// get any in progress games saved in cache and immediatly delete them
+		currentSinglePlayerGamesMutex.Lock()
 		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
-		bgLog().Infof("restored %d singleplayer biasgames on launch", len(currentSinglePlayerGames))
+		currentSinglePlayerGamesMutex.Unlock()
+		currentMultiPlayerGamesMutex.Lock()
 		getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
-		bgLog().Infof("restored %d multiplayer biasgames on launch", len(currentMultiPlayerGames))
+		currentMultiPlayerGamesMutex.Unlock()
+		bgLog().Infof("restored %d singleplayer biasgames on launch", len(getCurrentSinglePlayerGames()))
+		bgLog().Infof("restored %d multiplayer biasgames on launch", len(getCurrentMultiPlayerGames()))
 
 		// start any multi games
-		for _, multiGame := range currentMultiPlayerGames {
+		for _, multiGame := range getCurrentMultiPlayerGames() {
 			go func(multiGame *multiBiasGame) {
 				defer helpers.Recover()
 				multiGame.processMultiGame()
@@ -193,16 +199,18 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 // Uninit called when bot is shutting down
 func (b *BiasGame) Uninit(session *discordgo.Session) {
 	// save any currently running games
-	if len(currentSinglePlayerGames) > 0 {
-		err := setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
+	singlePlayerGames := getCurrentSinglePlayerGames()
+	if len(singlePlayerGames) > 0 {
+		err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
 		helpers.Relax(err)
 	}
-	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(currentSinglePlayerGames))
-	if len(currentMultiPlayerGames) > 0 {
-		err := setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
+	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(singlePlayerGames))
+	multiPlayerGames := getCurrentMultiPlayerGames()
+	if len(multiPlayerGames) > 0 {
+		err := setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
 		helpers.Relax(err)
 	}
-	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(currentMultiPlayerGames))
+	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(multiPlayerGames))
 }
 
 // Will validate if the passed command entered is used for this plugin
@@ -358,14 +366,8 @@ func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session
 	}
 
 	// confirm the reaction was added to a message for one bias games
-	if game, ok := currentSinglePlayerGames[reaction.UserID]; ok {
-
-		// if game was somehow set to nil, remove it from current games
-		if game == nil {
-			delete(currentSinglePlayerGames, reaction.UserID)
-		} else {
-			game.processVote(reaction)
-		}
+	if game := getSinglePlayerGameByUserID(reaction.UserID); game != nil {
+		game.processVote(reaction)
 	}
 
 	// check if this was a reaction to a idol suggestion.
@@ -383,7 +385,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 
 	// check if the user has a current game already going.
 	// if so update the channel id for the game incase the user tried starting the game from another server
-	if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+	if game := getSinglePlayerGameByUserID(msg.Author.ID); game != nil {
 
 		// if the user already had a game going, let them know to avoid confusion if they
 		//   tried starting another game a long time after the first
@@ -425,7 +427,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 			}
 
 			// recheck if a game is still going on, see above
-			if game, ok := currentSinglePlayerGames[msg.Author.ID]; ok {
+			if game := getSinglePlayerGameByUserID(msg.Author.ID); game != nil {
 				game.ChannelID = msg.ChannelID
 				return game
 			}
@@ -457,7 +459,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 		}
 
 		// save game to current running games
-		currentSinglePlayerGames[msg.Author.ID] = singleGame
+		singleGame.saveGame()
 	}
 
 	return singleGame
@@ -646,20 +648,36 @@ func (g *singleBiasGame) finishSingleGame() {
 		recordSingleGamesStats(g)
 	}(g)
 
-	// end the g. delete from current games
-	delete(currentSinglePlayerGames, g.User.ID)
+	// delete from current games
+	g.deleteGame()
 }
 
 // recoverGame if a panic was caused during the game, delete from current games
 func (g *singleBiasGame) recoverGame() {
 	if r := recover(); r != nil {
 
-		// end the g. delete from current games
-		delete(currentSinglePlayerGames, g.User.ID)
+		// delete from current games
+		g.deleteGame()
 
 		// re-panic so it gets handled and logged correctly
 		panic(r)
 	}
+}
+
+// saveGame saves the game to the currently running games
+func (g *singleBiasGame) saveGame() {
+	currentSinglePlayerGamesMutex.Lock()
+	defer currentSinglePlayerGamesMutex.Unlock()
+
+	currentSinglePlayerGames[g.User.ID] = g
+}
+
+// saveGame saves the game to the currently running games
+func (g *singleBiasGame) deleteGame() {
+	currentSinglePlayerGamesMutex.Lock()
+	defer currentSinglePlayerGamesMutex.Unlock()
+
+	delete(currentSinglePlayerGames, g.User.ID)
 }
 
 /////////////////////////////////
@@ -670,11 +688,9 @@ func (g *singleBiasGame) recoverGame() {
 func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 	// check if a multi game is already running in the current channel
-	for _, game := range currentMultiPlayerGames {
-		if game.ChannelID == msg.ChannelID {
-			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.multi-game-running"))
-			return
-		}
+	if game := getMultiPlayerGameByChannelID(msg.ChannelID); game != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.multi-game-running"))
+		return
 	}
 
 	var gameGender string
@@ -737,7 +753,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	// save game to current running games
-	currentMultiPlayerGames = append(currentMultiPlayerGames, multiGame)
+	multiGame.saveGame()
 
 	multiGame.processMultiGame()
 }
@@ -776,7 +792,6 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
 		checkPermissionError(err, g.ChannelID)
-		g.deleteMultiGame()
 		return errors.New("Could not send round")
 	}
 
@@ -886,18 +901,27 @@ func (g *multiBiasGame) processMultiGame() {
 		recordMultiGamesStats(g)
 	}(g)
 
-	g.deleteMultiGame()
+	g.deleteGame()
 }
 
 // removes game from current multi games
-func (g *multiBiasGame) deleteMultiGame() {
+func (g *multiBiasGame) deleteGame() {
+	currentMultiPlayerGamesMutex.Lock()
+	currentMultiPlayerGamesMutex.Unlock()
 
-	// delete multi game from current multi games
 	for i, game := range currentMultiPlayerGames {
 		if game.CurrentRoundMessageId == g.CurrentRoundMessageId {
 			currentMultiPlayerGames = append(currentMultiPlayerGames[:i], currentMultiPlayerGames[i+1:]...)
 		}
 	}
+}
+
+// saveGame save to currently running multi games
+func (g *multiBiasGame) saveGame() {
+	currentMultiPlayerGamesMutex.Lock()
+	currentMultiPlayerGamesMutex.Unlock()
+
+	currentMultiPlayerGames = append(currentMultiPlayerGames, g)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
