@@ -25,15 +25,14 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-// startBiasCacheRefreshLoop will refresh the image cache for both misc image and bias images
-func startBiasCacheRefreshLoop() {
+// startCacheRefreshLoop will refresh the image cache for both misc image and bias images
+func startCacheRefreshLoop() {
 	bgLog().Info("Starting biasgame refresh image cache loop")
 
 	go func() {
 		defer helpers.Recover()
 
 		for {
-			// refresh every 12 hours
 			time.Sleep(time.Hour * 12)
 
 			bgLog().Info("Refreshing image cache...")
@@ -42,6 +41,26 @@ func startBiasCacheRefreshLoop() {
 			bgLog().Info("Biasgame image cache has been refresh")
 		}
 	}()
+
+	bgLog().Info("Starting biasgame current games cache loop")
+	go func() {
+		defer helpers.Recover()
+
+		for {
+			time.Sleep(time.Second * 30)
+
+			// save any currently running games
+			singlePlayerGames := getCurrentSinglePlayerGames()
+			err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
+			helpers.Relax(err)
+			bgLog().Infof("Cached %d singleplayer biasgames to redis", len(singlePlayerGames))
+			multiPlayerGames := getCurrentMultiPlayerGames()
+			err = setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
+			helpers.Relax(err)
+			bgLog().Infof("Cached %d multiplayer biasgames to redis", len(multiPlayerGames))
+		}
+	}()
+
 }
 
 // loadMiscImages handles loading other images besides the idol images

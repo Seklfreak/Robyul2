@@ -166,7 +166,8 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		// load all images and information
 		refreshBiasChoices(false)
 		loadMiscImages()
-		startBiasCacheRefreshLoop()
+
+		startCacheRefreshLoop()
 
 		// get any in progress games saved in cache and immediatly delete them
 		currentSinglePlayerGamesMutex.Lock()
@@ -186,9 +187,6 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			}(multiGame)
 		}
 
-		// spew.Dump(currentSinglePlayerGames)
-		delBiasGameCache("currentSinglePlayerGames", "currentMultiPlayerGames")
-
 		gameIsReady = true
 
 		// set up suggestions channel
@@ -198,18 +196,16 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 
 // Uninit called when bot is shutting down
 func (b *BiasGame) Uninit(session *discordgo.Session) {
+
 	// save any currently running games
 	singlePlayerGames := getCurrentSinglePlayerGames()
-	if len(singlePlayerGames) > 0 {
-		err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
-		helpers.Relax(err)
-	}
+	err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
+	helpers.Relax(err)
 	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(singlePlayerGames))
+
 	multiPlayerGames := getCurrentMultiPlayerGames()
-	if len(multiPlayerGames) > 0 {
-		err := setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
-		helpers.Relax(err)
-	}
+	err = setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
+	helpers.Relax(err)
 	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(multiPlayerGames))
 }
 
