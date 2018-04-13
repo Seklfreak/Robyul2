@@ -782,13 +782,11 @@ func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (
 	}
 
 	// remove from redis
-	exists, err := cache.GetRedisClient().Exists(key).Result()
-	if err != nil || exists <= 0 {
-		return err
-	}
-
 	marshalled, err := cache.GetRedisClient().Get(key).Bytes()
 	if err != nil {
+		if strings.Contains(err.Error(), "redis: nil") {
+			return nil
+		}
 		return err
 	}
 

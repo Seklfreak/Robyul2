@@ -5,6 +5,8 @@ import (
 
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
@@ -35,19 +37,17 @@ func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err erro
 	redis := cache.GetRedisClient()
 
 	// check redis webhook cache
-	keyExists, err := redis.Exists(key).Result()
-	RelaxLog(err)
-	if err == nil && keyExists >= 1 {
-		keyBytes, err := redis.Get(key).Bytes()
+	keyBytes, err := redis.Get(key).Bytes()
+	if err != nil && !strings.Contains(err.Error(), "redis: nil") {
 		RelaxLog(err)
-		if err == nil {
-			err = msgpack.Unmarshal(keyBytes, &webhook)
-			RelaxLog(err)
-			if err == nil && webhook.ID != "" && webhook.Token != "" {
-				cache.GetLogger().WithField("module", "webhooks").Infof(
-					"got webhook for #%s from cache", channelID)
-				return webhook, nil
-			}
+	}
+	if err == nil && len(keyBytes) > 0 {
+		err = msgpack.Unmarshal(keyBytes, &webhook)
+		RelaxLog(err)
+		if err == nil && webhook.ID != "" && webhook.Token != "" {
+			cache.GetLogger().WithField("module", "webhooks").Infof(
+				"got webhook for #%s from cache", channelID)
+			return webhook, nil
 		}
 	}
 
