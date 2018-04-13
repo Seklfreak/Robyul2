@@ -144,19 +144,19 @@ func (m *LastFm) generateDiscordStats() {
 						case "overall":
 							newLastFmCachedStat.Overall = append(newLastFmCachedStat.Overall, songInfo)
 							break
-						case "7day":
+						case "7day", "7days", "week":
 							newLastFmCachedStat.SevenDay = append(newLastFmCachedStat.SevenDay, songInfo)
 							break
-						case "1month":
+						case "1month", "1months", "month":
 							newLastFmCachedStat.OneMonth = append(newLastFmCachedStat.OneMonth, songInfo)
 							break
-						case "3month":
+						case "3month", "3months":
 							newLastFmCachedStat.ThreeMonth = append(newLastFmCachedStat.ThreeMonth, songInfo)
 							break
-						case "6month":
+						case "6month", "6months":
 							newLastFmCachedStat.SixMonth = append(newLastFmCachedStat.SixMonth, songInfo)
 							break
-						case "12month":
+						case "12month", "12months", "year":
 							newLastFmCachedStat.TwelveMonth = append(newLastFmCachedStat.TwelveMonth, songInfo)
 							break
 						}
@@ -527,22 +527,22 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					timeLookup = "7day"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "1month", "month":
+				case "1month", "month", "1months":
 					timeString = "the last month"
 					timeLookup = "1month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "3month":
+				case "3month", "3months":
 					timeString = "the last three months"
 					timeLookup = "3month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "6month":
+				case "6month", "6months":
 					timeString = "the last six months"
 					timeLookup = "6month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "12month", "year":
+				case "12month", "year", "12months":
 					timeString = "the last twelve months"
 					timeLookup = "12month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
@@ -692,22 +692,22 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					timeLookup = "7day"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "1month", "month":
+				case "1month", "month", "1months":
 					timeString = "the last month"
 					timeLookup = "1month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "3month":
+				case "3month", "3months":
 					timeString = "the last three months"
 					timeLookup = "3month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "6month":
+				case "6month", "6months":
 					timeString = "the last six months"
 					timeLookup = "6month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "12month", "year":
+				case "12month", "year", "12months":
 					timeString = "the last twelve months"
 					timeLookup = "12month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
@@ -856,22 +856,22 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					timeLookup = "7day"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "1month", "month":
+				case "1month", "month", "1months":
 					timeString = "the last month"
 					timeLookup = "1month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "3month":
+				case "3month", "3months":
 					timeString = "the last three months"
 					timeLookup = "3month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "6month":
+				case "6month", "6months":
 					timeString = "the last six months"
 					timeLookup = "6month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
 					break
-				case "12month", "year":
+				case "12month", "year", "12months":
 					timeString = "the last twelve months"
 					timeLookup = "12month"
 					args = append(args[:len(args)-1], args[len(args):]...) // remove last element from slice
@@ -1035,19 +1035,19 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 					timeString = "the last seven days"
 					topTracks = combinedStats.SevenDay
 					break
-				case "1month", "month":
+				case "1month", "month", "1months":
 					timeString = "the last month"
 					topTracks = combinedStats.OneMonth
 					break
-				case "3month":
+				case "3month", "3months":
 					timeString = "the last three months"
 					topTracks = combinedStats.ThreeMonth
 					break
-				case "6month":
+				case "6month", "6months":
 					timeString = "the last six months"
 					topTracks = combinedStats.SixMonth
 					break
-				case "12month", "year":
+				case "12month", "year", "12months":
 					timeString = "the last twelve months"
 					topTracks = combinedStats.TwelveMonth
 					break
