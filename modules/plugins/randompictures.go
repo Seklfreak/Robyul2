@@ -904,8 +904,19 @@ Loop:
 					if result.NextPageToken == "" {
 						break
 					}
+				RetryRequest:
 					result, err = driveService.Files.List().Q(fmt.Sprintf(driveSearchText, driveFolderID)).Fields(googleapi.Field(driveFieldsText)).PageSize(1000).PageToken(result.NextPageToken).Do()
-					helpers.Relax(err)
+					if err != nil {
+						if strings.Contains(err.Error(), "Error 500: Internal Error") {
+							cache.GetLogger().WithField("module", "randompictures").Warnf(
+								"internal error requesting files for %s, retrying in 10 seconds",
+								driveFolderID,
+							)
+							time.Sleep(time.Second * 10)
+							goto RetryRequest
+						}
+						helpers.Relax(err)
+					}
 					for _, file := range result.Files {
 						if rp.isValidDriveFile(file) {
 							allFiles = append(allFiles, file)

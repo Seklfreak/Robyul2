@@ -50,8 +50,10 @@ func (w *Weather) Action(command string, content string, msg *discordgo.Message,
 			helpers.MdbCollection(models.WeatherLastLocationsTable).Find(bson.M{"userid": msg.Author.ID}),
 			&entryBucket,
 		)
-		if helpers.IsMdbNotFound(err) {
-			helpers.RelaxLog(err)
+		if err != nil {
+			if !helpers.IsMdbNotFound(err) {
+				helpers.RelaxLog(err)
+			}
 		} else {
 			latResult = entryBucket.Lat
 			lngResult = entryBucket.Lng

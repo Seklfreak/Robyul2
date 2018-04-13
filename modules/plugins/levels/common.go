@@ -254,8 +254,16 @@ func processExpStackLoop() {
 								}
 							}
 							messages, err := helpers.SendComplex(expItem.ChannelID, messageSend)
-							helpers.RelaxLog(err)
-							if guildSettings.LevelsNotificationDeleteAfter > 0 {
+							if err != nil {
+								if errD, ok := err.(*discordgo.RESTError); ok {
+									if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+										return
+									}
+								}
+								helpers.RelaxLog(err)
+								return
+							}
+							if messages != nil && guildSettings.LevelsNotificationDeleteAfter > 0 {
 								go func() {
 									defer helpers.Recover()
 

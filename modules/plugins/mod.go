@@ -94,8 +94,16 @@ func (m *Mod) Init(session *discordgo.Session) {
 				continue
 			}
 
+		RetryGetGuildInvites:
 			invites, err := session.GuildInvites(guild.ID)
 			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if strings.Contains(errD.Message.Message, "500: Internal Server Error") {
+						cache.GetLogger().WithField("module", "mod").Info("internal server error getting invites for #" + guild.ID + " retrying in 10 seconds")
+						time.Sleep(10 * time.Second)
+						goto RetryGetGuildInvites
+					}
+				}
 				helpers.RelaxLog(err)
 				continue
 			}
@@ -579,7 +587,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		})
 		return
-	case "unmute": // [p]unmute server <User>
+	case "unmute": // [p]unmute <User>
 		helpers.RequireMod(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
 			args := strings.Fields(content)
@@ -587,7 +595,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				targetUser, _ := helpers.GetUserFromMention(args[0])
 				if targetUser == nil {
 					targetUser = new(discordgo.User)
-					targetUser.ID = args[1]
+					targetUser.ID = args[0]
 					targetUser.Username = "N/A"
 				}
 				channel, err := helpers.GetChannel(msg.ChannelID)

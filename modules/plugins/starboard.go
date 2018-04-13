@@ -520,7 +520,9 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 		err = s.AddStar(channel.GuildID, message, reaction.UserID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok {
-				if errD.Message.Code == discordgo.ErrCodeUnknownMessage || errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+				if errD.Message.Code == discordgo.ErrCodeUnknownMessage ||
+					errD.Message.Code == discordgo.ErrCodeMissingPermissions ||
+					errD.Message.Code == discordgo.ErrCodeMissingAccess {
 					return
 				}
 			}

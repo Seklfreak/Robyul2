@@ -845,6 +845,11 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 			}
 			_, err = helpers.SendComplex(msg.ChannelID, messageSend)
 			if err != nil {
+				if errD, ok := err.(*discordgo.RESTError); ok {
+					if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+						return
+					}
+				}
 				helpers.RelaxLog(err)
 				return
 			}

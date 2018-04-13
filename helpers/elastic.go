@@ -44,7 +44,16 @@ func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.Messa
 		defer Recover()
 
 		err := ElasticAddMessage(message.Message)
-		Relax(err)
+		if err != nil {
+			if errE, ok := err.(*elastic.Error); ok {
+				if errE.Status == 429 {
+					cache.GetLogger().WithField("module", "elastic").Warn(
+						"unable to log MessageCreate event, too many requests")
+					return
+				}
+			}
+			RelaxLog(err)
+		}
 	}()
 }
 
@@ -75,9 +84,17 @@ func ElasticOnMessageUpdate(session *discordgo.Session, message *discordgo.Messa
 
 		err := ElasticUpdateMessage(message.Message)
 		if err != nil {
-			if !strings.Contains(err.Error(), "unable to find elastic message") {
-				Relax(err)
+			if strings.Contains(err.Error(), "unable to find elastic message") {
+				return
 			}
+			if errE, ok := err.(*elastic.Error); ok {
+				if errE.Status == 429 {
+					cache.GetLogger().WithField("module", "elastic").Warn(
+						"unable to log MessageCreate event, too many requests")
+					return
+				}
+			}
+			RelaxLog(err)
 		}
 	}()
 }
@@ -105,9 +122,17 @@ func ElasticOnMessageDelete(session *discordgo.Session, message *discordgo.Messa
 
 		err := ElasticDeleteMessage(message.Message)
 		if err != nil {
-			if !strings.Contains(err.Error(), "unable to find elastic message") {
-				Relax(err)
+			if strings.Contains(err.Error(), "unable to find elastic message") {
+				return
 			}
+			if errE, ok := err.(*elastic.Error); ok {
+				if errE.Status == 429 {
+					cache.GetLogger().WithField("module", "elastic").Warn(
+						"unable to log MessageCreate event, too many requests")
+					return
+				}
+			}
+			RelaxLog(err)
 		}
 	}()
 }
@@ -139,7 +164,16 @@ func ElasticOnReactionAdd(session *discordgo.Session, reaction *discordgo.Messag
 		defer Recover()
 
 		err := ElasticAddReaction(reaction.MessageReaction)
-		Relax(err)
+		if err != nil {
+			if errE, ok := err.(*elastic.Error); ok {
+				if errE.Status == 429 {
+					cache.GetLogger().WithField("module", "elastic").Warn(
+						"unable to log MessageCreate event, too many requests")
+					return
+				}
+			}
+			RelaxLog(err)
+		}
 	}()
 }
 
@@ -148,7 +182,16 @@ func ElasticOnPresenceUpdate(session *discordgo.Session, presence *discordgo.Pre
 		defer Recover()
 
 		err := ElasticAddPresenceUpdate(&presence.Presence)
-		Relax(err)
+		if err != nil {
+			if errE, ok := err.(*elastic.Error); ok {
+				if errE.Status == 429 {
+					cache.GetLogger().WithField("module", "elastic").Warn(
+						"unable to log MessageCreate event, too many requests")
+					return
+				}
+			}
+			RelaxLog(err)
+		}
 	}()
 }
 
