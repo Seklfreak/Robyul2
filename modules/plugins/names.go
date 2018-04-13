@@ -49,7 +49,7 @@ func (n *Names) Init(session *discordgo.Session) {
 }
 
 func (n *Names) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermNames) {
+	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermMod) {
 		return
 	}
 

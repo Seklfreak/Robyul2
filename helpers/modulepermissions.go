@@ -19,55 +19,55 @@ var (
 )
 
 const (
-	ModulePermStats              models.ModulePermissionsModule = 1 << iota // stats.go, uptime.go
-	ModulePermTranslator                                                    // translator.go
-	ModulePermUrban                                                         // urbandict.go
-	ModulePermWeather                                                       // weather.go
-	ModulePermVLive                                                         // vlive.go
-	ModulePermInstagram                                                     // instagram/
-	ModulePermFacebook                                                      // facebook.go
-	ModulePermWolframAlpha                                                  // wolframalpha.go
-	ModulePermLastFm                                                        // lastfm.go
-	ModulePermTwitch                                                        // twitch.go
-	ModulePermCharts                                                        // charts.go
-	ModulePermChoice                                                        // choice.go
-	ModulePermOsu                                                           // osu.go
-	ModulePermReminders                                                     // reminders.go
-	ModulePermGfycat                                                        // gfycat.go
-	ModulePermRandomPictures                                                // randompictures.go
-	ModulePermYouTube                                                       // youtube/
-	ModulePermSpoiler                                                       // spoiler.go
-	ModulePermAnimals                                                       // random_cat.go, dog.go
-	ModulePermGames                                                         // rps.go, biasgame/
-	ModulePermDig                                                           // dig.go
-	ModulePermStreamable                                                    // streamable.go
-	ModulePermLyrics                                                        // lyrics.go
-	ModulePermNames                                                         // names.go
-	ModulePermReddit                                                        // reddit.go
-	ModulePermColor                                                         // color.go
-	ModulePermSteam                                                         // dog.go
-	ModulePermGoogle                                                        // google/
-	ModulePermWhois                                                         // whois.go
-	ModulePermIsup                                                          // isup.go
-	ModulePermLevels                                                        // levels.go
-	ModulePermCustomCommands                                                // customcommands.go
-	ModulePermReactionPolls                                                 // reactionpolls.go
-	ModulePermTwitter                                                       // twitter.go
-	ModulePermStarboard                                                     // starboard.go
-	ModulePermAutoRole                                                      // autorole.go
-	ModulePermBias                                                          // bias.go
-	ModulePermDiscordmoney                                                  // discordmoney.go
-	ModulePermGallery                                                       // gallery.go
-	ModulePermGuildAnnouncements                                            // guildannouncements.go
-	ModulePermMirror                                                        // mirror.go
-	ModulePermMod                                                           // mod.go
-	ModulePermNotifications                                                 // notifications.go
-	ModulePermNuke                                                          // nuke.go
-	ModulePermPersistency                                                   // persistency.go
-	ModulePermPing                                                          // ping.go
-	ModulePermTroublemaker                                                  // troublemaker.go
-	ModulePermVanityInvite                                                  // vanityinvite.go
-	ModulePerm8ball                                                         // 8ball.go
+	ModulePermStats          models.ModulePermissionsModule = 1 << iota // stats.go, uptime.go
+	ModulePermTranslator                                                // translator.go
+	ModulePermUrban                                                     // urbandict.go
+	ModulePermWeather                                                   // weather.go
+	ModulePermVLive                                                     // vlive.go
+	ModulePermInstagram                                                 // instagram/
+	ModulePermFacebook                                                  // facebook.go
+	ModulePermWolframAlpha                                              // wolframalpha.go
+	ModulePermLastFm                                                    // lastfm.go
+	ModulePermTwitch                                                    // twitch.go
+	ModulePermCharts                                                    // charts.go
+	ModulePermChoice                                                    // choice.go
+	ModulePermOsu                                                       // osu.go
+	ModulePermReminders                                                 // reminders.go
+	ModulePermGfycat                                                    // gfycat.go
+	ModulePermRandomPictures                                            // randompictures.go
+	ModulePermYouTube                                                   // youtube/
+	ModulePermSpoiler                                                   // spoiler.go
+	ModulePermAnimals                                                   // random_cat.go, dog.go
+	ModulePermGames                                                     // rps.go, biasgame/
+	ModulePermDig                                                       // dig.go
+	ModulePermStreamable                                                // streamable.go
+	ModulePermLyrics                                                    // lyrics.go
+	ModulePermMisc
+	ModulePermReddit             // reddit.go
+	ModulePermColor              // color.go
+	ModulePermSteam              // dog.go
+	ModulePermGoogle             // google/
+	ModulePermWhois              // whois.go
+	ModulePermIsup               // isup.go
+	ModulePermLevels             // levels.go
+	ModulePermCustomCommands     // customcommands.go
+	ModulePermReactionPolls      // reactionpolls.go
+	ModulePermTwitter            // twitter.go
+	ModulePermStarboard          // starboard.go
+	ModulePermAutoRole           // autorole.go
+	ModulePermBias               // bias.go
+	ModulePermDiscordmoney       // discordmoney.go
+	ModulePermGallery            // gallery.go
+	ModulePermGuildAnnouncements // guildannouncements.go
+	ModulePermMirror             // mirror.go
+	ModulePermMod                // mod.go
+	ModulePermNotifications      // notifications.go
+	ModulePermNuke               // nuke.go
+	ModulePermPersistency        // persistency.go
+	ModulePermPing               // ping.go
+	ModulePermTroublemaker       // troublemaker.go
+	ModulePermVanityInvite       // vanityinvite.go
+	ModulePerm8ball              // 8ball.go
 	ModulePermAllPlaceholder
 	ModulePermFeedback  // feedback.go
 	ModulePermEmbedPost // embedpost.go
@@ -79,7 +79,7 @@ const (
 		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
 		ModulePermTwitch | ModulePermCharts | ModulePermChoice | ModulePermOsu | ModulePermReminders |
 		ModulePermGfycat | ModulePermRandomPictures | ModulePermYouTube | ModulePermSpoiler | ModulePermAnimals |
-		ModulePermGames | ModulePermDig | ModulePermStreamable | ModulePermLyrics | ModulePermNames | ModulePermReddit |
+		ModulePermGames | ModulePermDig | ModulePermStreamable | ModulePermLyrics | ModulePermMisc | ModulePermReddit |
 		ModulePermColor | ModulePermSteam | ModulePermGoogle | ModulePermWhois | ModulePermIsup | ModulePermLevels |
 		ModulePermCustomCommands | ModulePermReactionPolls | ModulePermTwitter | ModulePermStarboard |
 		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
@@ -113,7 +113,7 @@ var (
 		{Names: []string{"dig"}, Permission: ModulePermDig},
 		{Names: []string{"streamable"}, Permission: ModulePermStreamable},
 		{Names: []string{"lyrics"}, Permission: ModulePermLyrics},
-		{Names: []string{"names"}, Permission: ModulePermNames},
+		{Names: []string{"misc"}, Permission: ModulePermMisc},
 		{Names: []string{"reddit"}, Permission: ModulePermReddit},
 		{Names: []string{"color"}, Permission: ModulePermColor},
 		{Names: []string{"steam"}, Permission: ModulePermSteam},
@@ -131,7 +131,7 @@ var (
 		{Names: []string{"gallery"}, Permission: ModulePermGallery},
 		{Names: []string{"serverannouncements", "guildannouncements"}, Permission: ModulePermGuildAnnouncements},
 		{Names: []string{"mirror"}, Permission: ModulePermMirror},
-		{Names: []string{"mod"}, Permission: ModulePermMod},
+		{Names: []string{"mod", "names"}, Permission: ModulePermMod},
 		{Names: []string{"notifications"}, Permission: ModulePermNotifications},
 		{Names: []string{"nuke"}, Permission: ModulePermNuke},
 		{Names: []string{"persistency"}, Permission: ModulePermPersistency},

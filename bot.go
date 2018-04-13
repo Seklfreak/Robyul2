@@ -390,6 +390,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			})
 
 		default:
+			if !helpers.ModuleIsAllowed(message.ChannelID, message.ID, message.Author.ID, helpers.ModulePermMisc) {
+				return
+			}
+
 			// Mark typing
 			session.ChannelTyping(message.ChannelID)
 
