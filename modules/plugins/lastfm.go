@@ -1087,6 +1087,111 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			_, err = helpers.SendEmbed(msg.ChannelID, topTracksEmbed)
 			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 			break
+		case "recent", "recents", "recently":
+			var err error
+			targetUser := msg.Author
+			if len(args) >= 2 {
+				lastfmUsername = args[1]
+				targetUser, err = helpers.GetUserFromMention(lastfmUsername)
+				if err == nil {
+					lastfmUsername = helpers.GetLastFmUsername(targetUser.ID)
+				}
+			}
+
+			channel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			if lastfmUsername == "" {
+				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.lastfm.too-few", helpers.GetPrefixForServer(channel.GuildID)))
+				return
+			}
+			session.ChannelTyping(msg.ChannelID)
+
+			lastfmRecentTracks, err := helpers.GetLastFmClient().User.GetRecentTracksExtended(lastfm.P{
+				"limit": 11,
+				"user":  lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			if err != nil {
+				if e, ok := err.(*lastfm.LastfmError); ok {
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Error: `%s`", e.Message))
+					return
+				}
+			}
+
+			if len(lastfmRecentTracks.Tracks) <= 0 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
+				return
+			}
+
+			playcountText := ""
+			lastfmAvatar := targetUser.AvatarURL("64")
+			lastfmUserInfo, err := helpers.GetLastFmClient().User.GetInfo(lastfm.P{
+				"user": lastfmUsername,
+			})
+			metrics.LastFmRequests.Add(1)
+			helpers.RelaxLog(err)
+			if err == nil {
+				playcountText = " | Total plays: " + lastfmUserInfo.PlayCount
+				playcountNumber, err := strconv.Atoi(lastfmUserInfo.PlayCount)
+				if err == nil {
+					playcountText = " | Total plays: " + humanize.Comma(int64(playcountNumber))
+				}
+				if len(lastfmUserInfo.Images) > 0 {
+					for _, lastfmImage := range lastfmUserInfo.Images {
+						if lastfmImage.Size == "large" {
+							lastfmAvatar = lastfmImage.Url
+						}
+					}
+				}
+			}
+
+			recentsEmbed := &discordgo.MessageEmbed{
+				Footer: &discordgo.MessageEmbedFooter{
+					Text:    helpers.GetText("plugins.lastfm.embed-footer") + playcountText,
+					IconURL: helpers.GetText("plugins.lastfm.embed-footer-imageurl"),
+				},
+				Author: &discordgo.MessageEmbedAuthor{
+					URL:     fmt.Sprintf(lastfmFriendlyUser, lastfmUsername),
+					Name:    helpers.GetTextF("plugins.lastfm.recents-embed-title", lastfmUsername),
+					IconURL: lastfmAvatar,
+				},
+				//Fields: []*discordgo.MessageEmbedField{},
+				Color: helpers.GetDiscordColorFromHex(lastfmHexColor),
+			}
+
+			var currentTrackUrl string
+			var added int
+
+			for _, recentTrack := range lastfmRecentTracks.Tracks {
+				if added <= 1 && recentTrack.Url == currentTrackUrl {
+					continue
+				}
+				trackText := fmt.Sprintf("**[%s](%s) by [%s](%s)**",
+					recentTrack.Name, helpers.EscapeLinkForMarkdown(recentTrack.Url),
+					recentTrack.Artist.Name, helpers.EscapeLinkForMarkdown(recentTrack.Artist.Url))
+				if recentTrack.Loved == "1" {
+					trackText += " :heart:"
+				}
+				if recentTrack.NowPlaying == "true" {
+					trackText += " - _now playing_"
+					currentTrackUrl = recentTrack.Url
+				} else {
+					timestamp, err := strconv.Atoi(recentTrack.Date.Uts)
+					if err == nil {
+						trackText += " - " + humanize.Time(time.Unix(int64(timestamp), 0))
+					}
+				}
+				recentsEmbed.Description += trackText + "\n"
+				added++
+				if added >= 10 {
+					break
+				}
+			}
+
+			_, err = helpers.SendEmbed(msg.ChannelID, recentsEmbed)
+			helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
+			return
 		default:
 			var err error
 			targetUser := msg.Author
