@@ -3,19 +3,13 @@ package helpers
 import (
 	"encoding/json"
 
-	"sync"
+	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
+	"github.com/vmihailenco/msgpack"
 )
-
-var (
-	webhookCache     = make(map[string][]*discordgo.Webhook, 0) // map[channelID][]webhooks
-	webhookCacheLock sync.Mutex
-)
-
-// TODO: move galleries and more to this instead of storing webhooks
 
 // Executes a webhook and waites for the response
 // id	: the ID of the webhook to use
@@ -33,91 +27,79 @@ func WebhookExecuteWithResult(id, token string, data *discordgo.WebhookParams) (
 	return message, err
 }
 
-// Gets webhooks for a channel (checks for permission, and uses cache)
+// Gets a webhook for a channel (checks for permission, and uses cache)
 // guildID		: the guild from which to get the webhook
 // channelID	: the channel for which to get the webhook
-// amount		: how many webhooks to get
-func GetWebhooks(guildID, channelID string, amount int) (webhooks []*discordgo.Webhook, err error) {
-	webhooks = make([]*discordgo.Webhook, 0)
+func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err error) {
+	key := "robyul-discord:webhooks-cache:" + guildID + ":" + channelID
+	redis := cache.GetRedisClient()
 
-	// check webhook cache
-	webhookCacheLock.Lock()
-	if _, ok := webhookCache[channelID]; ok && webhookCache[channelID] != nil {
-		for _, cachedWebhook := range webhookCache[channelID] {
-			webhooks = append(webhooks, cachedWebhook)
-			if len(webhooks) >= amount {
-				break
+	// check redis webhook cache
+	keyExists, err := redis.Exists(key).Result()
+	RelaxLog(err)
+	if err == nil && keyExists >= 1 {
+		keyBytes, err := redis.Get(key).Bytes()
+		RelaxLog(err)
+		if err == nil {
+			err = msgpack.Unmarshal(keyBytes, &webhook)
+			RelaxLog(err)
+			if err == nil && webhook.ID != "" && webhook.Token != "" {
+				cache.GetLogger().WithField("module", "webhooks").Infof(
+					"got webhook for #%s from cache", channelID)
+				return webhook, nil
 			}
 		}
-		cache.GetLogger().WithField("module", "webhooks").Infof(
-			"got %d webhooks for #%s from cache", len(webhookCache[channelID]), channelID)
-	}
-	webhookCacheLock.Unlock()
-
-	if len(webhooks) >= amount {
-		return webhooks, nil
 	}
 
+	// get robyul's permissions for the target channel
 	channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channelID)
 	if err != nil {
-		return webhooks, err
+		return nil, err
 	}
 
 	// checks if we are allowed to manage webhooks
 	if channelPermissions&discordgo.PermissionManageWebhooks != discordgo.PermissionManageWebhooks &&
 		channelPermissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
-		return webhooks, errors.New("no permission to manage webhooks")
+		return nil, errors.New("no permission to manage webhooks")
 	}
 
-	// tries to use existing webhooks
+	// try to use existing webhooks
 	existingWebhooks, err := cache.GetSession().ChannelWebhooks(channelID)
 	if err != nil {
-		return webhooks, err
+		return nil, err
 	}
 	if existingWebhooks != nil && len(existingWebhooks) > 0 {
 		for _, existingWebhook := range existingWebhooks {
-			webhooks = append(webhooks, existingWebhook)
-			if len(webhooks) >= amount {
-				break
+			if existingWebhook.ID != "" && existingWebhook.Token != "" {
+				webhook = existingWebhook
+				cache.GetLogger().WithField("module", "webhooks").Infof(
+					"got webhook for #%s from existing webhooks", channelID)
 			}
 		}
-		cache.GetLogger().WithField("module", "webhooks").Infof(
-			"got %d webhooks for #%s from existing webhooks", len(existingWebhooks), channelID)
 	}
 
-	// creates new webhooks as needed
-	for {
-		if len(webhooks) >= amount {
-			break
-		}
-		newWebhook, err := cache.GetSession().WebhookCreate(channelID, "Robyul Webhook", "")
+	// create new webhook if no existing webhook
+	if webhook == nil || webhook.ID == "" || webhook.Token == "" {
+		webhook, err = cache.GetSession().WebhookCreate(channelID, "Robyul Webhook - Do Not Delete!", "")
 		if err != nil {
-			return webhooks, err
+			return nil, err
 		}
-		webhooks = append(webhooks, newWebhook)
 		cache.GetLogger().WithField("module", "webhooks").Infof(
 			"created a new webhook for #%s", channelID)
 	}
 
-	// cache new webhooks
-	webhookCacheLock.Lock()
-	if _, ok := webhookCache[channelID]; ok && webhookCache[channelID] != nil {
-		for _, newWebhook := range webhooks {
-			alreadyCached := false
-			for _, cachedWebhook := range webhookCache[channelID] {
-				if cachedWebhook.ID == newWebhook.ID {
-					alreadyCached = true
-					break
-				}
-			}
-			if !alreadyCached {
-				webhookCache[channelID] = append(webhookCache[channelID], newWebhook)
-			}
+	// cache and return webhook is valid
+	if webhook != nil && webhook.ID != "" && webhook.Token != "" {
+		// cache existing webhook for 15 minutes on redis
+		newKeyBytes, err := msgpack.Marshal(webhook)
+		RelaxLog(err)
+		if err == nil {
+			_, err = redis.Set(key, newKeyBytes, time.Minute*15).Result()
+			RelaxLog(err)
 		}
-	} else {
-		webhookCache[channelID] = webhooks
+		return webhook, nil
 	}
-	webhookCacheLock.Unlock()
 
-	return webhooks, nil
+	// return error
+	return nil, errors.New("unable to create webhook")
 }

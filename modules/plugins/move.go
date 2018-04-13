@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"net/http"
 	"strings"
 
 	"strconv"
@@ -236,30 +235,21 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 	if err != nil {
 		return err
 	}
-	webhooksToUse, err := helpers.GetWebhooks(targetChannel.GuildID, targetChannelID, 2)
+	webhook, err := helpers.GetWebhook(targetChannel.GuildID, targetChannelID)
 	if err != nil {
 		return err
 	}
 	// send new messages
-	var lastUserID string
-	var nextWebhookIndex int
 	var nextContent string
 	for _, messageToMove := range messagesToMove {
 		nextContent = messageToMove.Content
-		// should we switch to a new webhook (rotation)
-		if lastUserID != messageToMove.Author.ID {
-			nextWebhookIndex++
-			if nextWebhookIndex > 1 {
-				nextWebhookIndex = 0
-			}
-		}
 		// gather file if attachments on message
 		if messageToMove.Attachments != nil && len(messageToMove.Attachments) > 0 {
 			data, err := helpers.NetGetUAWithError(messageToMove.Attachments[0].URL, helpers.DEFAULT_UA)
 			helpers.RelaxLog(err)
 			if err == nil {
 				// sniff filetype from first 512 bytes
-				contentType := http.DetectContentType(data[0:511])
+				contentType, _ := helpers.SniffMime(data)
 				// debug
 				//m.logger().Debugf("found attached file %s content type %s",
 				//	messageToMove.Attachments[0].Filename, contentType)
@@ -273,17 +263,13 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 				}
 			}
 		}
-		// debug
-		//m.logger().Debugf("posting webhook id %s by %s content %s",
-		//	webhooksToUse[nextWebhookIndex].ID, messageToMove.Author.ID, messageToMove.Content,
-		//)
 		// send message
 		if nextContent == "" && (messageToMove.Embeds == nil || len(messageToMove.Embeds) < 1) {
 			continue
 		}
-		_, err := helpers.WebhookExecuteWithResult(
-			webhooksToUse[nextWebhookIndex].ID,
-			webhooksToUse[nextWebhookIndex].Token,
+		_, err = helpers.WebhookExecuteWithResult(
+			webhook.ID,
+			webhook.Token,
 			&discordgo.WebhookParams{
 				Content:   nextContent,
 				Username:  messageToMove.Author.Username,
@@ -295,7 +281,6 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 		if err != nil {
 			return err
 		}
-		lastUserID = messageToMove.Author.ID
 	}
 	// delete messages if wanted
 	if delete {

@@ -242,7 +242,7 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 					continue TryNextGallery
 				}
 				// get webhook
-				webhooks, err := helpers.GetWebhooks(gallery.GuildID, gallery.TargetChannelID, 1)
+				webhook, err := helpers.GetWebhook(gallery.GuildID, gallery.TargetChannelID)
 				if err != nil && !strings.Contains(err.Error(), "no permission to manage webhooks") {
 					helpers.Relax(err)
 				}
@@ -250,10 +250,10 @@ func (g *Gallery) OnMessage(content string, msg *discordgo.Message, session *dis
 				if len(linksToRepost) > 0 {
 					for _, linkToRepost := range linksToRepost {
 						var newMessage *discordgo.Message
-						if webhooks != nil && len(webhooks) > 0 {
+						if webhook != nil && webhook.ID != "" && webhook.Token != "" {
 							newMessage, err = helpers.WebhookExecuteWithResult(
-								webhooks[0].ID,
-								webhooks[0].Token,
+								webhook.ID,
+								webhook.Token,
 								&discordgo.WebhookParams{
 									Content:   fmt.Sprintf("posted %s in <#%s>", linkToRepost, gallery.SourceChannelID),
 									Username:  msg.Author.Username,
