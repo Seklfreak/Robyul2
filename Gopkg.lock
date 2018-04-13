@@ -74,8 +74,8 @@
     "v1/tasks",
     "v1/tracing"
   ]
-  revision = "450b514afc13ea590c556df961f1fdee1f7c6917"
-  version = "v1.3"
+  revision = "aa45d138355d6037320fcd0dec1f428ada01f045"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
@@ -101,7 +101,6 @@
   packages = [
     ".",
     "response",
-    "store",
     "uuid"
   ]
   revision = "f53fe58fa08bfdf622102ebc13389bb759479eb1"
@@ -154,8 +153,8 @@
     "service/sqs/sqsiface",
     "service/sts"
   ]
-  revision = "7f68df2a5baf19398d17def23a514a6e617e5937"
-  version = "v1.13.28"
+  revision = "9b0098a71f6d4d473a26ec8ad3c2feaac6eb1da6"
+  version = "v1.13.32"
 
 [[projects]]
   branch = "master"
@@ -167,7 +166,7 @@
   branch = "master"
   name = "github.com/beefsack/go-rate"
   packages = ["."]
-  revision = "de575b104f4218f4aebdc95ba56f61f38d0dad86"
+  revision = "efa7637bb9b6433f47eb73dde68902abda87f352"
 
 [[projects]]
   branch = "master"
@@ -191,7 +190,7 @@
   branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
-  revision = "75d58fe7067d90c77d9ed5eb616d067e395de7ac"
+  revision = "293b41141dbc60d25d2b69528c2dbb7c216c3bd4"
 
 [[projects]]
   name = "github.com/cenkalti/backoff"
@@ -295,7 +294,7 @@
   branch = "master"
   name = "github.com/getsentry/raven-go"
   packages = ["."]
-  revision = "7562301a6763c9ac631b0a2011b4aa0e064e45d4"
+  revision = "d1470f50d3a3a38533355a9fab7393e25a3b4226"
 
 [[projects]]
   branch = "master"
@@ -312,8 +311,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "5e9692864e22d02ac79e2fa499cffb00520b4fea"
-  version = "v1.34.0"
+  revision = "ace140f73450505f33e8b8418216792275ae82a7"
+  version = "v1.35.0"
 
 [[projects]]
   name = "github.com/go-redis/cache"
@@ -479,10 +478,10 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "83c435cc65d2862736428b9b4d07d0ab10ad3e4d"
-  version = "v1.0.5"
+  revision = "01d59357d468872339068bcd5d55a00e2463051f"
 
 [[projects]]
   name = "github.com/minio/minio-go"
@@ -612,13 +611,13 @@
   branch = "master"
   name = "github.com/xuri/excelize"
   packages = ["."]
-  revision = "a6fc5a721dfcb4974342603ebff8a4032c58a797"
+  revision = "2b97c3bb463b28e3d81f714ef55798621174e0a1"
 
 [[projects]]
   branch = "master"
   name = "github.com/zonedb/zonedb"
   packages = ["."]
-  revision = "380fd1d9acaaa9612946677bb6ea8bd4fae80130"
+  revision = "4208251dd4046202bfc5a5de9e420c518a20066e"
 
 [[projects]]
   name = "go.opencensus.io"
@@ -634,16 +633,17 @@
     "stats/view",
     "tag",
     "trace",
+    "trace/internal",
     "trace/propagation"
   ]
-  revision = "076344b67ac19bcb8096c4b12440c3cf92ac3927"
-  version = "v0.7.0"
+  revision = "0095aec66ae14801c6711210f6f0716411cefdd3"
+  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
   name = "go4.org"
   packages = ["reflectutil"]
-  revision = "e6a7f04a962e05f288f348eec6de20fe93b6b292"
+  revision = "10dc64e649b84f0413f08175a86efd8ee94d0afd"
 
 [[projects]]
   branch = "master"
@@ -657,7 +657,7 @@
     "salsa20/salsa",
     "ssh/terminal"
   ]
-  revision = "b2aa35443fbc700ab74c586ae79b81c171851023"
+  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
 
 [[projects]]
   branch = "master"
@@ -680,7 +680,7 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "b3c676e531a6dc479fa1b35ac961c13f5e2b4d2e"
+  revision = "61147c48b25b599e5b561d2e9c4f3e1ef489ca41"
 
 [[projects]]
   branch = "master"
@@ -701,7 +701,7 @@
     "unix",
     "windows"
   ]
-  revision = "fcb792cfc275f85145c640d36af94b591eed4275"
+  revision = "f6f352972f061230a99fbf49d1eb8073ebdb36cb"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -752,7 +752,7 @@
     "transport/http",
     "youtube/v3"
   ]
-  revision = "3097bf831ede4a24e08a3316254e29ca726383e3"
+  revision = "fca24fcb41126b846105a93fb9e30f416bdd55ce"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -784,7 +784,7 @@
     "googleapis/type/color",
     "googleapis/type/latlng"
   ]
-  revision = "35de2414665fc36f56b72d982c5af480d86de5ab"
+  revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -814,8 +814,8 @@
     "tap",
     "transport"
   ]
-  revision = "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34"
-  version = "v1.11.1"
+  revision = "d11072e7ca9811b1100b80ca0269ac831f06d024"
+  version = "v1.11.3"
 
 [[projects]]
   name = "gopkg.in/VividCortex/ewma.v1"
@@ -902,6 +902,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7cc93e6815c3ed2890f2b0d2d3c97723d9c618e0c39ab7a8cf68de473ffd2498"
+  inputs-digest = "5a5ab09bbfc814f5b176f1115223854d6acdbfe20931e4f7327c15631f9aaf7d"
   solver-name = "gps-cdcl"
   solver-version = 1
