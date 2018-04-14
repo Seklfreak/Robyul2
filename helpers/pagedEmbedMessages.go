@@ -302,9 +302,16 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 
 // getEmbedFooter is a simlple helper function to return the footer for the embed message
 func (p *pagedEmbedMessage) getEmbedFooter() *discordgo.MessageEmbedFooter {
-	return &discordgo.MessageEmbedFooter{
-		Text: fmt.Sprintf("Page: %d / %d", p.currentPage, p.totalNumOfPages),
+	var footerText string
+
+	// check if embed had a footer, if so attach to page count
+	if p.fullEmbed.Footer != nil && p.fullEmbed.Footer.Text != "" {
+		footerText = fmt.Sprintf("Page: %d / %d | %s", p.currentPage, p.totalNumOfPages, p.fullEmbed.Footer.Text)
+	} else {
+		footerText = fmt.Sprintf("Page: %d / %d", p.currentPage, p.totalNumOfPages)
 	}
+
+	return &discordgo.MessageEmbedFooter{Text: footerText}
 }
 
 func (p *pagedEmbedMessage) addReactionsToMessage() {
