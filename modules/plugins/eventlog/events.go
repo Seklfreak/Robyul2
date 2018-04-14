@@ -49,21 +49,32 @@ func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *dis
 			if invite.Inviter != nil {
 				postedInviteInviterUserIDs = append(postedInviteInviterUserIDs, invite.Inviter.ID)
 			}
+		} else {
+			postedInviteGuildIDs = append(postedInviteGuildIDs, "N/A")
+			postedInviteGuildNames = append(postedInviteGuildNames, "N/A")
+			postedInviteGuildMemberCounts = append(postedInviteGuildMemberCounts, "N/A")
+			postedInviteChannelIDs = append(postedInviteChannelIDs, "N/A")
+			postedInviteInviterUserIDs = append(postedInviteInviterUserIDs, "N/A")
 		}
 	}
 
 	_, err = helpers.EventlogLog(
 		createdAt,
 		channel.GuildID,
-		strings.Join(invitesCodes, ","),
-		models.EventlogTargetTypeInviteCode,
+		msg.ChannelID,
+		models.EventlogTargetTypeChannel,
 		msg.Author.ID,
 		models.EventlogTypeInvitePosted,
 		"",
 		nil,
 		[]models.ElasticEventlogOption{
 			{
-				Key:   "invite_guildids",
+				Key:   "invite_code",
+				Value: strings.Join(invitesCodes, ","),
+				Type:  models.EventlogTargetTypeInviteCode,
+			},
+			{
+				Key:   "invite_guildid",
 				Value: strings.Join(postedInviteGuildIDs, ","),
 				Type:  models.EventlogTargetTypeGuild,
 			},
