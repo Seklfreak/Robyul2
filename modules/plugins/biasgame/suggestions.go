@@ -381,14 +381,21 @@ func updateCurrentSuggestionEmbed() {
 		myReader := bytes.NewReader(buf.Bytes())
 
 		// get info of user who suggested image
+		suggestedByText := "*No User Info Found*"
 		suggestedBy, err := cache.GetSession().User(cs.UserID)
+		if err == nil {
+			suggestedByText = fmt.Sprintf("%s#%s \n(%s)", suggestedBy.Username, suggestedBy.Discriminator, suggestedBy.ID)
+		}
 
 		// get guild and channel info it was suggested from
-		suggestedFromText := "No Guild Info"
+		suggestedFromText := "*No Guild Info Found*"
 		suggestedFromCh, err := cache.GetSession().Channel(cs.ChannelID)
-		suggestedFrom, err := cache.GetSession().Guild(suggestedFromCh.GuildID)
 		if err == nil {
-			suggestedFromText = fmt.Sprintf("G: %s \nC: #%s", suggestedFrom.Name, suggestedFromCh.Name)
+
+			suggestedFrom, err := cache.GetSession().Guild(suggestedFromCh.GuildID)
+			if err == nil {
+				suggestedFromText = fmt.Sprintf("G: %s \nC: #%s", suggestedFrom.Name, suggestedFromCh.Name)
+			}
 		}
 
 		// if the group name and idol name were matched show a checkmark, otherwise show a question mark
@@ -435,7 +442,7 @@ func updateCurrentSuggestionEmbed() {
 				},
 				{
 					Name:   "Suggested By",
-					Value:  fmt.Sprintf("%s#%s \n(%s)", suggestedBy.Username, suggestedBy.Discriminator, suggestedBy.ID),
+					Value:  suggestedByText,
 					Inline: true,
 				},
 				{
