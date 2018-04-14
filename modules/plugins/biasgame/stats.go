@@ -119,14 +119,19 @@ func listIdolsInGame(msg *discordgo.Message) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	genderCountMap := make(map[string]int)
+	genderGroupCountMap := make(map[string]int)
 
 	// create map of idols and there group
 	groupIdolMap := make(map[string][]string)
 	for _, bias := range getAllBiases() {
+
+		// count idols and groups
 		genderCountMap[bias.Gender]++
+		if _, ok := groupIdolMap[bias.GroupName]; !ok {
+			genderGroupCountMap[bias.Gender]++
+		}
 
 		if len(bias.BiasImages) > 1 {
-
 			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s (%s)",
 				bias.BiasName, humanize.Comma(int64(len(bias.BiasImages)))))
 		} else {
@@ -138,11 +143,18 @@ func listIdolsInGame(msg *discordgo.Message) {
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: fmt.Sprintf("All Idols Available In Bias Game (%s total, %s girls, %s boys)",
-				humanize.Comma(int64(len(getAllBiases()))),
-				humanize.Comma(int64(genderCountMap["girl"])), humanize.Comma(int64(genderCountMap["boy"]))),
+			Name: "All Idols Available In Bias Game",
 		},
-		Title: "*Numbers indicate multi pictures are available for the idol*",
+		Title: fmt.Sprintf("%s Total | %s Girls, %s Boys | %s Girl Groups, %s Boy Groups",
+			humanize.Comma(int64(len(getAllBiases()))),
+			humanize.Comma(int64(genderCountMap["girl"])),
+			humanize.Comma(int64(genderCountMap["boy"])),
+			humanize.Comma(int64(genderGroupCountMap["girl"])),
+			humanize.Comma(int64(genderGroupCountMap["boy"])),
+		),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "Numbers show idols picture count",
+		},
 	}
 
 	// make fields for each group and the idols in the group.
