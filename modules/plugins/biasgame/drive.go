@@ -50,14 +50,13 @@ func startCacheRefreshLoop() {
 			time.Sleep(time.Second * 30)
 
 			// save any currently running games
-			singlePlayerGames := getCurrentSinglePlayerGames()
-			err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
+			err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)
 			helpers.Relax(err)
-			bgLog().Infof("Cached %d singleplayer biasgames to redis", len(singlePlayerGames))
-			multiPlayerGames := getCurrentMultiPlayerGames()
-			err = setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
+			bgLog().Infof("Cached %d singleplayer biasgames to redis", len(getCurrentSinglePlayerGames()))
+
+			err = setBiasGameCache("currentMultiPlayerGames", getCurrentMultiPlayerGames(), 0)
 			helpers.Relax(err)
-			bgLog().Infof("Cached %d multiplayer biasgames to redis", len(multiPlayerGames))
+			bgLog().Infof("Cached %d multiplayer biasgames to redis", len(getCurrentMultiPlayerGames()))
 		}
 	}()
 

@@ -198,15 +198,14 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 func (b *BiasGame) Uninit(session *discordgo.Session) {
 
 	// save any currently running games
-	singlePlayerGames := getCurrentSinglePlayerGames()
-	err := setBiasGameCache("currentSinglePlayerGames", singlePlayerGames, 0)
+	err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)
 	helpers.Relax(err)
-	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(singlePlayerGames))
 
-	multiPlayerGames := getCurrentMultiPlayerGames()
-	err = setBiasGameCache("currentMultiPlayerGames", multiPlayerGames, 0)
+	err = setBiasGameCache("currentMultiPlayerGames", getCurrentMultiPlayerGames(), 0)
 	helpers.Relax(err)
-	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(multiPlayerGames))
+
+	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(getCurrentSinglePlayerGames()))
+	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(getCurrentMultiPlayerGames()))
 }
 
 // Will validate if the passed command entered is used for this plugin
