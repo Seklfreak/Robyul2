@@ -912,3 +912,246 @@ MultiWinLoop:
 	}
 	helpers.SendComplex(msg.ChannelID, msgSend)
 }
+
+// displayIdolStats sends an embed for stats on a specific idol
+func displayGroupStats(msg *discordgo.Message, content string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	commandArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	commandArgs = commandArgs[1:]
+
+	if len(commandArgs) < 1 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+		return
+	}
+
+	// find matching idol
+	groupMatched, targetGroupName := getMatchingGroup(commandArgs[0])
+	if !groupMatched {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
+		return
+	}
+
+	// get all the games for the target group
+	queryParams := bson.M{"$or": []bson.M{
+		// check if idol is in round winner or losers array
+		bson.M{"roundwinners": bson.M{"$elemMatch": bson.M{"groupname": targetGroupName}}},
+		bson.M{"roundlosers": bson.M{"$elemMatch": bson.M{"groupname": targetGroupName}}},
+	}}
+
+	// exclude rounds from rankings query for better performance
+	fieldsToExclude := map[string]int{
+		"roundwinners": 0,
+		"roundlosers":  0,
+	}
+
+	// query db for information on this
+	var allGames []models.BiasGameEntry
+	var targetGroupGames []models.BiasGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{}).Select(fieldsToExclude)).All(&allGames)
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&targetGroupGames)
+
+	// get idol win counts
+	allGamesGroupsWinCounts := make(map[string]int)
+	singleGamesGroupWinCounts := make(map[string]int)
+	multiGamesGroupWinCounts := make(map[string]int)
+	memberWinCount := make(map[string]int)
+	for _, game := range allGames {
+		if game.GameWinner.GroupName == targetGroupName {
+			memberWinCount[game.GameWinner.Name] += 1
+		}
+		allGamesGroupsWinCounts[game.GameWinner.GroupName] += 1
+		if game.GameType == "multi" {
+			multiGamesGroupWinCounts[game.GameWinner.GroupName] += 1
+		} else {
+			singleGamesGroupWinCounts[game.GameWinner.GroupName] += 1
+		}
+	}
+
+	// get overall win rank
+	compiledData, uniqueCounts := complieGameStats(allGamesGroupsWinCounts)
+	groupWinRank := 0
+OverallWinLoop:
+	for i, count := range uniqueCounts {
+		for _, groupName := range compiledData[count] {
+			if groupName == targetGroupName {
+				groupWinRank = i + 1
+				break OverallWinLoop
+			}
+		}
+	}
+
+	// get single win rank
+	compiledData, uniqueCounts = complieGameStats(singleGamesGroupWinCounts)
+	groupSingleWinRank := 0
+SingleWinLoop:
+	for i, count := range uniqueCounts {
+		for _, groupName := range compiledData[count] {
+			if groupName == targetGroupName {
+				groupSingleWinRank = i + 1
+				break SingleWinLoop
+			}
+		}
+	}
+
+	// get multi win rank
+	compiledData, uniqueCounts = complieGameStats(multiGamesGroupWinCounts)
+	groupMultiWinRank := 0
+MultiWinLoop:
+	for i, count := range uniqueCounts {
+		for _, groupName := range compiledData[count] {
+			if groupName == targetGroupName {
+				groupMultiWinRank = i + 1
+				break MultiWinLoop
+			}
+		}
+	}
+
+	totalGames := len(targetGroupGames)
+	totalGameWins := 0
+	totalRounds := 0
+	totalRoundWins := 0
+	userGameWinMap := make(map[string]int)
+	guildGameWinMap := make(map[string]int)
+
+	for _, game := range targetGroupGames {
+
+		// win game
+		if game.GameWinner.GroupName == targetGroupName {
+			userGameWinMap[game.UserID]++
+			guildGameWinMap[game.GuildID]++
+			totalGameWins++
+		}
+
+		// round win
+		for _, round := range game.RoundWinners {
+			if round.GroupName == targetGroupName {
+				totalRounds++
+				totalRoundWins++
+			}
+		}
+		// round lose
+		for _, round := range game.RoundLosers {
+			if round.GroupName == targetGroupName {
+				totalRounds++
+			}
+		}
+	}
+
+	// get most winning user
+	highestUserWins := 0
+	var userId string
+	for k, v := range userGameWinMap {
+		if v > highestUserWins {
+			highestUserWins = v
+			userId = k
+		}
+	}
+	userNameMostWins := "*Unknown*"
+	userMostWins, err := helpers.GetUser(userId)
+	if err == nil {
+		userNameMostWins = userMostWins.Username
+	}
+
+	// get most winning server
+	highestServerWins := 0
+	var guildId string
+	for k, v := range guildGameWinMap {
+		if v > highestServerWins {
+			highestServerWins = v
+			guildId = k
+		}
+	}
+	guildNameMostWins := "*Unknown*"
+	guildMostWins, err := helpers.GetGuild(guildId)
+	if err == nil {
+		guildNameMostWins = guildMostWins.Name
+	}
+
+	// make embed
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: fmt.Sprintf("Stats for %s", targetGroupName),
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "attachment://group_stats_thumbnail.png",
+		},
+	}
+
+	// overall game and game win info
+	var gameWinPercentage float64
+	if totalGames > 0 {
+		gameWinPercentage = (float64(totalGameWins) / float64(totalGames)) * 100
+	} else {
+		gameWinPercentage = 0
+	}
+
+	// overall round and round win info
+	var roundWinPercentage float64
+	if totalGames > 0 {
+		roundWinPercentage = (float64(totalRoundWins) / float64(totalRounds)) * 100
+	} else {
+		roundWinPercentage = 0
+	}
+
+	// get all images for the group
+	var allGroupImages []biasImage
+	for _, bias := range getAllBiases() {
+		if bias.GroupName != targetGroupName {
+			continue
+		}
+
+		// get random picture for the idol
+		imageIndex := rand.Intn(len(bias.BiasImages))
+		allGroupImages = append(allGroupImages, bias.BiasImages[imageIndex])
+	}
+
+	// get group member with most wins
+	var mostWinningMember string
+	var mostWins int
+	for name, winCount := range memberWinCount {
+		if winCount > mostWins {
+			mostWins = winCount
+			mostWinningMember = name
+		}
+
+		// if win count is even between members, display first one alphabetically
+		if winCount == mostWins && name > mostWinningMember {
+			mostWinningMember = name
+		}
+
+	}
+
+	// add fields
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Most Winning Member", Value: fmt.Sprintf("%s (%d wins)", mostWinningMember, mostWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupSingleWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupMultiWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: strconv.Itoa(totalGameWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: strconv.Itoa(totalRoundWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: strconv.Itoa(totalGames), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: strconv.Itoa(totalRounds), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%d wins)", userNameMostWins, highestUserWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%d wins)", guildNameMostWins, highestServerWins), Inline: true})
+
+	// get random image from the thumbnail
+	imageIndex := rand.Intn(len(allGroupImages))
+	thumbnailReader := bytes.NewReader(allGroupImages[imageIndex].getImgBytes())
+
+	msgSend := &discordgo.MessageSend{
+		Files: []*discordgo.File{{
+			Name:   "group_stats_thumbnail.png",
+			Reader: thumbnailReader,
+		}},
+		Embed: embed,
+	}
+	helpers.SendComplex(msg.ChannelID, msgSend)
+
+}

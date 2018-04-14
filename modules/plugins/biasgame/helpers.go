@@ -113,6 +113,31 @@ func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasC
 	return groupMatch, nameMatch, matchingBiasChoice
 }
 
+// does a loose comparison of the group name to see if it exists
+// return 1: if a matching group exists
+// return 2: what the real group name is
+func getMatchingGroup(searchGroup string) (bool, string) {
+
+	allGroupsMap := make(map[string]bool)
+	for _, bias := range getAllBiases() {
+		allGroupsMap[bias.GroupName] = true
+	}
+
+	// check if the group suggested matches a current group. do loose comparison
+	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
+	for k, _ := range allGroupsMap {
+		curGroup := strings.ToLower(reg.ReplaceAllString(k, ""))
+		sugGroup := strings.ToLower(reg.ReplaceAllString(searchGroup, ""))
+
+		// if groups match, set the suggested group to the current group
+		if curGroup == sugGroup {
+			return true, k
+		}
+	}
+
+	return false, ""
+}
+
 // sendPagedEmbedOfImages takes the given image []byte and sends them in a paged embed
 func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []biasImage, displayObjectIds bool, authorName, description string) {
 	positionMap := []string{"Top Left", "Top Right", "Bottom Left", "Bottom Right"}
