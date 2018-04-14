@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -220,6 +221,7 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bool) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
+	gameSizeFilter := "this.roundwinners.length > 0"
 	rankType := "user"
 	gameType := "single"
 	embedTitle := "Bias Game User Rankings"
@@ -257,6 +259,17 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 		}
 	}
 
+	// filter by game size if needed
+	re := regexp.MustCompile("[0-9]+")
+	if userEnteredNum, err := strconv.Atoi(re.FindString(msg.Content)); err == nil {
+		if !allowedGameSizes[userEnteredNum] {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.invalid-game-size"))
+			return
+		}
+
+		gameSizeFilter = fmt.Sprintf("this.roundwinners.length == %d", userEnteredNum-1)
+	}
+
 	// exclude rounds from rankings query for better performance
 	fieldsToExclude := map[string]int{
 		"roundwinners": 0,
@@ -266,10 +279,10 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 	var games []models.BiasGameEntry
 	if gameType == "all" {
 
-		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{}).Select(fieldsToExclude)).All(&games)
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"$where": gameSizeFilter}).Select(fieldsToExclude)).All(&games)
 	} else {
 
-		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType}).Select(fieldsToExclude)).All(&games)
+		helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{"gametype": gameType, "$where": gameSizeFilter}).Select(fieldsToExclude)).All(&games)
 	}
 
 	// check if any stats were returned
