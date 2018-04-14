@@ -87,8 +87,11 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 	guildID := args[1]
 
 	if !helpers.IsSnowflake(guildID) {
-		inviteCode := helpers.ExtractInviteCode(guildID)
-		invite, err := cache.GetSession().Invite(inviteCode)
+		inviteCodes := helpers.ExtractInviteCodes(guildID)
+		if len(inviteCodes) < 1 {
+			inviteCodes = append(inviteCodes, guildID)
+		}
+		invite, err := cache.GetSession().Invite(inviteCodes[0])
 		if err == nil && invite != nil && invite.Guild != nil && invite.Guild.ID != "" {
 			guildID = invite.Guild.ID
 		} else {

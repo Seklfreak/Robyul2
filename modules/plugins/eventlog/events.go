@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -11,7 +13,82 @@ import (
 )
 
 func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+	if !strings.Contains(content, "discord.gg") {
+		return
+	}
 
+	invitesCodes := helpers.ExtractInviteCodes(content)
+	if len(invitesCodes) <= 0 {
+		return
+	}
+
+	createdAt, err := msg.Timestamp.Parse()
+	if err != nil {
+		createdAt = time.Now()
+	}
+
+	channel, err := helpers.GetChannelWithoutApi(msg.ChannelID)
+	helpers.Relax(err)
+
+	postedInviteGuildIDs := make([]string, 0)
+	postedInviteGuildNames := make([]string, 0)
+	postedInviteGuildMemberCounts := make([]string, 0)
+	postedInviteChannelIDs := make([]string, 0)
+	postedInviteInviterUserIDs := make([]string, 0)
+	for _, inviteCode := range invitesCodes {
+		invite, err := helpers.GetInviteWithCounts(inviteCode)
+		if err == nil && invite != nil && invite.Guild != nil {
+			postedInviteGuildIDs = append(postedInviteGuildIDs, invite.Guild.ID)
+			postedInviteGuildNames = append(postedInviteGuildNames, invite.Guild.Name)
+			postedInviteGuildMemberCounts = append(postedInviteGuildMemberCounts,
+				strconv.Itoa(invite.ApproximatePresenceCount)+"/"+strconv.Itoa(invite.ApproximateMemberCount),
+			)
+			if invite.Channel != nil {
+				postedInviteChannelIDs = append(postedInviteChannelIDs, invite.Channel.ID)
+			}
+			if invite.Inviter != nil {
+				postedInviteInviterUserIDs = append(postedInviteInviterUserIDs, invite.Inviter.ID)
+			}
+		}
+	}
+
+	_, err = helpers.EventlogLog(
+		createdAt,
+		channel.GuildID,
+		strings.Join(invitesCodes, ","),
+		models.EventlogTargetTypeInviteCode,
+		msg.Author.ID,
+		models.EventlogTypeInvitePosted,
+		"",
+		nil,
+		[]models.ElasticEventlogOption{
+			{
+				Key:   "invite_guildids",
+				Value: strings.Join(postedInviteGuildIDs, ","),
+				Type:  models.EventlogTargetTypeGuild,
+			},
+			{
+				Key:   "invite_guildname",
+				Value: strings.Join(postedInviteGuildNames, ","),
+			},
+			{
+				Key:   "invite_guildmembercount",
+				Value: strings.Join(postedInviteGuildMemberCounts, ","),
+			},
+			{
+				Key:   "invite_channelid",
+				Value: strings.Join(postedInviteChannelIDs, ","),
+				Type:  models.EventlogTargetTypeChannel,
+			},
+			{
+				Key:   "invite_inviterid",
+				Value: strings.Join(postedInviteInviterUserIDs, ","),
+				Type:  models.EventlogTargetTypeUser,
+			},
+		},
+		false,
+	)
+	helpers.RelaxLog(err)
 }
 
 func (h *Handler) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {

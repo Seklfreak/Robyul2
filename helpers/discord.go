@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -28,7 +29,8 @@ const (
 )
 
 var (
-	snowflakeRegex = regexp.MustCompile(`^[0-9]+$`)
+	snowflakeRegex     = regexp.MustCompile(`^[0-9]+$`)
+	discordInviteRegex = regexp.MustCompile(`(http(s)?:\/\/)?discord\.gg\/(invite\/)?([A-Za-z0-9]+)`)
 )
 
 var botAdmins = []string{
@@ -1466,12 +1468,17 @@ func IsSnowflake(input string) (snowflake bool) {
 	return false
 }
 
-func ExtractInviteCode(input string) (inviteCode string) {
-	inviteCode = strings.Replace(input, "https://", "", -1)
-	inviteCode = strings.Replace(inviteCode, "http://", "", -1)
-	inviteCode = strings.Replace(inviteCode, "discord.gg/", "", -1)
-	inviteCode = strings.Replace(inviteCode, "invite/", "", -1)
-	return inviteCode
+// Extracts all invites codes from the given message (e.g. discord.gg/foo => [foo])
+func ExtractInviteCodes(input string) (inviteCodes []string) {
+	inviteCodes = make([]string, 0)
+	results := discordInviteRegex.FindAllStringSubmatch(input, -1)
+	for _, result := range results {
+		if len(result) >= 5 {
+			inviteCodes = append(inviteCodes, result[4])
+		}
+	}
+
+	return inviteCodes
 }
 
 // Returns an channelID for bot announcements, if possible the default channel when a guild got created, if not the first channel from the top with chat permission
@@ -1551,4 +1558,37 @@ func DeleteMessageWithDelay(msg *discordgo.Message, delay time.Duration) (err er
 
 	time.Sleep(delay)
 	return cache.GetSession().ChannelMessageDelete(msg.ChannelID, msg.ID)
+}
+
+type InviteWithCounts struct {
+	Guild                    *discordgo.Guild    `json:"guild"`
+	Channel                  *discordgo.Channel  `json:"channel"`
+	Inviter                  *discordgo.User     `json:"inviter"`
+	Code                     string              `json:"code"`
+	CreatedAt                discordgo.Timestamp `json:"created_at"`
+	MaxAge                   int                 `json:"max_age"`
+	Uses                     int                 `json:"uses"`
+	MaxUses                  int                 `json:"max_uses"`
+	XkcdPass                 string              `json:"xkcdpass"`
+	Revoked                  bool                `json:"revoked"`
+	Temporary                bool                `json:"temporary"`
+	ApproximateMemberCount   int                 `json:"approximate_member_count"`
+	ApproximatePresenceCount int                 `json:"approximate_presence_count"`
+}
+
+func GetInviteWithCounts(inviteCode string) (invite *InviteWithCounts, err error) {
+	respBody, err := cache.GetSession().RequestWithBucketID(
+		"GET", discordgo.EndpointInvite(inviteCode)+"?with_counts=true",
+		nil, discordgo.EndpointInvite(""),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(respBody, &invite)
+	if err != nil {
+		return nil, err
+	}
+
+	return invite, nil
 }

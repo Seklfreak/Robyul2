@@ -15,8 +15,6 @@ import (
 
 	"reflect"
 
-	"encoding/json"
-
 	"sync"
 
 	"github.com/Jeffail/gabs"
@@ -1495,36 +1493,19 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			return
 		}
 
-		inviteCode := helpers.ExtractInviteCode(args[0])
+		inviteCodes := helpers.ExtractInviteCodes(args[0])
 
-		type InviteWithCounts struct {
-			Guild                    *discordgo.Guild    `json:"guild"`
-			Channel                  *discordgo.Channel  `json:"channel"`
-			Inviter                  *discordgo.User     `json:"inviter"`
-			Code                     string              `json:"code"`
-			CreatedAt                discordgo.Timestamp `json:"created_at"`
-			MaxAge                   int                 `json:"max_age"`
-			Uses                     int                 `json:"uses"`
-			MaxUses                  int                 `json:"max_uses"`
-			XkcdPass                 string              `json:"xkcdpass"`
-			Revoked                  bool                `json:"revoked"`
-			Temporary                bool                `json:"temporary"`
-			ApproximateMemberCount   int                 `json:"approximate_member_count"`
-			ApproximatePresenceCount int                 `json:"approximate_presence_count"`
+		if len(inviteCodes) < 1 {
+			inviteCodes = append(inviteCodes, args[0])
 		}
 
-		respBody, err := session.RequestWithBucketID("GET", discordgo.EndpointInvite(inviteCode)+"?with_counts=true", nil, discordgo.EndpointInvite(""))
+		invite, err := helpers.GetInviteWithCounts(inviteCodes[0])
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownInvite {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.unknown-invite"))
 				return
 			}
 		}
-		helpers.Relax(err)
-
-		var invite InviteWithCounts
-
-		err = json.Unmarshal(respBody, &invite)
 		helpers.Relax(err)
 
 		guild, err := helpers.GetGuild(invite.Guild.ID)
