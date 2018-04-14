@@ -475,7 +475,11 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 				a.logger().WithField("GuildID", guild.ID).Errorf("Leave Notification failed, Error: %s", err.Error())
 			}
 		}
-		cache.RemoveAutoleaverGuildID(guild.ID)
+
+		// remove guild from autoleaver Guilds, if not just leaving because unavailability
+		if guild.OwnerID != "" {
+			cache.RemoveAutoleaverGuildID(guild.ID)
+		}
 	}()
 }
 
