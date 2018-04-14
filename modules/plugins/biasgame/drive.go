@@ -276,7 +276,7 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 		recordsFound++
 
 		// if a matching idol was is found, just assign the targets images to it and delete
-		if matchingBias != nil {
+		if matchingBias != nil && (matchingBias.BiasName != targetBias.BiasName || matchingBias.GroupName != targetBias.GroupName) {
 
 			matchingBias.BiasImages = append(matchingBias.BiasImages, targetBias.BiasImages...)
 			allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
