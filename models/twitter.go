@@ -20,6 +20,8 @@ type TwitterEntry struct {
 	PostedTweets      []TwitterTweetEntry
 	MentionRoleID     string
 	PostMode          TwitterPostMode
+	ExcludeRTs        bool
+	ExcludeMentions   bool
 }
 
 type TwitterTweetEntry struct {

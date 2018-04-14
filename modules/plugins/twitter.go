@@ -82,6 +82,16 @@ func (t *Twitter) Init(session *discordgo.Session) {
 							continue
 						}
 
+						// exclude RTs?
+						if entry.ExcludeRTs && item.RetweetedStatus != nil {
+							continue
+						}
+
+						// exclude Mentions?
+						if entry.ExcludeMentions && strings.HasPrefix(item.Text, "@") {
+							continue
+						}
+
 						entryID := entry.ID
 						t.lockEntry(entryID)
 
@@ -321,6 +331,16 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				changes := false
 
 				for _, tweet := range twitterUserTweets {
+					// exclude RTs?
+					if entry.ExcludeRTs && tweet.RetweetedStatus != nil {
+						continue
+					}
+
+					// exclude Mentions?
+					if entry.ExcludeMentions && strings.HasPrefix(tweet.Text, "@") {
+						continue
+					}
+
 					tweetAlreadyPosted := false
 					for _, postedTweet := range entry.PostedTweets {
 						if postedTweet.ID == tweet.IDStr {
@@ -439,13 +459,9 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 							mentionRole = serverRole
 						}
 					}
-					if mentionRole.ID == "" {
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-						return
-					}
 				}
 				postMode := models.TwitterPostModeRobyulEmbed
-				if strings.HasSuffix(content, " discord-embed") {
+				if strings.Contains(strings.ToLower(content), " discord-embed") {
 					postMode = models.TwitterPostModeDiscordEmbed
 				}
 				// Create DB Entries
@@ -454,6 +470,14 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					tweetEntry := models.TwitterTweetEntry{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt}
 					dbTweets = append(dbTweets, tweetEntry)
 
+				}
+				// exclude RTs or Mentions?
+				var excludeRTs, excludeMentions bool
+				if strings.Contains(strings.ToLower(msg.Content), " exclude-rts") {
+					excludeRTs = true
+				}
+				if strings.Contains(strings.ToLower(msg.Content), " exclude-mentions") {
+					excludeMentions = true
 				}
 				// create new entry in db
 				newID, err := helpers.MDbInsert(
@@ -466,6 +490,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						PostedTweets:      dbTweets,
 						MentionRoleID:     mentionRole.ID,
 						PostMode:          postMode,
+						ExcludeRTs:        excludeRTs,
+						ExcludeMentions:   excludeMentions,
 					},
 				)
 				helpers.Relax(err)
@@ -505,6 +531,14 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 						{
 							Key:   "twitter_postmode",
 							Value: postModeText,
+						},
+						{
+							Key:   "twitter_exclude_rts",
+							Value: helpers.StoreBoolAsString(excludeRTs),
+						},
+						{
+							Key:   "twitter_exclude_mentions",
+							Value: helpers.StoreBoolAsString(excludeMentions),
 						},
 					}, false)
 				helpers.RelaxLog(err)
@@ -571,6 +605,14 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 								Key:   "twitter_postmode",
 								Value: postModeText,
 							},
+							{
+								Key:   "twitter_exclude_rts",
+								Value: helpers.StoreBoolAsString(entryBucket.ExcludeRTs),
+							},
+							{
+								Key:   "twitter_exclude_mentions",
+								Value: helpers.StoreBoolAsString(entryBucket.ExcludeMentions),
+							},
 						}, false)
 					helpers.RelaxLog(err)
 
@@ -611,6 +653,12 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					} else {
 						specialText += " mentioning N/A"
 					}
+				}
+				if entry.ExcludeRTs {
+					specialText += " ignoring RTs"
+				}
+				if entry.ExcludeMentions {
+					specialText += " ignoring Mentions"
 				}
 				resultMessage += fmt.Sprintf("`%s`: Twitter Account `@%s` posting to <#%s>%s\n",
 					helpers.MdbIdToHuman(entry.ID), entry.AccountScreenName, entry.ChannelID, specialText)
