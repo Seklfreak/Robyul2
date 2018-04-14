@@ -59,6 +59,10 @@ func (m *FacialRecognition) Action(command string, content string, msg *discordg
 }
 
 func (m *FacialRecognition) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) facialRecognitionAction {
+	if m.kairosClient == nil {
+		return nil
+	}
+
 	if len(args) >= 1 {
 		switch args[0] {
 		case "train":
@@ -80,11 +84,6 @@ func (m *FacialRecognition) actionRecognise(args []string, in *discordgo.Message
 	}
 
 	cache.GetSession().ChannelTyping(in.ChannelID)
-
-	if m.kairosClient == nil {
-		*out = m.newMsg("plugins.facialrecognition.not-setup")
-		return m.actionFinish
-	}
 
 	response, err := m.kairosClient.Recognize(in.Attachments[0].URL, m.galleryName, "", "0.60", 3)
 	helpers.Relax(err)
@@ -137,8 +136,8 @@ func (m *FacialRecognition) actionTrain(args []string, in *discordgo.Message, ou
 	cache.GetSession().ChannelTyping(in.ChannelID)
 
 	// TODO: store same Idols together somehow? But we want to keep in sync with updates…
-	if m.kairosClient == nil {
-		*out = m.newMsg("plugins.facialrecognition.not-setup")
+	if !helpers.IsRobyulMod(in.Author.ID) {
+		*out = m.newMsg("bot.robyulmod.no_permission")
 		return m.actionFinish
 	}
 
@@ -167,7 +166,7 @@ NextBiasEntry:
 		helpers.Relax(err)
 		mimeType, _ := helpers.SniffMime(imageData)
 		if mimeType != "image/jpeg" && mimeType != "image/png" {
-			continue
+			continue NextBiasEntry
 		}
 
 		base64Text := "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(imageData)
@@ -180,7 +179,6 @@ NextBiasEntry:
 					biasEntry.Name, biasEntry.GroupName, m.getKairosKey(biasEntry), err.Error())
 				time.Sleep(time.Second * 10)
 				goto RetryEnroll
-				continue
 			}
 			helpers.Relax(err)
 		}
@@ -188,15 +186,16 @@ NextBiasEntry:
 		if response.Errors != nil && len(response.Errors) > 0 {
 			for _, kairosError := range response.Errors {
 				if kairosError.ErrCode == 5002 { // no faces found in the image
-					m.logger().Infof("enrolled %s's %s as %s for enrolling, no face found",
+					m.logger().Infof("skipped enrolling %s's %s as %s for enrolling, no face found",
 						biasEntry.Name, biasEntry.GroupName, m.getKairosKey(biasEntry))
-					continue
+					continue NextBiasEntry
 				}
 				if kairosError.ErrCode == 5010 { // too many faces in image
-					m.logger().Infof("enrolled %s's %s as %s for enrolling, too many faces in image",
+					m.logger().Infof("skipped enrolling %s's %s as %s for enrolling, too many faces in image",
 						biasEntry.Name, biasEntry.GroupName, m.getKairosKey(biasEntry))
-					continue
+					continue NextBiasEntry
 				}
+				// TODO: cache skipped entries somewhere, to not try to enroll them every time
 				helpers.Relax(errors.New(fmt.Sprintf("%d: %s", kairosError.ErrCode, kairosError.Message)))
 			}
 		}
@@ -215,11 +214,6 @@ NextBiasEntry:
 // [p]facialrecognition status
 func (m *FacialRecognition) actionStatus(args []string, in *discordgo.Message, out **discordgo.MessageSend) facialRecognitionAction {
 	cache.GetSession().ChannelTyping(in.ChannelID)
-
-	if m.kairosClient == nil {
-		*out = m.newMsg("plugins.facialrecognition.not-setup")
-		return m.actionFinish
-	}
 
 	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = m.newMsg("bot.robyulmod.no_permission")
@@ -246,11 +240,6 @@ func (m *FacialRecognition) actionStatus(args []string, in *discordgo.Message, o
 // [p]facialrecognition reset
 func (m *FacialRecognition) actionReset(args []string, in *discordgo.Message, out **discordgo.MessageSend) facialRecognitionAction {
 	cache.GetSession().ChannelTyping(in.ChannelID)
-
-	if m.kairosClient == nil {
-		*out = m.newMsg("plugins.facialrecognition.not-setup")
-		return m.actionFinish
-	}
 
 	if !helpers.IsRobyulMod(in.Author.ID) {
 		*out = m.newMsg("bot.robyulmod.no_permission")
