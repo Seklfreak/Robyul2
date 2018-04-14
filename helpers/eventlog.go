@@ -635,7 +635,7 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 		}
 	*/
 
-	if oldChannel.Bitrate != newChannel.Bitrate {
+	if newChannel.Type == discordgo.ChannelTypeGuildVoice && oldChannel.Bitrate != newChannel.Bitrate {
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "channel_bitrate",
 			OldValue: strconv.Itoa(oldChannel.Bitrate),
