@@ -399,6 +399,12 @@
   version = "v1.8.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/humaniq/kairgo"
+  packages = ["."]
+  revision = "8c174af663878f41f8af859600ad0db8c9c013a5"
+
+[[projects]]
   branch = "v0"
   name = "github.com/inconshreveable/go-keen"
   packages = ["."]
@@ -902,6 +908,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5a5ab09bbfc814f5b176f1115223854d6acdbfe20931e4f7327c15631f9aaf7d"
+  inputs-digest = "47fb6e82f9447ffe0a29f2f62a427e14824e8528ae9ecd8b8d445df552faa9e7"
   solver-name = "gps-cdcl"
   solver-version = 1

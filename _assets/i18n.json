@@ -792,6 +792,14 @@
     },
     "move": {
       "no-webhook-permissions": "Please give me the `Manage Webhooks` permission so I can move messages."
+    },
+    "facialrecognition": {
+      "not-setup": "The Facial Recognition API is not set up.",
+      "train-success": "I enrolled **%d** images!",
+      "recognise-not-found": "Sorry, I don't know who this is. <a:ablobfrown:394026913292615701>",
+      "status": "There are currently **%d** pictures enrolled.",
+      "reset-success": "The database has been reset.",
+      "status-none": "There are currently no idols enrolled."
     }
   }
 }

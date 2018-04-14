@@ -213,3 +213,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/lucazulian/cryptocomparego"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/humaniq/kairgo"

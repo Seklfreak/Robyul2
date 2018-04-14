@@ -70,6 +70,7 @@ var (
 		&plugins.Steam{},
 		&plugins.Config{},
 		&plugins.Storage{},
+		&plugins.FacialRecognition{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{

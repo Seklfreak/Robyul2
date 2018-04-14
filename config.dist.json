@@ -140,5 +140,10 @@
   },
   "steam": {
     "api_key": ""
+  },
+  "kairos": {
+    "app_id": "",
+    "key": "",
+    "gallery": "Robyul"
   }
 }
