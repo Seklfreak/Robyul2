@@ -15,7 +15,6 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/mgutz/str"
 	"github.com/nfnt/resize"
 	"github.com/sethgrid/pester"
 )
@@ -69,8 +68,13 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	channel, err := helpers.GetChannel(msg.ChannelID)
 	helpers.Relax(err)
 
-	// ToArgv can panic, need to catch that
-	suggestionArgs := str.ToArgv(msgContent)[1:]
+	suggestionArgs, err := helpers.ToArgv(msgContent)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	suggestionArgs = suggestionArgs[1:]
+
 	var suggestedImageUrl string
 
 	// validate suggestion arg amount.

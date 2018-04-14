@@ -14,7 +14,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
-	"github.com/mgutz/str"
 )
 
 type rankingStruct struct {
@@ -174,7 +173,13 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 	defer helpers.Recover()
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
-	commandArgs := str.ToArgv(msgContent)[1:]
+	commandArgs, err := helpers.ToArgv(msgContent)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	commandArgs = commandArgs[1:]
+
 	if len(commandArgs) < 2 {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 		return
@@ -674,8 +679,13 @@ func compileGameWinnersLosers(biases []*biasChoice) []models.BiasGameIdolEntry {
 func displayIdolStats(msg *discordgo.Message, content string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
-	// make sure there are enough arguments
-	commandArgs := str.ToArgv(content)[1:]
+	commandArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	commandArgs = commandArgs[1:]
+
 	if len(commandArgs) < 2 {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 		return

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/mgutz/str"
 
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
@@ -238,7 +237,13 @@ func makeBiasChoiceFromBiasEntry(entry models.BiasGameIdolEntry) biasChoice {
 
 // updateIdolInfo updates a idols group, name, and/or gender depending on args
 func updateIdolInfo(msg *discordgo.Message, content string) {
-	contentArgs := str.ToArgv(content)[1:]
+
+	contentArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	contentArgs = contentArgs[1:]
 
 	// confirm amount of args
 	if len(contentArgs) < 4 {
@@ -301,7 +306,7 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 
 	// update database
 	var biasesToUpdate []models.BiasGameIdolEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&biasesToUpdate)
+	err = helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&biasesToUpdate)
 	helpers.Relax(err)
 
 	for _, bias := range biasesToUpdate {
@@ -433,7 +438,12 @@ func getFilesFromDriveFolder(folderId string) []*drive.File {
 
 // updateImageInfo updates a specific image and its related bias info
 func updateImageInfo(msg *discordgo.Message, content string) {
-	contentArgs := str.ToArgv(content)[1:]
+	contentArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	contentArgs = contentArgs[1:]
 
 	// confirm amount of args
 	if len(contentArgs) < 4 {
@@ -549,7 +559,12 @@ BiasLoop:
 
 // updateImageInfo updates a specific image and its related bias info
 func deleteBiasImage(msg *discordgo.Message, content string) {
-	contentArgs := str.ToArgv(content)[1:]
+	contentArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	contentArgs = contentArgs[1:]
 
 	// confirm amount of args
 	if len(contentArgs) != 1 {
@@ -603,7 +618,7 @@ BiasLoop:
 
 	// update database
 	var biasToDelete []models.BiasGameIdolEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&biasToDelete)
+	err = helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&biasToDelete)
 	helpers.Relax(err)
 
 	// if a database entry were found, update it
