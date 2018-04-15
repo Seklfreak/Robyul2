@@ -119,7 +119,7 @@ func (h *Handler) OnGuildMemberRemove(member *discordgo.Member, session *discord
 		added, err := helpers.EventlogLog(leftAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberLeave, "", nil, nil, false)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(member.GuildID, models.AuditLogBackfillTypeMemberRemove)
+			err := helpers.RequestAuditLogBackfill(member.GuildID, models.AuditLogBackfillTypeMemberRemove, "")
 			helpers.RelaxLog(err)
 		}
 	}()
@@ -209,7 +209,7 @@ func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo
 		added, err := helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelCreate, "", nil, options, true)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(channel.GuildID, models.AuditLogBackfillTypeChannelCreate)
+			err := helpers.RequestAuditLogBackfill(channel.GuildID, models.AuditLogBackfillTypeChannelCreate, "")
 			helpers.RelaxLog(err)
 		}
 	}()
@@ -291,7 +291,7 @@ func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo
 		added, err := helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelDelete, "", nil, options, true)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(channel.GuildID, models.AuditLogBackfillTypeChannelDelete)
+			err := helpers.RequestAuditLogBackfill(channel.GuildID, models.AuditLogBackfillTypeChannelDelete, "")
 			helpers.RelaxLog(err)
 		}
 	}()
@@ -344,7 +344,7 @@ func (h *Handler) OnGuildRoleCreate(session *discordgo.Session, role *discordgo.
 		added, err := helpers.EventlogLog(leftAt, role.GuildID, role.Role.ID, models.EventlogTargetTypeRole, "", models.EventlogTypeRoleCreate, "", nil, options, true)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(role.GuildID, models.AuditLogBackfillTypeRoleCreate)
+			err := helpers.RequestAuditLogBackfill(role.GuildID, models.AuditLogBackfillTypeRoleCreate, "")
 			helpers.RelaxLog(err)
 		}
 	}()
@@ -359,7 +359,7 @@ func (h *Handler) OnGuildRoleDelete(session *discordgo.Session, role *discordgo.
 		added, err := helpers.EventlogLog(leftAt, role.GuildID, role.RoleID, models.EventlogTargetTypeRole, "", models.EventlogTypeRoleDelete, "", nil, nil, true)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(role.GuildID, models.AuditLogBackfillTypeRoleDelete)
+			err := helpers.RequestAuditLogBackfill(role.GuildID, models.AuditLogBackfillTypeRoleDelete, "")
 			helpers.RelaxLog(err)
 		}
 	}()
@@ -379,7 +379,7 @@ func (h *Handler) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.
 		added, err := helpers.EventlogLog(leftAt, user.GuildID, user.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeBanAdd, "", nil, nil, true)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(user.GuildID, models.AuditLogBackfillTypeBanAdd)
+			err := helpers.RequestAuditLogBackfill(user.GuildID, models.AuditLogBackfillTypeBanAdd, "")
 			helpers.RelaxLog(err)
 		}
 	}()
@@ -394,7 +394,7 @@ func (h *Handler) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *disc
 		added, err := helpers.EventlogLog(leftAt, user.GuildID, user.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeBanRemove, "", nil, nil, true)
 		helpers.RelaxLog(err)
 		if added {
-			err := helpers.RequestAuditLogBackfill(user.GuildID, models.AuditLogBackfillTypeBanRemove)
+			err := helpers.RequestAuditLogBackfill(user.GuildID, models.AuditLogBackfillTypeBanRemove, "")
 			helpers.RelaxLog(err)
 		}
 	}()

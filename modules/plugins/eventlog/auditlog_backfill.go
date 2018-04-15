@@ -30,7 +30,7 @@ func auditlogBackfillLoop() {
 		redis := cache.GetRedisClient()
 
 		helpers.AuditLogBackfillRequestsLock.Lock()
-		backfills, err := redis.SMembers(models.AuditLogBackfillRedisSet).Result()
+		ungroupedBackfills, err := redis.LRange(models.AuditLogBackfillRedisSet, 0, -1).Result()
 		if err != nil {
 			helpers.AuditLogBackfillRequestsLock.Unlock()
 			helpers.Relax(err)
@@ -43,7 +43,10 @@ func auditlogBackfillLoop() {
 		helpers.AuditLogBackfillRequestsLock.Unlock()
 		var successfulBackfills int
 
-		for _, backfillMarshalled := range backfills {
+		backfills := make([]models.AuditLogBackfillRequest, 0)
+
+		// bundle requests
+		for _, backfillMarshalled := range ungroupedBackfills {
 			var backfill models.AuditLogBackfillRequest
 			err = json.Unmarshal([]byte(backfillMarshalled), &backfill)
 			if err != nil {
@@ -51,6 +54,22 @@ func auditlogBackfillLoop() {
 				continue
 			}
 
+			addedToExistingBackfills := false
+			for i, _ := range backfills {
+				if backfills[i].Type == backfill.Type &&
+					backfills[i].UserID == backfill.UserID &&
+					backfills[i].GuildID == backfill.GuildID {
+					backfills[i].Count++
+					addedToExistingBackfills = true
+				}
+			}
+
+			if !addedToExistingBackfills {
+				backfills = append(backfills, backfill)
+			}
+		}
+
+		for _, backfill := range backfills {
 			if backfill.GuildID == "" {
 				continue
 			}
@@ -61,8 +80,8 @@ func auditlogBackfillLoop() {
 
 			switch backfill.Type {
 			case models.AuditLogBackfillTypeChannelCreate:
-				logger().Infof("doing channel create backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelCreate, 1)
+				logger().Infof("doing channel create backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelCreate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -97,8 +116,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeChannelDelete:
-				logger().Infof("doing channel delete backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelDelete, 1)
+				logger().Infof("doing channel delete backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelDelete, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -133,8 +152,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeChannelUpdate:
-				logger().Infof("doing channel update backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelUpdate, 1)
+				logger().Infof("doing channel update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelUpdate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -169,8 +188,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditlogBackfillTypeMemberRoleUpdate:
-				logger().Infof("doing member role update backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberRoleUpdate, 1)
+				logger().Infof("doing member role update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberRoleUpdate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -205,8 +224,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditlogBackfillTypeMemberUpdate:
-				logger().Infof("doing member update backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberUpdate, 1)
+				logger().Infof("doing member update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberUpdate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -241,8 +260,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeRoleCreate:
-				logger().Infof("doing role create backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionRoleCreate, 1)
+				logger().Infof("doing role create backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionRoleCreate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -277,8 +296,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeRoleDelete:
-				logger().Infof("doing role delete backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionRoleDelete, 1)
+				logger().Infof("doing role delete backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionRoleDelete, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -353,8 +372,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeBanAdd:
-				logger().Infof("doing ban add backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberBanAdd, 1)
+				logger().Infof("doing ban add backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberBanAdd, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -413,8 +432,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeBanRemove:
-				logger().Infof("doing ban remove backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberBanRemove, 1)
+				logger().Infof("doing ban remove backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberBanRemove, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -449,8 +468,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeMemberRemove:
-				logger().Infof("doing member remove backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberKick, 1)
+				logger().Infof("doing member remove backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionMemberKick, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -488,8 +507,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeEmojiCreate:
-				logger().Infof("doing emoji create backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionEmojiCreate, 1)
+				logger().Infof("doing emoji create backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionEmojiCreate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -524,8 +543,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeEmojiDelete:
-				logger().Infof("doing emoji delete backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionEmojiDelete, 1)
+				logger().Infof("doing emoji delete backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionEmojiDelete, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -560,8 +579,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeEmojiUpdate:
-				logger().Infof("doing emoji update backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionEmojiUpdate, 1)
+				logger().Infof("doing emoji update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionEmojiUpdate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -596,8 +615,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeGuildUpdate:
-				logger().Infof("doing guild update backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionGuildUpdate, 1)
+				logger().Infof("doing guild update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionGuildUpdate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue
@@ -632,8 +651,8 @@ func auditlogBackfillLoop() {
 				}
 				break
 			case models.AuditLogBackfillTypeRoleUpdate:
-				logger().Infof("doing role update backfill for guild #%s", backfill.GuildID)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionRoleUpdate, 1)
+				logger().Infof("doing role update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionRoleUpdate, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue

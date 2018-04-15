@@ -149,6 +149,8 @@ const (
 )
 
 type AuditLogBackfillRequest struct {
-	GuildID string
-	Type    AuditLogBackfillType
+	GuildID string               // required
+	Type    AuditLogBackfillType // required
+	Count   int                  // required
+	UserID  string
 }
