@@ -100,7 +100,7 @@ func search(query string, nsfw bool, transport *http.Transport) (results []linkR
 
 	response, err := client.Do(request)
 	if err != nil {
-		if strings.Contains(err.Error(), "http.httpError") {
+		if strings.Contains(err.Error(), "http.httpError") || strings.Contains(err.Error(), "url.Error") {
 			// try with proxy
 			proxy, err := helpers.GetRandomProxy()
 			if err != nil {
@@ -166,7 +166,7 @@ func imageSearch(query string, nsfw bool, transport *http.Transport) (results []
 
 	response, err := client.Do(request)
 	if err != nil {
-		if strings.Contains(err.Error(), "http.httpError") {
+		if strings.Contains(err.Error(), "http.httpError") || strings.Contains(err.Error(), "url.Error") {
 			// try with proxy
 			proxy, err := helpers.GetRandomProxy()
 			if err != nil {
