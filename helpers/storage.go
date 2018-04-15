@@ -45,6 +45,7 @@ type AddFileMetadata struct {
 	Filename           string            // the actual file name, can be empty
 	ChannelID          string            // the source channel ID, can be empty, but should be set if possible
 	UserID             string            // the source user ID, can be empty, but should be set if possible
+	GuildID            string            // the source guild ID, can be empty but should be set if possible, will be set automatically if ChannelID has been set
 	AdditionalMetadata map[string]string // additional metadata attached to the object
 }
 
@@ -75,7 +76,7 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 		objectName = newID.String()
 	}
 	// retrieve guildID if channelID is set
-	var guildID string
+	guildID := metadata.GuildID
 	if metadata.ChannelID != "" {
 		channel, err := GetChannel(metadata.ChannelID)
 		RelaxLog(err)
@@ -306,6 +307,29 @@ func RetrieveFileByHash(hash string) (filename, filetype string, data []byte, er
 		return "", "", nil, err
 	}
 	return entryBucket.Filename, entryBucket.MimeType, data, nil
+}
+
+// Retrieves files by additional object metadta
+// currently supported file sources: custom commands
+// hash	: the md5 hash
+func RetrieveFilesByAdditionalObjectMetadata(key, value string) (objectNames []string, err error) {
+	var entryBucket []models.StorageEntry
+	err = MDbIter(MdbCollection(models.StorageTable).Find(
+		bson.M{"metadata." + strings.ToLower(key): value},
+	)).All(&entryBucket)
+
+	objectNames = make([]string, 0)
+	if entryBucket != nil && len(entryBucket) > 0 {
+		for _, entry := range entryBucket {
+			objectNames = append(objectNames, entry.ObjectName)
+		}
+	}
+
+	if len(objectNames) < 1 {
+		return nil, errors.New("none matching files found")
+	}
+
+	return objectNames, nil
 }
 
 // Retrieves a file's public url, returns an error if file is not public

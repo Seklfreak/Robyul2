@@ -155,6 +155,11 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 				targetName = targetGuild.Name
 			}
 			break
+		case models.EventlogTargetTypePublicObject:
+			targetUrl, err := GetFileLink(id)
+			if err == nil {
+				targetName = targetUrl
+			}
 		case models.EventlogTargetTypeMessage:
 			break
 		}
@@ -459,6 +464,62 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	}
 }
 
+func getDiscordFileHashChange(key, oldHash, newHash, oldHashUrl, newHashUrl, userID, channelID, guildID string) models.ElasticEventlogChange {
+	metadataKey := "discord_" + key
+
+	iconObjectChange := models.ElasticEventlogChange{
+		Key:  key,
+		Type: models.EventlogTargetTypePublicObject,
+	}
+
+	// try to get old icon from object storage
+	oldObjects, _ := RetrieveFilesByAdditionalObjectMetadata(metadataKey, oldHash)
+	if oldObjects != nil && len(oldObjects) >= 1 {
+		iconObjectChange.OldValue = oldObjects[0]
+	} else {
+		// try to download old icon if not found in object storage
+		oldGuildIconData, err := NetGetUAWithError(oldHashUrl, DEFAULT_UA)
+		RelaxLog(err)
+		if err == nil {
+			objectName, err := AddFile("", oldGuildIconData, AddFileMetadata{
+				UserID:    userID,
+				ChannelID: channelID,
+				GuildID:   guildID,
+				AdditionalMetadata: map[string]string{
+					metadataKey: oldHash,
+				},
+			}, "eventlog", true)
+			RelaxLog(err)
+			if err == nil {
+				iconObjectChange.OldValue = objectName
+			}
+		}
+	}
+	// try to get new icon from object storage
+	newObjects, _ := RetrieveFilesByAdditionalObjectMetadata(metadataKey, newHash)
+	if newObjects != nil && len(newObjects) >= 1 {
+		iconObjectChange.NewValue = newObjects[0]
+	} else {
+		// try to download new icon if not found in object storage
+		newGuildIconData, err := NetGetUAWithError(newHashUrl, DEFAULT_UA)
+		RelaxLog(err)
+		if err == nil {
+			objectName, err := AddFile("", newGuildIconData, AddFileMetadata{
+				UserID:    userID,
+				ChannelID: channelID,
+				GuildID:   guildID,
+				AdditionalMetadata: map[string]string{
+					metadataKey: newHash,
+				},
+			}, "eventlog", true)
+			RelaxLog(err)
+			iconObjectChange.NewValue = objectName
+		}
+	}
+
+	return iconObjectChange
+}
+
 func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) {
 	leftAt := time.Now()
 
@@ -472,11 +533,21 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	}
 
 	if oldGuild.Icon != newGuild.Icon {
+		iconObjectChange := getDiscordFileHashChange("guild_icon_object",
+			oldGuild.Icon, newGuild.Icon,
+			discordgo.EndpointGuildIcon(guildID, oldGuild.Icon),
+			discordgo.EndpointGuildIcon(guildID, newGuild.Icon),
+			"", "", newGuild.ID)
+
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "guild_icon",
 			OldValue: oldGuild.Icon,
 			NewValue: newGuild.Icon,
 		})
+
+		if iconObjectChange.OldValue != "" || iconObjectChange.NewValue != "" {
+			changes = append(changes, iconObjectChange)
+		}
 	}
 
 	if oldGuild.Region != newGuild.Region {
