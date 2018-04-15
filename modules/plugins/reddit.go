@@ -141,7 +141,7 @@ func (r *Reddit) checkSubredditLoop() {
 
 						err = r.postSubmission(postChannelID, postSubmission, entry.PostDirectLinks)
 						if err != nil {
-							if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
 								if errD.Message.Code != discordgo.ErrCodeMissingPermissions &&
 									errD.Message.Code != discordgo.ErrCodeUnknownChannel {
 									helpers.Relax(err)

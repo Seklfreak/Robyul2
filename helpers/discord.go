@@ -474,7 +474,7 @@ func RemoveMuteRole(guildID string, userID string) (err error) {
 
 	err = cache.GetSession().GuildMemberRoleRemove(guildID, userID, muteRole.ID)
 	if err != nil {
-		if errD, ok := err.(*discordgo.RESTError); ok {
+		if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
 			if errD.Message.Code == discordgo.ErrCodeUnknownMember ||
 				errD.Message.Code == discordgo.ErrCodeUnknownUser ||
 				errD.Response.StatusCode == 404 {

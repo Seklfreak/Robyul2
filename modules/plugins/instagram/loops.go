@@ -102,6 +102,7 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 			_, receivedPosts, err := m.getInformationAndPosts(instagramUsername, currentProxy)
 			if err != nil {
 				if strings.Contains(err.Error(), "expected status 200; got 404") {
+					// account got deleted/username got changed
 					continue NextEntry
 				}
 				if m.retryOnError(err) {
@@ -145,6 +146,10 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 						currentProxy, err = helpers.GetRandomProxy()
 						helpers.Relax(err)
 						goto RetryPost
+					}
+					if strings.Contains(err.Error(), "expected status 200; got 404") {
+						// post got deleted
+						continue
 					}
 					helpers.RelaxLog(err)
 					continue NextEntry
@@ -337,7 +342,8 @@ func (m *Handler) retryOnError(err error) (retry bool) {
 			strings.Contains(err.Error(), "net/http") ||
 			strings.Contains(err.Error(), "expected status 200; got 429") ||
 			strings.Contains(err.Error(), "Please wait a few minutes before you try again.") ||
-			strings.Contains(err.Error(), "expected status 200; got 500") {
+			strings.Contains(err.Error(), "expected status 200; got 500") ||
+			strings.Contains(err.Error(), "expected status 200; got 502") {
 			return true
 		}
 	}

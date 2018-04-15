@@ -713,6 +713,12 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							helpers.Relax(err)
 
 							badgeData, err := helpers.NetGetUAWithError(args[4], helpers.DEFAULT_UA)
+							if err != nil {
+								if strings.Contains(err.Error(), "expected status 200; got 404") {
+									helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+									return
+								}
+							}
 							helpers.Relax(err)
 
 							badgeData, err = helpers.ScaleImage(badgeData, 28, 28)

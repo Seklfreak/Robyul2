@@ -129,6 +129,7 @@
       "user-muted-success-timed": "User `%s (#%s)` has been muted and will be unmuted at %s. <:blobstop:317034621953114112>",
       "user-unmuted-success": "User `%s (#%s)` has been unmuted. <:blobgo:317034640181297163>",
       "user-unmuted-error": "I was unable to unmute this user!",
+      "user-unmuted-error-permissions": "I was unable to unmute this user!\nPlease make sure I can manage the roles of the user.",
       "disallowed": "You are not allowed to do this!",
       "bot-disallowed": "I am not allowed to do this!",
       "user-banned-success": "User `%s (#%s)` has been banned. <:blobhammer:317035118403387393>",

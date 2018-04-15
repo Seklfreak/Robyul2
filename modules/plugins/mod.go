@@ -602,6 +602,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				helpers.Relax(err)
 
 				err = helpers.UnmuteUser(channel.GuildID, targetUser.ID)
+				if err != nil {
+					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
+						if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+							helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-unmuted-error-permissions"))
+							return
+						}
+					}
+				}
 				helpers.Relax(err)
 
 				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetUser.ID,
