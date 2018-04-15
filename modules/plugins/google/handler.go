@@ -34,8 +34,6 @@ func (h *Handler) Action(command string, content string, msg *discordgo.Message,
 		return
 	}
 
-	session.ChannelTyping(msg.ChannelID)
-
 	var result *discordgo.MessageSend
 	args := strings.Fields(content)
 
@@ -54,6 +52,9 @@ func (h *Handler) Action(command string, content string, msg *discordgo.Message,
 
 // [p]google|g <query>
 func (h *Handler) actionSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
+	quitChannel := helpers.StartTypingLoop(in.ChannelID)
+	defer func() { quitChannel <- 0 }()
+
 	parts := strings.Split(in.Content, " ")
 	if len(parts) < 2 {
 		*out = h.newMsg("bot.arguments.too-few")
@@ -83,6 +84,8 @@ func (h *Handler) actionSearch(args []string, in *discordgo.Message, out **disco
 
 	embed := linkResultEmbed(results[0])
 
+	quitChannel <- 0
+
 	*out = &discordgo.MessageSend{
 		Content: helpers.GetText("<" + GoogleFriendlyUrl + "?" + getSearchQueries(query, nsfw, true) + ">"),
 		Embed:   embed,
@@ -92,6 +95,9 @@ func (h *Handler) actionSearch(args []string, in *discordgo.Message, out **disco
 
 // [p]image|img <query>
 func (h *Handler) actionImageSearch(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
+	quitChannel := helpers.StartTypingLoop(in.ChannelID)
+	defer func() { quitChannel <- 0 }()
+
 	parts := strings.Split(in.Content, " ")
 	if len(parts) < 2 {
 		*out = h.newMsg("bot.arguments.too-few")
@@ -120,6 +126,8 @@ func (h *Handler) actionImageSearch(args []string, in *discordgo.Message, out **
 	}
 
 	embed := imageResultEmbed(results[0])
+
+	quitChannel <- 0
 
 	*out = &discordgo.MessageSend{
 		Content: helpers.GetText("<" + GoogleFriendlyUrl + "?" + getImageSearchQuries(query, nsfw, true) + ">"),

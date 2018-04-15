@@ -136,9 +136,11 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 			link, err := GetFileLink(objectName)
 			Relax(err)
 			_, err = NetGetUAWithError(link, DEFAULT_UA)
-			cache.GetLogger().WithField("module", "storage").Warnf(
-				"error warming up #%s: %s", objectName, err.Error(),
-			)
+			if err != nil {
+				cache.GetLogger().WithField("module", "storage").Warnf(
+					"error warming up #%s: %s", objectName, err.Error(),
+				)
+			}
 		}()
 	}
 	// return new objectName

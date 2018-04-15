@@ -1329,7 +1329,7 @@ func CalculateFullEmbedLength(embed *discordgo.MessageEmbed) (count int) {
 }
 
 func StartTypingLoop(channelID string) (quitChannel chan int) {
-	quitChannel = make(chan int)
+	quitChannel = make(chan int, 1)
 	go typingLoop(channelID, quitChannel)
 	return quitChannel
 }
