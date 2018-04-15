@@ -89,7 +89,6 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 
 	currentProxy, err := helpers.GetRandomProxy()
 	helpers.Relax(err)
-	cache.GetLogger().WithField("module", "instagram").Infof("switched to random proxy")
 
 	for job := range jobs {
 		//cache.GetLogger().WithField("module", "instagram").WithField("worker", id).Infof(

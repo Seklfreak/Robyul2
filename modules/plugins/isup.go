@@ -40,6 +40,7 @@ func (iu *Isup) Action(command string, content string, msg *discordgo.Message, s
 	text := helpers.GetText("plugins.isup.isnotup")
 	status, err := iu.isup(args[0])
 	if err != nil {
+		helpers.RelaxLog(err)
 		text = helpers.GetText("plugins.isup.error")
 	} else {
 		if status {
@@ -56,7 +57,7 @@ func (iu *Isup) Action(command string, content string, msg *discordgo.Message, s
 
 func (iu *Isup) isup(link string) (isup bool, err error) {
 	resultBytes, err := helpers.NetGetUAWithErrorAndTimeout(
-		"http://www.isup.me/"+url.QueryEscape(link), helpers.DEFAULT_UA, time.Duration(60*time.Second))
+		"https://downforeveryoneorjustme.com/"+url.QueryEscape(link), helpers.DEFAULT_UA, time.Duration(60*time.Second))
 	if err != nil {
 		return false, err
 	}
