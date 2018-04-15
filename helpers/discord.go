@@ -30,7 +30,7 @@ const (
 
 var (
 	snowflakeRegex     = regexp.MustCompile(`^[0-9]+$`)
-	discordInviteRegex = regexp.MustCompile(`(http(s)?:\/\/)?discord\.gg\/(invite\/)?([A-Za-z0-9]+)`)
+	discordInviteRegex = regexp.MustCompile(`(http(s)?:\/\/)?(discord\.gg(\/invite)?|discordapp\.com\/invite)\/([A-Za-z0-9]+)`)
 )
 
 var botAdmins = []string{
@@ -1468,13 +1468,13 @@ func IsSnowflake(input string) (snowflake bool) {
 	return false
 }
 
-// Extracts all invites codes from the given message (e.g. discord.gg/foo => [foo])
+// Extracts ALL invites codes from the given message (message can contain multiple invites) (e.g. discord.gg/foo => [foo])
 func ExtractInviteCodes(input string) (inviteCodes []string) {
 	inviteCodes = make([]string, 0)
 	results := discordInviteRegex.FindAllStringSubmatch(input, -1)
 	for _, result := range results {
-		if len(result) >= 5 {
-			inviteCodes = append(inviteCodes, result[4])
+		if len(result) >= 6 {
+			inviteCodes = append(inviteCodes, result[5])
 		}
 	}
 

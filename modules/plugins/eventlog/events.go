@@ -13,7 +13,7 @@ import (
 )
 
 func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-	if !strings.Contains(content, "discord.gg") {
+	if !strings.Contains(content, "discord.gg/") && !strings.Contains(content, "discordapp.com/invite/") {
 		return
 	}
 
