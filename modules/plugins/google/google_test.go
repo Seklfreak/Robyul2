@@ -50,7 +50,7 @@ func TestImageSearchQueries(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	results, err := search("google", false)
+	results, err := search("google", false, nil)
 	if err != nil {
 		t.Fatalf("google.search() returned an error: %s", err.Error())
 	}
@@ -69,14 +69,14 @@ func TestSearch(t *testing.T) {
 		t.Fatalf("google.search() first result's Text does not contain \"Search\", it is \"%s\"", results[0].Text)
 	}
 
-	sfwResult, err := search("porn", false)
+	sfwResult, err := search("porn", false, nil)
 	if err != nil {
 		t.Fatalf("google.search() returned an error: %s", err.Error())
 	}
 	if len(sfwResult) <= 0 {
 		t.Fatal("google.search() returned less than one result")
 	}
-	nsfwResult, err := search("porn", true)
+	nsfwResult, err := search("porn", true, nil)
 	if err != nil {
 		t.Fatalf("google.search() returned an error: %s", err.Error())
 	}
@@ -86,7 +86,7 @@ func TestSearch(t *testing.T) {
 }
 
 func TestImageSearch(t *testing.T) {
-	results, err := imageSearch("google", false)
+	results, err := imageSearch("google", false, nil)
 	if err != nil {
 		t.Fatalf("google.imageSearch() returned an error: %s", err.Error())
 	}
@@ -105,14 +105,14 @@ func TestImageSearch(t *testing.T) {
 		t.Fatalf("google.imageSearch() first result's URL does not contain \"https://encrypted-tbn0.gstatic.com/images?q=tbn:\", it is \"%s\"", results[0].URL)
 	}
 
-	sfwResult, err := imageSearch("porn", false)
+	sfwResult, err := imageSearch("porn", false, nil)
 	if err != nil {
 		t.Fatalf("google.imageSearch() returned an error: %s", err.Error())
 	}
 	if len(sfwResult) <= 0 {
 		t.Fatal("google.imageSearch() returned less than one result")
 	}
-	nsfwResult, err := imageSearch("porn", true)
+	nsfwResult, err := imageSearch("porn", true, nil)
 	if err != nil {
 		t.Fatalf("google.imageSearch() returned an error: %s", err.Error())
 	}

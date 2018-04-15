@@ -67,7 +67,7 @@ func (h *Handler) actionSearch(args []string, in *discordgo.Message, out **disco
 
 	nsfw := channel.NSFW
 
-	results, err := search(query, nsfw)
+	results, err := search(query, nsfw, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "no search results") {
 			*out = h.newMsg("plugins.google.search-no-results")
@@ -105,7 +105,7 @@ func (h *Handler) actionImageSearch(args []string, in *discordgo.Message, out **
 
 	nsfw := channel.NSFW
 
-	results, err := imageSearch(query, nsfw)
+	results, err := imageSearch(query, nsfw, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "no search results") {
 			*out = h.newMsg("plugins.google.search-no-results")

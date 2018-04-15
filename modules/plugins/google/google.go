@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/Seklfreak/Robyul2/helpers"
 )
 
 // based on https://github.com/devsnek/googlebot/blob/rewrite/src/util/google.js
@@ -81,9 +82,13 @@ func getImageSearchQuries(queryText string, nsfw, friendly bool) (query string) 
 	return queryBuilder.Encode()
 }
 
-func search(query string, nsfw bool) (results []linkResult, err error) {
+func search(query string, nsfw bool, transport *http.Transport) (results []linkResult, err error) {
 	client := &http.Client{
 		Timeout: time.Duration(10 * time.Second),
+	}
+
+	if transport != nil {
+		client.Transport = transport
 	}
 
 	request, err := http.NewRequest("GET", SearchUrl+"?"+getSearchQueries(query, nsfw, false), nil)
@@ -99,6 +104,14 @@ func search(query string, nsfw bool) (results []linkResult, err error) {
 	}
 
 	if response.StatusCode != 200 {
+		if response.StatusCode == 503 { // too many requests
+			// try with proxy
+			proxy, err := helpers.GetRandomProxy()
+			if err != nil {
+				return results, err
+			}
+			return search(query, nsfw, &proxy)
+		}
 		return results, errors.New(fmt.Sprintf("unexpected status code: %d", response.StatusCode))
 	}
 
@@ -127,9 +140,13 @@ func search(query string, nsfw bool) (results []linkResult, err error) {
 	return results, nil
 }
 
-func imageSearch(query string, nsfw bool) (results []imageResult, err error) {
+func imageSearch(query string, nsfw bool, transport *http.Transport) (results []imageResult, err error) {
 	client := &http.Client{
 		Timeout: time.Duration(10 * time.Second),
+	}
+
+	if transport != nil {
+		client.Transport = transport
 	}
 
 	request, err := http.NewRequest("GET", SearchUrl+"?"+getImageSearchQuries(query, nsfw, false), nil)
@@ -145,6 +162,14 @@ func imageSearch(query string, nsfw bool) (results []imageResult, err error) {
 	}
 
 	if response.StatusCode != 200 {
+		if response.StatusCode == 503 { // too many requests
+			// try with proxy
+			proxy, err := helpers.GetRandomProxy()
+			if err != nil {
+				return results, err
+			}
+			return imageSearch(query, nsfw, &proxy)
+		}
 		return results, errors.New(fmt.Sprintf("unexpected status code: %d", response.StatusCode))
 	}
 
