@@ -19,14 +19,13 @@ const (
 
 	EventlogTypeInvitePosted = "Invite_Posted" // EvenlogTargetTypeGuild
 
-	EventlogTargetTypeUser         = "user"
-	EventlogTargetTypeChannel      = "channel"
-	EventlogTargetTypeRole         = "role"
-	EventlogTargetTypeEmoji        = "emoji"
-	EventlogTargetTypeGuild        = "guild"
-	EventlogTargetTypeMessage      = "message"
-	EventlogTargetTypeInviteCode   = "invite_code"
-	EventlogTargetTypePublicObject = "public_object"
+	EventlogTargetTypeUser       = "user"
+	EventlogTargetTypeChannel    = "channel"
+	EventlogTargetTypeRole       = "role"
+	EventlogTargetTypeEmoji      = "emoji"
+	EventlogTargetTypeGuild      = "guild"
+	EventlogTargetTypeMessage    = "message"
+	EventlogTargetTypeInviteCode = "invite_code"
 
 	EventlogTypeRobyulBadgeCreate                   = "Robyul_Badge_Create"                    // EventlogTargetTypeRobyulBadge
 	EventlogTypeRobyulBadgeDelete                   = "Robyul_Badge_Delete"                    // EventlogTargetTypeRobyulBadge
@@ -124,6 +123,7 @@ const (
 	EventlogTargetTypeRobyulRandomPictureSource = "robyul-randompicture-source"
 	EventlogTargetTypeRobyulTwitchFeed          = "robyul-twitch-feed"
 	EventlogTargetTypeRobyulTwitterFeed         = "robyul-twitter-feed"
+	EventlogTargetTypeRobyulPublicObject        = "robyul-public-object"
 
 	AuditLogBackfillRedisSet = "robyul-discord:eventlog:auditlog-backfills"
 )

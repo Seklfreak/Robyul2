@@ -155,7 +155,7 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 				targetName = targetGuild.Name
 			}
 			break
-		case models.EventlogTargetTypePublicObject:
+		case models.EventlogTargetTypeRobyulPublicObject:
 			targetUrl, err := GetFileLink(id)
 			if err == nil {
 				targetName = targetUrl
@@ -192,6 +192,38 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 	}
 
 	embed.Color = GetDiscordColorFromHex("#73d016") // lime green
+	// mark possibly destructive events red
+	if actionType == models.EventlogTypeMemberLeave ||
+		actionType == models.EventlogTypeChannelDelete ||
+		actionType == models.EventlogTypeRoleDelete ||
+		actionType == models.EventlogTypeBanAdd ||
+		actionType == models.EventlogTypeBanRemove ||
+		actionType == models.EventlogTypeEmojiDelete ||
+		actionType == models.EventlogTypeRobyulBadgeDelete ||
+		actionType == models.EventlogTypeRobyulLevelsReset ||
+		actionType == models.EventlogTypeRobyulLevelsRoleDelete ||
+		actionType == models.EventlogTypeRobyulVliveFeedRemove ||
+		actionType == models.EventlogTypeRobyulInstagramFeedRemove ||
+		actionType == models.EventlogTypeRobyulRedditFeedRemove ||
+		actionType == models.EventlogTypeRobyulFacebookFeedRemove ||
+		actionType == models.EventlogTypeRobyulCleanup ||
+		actionType == models.EventlogTypeRobyulMute ||
+		actionType == models.EventlogTypeRobyulUnmute ||
+		actionType == models.EventlogTypeRobyulChatlogUpdate ||
+		actionType == models.EventlogTypeRobyulBiasConfigDelete ||
+		actionType == models.EventlogTypeRobyulAutoroleRemove ||
+		actionType == models.EventlogTypeRobyulGalleryRemove ||
+		actionType == models.EventlogTypeRobyulMirrorDelete ||
+		actionType == models.EventlogTypeRobyulStarboardDelete ||
+		actionType == models.EventlogTypeRobyulRandomPictureSourceRemove ||
+		actionType == models.EventlogTypeRobyulCommandsDelete ||
+		actionType == models.EventlogTypeRobyulTwitchFeedRemove ||
+		actionType == models.EventlogTypeRobyulTroublemakerReport ||
+		actionType == models.EventlogTypeRobyulPersistencyRoleRemove ||
+		actionType == models.EventlogTypeRobyulEventlogConfigUpdate ||
+		actionType == models.EventlogTypeRobyulTwitterFeedRemove {
+		embed.Color = GetDiscordColorFromHex("#b22222") // firebrick red
+	}
 	if waitingForAuditLogBackfill {
 		embed.Color = GetDiscordColorFromHex("#ffb80a") // orange
 	}
@@ -487,7 +519,7 @@ func getDiscordFileHashOption(key, hash, hashHurl, userID, channelID, guildID st
 
 	iconObjectOption := models.ElasticEventlogOption{
 		Key:  key,
-		Type: models.EventlogTargetTypePublicObject,
+		Type: models.EventlogTargetTypeRobyulPublicObject,
 	}
 
 	// try to get old icon from object storage
@@ -522,7 +554,7 @@ func getDiscordFileHashChange(key, oldHash, newHash, oldHashUrl, newHashUrl, use
 
 	iconObjectChange := models.ElasticEventlogChange{
 		Key:  key,
-		Type: models.EventlogTargetTypePublicObject,
+		Type: models.EventlogTargetTypeRobyulPublicObject,
 	}
 
 	// try to get old icon from object storage
