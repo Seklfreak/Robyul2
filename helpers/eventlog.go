@@ -303,7 +303,7 @@ func RequestAuditLogBackfill(guildID string, backfillType models.AuditLogBackfil
 
 	redis := cache.GetRedisClient()
 
-	_, err = redis.LPush(models.AuditLogBackfillRedisSet, marshaledData).Result()
+	_, err = redis.LPush(models.AuditLogBackfillRedisList, marshaledData).Result()
 	return
 }
 

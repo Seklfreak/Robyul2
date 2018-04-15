@@ -30,12 +30,12 @@ func auditlogBackfillLoop() {
 		redis := cache.GetRedisClient()
 
 		helpers.AuditLogBackfillRequestsLock.Lock()
-		ungroupedBackfills, err := redis.LRange(models.AuditLogBackfillRedisSet, 0, -1).Result()
+		ungroupedBackfills, err := redis.LRange(models.AuditLogBackfillRedisList, 0, -1).Result()
 		if err != nil {
 			helpers.AuditLogBackfillRequestsLock.Unlock()
 			helpers.Relax(err)
 		}
-		_, err = redis.Del(models.AuditLogBackfillRedisSet).Result()
+		_, err = redis.Del(models.AuditLogBackfillRedisList).Result()
 		if err != nil {
 			helpers.AuditLogBackfillRequestsLock.Unlock()
 			helpers.Relax(err)

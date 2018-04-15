@@ -125,7 +125,7 @@ const (
 	EventlogTargetTypeRobyulTwitterFeed         = "robyul-twitter-feed"
 	EventlogTargetTypeRobyulPublicObject        = "robyul-public-object"
 
-	AuditLogBackfillRedisSet = "robyul-discord:eventlog:auditlog-backfills"
+	AuditLogBackfillRedisList = "robyul-discord:eventlog:auditlog-backfills:v2"
 )
 
 type AuditLogBackfillType int
