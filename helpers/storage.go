@@ -144,6 +144,10 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 			}
 		}()
 	}
+	cache.GetLogger().WithField("module", "storage").Infof(
+		"stored #%s for %s (%+v)",
+		objectName, source, metadata,
+	)
 	// return new objectName
 	return objectName, nil
 }
@@ -422,8 +426,6 @@ func uploadFile(objectName string, data []byte, metadata map[string]string) (err
 			return err
 		}
 	}
-
-	cache.GetLogger().WithField("module", "storage").Infof("uploading " + objectName + " to minio storage")
 
 	options := minio.PutObjectOptions{}
 
