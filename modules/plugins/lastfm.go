@@ -512,7 +512,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "topalbums", "topalbum":
+		case "topalbums", "topalbum", "tal":
 			timeLookup := "overall"
 			timeString := "all time"
 			var collage bool
@@ -677,7 +677,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "topartists", "topartist", "top":
+		case "topartists", "topartist", "top", "ta":
 			timeLookup := "overall"
 			timeString := "all time"
 			var collage bool
@@ -841,7 +841,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-recent-tracks"))
 				return
 			}
-		case "toptracks", "topsongs", "toptrack", "topsong":
+		case "toptracks", "topsongs", "toptrack", "topsong", "tt", "ts":
 			timeLookup := "overall"
 			timeString := "all time"
 			var collage bool
