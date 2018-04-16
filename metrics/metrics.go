@@ -269,7 +269,7 @@ func CollectRuntimeMetrics() {
 		numberOfProxies, _ := redis.SCard(helpers.PROXIES_KEY).Result()
 		GimmeProxyCachedProxies.Set(numberOfProxies)
 
-		auditLogBackfills, _ := redis.SCard(models.AuditLogBackfillRedisList).Result()
+		auditLogBackfills, _ := redis.LLen(models.AuditLogBackfillRedisList).Result()
 		EventlogPendingAuditlogBackfills.Set(auditLogBackfills)
 	}
 }

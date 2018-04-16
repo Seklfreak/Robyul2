@@ -5,15 +5,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
+
+	"sync"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 )
 
 type ReactionPolls struct{}
@@ -25,38 +25,21 @@ func (rp *ReactionPolls) Commands() []string {
 	}
 }
 
-type DB_ReactionPoll struct {
-	ID              string    `gorethink:"id,omitempty"`
-	Text            string    `gorethink:"text"`
-	MessageID       string    `gorethink:"messageid"`
-	ChannelID       string    `gorethink:"channelid"`
-	GuildID         string    `gorethink:"guildid"`
-	CreatedByUserID string    `gorethink:"createdby_userid"`
-	CreatedAt       time.Time `gorethink:"createdat"`
-	Active          bool      `gorethinK:"active"`
-	AllowedEmotes   []string  `gorethink:"allowedemotes"`
-	MaxAllowedVotes int       `gorethink:"maxallowedemotes"`
+type ReactionPollCacheEntry struct {
+	ID        bson.ObjectId
+	MessageID string
 }
 
 var (
-	reactionPollsCache []DB_ReactionPoll
+	reactionPollIDsCache    []ReactionPollCacheEntry
+	reactionPollsEntryLocks = make(map[string]*sync.Mutex)
 )
 
 // @TODO: add metrics
 func (rp *ReactionPolls) Init(session *discordgo.Session) {
-	reactionPollsCache = rp.getAllReactionPolls()
-
-	// delete deleted poll messages from the database
-	go func() {
-		for _, reactionPoll := range reactionPollsCache {
-			_, err := session.ChannelMessage(reactionPoll.ChannelID, reactionPoll.MessageID)
-			if err != nil {
-				cache.GetLogger().WithField("module", "reactionpolls").Warn(fmt.Sprintf("Removed Reaction Poll #%s from the database since the message is not available anymore", reactionPoll.ID))
-				rp.deleteReactionPollByID(reactionPoll.ID)
-			}
-		}
-		reactionPollsCache = rp.getAllReactionPolls()
-	}()
+	var err error
+	reactionPollIDsCache, err = rp.getAllActiveReactionPollIDs()
+	helpers.Relax(err)
 }
 
 func (rp *ReactionPolls) Uninit(session *discordgo.Session) {
@@ -68,26 +51,9 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 		return
 	}
 
-	lastQuote := rune(0)
-	f := func(c rune) bool {
-		switch {
-		case c == lastQuote:
-			lastQuote = rune(0)
-			return false
-		case lastQuote != rune(0):
-			return false
-		case unicode.In(c, unicode.Quotation_Mark):
-			lastQuote = c
-			return false
-		default:
-			return unicode.IsSpace(c)
+	args, err := helpers.ToArgv(content)
+	helpers.Relax(err)
 
-		}
-	}
-	args := strings.FieldsFunc(content, f)
-	if len(args) < 1 {
-		return
-	}
 	switch args[0] {
 	case "create": // [p]reactionpolls create "<poll text>" <max number of votes> <allowed emotes>
 		session.ChannelTyping(msg.ChannelID)
@@ -137,17 +103,6 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 			}
 		}
 
-		newReactionPoll := rp.getReactionPollByOrCreateEmpty("id", "")
-		newReactionPoll.Text = pollText
-		newReactionPoll.ChannelID = channel.ID
-		newReactionPoll.GuildID = guild.ID
-		newReactionPoll.CreatedByUserID = msg.Author.ID
-		newReactionPoll.CreatedAt = time.Now().UTC()
-		newReactionPoll.Active = true
-		newReactionPoll.AllowedEmotes = allowedEmotes
-		newReactionPoll.MaxAllowedVotes = pollMaxVotes
-		rp.setReactionPoll(newReactionPoll)
-
 		pollEmbed := &discordgo.MessageEmbed{
 			Color:       0x0FADED,
 			Description: "**Poll is being created...** :construction_site:",
@@ -161,25 +116,45 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 		}
 		pollPostedMessage := pollPostedMessages[0]
 
-		newReactionPoll.MessageID = pollPostedMessage.ID
-		rp.setReactionPoll(newReactionPoll)
+		newEntry := models.ReactionpollsEntry{
+			Text:            pollText,
+			MessageID:       pollPostedMessage.ID,
+			ChannelID:       channel.ID,
+			GuildID:         guild.ID,
+			CreatedByUserID: msg.Author.ID,
+			CreatedAt:       time.Now().UTC(),
+			Active:          true,
+			AllowedEmotes:   allowedEmotes,
+			MaxAllowedVotes: pollMaxVotes,
+			Reactions:       nil,
+			Initialised:     true,
+		}
+
+		_, err = helpers.MDbInsert(
+			models.ReactionpollsTable,
+			newEntry,
+		)
+		helpers.Relax(err)
 
 		for _, allowedEmote := range allowedEmotes {
 			err = session.MessageReactionAdd(pollPostedMessage.ChannelID, pollPostedMessage.ID, allowedEmote)
 			helpers.Relax(err)
 		}
 
-		reactionPollsCache = rp.getAllReactionPolls()
+		reactionPollIDsCache, err = rp.getAllActiveReactionPollIDs()
+		helpers.Relax(err)
 
-		pollEmbed = rp.getEmbedForPoll(newReactionPoll, 0)
+		pollEmbed = rp.getEmbedForPoll(newEntry, 0)
 		_, err = helpers.EditEmbed(pollPostedMessage.ChannelID, pollPostedMessage.ID, pollEmbed)
 		helpers.Relax(err)
 		return
 	case "refresh": // [p]reactionpolls refresh
 		helpers.RequireBotAdmin(msg, func() {
 			session.ChannelTyping(msg.ChannelID)
-			reactionPollsCache = rp.getAllReactionPolls()
-			_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.reactionpolls.refreshed-polls"))
+			var err error
+			reactionPollIDsCache, err = rp.getAllActiveReactionPollIDs()
+			helpers.Relax(err)
+			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.reactionpolls.refreshed-polls"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		})
 		return
@@ -187,15 +162,18 @@ func (rp *ReactionPolls) Action(command string, content string, msg *discordgo.M
 
 }
 
-func (rp *ReactionPolls) getEmbedForPoll(poll DB_ReactionPoll, totalVotes int) *discordgo.MessageEmbed {
+func (rp *ReactionPolls) getEmbedForPoll(poll models.ReactionpollsEntry, totalVotes int) *discordgo.MessageEmbed {
 	pollAuthor, err := helpers.GetUser(poll.CreatedByUserID)
 	helpers.Relax(err)
 	pollEmbed := &discordgo.MessageEmbed{
 		Color:       0x0FADED,
 		Description: poll.Text,
-		Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Created By %s | Total Votes %s | Poll ID %s",
-			pollAuthor.Username, humanize.Comma(int64(totalVotes)), poll.ID,
-		)},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf(
+				"Created By %s | Total Votes %s | Poll #%s",
+				pollAuthor.Username, humanize.Comma(int64(totalVotes)), helpers.MdbIdToHuman(poll.ID)),
+			IconURL: pollAuthor.AvatarURL("64"),
+		},
 	}
 	return pollEmbed
 }
@@ -205,84 +183,65 @@ func (rp *ReactionPolls) OnReactionAdd(reaction *discordgo.MessageReactionAdd, s
 	if reaction.UserID == session.State.User.ID {
 		return
 	}
-	for _, reactionPoll := range reactionPollsCache {
-		if reactionPoll.Active == true && reactionPoll.MessageID == reaction.MessageID {
-			// check if emote is allowed
-			isAllowed := false
-			for _, allowedEmote := range reactionPoll.AllowedEmotes {
-				if allowedEmote == reaction.Emoji.APIName() {
-					isAllowed = true
-					break
-				}
+	for _, reactionPollIDs := range reactionPollIDsCache {
+		if reactionPollIDs.MessageID != reaction.MessageID {
+			continue
+		}
+
+		rp.lockEntry(reactionPollIDs.ID)
+		defer rp.unlockEntry(reactionPollIDs.ID)
+		var reactionPoll models.ReactionpollsEntry
+		err := helpers.MdbOneWithoutLogging(
+			helpers.MdbCollection(models.ReactionpollsTable).Find(bson.M{"_id": reactionPollIDs.ID}),
+			&reactionPoll,
+		)
+		helpers.Relax(err)
+
+		// check if emote is allowed
+		isAllowed := false
+		for _, allowedEmote := range reactionPoll.AllowedEmotes {
+			if allowedEmote == reaction.Emoji.APIName() {
+				isAllowed = true
+				break
 			}
-			// remove emote if not allowed
-			if isAllowed == false {
-				err := session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.APIName(), reaction.UserID)
-				if err != nil {
-					if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != 50013 {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					}
-				}
-				return
-			}
-			// get reactions on the message
-			votesOnMessage := 0
-			for _, reactionOnMessageEmote := range reactionPoll.AllowedEmotes {
-				reactionOnMessageUsers, err := session.MessageReactions(reaction.ChannelID, reaction.MessageID, reactionOnMessageEmote, 100)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-				for _, reactionOnMessageUser := range reactionOnMessageUsers {
-					if reactionOnMessageUser.ID == reaction.UserID {
-						votesOnMessage++
-					}
-				}
-			}
-			// check if user is allowed to add another vote
-			if reactionPoll.MaxAllowedVotes > -1 && votesOnMessage > reactionPoll.MaxAllowedVotes {
-				err := session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.APIName(), reaction.UserID)
-				if err != nil {
-					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-						if err.Message.Code == 50013 {
-							cache.GetLogger().WithField("module", "reactionpolls").Warnf("can not remove reaction from message #%s, missing permissions", reaction.MessageID)
-						} else {
-							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-						}
-					} else {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-					}
-				}
-				return
-			}
-			// count total votes
-			message, err := session.State.Message(reaction.ChannelID, reaction.MessageID)
-			if err != nil {
-				cache.GetLogger().WithField("module", "reactionpolls").Info(fmt.Sprintf("adding message #%s to world state", reaction.MessageID))
-				message, err = session.ChannelMessage(reaction.ChannelID, reaction.MessageID)
-				if err != nil {
-					if errD, ok := err.(*discordgo.RESTError); ok && (errD.Message.Code == discordgo.ErrCodeMissingAccess || errD.Message.Code == discordgo.ErrCodeUnknownMessage) {
-						return
-					}
-				}
-				helpers.Relax(err)
+		}
+		// remove emote if not allowed
+		if !isAllowed {
+			session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.APIName(), reaction.UserID)
+			return
+		}
+		// count total votes
+		message, err := session.State.Message(reaction.ChannelID, reaction.MessageID)
+		if err != nil {
+			cache.GetLogger().WithField("module", "reactionpolls").Info(fmt.Sprintf("adding message #%s to world state", reaction.MessageID))
+			message, err = session.ChannelMessage(reaction.ChannelID, reaction.MessageID)
+			if err == nil {
 				err = session.State.MessageAdd(message)
 				helpers.Relax(err)
 			}
-			if message.Author.ID == session.State.User.ID {
-				totalVotes := 0
-				for _, reaction := range message.Reactions {
-					totalVotes += reaction.Count
-				}
-				totalVotes -= len(reactionPoll.AllowedEmotes)
-				// update embed
-				pollEmbed := rp.getEmbedForPoll(reactionPoll, totalVotes)
-				_, err = helpers.EditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-			}
+		}
+		if message.Author.ID != session.State.User.ID {
 			return
 		}
+		// update entry
+		if reactionPoll.Reactions[reaction.Emoji.APIName()] == nil {
+			reactionPoll.Reactions[reaction.Emoji.APIName()] = make([]string, 0)
+		}
+		reactionPoll.Reactions[reaction.Emoji.APIName()] = append(reactionPoll.Reactions[reaction.Emoji.APIName()], reaction.UserID)
+		err = helpers.MDbUpdateWithoutLogging(models.ReactionpollsTable, reactionPoll.ID, reactionPoll)
+		helpers.Relax(err)
+		// check if user is allowed to add another vote
+		if reactionPoll.MaxAllowedVotes > -1 {
+			if rp.getTotalVotes(reactionPoll, reaction.UserID) > reactionPoll.MaxAllowedVotes {
+				session.MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.APIName(), reaction.UserID)
+				return
+			}
+		}
+		// update embed
+		pollEmbed := rp.getEmbedForPoll(reactionPoll, rp.getTotalVotes(reactionPoll, ""))
+		_, err = helpers.EditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
+		helpers.RelaxLog(err)
+		return
 	}
 }
 
@@ -291,39 +250,128 @@ func (rp *ReactionPolls) OnReactionRemove(reaction *discordgo.MessageReactionRem
 	if reaction.UserID == session.State.User.ID {
 		return
 	}
-	for _, reactionPoll := range reactionPollsCache {
-		if reactionPoll.Active == true && reactionPoll.MessageID == reaction.MessageID {
-			// check if emote is allowed
-			isAllowed := false
-			for _, allowedEmote := range reactionPoll.AllowedEmotes {
-				if allowedEmote == reaction.Emoji.APIName() {
-					isAllowed = true
-					break
-				}
+	for _, reactionPollIDs := range reactionPollIDsCache {
+		if reactionPollIDs.MessageID != reaction.MessageID {
+			continue
+		}
+
+		rp.lockEntry(reactionPollIDs.ID)
+		defer rp.unlockEntry(reactionPollIDs.ID)
+		var reactionPoll models.ReactionpollsEntry
+		err := helpers.MdbOneWithoutLogging(
+			helpers.MdbCollection(models.ReactionpollsTable).Find(bson.M{"_id": reactionPollIDs.ID}),
+			&reactionPoll,
+		)
+		helpers.Relax(err)
+
+		// check if emote is allowed
+		isAllowed := false
+		for _, allowedEmote := range reactionPoll.AllowedEmotes {
+			if allowedEmote == reaction.Emoji.APIName() {
+				isAllowed = true
+				break
 			}
-			// skip embed update if emote is not allowed
-			if isAllowed == false {
-				return
-			}
-			// count total votes for the message
-			message, err := session.ChannelMessage(reaction.ChannelID, reaction.MessageID)
-			helpers.Relax(err)
-			if message.Author.ID == session.State.User.ID {
-				totalVotes := 0
-				for _, reaction := range message.Reactions {
-					totalVotes += reaction.Count
-				}
-				totalVotes -= len(reactionPoll.AllowedEmotes)
-				// update embed
-				pollEmbed := rp.getEmbedForPoll(reactionPoll, totalVotes)
-				_, err = helpers.EditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
-				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-				}
-			}
+		}
+		// skip embed update if emote is not allowed
+		if !isAllowed {
 			return
 		}
+		// count total votes for the message
+		message, err := session.State.Message(reaction.ChannelID, reaction.MessageID)
+		if err != nil {
+			cache.GetLogger().WithField("module", "reactionpolls").Info(fmt.Sprintf("adding message #%s to world state", reaction.MessageID))
+			message, err = session.ChannelMessage(reaction.ChannelID, reaction.MessageID)
+			if err == nil {
+				err = session.State.MessageAdd(message)
+				helpers.Relax(err)
+			}
+		}
+		if message.Author.ID != session.State.User.ID {
+			return
+		}
+		// update entry
+		if reactionPoll.Reactions[reaction.Emoji.APIName()] != nil {
+			without := make([]string, 0)
+			for _, storedReactionUserID := range reactionPoll.Reactions[reaction.Emoji.APIName()] {
+				if storedReactionUserID == reaction.UserID {
+					continue
+				}
+				without = append(without, storedReactionUserID)
+			}
+			reactionPoll.Reactions[reaction.Emoji.APIName()] = without
+		}
+		err = helpers.MDbUpdateWithoutLogging(models.ReactionpollsTable, reactionPoll.ID, reactionPoll)
+		helpers.Relax(err)
+		// update embed
+		pollEmbed := rp.getEmbedForPoll(reactionPoll, rp.getTotalVotes(reactionPoll, ""))
+		_, err = helpers.EditEmbed(reactionPoll.ChannelID, reactionPoll.MessageID, pollEmbed)
+		helpers.RelaxLog(err)
+		return
 	}
+}
+
+func (rp *ReactionPolls) getTotalVotes(reactionPoll models.ReactionpollsEntry, userID string) (count int) {
+	if reactionPoll.Reactions == nil {
+		reactionPoll.Reactions = make(map[string][]string, 0)
+	}
+
+	if !reactionPoll.Initialised {
+		cache.GetLogger().WithField("module", "reactionpolls").Info(
+			"initialising reaction poll #", helpers.MdbIdToHuman(reactionPoll.ID),
+		)
+		message, err := cache.GetSession().ChannelMessage(reactionPoll.ChannelID, reactionPoll.MessageID)
+		if err != nil {
+			return 0
+		}
+		for _, messageReaction := range message.Reactions {
+			for _, allowedEmote := range reactionPoll.AllowedEmotes {
+				if allowedEmote != messageReaction.Emoji.APIName() {
+					continue
+				}
+				messageReactionUsers, err := cache.GetSession().MessageReactions(
+					reactionPoll.ChannelID, reactionPoll.MessageID, messageReaction.Emoji.APIName(), 100)
+				if err == nil {
+					userIDs := make([]string, 0)
+					for _, messageReactionUser := range messageReactionUsers {
+						if messageReactionUser.ID == cache.GetSession().State.User.ID {
+							continue
+						}
+
+						userIDs = append(userIDs, messageReactionUser.ID)
+					}
+					reactionPoll.Reactions[messageReaction.Emoji.APIName()] = userIDs
+				}
+			}
+		}
+		reactionPoll.Initialised = true
+		err = helpers.MDbUpdateWithoutLogging(models.ReactionpollsTable, reactionPoll.ID, reactionPoll)
+		helpers.RelaxLog(err)
+		if err != nil {
+			return 0
+		}
+	}
+
+NextReaction:
+	for reactionEmoji, reactionUserIDs := range reactionPoll.Reactions {
+	NextAllowedEmoji:
+		for _, allowedEmote := range reactionPoll.AllowedEmotes {
+			if allowedEmote != reactionEmoji {
+				continue NextAllowedEmoji
+			}
+			if userID == "" {
+				count += len(reactionUserIDs)
+				continue NextReaction
+			} else {
+				for _, reactionUserID := range reactionUserIDs {
+					if reactionUserID == userID {
+						count++
+						break
+					}
+				}
+			}
+		}
+	}
+	return
 }
 
 func (rp *ReactionPolls) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -338,77 +386,26 @@ func (rp *ReactionPolls) OnGuildMemberRemove(member *discordgo.Member, session *
 
 }
 
-func (rp *ReactionPolls) getReactionPollBy(key string, id string) DB_ReactionPoll {
-	var entryBucket DB_ReactionPoll
-	listCursor, err := rethink.Table("reactionpolls").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
+func (rp *ReactionPolls) getAllActiveReactionPollIDs() (ids []ReactionPollCacheEntry, err error) {
+	var entryBucket []models.ReactionpollsEntry
+	err = helpers.MDbIter(
+		helpers.MdbCollection(models.ReactionpollsTable).
+			Find(bson.M{"active": true}).
+			Select(bson.M{"_id": 1, "messageid": 1}),
+	).All(&entryBucket)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (rp *ReactionPolls) getReactionPollByOrCreateEmpty(key string, id string) DB_ReactionPoll {
-	var entryBucket DB_ReactionPoll
-	listCursor, err := rethink.Table("reactionpolls").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("reactionpolls").Insert(DB_ReactionPoll{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		if e != nil {
-			panic(e)
-		} else {
-			return rp.getReactionPollBy("id", res.GeneratedKeys[0])
+	ids = make([]ReactionPollCacheEntry, 0)
+	if entryBucket != nil && len(entryBucket) >= 1 {
+		for _, entry := range entryBucket {
+			ids = append(ids, ReactionPollCacheEntry{
+				ID:        entry.ID,
+				MessageID: entry.MessageID,
+			})
 		}
-	} else if err != nil {
-		panic(err)
 	}
-
-	return entryBucket
-}
-
-func (rp *ReactionPolls) setReactionPoll(entry DB_ReactionPoll) {
-	_, err := rethink.Table("reactionpolls").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (rp *ReactionPolls) deleteReactionPollByID(id string) {
-	_, err := rethink.Table("reactionpolls").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (rp *ReactionPolls) getAllReactionPolls() []DB_ReactionPoll {
-	var entryBucket []DB_ReactionPoll
-	listCursor, err := rethink.Table("reactionpolls").Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	if err != nil && err != rethink.ErrEmptyResult {
-		helpers.Relax(err)
-	}
-
-	metrics.ReactionPollsCount.Set(int64(len(entryBucket)))
-	return entryBucket
+	return ids, nil
 }
 
 func (rp *ReactionPolls) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
@@ -419,4 +416,19 @@ func (rp *ReactionPolls) OnGuildBanRemove(user *discordgo.GuildBanRemove, sessio
 }
 func (rp *ReactionPolls) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 
+}
+
+func (rp *ReactionPolls) lockEntry(entryID bson.ObjectId) {
+	if _, ok := reactionPollsEntryLocks[string(entryID)]; ok {
+		reactionPollsEntryLocks[string(entryID)].Lock()
+		return
+	}
+	reactionPollsEntryLocks[string(entryID)] = new(sync.Mutex)
+	reactionPollsEntryLocks[string(entryID)].Lock()
+}
+
+func (rp *ReactionPolls) unlockEntry(entryID bson.ObjectId) {
+	if _, ok := reactionPollsEntryLocks[string(entryID)]; ok {
+		reactionPollsEntryLocks[string(entryID)].Unlock()
+	}
 }

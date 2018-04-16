@@ -14,7 +14,6 @@ var migrations = []helpers.Callback{
 	m14_create_table_stats_voicetimes,
 	m17_create_table_mirrors,
 	m18_create_table_randompictures_sources,
-	m20_create_table_reactionpolls,
 	m22_create_table_troublemakerlog,
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m81_migration_table_youtube_channels,
 	m82_migration_table_reddit_subreddits,
 	m83_migration_table_galleries,
+	m84_migration_table_reactionpolls,
 }
 
 // Run executes all registered migrations
