@@ -396,7 +396,7 @@
       "deny-badge-success-denied": "I added %s to the denied users list for %s (%s). <:blobokhand:317032017164238848>",
       "deny-badge-success-not-denied": "I removed %s from the denied users list for %s (%s). <:blobokhand:317032017164238848>",
       "badge-error-none": "There are no badges available for you. <:blobugh:317047327443517442>",
-      "new-profile-background-help": "Just attach your 400x300px background image to this command and I will set it as yur background.\nYou can view a list of publicly available backgrounds to choose from here: <https://robyul.chat/profile/backgrounds>.",
+      "new-profile-background-help": "Just attach your 400x300px background image to this command and I will set it as your background.\nYou can view a list of publicly available backgrounds to choose from here: <https://robyul.chat/profile/backgrounds>.",
       "move-badge-success": "I moved the badge on your profile. <:blobokhand:317032017164238848>",
       "profile-color-set-success": "I updated your profile. <:blobokhand:317032017164238848>",
       "profile-opacity-set-success": "I updated your profile. <:blobokhand:317032017164238848>",
