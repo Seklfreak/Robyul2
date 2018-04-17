@@ -637,6 +637,9 @@ func (g *singleBiasGame) sendWinnerMessage() {
 func (g *singleBiasGame) finishSingleGame() {
 	defer g.recoverGame()
 
+	// delete from current games
+	g.deleteGame()
+
 	// used to make sure the game finish isn't triggered twice
 	if g.GameWinnerBias != nil {
 		return
@@ -650,9 +653,6 @@ func (g *singleBiasGame) finishSingleGame() {
 		defer helpers.Recover()
 		recordSingleGamesStats(g)
 	}(g)
-
-	// delete from current games
-	g.deleteGame()
 }
 
 // recoverGame if a panic was caused during the game, delete from current games
