@@ -65,20 +65,20 @@ type multiBiasGame struct {
 	LastRoundMessage      *discordgo.Message
 	Gender                string // girl, boy, mixed
 	UserIdsInvolved       []string
+	RoundDelay            int
 
 	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
 	GameImageIndex map[string]int
 }
 
 const (
-	DRIVE_SEARCH_TEXT       = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
-	IMAGE_RESIZE_HEIGHT     = 150
-	LEFT_ARROW_EMOJI        = "⬅"
-	RIGHT_ARROW_EMOJI       = "➡"
-	ARROW_FORWARD_EMOJI     = "▶"
-	ARROW_BACKWARD_EMOJI    = "◀"
-	ZERO_WIDTH_SPACE        = "\u200B"
-	MULTIPLAYER_ROUND_DELAY = 5
+	DRIVE_SEARCH_TEXT    = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
+	IMAGE_RESIZE_HEIGHT  = 150
+	LEFT_ARROW_EMOJI     = "⬅"
+	RIGHT_ARROW_EMOJI    = "➡"
+	ARROW_FORWARD_EMOJI  = "▶"
+	ARROW_BACKWARD_EMOJI = "◀"
+	ZERO_WIDTH_SPACE     = "\u200B"
 )
 
 // used to stop commands from going through
@@ -132,6 +132,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		// allow games with the size of 10 in debug mode
 		if helpers.DEBUG_MODE {
 			allowedGameSizes[10] = true
+			allowedMultiGameSizes[10] = true
 		}
 
 		biasGameGenders = map[string]string{
@@ -754,6 +755,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		ChannelID:      msg.ChannelID,
 		IdolsRemaining: multiGameSize,
 		Gender:         gameGender,
+		RoundDelay:     5,
 	}
 	multiGame.GameImageIndex = make(map[string]int)
 
@@ -835,7 +837,7 @@ func (g *multiBiasGame) processMultiGame() {
 		if err != nil {
 			return
 		}
-		time.Sleep(time.Second * MULTIPLAYER_ROUND_DELAY)
+		time.Sleep(time.Second * time.Duration(g.RoundDelay))
 
 		// get current round message
 		message, err := cache.GetSession().ChannelMessage(g.ChannelID, g.CurrentRoundMessageId)
@@ -860,6 +862,9 @@ func (g *multiBiasGame) processMultiGame() {
 				rightCount = reaction.Count
 			}
 		}
+
+		// adjust next round delay based on amount of votes
+		g.adjustRoundDelay(leftCount + rightCount)
 
 		winnerIndex := 0
 		loserIndex := 0
@@ -992,6 +997,38 @@ func (g *multiBiasGame) sendWinnerMessage() {
 
 	// send message
 	helpers.SendFile(g.ChannelID, "biasgame_multi_winner.png", myReader, messageString)
+}
+
+// adjusts the next round delay based on the amount of votes
+//  will only adjust by 1 second at a time so changes are not drastic
+func (g *multiBiasGame) adjustRoundDelay(lastRoundVoteCount int) {
+
+	// remove bots reaction count
+	lastRoundVoteCount -= 2
+
+	// amount of votes => max delay
+	voteCountDelayMap := map[int]int{
+		0:  3,
+		1:  4,
+		2:  5,
+		5:  6,
+		12: 7,
+	}
+
+	// get desired delay based on vote count
+	var targetDelay int
+	for reqVoteCount, delay := range voteCountDelayMap {
+		if lastRoundVoteCount >= reqVoteCount && delay > targetDelay {
+			targetDelay = delay
+		}
+	}
+
+	// if the new target delay is different than the current, adjust by 1 second
+	if g.RoundDelay < targetDelay {
+		g.RoundDelay++
+	} else if g.RoundDelay > targetDelay {
+		g.RoundDelay--
+	}
 }
 
 //////////////////////////////////
