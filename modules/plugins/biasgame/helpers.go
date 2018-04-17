@@ -2,7 +2,6 @@ package biasgame
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
@@ -15,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis"
+	json "github.com/json-iterator/go"
 	"github.com/nfnt/resize"
 	"github.com/sirupsen/logrus"
 )
