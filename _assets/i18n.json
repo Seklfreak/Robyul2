@@ -763,6 +763,7 @@
       },
       "game": {
         "invalid-game-size": "Sorry, that game size is not valid. Valid sizes are: 32, 64, 128, 256, 512, or 1024",
+        "invalid-game-size-multi": "Sorry, that game size is not valid. Valid sizes are: 32 and 64",
         "not-enough-idols": "There are not enough idols for a game of that size",
         "game-not-ready": "Game is still loading after a bot restart. Please check again in a minute.",
         "resuming-game": "Looks like you already had a game going. Please finish this game before starting another one. <:blobthumbsup:317043177028714497>",

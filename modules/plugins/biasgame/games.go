@@ -103,6 +103,7 @@ var allBiasesMutex sync.RWMutex
 
 // game configs
 var allowedGameSizes map[int]bool
+var allowedMultiGameSizes map[int]bool
 var biasGameGenders map[string]string
 
 // top 8 bracket
@@ -123,6 +124,10 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			256:  true,
 			512:  true,
 			1024: true,
+		}
+		allowedMultiGameSizes = map[int]bool{
+			32: true,
+			64: true,
 		}
 		// allow games with the size of 10 in debug mode
 		if helpers.DEBUG_MODE {
@@ -690,20 +695,38 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		return
 	}
 
-	var gameGender string
-	var ok bool
+	commandArgs = commandArgs[1:]
+	gameGender := "mixed"
+	multiGameSize := 32
 
-	// if command args are at least 2, check if the 2nd arg is valid gender
-	if len(commandArgs) >= 2 {
+	// validate multi game options
+	if len(commandArgs) > 0 {
 
-		if gameGender, ok = biasGameGenders[commandArgs[1]]; ok == false {
+		for _, arg := range commandArgs {
+
+			// gender check
+			if gender, ok := biasGameGenders[arg]; ok == true {
+				gameGender = gender
+				continue
+			}
+
+			// game size check
+			if requestedGameSize, err := strconv.Atoi(arg); err == nil {
+				if _, ok := allowedMultiGameSizes[requestedGameSize]; ok == true {
+
+					multiGameSize = requestedGameSize
+					continue
+				} else {
+
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.invalid-game-size-multi"))
+					return
+				}
+			}
+
+			// if a arg was passed that didn't match any check, send invalid args message
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			return
 		}
-	} else {
-
-		// set gender to mixed
-		gameGender = "mixed"
 	}
 
 	var biasChoices []*biasChoice
@@ -721,7 +744,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	// confirm we have enough biases for a multiplayer game
-	if len(biasChoices) < 32 {
+	if len(biasChoices) < multiGameSize {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.not-enough-idols"))
 		return
 	}
@@ -729,7 +752,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	// create new game
 	multiGame := &multiBiasGame{
 		ChannelID:      msg.ChannelID,
-		IdolsRemaining: 32,
+		IdolsRemaining: multiGameSize,
 		Gender:         gameGender,
 	}
 	multiGame.GameImageIndex = make(map[string]int)
