@@ -66,6 +66,7 @@ type multiBiasGame struct {
 	Gender                string // girl, boy, mixed
 	UserIdsInvolved       []string
 	RoundDelay            int
+	GameIsRunning         bool
 
 	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
 	GameImageIndex map[string]int
@@ -578,7 +579,11 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	// send round message
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
 	if err != nil {
-		checkPermissionError(err, g.ChannelID)
+
+		if checkPermissionError(err, g.ChannelID) {
+			helpers.SendMessage(g.ChannelID, helpers.GetText("bot.errors.no-file"))
+		}
+
 		return
 	}
 
@@ -703,6 +708,13 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 
 	// check if a multi game is already running in the current channel
 	if game := getMultiPlayerGameByChannelID(msg.ChannelID); game != nil {
+
+		// resume game if it was stopped
+		if game.GameIsRunning == false {
+			game.processMultiGame()
+			return
+		}
+
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.multi-game-running"))
 		return
 	}
@@ -767,6 +779,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		IdolsRemaining: multiGameSize,
 		Gender:         gameGender,
 		RoundDelay:     5,
+		GameIsRunning:  true,
 	}
 	multiGame.GameImageIndex = make(map[string]int)
 
@@ -823,9 +836,31 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 
 	// send round message
 	fileSendMsg, err := helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
+
 	if err != nil {
-		checkPermissionError(err, g.ChannelID)
-		return errors.New("Could not send round")
+
+		// check if error is a permissions error, if not retry send the round
+		if checkPermissionError(err, g.ChannelID) {
+
+			helpers.SendMessage(g.ChannelID, helpers.GetText("bot.errors.no-file"))
+			return errors.New("Could not send round")
+		} else {
+
+			for i := 0; i < 10; i++ {
+				time.Sleep(time.Second * 1)
+
+				myReader = bytes.NewReader(buf.Bytes())
+				fileSendMsg, err = helpers.SendFile(g.ChannelID, "combined_pic.png", myReader, messageString)
+				if err == nil {
+					break
+				}
+			}
+
+			// if after the retries an error still exists, return
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// add reactions
@@ -846,13 +881,16 @@ func (g *multiBiasGame) processMultiGame() {
 		// send next rounds and sleep
 		err := g.sendMultiBiasGameRound()
 		if err != nil {
+			g.GameIsRunning = false
 			return
 		}
 		time.Sleep(time.Second * time.Duration(g.RoundDelay))
+		g.GameIsRunning = true
 
 		// get current round message
 		message, err := cache.GetSession().ChannelMessage(g.ChannelID, g.CurrentRoundMessageId)
 		if err != nil {
+			g.GameIsRunning = false
 			return
 		}
 

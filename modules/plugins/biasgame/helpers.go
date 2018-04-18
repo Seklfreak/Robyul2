@@ -297,17 +297,18 @@ func getRandomNayoungEmoji() string {
 }
 
 // checks if the error is a permissions error and notifies the user
-func checkPermissionError(err error, channelID string) {
+func checkPermissionError(err error, channelID string) bool {
 	if err == nil {
-		return
+		return false
 	}
 
 	// check if error is a permissions error
 	if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 		if err.Message.Code == discordgo.ErrCodeMissingPermissions {
-			helpers.SendMessage(channelID, helpers.GetText("bot.errors.no-file"))
+			return true
 		}
 	}
+	return false
 }
 
 // gets a specific single player game for a UserID
