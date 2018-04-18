@@ -34,6 +34,7 @@ var suggestionQueue []*models.BiasGameSuggestionEntry
 var suggestionEmbedMessageId string // id of the embed message where suggestions are accepted/denied
 var exampleRoundPicId string
 var suggestionQueueCountMessageId string
+var quoteReplacer = strings.NewReplacer("“", "\"", "”", "\"", "‘", "'", "’", "'")
 
 func initSuggestionChannel() {
 	var err error
@@ -67,6 +68,9 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 
 	channel, err := helpers.GetChannel(msg.ChannelID)
 	helpers.Relax(err)
+
+	// replace odd double and single quotes with real ones
+	msgContent = quoteReplacer.Replace(msgContent)
 
 	suggestionArgs, err := helpers.ToArgv(msgContent)
 	if err != nil {
