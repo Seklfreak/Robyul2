@@ -241,7 +241,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 		if len(commandArgs) == 0 {
 			// start default bias game
-			singleGame := createOrGetSinglePlayerGame(msg, "mixed", 32)
+			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
 			singleGame.sendBiasGameRound()
 
 		} else if commandArgs[0] == "group-stats" {
@@ -324,35 +324,15 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
 			})
 
-		} else if gameSize, err := strconv.Atoi(commandArgs[0]); err == nil {
+		} else if _, err := strconv.Atoi(commandArgs[0]); err == nil {
 
-			// check if the game size the user wants is valid
-			if allowedGameSizes[gameSize] {
-				singleGame := createOrGetSinglePlayerGame(msg, "mixed", gameSize)
-				singleGame.sendBiasGameRound()
-			} else {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.invalid-game-size"))
-				return
-			}
+			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
+			singleGame.sendBiasGameRound()
 
-		} else if gameGender, ok := biasGameGenders[commandArgs[0]]; ok {
+		} else if _, ok := biasGameGenders[commandArgs[0]]; ok {
 
-			// check if the game size the user wants is valid
-			if len(commandArgs) == 2 {
-
-				gameSize, _ := strconv.Atoi(commandArgs[1])
-				if allowedGameSizes[gameSize] {
-					singleGame := createOrGetSinglePlayerGame(msg, gameGender, gameSize)
-					singleGame.sendBiasGameRound()
-				} else {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.invalid-game-size"))
-					return
-				}
-			} else {
-				singleGame := createOrGetSinglePlayerGame(msg, gameGender, 32)
-				singleGame.sendBiasGameRound()
-			}
-
+			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
+			singleGame.sendBiasGameRound()
 		}
 	} else if command == "biasgame-edit" { // edit is used for changing details of suggestions
 		fieldToUpdate := commandArgs[0]
@@ -383,7 +363,7 @@ func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session
 /////////////////////////////////
 
 // createSinglePlayerGame will setup a singleplayer game for the user
-func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, gameSize int) *singleBiasGame {
+func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *singleBiasGame {
 	var singleGame *singleBiasGame
 
 	// check if the user has a current game already going.
@@ -403,6 +383,37 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, gameGender string, game
 		singleGame = game
 	} else {
 		var biasChoices []*biasChoice
+		gameGender := "mixed"
+		gameSize := 32
+
+		// validate game arguments
+		if len(commandArgs) > 0 {
+			for _, arg := range commandArgs {
+
+				// gender check
+				if gender, ok := biasGameGenders[arg]; ok == true {
+					gameGender = gender
+					continue
+				}
+
+				// game size check
+				if requestedGameSize, err := strconv.Atoi(arg); err == nil {
+					if _, ok := allowedGameSizes[requestedGameSize]; ok == true {
+
+						gameSize = requestedGameSize
+						continue
+					} else {
+
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.invalid-game-size"))
+						return nil
+					}
+				}
+
+				// if a arg was passed that didn't match any check, send invalid args message
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return nil
+			}
+		}
 
 		// if this isn't a mixed game then filter all choices by the gender
 		if gameGender != "mixed" {
