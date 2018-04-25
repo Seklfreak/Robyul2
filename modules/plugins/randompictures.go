@@ -1019,8 +1019,18 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 	err = rp.appendLinkToServerHistory(linkToPost, sourceID, pictureID, file.Name, guildID)
 	helpers.RelaxLog(err)
 
+	var shortUrl string
+	if cache.GetPolr() != nil {
+		shortUrl, err = cache.GetPolr().Shorten(linkToPost, "", false)
+		helpers.RelaxLog(err)
+	}
+
+	if shortUrl == "" {
+		shortUrl = linkToPost
+	}
+
 	embed := &discordgo.MessageEmbed{
-		URL:   linkToPost,
+		URL:   shortUrl,
 		Title: "🏷 " + file.Name + camerModelText,
 		Author: &discordgo.MessageEmbedAuthor{
 			URL:  linkToHistory,
@@ -1031,7 +1041,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 		},
 	}
 
-	text := "🔗 <" + linkToPost + ">"
+	text := "🔗 <" + shortUrl + ">"
 	if messageID == "" {
 		_, err = helpers.SendComplex(channelID, &discordgo.MessageSend{
 			Content: text,

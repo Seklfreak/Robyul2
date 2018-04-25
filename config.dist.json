@@ -140,5 +140,9 @@
   },
   "steam": {
     "api_key": ""
+  },
+  "polr": {
+    "url": "https://demo.polr.me/api/",
+    "api-key": ""
   }
 }

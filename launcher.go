@@ -24,6 +24,7 @@ import (
 	"github.com/Seklfreak/Robyul2/rest"
 	"github.com/Seklfreak/Robyul2/robyulstate"
 	"github.com/Seklfreak/Robyul2/version"
+	"github.com/Seklfreak/polr-go"
 	"github.com/bshuster-repo/logruzio"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
@@ -174,6 +175,21 @@ func main() {
 			panic(err)
 		}
 		log.WithField("module", "launcher").Info("Connected to ElasticSearch v" + version)
+	}
+
+	if config.ExistsP("polr.url") &&
+		config.ExistsP("polr.api-key") &&
+		config.Path("polr.url").Data().(string) != "" &&
+		config.Path("polr.api-key").Data().(string) != "" {
+		polrClient, err := polr.New(
+			config.Path("polr.url").Data().(string),
+			config.Path("polr.api-key").Data().(string),
+			nil,
+		)
+		if err != nil {
+			panic(err)
+		}
+		cache.SetPolr(polrClient)
 	}
 
 	// Run migrations
