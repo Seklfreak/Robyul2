@@ -1013,22 +1013,40 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
 		}
-	} else {
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 	}
+	helpers.RelaxLog(err)
 
 	err = rp.appendLinkToServerHistory(linkToPost, sourceID, pictureID, file.Name, guildID)
-	if err != nil {
-		raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+	helpers.RelaxLog(err)
+
+	embed := &discordgo.MessageEmbed{
+		URL:   linkToPost,
+		Title: "🏷 " + file.Name + camerModelText,
+		Author: &discordgo.MessageEmbedAuthor{
+			URL:  linkToHistory,
+			Name: "🖼  Gallery",
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: linkToPost,
+		},
 	}
 
+	text := "🔗 <" + linkToPost + ">"
 	if messageID == "" {
-		_, err = helpers.SendMessage(channelID, fmt.Sprintf(":label: `%s`%s\n%s", file.Name, camerModelText, linkToPost))
+		_, err = helpers.SendComplex(channelID, &discordgo.MessageSend{
+			Content: text,
+			Embed:   embed,
+		})
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = helpers.EditMessage(channelID, messageID, fmt.Sprintf(":label: `%s`%s\n%s\nCheck out a gallery of recent pictures here: <%s>", file.Name, camerModelText, linkToPost, linkToHistory))
+		_, err = helpers.EditComplex(&discordgo.MessageEdit{
+			Content: &text,
+			Embed:   embed,
+			ID:      messageID,
+			Channel: channelID,
+		})
 		if err != nil {
 			return err
 		}
