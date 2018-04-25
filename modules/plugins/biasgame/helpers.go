@@ -353,12 +353,26 @@ func getMultiPlayerGameByChannelID(channelID string) *multiBiasGame {
 func getCurrentSinglePlayerGames() map[string]*singleBiasGame {
 	currentSinglePlayerGamesMutex.RLock()
 	defer currentSinglePlayerGamesMutex.RUnlock()
-	return currentSinglePlayerGames
+
+	// copy data to prevent race conditions
+	gamesCopy := make(map[string]*singleBiasGame)
+	for key, value := range currentSinglePlayerGames {
+		gamesCopy[key] = value
+	}
+
+	return gamesCopy
 }
 
 // gets all currently ongoing multi player games
 func getCurrentMultiPlayerGames() []*multiBiasGame {
 	currentMultiPlayerGamesMutex.RLock()
 	defer currentMultiPlayerGamesMutex.RUnlock()
-	return currentMultiPlayerGames
+
+	// copy data to prevent race conditions
+	gamesCopy := make([]*multiBiasGame, len(currentMultiPlayerGames))
+	for i, value := range currentMultiPlayerGames {
+		gamesCopy[i] = value
+	}
+
+	return gamesCopy
 }
