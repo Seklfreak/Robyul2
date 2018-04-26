@@ -224,7 +224,7 @@ func (s *Robyulstate) GuildUpdate(guild *discordgo.Guild) error {
 		s.guildMap[guild.ID].DefaultMessageNotifications != guild.DefaultMessageNotifications {
 		// guild got updated
 		//fmt.Println("guild update", s.guildMap[guild.ID].Name, "to", guild.Name)
-		helpers.OnEventlogGuildUpdate(guild.ID, s.guildMap[guild.ID], guild)
+		go helpers.OnEventlogGuildUpdate(guild.ID, s.guildMap[guild.ID], guild)
 	}
 
 	guildCopy := new(discordgo.Guild)
@@ -302,7 +302,7 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 			s.guildMap[guildID].Emojis = append(s.guildMap[guildID].Emojis[:i], s.guildMap[guildID].Emojis[i+1:]...)
 			// emoji got removed
 			//fmt.Println("emoji removed", oldEmoji.Name)
-			helpers.OnEventlogEmojiDelete(guildID, oldEmoji)
+			go helpers.OnEventlogEmojiDelete(guildID, oldEmoji)
 		}
 	}
 
@@ -316,7 +316,7 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 					oldEmoji.Managed != newEmoji.Managed {
 					// emoji got updated
 					//fmt.Println("emoji update", oldEmoji.Name, "to", newEmoji.Name)
-					helpers.OnEventlogEmojiUpdate(guildID, oldEmoji, newEmoji)
+					go helpers.OnEventlogEmojiUpdate(guildID, oldEmoji, newEmoji)
 				}
 				emojis = append(emojis[:i], emojis[i+1:]...)
 				s.guildMap[guildID].Emojis[j] = newEmoji
@@ -329,7 +329,7 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 		s.guildMap[guildID].Emojis = append(s.guildMap[guildID].Emojis, newEmoji)
 		// emoji got added
 		//fmt.Println("emoji added", newEmoji.Name)
-		helpers.OnEventlogEmojiCreate(guildID, newEmoji)
+		go helpers.OnEventlogEmojiCreate(guildID, newEmoji)
 	}
 
 	return nil
@@ -369,7 +369,7 @@ func (s *Robyulstate) ChannelUpdate(newChannel *discordgo.Channel) error {
 				!helpers.ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
 				// channel got updated
 				//fmt.Println("channel update", oldChannel.Name, "to", oldChannel.Name)
-				helpers.OnEventlogChannelUpdate(newChannel.GuildID, oldChannel, newChannel)
+				go helpers.OnEventlogChannelUpdate(newChannel.GuildID, oldChannel, newChannel)
 			}
 			s.guildMap[newChannel.GuildID].Channels[j] = newChannel
 			return nil
@@ -446,7 +446,7 @@ func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
 				oldMember.Nick != member.Nick ||
 				(oldMember.User.Discriminator != member.User.Discriminator && oldMember.User.Discriminator != "") {
 				//fmt.Println("member", member.User.Username, "update roles:", len(oldMember.Roles), "to:", len(member.Roles))
-				helpers.OnEventlogMemberUpdate(member.GuildID, oldMember, member)
+				go helpers.OnEventlogMemberUpdate(member.GuildID, oldMember, member)
 			}
 
 			s.guildMap[member.GuildID].Members[j] = new(discordgo.Member)
@@ -530,7 +530,7 @@ func (s *Robyulstate) RoleAdd(guildID string, role *discordgo.Role) error {
 				oldRole.Color != role.Color ||
 				//oldRole.Position != role.Position ||
 				oldRole.Permissions != role.Permissions {
-				helpers.OnEventlogRoleUpdate(guildID, oldRole, role)
+				go helpers.OnEventlogRoleUpdate(guildID, oldRole, role)
 			}
 
 			s.guildMap[guildID].Roles[j] = new(discordgo.Role)
