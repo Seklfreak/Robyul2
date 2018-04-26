@@ -29,7 +29,7 @@ func (a *About) Action(command string, content string, msg *discordgo.Message, s
 	embed := &discordgo.MessageEmbed{
 		URL:         "https://robyul.chat/",
 		Title:       "Hello, I'm Robyul!",
-		Description: "I'm built using Go, open-source and a fork of [Shiro](https://github.com/SubliminalHQ/shiro), formerly called Karen.",
+		Description: "I'm built using Go, open-source and a fork of Shiro, formerly called Karen.",
 		Color:       0,
 		Author: &discordgo.MessageEmbedAuthor{
 			URL:     "https://robyul.chat/",
