@@ -442,7 +442,7 @@ func (s *Robyulstate) MemberAdd(member *discordgo.Member) error {
 			// update member
 			oldRoles, newRoles := helpers.StringSliceDiff(oldMember.Roles, member.Roles)
 			if (len(oldRoles) > 0 || len(newRoles) > 0) ||
-				(oldMember.User.Username != member.User.Username && oldMember.User.Username != "") ||
+				(oldMember.User.Username != member.User.Username && oldMember.User.Username != "" && member.User.Username != "") ||
 				oldMember.Nick != member.Nick ||
 				(oldMember.User.Discriminator != member.User.Discriminator && oldMember.User.Discriminator != "") {
 				//fmt.Println("member", member.User.Username, "update roles:", len(oldMember.Roles), "to:", len(member.Roles))
