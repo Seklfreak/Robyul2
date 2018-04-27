@@ -23,6 +23,7 @@ const (
 	CHECKMARK_EMOJI    = "✅"
 	X_EMOJI            = "❌"
 	QUESTIONMARK_EMOJI = "❓"
+	NAV_NUMBERS_EMOJI  = "🔢"
 
 	MAX_IMAGE_SIZE = 2000 // 2000x2000px
 	MIN_IMAGE_SIZE = 150  // 150x150px
@@ -35,9 +36,18 @@ var suggestionEmbedMessageId string // id of the embed message where suggestions
 var exampleRoundPicId string
 var suggestionQueueCountMessageId string
 var quoteReplacer = strings.NewReplacer("“", "\"", "”", "\"", "‘", "'", "’", "'")
+var predefinedDenyMessages map[int]string
 
 func initSuggestionChannel() {
 	var err error
+
+	predefinedDenyMessages = map[int]string{
+		1: "The face is too small, please zoom in more.",
+		2: "Please only submit pictures in color.",
+		3: "The face is to hard to see.",
+		4: "The picture quality is too low.",
+		5: "Bad cropping.",
+	}
 
 	imageSuggestionChannlId = helpers.GetConfig().Path("biasgame.suggestion_channel_id").Data().(string)
 	imageSuggestionChannel, err = helpers.GetChannel(imageSuggestionChannlId)
@@ -53,7 +63,14 @@ func initSuggestionChannel() {
 	cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
 
 	// make a message on how to edit suggestions
-	helpMessage := "```Editable Fields: name, group, gender, notes\nCommand: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "biasgame-edit {field} new field value...\n\nPlease add a note when denying suggestions.```"
+	helpMessage := "```Editable Fields: name, group, gender, notes\n" +
+		"Command: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "biasgame-edit {field} new field value...\n\n" +
+		"\n1. " + predefinedDenyMessages[1] +
+		"\n2. " + predefinedDenyMessages[2] +
+		"\n3. " + predefinedDenyMessages[3] +
+		"\n4. " + predefinedDenyMessages[4] +
+		"\n5. " + predefinedDenyMessages[5] + "```"
+
 	helpers.SendMessage(imageSuggestionChannlId, helpMessage)
 
 	// load unresolved suggestions and create the first embed
@@ -236,7 +253,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 	var userResponseMessage string
 
 	// check if the reaction added was valid
-	if CHECKMARK_EMOJI != reaction.Emoji.Name && X_EMOJI != reaction.Emoji.Name {
+	if CHECKMARK_EMOJI != reaction.Emoji.Name && X_EMOJI != reaction.Emoji.Name && NAV_NUMBERS_EMOJI != reaction.Emoji.Name {
 		return
 	}
 
@@ -263,7 +280,18 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Approved** <:blobthumbsup:317043177028714497>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "approved"
 
-		} else if X_EMOJI == reaction.Emoji.Name {
+		} else if X_EMOJI == reaction.Emoji.Name || NAV_NUMBERS_EMOJI == reaction.Emoji.Name {
+
+			// if predefined deny reason
+			if NAV_NUMBERS_EMOJI == reaction.Emoji.Name {
+
+				// get the default denial reason
+				if reasonNumber, err := getSuggestionDenialInput(imageSuggestionChannlId); err == nil && predefinedDenyMessages[reasonNumber] != "" {
+					cs.Notes = predefinedDenyMessages[reasonNumber]
+				} else {
+					return
+				}
+			}
 
 			// confirm a note is set before denying a suggestion
 			if cs.Notes == "" {
@@ -503,6 +531,7 @@ func updateCurrentSuggestionEmbed() {
 
 		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, CHECKMARK_EMOJI)
 		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, X_EMOJI)
+		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, NAV_NUMBERS_EMOJI)
 	}
 }
 

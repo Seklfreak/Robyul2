@@ -2,11 +2,13 @@ package biasgame
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/draw"
 	"math/rand"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -375,4 +377,53 @@ func getCurrentMultiPlayerGames() []*multiBiasGame {
 	}
 
 	return gamesCopy
+}
+
+// getUserInputPage waits for the user to enter a number
+func getSuggestionDenialInput(channelID string) (int, error) {
+	queryMsg, err := helpers.SendMessage(channelID, "Enter the number for the reason you would like to deny with.")
+	if err != nil {
+		return 0, err
+	}
+
+	defer cache.GetSession().ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
+
+	timeoutChan := make(chan int)
+	go func() {
+		time.Sleep(time.Second * 45)
+		timeoutChan <- 0
+	}()
+
+	for {
+		select {
+		case userMsg := <-waitForUserMessage():
+			if userMsg.Author.Bot {
+				continue
+			}
+
+			// delete user message and remove reaction
+			go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
+
+			// get page number from user text
+			re := regexp.MustCompile("[0-9]+")
+			if userEnteredNum, err := strconv.Atoi(re.FindString(userMsg.Content)); err == nil {
+
+				if userEnteredNum > 0 {
+					return userEnteredNum, nil
+				}
+			} else {
+				return 0, errors.New("Number not found in input")
+			}
+		case <-timeoutChan:
+			return 0, errors.New("Timed out")
+		}
+	}
+}
+
+func waitForUserMessage() chan *discordgo.MessageCreate {
+	out := make(chan *discordgo.MessageCreate)
+	cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
+		out <- e
+	})
+	return out
 }
