@@ -1,9 +1,13 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/globalsign/mgo/bson"
+)
 
 const (
-	VanityInvitesTable = "vanity_invites"
+	VanityInvitesTable MongoDbCollection = "vanity_invites"
 	// {guildID} resolves to VanityInviteRedisEntry
 	VanityInvitesInviteRedisKey = "robyul2-discord:vanityinvites:invite:%s"
 
@@ -11,13 +15,13 @@ const (
 )
 
 type VanityInviteEntry struct {
-	ID               string    `gorethink:"id,omitempty"`
-	GuildID          string    `gorethink:"guild_id"`
-	ChannelID        string    `gorethink:"channel_id"`
-	VanityName       string    `gorethink:"vanity_name"`
-	VanityNamePretty string    `gorethink:"vanity_name_pretty"`
-	SetByUserID      string    `gorethink:"set_by_user_id"`
-	SetAt            time.Time `gorethink:"set_at"`
+	ID               bson.ObjectId `bson:"_id,omitempty"`
+	GuildID          string
+	ChannelID        string
+	VanityName       string
+	VanityNamePretty string
+	SetByUserID      string
+	SetAt            time.Time
 }
 
 type VanityInviteRedisEntry struct {

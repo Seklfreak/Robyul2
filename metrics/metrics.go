@@ -240,7 +240,7 @@ func CollectRuntimeMetrics() {
 
 		TwitchChannelsCount.Set(entriesCountMgo(models.TwitchTable, nil))
 
-		VanityInvitesCount.Set(entriesCount(models.VanityInvitesTable))
+		VanityInvitesCount.Set(entriesCountMgo(models.VanityInvitesTable, nil))
 
 		BiasgameImagesCount.Set(entriesCountMgo(models.BiasGameIdolsTable, nil))
 

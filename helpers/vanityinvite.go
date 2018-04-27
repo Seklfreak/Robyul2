@@ -12,8 +12,8 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
-	"github.com/gorethink/gorethink"
 	"github.com/pkg/errors"
 )
 
@@ -96,8 +96,10 @@ func UpdateOrInsertVanityUrl(vanityName, guildID, channelID, userID string) (err
 		WithField("guildID", vanityEntryByGuildID.GuildID).
 		Info("created the vanity url, name:", vanityEntryByGuildID.VanityNamePretty, "channel:", vanityEntryByGuildID.ChannelID)
 
-	insert := gorethink.Table(models.VanityInvitesTable).Insert(newVanityInvite)
-	_, err = insert.RunWrite(GetDB())
+	_, err = MDbInsert(
+		models.VanityInvitesTable,
+		newVanityInvite,
+	)
 	if err != nil {
 		return err
 	}
@@ -312,47 +314,29 @@ func logVanityInviteChange(channelID string, vanityInvite, oldVanityInvite model
 	return err
 }
 
-func GetVanityUrlByID(id string) (entryBucket models.VanityInviteEntry, err error) {
-	listCursor, err := gorethink.Table(models.VanityInvitesTable).Get(id).Run(GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-	return entryBucket, err
-}
-
 func GetVanityUrlByGuildID(guildID string) (entryBucket models.VanityInviteEntry, err error) {
-	listCursor, err := gorethink.Table(models.VanityInvitesTable).Filter(
-		gorethink.Row.Field("guild_id").Eq(guildID),
-	).Run(GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
+	err = MdbOne(
+		MdbCollection(models.VanityInvitesTable).Find(bson.M{"guildid": guildID}),
+		&entryBucket,
+	)
 	return entryBucket, err
 }
 
 func GetVanityUrlByVanityName(vanityName string) (entryBucket models.VanityInviteEntry, err error) {
-	listCursor, err := gorethink.Table(models.VanityInvitesTable).Filter(
-		gorethink.Row.Field("vanity_name").Eq(strings.ToLower(vanityName)),
-	).Run(GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
+	err = MdbOne(
+		MdbCollection(models.VanityInvitesTable).Find(bson.M{"vanityname": strings.ToLower(vanityName)}),
+		&entryBucket,
+	)
 	return entryBucket, err
 }
 
 func RemoveVanityUrl(vanityInviteEntry models.VanityInviteEntry) error {
-	if vanityInviteEntry.ID != "" {
+	if vanityInviteEntry.ID.Valid() {
 		cache.GetLogger().WithField("module", "helpers/vanityinvite").
 			WithField("guildID", vanityInviteEntry.GuildID).
 			Info("removed the vanity url", vanityInviteEntry.VanityNamePretty)
 
-		_, err := gorethink.Table(models.VanityInvitesTable).Get(vanityInviteEntry.ID).Delete().RunWrite(GetDB())
+		err := MDbDelete(models.VanityInvitesTable, vanityInviteEntry.ID)
 		if err != nil {
 			return err
 		}
@@ -371,8 +355,8 @@ func RemoveVanityUrl(vanityInviteEntry models.VanityInviteEntry) error {
 }
 
 func UpdateVanityUrl(vanityInviteEntry models.VanityInviteEntry) error {
-	if vanityInviteEntry.ID != "" {
-		_, err := gorethink.Table(models.VanityInvitesTable).Update(vanityInviteEntry).Run(GetDB())
+	if vanityInviteEntry.ID.Valid() {
+		err := MDbUpdate(models.VanityInvitesTable, vanityInviteEntry.ID, vanityInviteEntry)
 		return err
 	}
 	return errors.New("empty vanityName submitted")
