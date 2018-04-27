@@ -123,6 +123,12 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 		return
 	}
 
+	// confirm user can upload pictures
+	if helpers.UseruploadsIsDisabled(msg.Author.ID) {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.errors.useruploads-disabled"))
+		return
+	}
+
 	// validate url image
 	resp, err := pester.Get(suggestedImageUrl)
 	if err != nil {
