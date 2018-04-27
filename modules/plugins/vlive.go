@@ -133,6 +133,10 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, r
 				changes := false
 
 				for _, vod := range updatedVliveChannel.VOD {
+					// don't post playlists
+					if vod.Type == "PLAYLIST" {
+						continue
+					}
 					videoAlreadyPosted := false
 					for _, postedVod := range entry.PostedVOD {
 						if postedVod.Seq == vod.Seq {
