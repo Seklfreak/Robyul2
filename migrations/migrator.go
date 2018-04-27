@@ -13,7 +13,6 @@ var migrations = []helpers.Callback{
 	m1_create_table_guild_config,
 	m14_create_table_stats_voicetimes,
 	m18_create_table_randompictures_sources,
-	m22_create_table_troublemakerlog,
 	m27_create_table_starboard_entries,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m85_migration_table_mirrors,
 	m86_migration_table_vanity_invites,
 	m87_migration_table_user_config,
+	m88_migration_table_troublemakerlog,
 }
 
 // Run executes all registered migrations

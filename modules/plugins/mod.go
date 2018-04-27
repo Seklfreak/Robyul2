@@ -23,7 +23,6 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
-	rethink "github.com/gorethink/gorethink"
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
 	"github.com/olebedev/when/rules/en"
@@ -2371,15 +2370,8 @@ func (m *Mod) inspectCommonServers(user *discordgo.User) []*discordgo.Guild {
 	return isOnServerList
 }
 
-func (m *Mod) getTroublemakerReports(user *discordgo.User) []DB_Troublemaker_Entry {
-	var entryBucket []DB_Troublemaker_Entry
-	listCursor, err := rethink.Table("troublemakerlog").Filter(
-		rethink.Row.Field("userid").Eq(user.ID),
-	).Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	listCursor.All(&entryBucket)
-
+func (m *Mod) getTroublemakerReports(user *discordgo.User) (entryBucket []models.TroublemakerlogEntry) {
+	helpers.MDbIter(helpers.MdbCollection(models.TroublemakerlogTable).Find(bson.M{"userid": user.ID})).All(&entryBucket)
 	return entryBucket
 }
 
