@@ -2,43 +2,25 @@ package plugins
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"sync"
 
 	"time"
 
+	"strconv"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack"
 )
 
 type Mirror struct{}
-
-type DB_Mirror_Entry struct {
-	ID                string `gorethink:"id,omitempty"`
-	Type              string `gorethink:"type"`
-	ConnectedChannels []Mirror_Channel
-}
-
-type Mirror_Channel struct {
-	ChannelID           string
-	ChannelWebhookID    string
-	ChannelWebhookToken string
-	GuildID             string
-	ChannelWebhooks     []Mirror_Channel_Webhook
-}
-
-type Mirror_Channel_Webhook struct {
-	WebhookID    string `gorethink:"webhook_id"`
-	WebhookToken string `gorethink:"webhook_token"`
-}
 
 func (m *Mirror) Commands() []string {
 	return []string{
@@ -47,20 +29,16 @@ func (m *Mirror) Commands() []string {
 	}
 }
 
-const (
-	mirrorUrlRegexText = `(<?https?:\/\/[^\s]+>?)`
-)
-
 var (
-	mirrorUrlRegex *regexp.Regexp
-	mirrors        []DB_Mirror_Entry
+	mirrors []models.MirrorEntry
 	// one lock for every channel ID
 	mirrorChannelLocks = make(map[string]*sync.Mutex, 0)
 )
 
 func (m *Mirror) Init(session *discordgo.Session) {
-	mirrorUrlRegex = regexp.MustCompile(mirrorUrlRegexText)
-	mirrors = m.GetMirrors()
+	var err error
+	mirrors, err = m.GetMirrors()
+	helpers.Relax(err)
 }
 
 func (m *Mirror) Uninit(session *discordgo.Session) {
@@ -80,13 +58,16 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			helpers.RequireRobyulMod(msg, func() {
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
-				newMirrorEntry := m.getEntryByOrCreateEmpty("id", "")
-				newMirrorEntry.ConnectedChannels = make([]Mirror_Channel, 0)
-				m.setEntry(newMirrorEntry)
 
-				mirrors = m.GetMirrors()
+				newID, err := helpers.MDbInsert(models.MirrorsTable, models.MirrorEntry{
+					Type: models.MirrorTypeLink,
+				})
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, newMirrorEntry.ID,
+				mirrors, err = m.GetMirrors()
+				helpers.Relax(err)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(newID),
 					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
 					models.EventlogTypeRobyulMirrorCreate, "",
 					nil,
@@ -95,7 +76,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Created new Mirror by %s (#%s)", msg.Author.Username, msg.Author.ID))
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.create-success",
-					helpers.GetPrefixForServer(channel.GuildID), newMirrorEntry.ID))
+					helpers.GetPrefixForServer(channel.GuildID), helpers.MdbIdToHuman(newID)))
 				helpers.Relax(err)
 				return
 			})
@@ -111,43 +92,51 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
-				mirrorID := args[1]
-				mirrorEntry := m.getEntryBy("id", mirrorID)
-				if mirrorEntry.ID == "" {
+				var mirrorEntry models.MirrorEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.MirrorsTable).Find(bson.M{"_id": helpers.HumanToMdbId(args[1])}),
+					&mirrorEntry,
+				)
+				if helpers.IsMdbNotFound(err) {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
+				helpers.Relax(err)
 
 				beforeType := mirrorEntry.Type
 
+				var typeText string
 				switch mirrorEntry.Type {
-				case "text":
-					mirrorEntry.Type = "link"
+				case models.MirrorTypeLink:
+					mirrorEntry.Type = models.MirrorTypeText
+					typeText = "text"
 					break
 				default:
-					mirrorEntry.Type = "text"
+					mirrorEntry.Type = models.MirrorTypeLink
+					typeText = "link"
 					break
 				}
-				m.setEntry(mirrorEntry)
+				err = helpers.MDbUpdate(models.MirrorsTable, mirrorEntry.ID, mirrorEntry)
+				helpers.Relax(err)
 
-				go func() {
-					mirrors = m.GetMirrors()
-				}()
+				mirrors, err = m.GetMirrors()
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, mirrorEntry.ID,
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(mirrorEntry.ID),
 					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
 					models.EventlogTypeRobyulMirrorUpdate, "",
 					[]models.ElasticEventlogChange{
 						{
 							Key:      "mirror_type",
-							OldValue: beforeType,
-							NewValue: mirrorEntry.Type,
+							OldValue: strconv.Itoa(int(beforeType)),
+							NewValue: strconv.Itoa(int(mirrorEntry.Type)),
+							Type:     models.EventlogTargetTypeRobyulMirrorType,
 						},
 					},
 					nil, false)
 				helpers.RelaxLog(err)
 
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", mirrorEntry.Type))
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mirror.toggle-success", typeText))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			})
@@ -174,13 +163,16 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				guild, err := helpers.GetGuild(channel.GuildID)
 				helpers.Relax(err)
 
-				mirrorID := args[1]
-				mirrorEntry := m.getEntryBy("id", mirrorID)
-				if mirrorEntry.ID == "" {
-					_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-					helpers.Relax(err)
+				var mirrorEntry models.MirrorEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.MirrorsTable).Find(bson.M{"_id": helpers.HumanToMdbId(args[1])}),
+					&mirrorEntry,
+				)
+				if helpers.IsMdbNotFound(err) {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
+				helpers.Relax(err)
 
 				targetChannel, err := helpers.GetChannelFromMention(msg, args[2])
 				if err != nil || targetChannel.ID == "" || targetChannel.GuildID != channel.GuildID {
@@ -189,58 +181,20 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				newMirrorChannel := Mirror_Channel{
+				newMirrorChannel := models.MirrorChannelEntry{
 					ChannelID: targetChannel.ID,
 					GuildID:   targetChannel.GuildID,
 				}
 
-				if len(args) >= 5 {
-					targetChannelWebhookId := args[3]
-					targetChannelWebhookToken := args[4]
-
-					webhook, err := session.WebhookWithToken(targetChannelWebhookId, targetChannelWebhookToken)
-					if err != nil || webhook.GuildID != targetChannel.GuildID || webhook.ChannelID != targetChannel.ID {
-						_, err := helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("bot.arguments.invalid"))
-						helpers.Relax(err)
-						return
-					}
-
-					newMirrorChannel.ChannelWebhookID = targetChannelWebhookId
-					newMirrorChannel.ChannelWebhookToken = targetChannelWebhookToken
-				} else {
-					firstWebhook, err := session.WebhookCreate(targetChannel.ID, "Robyul Mirror Webhook 1", "")
-					if err != nil {
-						if errD, ok := err.(*discordgo.RESTError); ok {
-							if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
-								_, err = helpers.EditMessage(msg.ChannelID, progressMessage.ID, helpers.GetText("plugins.mirror.add-channel-error-permissions"))
-								helpers.Relax(err)
-								return
-							}
-						}
-					}
-					helpers.Relax(err)
-
-					newMirrorChannel.ChannelWebhooks = append(newMirrorChannel.ChannelWebhooks, Mirror_Channel_Webhook{
-						WebhookID:    firstWebhook.ID,
-						WebhookToken: firstWebhook.Token,
-					})
-
-					secondWebhook, err := session.WebhookCreate(targetChannel.ID, "Robyul Mirror Webhook 2", "")
-					helpers.Relax(err)
-
-					newMirrorChannel.ChannelWebhooks = append(newMirrorChannel.ChannelWebhooks, Mirror_Channel_Webhook{
-						WebhookID:    secondWebhook.ID,
-						WebhookToken: secondWebhook.Token,
-					})
-				}
-
 				mirrorEntry.ConnectedChannels = append(mirrorEntry.ConnectedChannels, newMirrorChannel)
 
-				m.setEntry(mirrorEntry)
+				err = helpers.MDbUpdate(models.MirrorsTable, mirrorEntry.ID, mirrorEntry)
+				helpers.Relax(err)
 
-				mirrors = m.GetMirrors()
+				mirrors, err = m.GetMirrors()
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, mirrorEntry.ID,
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(mirrorEntry.ID),
 					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
 					models.EventlogTypeRobyulMirrorUpdate, "",
 					nil,
@@ -264,49 +218,42 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			session.ChannelTyping(msg.ChannelID)
 			helpers.RequireRobyulMod(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
-				var entryBucket []DB_Mirror_Entry
-				listCursor, err := rethink.Table("mirrors").Run(helpers.GetDB())
+				var entryBucket []models.MirrorEntry
+				err := helpers.MDbIter(helpers.MdbCollection(models.MirrorsTable).Find(nil)).All(&entryBucket)
 				helpers.Relax(err)
-				defer listCursor.Close()
-				err = listCursor.All(&entryBucket)
 
-				if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+				if len(entryBucket) <= 0 {
 					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.list-empty"))
 					return
 				}
-				helpers.Relax(err)
 
 				resultMessage := ":fax: Mirrors:\n"
 				for _, entry := range entryBucket {
-					entryType := entry.Type
-					if entryType == "" {
-						entryType = "link"
+					var entryTypeText string
+					switch entry.Type {
+					case models.MirrorTypeLink:
+						entryTypeText = "link"
+					case models.MirrorTypeText:
+						entryTypeText = "text"
 					}
-					resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (Mode: `%s`, %d channels):\n", entry.ID, entryType, len(entry.ConnectedChannels))
+					resultMessage += fmt.Sprintf(":satellite: Mirror `%s` (Mode: `%s`, %d channels):\n",
+						helpers.MdbIdToHuman(entry.ID), entryTypeText, len(entry.ConnectedChannels))
 					for _, mirroredChannelEntry := range entry.ConnectedChannels {
-						if mirroredChannelEntry.ChannelWebhookID != "" && mirroredChannelEntry.ChannelWebhookToken != "" {
-							mirroredChannelEntry.ChannelWebhooks = append(mirroredChannelEntry.ChannelWebhooks, Mirror_Channel_Webhook{
-								WebhookID:    mirroredChannelEntry.ChannelWebhookID,
-								WebhookToken: mirroredChannelEntry.ChannelWebhookToken,
-							})
-						}
 						mirroredChannel, err := helpers.GetChannel(mirroredChannelEntry.ChannelID)
 						if err != nil {
-							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` (`#%s`) on `N/A` `(#%s)`: <#%s> (Webhooks: `%d`)\n",
+							resultMessage += fmt.Sprintf(":arrow_forward: `N/A` (`#%s`) on `N/A` `(#%s)`: <#%s>\n",
 								mirroredChannelEntry.ChannelID,
 								mirroredChannelEntry.GuildID,
 								mirroredChannelEntry.ChannelID,
-								len(mirroredChannelEntry.ChannelWebhooks),
 							)
 							continue
 						}
 						mirroredChannelGuild, err := helpers.GetGuild(mirroredChannelEntry.GuildID)
 						helpers.Relax(err)
-						resultMessage += fmt.Sprintf(":arrow_forward: `#%s` (`#%s`) on `%s` `(#%s)`: <#%s> (Webhooks: `%d`)\n",
+						resultMessage += fmt.Sprintf(":arrow_forward: `#%s` (`#%s`) on `%s` `(#%s)`: <#%s>\n",
 							mirroredChannel.Name, mirroredChannel.ID,
 							mirroredChannelGuild.Name, mirroredChannelGuild.ID,
 							mirroredChannel.ID,
-							len(mirroredChannelEntry.ChannelWebhooks),
 						)
 					}
 				}
@@ -331,17 +278,24 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				channel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
-				entryId := args[1]
-				entryBucket := m.getEntryBy("id", entryId)
-				if entryBucket.ID == "" {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.delete-not-found"))
+				var mirrorEntry models.MirrorEntry
+				err = helpers.MdbOne(
+					helpers.MdbCollection(models.MirrorsTable).Find(bson.M{"_id": helpers.HumanToMdbId(args[1])}),
+					&mirrorEntry,
+				)
+				if helpers.IsMdbNotFound(err) {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					return
 				}
-				m.deleteEntryById(entryBucket.ID)
+				helpers.Relax(err)
 
-				mirrors = m.GetMirrors()
+				err = helpers.MDbDelete(models.MirrorsTable, mirrorEntry.ID)
+				helpers.Relax(err)
 
-				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, entryBucket.ID,
+				mirrors, err = m.GetMirrors()
+				helpers.Relax(err)
+
+				_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(mirrorEntry.ID),
 					models.EventlogTargetTypeRobyulMirror, msg.Author.ID,
 					models.EventlogTypeRobyulMirrorDelete, "",
 					nil,
@@ -349,7 +303,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 				helpers.RelaxLog(err)
 
 				cache.GetLogger().WithField("module", "mirror").Info(fmt.Sprintf("Deleted Mirror %s by %s (#%s)",
-					entryBucket.ID, msg.Author.Username, msg.Author.ID))
+					helpers.MdbIdToHuman(mirrorEntry.ID), msg.Author.Username, msg.Author.ID))
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.delete-success"))
 				helpers.Relax(err)
 				return
@@ -358,9 +312,11 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 		case "refresh": // [p]mirror refresh
 			session.ChannelTyping(msg.ChannelID)
 			helpers.RequireRobyulMod(msg, func() {
+				var err error
 				session.ChannelTyping(msg.ChannelID)
-				mirrors = m.GetMirrors()
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.refreshed-config"))
+				mirrors, err = m.GetMirrors()
+				helpers.Relax(err)
+				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.refreshed-config"))
 				helpers.Relax(err)
 				return
 			})
@@ -413,7 +369,7 @@ TryNextMirror:
 					}
 				}
 				switch mirrorEntry.Type {
-				case "text":
+				case models.MirrorTypeText:
 					m.postMirrorMessage(mirrorEntry, msg, msg.Author, newContent)
 					break
 				default:
@@ -437,7 +393,7 @@ TryNextMirror:
 
 }
 
-func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceMessage *discordgo.Message, author *discordgo.User, message string) {
+func (m *Mirror) postMirrorMessage(mirrorEntry models.MirrorEntry, sourceMessage *discordgo.Message, author *discordgo.User, message string) {
 	for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
 		if channelToMirrorToEntry.ChannelID != sourceMessage.ChannelID {
 			robyulIsOnTargetGuild := false
@@ -447,84 +403,23 @@ func (m *Mirror) postMirrorMessage(mirrorEntry DB_Mirror_Entry, sourceMessage *d
 				}
 			}
 			if robyulIsOnTargetGuild {
-				var webhookID, webhookToken string
-				if channelToMirrorToEntry.ChannelWebhookID != "" && channelToMirrorToEntry.ChannelWebhookToken != "" {
-					channelToMirrorToEntry.ChannelWebhooks = append(channelToMirrorToEntry.ChannelWebhooks, Mirror_Channel_Webhook{
-						WebhookID:    channelToMirrorToEntry.ChannelWebhookID,
-						WebhookToken: channelToMirrorToEntry.ChannelWebhookToken,
+				webhook, err := helpers.GetWebhook(channelToMirrorToEntry.GuildID, channelToMirrorToEntry.ChannelID)
+				if err != nil {
+					continue
+				}
+				result, err := helpers.WebhookExecuteWithResult(
+					webhook.ID, webhook.Token,
+					&discordgo.WebhookParams{
+						Content:   message,
+						Username:  author.Username,
+						AvatarURL: helpers.GetAvatarUrl(author),
 					})
-				}
-				if len(channelToMirrorToEntry.ChannelWebhooks) == 1 {
-					result, err := helpers.WebhookExecuteWithResult(
-						channelToMirrorToEntry.ChannelWebhooks[0].WebhookID, channelToMirrorToEntry.ChannelWebhooks[0].WebhookToken,
-						&discordgo.WebhookParams{
-							Content:   message,
-							Username:  author.Username,
-							AvatarURL: helpers.GetAvatarUrl(author),
-						})
-					helpers.RelaxLog(err)
-					metrics.MirrorsPostsSent.Add(1)
-					err = m.rememberPostedMessage(sourceMessage, result)
-					helpers.RelaxLog(err)
-				} else if len(channelToMirrorToEntry.ChannelWebhooks) > 1 {
-					m.lockWebhookChannel(channelToMirrorToEntry.ChannelID)
-					lastWebhookID := m.getLastWebhookID(channelToMirrorToEntry.ChannelID)
-					for _, channelWebhook := range channelToMirrorToEntry.ChannelWebhooks {
-						webhookID = channelWebhook.WebhookID
-						webhookToken = channelWebhook.WebhookToken
-						if lastWebhookID != webhookID {
-							break
-						}
-					}
-					err := m.setLastWebhookID(channelToMirrorToEntry.ChannelID, webhookID)
-					helpers.RelaxLog(err)
-					result, err := helpers.WebhookExecuteWithResult(webhookID, webhookToken,
-						&discordgo.WebhookParams{
-							Content:   message,
-							Username:  author.Username,
-							AvatarURL: helpers.GetAvatarUrl(author),
-						})
-					helpers.RelaxLog(err)
-					metrics.MirrorsPostsSent.Add(1)
-					m.unlockWebhookChannel(channelToMirrorToEntry.ChannelID)
-					err = m.rememberPostedMessage(sourceMessage, result)
-					helpers.RelaxLog(err)
-				}
+				helpers.RelaxLog(err)
+				metrics.MirrorsPostsSent.Add(1)
+				err = m.rememberPostedMessage(sourceMessage, result)
+				helpers.RelaxLog(err)
 			}
 		}
-	}
-}
-
-func (m *Mirror) getLastWebhookKey(channelID string) (key string) {
-	return "robyul2-discord:mirror:last-webhook:" + channelID
-}
-
-func (m *Mirror) setLastWebhookID(channelID string, webhookID string) (err error) {
-	key := m.getLastWebhookKey(channelID)
-
-	redisClient := cache.GetRedisClient()
-	return redisClient.Set(key, webhookID, 0).Err()
-}
-
-func (m *Mirror) getLastWebhookID(channelID string) (webhookID string) {
-	key := m.getLastWebhookKey(channelID)
-
-	redisClient := cache.GetRedisClient()
-	return redisClient.Get(key).Val()
-}
-
-func (m *Mirror) lockWebhookChannel(channelID string) {
-	if _, ok := mirrorChannelLocks[channelID]; ok {
-		mirrorChannelLocks[channelID].Lock()
-		return
-	}
-	mirrorChannelLocks[channelID] = new(sync.Mutex)
-	mirrorChannelLocks[channelID].Lock()
-}
-
-func (m *Mirror) unlockWebhookChannel(channelID string) {
-	if _, ok := mirrorChannelLocks[channelID]; ok {
-		mirrorChannelLocks[channelID].Unlock()
 	}
 }
 
@@ -534,73 +429,9 @@ func (m *Mirror) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.S
 func (m *Mirror) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 }
 
-func (m *Mirror) getEntryBy(key string, id string) DB_Mirror_Entry {
-	var entryBucket DB_Mirror_Entry
-	listCursor, err := rethink.Table("mirrors").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		return entryBucket
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Mirror) getEntryByOrCreateEmpty(key string, id string) DB_Mirror_Entry {
-	var entryBucket DB_Mirror_Entry
-	listCursor, err := rethink.Table("mirrors").Filter(
-		rethink.Row.Field(key).Eq(id),
-	).Run(helpers.GetDB())
-	if err != nil {
-		panic(err)
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
-		insert := rethink.Table("mirrors").Insert(DB_Mirror_Entry{})
-		res, e := insert.RunWrite(helpers.GetDB())
-		if e != nil {
-			panic(e)
-		} else {
-			return m.getEntryByOrCreateEmpty("id", res.GeneratedKeys[0])
-		}
-	} else if err != nil {
-		panic(err)
-	}
-
-	return entryBucket
-}
-
-func (m *Mirror) setEntry(entry DB_Mirror_Entry) {
-	_, err := rethink.Table("mirrors").Update(entry).Run(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Mirror) deleteEntryById(id string) {
-	_, err := rethink.Table("mirrors").Filter(
-		rethink.Row.Field("id").Eq(id),
-	).Delete().RunWrite(helpers.GetDB())
-	helpers.Relax(err)
-}
-
-func (m *Mirror) GetMirrors() []DB_Mirror_Entry {
-	var entryBucket []DB_Mirror_Entry
-	listCursor, err := rethink.Table("mirrors").Run(helpers.GetDB())
-	helpers.Relax(err)
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-
-	helpers.Relax(err)
-	return entryBucket
+func (m *Mirror) GetMirrors() (entryBucket []models.MirrorEntry, err error) {
+	err = helpers.MDbIter(helpers.MdbCollection(models.MirrorsTable).Find(nil)).All(&entryBucket)
+	return entryBucket, err
 }
 
 type Mirror_PostedMessage struct {

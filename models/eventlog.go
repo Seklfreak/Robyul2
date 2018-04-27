@@ -124,6 +124,7 @@ const (
 	EventlogTargetTypeRobyulTwitchFeed          = "robyul-twitch-feed"
 	EventlogTargetTypeRobyulTwitterFeed         = "robyul-twitter-feed"
 	EventlogTargetTypeRobyulPublicObject        = "robyul-public-object"
+	EventlogTargetTypeRobyulMirrorType          = "robyul-mirror-type"
 
 	AuditLogBackfillRedisList = "robyul-discord:eventlog:auditlog-backfills:v2"
 )

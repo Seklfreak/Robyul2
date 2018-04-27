@@ -230,7 +230,7 @@ func CollectRuntimeMetrics() {
 
 		GalleriesCount.Set(entriesCountMgo(models.GalleryTable, nil))
 
-		MirrorsCount.Set(entriesCount("mirrors"))
+		MirrorsCount.Set(entriesCountMgo(models.MirrorsTable, nil))
 
 		RandomPictureSourcesCount.Set(entriesCount("randompictures_sources"))
 
