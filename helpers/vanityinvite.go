@@ -385,7 +385,7 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 	if err = cacheCodec.Get(key, &vanityInviteRedis); err == nil {
 		if time.Now().Before(vanityInviteRedis.ExpiresAt) {
 
-			fmt.Println(vanityInviteRedis.ExpiresAt)
+			//fmt.Println(vanityInviteRedis.ExpiresAt)
 			return vanityInviteRedis.InviteCode, nil
 		}
 	}

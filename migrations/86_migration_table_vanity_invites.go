@@ -66,8 +66,6 @@ func m86_migration_table_vanity_invites() {
 	}
 	bar.Finish()
 
-	return
-
 	cache.GetLogger().WithField("module", "migrations").Info("dropping rethinkdb vanity_invites")
 	_, err = gorethink.TableDrop("vanity_invites").Run(helpers.GetDB())
 	if err != nil {
