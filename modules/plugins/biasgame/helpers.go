@@ -400,6 +400,9 @@ func getSuggestionDenialInput(channelID string) (int, error) {
 			if userMsg.Author.Bot {
 				continue
 			}
+			if userMsg.ChannelID != channelID {
+				continue
+			}
 
 			// delete user message and remove reaction
 			go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)

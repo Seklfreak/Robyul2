@@ -44,7 +44,7 @@ func initSuggestionChannel() {
 	predefinedDenyMessages = map[int]string{
 		1: "The face is too small, please zoom in more.",
 		2: "Please only submit pictures in color.",
-		3: "The face is to hard to see.",
+		3: "The face is too hard to see.",
 		4: "The picture quality is too low.",
 		5: "Bad cropping.",
 	}
