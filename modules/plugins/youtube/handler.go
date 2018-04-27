@@ -153,26 +153,29 @@ func (h *Handler) actionChannel(args []string, in *discordgo.Message, out **disc
 		return h.actionListChannel
 	}
 
-	item, err := h.service.SearchQuerySingle(args[1:], "channel")
-	if err != nil {
-		logger().Error(err)
-		*out = h.newMsg(err.Error())
-		return h.actionFinish
+	// search channel
+	var channelId string
+	// try ID
+	directItem, err := h.service.GetChannelSingle(args[1])
+	if err == nil && directItem != nil {
+		channelId = directItem.Id
 	}
 
-	var channelId string
-
-	if item == nil {
-		directItem, err := h.service.GetChannelSingle(args[1])
-		if err == nil && directItem != nil {
-			channelId = directItem.Id
+	if channelId == "" {
+		// try searching for text
+		yc, err := h.service.SearchQuerySingle(args[1:], "channel")
+		if err != nil {
+			logger().Error(err)
+			*out = h.newMsg(err.Error())
+			return h.actionFinish
 		}
-	} else {
-		// Very few channels only have snippet.ChannelID
-		// Maybe it's youtube API bug.
-		channelId = item.Id.ChannelId
-		if channelId == "" {
-			channelId = item.Snippet.ChannelId
+		if yc != nil {
+			// Very few channels only have snippet.ChannelID
+			// Maybe it's youtube API bug.
+			channelId = yc.Id.ChannelId
+			if channelId == "" {
+				channelId = yc.Snippet.ChannelId
+			}
 		}
 	}
 
@@ -207,29 +210,31 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 	}
 
 	// search channel
-	yc, err := h.service.SearchQuerySingle(args[2:len(args)-1], "channel")
-	if err != nil {
-		logger().Error(err)
-		*out = h.newMsg(err.Error())
-		return h.actionFinish
+	var channelId, channelTitle string
+	// try ID
+	directItem, err := h.service.GetChannelSingle(args[2])
+	if err == nil && directItem != nil {
+		channelId = directItem.Id
+		channelTitle = directItem.Snippet.Title
 	}
 
-	var channelId, channelTitle string
-
-	if yc == nil {
-		directItem, err := h.service.GetChannelSingle(args[2])
-		if err == nil && directItem != nil {
-			channelId = directItem.Id
-			channelTitle = directItem.Snippet.Title
+	if channelId == "" {
+		// try searching for text
+		yc, err := h.service.SearchQuerySingle(args[2:len(args)-1], "channel")
+		if err != nil {
+			logger().Error(err)
+			*out = h.newMsg(err.Error())
+			return h.actionFinish
 		}
-	} else {
-		// Very few channels only have snippet.ChannelID
-		// Maybe it's youtube API bug.
-		channelId = yc.Id.ChannelId
-		if channelId == "" {
-			channelId = yc.Snippet.ChannelId
+		if yc != nil {
+			// Very few channels only have snippet.ChannelID
+			// Maybe it's youtube API bug.
+			channelId = yc.Id.ChannelId
+			if channelId == "" {
+				channelId = yc.Snippet.ChannelId
+			}
+			channelTitle = yc.Snippet.ChannelTitle
 		}
-		channelTitle = yc.Snippet.ChannelTitle
 	}
 
 	entry := models.YoutubeChannelEntry{
