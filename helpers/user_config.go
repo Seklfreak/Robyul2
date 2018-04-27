@@ -6,39 +6,31 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/vmihailenco/msgpack"
 )
 
 func getUserConfigEntry(userID, key string) (entry models.UserConfigEntry, err error) {
-	listCursor, err := rethink.Table(models.UserConfigTable).Filter(
-		rethink.Row.Field("user_id").Eq(userID),
-	).Filter(
-		rethink.Row.Field("key").Eq(key),
-	).Run(GetDB())
-	if err != nil {
-		return entry, err
-	}
-
-	defer listCursor.Close()
-	err = listCursor.One(&entry)
+	err = MdbOne(
+		MdbCollection(models.UserConfigTable).Find(bson.M{"userid": userID, "key": key}),
+		&entry,
+	)
 	return entry, err
 }
 
 func createUserConfigEntry(userID, key string, value []byte) (err error) {
-	insert := rethink.Table(models.UserConfigTable).Insert(models.UserConfigEntry{
+	_, err = MDbInsert(models.UserConfigTable, models.UserConfigEntry{
 		UserID:      userID,
 		Key:         key,
 		Value:       value,
 		LastChanged: time.Now(),
 	})
-	_, err = insert.RunWrite(GetDB())
 	return err
 }
 
 func updateUserConfigEntry(entry models.UserConfigEntry) (err error) {
-	if entry.ID != "" {
-		_, err = rethink.Table(models.UserConfigTable).Get(entry.ID).Update(entry).RunWrite(GetDB())
+	if entry.ID.Valid() {
+		err = MDbUpdate(models.UserConfigTable, entry.ID, entry)
 	}
 	return err
 }

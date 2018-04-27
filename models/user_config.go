@@ -2,16 +2,18 @@ package models
 
 import (
 	"time"
+
+	"github.com/globalsign/mgo/bson"
 )
 
 const (
-	UserConfigTable = "user_config"
+	UserConfigTable MongoDbCollection = "user_config"
 )
 
 type UserConfigEntry struct {
-	ID          string    `rethink:"id,omitempty"`
-	UserID      string    `rethink:"user_id"`
-	Key         string    `rethink:"key"`
-	Value       []byte    `rethink:"value"`
-	LastChanged time.Time `rethink:"last_changed"`
+	ID          bson.ObjectId `bson:"_id,omitempty"`
+	UserID      string
+	Key         string
+	Value       []byte
+	LastChanged time.Time
 }
