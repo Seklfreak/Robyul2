@@ -278,7 +278,7 @@ func (t *Troublemaker) Action(command string, content string, msg *discordgo.Mes
 								_, err = helpers.SendEmbed(guildToNotifySettings.TroublemakerLogChannel, reportEmbed)
 								if err != nil {
 									cache.GetLogger().WithField("module", "troublemaker").Warnf("Failed to send troublemaker report to channel #%s on guild #%s: %s"+
-										guildToNotifySettings.TroublemakerLogChannel, guildToNotifySettings.Guild, err.Error())
+										guildToNotifySettings.TroublemakerLogChannel, guildToNotifySettings.GuildID, err.Error())
 								}
 							}
 						}

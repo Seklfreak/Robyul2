@@ -21,7 +21,6 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
-	rethink "github.com/gorethink/gorethink"
 	"github.com/vmihailenco/msgpack"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
@@ -497,9 +496,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					}
 					helpers.Relax(err)
 
-					_, err = rethink.Table("randompictures_sources").Filter(
-						rethink.Row.Field("id").Eq(entryBucket.ID),
-					).Delete().RunWrite(helpers.GetDB())
+					err = helpers.MDbDelete(models.RandompictureSourcesTable, entryBucket.ID)
 					helpers.Relax(err)
 
 					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, helpers.MdbIdToHuman(entryBucket.ID),

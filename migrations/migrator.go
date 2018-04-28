@@ -9,9 +9,6 @@ import (
 )
 
 var migrations = []helpers.Callback{
-	m0_create_db,
-	m1_create_table_guild_config,
-	m14_create_table_stats_voicetimes,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
 	m43_create_elastic_vanityinvite_click_index,
@@ -64,6 +61,7 @@ var migrations = []helpers.Callback{
 	m92_migration_table_levels_roles,
 	m93_migration_table_levels_roles_overwrites,
 	m94_migration_table_bot_config,
+	m95_migration_table_guild_configs,
 }
 
 // Run executes all registered migrations

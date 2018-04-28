@@ -7,6 +7,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo/bson"
 	rethink "github.com/gorethink/gorethink"
 )
 
@@ -56,30 +57,23 @@ func GuildSettingsSet(guild string, config models.Config) error {
 	// Check if an config object exists
 	var settings models.Config
 
-	cursor, err := rethink.Table("guild_configs").Filter(map[string]interface{}{"guild": guild}).Run(GetDB())
-	defer cursor.Close()
+	err := MdbOne(
+		MdbCollection(models.GuildConfigTable).Find(bson.M{"guildid": guild}),
+		&settings,
+	)
 
+	if IsMdbNotFound(err) {
+		_, err = MDbInsert(
+			models.GuildConfigTable,
+			config,
+		)
+	} else if err != nil {
+		return err
+	} else {
+		err = MDbUpdate(models.GuildConfigTable, config.ID, config)
+	}
 	if err != nil {
 		return err
-	}
-
-	err = cursor.One(&settings)
-
-	switch err {
-	// Insert
-	case rethink.ErrEmptyResult:
-		_, err = rethink.Table("guild_configs").Insert(config).RunWrite(GetDB())
-		break
-
-	// Update
-	case nil:
-		_, err = rethink.Table("guild_configs").Filter(
-			map[string]interface{}{"guild": guild},
-		).Update(config).RunWrite(GetDB())
-		break
-
-	default:
-		panic(err)
 	}
 
 	// Update cache
@@ -93,25 +87,19 @@ func GuildSettingsSet(guild string, config models.Config) error {
 // GuildSettingsGet returns all config values for the guild or a default object
 func GuildSettingsGet(guild string) (models.Config, error) {
 	var settings models.Config
-	var cursor *rethink.Cursor
 	var err error
 
-	cursor, err = rethink.Table("guild_configs").Filter(rethink.Row.Field("guild").Eq(guild)).Run(GetDB())
-	defer cursor.Close()
+	err = MdbOne(
+		MdbCollection(models.GuildConfigTable).Find(bson.M{"guildid": guild}),
+		&settings,
+	)
 
-	if err != nil {
-		return settings, err
-	}
-
-	err = cursor.One(&settings)
-
-	switch err {
-	case rethink.ErrEmptyResult:
+	if IsMdbNotFound(err) {
 		settings = models.Config{}.Default(guild)
 		return settings, nil
-	default:
-		return settings, err
 	}
+
+	return settings, err
 }
 
 func GuildSettingsGetCached(id string) models.Config {

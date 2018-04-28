@@ -1,74 +1,78 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/globalsign/mgo/bson"
+)
+
+const (
+	GuildConfigTable MongoDbCollection = "guild_configs"
+)
 
 // Config is a struct describing all config options a guild may set
 type Config struct {
-	Id string `rethink:"id,omitempty"`
+	ID bson.ObjectId `bson:"_id,omitempty"`
+
 	// Guild contains the guild ID
-	Guild string `rethink:"guild"`
+	GuildID string
 
-	Prefix string `rethink:"prefix"`
+	Prefix string
 
-	CleanupEnabled bool `rethink:"cleanup_enabled"`
+	CleanupEnabled bool
 
-	AnnouncementsEnabled bool `rethink:"announcements_enabled"`
+	AnnouncementsEnabled bool
 	// AnnouncementsChannel stores the channel ID
-	AnnouncementsChannel string `rethink:"announcements_channel"`
+	AnnouncementsChannel string
 
-	WelcomeNewUsersEnabled bool   `rethink:"welcome_new_users_enabled"`
-	WelcomeNewUsersText    string `rethink:"welcome_new_users_text"`
+	WelcomeNewUsersEnabled bool
+	WelcomeNewUsersText    string
 
-	MutedRoleName string `rethink:"muted_role_name"`
+	MutedRoleName string
 
-	// Polls contains all open polls for the guild,
-	// closed polls are also stored but will be auto-deleted
-	// one day after its state changes to closed
-	Polls []Poll `rethink:"polls"`
+	InspectTriggersEnabled InspectTriggersEnabled
+	InspectsChannel        string
 
-	InspectTriggersEnabled InspectTriggersEnabled `rethink:"inspect_triggers_enabled"`
-	InspectsChannel        string                 `rethink:"inspects_channel"`
+	NukeIsParticipating bool
+	NukeLogChannel      string
 
-	NukeIsParticipating bool   `rethink:"nuke_participation"`
-	NukeLogChannel      string `rethink:"nuke_channel"`
+	LevelsIgnoredUserIDs          []string
+	LevelsIgnoredChannelIDs       []string
+	LevelsNotificationCode        string
+	LevelsNotificationDeleteAfter int
+	LevelsMaxBadges               int
 
-	LevelsIgnoredUserIDs          []string `rethink:"levels_ignored_user_ids"`
-	LevelsIgnoredChannelIDs       []string `rethink:"levels_ignored_channel_ids"`
-	LevelsNotificationCode        string   `rethink:"level_notification_code"`
-	LevelsNotificationDeleteAfter int      `rethink:"level_notification_deleteafter"`
-	LevelsMaxBadges               int      `rethink:"levels_maxbadges"`
+	MutedMembers []string // deprecated
 
-	MutedMembers []string `rethink:"muted_member_ids"` // deprecated
+	TroublemakerIsParticipating bool
+	TroublemakerLogChannel      string
 
-	TroublemakerIsParticipating bool   `rethink:"troublemaker_participation"`
-	TroublemakerLogChannel      string `rethink:"troublemaker_channel"`
+	AutoRoleIDs      []string
+	DelayedAutoRoles []DelayedAutoRole
 
-	AutoRoleIDs      []string          `rethink:"autorole_roleids"`
-	DelayedAutoRoles []DelayedAutoRole `rethink:"delayed_autoroles"`
+	StarboardChannelID string
+	StarboardMinimum   int
+	StarboardEmoji     []string
 
-	StarboardChannelID string   `rethink:"starboard_channel_id"`
-	StarboardMinimum   int      `rethink:"starboard_minimum"`
-	StarboardEmoji     []string `rethink:"starboard_emoji"`
+	ChatlogDisabled bool
 
-	ChatlogDisabled bool `rethink:"chatlog_disabled"`
+	EventlogDisabled   bool
+	EventlogChannelIDs []string
 
-	EventlogDisabled   bool     `rethink:"eventlog_disabled"`
-	EventlogChannelIDs []string `rethink:"eventlog_channelids"`
+	PersistencyBiasEnabled bool
+	PersistencyRoleIDs     []string
 
-	PersistencyBiasEnabled bool     `rethink:"persistency_bias_enabled"`
-	PersistencyRoleIDs     []string `rethink:"persistency_roleids"`
+	RandomPicturesPicDelay                  int
+	RandomPicturesPicDelayIgnoredChannelIDs []string
 
-	RandomPicturesPicDelay                  int      `rethink:"randompictures_pic_delay"`
-	RandomPicturesPicDelayIgnoredChannelIDs []string `rethink:"randompictures_pic_delay_ignored_channelids"`
+	PerspectiveIsParticipating bool
+	PerspectiveChannelID       string
 
-	PerspectiveIsParticipating bool   `rethink:"perspective_participation"`
-	PerspectiveChannelID       string `rethink:"perspective_channelid"`
+	CustomCommandsEveryoneCanAdd bool
+	CustomCommandsAddRoleID      string
 
-	CustomCommandsEveryoneCanAdd bool   `rethink:"customcommands_everyonecanadd"`
-	CustomCommandsAddRoleID      string `rethink:"customcommands_add_roleid"`
-
-	AdminRoleIDs []string `rethink:"admin_roleids"`
-	ModRoleIDs   []string `rethink:"mod_roleids"`
+	AdminRoleIDs []string
+	ModRoleIDs   []string
 }
 
 type InspectTriggersEnabled struct {
@@ -89,7 +93,7 @@ type DelayedAutoRole struct {
 // Default is a helper for generating default config values
 func (c Config) Default(guild string) Config {
 	return Config{
-		Guild: guild,
+		GuildID: guild,
 
 		Prefix: "_",
 
