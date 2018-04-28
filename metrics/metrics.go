@@ -232,7 +232,7 @@ func CollectRuntimeMetrics() {
 
 		MirrorsCount.Set(entriesCountMgo(models.MirrorsTable, nil))
 
-		RandomPictureSourcesCount.Set(entriesCount("randompictures_sources"))
+		RandomPictureSourcesCount.Set(entriesCountMgo(models.RandompictureSourcesTable, nil))
 
 		RedditSubredditsCount.Set(entriesCountMgo(models.RedditSubredditsTable, nil))
 

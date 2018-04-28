@@ -19,6 +19,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
 	rethink "github.com/gorethink/gorethink"
 	"github.com/vmihailenco/msgpack"
@@ -28,15 +29,6 @@ import (
 
 type RandomPictures struct{}
 
-type DB_RandomPictures_Source struct {
-	ID                 string   `gorethink:"id,omitempty"`
-	GuildID            string   `gorethink:"guildid"`
-	PostToChannelIDs   []string `gorethink:"post_to_channelids"`
-	DriveFolderIDs     []string `gorethink:"drive_folderids"`
-	Aliases            []string `gorethink:"aliases"`
-	BlacklistedRoleIDs []string `gorethink:"blacklisted_role_ids"`
-}
-
 var (
 	driveService *drive.Service
 )
@@ -45,7 +37,6 @@ const (
 	driveSearchText       = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
 	driveFieldsText       = "nextPageToken, files(id, size, mimeType)"
 	driveFieldsSingleText = "id, name, size, modifiedTime, imageMediaMetadata, webContentLink"
-	imgurApiUploadBaseUrl = "https://api.imgur.com/3/image"
 )
 
 func (rp *RandomPictures) Commands() []string {
@@ -74,11 +65,9 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 			var marshalled []byte
 			redisClient := cache.GetRedisClient()
 
-			var rpSources []DB_RandomPictures_Source
-			cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
-			helpers.Relax(err)
-			err = cursor.All(&rpSources)
-			if err == rethink.ErrEmptyResult {
+			var rpSources []models.RandompictureSourceEntry
+			err := helpers.MDbIter(helpers.MdbCollection(models.RandompictureSourcesTable).Find(nil)).All(&rpSources)
+			if len(rpSources) <= 0 {
 				time.Sleep(30 * time.Second)
 				continue
 			}
@@ -92,8 +81,8 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 				var i int
 				var entry *drive.File
 				for i, entry = range rp.getFileCache(sourceEntry) {
-					fileHash = rp.GetFileHash(sourceEntry.ID, entry.Id)
-					key1 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", sourceEntry.ID, i+1)
+					fileHash = rp.GetFileHash(sourceEntry.ID, sourceEntry.PreviousID, entry.Id)
+					key1 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", helpers.MdbIdToHuman(sourceEntry.ID), i+1)
 					key2 = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-hash:%s", fileHash)
 					marshalled, err = msgpack.Marshal(entry)
 					if err != nil {
@@ -111,7 +100,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 						continue
 					}
 				}
-				key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
+				key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", helpers.MdbIdToHuman(sourceEntry.ID), "count")
 				err = redisClient.Set(key, i+1, 7*24*time.Hour).Err()
 				if err != nil {
 					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -133,11 +122,10 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 
 			redisClient := cache.GetRedisClient()
 
-			var rpSources []DB_RandomPictures_Source
-			cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
+			var rpSources []models.RandompictureSourceEntry
+			err := helpers.MDbIter(helpers.MdbCollection(models.RandompictureSourcesTable).Find(nil)).All(&rpSources)
 			helpers.Relax(err)
-			err = cursor.All(&rpSources)
-			if err == rethink.ErrEmptyResult {
+			if len(rpSources) <= 0 {
 				time.Sleep(30 * time.Second)
 				continue
 			}
@@ -148,13 +136,13 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 
 			for _, sourceEntry := range rpSources {
 				if len(sourceEntry.PostToChannelIDs) > 0 {
-					key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
+					key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", helpers.MdbIdToHuman(sourceEntry.ID), "count")
 					pictureCount, err := redisClient.Get(key).Int64()
 					if err == nil {
 						for _, postToChannelID := range sourceEntry.PostToChannelIDs {
 						RetryNewPicture:
 							chosenPicN := rand.Intn(int(pictureCount)) + 1
-							key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", sourceEntry.ID, chosenPicN)
+							key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", helpers.MdbIdToHuman(sourceEntry.ID), chosenPicN)
 							fileHash = redisClient.Get(key).Val()
 							if fileHash == "" {
 								continue
@@ -165,7 +153,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 								var gPicture *drive.File
 								msgpack.Unmarshal(resultBytes, &gPicture)
 								defer helpers.Recover()
-								err = rp.postItem(sourceEntry.GuildID, postToChannelID, "", gPicture, sourceEntry.ID, strconv.Itoa(chosenPicN))
+								err = rp.postItem(sourceEntry.GuildID, postToChannelID, "", gPicture, sourceEntry.ID, sourceEntry.PreviousID, strconv.Itoa(chosenPicN))
 								if err != nil {
 									if errG, ok := err.(*googleapi.Error); ok {
 										if strings.Contains("The download quota for this file has been exceeded", errG.Error()) {
@@ -202,22 +190,14 @@ func (rp *RandomPictures) setServerFeaturesLoop() {
 		rp.setServerFeaturesLoop()
 	}()
 
-	var sourcesBucket []DB_RandomPictures_Source
-	var sourcesOnServer []DB_RandomPictures_Source
-	var listCursor *rethink.Cursor
+	var sourcesBucket []models.RandompictureSourceEntry
+	var sourcesOnServer []models.RandompictureSourceEntry
 	var err error
 	var feature models.Rest_Feature_RandomPictures
 	var key string
 	cacheCodec := cache.GetRedisCacheCodec()
 	for {
-		listCursor, err = rethink.Table("randompictures_sources").Run(helpers.GetDB())
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			time.Sleep(60 * time.Second)
-			continue
-		}
-		defer listCursor.Close()
-		err = listCursor.All(&sourcesBucket)
+		err = helpers.MDbIter(helpers.MdbCollection(models.RandompictureSourcesTable).Find(nil)).All(&sourcesBucket)
 		if err != nil {
 			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			time.Sleep(60 * time.Second)
@@ -225,7 +205,7 @@ func (rp *RandomPictures) setServerFeaturesLoop() {
 		}
 
 		for _, guild := range cache.GetSession().State.Guilds {
-			sourcesOnServer = make([]DB_RandomPictures_Source, 0)
+			sourcesOnServer = make([]models.RandompictureSourceEntry, 0)
 			for _, source := range sourcesBucket {
 				if source.GuildID == guild.ID {
 					sourcesOnServer = append(sourcesOnServer, source)
@@ -274,11 +254,10 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		session.ChannelTyping(msg.ChannelID)
 		postedPic := false
 
-		var rpSources []DB_RandomPictures_Source
-		cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
+		var rpSources []models.RandompictureSourceEntry
+		err = helpers.MDbIter(helpers.MdbCollection(models.RandompictureSourcesTable).Find(bson.M{"guildid": channel.GuildID})).All(&rpSources)
 		helpers.Relax(err)
-		err = cursor.All(&rpSources)
-		if (err != nil && err != rethink.ErrEmptyResult) || len(rpSources) <= 0 {
+		if len(rpSources) <= 0 {
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.pic-no-picture"))
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
@@ -296,9 +275,6 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 		postedPic, err = rp.postRandomItemFromContent(channel, msg, content, initialMessage, rpSources)
 		if err != nil || postedPic == false {
 			helpers.EditMessage(msg.ChannelID, initialMessage.ID, helpers.GetText("plugins.randompictures.pic-no-picture"))
-			if err != nil {
-				fmt.Println(err.Error())
-			}
 		} else {
 			isPostingNewPic := false
 			err = session.MessageReactionAdd(msg.ChannelID, initialMessage.ID, "🎲")
@@ -403,17 +379,19 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						return
 					}
 
-					insert := rethink.Table("randompictures_sources").Insert(DB_RandomPictures_Source{
-						PostToChannelIDs:   postToChannelIDs,
-						DriveFolderIDs:     driveFolderIDs,
-						Aliases:            aliases,
-						GuildID:            channel.GuildID,
-						BlacklistedRoleIDs: blacklistedRoleIDs,
-					})
-					inserted, err := insert.RunWrite(helpers.GetDB())
+					newID, err := helpers.MDbInsert(
+						models.RandompictureSourcesTable,
+						models.RandompictureSourceEntry{
+							PostToChannelIDs:   postToChannelIDs,
+							DriveFolderIDs:     driveFolderIDs,
+							Aliases:            aliases,
+							GuildID:            channel.GuildID,
+							BlacklistedRoleIDs: blacklistedRoleIDs,
+						},
+					)
 					helpers.Relax(err)
 
-					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, inserted.GeneratedKeys[0],
+					_, err = helpers.EventlogLog(time.Now(), channel.GuildID, helpers.MdbIdToHuman(newID),
 						models.EventlogTargetTypeRobyulRandomPictureSource, msg.Author.ID,
 						models.EventlogTypeRobyulRandomPictureSourceCreate, "",
 						nil,
@@ -439,7 +417,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						}, false)
 					helpers.RelaxLog(err)
 
-					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Created a new entry in the Database: `%s`.", inserted.GeneratedKeys[0]))
+					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Created a new entry in the Database: `%s`.", helpers.MdbIdToHuman(newID)))
 					helpers.Relax(err)
 				})
 				return
@@ -450,13 +428,11 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					channel, err := helpers.GetChannel(msg.ChannelID)
 					helpers.Relax(err)
 
-					var rpSources []DB_RandomPictures_Source
-					cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
-					helpers.Relax(err)
-					err = cursor.All(&rpSources)
+					var rpSources []models.RandompictureSourceEntry
+					err = helpers.MDbIter(helpers.MdbCollection(models.RandompictureSourcesTable).Find(bson.M{"guildid": channel.GuildID})).All(&rpSources)
 					helpers.Relax(err)
 
-					if err == rethink.ErrEmptyResult || len(rpSources) <= 0 {
+					if len(rpSources) <= 0 {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
 						return
 					} else if err != nil {
@@ -467,13 +443,10 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					totalSources := 0
 					totalCachedImages := int64(0)
 					for _, rpSource := range rpSources {
-						if rpSource.GuildID != channel.GuildID {
-							continue
-						}
 						rpSourceGuild, err := helpers.GetGuild(rpSource.GuildID)
 						helpers.Relax(err)
 						cacheText := "No cache yet"
-						key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", rpSource.ID, "count")
+						key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", helpers.MdbIdToHuman(rpSource.ID), "count")
 						pictureCount, err := cache.GetRedisClient().Get(key).Int64()
 						if err == nil {
 							cacheText = fmt.Sprintf("%s images cached", humanize.Comma(pictureCount))
@@ -513,17 +486,12 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					channel, err := helpers.GetChannel(msg.ChannelID)
 					helpers.Relax(err)
 
-					var entryBucket DB_RandomPictures_Source
-					listCursor, err := rethink.Table("randompictures_sources").Filter(
-						rethink.Row.Field("guildid").Eq(channel.GuildID),
-					).Filter(
-						rethink.Row.Field("id").Eq(args[1]),
-					).Run(helpers.GetDB())
-					helpers.Relax(err)
-					defer listCursor.Close()
-					err = listCursor.One(&entryBucket)
-
-					if err == rethink.ErrEmptyResult || entryBucket.ID == "" {
+					var entryBucket models.RandompictureSourceEntry
+					err = helpers.MdbOne(
+						helpers.MdbCollection(models.RandompictureSourcesTable).Find(bson.M{"guildid": channel.GuildID, "_id": helpers.HumanToMdbId(args[1])}),
+						&entryBucket,
+					)
+					if helpers.IsMdbNotFound(err) {
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 						return
 					}
@@ -534,7 +502,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					).Delete().RunWrite(helpers.GetDB())
 					helpers.Relax(err)
 
-					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, entryBucket.ID,
+					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
 						models.EventlogTargetTypeRobyulRandomPictureSource, msg.Author.ID,
 						models.EventlogTypeRobyulRandomPictureSourceRemove, "",
 						nil,
@@ -573,13 +541,14 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						return
 					}
 
-					var rpSources []DB_RandomPictures_Source
-					cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
-					helpers.Relax(err)
-					err = cursor.All(&rpSources)
+					channel, err := helpers.GetChannel(msg.ChannelID)
 					helpers.Relax(err)
 
-					if err == rethink.ErrEmptyResult || len(rpSources) <= 0 {
+					var rpSources []models.RandompictureSourceEntry
+					err = helpers.MDbIter(helpers.MdbCollection(models.RandompictureSourcesTable).Find(bson.M{"guildid": channel.GuildID})).All(&rpSources)
+					helpers.Relax(err)
+
+					if len(rpSources) <= 0 {
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.randompictures.list-no-entries-error"))
 						return
 					} else if err != nil {
@@ -587,7 +556,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 					}
 
 					for _, rpSource := range rpSources {
-						if rpSource.ID == args[1] {
+						if helpers.MdbIdToHuman(rpSource.ID) == args[1] {
 							var fileHash string
 							var key string
 							var i int
@@ -596,8 +565,8 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 							redisClient := cache.GetRedisClient()
 							helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.randompictures.refresh-started"))
 							for i, entry = range rp.getFileCache(rpSource) {
-								key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", rpSource.ID, i+1)
-								fileHash = rp.GetFileHash(rpSource.ID, entry.Id)
+								key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", helpers.MdbIdToHuman(rpSource.ID), i+1)
+								fileHash = rp.GetFileHash(rpSource.ID, rpSource.PreviousID, entry.Id)
 								if fileHash == "" {
 									continue
 								}
@@ -618,7 +587,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 									continue
 								}
 							}
-							key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", rpSource.ID, "count")
+							key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", helpers.MdbIdToHuman(rpSource.ID), "count")
 							err = redisClient.Set(key, i+1, time.Hour*24).Err()
 							if err != nil {
 								raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
@@ -771,8 +740,8 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 
 }
 
-func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, msg *discordgo.Message, content string, initialMessage *discordgo.Message, rpSources []DB_RandomPictures_Source) (bool, error) {
-	var matchEntry DB_RandomPictures_Source
+func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, msg *discordgo.Message, content string, initialMessage *discordgo.Message, rpSources []models.RandompictureSourceEntry) (bool, error) {
+	var matchEntry models.RandompictureSourceEntry
 	if content != "" { // match <name>
 		for _, sourceEntry := range rpSources {
 			if sourceEntry.GuildID == channel.GuildID {
@@ -841,11 +810,11 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 	}
 	if matchEntry.ID != "" {
 		redisClient := cache.GetRedisClient()
-		key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", matchEntry.ID, "count")
+		key := fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", helpers.MdbIdToHuman(matchEntry.ID), "count")
 		pictureCount, err := redisClient.Get(key).Int64()
 		if err == nil {
 			chosenPicN := rand.Intn(int(pictureCount)) + 1
-			key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", matchEntry.ID, chosenPicN)
+			key = fmt.Sprintf("robyul2-discord:randompictures:filescache:by-n:%s:entry:%d", helpers.MdbIdToHuman(matchEntry.ID), chosenPicN)
 			fileHash := redisClient.Get(key).Val()
 			if fileHash == "" {
 				return false, errors.New("unable to gather data for pic")
@@ -857,7 +826,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 			}
 			var gPicture *drive.File
 			msgpack.Unmarshal(resultBytes, &gPicture)
-			err = rp.postItem(channel.GuildID, msg.ChannelID, initialMessage.ID, gPicture, matchEntry.ID, strconv.Itoa(chosenPicN))
+			err = rp.postItem(channel.GuildID, msg.ChannelID, initialMessage.ID, gPicture, matchEntry.ID, matchEntry.PreviousID, strconv.Itoa(chosenPicN))
 			if err == nil {
 				return true, nil
 			} else {
@@ -868,7 +837,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 	return false, errors.New("unable to match to source")
 }
 
-func (rp *RandomPictures) getFileCache(sourceEntry DB_RandomPictures_Source) []*drive.File {
+func (rp *RandomPictures) getFileCache(sourceEntry models.RandompictureSourceEntry) []*drive.File {
 	var allFiles []*drive.File
 
 Loop:
@@ -950,11 +919,10 @@ func (rp *RandomPictures) isValidDriveFile(file *drive.File) bool {
 func (rp *RandomPictures) updateImagesCachedMetric() {
 	var totalImages int64
 
-	var rpSources []DB_RandomPictures_Source
-	cursor, err := rethink.Table("randompictures_sources").Run(helpers.GetDB())
+	var rpSources []models.RandompictureSourceEntry
+	err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.RandompictureSourcesTable).Find(nil)).All(&rpSources)
 	helpers.Relax(err)
-	err = cursor.All(&rpSources)
-	if err == rethink.ErrEmptyResult {
+	if len(rpSources) <= 0 {
 		time.Sleep(30 * time.Second)
 		return
 	}
@@ -964,7 +932,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 	var items int64
 	redisClient := cache.GetRedisClient()
 	for _, sourceEntry := range rpSources {
-		key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", sourceEntry.ID, "count")
+		key = fmt.Sprintf("robyul2-discord:randompictures:filescache:%s:entry:%s", helpers.MdbIdToHuman(sourceEntry.ID), "count")
 		items, err = redisClient.Get(key).Int64()
 		if err != nil {
 			continue
@@ -975,7 +943,7 @@ func (rp *RandomPictures) updateImagesCachedMetric() {
 	metrics.RandomPictureSourcesImagesCachedCount.Set(totalImages)
 }
 
-func (rp *RandomPictures) postItem(guildID string, channelID string, messageID string, file *drive.File, sourceID string, pictureID string) error {
+func (rp *RandomPictures) postItem(guildID string, channelID string, messageID string, file *drive.File, sourceID bson.ObjectId, previousSourceID, pictureID string) error {
 	// fmt.Println("channelID:", channelID, "messageID:", messageID, "file:", file.Name, "sourceID:", sourceID, "pictureID:", pictureID)
 	file, err := driveService.Files.Get(file.Id).Fields(googleapi.Field(driveFieldsSingleText)).Do()
 	if err != nil {
@@ -991,7 +959,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 
 	splitFilename := strings.Split(file.Name, ".")
 
-	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+strings.ToLower(splitFilename[len(splitFilename)-1])))
+	linkToPost = fmt.Sprintf(linkToPost, rp.GetFileHash(sourceID, previousSourceID, file.Id), url.QueryEscape(strings.Join(splitFilename[0:len(splitFilename)-1], "-")+"."+strings.ToLower(splitFilename[len(splitFilename)-1])))
 	linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
 	// open link to prepare cache
@@ -1064,17 +1032,20 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 	return nil
 }
 
-func (rp *RandomPictures) GetFileHash(sourceID string, fileID string) string {
-	return helpers.GetMD5Hash(sourceID + "-" + fileID)
+func (rp *RandomPictures) GetFileHash(sourceID bson.ObjectId, previousID string, fileID string) string {
+	if previousID != "" {
+		return helpers.GetMD5Hash(previousID + "-" + fileID)
+	}
+	return helpers.GetMD5Hash(helpers.MdbIdToHuman(sourceID) + "-" + fileID)
 }
 
-func (rp *RandomPictures) appendLinkToServerHistory(link string, sourceID string, pictureID string, fileName string, guildID string) error {
+func (rp *RandomPictures) appendLinkToServerHistory(link string, sourceID bson.ObjectId, pictureID string, fileName string, guildID string) error {
 	redis := cache.GetRedisClient()
 	key := fmt.Sprintf("robyul2-discord:randompictures:history:%s", guildID)
 
 	item := new(RandomPictures_HistoryItem)
 	item.Link = link
-	item.SourceID = sourceID
+	item.SourceID = helpers.MdbIdToHuman(sourceID)
 	item.PictureID = pictureID
 	item.Filename = fileName
 	item.GuildID = guildID
