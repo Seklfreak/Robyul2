@@ -79,10 +79,6 @@
   version = "6.5.4"
 
 [[constraint]]
-  name = "github.com/gorethink/gorethink"
-  version = "^3.0.5"
-
-[[constraint]]
   name = "github.com/huandu/facebook"
   version = "1.8.1"
 
@@ -181,10 +177,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/dyatlov/go-oembed"
-
-[[constraint]]
-  name = "github.com/cheggaaa/pb"
-  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/VojtechVitek/go-trello"

@@ -25,6 +25,6 @@ type VanityInviteEntry struct {
 }
 
 type VanityInviteRedisEntry struct {
-	InviteCode string    `gorethink:"invitecode"`
-	ExpiresAt  time.Time `gorethink:"expiresat"`
+	InviteCode string
+	ExpiresAt  time.Time
 }

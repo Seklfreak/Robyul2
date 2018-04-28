@@ -211,12 +211,6 @@
   version = "2018.01.18"
 
 [[projects]]
-  name = "github.com/cheggaaa/pb"
-  packages = ["."]
-  revision = "c112833d014c77e8bde723fd0158e3156951639f"
-  version = "v2.0.6"
-
-[[projects]]
   branch = "master"
   name = "github.com/corona10/goimagehash"
   packages = [
@@ -381,22 +375,10 @@
   version = "v2.0.0"
 
 [[projects]]
-  name = "github.com/gorethink/gorethink"
-  packages = ["."]
-  revision = "7f5bdfd858bb064d80559b2a32b86669c5de5d3b"
-  version = "v3.0.5"
-
-[[projects]]
   name = "github.com/gorilla/websocket"
   packages = ["."]
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/hailocab/go-hostpool"
-  packages = ["."]
-  revision = "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
 
 [[projects]]
   name = "github.com/huandu/facebook"
@@ -470,18 +452,6 @@
     "jwriter"
   ]
   revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
-
-[[projects]]
-  name = "github.com/mattn/go-colorable"
-  packages = ["."]
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  name = "github.com/mattn/go-isatty"
-  packages = ["."]
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
 
 [[projects]]
   branch = "master"
@@ -670,7 +640,6 @@
     "ed25519",
     "ed25519/internal/edwards25519",
     "nacl/secretbox",
-    "pbkdf2",
     "poly1305",
     "salsa20/salsa",
     "ssh/terminal"
@@ -836,58 +805,6 @@
   version = "v1.11.3"
 
 [[projects]]
-  name = "gopkg.in/VividCortex/ewma.v1"
-  packages = ["."]
-  revision = "b24eb346a94c3ba12c1da1e564dbac1b498a77ce"
-  version = "v1.1.1"
-
-[[projects]]
-  name = "gopkg.in/cheggaaa/pb.v2"
-  packages = ["termutil"]
-  revision = "c112833d014c77e8bde723fd0158e3156951639f"
-  version = "v2.0.6"
-
-[[projects]]
-  name = "gopkg.in/fatih/color.v1"
-  packages = ["."]
-  revision = "507f6050b8568533fb3f5504de8e5205fa62a114"
-  version = "v1.6.0"
-
-[[projects]]
-  name = "gopkg.in/fatih/pool.v2"
-  packages = ["."]
-  revision = "010e0b745d12eaf8426c95f9c3924d81dd0b668f"
-  version = "v2.0.0"
-
-[[projects]]
-  name = "gopkg.in/gorethink/gorethink.v3"
-  packages = [
-    "encoding",
-    "ql2",
-    "types"
-  ]
-  revision = "7f5bdfd858bb064d80559b2a32b86669c5de5d3b"
-  version = "v3.0.5"
-
-[[projects]]
-  name = "gopkg.in/mattn/go-colorable.v0"
-  packages = ["."]
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  name = "gopkg.in/mattn/go-isatty.v0"
-  packages = ["."]
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
-
-[[projects]]
-  name = "gopkg.in/mattn/go-runewidth.v0"
-  packages = ["."]
-  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
-  version = "v0.0.2"
-
-[[projects]]
   branch = "v2"
   name = "gopkg.in/mgo.v2"
   packages = [
@@ -920,6 +837,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "672f9aec1f884f87d45a8ddb294888128bd1d5301c71d41cbe6b695d7197d152"
+  inputs-digest = "8822ac5ce15a20b1570f849008667f1b05b108cd1ddb6f20ecf5cc9316159bcb"
   solver-name = "gps-cdcl"
   solver-version = 1

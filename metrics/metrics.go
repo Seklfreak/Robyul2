@@ -10,7 +10,6 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -272,15 +271,6 @@ func CollectRuntimeMetrics() {
 		auditLogBackfills, _ := redis.LLen(models.AuditLogBackfillRedisList).Result()
 		EventlogPendingAuditlogBackfills.Set(auditLogBackfills)
 	}
-}
-
-func entriesCount(table string) (cnt int64) {
-
-	cursor, err := rethink.Table(table).Count().Run(helpers.GetDB())
-	helpers.Relax(err)
-	cursor.One(&cnt)
-	cursor.Close()
-	return
 }
 
 func entriesCountMgo(table models.MongoDbCollection, query interface{}) (count int64) {

@@ -8,49 +8,12 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
-	rethink "github.com/gorethink/gorethink"
 )
 
 var (
-	dbSession *rethink.Session
-
-	guildSettingsCache map[string]models.Config
+	guildSettingsCache = make(map[string]models.Config)
 	cacheMutex         sync.RWMutex
 )
-
-// ConnectDB connects to rethink and stores the session
-func ConnectDB(url string, db string) {
-	log := cache.GetLogger()
-	log.WithField("module", "db").Info("Connecting to " + url)
-
-	rethink.Log = cache.GetLogger()
-	rethink.SetTags("rethink", "json")
-	rethink.SetVerbose(true)
-
-	session, err := rethink.Connect(rethink.ConnectOpts{
-		Address:  url,
-		Database: db,
-	})
-
-	if err != nil {
-		log.WithField("module", "db").Error(err.Error())
-		panic(err)
-	}
-
-	dbSession = session
-
-	cacheMutex.Lock()
-	guildSettingsCache = make(map[string]models.Config)
-	cacheMutex.Unlock()
-
-	log.WithField("module", "db").Info("Connected!")
-}
-
-// GetDB is a simple getter for the rethink session.
-// Might receive some singleton-like lazy-creation later
-func GetDB() *rethink.Session {
-	return dbSession
-}
 
 // GuildSettingsSet writes all $config into the db
 func GuildSettingsSet(guild string, config models.Config) error {

@@ -11,7 +11,6 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
-	"github.com/gorethink/gorethink"
 )
 
 type Ping struct{}
@@ -65,11 +64,6 @@ func (p *Ping) OnMessage(session *discordgo.Session, message *discordgo.MessageC
 	apiTaken := time.Since(started)
 
 	text = text + "\nHTTP API Latency (edit message): " + apiTaken.String()
-
-	started = time.Now()
-	gorethink.Expr(1).Run(helpers.GetDB())
-	rethinkTaken := time.Since(started)
-	text = text + "\nRethinkDB Latency: " + rethinkTaken.String()
 
 	started = time.Now()
 	helpers.GetMDbSession().Ping()

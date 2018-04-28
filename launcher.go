@@ -133,22 +133,6 @@ func main() {
 	log.WithField("module", "launcher").Info(
 		"Connected to Sentry Project ID: ", raven.ProjectID(), " Release: ", raven.Release())
 
-	// Connect to DB
-	log.WithField("module", "launcher").Info("Connecting to rethinkDB...")
-	helpers.ConnectDB(
-		config.Path("rethink.url").Data().(string),
-		config.Path("rethink.db").Data().(string),
-	)
-	rethinkdbServer, err := helpers.GetDB().Server()
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("module", "launcher").Info(
-		"Connected to rethinkDB Server: ", rethinkdbServer.Name, " (ID: "+rethinkdbServer.ID+")")
-
-	// Close DB when main dies
-	defer helpers.GetDB().Close()
-
 	// Connect to MongoDB
 	helpers.ConnectMDB(
 		config.Path("mongodb.url").Data().(string),

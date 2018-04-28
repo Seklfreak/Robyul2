@@ -28,7 +28,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/getsentry/raven-go"
-	"github.com/gorethink/gorethink"
 	"github.com/olivere/elastic"
 )
 
@@ -198,27 +197,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		uptime := helpers.HumanizeDuration(time.Now().Sub(time.Unix(bootTime, 0)))
 
-		var rethinkDBStatusText string
-
-		rethinkDBServerStatus := make(map[string]interface{}, 0)
-		rethinkDBServerStatusCursor, err := gorethink.DB(gorethink.SystemDatabase).Table(gorethink.ServerStatusSystemTable).
-			Run(helpers.GetDB())
-		helpers.Relax(err)
-		rethinkDBServerStatusCursor.One(&rethinkDBServerStatus)
-		defer rethinkDBServerStatusCursor.Close()
-
-		rethinkDBProcess, ok := rethinkDBServerStatus["process"].(map[string]interface{})
-		if ok {
-			startedAt, ok := rethinkDBProcess["time_started"].(time.Time)
-			if ok {
-				rethinkDBStatusText += "Uptime " + helpers.HumanizeDuration(time.Now().Sub(startedAt)) + "\n"
-			}
-			cacheSizeMb, ok := rethinkDBProcess["cache_size_mb"].(float64)
-			if ok {
-				rethinkDBStatusText += "Cache " + humanize.Bytes(uint64(cacheSizeMb*1000000)) + "\n"
-			}
-		}
-
 		mdbAliveServers := helpers.GetMDbSession().LiveServers()
 		mdbStats := bson.M{}
 		err = helpers.GetMDb().Run("dbstats", &mdbStats)
@@ -346,9 +324,6 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 				// Machinery
 				{Name: "Marchinery", Value: machineryText, Inline: true},
-
-				// RethinkDB
-				{Name: "RethinkDB", Value: rethinkDBStatusText, Inline: true},
 
 				// MongoDB
 				{Name: "MongoDB Status", Value: mongodbStatusText, Inline: true},

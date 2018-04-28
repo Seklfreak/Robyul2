@@ -12,7 +12,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
-	rethink "github.com/gorethink/gorethink"
 	fb "github.com/huandu/facebook"
 	"github.com/pkg/errors"
 )
@@ -276,7 +275,7 @@ func (m *Facebook) Action(command string, content string, msg *discordgo.Message
 			err = helpers.MDbIter(helpers.MdbCollection(models.FacebookTable).Find(bson.M{"guildid": currentChannel.GuildID})).All(&entryBucket)
 			helpers.Relax(err)
 
-			if err == rethink.ErrEmptyResult || len(entryBucket) <= 0 {
+			if len(entryBucket) <= 0 {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.facebook.account-list-no-accounts-error"))
 				return
 			} else if err != nil {
