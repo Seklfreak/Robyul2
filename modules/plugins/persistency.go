@@ -11,7 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack"
 )
@@ -467,26 +467,21 @@ func (p *Persistency) getCachedRoles(GuildID string, UserID string) (roleIDs []s
 func (p *Persistency) saveRoleDBCache(GuildID string, UserID string) (err error) {
 	var persistedRoles models.PersistencyRolesEntry
 
-	listCursor, _ := rethink.Table(models.PersistencyRolesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(GuildID),
-			rethink.Row.Field("user_id").Eq(UserID),
-		),
-	).Run(helpers.GetDB())
-	defer listCursor.Close()
-	listCursor.One(&persistedRoles)
+	helpers.MdbOne(
+		helpers.MdbCollection(models.PersistencyRolesTable).Find(bson.M{"guildid": GuildID, "userid": UserID}),
+		&persistedRoles,
+	)
 
 	persistedRoles.Roles = p.getCachedRoles(GuildID, UserID)
-	if persistedRoles.ID != "" {
+	if persistedRoles.ID.Valid() {
 		// update
-		_, err = rethink.Table(models.PersistencyRolesTable).Update(persistedRoles).Run(helpers.GetDB())
+		err = helpers.MDbUpdate(models.PersistencyRolesTable, persistedRoles.ID, persistedRoles)
 	} else {
 		// insert
 		persistedRoles.GuildID = GuildID
 		persistedRoles.UserID = UserID
 
-		insert := rethink.Table(models.PersistencyRolesTable).Insert(persistedRoles)
-		_, err = insert.RunWrite(helpers.GetDB())
+		_, err = helpers.MDbInsert(models.PersistencyRolesTable, persistedRoles)
 	}
 
 	return err
@@ -495,14 +490,10 @@ func (p *Persistency) saveRoleDBCache(GuildID string, UserID string) (err error)
 func (p *Persistency) getRoleDBCache(GuildID string, UserID string) (roleIDs []string) {
 	var persistedRoles models.PersistencyRolesEntry
 
-	listCursor, _ := rethink.Table(models.PersistencyRolesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(GuildID),
-			rethink.Row.Field("user_id").Eq(UserID),
-		),
-	).Run(helpers.GetDB())
-	defer listCursor.Close()
-	listCursor.One(&persistedRoles)
+	helpers.MdbOne(
+		helpers.MdbCollection(models.PersistencyRolesTable).Find(bson.M{"guildid": GuildID, "userid": UserID}),
+		&persistedRoles,
+	)
 
 	return persistedRoles.Roles
 }

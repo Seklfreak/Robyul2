@@ -18,8 +18,8 @@ import (
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
-	rethink "github.com/gorethink/gorethink"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -685,15 +685,10 @@ func persistencyAddCachedRole(GuildID string, UserID string, roleID string) (err
 	var dbRoles models.PersistencyRolesEntry
 
 	// add to db
-	listCursor, _ := rethink.Table(models.PersistencyRolesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(GuildID),
-			rethink.Row.Field("user_id").Eq(UserID),
-		),
-	).Run(GetDB())
-	defer listCursor.Close()
-	listCursor.One(&dbRoles)
-
+	MdbOne(
+		MdbCollection(models.PersistencyRolesTable).Find(bson.M{"guildid": GuildID, "userid": UserID}),
+		&dbRoles,
+	)
 	alreadyInDbRoles := false
 	for _, dbRoleID := range dbRoles.Roles {
 		if dbRoleID == roleID {
@@ -705,9 +700,9 @@ func persistencyAddCachedRole(GuildID string, UserID string, roleID string) (err
 		dbRoles.Roles = append(dbRoles.Roles, roleID)
 	}
 
-	if dbRoles.ID != "" {
+	if dbRoles.ID.Valid() {
 		// update
-		_, err = rethink.Table(models.PersistencyRolesTable).Update(dbRoles).Run(GetDB())
+		err = MDbUpdate(models.PersistencyRolesTable, dbRoles.ID, dbRoles)
 		if err != nil {
 			return err
 		}
@@ -716,8 +711,10 @@ func persistencyAddCachedRole(GuildID string, UserID string, roleID string) (err
 		dbRoles.GuildID = GuildID
 		dbRoles.UserID = UserID
 
-		insert := rethink.Table(models.PersistencyRolesTable).Insert(dbRoles)
-		_, err = insert.RunWrite(GetDB())
+		_, err = MDbInsert(models.PersistencyRolesTable, dbRoles)
+		if err != nil {
+			return err
+		}
 	}
 
 	// add to redis
@@ -761,14 +758,10 @@ func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (
 	var dbRoles models.PersistencyRolesEntry
 
 	// remove from db
-	listCursor, _ := rethink.Table(models.PersistencyRolesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(GuildID),
-			rethink.Row.Field("user_id").Eq(UserID),
-		),
-	).Run(GetDB())
-	defer listCursor.Close()
-	listCursor.One(&dbRoles)
+	MdbOne(
+		MdbCollection(models.PersistencyRolesTable).Find(bson.M{"guildid": GuildID, "userid": UserID}),
+		&dbRoles,
+	)
 
 	newDbRoles := dbRoles
 	newDbRoles.Roles = make([]string, 0)
@@ -778,9 +771,12 @@ func persistencyRemoveCachedRole(GuildID string, UserID string, roleID string) (
 		}
 	}
 
-	_, err = rethink.Table(models.PersistencyRolesTable).Update(newDbRoles).Run(GetDB())
-	if err != nil {
-		return err
+	if dbRoles.ID.Valid() {
+		err = MDbDelete(models.PersistencyRolesTable, dbRoles.ID)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	// remove from redis

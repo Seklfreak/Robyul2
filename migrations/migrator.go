@@ -64,6 +64,7 @@ var migrations = []helpers.Callback{
 	m88_migration_table_troublemakerlog,
 	m89_migration_table_starboard_entries,
 	m90_migration_table_randompicture_source,
+	m91_migration_table_persistency_roles,
 }
 
 // Run executes all registered migrations

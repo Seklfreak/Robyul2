@@ -1,12 +1,14 @@
 package models
 
+import "github.com/globalsign/mgo/bson"
+
 const (
-	PersistencyRolesTable = "persistency_roles"
+	PersistencyRolesTable MongoDbCollection = "persistency_roles"
 )
 
 type PersistencyRolesEntry struct {
-	ID      string   `rethink:"id,omitempty"`
-	GuildID string   `rethink:"guild_id"`
-	UserID  string   `rethink:"user_id"`
-	Roles   []string `rethink:"roles"`
+	ID      bson.ObjectId `bson:"_id,omitempty"`
+	GuildID string
+	UserID  string
+	Roles   []string
 }

@@ -454,7 +454,7 @@ func (rp *RandomPictures) Action(command string, content string, msg *discordgo.
 						}
 
 						listText += fmt.Sprintf(":arrow_forward: `%s`: on %s (`#%s`), %d Aliases (`%s`), %d Folders, %d Channels, %d Skipped Roles, %s\n",
-							rpSource.ID, rpSourceGuild.Name, rpSourceGuild.ID,
+							helpers.MdbIdToHuman(rpSource.ID), rpSourceGuild.Name, rpSourceGuild.ID,
 							len(rpSource.Aliases), strings.Join(rpSource.Aliases, ","),
 							len(rpSource.DriveFolderIDs),
 							len(rpSource.PostToChannelIDs), len(rpSource.BlacklistedRoleIDs),
