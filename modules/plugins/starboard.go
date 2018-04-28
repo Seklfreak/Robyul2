@@ -20,7 +20,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 )
 
@@ -675,7 +675,7 @@ func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserI
 	return nil
 }
 
-func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error {
+func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarboardEntry) error {
 	settings := helpers.GuildSettingsGetCached(starEntry.GuildID)
 	if settings.StarboardChannelID == "" {
 		return nil
@@ -770,7 +770,7 @@ func (s *Starboard) PostOrUpdateDiscordMessage(starEntry models.StarEntry) error
 	}
 }
 
-func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.MessageEmbed {
+func (s *Starboard) getStarrersEmbed(starEntry models.StarboardEntry) *discordgo.MessageEmbed {
 	authorName := "N/A"
 	author, err := helpers.GetGuildMember(starEntry.GuildID, starEntry.AuthorID)
 	if err == nil && author != nil && author.User != nil {
@@ -841,7 +841,7 @@ func (s *Starboard) getStarrersEmbed(starEntry models.StarEntry) *discordgo.Mess
 	return starrersEmbed
 }
 
-func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage, maxCharacters int) (pages []*discordgo.MessageEmbed, err error) {
+func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarboardEntry, perPage, maxCharacters int) (pages []*discordgo.MessageEmbed, err error) {
 	if len(starEntries) <= 0 {
 		return pages, errors.New("no star entries passed")
 	}
@@ -933,49 +933,35 @@ func (s *Starboard) getTopMessagesEmbeds(starEntries []models.StarEntry, perPage
 	return pages, nil
 }
 
-func (s *Starboard) getStarboardEntry(guildID string, messageID string) (models.StarEntry, error) {
-	var entryBucket models.StarEntry
-	listCursor, err := rethink.Table("starboard_entries").GetAllByIndex(
-		"message_id", messageID,
-	).Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return entryBucket, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&entryBucket)
-
-	if err == rethink.ErrEmptyResult {
+func (s *Starboard) getStarboardEntry(guildID string, messageID string) (entryBucket models.StarboardEntry, err error) {
+	err = helpers.MdbOneWithoutLogging(
+		helpers.MdbCollection(models.StarboardEntriesTable).Find(bson.M{"messageid": messageID, "guildid": guildID}),
+		&entryBucket,
+	)
+	if helpers.IsMdbNotFound(err) {
 		return entryBucket, errors.New("no starboard entry")
-	} else if err != nil {
-		return entryBucket, err
 	}
 
-	return entryBucket, nil
+	return entryBucket, err
 }
 
-func (s *Starboard) getTopStarboardEntries(guildID string, limit int) ([]models.StarEntry, error) {
-	var entryBucket []models.StarEntry
-	listCursor, err := rethink.Table("starboard_entries").Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).OrderBy(rethink.Desc("stars")).Limit(limit).Run(helpers.GetDB())
+func (s *Starboard) getTopStarboardEntries(guildID string, limit int) (entryBucket []models.StarboardEntry, err error) {
+	err = helpers.MDbIter(helpers.MdbCollection(models.StarboardEntriesTable).Find(
+		bson.M{"guildid": guildID}).Sort("-stars").Limit(limit),
+	).All(&entryBucket)
+
 	if err != nil {
 		return entryBucket, err
 	}
 
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
-	if err == rethink.ErrEmptyResult {
+	if len(entryBucket) <= 0 {
 		return entryBucket, errors.New("no starboard entries")
-	} else if err != nil {
-		return entryBucket, err
 	}
 
 	return entryBucket, nil
 }
 
-func (s *Starboard) incrementStarboardEntry(starEntry *models.StarEntry, userID string) error {
+func (s *Starboard) incrementStarboardEntry(starEntry *models.StarboardEntry, userID string) error {
 	alreadyInList := false
 	for _, starUserID := range starEntry.StarUserIDs {
 		if starUserID == userID {
@@ -988,7 +974,7 @@ func (s *Starboard) incrementStarboardEntry(starEntry *models.StarEntry, userID 
 	}
 	return s.setStarboardEntry(*starEntry)
 }
-func (s *Starboard) decrementStarboardEntry(starEntry *models.StarEntry, userID string) (bool, error) {
+func (s *Starboard) decrementStarboardEntry(starEntry *models.StarboardEntry, userID string) (bool, error) {
 	newStarUserIDs := make([]string, 0)
 	for _, starUserID := range starEntry.StarUserIDs {
 		if starUserID != userID {
@@ -1012,8 +998,8 @@ func (s *Starboard) createStarboardEntry(
 	messageContent string,
 	messageAttachmentURLs []string,
 	messageEmbedImageURL string,
-) (models.StarEntry, error) {
-	insert := rethink.Table("starboard_entries").Insert(models.StarEntry{
+) (models.StarboardEntry, error) {
+	_, err := helpers.MDbInsert(models.StarboardEntriesTable, models.StarboardEntry{
 		GuildID:               guildID,
 		MessageID:             messageID,
 		ChannelID:             channelID,
@@ -1025,26 +1011,24 @@ func (s *Starboard) createStarboardEntry(
 		Stars:                 0,
 		FirstStarred:          time.Now(),
 	})
-	_, err := insert.RunWrite(helpers.GetDB())
 	if err != nil {
-		return models.StarEntry{}, err
+		return models.StarboardEntry{}, err
 	} else {
 		return s.getStarboardEntry(guildID, messageID)
 	}
 }
 
-func (s *Starboard) setStarboardEntry(starEntry models.StarEntry) error {
-	if starEntry.ID != "" {
-		_, err := rethink.Table("starboard_entries").Get(starEntry.ID).Update(starEntry).RunWrite(helpers.GetDB())
+func (s *Starboard) setStarboardEntry(starEntry models.StarboardEntry) error {
+	if starEntry.ID.Valid() {
+		err := helpers.MDbUpdate(models.StarboardEntriesTable, starEntry.ID, starEntry)
 		return err
 	}
 	return errors.New("empty starEntry submitted")
 }
 
-func (s *Starboard) deleteStarboardEntry(starEntry models.StarEntry) error {
-	if starEntry.ID != "" {
-
-		_, err := rethink.Table("starboard_entries").Get(starEntry.ID).Delete().RunWrite(helpers.GetDB())
+func (s *Starboard) deleteStarboardEntry(starEntry models.StarboardEntry) error {
+	if starEntry.ID.Valid() {
+		err := helpers.MDbDelete(models.StarboardEntriesTable, starEntry.ID)
 		return err
 	}
 	return errors.New("empty starEntry submitted")

@@ -315,7 +315,7 @@ func logVanityInviteChange(channelID string, vanityInvite, oldVanityInvite model
 }
 
 func GetVanityUrlByGuildID(guildID string) (entryBucket models.VanityInviteEntry, err error) {
-	err = MdbOne(
+	err = MdbOneWithoutLogging(
 		MdbCollection(models.VanityInvitesTable).Find(bson.M{"guildid": guildID}),
 		&entryBucket,
 	)
@@ -323,7 +323,7 @@ func GetVanityUrlByGuildID(guildID string) (entryBucket models.VanityInviteEntry
 }
 
 func GetVanityUrlByVanityName(vanityName string) (entryBucket models.VanityInviteEntry, err error) {
-	err = MdbOne(
+	err = MdbOneWithoutLogging(
 		MdbCollection(models.VanityInvitesTable).Find(bson.M{"vanityname": strings.ToLower(vanityName)}),
 		&entryBucket,
 	)
