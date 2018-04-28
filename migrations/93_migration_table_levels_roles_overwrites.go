@@ -65,8 +65,6 @@ func m93_migration_table_levels_roles_overwrites() {
 	}
 	bar.Finish()
 
-	return
-
 	cache.GetLogger().WithField("module", "migrations").Info("dropping rethinkdb levels_roles_overwrites")
 	_, err = gorethink.TableDrop("levels_roles_overwrites").Run(helpers.GetDB())
 	if err != nil {

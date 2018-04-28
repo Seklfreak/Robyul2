@@ -14,7 +14,6 @@ var migrations = []helpers.Callback{
 	m14_create_table_stats_voicetimes,
 	m28_create_elastic_indexes,
 	m29_create_elastic_presence_update_index,
-	m40_create_table_bot_config,
 	m43_create_elastic_vanityinvite_click_index,
 	m45_create_elastic_index_messages,
 	m46_create_elastic_index_joins,
@@ -64,6 +63,7 @@ var migrations = []helpers.Callback{
 	m91_migration_table_persistency_roles,
 	m92_migration_table_levels_roles,
 	m93_migration_table_levels_roles_overwrites,
+	m94_migration_table_bot_config,
 }
 
 // Run executes all registered migrations

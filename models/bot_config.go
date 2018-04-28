@@ -2,14 +2,17 @@ package models
 
 import (
 	"time"
+
+	"github.com/globalsign/mgo/bson"
 )
 
 const (
-	BotConfigTable = "bot_config"
+	BotConfigTable MongoDbCollection = "bot_config"
 )
 
 type BotConfigEntry struct {
-	Key         string    `rethink:"id,omitempty"`
-	Value       []byte    `rethink:"value"`
-	LastChanged time.Time `rethink:"last_changed"`
+	ID          bson.ObjectId `bson:"_id,omitempty"`
+	Key         string
+	Value       []byte
+	LastChanged time.Time
 }

@@ -6,34 +6,33 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
-	rethink "github.com/gorethink/gorethink"
+	"github.com/globalsign/mgo/bson"
 	"github.com/vmihailenco/msgpack"
 )
 
 func getBotConfigEntry(key string) (entry models.BotConfigEntry, err error) {
-	listCursor, err := rethink.Table(models.BotConfigTable).Get(key).Run(GetDB())
-	if err != nil {
-		return entry, err
-	}
-
-	defer listCursor.Close()
-	err = listCursor.One(&entry)
+	err = MdbOne(
+		MdbCollection(models.BotConfigTable).Find(bson.M{"key": key}),
+		&entry,
+	)
 	return entry, err
 }
 
 func createBotConfigEntry(key string, value []byte) (err error) {
-	insert := rethink.Table(models.BotConfigTable).Insert(models.BotConfigEntry{
-		Key:         key,
-		Value:       value,
-		LastChanged: time.Now(),
-	})
-	_, err = insert.RunWrite(GetDB())
+	_, err = MDbInsert(
+		models.BotConfigTable,
+		models.BotConfigEntry{
+			Key:         key,
+			Value:       value,
+			LastChanged: time.Now(),
+		},
+	)
 	return err
 }
 
 func updateBotConfigEntry(entry models.BotConfigEntry) (err error) {
-	if entry.Key != "" {
-		_, err = rethink.Table(models.BotConfigTable).Get(entry.Key).Update(entry).RunWrite(GetDB())
+	if entry.ID.Valid() {
+		err = MDbUpdate(models.BotConfigTable, entry.ID, entry)
 	}
 	return err
 }
