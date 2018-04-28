@@ -33,17 +33,13 @@ func getLevelsRoles(guildID string, currentLevel int) (apply []*discordgo.Role, 
 	remove = make([]*discordgo.Role, 0)
 
 	var entryBucket []models.LevelsRoleEntry
-	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
-		rethink.Row.Field("guild_id").Eq(guildID),
-	).Run(helpers.GetDB())
+	err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.LevelsRolesTable).Find(bson.M{"guildid": guildID})).All(&entryBucket)
 	if err != nil {
 		helpers.RelaxLog(err)
 		return
 	}
-	defer listCursor.Close()
-	err = listCursor.All(&entryBucket)
 
-	if err == rethink.ErrEmptyResult {
+	if len(entryBucket) <= 0 {
 		return
 	}
 

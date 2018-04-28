@@ -2489,7 +2489,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				case "list":
 					// [p]levels role list
 					helpers.RequireMod(msg, func() {
-						entries, err := m.getLevelsRoleEntriesBy("guild_id", channel.GuildID)
+						entries, err := m.getLevelsRoleEntriesBy("guildid", channel.GuildID)
 						if err != nil {
 							if !strings.Contains(err.Error(), "no levels role entries") {
 								helpers.Relax(err)
@@ -2516,7 +2516,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							}
 
 							message += fmt.Sprintf("`%s`: Role `%s` (`#%s`) from level %d to level %s\n",
-								entry.ID, role.Name, role.ID, entry.StartLevel, lastLevelText)
+								helpers.MdbIdToHuman(entry.ID), role.Name, role.ID, entry.StartLevel, lastLevelText)
 						}
 						message += fmt.Sprintf("_found %d role(s) in total_", len(entries))
 
@@ -2559,7 +2559,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
-						entry, err := m.getLevelsRoleEntryBy("id", args[2])
+						entry, err := m.getLevelsRoleEntryByID(helpers.HumanToMdbId(args[2]))
 						if err != nil {
 							if !strings.Contains(err.Error(), "no levels role entry") {
 								helpers.Relax(err)
@@ -3712,31 +3712,29 @@ func (l *Levels) createLevelsRoleEntry(
 	startLevel int,
 	lastLevel int,
 ) (result models.LevelsRoleEntry, err error) {
-	insert := rethink.Table(models.LevelsRolesTable).Insert(models.LevelsRoleEntry{
-		GuildID:    guildID,
-		RoleID:     roleID,
-		StartLevel: startLevel,
-		LastLevel:  lastLevel,
-	})
-	inserted, err := insert.RunWrite(helpers.GetDB())
+	newID, err := helpers.MDbInsert(
+		models.LevelsRolesTable,
+		models.LevelsRoleEntry{
+			GuildID:    guildID,
+			RoleID:     roleID,
+			StartLevel: startLevel,
+			LastLevel:  lastLevel,
+		},
+	)
 	if err != nil {
 		return models.LevelsRoleEntry{}, err
 	} else {
-		return l.getLevelsRoleEntryBy("id", inserted.GeneratedKeys[0])
+		return l.getLevelsRoleEntryByID(newID)
 	}
 }
 
-func (l *Levels) getLevelsRoleEntryBy(key string, value string) (result models.LevelsRoleEntry, err error) {
-	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
-		rethink.Row.Field(key).Eq(value),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return result, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&result)
+func (l *Levels) getLevelsRoleEntryByID(id bson.ObjectId) (result models.LevelsRoleEntry, err error) {
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.LevelsRolesTable).Find(bson.M{"_id": id}),
+		&result,
+	)
 
-	if err == rethink.ErrEmptyResult {
+	if helpers.IsMdbNotFound(err) {
 		return result, errors.New("no levels role entry")
 	}
 
@@ -3744,25 +3742,21 @@ func (l *Levels) getLevelsRoleEntryBy(key string, value string) (result models.L
 }
 
 func (l *Levels) getLevelsRoleEntriesBy(key string, value string) (result []models.LevelsRoleEntry, err error) {
-	listCursor, err := rethink.Table(models.LevelsRolesTable).Filter(
-		rethink.Row.Field(key).Eq(value),
-	).Run(helpers.GetDB())
+	err = helpers.MDbIter(helpers.MdbCollection(models.LevelsRolesTable).Find(bson.M{key: value})).All(&result)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
-	defer listCursor.Close()
-	err = listCursor.All(&result)
 
-	if err == rethink.ErrEmptyResult {
+	if len(result) <= 0 {
 		return result, errors.New("no levels role entries")
 	}
 
-	return result, err
+	return result, nil
 }
 
 func (l *Levels) deleteLevelsRoleEntry(levelsRoleEntry models.LevelsRoleEntry) (err error) {
-	if levelsRoleEntry.ID != "" {
-		_, err := rethink.Table(models.LevelsRolesTable).Get(levelsRoleEntry.ID).Delete().RunWrite(helpers.GetDB())
+	if levelsRoleEntry.ID.Valid() {
+		err = helpers.MDbDelete(models.LevelsRolesTable, levelsRoleEntry.ID)
 		return err
 	}
 	return errors.New("empty levelsRoleEntry submitted")
