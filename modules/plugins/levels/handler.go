@@ -34,7 +34,6 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	rethink "github.com/gorethink/gorethink"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
 	"gopkg.in/oleiade/lane.v1"
@@ -2537,8 +2536,13 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 									overwriteUser.ID = overwrite.UserID
 								}
 
+								overwriteTypeText := "grant"
+								if overwrite.Type == models.LevelsRoleOverwriteTypeDeny {
+									overwriteTypeText = "deny"
+								}
+
 								message += fmt.Sprintf("%s user `%s` (`#%s`) role `%s` (`#%s`)\n",
-									strings.Title(overwrite.Type), overwriteUser.Username, overwriteUser.ID, overwriteRole.Name, overwriteRole.ID)
+									overwriteTypeText, overwriteUser.Username, overwriteUser.ID, overwriteRole.Name, overwriteRole.ID)
 							}
 							message += fmt.Sprintf("_found %d overwrite(s) in total_", len(overwrites))
 						}
@@ -2672,7 +2676,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
-						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, "grant")
+						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, models.LevelsRoleOverwriteTypeGrant)
 						helpers.Relax(err)
 
 						err = applyLevelsRoles(guild.ID, targetUser.ID, getLevelForUser(targetUser.ID, guild.ID))
@@ -2764,7 +2768,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
-						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, "deny")
+						_, err = m.createLevelsRolesOverwriteEntry(guild.ID, targetRole.ID, targetUser.ID, models.LevelsRoleOverwriteTypeDeny)
 						helpers.Relax(err)
 
 						err = applyLevelsRoles(guild.ID, targetUser.ID, getLevelForUser(targetUser.ID, guild.ID))
@@ -3766,37 +3770,31 @@ func (l *Levels) createLevelsRolesOverwriteEntry(
 	guildID string,
 	roleID string,
 	userID string,
-	overwriteType string,
+	overwriteType models.LevelsRoleOverwriteType,
 ) (result models.LevelsRoleOverwriteEntry, err error) {
-	if overwriteType != "grant" && overwriteType != "deny" {
-		return models.LevelsRoleOverwriteEntry{}, errors.New("invalid overwrite type")
-	}
-
-	insert := rethink.Table(models.LevelsRoleOverwritesTable).Insert(models.LevelsRoleOverwriteEntry{
-		GuildID: guildID,
-		RoleID:  roleID,
-		UserID:  userID,
-		Type:    overwriteType,
-	})
-	inserted, err := insert.RunWrite(helpers.GetDB())
+	newID, err := helpers.MDbInsert(
+		models.LevelsRoleOverwritesTable,
+		models.LevelsRoleOverwriteEntry{
+			GuildID: guildID,
+			RoleID:  roleID,
+			UserID:  userID,
+			Type:    overwriteType,
+		},
+	)
 	if err != nil {
 		return models.LevelsRoleOverwriteEntry{}, err
 	} else {
-		return l.getLevelsRoleOverwriteEntryBy("id", inserted.GeneratedKeys[0])
+		return l.getLevelsRoleOverwriteEntryByID(newID)
 	}
 }
 
-func (l *Levels) getLevelsRoleOverwriteEntryBy(key string, value string) (result models.LevelsRoleOverwriteEntry, err error) {
-	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
-		rethink.Row.Field(key).Eq(value),
-	).Run(helpers.GetDB())
-	if err != nil {
-		return result, err
-	}
-	defer listCursor.Close()
-	err = listCursor.One(&result)
+func (l *Levels) getLevelsRoleOverwriteEntryByID(id bson.ObjectId) (result models.LevelsRoleOverwriteEntry, err error) {
+	err = helpers.MdbOne(
+		helpers.MdbCollection(models.LevelsRoleOverwritesTable).Find(bson.M{"_id": id}),
+		&result,
+	)
 
-	if err == rethink.ErrEmptyResult {
+	if helpers.IsMdbNotFound(err) {
 		return result, errors.New("no levels role overwrite entry")
 	}
 
@@ -3804,28 +3802,24 @@ func (l *Levels) getLevelsRoleOverwriteEntryBy(key string, value string) (result
 }
 
 func (l *Levels) getLevelsRolesUserRoleOverwrite(guildID string, roleID string, userID string) (grant bool, deny bool, overwrite models.LevelsRoleOverwriteEntry) {
-	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(guildID),
-			rethink.Row.Field("user_id").Eq(userID),
-			rethink.Row.Field("role_id").Eq(roleID),
-		),
-	).Run(helpers.GetDB())
+	err := helpers.MdbOne(
+		helpers.MdbCollection(models.LevelsRoleOverwritesTable).Find(
+			bson.M{"userid": userID, "guildid": guildID, "roleid": roleID}),
+		&overwrite,
+	)
+	if helpers.IsMdbNotFound(err) {
+		return false, false, models.LevelsRoleOverwriteEntry{}
+	}
+
 	if err != nil {
 		helpers.RelaxLog(err)
 		return false, false, models.LevelsRoleOverwriteEntry{}
 	}
-	defer listCursor.Close()
-	err = listCursor.One(&overwrite)
-
-	if err == rethink.ErrEmptyResult {
-		return false, false, models.LevelsRoleOverwriteEntry{}
-	}
 
 	switch overwrite.Type {
-	case "grant":
+	case models.LevelsRoleOverwriteTypeGrant:
 		return true, false, overwrite
-	case "deny":
+	case models.LevelsRoleOverwriteTypeDeny:
 		return false, true, overwrite
 	}
 
@@ -3833,19 +3827,9 @@ func (l *Levels) getLevelsRolesUserRoleOverwrite(guildID string, roleID string, 
 }
 
 func (l *Levels) getLevelsRolesGuildOverwrites(guildID string) (overwrites []models.LevelsRoleOverwriteEntry) {
-	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(guildID),
-		),
-	).Run(helpers.GetDB())
+	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsRoleOverwritesTable).Find(bson.M{"guildid": guildID})).All(&overwrites)
 	if err != nil {
 		helpers.RelaxLog(err)
-		return make([]models.LevelsRoleOverwriteEntry, 0)
-	}
-	defer listCursor.Close()
-	err = listCursor.All(&overwrites)
-
-	if err == rethink.ErrEmptyResult {
 		return make([]models.LevelsRoleOverwriteEntry, 0)
 	}
 
@@ -3853,8 +3837,8 @@ func (l *Levels) getLevelsRolesGuildOverwrites(guildID string) (overwrites []mod
 }
 
 func (l *Levels) deleteLevelsRolesOverwriteEntry(levelsRolesOverwriteEntry models.LevelsRoleOverwriteEntry) (err error) {
-	if levelsRolesOverwriteEntry.ID != "" {
-		_, err = rethink.Table(models.LevelsRoleOverwritesTable).Get(levelsRolesOverwriteEntry.ID).Delete().RunWrite(helpers.GetDB())
+	if levelsRolesOverwriteEntry.ID.Valid() {
+		err = helpers.MDbDelete(models.LevelsRoleOverwritesTable, levelsRolesOverwriteEntry.ID)
 		return err
 	}
 	return errors.New("empty levelsRoleOverwriteEntry submitted")

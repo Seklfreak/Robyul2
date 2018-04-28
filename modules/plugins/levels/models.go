@@ -8,7 +8,6 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
-	rethink "github.com/gorethink/gorethink"
 )
 
 func getLevelsServerUserOrCreateNewWithoutLogging(guildid string, userid string) (serveruser models.LevelsServerusersEntry, err error) {
@@ -60,24 +59,12 @@ func getLevelsRoles(guildID string, currentLevel int) (apply []*discordgo.Role, 
 }
 
 func getLevelsRolesUserOverwrites(guildID string, userID string) (overwrites []models.LevelsRoleOverwriteEntry) {
-	listCursor, err := rethink.Table(models.LevelsRoleOverwritesTable).Filter(
-		rethink.And(
-			rethink.Row.Field("guild_id").Eq(guildID),
-			rethink.Row.Field("user_id").Eq(userID),
-		),
-	).Run(helpers.GetDB())
+	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsRoleOverwritesTable).Find(bson.M{"userid": userID, "guildid": guildID})).All(&overwrites)
 	if err != nil {
 		helpers.RelaxLog(err)
 		return make([]models.LevelsRoleOverwriteEntry, 0)
 	}
-	defer listCursor.Close()
-	err = listCursor.All(&overwrites)
-
-	if err == rethink.ErrEmptyResult {
-		return make([]models.LevelsRoleOverwriteEntry, 0)
-	}
-
-	return
+	return overwrites
 }
 
 func getLevelForUser(userID string, guildID string) int {

@@ -368,7 +368,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 	overwrites := getLevelsRolesUserOverwrites(guildID, userID)
 	for _, overwrite := range overwrites {
 		switch overwrite.Type {
-		case "grant":
+		case models.LevelsRoleOverwriteTypeGrant:
 			hasRoleAlready := false
 			for _, memberRole := range member.Roles {
 				if overwrite.RoleID == memberRole {
@@ -401,7 +401,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 			toRemove = newToRemove
 
 			break
-		case "deny":
+		case models.LevelsRoleOverwriteTypeDeny:
 			hasRole := false
 			for _, memberRole := range member.Roles {
 				if overwrite.RoleID == memberRole {
