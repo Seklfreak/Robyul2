@@ -20,7 +20,7 @@ func GuildSettingsSet(guild string, config models.Config) error {
 	// Check if an config object exists
 	var settings models.Config
 
-	err := MdbOne(
+	err := MdbOneWithoutLogging(
 		MdbCollection(models.GuildConfigTable).Find(bson.M{"guildid": guild}),
 		&settings,
 	)
@@ -52,7 +52,7 @@ func GuildSettingsGet(guild string) (models.Config, error) {
 	var settings models.Config
 	var err error
 
-	err = MdbOne(
+	err = MdbOneWithoutLogging(
 		MdbCollection(models.GuildConfigTable).Find(bson.M{"guildid": guild}),
 		&settings,
 	)
