@@ -1167,6 +1167,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 			return
 		}
+		if targetUser.ID == session.State.User.ID {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			return
+		}
 		textVersion := false
 		if len(args) >= 2 && args[1] == "text" {
 			textVersion = true
