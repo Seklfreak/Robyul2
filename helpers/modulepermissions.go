@@ -3,6 +3,8 @@ package helpers
 import (
 	"sync"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
@@ -19,73 +21,76 @@ var (
 )
 
 const (
-	ModulePermStats          models.ModulePermissionsModule = 1 << iota // stats.go, uptime.go
-	ModulePermTranslator                                                // translator.go
-	ModulePermUrban                                                     // urbandict.go
-	ModulePermWeather                                                   // weather.go
-	ModulePermVLive                                                     // vlive.go
-	ModulePermInstagram                                                 // instagram/
-	ModulePermFacebook                                                  // facebook.go
-	ModulePermWolframAlpha                                              // wolframalpha.go
-	ModulePermLastFm                                                    // lastfm.go
-	ModulePermTwitch                                                    // twitch.go
-	ModulePermCharts                                                    // charts.go
-	ModulePermChoice                                                    // choice.go
-	ModulePermOsu                                                       // osu.go
-	ModulePermReminders                                                 // reminders.go
-	ModulePermGfycat                                                    // gfycat.go
-	ModulePermRandomPictures                                            // randompictures.go
-	ModulePermYouTube                                                   // youtube/
-	ModulePermSpoiler                                                   // spoiler.go
-	ModulePermAnimals                                                   // random_cat.go, dog.go
-	ModulePermGames                                                     // rps.go, biasgame/
-	ModulePermDig                                                       // dig.go
-	ModulePermStreamable                                                // streamable.go
-	ModulePermLyrics                                                    // lyrics.go
-	ModulePermMisc
-	ModulePermReddit             // reddit.go
-	ModulePermColor              // color.go
-	ModulePermSteam              // dog.go
-	ModulePermGoogle             // google/
-	ModulePermWhois              // whois.go
-	ModulePermIsup               // isup.go
-	ModulePermLevels             // levels.go
-	ModulePermCustomCommands     // customcommands.go
-	ModulePermReactionPolls      // reactionpolls.go
-	ModulePermTwitter            // twitter.go
-	ModulePermStarboard          // starboard.go
-	ModulePermAutoRole           // autorole.go
-	ModulePermBias               // bias.go
-	ModulePermDiscordmoney       // discordmoney.go
-	ModulePermGallery            // gallery.go
-	ModulePermGuildAnnouncements // guildannouncements.go
-	ModulePermMirror             // mirror.go
-	ModulePermMod                // mod.go
-	ModulePermNotifications      // notifications.go
-	ModulePermNuke               // nuke.go
-	ModulePermPersistency        // persistency.go
-	ModulePermPing               // ping.go
-	ModulePermTroublemaker       // troublemaker.go
-	ModulePermVanityInvite       // vanityinvite.go
-	ModulePerm8ball              // 8ball.go
-	ModulePermAllPlaceholder
-	ModulePermFeedback  // feedback.go
-	ModulePermEmbedPost // embedpost.go
-	ModulePermEventlog  // eventlog/
-	ModulePermCrypto    // crypto.go
-	ModulePermImgur     // imgur.go
+	ModulePermStats              models.ModulePermissionsModule = "stats"          // stats.go, uptime.go
+	ModulePermTranslator         models.ModulePermissionsModule = "translator"     // translator.go
+	ModulePermUrban              models.ModulePermissionsModule = "urban"          // urbandict.go
+	ModulePermWeather            models.ModulePermissionsModule = "weather"        // weather.go
+	ModulePermVLive              models.ModulePermissionsModule = "vlive"          // vlive.go
+	ModulePermInstagram          models.ModulePermissionsModule = "instagram"      // instagram/
+	ModulePermFacebook           models.ModulePermissionsModule = "facebook"       // facebook.go
+	ModulePermWolframAlpha       models.ModulePermissionsModule = "wolframalpha"   // wolframalpha.go
+	ModulePermLastFm             models.ModulePermissionsModule = "lastfm"         // lastfm.go
+	ModulePermTwitch             models.ModulePermissionsModule = "twitch"         // twitch.go
+	ModulePermCharts             models.ModulePermissionsModule = "charts"         // charts.go
+	ModulePermChoice             models.ModulePermissionsModule = "choice"         // choice.go
+	ModulePermOsu                models.ModulePermissionsModule = "osu"            // osu.go
+	ModulePermReminders          models.ModulePermissionsModule = "reminders"      // reminders.go
+	ModulePermGfycat             models.ModulePermissionsModule = "gfycat"         // gfycat.go
+	ModulePermRandomPictures     models.ModulePermissionsModule = "randompictures" // randompictures.go
+	ModulePermYouTube            models.ModulePermissionsModule = "youtube"        // youtube/
+	ModulePermSpoiler            models.ModulePermissionsModule = "spoiler"        // spoiler.go
+	ModulePermAnimals            models.ModulePermissionsModule = "animals"        // random_cat.go, dog.go
+	ModulePermGames              models.ModulePermissionsModule = "games"          // rps.go, biasgame/
+	ModulePermDig                models.ModulePermissionsModule = "dig"            // dig.go
+	ModulePermStreamable         models.ModulePermissionsModule = "streamable"     // streamable.go
+	ModulePermLyrics             models.ModulePermissionsModule = "lyrcis"         // lyrics.go
+	ModulePermMisc               models.ModulePermissionsModule = "misc"
+	ModulePermReddit             models.ModulePermissionsModule = "reddit"             // reddit.go
+	ModulePermColor              models.ModulePermissionsModule = "color"              // color.go
+	ModulePermSteam              models.ModulePermissionsModule = "steam"              // dog.go
+	ModulePermGoogle             models.ModulePermissionsModule = "google"             // google/
+	ModulePermWhois              models.ModulePermissionsModule = "whois"              // whois.go
+	ModulePermIsup               models.ModulePermissionsModule = "isup"               // isup.go
+	ModulePermLevels             models.ModulePermissionsModule = "levels"             // levels.go
+	ModulePermCustomCommands     models.ModulePermissionsModule = "customcommands"     // customcommands.go
+	ModulePermReactionPolls      models.ModulePermissionsModule = "reactionpolls"      // reactionpolls.go
+	ModulePermTwitter            models.ModulePermissionsModule = "twitter"            // twitter.go
+	ModulePermStarboard          models.ModulePermissionsModule = "starboard"          // starboard.go
+	ModulePermAutoRole           models.ModulePermissionsModule = "autorole"           // autorole.go
+	ModulePermBias               models.ModulePermissionsModule = "bias"               // bias.go
+	ModulePermDiscordmoney       models.ModulePermissionsModule = "discordmoney"       // discordmoney.go
+	ModulePermGallery            models.ModulePermissionsModule = "gallery"            // gallery.go
+	ModulePermGuildAnnouncements models.ModulePermissionsModule = "guildannouncements" // guildannouncements.go
+	ModulePermMirror             models.ModulePermissionsModule = "mirror"             // mirror.go
+	ModulePermMod                models.ModulePermissionsModule = "mod"                // mod.go
+	ModulePermNotifications      models.ModulePermissionsModule = "notifications"      // notifications.go
+	ModulePermNuke               models.ModulePermissionsModule = "nuke"               // nuke.go
+	ModulePermPersistency        models.ModulePermissionsModule = "persistency"        // persistency.go
+	ModulePermPing               models.ModulePermissionsModule = "ping"               // ping.go
+	ModulePermTroublemaker       models.ModulePermissionsModule = "troublemaker"       // troublemaker.go
+	ModulePermVanityInvite       models.ModulePermissionsModule = "vanityinvite"       // vanityinvite.go
+	ModulePerm8ball              models.ModulePermissionsModule = "8ball"              // 8ball.go
+	ModulePermFeedback           models.ModulePermissionsModule = "feedback"           // feedback.go
+	ModulePermEmbedPost          models.ModulePermissionsModule = "embed"              // embedpost.go
+	ModulePermEventlog           models.ModulePermissionsModule = "eventlog"           // eventlog/
+	ModulePermCrypto             models.ModulePermissionsModule = "crypto"             // crypto.go
+	ModulePermImgur              models.ModulePermissionsModule = "imgur"              // imgur.go
 
-	ModulePermAll = ModulePermStats | ModulePermTranslator | ModulePermUrban | ModulePermWeather | ModulePermVLive |
-		ModulePermInstagram | ModulePermFacebook | ModulePermWolframAlpha | ModulePermLastFm | ModulePermTwitter |
-		ModulePermTwitch | ModulePermCharts | ModulePermChoice | ModulePermOsu | ModulePermReminders |
-		ModulePermGfycat | ModulePermRandomPictures | ModulePermYouTube | ModulePermSpoiler | ModulePermAnimals |
-		ModulePermGames | ModulePermDig | ModulePermStreamable | ModulePermLyrics | ModulePermMisc | ModulePermReddit |
-		ModulePermColor | ModulePermSteam | ModulePermGoogle | ModulePermWhois | ModulePermIsup | ModulePermLevels |
-		ModulePermCustomCommands | ModulePermReactionPolls | ModulePermTwitter | ModulePermStarboard |
-		ModulePermAutoRole | ModulePermBias | ModulePermDiscordmoney | ModulePermGallery |
-		ModulePermGuildAnnouncements | ModulePermMirror | ModulePermMirror | ModulePermMod | ModulePermNotifications |
-		ModulePermNuke | ModulePermPersistency | ModulePermPing | ModulePermTroublemaker | ModulePermVanityInvite |
-		ModulePerm8ball | ModulePermFeedback | ModulePermEmbedPost | ModulePermEventlog | ModulePermCrypto | ModulePermImgur
+	ModulePermAllPlaceholder models.ModulePermissionsModule = "all"
+)
+
+var (
+	ModulePermAll = []models.ModulePermissionsModule{ModulePermStats, ModulePermTranslator, ModulePermUrban, ModulePermWeather, ModulePermVLive,
+		ModulePermInstagram, ModulePermFacebook, ModulePermWolframAlpha, ModulePermLastFm, ModulePermTwitter,
+		ModulePermTwitch, ModulePermCharts, ModulePermChoice, ModulePermOsu, ModulePermReminders,
+		ModulePermGfycat, ModulePermRandomPictures, ModulePermYouTube, ModulePermSpoiler, ModulePermAnimals,
+		ModulePermGames, ModulePermDig, ModulePermStreamable, ModulePermLyrics, ModulePermMisc, ModulePermReddit,
+		ModulePermColor, ModulePermSteam, ModulePermGoogle, ModulePermWhois, ModulePermIsup, ModulePermLevels,
+		ModulePermCustomCommands, ModulePermReactionPolls, ModulePermTwitter, ModulePermStarboard,
+		ModulePermAutoRole, ModulePermBias, ModulePermDiscordmoney, ModulePermGallery,
+		ModulePermGuildAnnouncements, ModulePermMirror, ModulePermMirror, ModulePermMod, ModulePermNotifications,
+		ModulePermNuke, ModulePermPersistency, ModulePermPing, ModulePermTroublemaker, ModulePermVanityInvite,
+		ModulePerm8ball, ModulePermFeedback, ModulePermEmbedPost, ModulePermEventlog, ModulePermCrypto, ModulePermImgur}
 )
 
 var (
@@ -212,88 +217,102 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 
 	// allowed role
 	for _, userRoleID := range userRoles {
-		if GetAllowedForRole(channel.GuildID, userRoleID)&module == module ||
-			GetAllowedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"allowed command by role message #%s channel #%s user #%s module %s",
-				msgID, channelID, userID, GetModuleNameById(module),
-			)
-			return true
+		if GetAllowedForRole(channel.GuildID, userRoleID) != nil {
+			if ModulePermissionsContain(GetAllowedForRole(channel.GuildID, userRoleID), module) ||
+				ModulePermissionsContain(GetAllowedForRole(channel.GuildID, userRoleID), ModulePermAllPlaceholder) {
+				cache.GetLogger().WithField("module", "modulepermissions").Infof(
+					"allowed command by role message #%s channel #%s user #%s module %s",
+					msgID, channelID, userID, GetModuleNameById(module),
+				)
+				return true
+			}
 		}
 	}
 
 	// denied role
 	for _, userRoleID := range userRoles {
-		if GetDeniedForRole(channel.GuildID, userRoleID)&module == module ||
-			GetDeniedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"denied command by role message #%s channel #%s user #%s module %s",
-				msgID, channelID, userID, GetModuleNameById(module),
-			)
-			return false
+		if GetDeniedForRole(channel.GuildID, userRoleID) != nil {
+			if ModulePermissionsContain(GetDeniedForRole(channel.GuildID, userRoleID), module) ||
+				ModulePermissionsContain(GetDeniedForRole(channel.GuildID, userRoleID), ModulePermAllPlaceholder) {
+				cache.GetLogger().WithField("module", "modulepermissions").Infof(
+					"denied command by role message #%s channel #%s user #%s module %s",
+					msgID, channelID, userID, GetModuleNameById(module),
+				)
+				return false
+			}
 		}
 	}
 
 	// allowed channel
-	if GetAllowedForChannel(channel.GuildID, channelID)&module == module ||
-		GetAllowedForChannel(channel.GuildID, channelID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"allowed command by channel message #%s channel #%s user #%s module %s",
-			msgID, channelID, userID, GetModuleNameById(module),
-		)
-		return true
-	}
-
-	// denied channel
-	if GetDeniedForChannel(channel.GuildID, channelID)&module == module ||
-		GetDeniedForChannel(channel.GuildID, channelID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"denied command by channel message #%s channel #%s user #%s module %s",
-			msgID, channelID, userID, GetModuleNameById(module),
-		)
-		return false
-	}
-
-	// allowed parent channel (if in sync)
-	if checkParent {
-		if GetAllowedForChannel(channel.GuildID, channel.ParentID)&module == module ||
-			GetAllowedForChannel(channel.GuildID, channel.ParentID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
+	if GetAllowedForChannel(channel.GuildID, channelID) != nil {
+		if ModulePermissionsContain(GetAllowedForChannel(channel.GuildID, channelID), module) ||
+			ModulePermissionsContain(GetAllowedForChannel(channel.GuildID, channelID), ModulePermAllPlaceholder) {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"allowed command by parent channel message #%s channel #%s user #%s module %s",
+				"allowed command by channel message #%s channel #%s user #%s module %s",
 				msgID, channelID, userID, GetModuleNameById(module),
 			)
 			return true
 		}
 	}
 
-	// denied parent channel (if in sync)
-	if checkParent {
-		if GetDeniedForChannel(channel.GuildID, channel.ParentID)&module == module ||
-			GetDeniedForChannel(channel.GuildID, channel.ParentID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
+	// denied channel
+	if GetDeniedForChannel(channel.GuildID, channelID) != nil {
+		if ModulePermissionsContain(GetDeniedForChannel(channel.GuildID, channelID), module) ||
+			ModulePermissionsContain(GetDeniedForChannel(channel.GuildID, channelID), ModulePermAllPlaceholder) {
 			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"denied command by parent channel message #%s channel #%s user #%s module %s",
+				"denied command by channel message #%s channel #%s user #%s module %s",
 				msgID, channelID, userID, GetModuleNameById(module),
 			)
 			return false
+		}
+	}
+
+	// allowed parent channel (if in sync)
+	if checkParent {
+		if GetAllowedForChannel(channel.GuildID, channel.ParentID) != nil {
+			if ModulePermissionsContain(GetAllowedForChannel(channel.GuildID, channel.ParentID), module) ||
+				ModulePermissionsContain(GetAllowedForChannel(channel.GuildID, channel.ParentID), ModulePermAllPlaceholder) {
+				cache.GetLogger().WithField("module", "modulepermissions").Infof(
+					"allowed command by parent channel message #%s channel #%s user #%s module %s",
+					msgID, channelID, userID, GetModuleNameById(module),
+				)
+				return true
+			}
+		}
+	}
+
+	// denied parent channel (if in sync)
+	if checkParent {
+		if GetDeniedForChannel(channel.GuildID, channel.ParentID) != nil {
+			if ModulePermissionsContain(GetDeniedForChannel(channel.GuildID, channel.ParentID), module) ||
+				ModulePermissionsContain(GetDeniedForChannel(channel.GuildID, channel.ParentID), ModulePermAllPlaceholder) {
+				cache.GetLogger().WithField("module", "modulepermissions").Infof(
+					"denied command by parent channel message #%s channel #%s user #%s module %s",
+					msgID, channelID, userID, GetModuleNameById(module),
+				)
+				return false
+			}
 		}
 	}
 
 	return true
 }
 
-func GetModuleNameById(id models.ModulePermissionsModule) (name string) {
-	for _, module := range Modules {
-		if module.Permission == id {
-			if len(module.Names) > 0 {
-				return module.Names[0]
-			}
-			return "unnamed"
-		}
-	}
-	if (ModulePermAll | ModulePermAllPlaceholder) == id {
+func GetModuleNameById(ids ...models.ModulePermissionsModule) (name string) {
+	if ModulePermissionsContain(ids, ModulePermAllPlaceholder) {
 		return "all modules"
 	}
-	return "not found"
+	for _, id := range ids {
+		for _, module := range Modules {
+			if module.Permission == id {
+				if len(module.Names) > 0 {
+					name += module.Names[0] + ", "
+				}
+			}
+		}
+	}
+	name = strings.TrimRight(name, ", ")
+	return name
 }
 
 func GetDisabledModules(guildID string) (disabledModules []models.ModulePermissionsModule) {
@@ -314,91 +333,95 @@ func GetDisabledModules(guildID string) (disabledModules []models.ModulePermissi
 
 NextModule:
 	for _, module := range Modules {
-		if GetDeniedForRole(guildID, everyoneRoleID)&module.Permission == module.Permission {
-			// is denied for everyone
-			for _, role := range guild.Roles {
-				if GetAllowedForRole(guildID, role.ID)&module.Permission == module.Permission {
-					continue NextModule
+		if GetDeniedForRole(guildID, everyoneRoleID) != nil {
+			if ModulePermissionsContain(GetDeniedForRole(guildID, everyoneRoleID), module.Permission) {
+				// is denied for everyone
+				for _, role := range guild.Roles {
+					if GetAllowedForRole(guildID, role.ID) != nil {
+						if ModulePermissionsContain(GetAllowedForRole(guildID, role.ID), module.Permission) {
+							continue NextModule
+						}
+					}
 				}
-			}
 
-			disabledModules = append(disabledModules, module.Permission)
+				disabledModules = append(disabledModules, module.Permission)
+			}
 		}
 	}
 
 	return disabledModules
 }
 
-func SetAllowedForChannel(guildID, channelID string, newPermissions models.ModulePermissionsModule) (err error) {
+func SetAllowedForChannel(guildID, channelID string, newPermissions []models.ModulePermissionsModule) (err error) {
 	entry := findModulePermissionsEntry(guildID, "channel", channelID)
-	entry.Allowed = newPermissions
+	entry.AllowedModules = newPermissions
 	err = setModulePermissionsEntry(entry)
 	return err
 }
 
-func SetAllowedForRole(guildID, roleID string, newPermissions models.ModulePermissionsModule) (err error) {
+func SetAllowedForRole(guildID, roleID string, newPermissions []models.ModulePermissionsModule) (err error) {
 	entry := findModulePermissionsEntry(guildID, "role", roleID)
-	entry.Allowed = newPermissions
+	entry.AllowedModules = newPermissions
 	err = setModulePermissionsEntry(entry)
 	return err
 }
 
-func SetDeniedForChannel(guildID, channelID string, newPermissions models.ModulePermissionsModule) (err error) {
+func SetDeniedForChannel(guildID, channelID string, newPermissions []models.ModulePermissionsModule) (err error) {
 	entry := findModulePermissionsEntry(guildID, "channel", channelID)
-	entry.Denied = newPermissions
+	entry.DeniedModules = newPermissions
 	err = setModulePermissionsEntry(entry)
 	return err
 }
 
-func SetDeniedForRole(guildID, roleID string, newPermissions models.ModulePermissionsModule) (err error) {
+func SetDeniedForRole(guildID, roleID string, newPermissions []models.ModulePermissionsModule) (err error) {
 	entry := findModulePermissionsEntry(guildID, "role", roleID)
-	entry.Denied = newPermissions
+	entry.DeniedModules = newPermissions
 	err = setModulePermissionsEntry(entry)
 	return err
 }
 
-func GetAllowedForChannel(guildID, channelID string) (permissions models.ModulePermissionsModule) {
+func GetAllowedForChannel(guildID, channelID string) (permissions []models.ModulePermissionsModule) {
 	entry := findModulePermissionsEntry(guildID, "channel", channelID)
-	if entry.Allowed >= 0 {
-		if entry.Allowed&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			return ModulePermAll | ModulePermAllPlaceholder
+	if entry.AllowedModules != nil {
+		if ModulePermissionsContain(entry.AllowedModules, ModulePermAllPlaceholder) {
+			return append(ModulePermAll, ModulePermAllPlaceholder)
 		}
-		return entry.Allowed
+		return entry.AllowedModules
 	}
-	return 0
+	return nil
 }
 
-func GetAllowedForRole(guildID, roleID string) (permissions models.ModulePermissionsModule) {
+func GetAllowedForRole(guildID, roleID string) (permissions []models.ModulePermissionsModule) {
 	entry := findModulePermissionsEntry(guildID, "role", roleID)
-	if entry.Allowed >= 0 {
-		if entry.Allowed&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			return ModulePermAll | ModulePermAllPlaceholder
+	if entry.AllowedModules != nil {
+		if ModulePermissionsContain(entry.AllowedModules, ModulePermAllPlaceholder) {
+			return append(ModulePermAll, ModulePermAllPlaceholder)
 		}
-		return entry.Allowed
+		return entry.AllowedModules
 	}
-	return 0
+	return nil
 }
 
-func GetDeniedForChannel(guildID, channelID string) (permissions models.ModulePermissionsModule) {
+func GetDeniedForChannel(guildID, channelID string) (permissions []models.ModulePermissionsModule) {
 	entry := findModulePermissionsEntry(guildID, "channel", channelID)
-	if entry.Denied >= 0 {
-		if entry.Denied&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			return ModulePermAll | ModulePermAllPlaceholder
+	if entry.DeniedModules != nil {
+		if ModulePermissionsContain(entry.AllowedModules, ModulePermAllPlaceholder) {
+			return append(ModulePermAll, ModulePermAllPlaceholder)
 		}
-		return entry.Denied
+		return entry.DeniedModules
 	}
-	return 0
+	return nil
 }
 
-func GetDeniedForRole(guildID, roleID string) (permissions models.ModulePermissionsModule) {
+func GetDeniedForRole(guildID, roleID string) (permissions []models.ModulePermissionsModule) {
 	entry := findModulePermissionsEntry(guildID, "role", roleID)
-	if entry.Denied >= 0 {
-		if entry.Denied&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			return ModulePermAll | ModulePermAllPlaceholder
+	if entry.DeniedModules != nil {
+		if ModulePermissionsContain(entry.AllowedModules, ModulePermAllPlaceholder) {
+			return append(ModulePermAll, ModulePermAllPlaceholder)
 		}
-		return entry.Denied
+		return entry.DeniedModules
 	}
-	return 0
+	return nil
 }
 
 func findModulePermissionsEntry(guildID, permType, targetID string) (entry models.ModulePermissionEntry) {
@@ -473,4 +496,28 @@ func setModulePermissionsEntry(entry models.ModulePermissionEntry) (err error) {
 		Relax(err)
 	}()
 	return err
+}
+
+func ModulePermissionsContain(list []models.ModulePermissionsModule, entries ...models.ModulePermissionsModule) (contains bool) {
+	for _, entry := range entries {
+		contains := false
+		for _, listEntry := range list {
+			if listEntry == entry {
+				contains = true
+			}
+		}
+		if !contains {
+			return false
+		}
+	}
+	return true
+}
+
+func ModulePermissionsWithout(list []models.ModulePermissionsModule, without ...models.ModulePermissionsModule) (newList []models.ModulePermissionsModule) {
+	for _, listEntry := range list {
+		if !ModulePermissionsContain(without, listEntry) {
+			newList = append(newList, listEntry)
+		}
+	}
+	return newList
 }

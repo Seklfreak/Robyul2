@@ -90,17 +90,17 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 		moduleAllowText = ""
 		moduleDenyText = ""
 		for _, module := range helpers.Modules {
-			if entry.Allowed&module.Permission == module.Permission {
+			if helpers.ModulePermissionsContain(entry.AllowedModules, module.Permission) {
 				moduleAllowText += "`" + helpers.GetModuleNameById(module.Permission) + "`, "
 			}
-			if entry.Denied&module.Permission == module.Permission {
+			if helpers.ModulePermissionsContain(entry.DeniedModules, module.Permission) {
 				moduleDenyText += "`" + helpers.GetModuleNameById(module.Permission) + "`, "
 			}
 		}
-		if entry.Allowed&helpers.ModulePermAllPlaceholder == helpers.ModulePermAllPlaceholder {
+		if helpers.ModulePermissionsContain(entry.AllowedModules, helpers.ModulePermAllPlaceholder) {
 			moduleAllowText = "_ALL_"
 		}
-		if entry.Denied&helpers.ModulePermAllPlaceholder == helpers.ModulePermAllPlaceholder {
+		if helpers.ModulePermissionsContain(entry.DeniedModules, helpers.ModulePermAllPlaceholder) {
 			moduleDenyText = "_ALL_"
 		}
 		if strings.HasSuffix(moduleAllowText, ", ") {
@@ -116,7 +116,7 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 				entryIsCategory = true
 			}
 			entryText += "<#" + entry.TargetID + ">: "
-			if entry.Allowed > 0 {
+			if len(entry.AllowedModules) > 0 {
 				entryAllowText += entryText + moduleAllowText + "\n"
 				if entryIsCategory {
 					messageAllowCategory += entryAllowText
@@ -124,7 +124,7 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 					messageAllowChannels += entryAllowText
 				}
 			}
-			if entry.Denied > 0 {
+			if len(entry.DeniedModules) > 0 {
 				entryDenyText += entryText + moduleDenyText + "\n"
 				if entryIsCategory {
 					messageDenyCategory += entryDenyText
@@ -139,11 +139,11 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 				continue
 			}
 			entryText += role.Name + ": "
-			if entry.Allowed > 0 {
+			if len(entry.AllowedModules) > 0 {
 				entryAllowText += entryText + moduleAllowText + "\n"
 				messageAllowRoles += entryAllowText
 			}
-			if entry.Denied > 0 {
+			if len(entry.DeniedModules) > 0 {
 				entryDenyText += entryText + moduleDenyText + "\n"
 				messageDenyRoles += entryDenyText
 			}
@@ -202,18 +202,18 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		return mp.actionFinish
 	}
 
-	var permToAdd models.ModulePermissionsModule
+	var permToAdd []models.ModulePermissionsModule
 	if "all" == strings.ToLower(args[1]) {
-		permToAdd = helpers.ModulePermAll | helpers.ModulePermAllPlaceholder
+		permToAdd = append(helpers.ModulePermAll, helpers.ModulePermAllPlaceholder)
 	}
 	for _, module := range helpers.Modules {
 		for _, moduleName := range module.Names {
 			if strings.ToLower(moduleName) == strings.ToLower(args[1]) {
-				permToAdd = module.Permission
+				permToAdd = []models.ModulePermissionsModule{module.Permission}
 			}
 		}
 	}
-	if permToAdd == 0 {
+	if len(permToAdd) <= 0 {
 		*out = mp.newMsg("plugins.modulepermissions.module-not-found")
 		return mp.actionFinish
 	}
@@ -226,9 +226,10 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 	targetChannel, err := helpers.GetChannelFromMention(in, args[2])
 	if err == nil && targetChannel != nil && targetChannel.ID != "" {
 		previousPerms := helpers.GetAllowedForChannel(targetChannel.GuildID, targetChannel.ID)
-		if previousPerms&permToAdd == permToAdd {
+		if helpers.ModulePermissionsContain(previousPerms, permToAdd...) {
 			err = helpers.SetAllowedForChannel(
-				targetChannel.GuildID, targetChannel.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
+				targetChannel.GuildID, targetChannel.ID,
+				helpers.ModulePermissionsWithout(previousPerms, append(permToAdd, helpers.ModulePermAllPlaceholder)...))
 			helpers.Relax(err)
 
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
@@ -238,7 +239,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 				[]models.ElasticEventlogOption{
 					{
 						Key:   "module_allow_channel_removed",
-						Value: helpers.GetModuleNameById(permToAdd),
+						Value: helpers.GetModuleNameById(permToAdd...),
 					},
 				}, false)
 			helpers.RelaxLog(err)
@@ -248,7 +249,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		}
 
 		err = helpers.SetAllowedForChannel(
-			targetChannel.GuildID, targetChannel.ID, previousPerms|permToAdd)
+			targetChannel.GuildID, targetChannel.ID, append(previousPerms, permToAdd...))
 		helpers.Relax(err)
 
 		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
@@ -258,7 +259,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 			[]models.ElasticEventlogOption{
 				{
 					Key:   "module_allow_channel_added",
-					Value: helpers.GetModuleNameById(permToAdd),
+					Value: helpers.GetModuleNameById(permToAdd...),
 				},
 			}, false)
 		helpers.RelaxLog(err)
@@ -277,9 +278,10 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 	}
 	if targetRole != nil && targetRole.ID != "" {
 		previousPerms := helpers.GetAllowedForRole(guild.ID, targetRole.ID)
-		if previousPerms&permToAdd == permToAdd {
+		if helpers.ModulePermissionsContain(previousPerms, permToAdd...) {
 			err = helpers.SetAllowedForRole(
-				guild.ID, targetRole.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
+				guild.ID, targetRole.ID,
+				helpers.ModulePermissionsWithout(previousPerms, append(permToAdd, helpers.ModulePermAllPlaceholder)...))
 			helpers.Relax(err)
 
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
@@ -289,7 +291,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 				[]models.ElasticEventlogOption{
 					{
 						Key:   "module_allow_role_removed",
-						Value: helpers.GetModuleNameById(permToAdd),
+						Value: helpers.GetModuleNameById(permToAdd...),
 					},
 				}, false)
 			helpers.RelaxLog(err)
@@ -299,7 +301,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 		}
 
 		err = helpers.SetAllowedForRole(
-			guild.ID, targetRole.ID, previousPerms|permToAdd)
+			guild.ID, targetRole.ID, append(previousPerms, permToAdd...))
 		helpers.Relax(err)
 
 		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
@@ -309,7 +311,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 			[]models.ElasticEventlogOption{
 				{
 					Key:   "module_allow_role_added",
-					Value: helpers.GetModuleNameById(permToAdd),
+					Value: helpers.GetModuleNameById(permToAdd...),
 				},
 			}, false)
 		helpers.RelaxLog(err)
@@ -328,18 +330,18 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		return mp.actionFinish
 	}
 
-	var permToAdd models.ModulePermissionsModule
+	var permToAdd []models.ModulePermissionsModule
 	if "all" == strings.ToLower(args[1]) {
-		permToAdd = helpers.ModulePermAll | helpers.ModulePermAllPlaceholder
+		permToAdd = append(helpers.ModulePermAll, helpers.ModulePermAllPlaceholder)
 	}
 	for _, module := range helpers.Modules {
 		for _, moduleName := range module.Names {
 			if strings.ToLower(moduleName) == strings.ToLower(args[1]) {
-				permToAdd = module.Permission
+				permToAdd = []models.ModulePermissionsModule{module.Permission}
 			}
 		}
 	}
-	if permToAdd == 0 {
+	if len(permToAdd) <= 0 {
 		*out = mp.newMsg("plugins.modulepermissions.module-not-found")
 		return mp.actionFinish
 	}
@@ -352,9 +354,10 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 	targetChannel, err := helpers.GetChannelOfAnyTypeFromMention(in, args[2])
 	if err == nil && targetChannel != nil && targetChannel.ID != "" {
 		previousPerms := helpers.GetDeniedForChannel(targetChannel.GuildID, targetChannel.ID)
-		if previousPerms&permToAdd == permToAdd {
+		if helpers.ModulePermissionsContain(previousPerms, permToAdd...) {
 			err = helpers.SetDeniedForChannel(
-				targetChannel.GuildID, targetChannel.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
+				targetChannel.GuildID, targetChannel.ID,
+				helpers.ModulePermissionsWithout(previousPerms, append(permToAdd, helpers.ModulePermAllPlaceholder)...))
 			helpers.Relax(err)
 
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
@@ -364,7 +367,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 				[]models.ElasticEventlogOption{
 					{
 						Key:   "module_deny_channel_removed",
-						Value: helpers.GetModuleNameById(permToAdd),
+						Value: helpers.GetModuleNameById(permToAdd...),
 					},
 				}, false)
 			helpers.RelaxLog(err)
@@ -374,7 +377,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		}
 
 		err = helpers.SetDeniedForChannel(
-			targetChannel.GuildID, targetChannel.ID, previousPerms|permToAdd)
+			targetChannel.GuildID, targetChannel.ID, append(previousPerms, permToAdd...))
 		helpers.Relax(err)
 
 		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetChannel.ID,
@@ -384,7 +387,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 			[]models.ElasticEventlogOption{
 				{
 					Key:   "module_deny_channel_added",
-					Value: helpers.GetModuleNameById(permToAdd),
+					Value: helpers.GetModuleNameById(permToAdd...),
 				},
 			}, false)
 		helpers.RelaxLog(err)
@@ -403,9 +406,10 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 	}
 	if targetRole != nil && targetRole.ID != "" {
 		previousPerms := helpers.GetDeniedForRole(guild.ID, targetRole.ID)
-		if previousPerms&permToAdd == permToAdd {
+		if helpers.ModulePermissionsContain(previousPerms, permToAdd...) {
 			err = helpers.SetDeniedForRole(
-				guild.ID, targetRole.ID, (previousPerms&^permToAdd)&^helpers.ModulePermAllPlaceholder)
+				guild.ID, targetRole.ID,
+				helpers.ModulePermissionsWithout(previousPerms, append(permToAdd, helpers.ModulePermAllPlaceholder)...))
 			helpers.Relax(err)
 
 			_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
@@ -415,7 +419,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 				[]models.ElasticEventlogOption{
 					{
 						Key:   "module_deny_role_removed",
-						Value: helpers.GetModuleNameById(permToAdd),
+						Value: helpers.GetModuleNameById(permToAdd...),
 					},
 				}, false)
 			helpers.RelaxLog(err)
@@ -425,7 +429,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 		}
 
 		err = helpers.SetDeniedForRole(
-			guild.ID, targetRole.ID, previousPerms|permToAdd)
+			guild.ID, targetRole.ID, append(previousPerms, permToAdd...))
 		helpers.Relax(err)
 
 		_, err = helpers.EventlogLog(time.Now(), channel.GuildID, targetRole.ID,
@@ -435,7 +439,7 @@ func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, ou
 			[]models.ElasticEventlogOption{
 				{
 					Key:   "module_deny_role_added",
-					Value: helpers.GetModuleNameById(permToAdd),
+					Value: helpers.GetModuleNameById(permToAdd...),
 				},
 			}, false)
 		helpers.RelaxLog(err)
