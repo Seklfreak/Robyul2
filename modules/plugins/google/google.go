@@ -103,6 +103,7 @@ func search(query string, nsfw bool, transport *http.Transport) (results []linkR
 		if strings.Contains(err.Error(), "http.httpError") ||
 			strings.Contains(err.Error(), "url.Error") ||
 			strings.Contains(err.Error(), "Timeout") ||
+			strings.Contains(err.Error(), "Service Unavailable") ||
 			strings.Contains(err.Error(), "net.OpError") {
 			// try with proxy
 			proxy, err := helpers.GetRandomProxy()
@@ -172,6 +173,7 @@ func imageSearch(query string, nsfw bool, transport *http.Transport) (results []
 		if strings.Contains(err.Error(), "http.httpError") ||
 			strings.Contains(err.Error(), "url.Error") ||
 			strings.Contains(err.Error(), "Timeout") ||
+			strings.Contains(err.Error(), "Service Unavailable") ||
 			strings.Contains(err.Error(), "net.OpError") {
 			// try with proxy
 			proxy, err := helpers.GetRandomProxy()
