@@ -147,7 +147,10 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 				if twitchStatus.Links.Channel != "" {
 					if entry.IsLive == false {
 						if twitchStatus.Stream.ID != 0 {
-							go m.postTwitchLiveToChannel(entry.ChannelID, twitchStatus)
+							go func(gChannelID string, gTwitchStatus TwitchStatus) {
+								defer helpers.Recover()
+								m.postTwitchLiveToChannel(gChannelID, gTwitchStatus)
+							}(entry.ChannelID, twitchStatus)
 							entry.IsLive = true
 							changes = true
 						}
