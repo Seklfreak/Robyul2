@@ -152,7 +152,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		m.lockRepUser(msg.Author.ID)
 		defer m.unlockRepUser(msg.Author.ID)
 
-		userData, err := m.GetUserUserdata(msg.Author)
+		userData, err := helpers.GetUserUserdata(msg.Author.ID)
 		helpers.Relax(err)
 
 		if len(args) <= 0 {
@@ -212,7 +212,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			return
 		}
 
-		targetUserData, err := m.GetUserUserdata(targetUser)
+		targetUserData, err := helpers.GetUserUserdata(targetUser.ID)
 		helpers.Relax(err)
 		targetUserData.Rep += 1
 		err = helpers.MDbUpdate(models.ProfileUserdataTable, targetUserData.ID, targetUserData)
@@ -246,7 +246,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 		if len(args) >= 1 && args[0] != "" {
 			switch args[0] {
 			case "toggle-lastfm":
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 
 				var message string
@@ -269,7 +269,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					titleText = strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 				}
 
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 				userUserdata.Title = titleText
 				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
@@ -284,7 +284,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					bioText = strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
 				}
 
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 
 				oldBioText := userUserdata.Bio
 
@@ -303,7 +303,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			case "background", "backgrounds":
 				if len(args) < 2 {
 					if len(msg.Attachments) <= 0 {
-						userUserdata, err := m.GetUserUserdata(msg.Author)
+						userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 
 						if userUserdata.Background != "" {
 							helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.levels.new-profile-background-help-withbackground", userUserdata.Background))
@@ -386,7 +386,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						return
 					}
 
-					userUserdata, err := m.GetUserUserdata(msg.Author)
+					userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 					helpers.Relax(err)
 
 					// delete old background object if set
@@ -465,7 +465,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
-						userUserdata, err := m.GetUserUserdata(userToChange)
+						userUserdata, err := helpers.GetUserUserdata(userToChange.ID)
 						helpers.Relax(err)
 
 						// delete old background object if set
@@ -495,7 +495,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						userToReset, err := helpers.GetUserFromMention(args[2])
 						helpers.Relax(err)
 
-						userUserdata, err := m.GetUserUserdata(userToReset)
+						userUserdata, err := helpers.GetUserUserdata(userToReset.ID)
 						helpers.Relax(err)
 						userUserdata.Background = ""
 						err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
@@ -671,7 +671,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						return
 					}
 
-					userUserdata, err := m.GetUserUserdata(msg.Author)
+					userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 					helpers.Relax(err)
 
 					// delete old background object if set
@@ -1371,7 +1371,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							return
 						}
 
-						userData, err := m.GetUserUserdata(msg.Author)
+						userData, err := helpers.GetUserUserdata(msg.Author.ID)
 						helpers.Relax(err)
 
 						var idToMove string
@@ -1422,7 +1422,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				userData, err := m.GetUserUserdata(msg.Author)
+				userData, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 				newActiveBadgeIDs := make([]string, 0)
 				for _, activeBadgeID := range userData.ActiveBadgeIDs {
@@ -1595,7 +1595,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 
 				switch args[1] {
@@ -1636,7 +1636,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					return
 				}
 
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 
 				opacityText := "0.5"
@@ -1676,7 +1676,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			case "timezone":
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 
 				newTimezoneString := ""
@@ -1723,7 +1723,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					newBirthday = args[1]
 				}
 
-				userUserdata, err := m.GetUserUserdata(msg.Author)
+				userUserdata, err := helpers.GetUserUserdata(msg.Author.ID)
 				helpers.Relax(err)
 				userUserdata.Birthday = newBirthday
 				err = helpers.MDbUpdate(models.ProfileUserdataTable, userUserdata.ID, userUserdata)
@@ -3071,22 +3071,6 @@ func (l *Levels) BadgePickerHelpText() string {
 	return "\nSay `categories` to display all categories, `category name` to choose a category, `badge name` to choose a badge, `reset` to remove all badges displayed on your profile, `exit` to exit and save. To remove a badge from your Profile pick the badge again.\n"
 }
 
-func (l *Levels) GetUserUserdata(user *discordgo.User) (userdata models.ProfileUserdataEntry, err error) {
-	err = helpers.MdbOne(
-		helpers.MdbCollection(models.ProfileUserdataTable).Find(bson.M{"userid": user.ID}),
-		&userdata,
-	)
-
-	if err == mgo.ErrNotFound {
-		userdata.UserID = user.ID
-		newid, err := helpers.MDbInsert(models.ProfileUserdataTable, userdata)
-		userdata.ID = newid
-		return userdata, err
-	}
-
-	return userdata, err
-}
-
 func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild, web bool) (string, error) {
 	var levelsServersUser []models.LevelsServerusersEntry
 	err := helpers.MDbIter(helpers.MdbCollection(models.LevelsServerusersTable).Find(bson.M{"userid": member.User.ID})).All(&levelsServersUser)
@@ -3121,7 +3105,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 		}
 	}
 
-	userData, err := m.GetUserUserdata(member.User)
+	userData, err := helpers.GetUserUserdata(member.User.ID)
 	if err != nil {
 		return "", err
 	}

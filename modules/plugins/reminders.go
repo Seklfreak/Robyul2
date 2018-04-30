@@ -135,11 +135,20 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		)
 		helpers.Relax(err)
 
+		var userLocation *time.Location
+		userData, err := helpers.GetUserUserdata(msg.Author.ID)
+		if err == nil {
+			userLocation, _ = time.LoadLocation(userData.Timezone)
+		}
+		if userLocation == nil {
+			userLocation, _ = time.LoadLocation("UTC")
+		}
+
 		// Check if guild has a custom message set
 		if customMsg, ok := customReminderMsgMap[channel.GuildID]; ok {
 			helpers.SendMessage(msg.ChannelID, customMsg)
 		} else {
-			helpers.SendMessage(msg.ChannelID, "Ok I'll remind you <:blobokhand:317032017164238848>")
+			helpers.SendMessage(msg.ChannelID, "Ok I'll remind you at `"+r.Time.In(userLocation).Format(time.UnixDate)+" ` <:blobokhand:317032017164238848>")
 		}
 		break
 
