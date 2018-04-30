@@ -709,6 +709,10 @@ NextKeyword:
 	}
 
 	for _, pendingNotification := range pendingNotifications {
+		if !helpers.GetIsInGuild(pendingNotification.Member.GuildID, pendingNotification.Member.User.ID) {
+			continue
+		}
+
 		dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
 		if err != nil {
 			cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", pendingNotification.Member.User.ID).Warn("error creating DM channel: " + err.Error())
