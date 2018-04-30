@@ -457,7 +457,7 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
 		}
 		for _, channel := range guild.Channels {
 			err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0,
-				discordgo.PermissionSendMessages|discordgo.PermissionAddReactions)
+				discordgo.PermissionSendMessages|discordgo.PermissionAddReactions|discordgo.PermissionVoiceConnect)
 			if err != nil {
 				cache.GetLogger().WithField("module", "discord").Error("Error disabling send messages and add reactions on mute Role: " + err.Error())
 			}
