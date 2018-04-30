@@ -158,25 +158,22 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 		reminders := getReminders(msg.Author.ID)
 		var embedFields []*discordgo.MessageEmbedField
 
+		var userLocation *time.Location
+		userData, err := helpers.GetUserUserdata(msg.Author.ID)
+		if err == nil {
+			userLocation, _ = time.LoadLocation(userData.Timezone)
+		}
+		if userLocation == nil {
+			userLocation, _ = time.LoadLocation("UTC")
+		}
+
 		for _, reminder := range reminders.Reminders {
 			ts := time.Unix(reminder.Timestamp, 0)
-			channel := "?"
-			guild := "?"
-
-			chanRef, err := helpers.GetChannel(reminder.ChannelID)
-			if err == nil {
-				channel = chanRef.Name
-			}
-
-			guildRef, err := helpers.GetGuild(reminder.GuildID)
-			if err == nil {
-				guild = guildRef.Name
-			}
 
 			embedFields = append(embedFields, &discordgo.MessageEmbedField{
 				Inline: false,
-				Name:   reminder.Message,
-				Value:  "At " + ts.String() + " in #" + channel + " of " + guild,
+				Name:   "At " + ts.In(userLocation).Format(time.UnixDate),
+				Value:  reminder.Message,
 			})
 		}
 
