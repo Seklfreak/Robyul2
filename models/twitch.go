@@ -12,4 +12,5 @@ type TwitchEntry struct {
 	ChannelID         string
 	TwitchChannelName string
 	IsLive            bool
+	MentionRoleID     string
 }

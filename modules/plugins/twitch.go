@@ -147,10 +147,10 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 				if twitchStatus.Links.Channel != "" {
 					if entry.IsLive == false {
 						if twitchStatus.Stream.ID != 0 {
-							go func(gChannelID string, gTwitchStatus TwitchStatus) {
+							go func(gEntry models.TwitchEntry, gTwitchStatus TwitchStatus) {
 								defer helpers.Recover()
-								m.postTwitchLiveToChannel(gChannelID, gTwitchStatus)
-							}(entry.ChannelID, twitchStatus)
+								m.postTwitchLiveToChannel(gEntry, gTwitchStatus)
+							}(entry, twitchStatus)
 							entry.IsLive = true
 							changes = true
 						}
@@ -206,6 +206,29 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				}
 				targetGuild, err = helpers.GetGuild(targetChannel.GuildID)
 				helpers.Relax(err)
+				mentionRole := new(discordgo.Role)
+				if len(args) >= 4 {
+					mentionRoleName := strings.ToLower(args[3])
+					serverRoles, err := session.GuildRoles(targetGuild.ID)
+					if err != nil {
+						if errD, ok := err.(*discordgo.RESTError); ok {
+							if errD.Message.Code == 50013 {
+								_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission.")
+								helpers.Relax(err)
+								return
+							} else {
+								helpers.Relax(err)
+							}
+						} else {
+							helpers.Relax(err)
+						}
+					}
+					for _, serverRole := range serverRoles {
+						if serverRole.Mentionable == true && (serverRole.Name == mentionRoleName || serverRole.ID == mentionRoleName) {
+							mentionRole = serverRole
+						}
+					}
+				}
 				// create new entry in db
 				newID, err := helpers.MDbInsert(
 					models.TwitchTable,
@@ -214,6 +237,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 						ChannelID:         targetChannel.ID,
 						TwitchChannelName: targetTwitchChannelName,
 						IsLive:            false,
+						MentionRoleID:     mentionRole.ID,
 					},
 				)
 				helpers.Relax(err)
@@ -226,6 +250,11 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 						{
 							Key:   "twitch_feed_channelname",
 							Value: targetTwitchChannelName,
+						},
+						{
+							Key:   "twitch_feed_mentionroleid",
+							Value: mentionRole.ID,
+							Type:  models.EventlogTargetTypeRole,
 						},
 					}, false)
 				helpers.RelaxLog(err)
@@ -267,6 +296,11 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 								Key:   "twitch_feed_channelname",
 								Value: entryBucket.TwitchChannelName,
 							},
+							{
+								Key:   "twitch_feed_mentionroleid",
+								Value: entryBucket.MentionRoleID,
+								Type:  models.EventlogTargetTypeRole,
+							},
 						}, false)
 					helpers.RelaxLog(err)
 
@@ -294,13 +328,17 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 
 			resultMessage := ""
 			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s`: Twitch Channel `%s` posting to <#%s>\n", helpers.MdbIdToHuman(entry.ID), entry.TwitchChannelName, entry.ChannelID)
+				var mentionText string
+				if entry.MentionRoleID != "" {
+					role, err := session.State.Role(currentChannel.GuildID, entry.MentionRoleID)
+					helpers.Relax(err)
+					mentionText += fmt.Sprintf(" mentioning `@%s`", role.Name)
+				}
+				resultMessage += fmt.Sprintf("`%s`: Twitch Channel `%s` posting to <#%s>%s\n", helpers.MdbIdToHuman(entry.ID), entry.TwitchChannelName, entry.ChannelID, mentionText)
 			}
 			resultMessage += fmt.Sprintf("Found **%d** Twitch Channels in total.", len(entryBucket))
-			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err = helpers.SendMessage(msg.ChannelID, resultPage)
-				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-			}
+			_, err = helpers.SendMessage(msg.ChannelID, resultMessage)
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		default:
 			if args[0] == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
@@ -386,10 +424,14 @@ func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
 	return twitchStatus
 }
 
-func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchStatus) {
+func (m *Twitch) postTwitchLiveToChannel(entry models.TwitchEntry, twitchStatus TwitchStatus) {
 	twitchStreamName := twitchStatus.Stream.Channel.DisplayName
 	if strings.ToLower(twitchStatus.Stream.Channel.Name) != strings.ToLower(twitchStatus.Stream.Channel.DisplayName) {
 		twitchStreamName += fmt.Sprintf(" (%s)", twitchStatus.Stream.Channel.Name)
+	}
+	var mentionText string
+	if entry.MentionRoleID != "" {
+		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
 
 	twitchChannelEmbed := &discordgo.MessageEmbed{
@@ -416,8 +458,8 @@ func (m *Twitch) postTwitchLiveToChannel(channelID string, twitchStatus TwitchSt
 	if twitchChannelEmbed.Description != "" {
 		twitchChannelEmbed.Description = strings.Trim(twitchChannelEmbed.Description, "\n")
 	}
-	_, err := helpers.SendComplex(channelID, &discordgo.MessageSend{
-		Content: fmt.Sprintf("<%s>", twitchStatus.Stream.Channel.URL),
+	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
+		Content: mentionText + fmt.Sprintf("<%s>", twitchStatus.Stream.Channel.URL),
 		Embed:   twitchChannelEmbed,
 	})
 	helpers.Relax(err)

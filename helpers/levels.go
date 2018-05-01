@@ -3,7 +3,6 @@ package helpers
 import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
-	"gitlab.com/project-d-collab/dhelpers/mdb"
 )
 
 func GetMaxBadgesForGuild(guildID string) (maxBadges int) {
@@ -23,7 +22,7 @@ func GetUserUserdata(userID string) (userdata models.ProfileUserdataEntry, err e
 		&userdata,
 	)
 
-	if mdb.ErrNotFound(err) {
+	if IsMdbNotFound(err) {
 		userdata.UserID = userID
 		newid, err := MDbInsert(models.ProfileUserdataTable, userdata)
 		userdata.ID = newid
