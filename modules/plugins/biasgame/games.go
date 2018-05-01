@@ -286,6 +286,12 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				updateImageInfo(msg, content)
 			})
 
+		} else if commandArgs[0] == "update-stats" {
+
+			helpers.RequireRobyulMod(msg, func() {
+				updateGameStats(msg, content)
+			})
+
 		} else if commandArgs[0] == "update" {
 
 			helpers.RequireRobyulMod(msg, func() {

@@ -1155,3 +1155,70 @@ MultiWinLoop:
 	helpers.SendComplex(msg.ChannelID, msgSend)
 
 }
+
+// updateGameStats will update saved game stats
+func updateGameStats(msg *discordgo.Message, content string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	// validate arguments
+	commandArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	commandArgs = commandArgs[1:]
+	if len(commandArgs) != 5 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	if commandArgs[4] != "boy" && commandArgs[4] != "girl" {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+
+	targetGroup := commandArgs[0]
+	targetName := commandArgs[1]
+	newGroup := commandArgs[2]
+	newName := commandArgs[3]
+	newGender := commandArgs[4]
+
+	// update is done in pairs, first the select query, and then the update.
+	//  update gamewinner, roundwinner, and round loser records
+	updateArray := []interface{}{
+		bson.M{"gamewinner.groupname": targetGroup, "gamewinner.name": targetName},
+		bson.M{"$set": bson.M{"gamewinner.groupname": newGroup, "gamewinner.name": newName, "gamewinner.gender": newGender}},
+
+		bson.M{"roundwinners": bson.M{"$elemMatch": bson.M{"groupname": targetGroup, "name": targetName}}},
+		bson.M{"$set": bson.M{"roundwinners.$.groupname": newGroup, "roundwinners.$.name": newName, "roundwinners.$.gender": newGender}},
+
+		bson.M{"roundlosers": bson.M{"$elemMatch": bson.M{"groupname": targetGroup, "name": targetName}}},
+		bson.M{"$set": bson.M{"roundlosers.$.groupname": newGroup, "roundlosers.$.name": newName, "roundlosers.$.gender": newGender}},
+	}
+
+	matched := 0
+	modified := 0
+
+	// update in a loop as $ is a positional operator and therefore not all array elements for the round will be updated immediatly. loop through and update them until completed
+	//   wish this wasn't needed but mgo doesn't have a proper way to do arrayfilter with update multi mongo operation
+	for true {
+
+		// run bulk operation to update records
+		bulkOperation := helpers.MdbCollection(models.BiasGameTable).Bulk()
+		bulkOperation.UpdateAll(updateArray...)
+		bulkResults, err := bulkOperation.Run()
+		if err != nil {
+			bgLog().Errorln("Bulk update error: ", err.Error())
+			return
+		}
+
+		matched += bulkResults.Matched
+		modified += bulkResults.Modified
+
+		// break when no more records are being modified
+		if bulkResults.Modified == 0 {
+			break
+		}
+	}
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Stats. Changed %s %s => %s %s\nRecords Found: %d \nRecords Updated: %d", targetGroup, targetName, newGroup, newName, matched, modified))
+}
