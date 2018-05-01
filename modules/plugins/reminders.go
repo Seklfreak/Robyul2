@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -87,8 +89,9 @@ func (r *Reminders) Init(session *discordgo.Session) {
 	// Setup custom reminder messages.
 	//  Could eventually be loaded from a db if we wanted guilds to set up there own. not an important enough plugin to need that atm
 	customReminderMsgMap = map[string]string{
-		"339227598544568340": "Ok I'll remind you <:nayoungok:424683077793611777>", // nayoung cord
-		"403003926720413699": "Ok I'll remind you <:nayoungok:424683077793611777>", // snakeyesz dev
+		"339227598544568340": "Ok I'll remind you at `%s` <:nayoungok:424683077793611777>", // nayoung cord
+		"403003926720413699": "Ok I'll remind you at `%s` <:nayoungok:424683077793611777>", // snakeyesz dev
+		"208673735580844032": "Ok I'll remind you at `%s` <:nayoungok:424683077793611777>", // sekl dev
 	}
 
 	cache.GetLogger().WithField("module", "reminders").Info("Started reminder loop (10s)")
@@ -146,7 +149,7 @@ func (r *Reminders) Action(command string, content string, msg *discordgo.Messag
 
 		// Check if guild has a custom message set
 		if customMsg, ok := customReminderMsgMap[channel.GuildID]; ok {
-			helpers.SendMessage(msg.ChannelID, customMsg)
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf(customMsg, r.Time.In(userLocation).Format(time.UnixDate)))
 		} else {
 			helpers.SendMessage(msg.ChannelID, "Ok I'll remind you at `"+r.Time.In(userLocation).Format(time.UnixDate)+" ` <:blobokhand:317032017164238848>")
 		}
