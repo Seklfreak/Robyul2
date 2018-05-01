@@ -890,14 +890,14 @@ MultiWinLoop:
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(bias.BiasImages)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolSingleWinRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolMultiWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: strconv.Itoa(totalGameWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: strconv.Itoa(totalRoundWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: strconv.Itoa(totalGames), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: strconv.Itoa(totalRounds), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: humanize.Comma(int64(totalGameWins)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: humanize.Comma(int64(totalRoundWins)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: humanize.Comma(int64(totalGames)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: humanize.Comma(int64(totalRounds)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%d wins)", userNameMostWins, highestUserWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%d wins)", guildNameMostWins, highestServerWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%s wins)", userNameMostWins, humanize.Comma(int64(highestUserWins))), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%s wins)", guildNameMostWins, humanize.Comma(int64(highestServerWins))), Inline: true})
 
 	// get random image from the thumbnail
 	imageIndex := rand.Intn(len(bias.BiasImages))
@@ -1132,14 +1132,14 @@ MultiWinLoop:
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Most Winning Member", Value: fmt.Sprintf("%s (%d wins)", mostWinningMember, mostWins), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupSingleWinRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupMultiWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: strconv.Itoa(totalGameWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: strconv.Itoa(totalRoundWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: strconv.Itoa(totalGames), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: strconv.Itoa(totalRounds), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: humanize.Comma(int64(totalGameWins)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: humanize.Comma(int64(totalRoundWins)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: humanize.Comma(int64(totalGames)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: humanize.Comma(int64(totalRounds)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%d wins)", userNameMostWins, highestUserWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%d wins)", guildNameMostWins, highestServerWins), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%s wins)", userNameMostWins, humanize.Comma(int64(highestUserWins))), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%s wins)", guildNameMostWins, humanize.Comma(int64(highestServerWins))), Inline: true})
 
 	// get random image from the thumbnail
 	imageIndex := rand.Intn(len(allGroupImages))
@@ -1220,5 +1220,5 @@ func updateGameStats(msg *discordgo.Message, content string) {
 		}
 	}
 
-	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Stats. Changed %s %s => %s %s\nRecords Found: %d \nRecords Updated: %d", targetGroup, targetName, newGroup, newName, matched, modified))
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Stats. Changed %s %s => %s %s\nRecords Found: %s \nRecords Updated: %s", targetGroup, targetName, newGroup, newName, humanize.Comma(int64(matched)), humanize.Comma(int64(modified))))
 }
