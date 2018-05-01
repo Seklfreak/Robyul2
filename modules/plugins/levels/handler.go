@@ -3497,7 +3497,11 @@ func (m *Levels) OnMessage(content string, msg *discordgo.Message, session *disc
 		return
 	}
 
-	go m.ProcessMessage(msg, session)
+	go func() {
+		defer helpers.Recover()
+
+		m.ProcessMessage(msg, session)
+	}()
 }
 
 func (m *Levels) ProcessMessage(msg *discordgo.Message, session *discordgo.Session) {
