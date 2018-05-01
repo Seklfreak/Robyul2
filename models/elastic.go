@@ -6,7 +6,6 @@ const (
 	ElasticIndexMessages           = "robyul-messages"
 	ElasticIndexJoins              = "robyul-joins"
 	ElasticIndexLeaves             = "robyul-leaves"
-	ElasticIndexReactions          = "robyul-reactions"
 	ElasticIndexPresenceUpdates    = "robyul-presence_updates"
 	ElasticIndexVanityInviteClicks = "robyul-vanity_invite_clicks"
 	ElasticIndexVoiceSessions      = "robyul-voice_session"
@@ -50,16 +49,6 @@ type ElasticLeave struct {
 	CreatedAt time.Time
 	GuildID   string
 	UserID    string
-}
-
-type ElasticReaction struct {
-	CreatedAt time.Time
-	UserID    string
-	MessageID string
-	ChannelID string
-	GuildID   string
-	EmojiID   string
-	EmojiName string
 }
 
 type ElasticPresenceUpdate struct {

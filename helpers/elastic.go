@@ -146,37 +146,6 @@ func ElasticOnGuildMemberRemove(session *discordgo.Session, member *discordgo.Gu
 	}()
 }
 
-func ElasticOnReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
-	channel, err := GetChannelWithoutApi(reaction.ChannelID)
-	if err != nil {
-		return
-	}
-
-	if IsBlacklistedGuild(channel.GuildID) {
-		return
-	}
-
-	if IsLimitedGuild(channel.GuildID) {
-		return
-	}
-
-	go func() {
-		defer Recover()
-
-		err := ElasticAddReaction(reaction.MessageReaction)
-		if err != nil {
-			if errE, ok := err.(*elastic.Error); ok {
-				if errE.Status == 429 {
-					cache.GetLogger().WithField("module", "elastic").Warn(
-						"unable to log MessageCreate event, too many requests")
-					return
-				}
-			}
-			RelaxLog(err)
-		}
-	}()
-}
-
 func ElasticOnPresenceUpdate(session *discordgo.Session, presence *discordgo.PresenceUpdate) {
 	go func() {
 		defer Recover()
@@ -459,42 +428,6 @@ func ElasticAddLeave(member *discordgo.Member) error {
 
 	_, err = cache.GetElastic().Index().
 		Index(models.ElasticIndexLeaves).
-		Type("doc").
-		BodyJson(elasticLeaveData).
-		Do(context.Background())
-	return err
-}
-
-func ElasticAddReaction(reaction *discordgo.MessageReaction) error {
-	if !cache.HasElastic() {
-		return errors.New("no elastic client")
-	}
-
-	var err error
-	channel, err := GetChannel(reaction.ChannelID)
-	if err != nil {
-		return err
-	}
-
-	elasticLeaveData := models.ElasticReaction{
-		CreatedAt: time.Now(),
-		UserID:    reaction.UserID,
-		MessageID: reaction.MessageID,
-		ChannelID: reaction.ChannelID,
-		GuildID:   channel.GuildID,
-		EmojiID:   reaction.Emoji.ID,
-		EmojiName: reaction.Emoji.Name,
-	}
-
-	if GuildSettingsGetCached(channel.GuildID).ChatlogDisabled {
-		elasticLeaveData.UserID = ""
-		elasticLeaveData.MessageID = ""
-		elasticLeaveData.EmojiID = ""
-		elasticLeaveData.EmojiName = ""
-	}
-
-	_, err = cache.GetElastic().Index().
-		Index(models.ElasticIndexReactions).
 		Type("doc").
 		BodyJson(elasticLeaveData).
 		Do(context.Background())

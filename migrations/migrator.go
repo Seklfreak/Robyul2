@@ -15,7 +15,6 @@ var migrations = []helpers.Callback{
 	m45_create_elastic_index_messages,
 	m46_create_elastic_index_joins,
 	m47_create_elastic_index_leaves,
-	m48_create_elastic_index_reactions,
 	m49_create_elastic_index_presence_updates,
 	m50_create_elastic_vanity_invite_clicks,
 	m51_reindex_elasticv5_to_v6,
