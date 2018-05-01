@@ -443,7 +443,7 @@
       "level-notification-enabled": "I will now display level up notifications.",
       "level-notification-autodelete-enabled": "I will delete level up notifications after %d seconds.",
       "level-notification-autodelete-disabled": "I will not delete level up notifications anymore.",
-      "new-profile-background-help-withbackground": "Your current background: `%s`.\nJust attach your 400x300px background image to this command and I will set it as yur background.\nYou can view a list of publicly available backgrounds to choose from here: <https://robyul.chat/profile/backgrounds>."
+      "new-profile-background-help-withbackground": "Your current background: `%s`.\nJust attach your 400x300px background image to this command and I will set it as your background.\nYou can view a list of publicly available backgrounds to choose from here: <https://robyul.chat/profile/backgrounds>."
     },
     "gallery": {
       "add-success": "Gallery successfully added. <:blobokhand:317032017164238848>",
