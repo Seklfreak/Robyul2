@@ -161,7 +161,7 @@ type Instagram_Safe_Entries struct {
 
 type InstagramPublicProfileFeed struct {
 	EntryData struct {
-		ProfilePage struct {
+		ProfilePage []struct {
 			LoggingPageID         string `json:"logging_page_id"`
 			ShowSuggestedProfiles bool   `json:"show_suggested_profiles"`
 			Graphql               struct {
@@ -231,7 +231,7 @@ type InstagramPublicProfileFeed struct {
 
 type InstagramSharedData struct {
 	EntryData struct {
-		PostPage struct {
+		PostPage []struct {
 			Graphql struct {
 				ShortcodeMedia struct {
 					Typename   string `json:"__typename"`
@@ -365,13 +365,13 @@ func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.Instag
 }
 
 func (m *Handler) extractInstagramSharedData(pageContent string) (sharedData string, err error) {
-	parts := strings.Split(pageContent, "window._sharedData=")
+	parts := strings.Split(pageContent, "window._sharedData = ")
 
 	if len(parts) < 2 {
 		return sharedData, errors.New("unable to parse shared data")
 	}
 
-	subParts := strings.Split(parts[1], ";\n")
+	subParts := strings.Split(parts[1], ";</script>")
 
 	if len(subParts) < 1 {
 		return sharedData, errors.New("unable to parse shared data")
