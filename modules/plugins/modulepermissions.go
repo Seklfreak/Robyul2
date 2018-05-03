@@ -223,7 +223,7 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 	guild, err := helpers.GetGuild(channel.GuildID)
 	helpers.Relax(err)
 
-	targetChannel, err := helpers.GetChannelFromMention(in, args[2])
+	targetChannel, err := helpers.GetChannelOfAnyTypeFromMention(in, args[2])
 	if err == nil && targetChannel != nil && targetChannel.ID != "" {
 		previousPerms := helpers.GetAllowedForChannel(targetChannel.GuildID, targetChannel.ID)
 		if previousPerms&permToAdd == permToAdd {
