@@ -87,7 +87,9 @@ func (m *Handler) checkInstagramPublicFeedLoop() {
 func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[string][]models.InstagramEntry, results chan<- int) {
 	defer func() {
 		helpers.Recover()
-		results <- len(jobs)
+		if results != nil && jobs != nil {
+			results <- len(jobs)
+		}
 	}()
 
 	currentProxy, err := helpers.GetRandomProxy()

@@ -24,7 +24,9 @@ func (m *Handler) getInformationAndPosts(username string, proxy http.Transport) 
 
 	var graphQlFeedResult InstagramPublicProfileFeed // TODO: new struct
 	err = json.Unmarshal([]byte(sharedDataText), &graphQlFeedResult)
-	helpers.Relax(err)
+	if err != nil {
+		return
+	}
 
 	if graphQlFeedResult.EntryData.ProfilePage == nil || len(graphQlFeedResult.EntryData.ProfilePage) < 0 ||
 		graphQlFeedResult.EntryData.ProfilePage[0].Graphql.User.ID == "" {

@@ -371,11 +371,11 @@ func (m *Handler) extractInstagramSharedData(pageContent string) (sharedData str
 		return sharedData, errors.New("unable to parse shared data")
 	}
 
-	subParts := strings.Split(parts[1], ";</script>")
+	subParts := strings.Split(parts[1], "};")
 
 	if len(subParts) < 1 {
 		return sharedData, errors.New("unable to parse shared data")
 	}
 
-	return subParts[0], nil
+	return subParts[0] + "}", nil
 }
