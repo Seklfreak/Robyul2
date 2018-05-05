@@ -292,7 +292,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 		} else if commandArgs[0] == "update-stats" {
 
 			helpers.RequireRobyulMod(msg, func() {
-				updateGameStats(msg, content)
+				updateGameStatsFromMsg(msg, content)
 			})
 
 		} else if commandArgs[0] == "update" {

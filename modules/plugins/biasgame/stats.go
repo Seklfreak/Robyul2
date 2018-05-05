@@ -1156,8 +1156,8 @@ MultiWinLoop:
 
 }
 
-// updateGameStats will update saved game stats
-func updateGameStats(msg *discordgo.Message, content string) {
+// updateGameStatsFromMsg will update saved game stats based on the discord message
+func updateGameStatsFromMsg(msg *discordgo.Message, content string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	// validate arguments
@@ -1176,11 +1176,14 @@ func updateGameStats(msg *discordgo.Message, content string) {
 		return
 	}
 
-	targetGroup := commandArgs[0]
-	targetName := commandArgs[1]
-	newGroup := commandArgs[2]
-	newName := commandArgs[3]
-	newGender := commandArgs[4]
+	matched, modified := updateGameStats(commandArgs[0], commandArgs[1], commandArgs[2], commandArgs[3], commandArgs[4])
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Stats. Changed %s %s => %s %s\nRecords Found: %s \nRecords Updated: %s", commandArgs[0], commandArgs[1], commandArgs[2], commandArgs[3], humanize.Comma(int64(matched)), humanize.Comma(int64(modified))))
+}
+
+// updateGameStats will update the stats based on the given parameters
+//  returns the amount of records found and the amount updated
+func updateGameStats(targetGroup, targetName, newGroup, newName, newGender string) (int, int) {
 
 	// update is done in pairs, first the select query, and then the update.
 	//  update gamewinner, roundwinner, and round loser records
@@ -1208,7 +1211,7 @@ func updateGameStats(msg *discordgo.Message, content string) {
 		bulkResults, err := bulkOperation.Run()
 		if err != nil {
 			bgLog().Errorln("Bulk update error: ", err.Error())
-			return
+			return 0, 0
 		}
 
 		matched += bulkResults.Matched
@@ -1220,5 +1223,5 @@ func updateGameStats(msg *discordgo.Message, content string) {
 		}
 	}
 
-	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Stats. Changed %s %s => %s %s\nRecords Found: %s \nRecords Updated: %s", targetGroup, targetName, newGroup, newName, humanize.Comma(int64(matched)), humanize.Comma(int64(modified))))
+	return matched, modified
 }

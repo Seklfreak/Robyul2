@@ -246,7 +246,7 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 	contentArgs = contentArgs[1:]
 
 	// confirm amount of args
-	if len(contentArgs) < 4 {
+	if len(contentArgs) < 5 {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
 		return
 	}
@@ -285,7 +285,13 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 			matchingBias.BiasImages = append(matchingBias.BiasImages, targetBias.BiasImages...)
 			allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
 
+			// update previous game stats
+			updateGameStats(targetBias.GroupName, targetBias.BiasName, matchingBias.GroupName, matchingBias.BiasName, matchingBias.Gender)
+
 		} else {
+
+			// update previous game stats
+			updateGameStats(targetBias.GroupName, targetBias.BiasName, newGroup, newName, contentArgs[4])
 
 			// update targetbias name and group
 			targetBias.BiasName = newName
@@ -293,6 +299,7 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 			if updateGender {
 				targetBias.Gender = contentArgs[4]
 			}
+
 		}
 	}
 	allBiasesMutex.Unlock()
