@@ -81,6 +81,8 @@ func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasC
 	nameMatch := false
 	var matchingBiasChoice *biasChoice
 
+	groupAliases := getGroupAliases()
+
 	// create map of group => idols in group
 	groupIdolMap := make(map[string][]*biasChoice)
 	for _, bias := range getAllBiases() {
@@ -93,9 +95,32 @@ func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasC
 		curGroup := strings.ToLower(reg.ReplaceAllString(k, ""))
 		sugGroup := strings.ToLower(reg.ReplaceAllString(searchGroup, ""))
 
-		// if groups match, set the suggested group to the current group
+		// check if group matches, if not check the aliases
 		if curGroup == sugGroup {
+
 			groupMatch = true
+		} else {
+
+			// if this group has any aliases check if the group we're
+			//   searching for matches one of the aliases
+		GroupLoop:
+			for aliasGroup, aliases := range groupAliases {
+				regGroup := strings.ToLower(reg.ReplaceAllString(aliasGroup, ""))
+				if regGroup != curGroup {
+					continue
+				}
+
+				for _, alias := range aliases {
+					regAlias := strings.ToLower(reg.ReplaceAllString(alias, ""))
+					if regAlias == sugGroup {
+						groupMatch = true
+						break GroupLoop
+					}
+				}
+			}
+		}
+
+		if groupMatch {
 
 			// check if the idols name matches
 			for _, idol := range v {
@@ -125,6 +150,8 @@ func getMatchingGroup(searchGroup string) (bool, string) {
 		allGroupsMap[bias.GroupName] = true
 	}
 
+	groupAliases := getGroupAliases()
+
 	// check if the group suggested matches a current group. do loose comparison
 	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
 	for k, _ := range allGroupsMap {
@@ -134,6 +161,22 @@ func getMatchingGroup(searchGroup string) (bool, string) {
 		// if groups match, set the suggested group to the current group
 		if curGroup == sugGroup {
 			return true, k
+		}
+
+		// if this group has any aliases check if the group we're
+		//   searching for matches one of the aliases
+		for aliasGroup, aliases := range groupAliases {
+			regGroup := strings.ToLower(reg.ReplaceAllString(aliasGroup, ""))
+			if regGroup != curGroup {
+				continue
+			}
+
+			for _, alias := range aliases {
+				regAlias := strings.ToLower(reg.ReplaceAllString(alias, ""))
+				if regAlias == sugGroup {
+					return true, k
+				}
+			}
 		}
 	}
 

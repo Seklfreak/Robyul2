@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -565,35 +564,20 @@ func loadUnresolvedSuggestions() {
 // does a loose comparison of the suggested idols and idols already in the game.
 func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 
-	// create map of group => idols in group
-	groupIdolMap := make(map[string][]string)
-	for _, bias := range getAllBiases() {
-		groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], bias.BiasName)
-	}
+	groupMatched, _, matchingBias := getMatchingIdolAndGroup(sug.GrouopName, sug.Name)
 
-	// check if the group suggested matches a current group. do loose comparison
-	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
-	for k, v := range groupIdolMap {
-		curGroup := strings.ToLower(reg.ReplaceAllString(k, ""))
-		sugGroup := strings.ToLower(reg.ReplaceAllString(sug.GrouopName, ""))
+	// if a matching idol was found then set the suggested name and group to match
+	if matchingBias != nil {
+		sug.GrouopName = matchingBias.GroupName
+		sug.GroupMatch = true
+		sug.Name = matchingBias.BiasName
+		sug.IdolMatch = true
 
-		// if groups match, set the suggested group to the current group
-		if curGroup == sugGroup {
+	} else if groupMatched {
+		// if the group matched, get the group name
+		if exist, realGroupName := getMatchingGroup(sug.GrouopName); exist {
+			sug.GrouopName = realGroupName
 			sug.GroupMatch = true
-			sug.GrouopName = k
-
-			// check if the idols name matches
-			for _, idolName := range v {
-				curName := strings.ToLower(reg.ReplaceAllString(idolName, ""))
-				sugName := strings.ToLower(reg.ReplaceAllString(sug.Name, ""))
-
-				if curName == sugName {
-					sug.IdolMatch = true
-					sug.Name = idolName
-					break
-				}
-			}
-			break
 		}
 	}
 }

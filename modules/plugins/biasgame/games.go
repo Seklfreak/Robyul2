@@ -196,6 +196,9 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 
 		gameIsReady = true
 
+		// load aliases
+		initAliases()
+
 		// set up suggestions channel
 		initSuggestionChannel()
 	}()
@@ -308,6 +311,31 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 		} else if isCommandAlias(commandArgs[0], "images") {
 
 			showImagesForIdol(msg, content, false)
+
+		} else if commandArgs[0] == "alias" {
+
+			if len(commandArgs) < 2 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
+
+			switch commandArgs[1] {
+			case "add":
+				helpers.RequireRobyulMod(msg, func() {
+					addGroupAlias(msg, content)
+				})
+				break
+			case "list":
+				listGroupAliases(msg)
+				break
+			case "delete", "del":
+				helpers.RequireRobyulMod(msg, func() {
+					deleteGroupAlias(msg, content)
+				})
+				break
+			default:
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			}
 
 		} else if isCommandAlias(commandArgs[0], "current") {
 			displayCurrentGameStats(msg)
