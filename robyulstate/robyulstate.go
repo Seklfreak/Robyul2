@@ -291,7 +291,7 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 	}
 
 	// remove guild emoji not in emojis
-	for i, oldEmoji := range s.guildMap[guildID].Emojis {
+	for _, oldEmoji := range s.guildMap[guildID].Emojis {
 		emojiRemoved := true
 		for _, newEmoji := range emojis {
 			if newEmoji.ID == oldEmoji.ID {
@@ -299,7 +299,14 @@ func (s *Robyulstate) EmojisUpdate(guildID string, emojis []*discordgo.Emoji) er
 			}
 		}
 		if emojiRemoved {
-			s.guildMap[guildID].Emojis = append(s.guildMap[guildID].Emojis[:i], s.guildMap[guildID].Emojis[i+1:]...)
+			newEmojis := make([]*discordgo.Emoji, 0)
+			for _, previousEmoji := range s.guildMap[guildID].Emojis {
+				if previousEmoji.ID == oldEmoji.ID {
+					continue
+				}
+				newEmojis = append(newEmojis, previousEmoji)
+			}
+			s.guildMap[guildID].Emojis = newEmojis
 			// emoji got removed
 			//fmt.Println("emoji removed", oldEmoji.Name)
 			go helpers.OnEventlogEmojiDelete(guildID, oldEmoji)
