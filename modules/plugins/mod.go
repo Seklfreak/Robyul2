@@ -2207,14 +2207,44 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 	case "pin": // [p]pin <channel> <message id>
 		helpers.RequireMod(msg, func() {
 			args := strings.Fields(content)
-			if len(args) < 2 {
+
+			sourceChannel, err := helpers.GetChannel(msg.ChannelID)
+			helpers.Relax(err)
+
+			var targetMessageID string
+			var targetChannelID string
+			if len(sourceChannel.Messages) >= 1 {
+				var targetMessage *discordgo.Message
+				for _, message := range sourceChannel.Messages {
+					if message.ID == msg.ID {
+						continue
+					}
+					if targetMessage == nil {
+						targetMessage = message
+						continue
+					}
+					targetTime, _ := targetMessage.Timestamp.Parse()
+					nextTime, _ := message.Timestamp.Parse()
+					if nextTime.After(targetTime) {
+						targetMessage = message
+					}
+				}
+				if targetMessage != nil {
+					targetMessageID = targetMessage.ID
+				}
+				targetChannelID = sourceChannel.ID
+			}
+			if len(args) >= 2 {
+				targetChannelID = args[0]
+				targetMessageID = args[1]
+			}
+
+			if targetMessageID == "" || targetChannelID == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
 				return
 			}
 
-			sourceChannel, err := helpers.GetChannel(msg.ChannelID)
-			helpers.Relax(err)
-			targetChannel, err := helpers.GetChannelFromMention(msg, args[0])
+			targetChannel, err := helpers.GetChannelFromMention(msg, targetChannelID)
 			if err != nil || targetChannel.ID == "" {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				return
@@ -2224,7 +2254,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
-			targetMessage, err := session.ChannelMessage(targetChannel.ID, args[1])
+			targetMessage, err := session.ChannelMessage(targetChannel.ID, targetMessageID)
 			if err != nil {
 				if errD, ok := err.(*discordgo.RESTError); ok {
 					if errD.Message.Code == discordgo.ErrCodeUnknownMessage || errD.Message.Code == discordgo.ErrCodeMissingAccess {
@@ -2249,7 +2279,9 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			var message string
 			if !alreadyPinned {
 				err = session.ChannelMessagePin(targetMessage.ChannelID, targetMessage.ID)
-				message = helpers.GetText("plugins.mod.pin-success")
+				if targetChannel.ID != sourceChannel.ID {
+					message = helpers.GetText("plugins.mod.pin-success")
+				}
 			} else {
 				err = session.ChannelMessageUnpin(targetMessage.ChannelID, targetMessage.ID)
 				message = helpers.GetText("plugins.mod.unpin-success")
@@ -2264,12 +2296,18 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.pin-error-limit"))
 						return
 					}
+					if errD.Message.Code == discordgo.ErrCodeCannotExecuteActionOnSystemMessage {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mod.pin-error-system-message"))
+						return
+					}
 				}
 			}
 			helpers.Relax(err)
 
-			_, err = helpers.SendMessage(msg.ChannelID, message)
-			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			if message != "" {
+				_, err = helpers.SendMessage(msg.ChannelID, message)
+				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			}
 			return
 		})
 		return

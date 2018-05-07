@@ -155,7 +155,8 @@
       "pin-success": "I pinned the message! <:blobpin:430392774198689825>",
       "unpin-success": "I unpinned the message! <:blobpin:430392774198689825>",
       "pin-error-permissions": "I'm not allowed to pin messages. <a:ablobcry:393869333740126219>",
-      "pin-error-limit": "The pin limit in this channel has been reached. <a:ablobshocked:394026914076950539>\nPlease unpin a message before pinning more."
+      "pin-error-limit": "The pin limit in this channel has been reached. <a:ablobshocked:394026914076950539>\nPlease unpin a message before pinning more.",
+      "pin-error-system-message": "Sorry, I cannot pin system messages!"
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",
