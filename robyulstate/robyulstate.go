@@ -205,6 +205,7 @@ func (s *Robyulstate) GuildUpdate(guild *discordgo.Guild) error {
 	s.Lock()
 	defer s.Unlock()
 
+	// add new guild
 	if _, ok := s.guildMap[guild.ID]; !ok || s.guildMap[guild.ID] == nil {
 		guildCopy := new(discordgo.Guild)
 		*guildCopy = *guild
@@ -215,16 +216,18 @@ func (s *Robyulstate) GuildUpdate(guild *discordgo.Guild) error {
 		s.guildMap[guild.ID].Icon != guild.Icon ||
 		s.guildMap[guild.ID].Region != guild.Region ||
 		s.guildMap[guild.ID].AfkChannelID != guild.AfkChannelID ||
-		s.guildMap[guild.ID].EmbedChannelID != guild.EmbedChannelID ||
+		//s.guildMap[guild.ID].EmbedChannelID != guild.EmbedChannelID || sent with every first update
 		s.guildMap[guild.ID].OwnerID != guild.OwnerID ||
 		s.guildMap[guild.ID].Splash != guild.Splash ||
 		s.guildMap[guild.ID].AfkTimeout != guild.AfkTimeout ||
 		s.guildMap[guild.ID].VerificationLevel != guild.VerificationLevel ||
-		s.guildMap[guild.ID].EmbedEnabled != guild.EmbedEnabled ||
+		//s.guildMap[guild.ID].EmbedEnabled != guild.EmbedEnabled || sent with every first update
 		s.guildMap[guild.ID].DefaultMessageNotifications != guild.DefaultMessageNotifications {
 		// guild got updated
 		//fmt.Println("guild update", s.guildMap[guild.ID].Name, "to", guild.Name)
-		go helpers.OnEventlogGuildUpdate(guild.ID, s.guildMap[guild.ID], guild)
+		guildCopy := new(discordgo.Guild)
+		*guildCopy = *s.guildMap[guild.ID]
+		go helpers.OnEventlogGuildUpdate(guild.ID, guildCopy, guild)
 	}
 
 	guildCopy := new(discordgo.Guild)

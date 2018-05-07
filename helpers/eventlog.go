@@ -662,14 +662,17 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 		})
 	}
 
-	if oldGuild.EmbedChannelID != newGuild.EmbedChannelID {
-		changes = append(changes, models.ElasticEventlogChange{
-			Key:      "guild_embedchannelid",
-			OldValue: oldGuild.EmbedChannelID,
-			NewValue: newGuild.EmbedChannelID,
-			Type:     models.EventlogTargetTypeChannel,
-		})
-	}
+	/*
+		sent with every first update
+		if oldGuild.EmbedChannelID != newGuild.EmbedChannelID {
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "guild_embedchannelid",
+				OldValue: oldGuild.EmbedChannelID,
+				NewValue: newGuild.EmbedChannelID,
+				Type:     models.EventlogTargetTypeChannel,
+			})
+		}
+	*/
 
 	if oldGuild.OwnerID != newGuild.OwnerID {
 		changes = append(changes, models.ElasticEventlogChange{
@@ -733,13 +736,16 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 		})
 	}
 
-	if oldGuild.EmbedEnabled != newGuild.EmbedEnabled {
-		changes = append(changes, models.ElasticEventlogChange{
-			Key:      "guild_embedenabled",
-			OldValue: StoreBoolAsString(oldGuild.EmbedEnabled),
-			NewValue: StoreBoolAsString(newGuild.EmbedEnabled),
-		})
-	}
+	/*
+		sent with every first update
+		if oldGuild.EmbedEnabled != newGuild.EmbedEnabled {
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "guild_embedenabled",
+				OldValue: StoreBoolAsString(oldGuild.EmbedEnabled),
+				NewValue: StoreBoolAsString(newGuild.EmbedEnabled),
+			})
+		}
+	*/
 
 	if oldGuild.DefaultMessageNotifications != newGuild.DefaultMessageNotifications {
 		changes = append(changes, models.ElasticEventlogChange{
