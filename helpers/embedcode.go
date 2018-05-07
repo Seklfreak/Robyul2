@@ -73,7 +73,7 @@ func GetEmbedCode(targetMessage *discordgo.Message) (embedCode string) {
 
 	embedCode = strings.TrimSuffix(embedCode, " | ")
 
-	return embedCode
+	return ReplaceEmojis(embedCode)
 }
 
 func CleanEmbedValue(input string) (output string) {

@@ -1080,7 +1080,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						helpers.Relax(err)
 					}
 				}
-				newMessage := fmt.Sprintf("```%s```", targetMessage.Content)
+				newMessage := fmt.Sprintf("```%s```", helpers.ReplaceEmojis(targetMessage.Content))
 				_, err = helpers.SendMessage(msg.ChannelID, newMessage)
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			} else {

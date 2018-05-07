@@ -1588,3 +1588,21 @@ func GetInviteWithCounts(inviteCode string) (invite *InviteWithCounts, err error
 
 	return invite, nil
 }
+
+// ReplaceEmojis, replaces emoji mentions with text
+func ReplaceEmojis(content string) (result string) {
+	var replaceWith string
+
+	emojiPartsList := MentionRegexStrict.FindAllStringSubmatch(content, -1)
+	if len(emojiPartsList) > 0 {
+		for _, emojiParts := range emojiPartsList {
+			replaceWith = ":" + emojiParts[1] + ":"
+
+			if replaceWith != "" {
+				content = strings.Replace(content, emojiParts[0], replaceWith, -1)
+			}
+		}
+	}
+
+	return content
+}
