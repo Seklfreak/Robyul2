@@ -289,6 +289,12 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 				updateImageInfo(msg, content)
 			})
 
+		} else if commandArgs[0] == "update-group" {
+
+			helpers.RequireRobyulMod(msg, func() {
+				updateGroupInfo(msg, content)
+			})
+
 		} else if commandArgs[0] == "update-stats" {
 
 			helpers.RequireRobyulMod(msg, func() {
@@ -298,7 +304,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 		} else if commandArgs[0] == "update" {
 
 			helpers.RequireRobyulMod(msg, func() {
-				updateIdolInfo(msg, content)
+				updateIdolInfoFromMsg(msg, content)
 			})
 
 		} else if isCommandAlias(commandArgs[0], "image-ids") {

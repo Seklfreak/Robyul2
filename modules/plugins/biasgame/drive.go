@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	humanize "github.com/dustin/go-humanize"
 
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
@@ -235,8 +236,64 @@ func makeBiasChoiceFromBiasEntry(entry models.BiasGameIdolEntry) biasChoice {
 	return newBiasChoice
 }
 
-// updateIdolInfo updates a idols group, name, and/or gender depending on args
-func updateIdolInfo(msg *discordgo.Message, content string) {
+// updateGroupStats if a target group is found, will update the group name
+//  for all members as well as updating all the stats for those members
+func updateGroupInfo(msg *discordgo.Message, content string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	contentArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+	contentArgs = contentArgs[1:]
+
+	// confirm amount of args
+	if len(contentArgs) != 2 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+
+	targetGroup := contentArgs[0]
+	newGroup := contentArgs[1]
+
+	// confirm target group exists
+	if matched, realGroupName := getMatchingGroup(targetGroup); !matched {
+		helpers.SendMessage(msg.ChannelID, "No group found with that exact name.")
+		return
+	} else {
+		targetGroup = realGroupName
+	}
+
+	// update all idols in the target group
+	var idolsUpdated int
+	var allStatsUpdated int
+	for _, idol := range getAllBiases() {
+		if idol.GroupName == targetGroup {
+
+			recordsUpdated, _, statsUpdated := updateIdolInfo(idol.GroupName, idol.BiasName, newGroup, idol.BiasName, idol.Gender)
+			if recordsUpdated != 0 {
+				idolsUpdated++
+				allStatsUpdated += statsUpdated
+			}
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Idol: **%s** %s => **%s** %s \nStats Updated: %s", targetGroup, idol.BiasName, newGroup, idol.BiasName, humanize.Comma(int64(statsUpdated))))
+
+			// sleep so mongo doesn't get flooded with update reqeusts
+			time.Sleep(time.Second / 5)
+		}
+	}
+
+	// check if an idol record was updated
+	if idolsUpdated == 0 {
+		helpers.SendMessage(msg.ChannelID, "No Idols found in the given group.")
+	} else {
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Group Information updated. \nIdols Updated: %d \nTotal Stats Updated: %s", idolsUpdated, humanize.Comma(int64(allStatsUpdated))))
+	}
+}
+
+// updateIdolInfoFromMsg updates a idols group, name, and/or gender depending on args
+func updateIdolInfoFromMsg(msg *discordgo.Message, content string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	contentArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -251,26 +308,42 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 		return
 	}
 
+	// validate gender
+	if contentArgs[4] != "boy" && contentArgs[4] != "girl" {
+		helpers.SendMessage(msg.ChannelID, "Invalid gender. Gender must be exactly 'girl' or 'boy'. No information was updated.")
+		return
+	}
+
 	targetGroup := contentArgs[0]
 	targetName := contentArgs[1]
 	newGroup := contentArgs[2]
 	newName := contentArgs[3]
-	updateGender := false
+	newGender := contentArgs[4]
 
-	// if a gender was passed, make sure its valid
-	if len(contentArgs) == 5 {
-		updateGender = true
-		if contentArgs[4] != "boy" && contentArgs[4] != "girl" {
-			helpers.SendMessage(msg.ChannelID, "Invalid gender. Gender must be exactly 'girl' or 'boy'. No information was updated.")
-			return
-		}
+	// update idol
+	recordsUpdated, _, statsUpdated := updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender)
+
+	// check if an idol record was updated
+	if recordsUpdated == 0 {
+		helpers.SendMessage(msg.ChannelID, "No Idols found with that exact group and name.")
+	} else {
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Idol Information updated. \nOld: **%s** %s \nNew: **%s** %s \nStats Updated: %d", targetGroup, targetName, newGroup, newName, statsUpdated))
 	}
+}
+
+// updateIdolInfo updates a idols group, name, and/or gender depending on args
+//  return 1: bias records update
+//  return 2: stats records found
+//  return 3: stats records update
+func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string) (int, int, int) {
 
 	// attempt to find a matching idol of the new group and name,
 	_, _, matchingBias := getMatchingIdolAndGroup(newGroup, newName)
 
 	// update biases in memory
 	recordsFound := 0
+	statsFound := 0
+	statsUpdated := 0
 	allBiases := getAllBiases()
 	allBiasesMutex.Lock()
 	for biasIndex, targetBias := range allBiases {
@@ -286,43 +359,31 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 			allBiases = append(allBiases[:biasIndex], allBiases[biasIndex+1:]...)
 
 			// update previous game stats
-			updateGameStats(targetBias.GroupName, targetBias.BiasName, matchingBias.GroupName, matchingBias.BiasName, matchingBias.Gender)
+			statsFound, statsUpdated = updateGameStats(targetBias.GroupName, targetBias.BiasName, matchingBias.GroupName, matchingBias.BiasName, matchingBias.Gender)
 
 		} else {
 
 			// update previous game stats
-			updateGameStats(targetBias.GroupName, targetBias.BiasName, newGroup, newName, contentArgs[4])
+			statsFound, statsUpdated = updateGameStats(targetBias.GroupName, targetBias.BiasName, newGroup, newName, newGender)
 
 			// update targetbias name and group
 			targetBias.BiasName = newName
 			targetBias.GroupName = newGroup
-			if updateGender {
-				targetBias.Gender = contentArgs[4]
-			}
-
+			targetBias.Gender = newGender
 		}
 	}
 	allBiasesMutex.Unlock()
 	setAllBiases(allBiases)
 
-	// check if nothing was found
-	if recordsFound == 0 {
-		helpers.SendMessage(msg.ChannelID, "No Idols found with that exact group and name.")
-		return
-	}
-
 	// update database
 	var biasesToUpdate []models.BiasGameIdolEntry
-	err = helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&biasesToUpdate)
+	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&biasesToUpdate)
 	helpers.Relax(err)
 
 	for _, bias := range biasesToUpdate {
 		bias.Name = newName
 		bias.GroupName = newGroup
-
-		if len(contentArgs) == 5 && (contentArgs[4] == "boy" || contentArgs[4] == "girl") {
-			bias.Gender = contentArgs[4]
-		}
+		bias.Gender = newGender
 
 		err := helpers.MDbUpsertID(models.BiasGameIdolsTable, bias.ID, bias)
 		helpers.Relax(err)
@@ -333,7 +394,7 @@ func updateIdolInfo(msg *discordgo.Message, content string) {
 		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
 	}
 
-	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Idol Information updated. Old: %s %s | New: %s %s", targetGroup, targetName, newGroup, newName))
+	return recordsFound, statsFound, statsUpdated
 }
 
 // runGoogleDriveMigration Should only be run on rare occasions when issues occur with object storage or setting up a new object storage
