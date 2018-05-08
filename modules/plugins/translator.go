@@ -16,7 +16,6 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/text/language"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
@@ -75,56 +74,47 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 		return
 	}
 
-	translations, err := t.client.Translate(
-		t.ctx,
-		parts[2:],
-		target,
-		&translate.Options{
-			Format: translate.Text,
-			Source: source,
-			Model:  "nmt",
-		},
-	)
+	fullInputText := ""
+	for _, partInputText := range parts[2:] {
+		fullInputText += " " + partInputText
+	}
+	fullInputText = strings.TrimSpace(strings.Replace(fullInputText, "\n", " ", -1))
+	targetInput := ""
+	var targetInputs []string
 
-	if err != nil {
-		if err, ok := err.(*googleapi.Error); ok {
-			if err.Code == 400 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.translator.unknown_lang"))
-				return
+	for _, word := range strings.Fields(fullInputText) {
+		if len(targetInput)+len(word)+1 < 200 {
+			targetInput += " " + word
+		} else {
+			targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
+			targetInput = ""
+			if len(word) < 200 {
+				targetInput = word
 			}
 		}
-		//helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.translator.error"))
-		helpers.SendError(msg, err)
-		return
 	}
+	targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
 
 	m := ""
-	for _, piece := range translations {
-		m += piece.Text + " "
+	for _, partToTranslate := range targetInputs {
+		translations, err := t.client.Translate(
+			t.ctx,
+			strings.Fields(partToTranslate),
+			target,
+			&translate.Options{
+				Format: translate.Text,
+				Source: source,
+				Model:  "nmt",
+			},
+		)
+		helpers.Relax(err)
+		for _, piece := range translations {
+			m += piece.Text + " "
+		}
 	}
 
 	translatedNaverResult := ""
 	if (strings.ToLower(source.String()) == "en" || strings.ToLower(source.String()) == "ko") && (strings.ToLower(target.String()) == "en" || strings.ToLower(target.String()) == "ko") {
-		fullInputText := ""
-		for _, partInputText := range parts[2:] {
-			fullInputText += " " + partInputText
-		}
-		fullInputText = strings.TrimSpace(strings.Replace(fullInputText, "\n", " ", -1))
-		targetInput := ""
-		var targetInputs []string
-		for _, word := range strings.Fields(fullInputText) {
-			if len(targetInput)+len(word)+1 < 200 {
-				targetInput += " " + word
-			} else {
-				targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
-				targetInput = ""
-				if len(word) < 200 {
-					targetInput = word
-				}
-			}
-		}
-		targetInputs = append(targetInputs, strings.TrimSpace(targetInput))
-
 		for _, partToTranslaste := range targetInputs {
 			data := url.Values{}
 			decoded, err := base64.StdEncoding.DecodeString("rlWxnJA0VwczLJkmZSwiZGljdERpc3BsYXkiOjUsInNvdXJjZSI6ImVuIiwidGFyZ2V0Ijoia28iLCJ0ZXh0IjoiQUFBQUFBQUFBQSJ9")
