@@ -62,19 +62,19 @@ func TestSearch(t *testing.T) {
 	if results[0].Title != "Google" {
 		t.Fatalf("google.search() first result's Title is not \"Google\" but \"%s\"", results[0].Title)
 	}
-	if results[0].Link != "https://www.google.com/" {
-		t.Fatalf("google.search() first result's Link is not \"https://www.google.com/\" but \"%s\"", results[0].Link)
+	if !strings.Contains(results[0].Link, "www.google.com") {
+		t.Fatalf("google.search() first result's Link \"%s\" does not contain \"www.google.com\" but ", results[0].Link)
 	}
 	if !strings.Contains(results[0].Text, "Search") {
 		t.Fatalf("google.search() first result's Text does not contain \"Search\", it is \"%s\"", results[0].Text)
 	}
 
-	sfwResult, err := search("porn", false, nil)
-	if err != nil {
-		t.Fatalf("google.search() returned an error: %s", err.Error())
+	_, err = search("porn", false, nil)
+	if err == nil {
+		t.Fatalf("google.search() returned no error, should return an error")
 	}
-	if len(sfwResult) <= 0 {
-		t.Fatal("google.search() returned less than one result")
+	if err != nil && !strings.Contains(err.Error(), "no search results") {
+		t.Fatalf("google.search() returned an unexpected error: %s", err.Error())
 	}
 	nsfwResult, err := search("porn", true, nil)
 	if err != nil {
