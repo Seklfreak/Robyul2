@@ -437,7 +437,7 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				helpers.Relax(err)
 
 				mentionRole := new(discordgo.Role)
-				if len(args) >= 4 && args[3] != "discord-embed" {
+				if len(args) >= 4 && (args[3] != "discord-embed" && args[3] != "text") {
 					mentionRoleName := args[3]
 					serverRoles, err := session.GuildRoles(targetGuild.ID)
 					if err != nil {
@@ -463,6 +463,9 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				postMode := models.TwitterPostModeRobyulEmbed
 				if strings.Contains(strings.ToLower(content), " discord-embed") {
 					postMode = models.TwitterPostModeDiscordEmbed
+				}
+				if strings.Contains(strings.ToLower(content), " text") {
+					postMode = models.TwitterPostModeText
 				}
 				// Create DB Entries
 				var dbTweets []models.TwitterTweetEntry
@@ -502,7 +505,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				switch postMode {
 				case models.TwitterPostModeDiscordEmbed:
 					postModeText = "discord embed"
-					break
+				case models.TwitterPostModeText:
+					postModeText = "text"
 				}
 
 				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, helpers.MdbIdToHuman(newID),
@@ -575,7 +579,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 					switch entryBucket.PostMode {
 					case models.TwitterPostModeDiscordEmbed:
 						postModeText = "discord embed"
-						break
+					case models.TwitterPostModeText:
+						postModeText = "text"
 					}
 
 					_, err = helpers.EventlogLog(time.Now(), entryBucket.GuildID, helpers.MdbIdToHuman(entryBucket.ID),
@@ -644,7 +649,8 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 				switch entry.PostMode {
 				case models.TwitterPostModeDiscordEmbed:
 					specialText += " as discord embed"
-					break
+				case models.TwitterPostModeText:
+					specialText += " as text"
 				}
 				if entry.MentionRoleID != "" {
 					role, err := session.State.Role(currentChannel.GuildID, entry.MentionRoleID)
@@ -738,10 +744,34 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 }
 
 func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User, entry models.TwitterEntry) {
-	if entry.PostMode == models.TwitterPostModeDiscordEmbed {
+	if entry.PostMode == models.TwitterPostModeDiscordEmbed || entry.PostMode == models.TwitterPostModeText {
 		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr))
+		if entry.PostMode == models.TwitterPostModeText {
+			content = "<" + content + ">"
+		}
 		if entry.MentionRoleID != "" {
 			content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
+		}
+		if entry.PostMode == models.TwitterPostModeText {
+			// hide URL previews
+			content += "\n" + helpers.URLRegex.ReplaceAllStringFunc(tweet.Text, func(link string) string {
+				return "<" + link + ">"
+			})
+		}
+		if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
+			content += "\n"
+			for _, mediaUrl := range tweet.ExtendedEntities.Media {
+				switch mediaUrl.Type {
+				case "video", "animated_gif":
+					if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
+						content += m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL + "\n"
+					} else {
+						content += m.maxQualityMediaUrl(mediaUrl.DisplayURL) + "\n"
+					}
+				default:
+					content += m.maxQualityMediaUrl(mediaUrl.MediaURLHttps) + "\n"
+				}
+			}
 		}
 
 		_, err := helpers.SendComplex(
@@ -749,7 +779,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 				Content: content,
 			})
 		if err != nil {
-			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (discord embed mode): #%d to channel: #%s failed: %s", tweet.ID, channelID, err))
+			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (discord embed mode): #%s to channel: #%s failed: %s", tweet.IDStr, channelID, err))
 		}
 		return
 	}
@@ -837,10 +867,34 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 }
 
 func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.Tweet, twitterUser *anaconda.User, entry models.TwitterEntry) {
-	if entry.PostMode == models.TwitterPostModeDiscordEmbed {
+	if entry.PostMode == models.TwitterPostModeDiscordEmbed || entry.PostMode == models.TwitterPostModeText {
 		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IdStr))
+		if entry.PostMode == models.TwitterPostModeText {
+			content = "<" + content + ">"
+		}
 		if entry.MentionRoleID != "" {
 			content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
+		}
+		if entry.PostMode == models.TwitterPostModeText {
+			// hide URL previews
+			content += "\n" + helpers.URLRegex.ReplaceAllStringFunc(tweet.Text, func(link string) string {
+				return "<" + link + ">"
+			})
+		}
+		if len(tweet.ExtendedEntities.Media) > 0 {
+			content += "\n"
+			for _, mediaUrl := range tweet.ExtendedEntities.Media {
+				switch mediaUrl.Type {
+				case "video", "animated_gif":
+					if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url != "" {
+						content += m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url + "\n"
+					} else {
+						content += m.maxQualityMediaUrl(mediaUrl.Display_url) + "\n"
+					}
+				default:
+					content += m.maxQualityMediaUrl(mediaUrl.Media_url_https) + "\n"
+				}
+			}
 		}
 
 		_, err := helpers.SendComplex(

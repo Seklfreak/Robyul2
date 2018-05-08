@@ -18,4 +18,7 @@ var (
 	// MentionRegexStrict matches Discord Emoji
 	// Source: Discord API Server => ?tag discordregex
 	MentionRegexStrict = regexp.MustCompile(`<a?:(\w+):(\d+)>`)
+
+	// URLRege matches a URL on Discord
+	URLRegex = regexp.MustCompile(`((?:https?|steam):\/\/[^\s<]+[^<.,:;"'\]\s])`)
 )

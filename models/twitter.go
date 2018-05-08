@@ -7,6 +7,7 @@ const (
 
 	TwitterPostModeRobyulEmbed TwitterPostMode = iota
 	TwitterPostModeDiscordEmbed
+	TwitterPostModeText
 )
 
 type TwitterPostMode int
