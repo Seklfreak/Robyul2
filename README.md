@@ -15,6 +15,7 @@ Robyul provides various features with the needs of KPop Servers in mind, some ex
 - Translation (using enhanced translation for korean powered by naver openAPI)
 - LastFM (including summary of the lastFM usage on a whole discord)
 - Advanced Bias Role assignment (Multiple Levels of Roles and more)
+- Biasgame
 - Music Charts (iChart, Melon, Gaon)
 - Keyword Notifications
 - Level System (Including customizable profiles, leaderboards, tying roles to levels, reputation system)
