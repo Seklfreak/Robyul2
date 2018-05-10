@@ -347,7 +347,8 @@ func (m *Handler) retryOnError(err error) (retry bool) {
 			strings.Contains(err.Error(), "expected status 200; got 429") ||
 			strings.Contains(err.Error(), "Please wait a few minutes before you try again.") ||
 			strings.Contains(err.Error(), "expected status 200; got 500") ||
-			strings.Contains(err.Error(), "expected status 200; got 502") {
+			strings.Contains(err.Error(), "expected status 200; got 502") ||
+			strings.Contains(err.Error(), "expected status 200; got 503") {
 			return true
 		}
 	}
