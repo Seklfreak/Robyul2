@@ -14,18 +14,19 @@ func UpdateBotlists() {
 	defer Recover()
 
 	numOfGuilds := len(cache.GetSession().State.Guilds)
-	_ = numOfGuilds
 
-	/*
-		err := updateDiscordBotsOrg(numOfGuilds)
-		if err != nil {
-			RelaxLog(err)
-		}
-	*/
+	err := updateDiscordBotsOrg(numOfGuilds)
+	if err != nil {
+		RelaxLog(err)
+	}
 }
 
 // https://discordbots.org/bot/283848369250500608
 func updateDiscordBotsOrg(numOfGuilds int) (err error) {
+	if GetConfig().Path("botlists.discordbotsorg-token").Data().(string) == "" {
+		return nil
+	}
+
 	token := GetConfig().Path("botlists.discordbotsorg-token").Data().(string)
 
 	if token == "" {
