@@ -757,19 +757,19 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 			content += "\n" + helpers.URLRegex.ReplaceAllStringFunc(tweet.Text, func(link string) string {
 				return "<" + link + ">"
 			})
-		}
-		if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
-			content += "\n"
-			for _, mediaUrl := range tweet.ExtendedEntities.Media {
-				switch mediaUrl.Type {
-				case "video", "animated_gif":
-					if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
-						content += m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL + "\n"
-					} else {
-						content += m.maxQualityMediaUrl(mediaUrl.DisplayURL) + "\n"
+			if tweet.ExtendedEntities != nil && len(tweet.ExtendedEntities.Media) > 0 {
+				content += "\n"
+				for _, mediaUrl := range tweet.ExtendedEntities.Media {
+					switch mediaUrl.Type {
+					case "video", "animated_gif":
+						if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL != "" {
+							content += m.bestVideoVariant(mediaUrl.VideoInfo.Variants).URL + "\n"
+						} else {
+							content += m.maxQualityMediaUrl(mediaUrl.DisplayURL) + "\n"
+						}
+					default:
+						content += m.maxQualityMediaUrl(mediaUrl.MediaURLHttps) + "\n"
 					}
-				default:
-					content += m.maxQualityMediaUrl(mediaUrl.MediaURLHttps) + "\n"
 				}
 			}
 		}
@@ -880,19 +880,20 @@ func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.T
 			content += "\n" + helpers.URLRegex.ReplaceAllStringFunc(tweet.Text, func(link string) string {
 				return "<" + link + ">"
 			})
-		}
-		if len(tweet.ExtendedEntities.Media) > 0 {
-			content += "\n"
-			for _, mediaUrl := range tweet.ExtendedEntities.Media {
-				switch mediaUrl.Type {
-				case "video", "animated_gif":
-					if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url != "" {
-						content += m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url + "\n"
-					} else {
-						content += m.maxQualityMediaUrl(mediaUrl.Display_url) + "\n"
+			// link medias
+			if len(tweet.ExtendedEntities.Media) > 0 {
+				content += "\n"
+				for _, mediaUrl := range tweet.ExtendedEntities.Media {
+					switch mediaUrl.Type {
+					case "video", "animated_gif":
+						if len(mediaUrl.VideoInfo.Variants) > 0 && m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url != "" {
+							content += m.bestAnacondaVideoVariant(mediaUrl.VideoInfo.Variants).Url + "\n"
+						} else {
+							content += m.maxQualityMediaUrl(mediaUrl.Display_url) + "\n"
+						}
+					default:
+						content += m.maxQualityMediaUrl(mediaUrl.Media_url_https) + "\n"
 					}
-				default:
-					content += m.maxQualityMediaUrl(mediaUrl.Media_url_https) + "\n"
 				}
 			}
 		}
