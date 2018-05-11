@@ -36,6 +36,7 @@ var (
 		"308942526570561536", // TrelleIRC (Kakkela, Webhook)
 		"430089364417150976", // TrelleIRC (Kakkela, Webhook)
 	}
+	generatedDelimiterCombinations []delimiterCombination
 )
 
 const (
@@ -52,6 +53,7 @@ func (m *Notifications) Commands() []string {
 }
 
 func (m *Notifications) Init(session *discordgo.Session) {
+	generatedDelimiterCombinations = m.getAllDelimiterCombinations()
 	session.AddHandler(m.OnMessage)
 	go func() {
 		defer helpers.Recover()
@@ -531,7 +533,7 @@ NextKeyword:
 
 			matchContent := strings.ToLower(strings.TrimSpace(msg.Content))
 			doesMatch := false
-			for _, combination := range m.getAllDelimiterCombinations(ValidTextDelimiters) {
+			for _, combination := range generatedDelimiterCombinations {
 				if strings.Contains(matchContent, strings.ToLower(combination.Start+notificationSetting.Keyword+combination.End)) {
 					doesMatch = true
 				}
@@ -838,10 +840,10 @@ type delimiterCombination struct {
 	End   string
 }
 
-func (m *Notifications) getAllDelimiterCombinations(delimiters []string) []delimiterCombination {
+func (m *Notifications) getAllDelimiterCombinations() []delimiterCombination {
 	var result []delimiterCombination
-	for _, delimiterStart := range delimiters {
-		for _, delimiterEnd := range delimiters {
+	for _, delimiterStart := range ValidTextDelimiters {
+		for _, delimiterEnd := range ValidTextDelimiters {
 			result = append(result, delimiterCombination{Start: delimiterStart, End: delimiterEnd})
 		}
 	}
