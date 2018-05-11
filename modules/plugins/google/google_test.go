@@ -69,13 +69,6 @@ func TestSearch(t *testing.T) {
 		t.Fatalf("google.search() first result's Text does not contain \"Search\", it is \"%s\"", results[0].Text)
 	}
 
-	_, err = search("porn", false, nil)
-	if err == nil {
-		t.Fatalf("google.search() returned no error, should return an error")
-	}
-	if err != nil && !strings.Contains(err.Error(), "no search results") {
-		t.Fatalf("google.search() returned an unexpected error: %s", err.Error())
-	}
 	nsfwResult, err := search("porn", true, nil)
 	if err != nil {
 		t.Fatalf("google.search() returned an error: %s", err.Error())
