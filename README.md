@@ -8,7 +8,7 @@
 The multi-purpose Discord Bot for KPop Servers originating from the I.O.I Discord.
 
 Robyul provides various features with the needs of KPop Servers in mind, some examples:
-- Social Media notification (VLive, Instagram (including Instagram Story), Twitter, Facebook, Reddit, YouTube)
+- Social Media notification (VLive, Instagram, Twitter, Facebook, Reddit, YouTube)
 - Mod features (ban, kick, optional warning and ban system across servers, chatlog, role persistency, autoroles)
 - Server Statistics
 - Easy Embed Creation (https://robyul.chat/embed-creator)

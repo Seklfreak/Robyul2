@@ -36,6 +36,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	drive "google.golang.org/api/drive/v3"
+
+	_ "net/http/pprof"
 )
 
 var (
