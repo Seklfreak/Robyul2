@@ -12,9 +12,12 @@ import (
 
 	"errors"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/globalsign/mgo/bson"
 )
 
 var (
@@ -173,6 +176,7 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (embed *discordgo.MessageEmbed) {
 
+	// get target text
 	targetNames := strings.Join(eventlogTargetsToText(guildID, targetType, targetID), ", ")
 	if targetNames == targetID {
 		targetNames = ""
@@ -180,20 +184,21 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		targetNames += ", "
 	}
 
+	// create embed
 	embed = &discordgo.MessageEmbed{
 		URL:       "",
 		Type:      "",
-		Title:     actionType + ": #" + targetID + " (" + targetNames + targetType + ")",
+		Title:     actionType + ": #" + targetID + " (" + targetNames + targetType + ")", // title: action type + targets
 		Timestamp: createdAt.Format(time.RFC3339),
 		Fields: []*discordgo.MessageEmbedField{{
-			Name:  "Reason",
+			Name:  "Reason", // reason field
 			Value: reason,
 		},
 		},
-		Footer: &discordgo.MessageEmbedFooter{Text: "Robyul Eventlog is currently in Beta"},
+		Footer: &discordgo.MessageEmbedFooter{Text: "Robyul Eventlog is currently in Beta"}, // beta disclaimer
+		Color:  GetDiscordColorFromHex("#73d016"),                                           // lime gree
 	}
 
-	embed.Color = GetDiscordColorFromHex("#73d016") // lime green
 	// mark possibly destructive events red
 	if actionType == models.EventlogTypeMemberLeave ||
 		actionType == models.EventlogTypeChannelDelete ||
@@ -230,6 +235,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		embed.Color = GetDiscordColorFromHex("#ffb80a") // orange
 	}
 
+	// display changes as fields
 	if changes != nil {
 		for _, change := range changes {
 			oldValueText := "`" + change.OldValue + "`"
@@ -251,6 +257,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		}
 	}
 
+	// display options as fields
 	if options != nil {
 		for _, option := range options {
 			valueText := "`" + option.Value + "`"
@@ -266,6 +273,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		}
 	}
 
+	// add author information if issuer is given
 	if userID != "" {
 		user, err := GetUserWithoutAPI(userID)
 		if err != nil {
@@ -275,6 +283,49 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		embed.Author = &discordgo.MessageEmbedAuthor{
 			Name:    user.Username,
 			IconURL: user.AvatarURL("64"),
+		}
+	}
+
+	// add target icon if possible
+	targetIDs := strings.Split(targetID, ",")
+	if len(targetIDs) >= 1 {
+		embed.Thumbnail = &discordgo.MessageEmbedThumbnail{}
+
+		switch targetType {
+		case models.EventlogTargetTypeUser:
+			user, err := GetUserWithoutAPI(targetIDs[0])
+			if err == nil {
+				embed.Thumbnail.URL = user.AvatarURL("256")
+			}
+		case models.EventlogTargetTypeGuild:
+			guild, err := GetGuildWithoutApi(targetIDs[0])
+			if err == nil && guild.Icon != "" {
+				embed.Thumbnail.URL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon) + "?size=256"
+			}
+		case models.EventlogTargetTypeEmoji:
+			objectName, err := getDiscordFileHashObject("emoji_icon_object",
+				targetIDs[0],
+				discordgo.EndpointEmoji(targetIDs[0]),
+				"", "", guildID)
+			if err == nil {
+				fileLink, err := GetFileLink(objectName)
+				if err == nil {
+					fmt.Println(fileLink)
+					embed.Thumbnail.URL = fileLink
+				}
+			}
+		case models.EventlogTargetTypeRobyulBadge:
+			var entryBucket models.ProfileBadgeEntry
+			err := MdbOne(
+				MdbCollection(models.ProfileBadgesTable).Find(bson.M{"guildid": guildID, "_id": HumanToMdbId(targetIDs[0])}),
+				&entryBucket,
+			)
+			if err == nil && entryBucket.ObjectName != "" {
+				fileLink, err := GetFileLink(entryBucket.ObjectName)
+				if err == nil {
+					embed.Thumbnail.URL = fileLink
+				}
+			}
 		}
 	}
 
@@ -524,21 +575,27 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	}
 }
 
-func getDiscordFileHashOption(key, hash, hashHurl, userID, channelID, guildID string) models.ElasticEventlogOption {
-	metadataKey := "discord_" + key
-
+func getDiscordFileHashOption(key, hash, hashURL, userID, channelID, guildID string) models.ElasticEventlogOption {
 	iconObjectOption := models.ElasticEventlogOption{
 		Key:  key,
 		Type: models.EventlogTargetTypeRobyulPublicObject,
 	}
 
-	// try to get old icon from object storage
+	// get icon object
+	iconObjectOption.Value, _ = getDiscordFileHashObject(key, hash, hashURL, userID, channelID, guildID)
+
+	return iconObjectOption
+}
+
+func getDiscordFileHashObject(key, hash, hashURL, userID, channelID, guildID string) (objectName string, err error) {
+	metadataKey := "discord_" + key
+	// try to get icon from object storage
 	oldObjects, _ := RetrieveFilesByAdditionalObjectMetadata(metadataKey, hash)
 	if oldObjects != nil && len(oldObjects) >= 1 {
-		iconObjectOption.Value = oldObjects[0]
+		return oldObjects[0], nil
 	} else {
 		// try to download old icon if not found in object storage
-		oldGuildIconData, err := NetGetUAWithError(hashHurl, DEFAULT_UA)
+		oldGuildIconData, err := NetGetUAWithError(hashURL, DEFAULT_UA)
 		RelaxLog(err)
 		if err == nil {
 			objectName, err := AddFile("", oldGuildIconData, AddFileMetadata{
@@ -551,66 +608,25 @@ func getDiscordFileHashOption(key, hash, hashHurl, userID, channelID, guildID st
 			}, "eventlog", true)
 			RelaxLog(err)
 			if err == nil {
-				iconObjectOption.Value = objectName
+				return objectName, nil
 			}
 		}
 	}
 
-	return iconObjectOption
+	return "", errors.New("unable to get object for file hash")
 }
 
 func getDiscordFileHashChange(key, oldHash, newHash, oldHashUrl, newHashUrl, userID, channelID, guildID string) models.ElasticEventlogChange {
-	metadataKey := "discord_" + key
-
 	iconObjectChange := models.ElasticEventlogChange{
 		Key:  key,
 		Type: models.EventlogTargetTypeRobyulPublicObject,
 	}
 
-	// try to get old icon from object storage
-	oldObjects, _ := RetrieveFilesByAdditionalObjectMetadata(metadataKey, oldHash)
-	if oldObjects != nil && len(oldObjects) >= 1 {
-		iconObjectChange.OldValue = oldObjects[0]
-	} else {
-		// try to download old icon if not found in object storage
-		oldGuildIconData, err := NetGetUAWithError(oldHashUrl, DEFAULT_UA)
-		RelaxLog(err)
-		if err == nil {
-			objectName, err := AddFile("", oldGuildIconData, AddFileMetadata{
-				UserID:    userID,
-				ChannelID: channelID,
-				GuildID:   guildID,
-				AdditionalMetadata: map[string]string{
-					metadataKey: oldHash,
-				},
-			}, "eventlog", true)
-			RelaxLog(err)
-			if err == nil {
-				iconObjectChange.OldValue = objectName
-			}
-		}
-	}
-	// try to get new icon from object storage
-	newObjects, _ := RetrieveFilesByAdditionalObjectMetadata(metadataKey, newHash)
-	if newObjects != nil && len(newObjects) >= 1 {
-		iconObjectChange.NewValue = newObjects[0]
-	} else {
-		// try to download new icon if not found in object storage
-		newGuildIconData, err := NetGetUAWithError(newHashUrl, DEFAULT_UA)
-		RelaxLog(err)
-		if err == nil {
-			objectName, err := AddFile("", newGuildIconData, AddFileMetadata{
-				UserID:    userID,
-				ChannelID: channelID,
-				GuildID:   guildID,
-				AdditionalMetadata: map[string]string{
-					metadataKey: newHash,
-				},
-			}, "eventlog", true)
-			RelaxLog(err)
-			iconObjectChange.NewValue = objectName
-		}
-	}
+	// try to get old icon
+	iconObjectChange.OldValue, _ = getDiscordFileHashObject(key, oldHash, oldHashUrl, userID, channelID, guildID)
+
+	// try to get new icon
+	iconObjectChange.NewValue, _ = getDiscordFileHashObject(key, newHash, newHashUrl, userID, channelID, guildID)
 
 	return iconObjectChange
 }
