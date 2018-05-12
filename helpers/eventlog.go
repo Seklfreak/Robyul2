@@ -286,17 +286,22 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		}
 	}
 
-	// add target icon if possible
+	// add target icon and description text if possible
 	targetIDs := strings.Split(targetID, ",")
 	if len(targetIDs) >= 1 {
 		embed.Thumbnail = &discordgo.MessageEmbedThumbnail{}
 
 		switch targetType {
+		case models.EventlogTargetTypeRole:
+			embed.Description += "\n<@&" + strings.Join(targetIDs, ">, <@&") + ">"
+		case models.EventlogTargetTypeChannel:
+			embed.Description += "\n<#" + strings.Join(targetIDs, ">, <#") + ">"
 		case models.EventlogTargetTypeUser:
 			user, err := GetUserWithoutAPI(targetIDs[0])
 			if err == nil {
 				embed.Thumbnail.URL = user.AvatarURL("256")
 			}
+			embed.Description += "\n<@" + strings.Join(targetIDs, ">, <@") + ">"
 		case models.EventlogTargetTypeGuild:
 			guild, err := GetGuildWithoutApi(targetIDs[0])
 			if err == nil && guild.Icon != "" {
