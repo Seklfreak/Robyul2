@@ -71,6 +71,9 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	if err == nil {
 		req.Header.Set("Accept-Language", "en-US,en;q=0.5")
 		resp, _ := httpClient.Do(req)
+		if resp.Body != nil {
+			defer resp.Body.Close()
+		}
 		if err == nil {
 			// try oEmbed title
 			finalURL := resp.Request.URL.String()

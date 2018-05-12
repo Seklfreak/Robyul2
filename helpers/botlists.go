@@ -55,9 +55,13 @@ func updateDiscordBotsOrg(numOfGuilds int) (err error) {
 		Timeout: time.Duration(10 * time.Second),
 	}
 
-	_, err = client.Do(request)
+	resp, err := client.Do(request)
 	if err != nil {
 		return err
+	}
+
+	if resp.Body != nil {
+		defer resp.Body.Close()
 	}
 
 	cache.GetLogger().WithField("module", "botlists").Infof("Updated discordbots.org: %d servers", numOfGuilds)

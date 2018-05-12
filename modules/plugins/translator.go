@@ -134,6 +134,7 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 				helpers.SendError(msg, err)
 				continue
 			}
+
 			request.Header.Set("User-Agent", helpers.DEFAULT_UA)
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			response, err := client.Do(request)
@@ -141,9 +142,11 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 				helpers.SendError(msg, err)
 				continue
 			}
-			if response.StatusCode == 200 {
-				defer response.Body.Close()
 
+			if response.Body != nil {
+				defer response.Body.Close()
+			}
+			if response.StatusCode == 200 {
 				resultParsed, err := gabs.ParseJSONBuffer(response.Body)
 				if err != nil {
 					helpers.SendError(msg, err)

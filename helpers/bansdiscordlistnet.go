@@ -60,6 +60,10 @@ func IsBannedOnBansdiscordlistNet(userID string) (isBanned bool, err error) {
 		return false, err
 	}
 
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
 	bytesResp, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return false, err

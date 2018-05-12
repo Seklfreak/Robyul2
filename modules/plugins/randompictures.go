@@ -966,7 +966,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 	request, err := http.NewRequest("GET", linkToPost, nil)
 	if err == nil {
 		request.Header.Set("User-Agent", helpers.DEFAULT_UA)
-		_, err = client.Do(request)
+		resp, err := client.Do(request)
 		if err != nil {
 			if errU, ok := err.(*url.Error); ok {
 				if !strings.Contains(errU.Err.Error(), "Client.Timeout exceeded while awaiting headers") {
@@ -977,6 +977,9 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 			} else {
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
+		}
+		if resp.Body != nil {
+			defer resp.Body.Close()
 		}
 	}
 	helpers.RelaxLog(err)

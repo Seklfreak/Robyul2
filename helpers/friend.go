@@ -73,6 +73,11 @@ func FriendRequest(friend *discordgo.Session, method string, endpoint string) (r
 	if err != nil {
 		return []byte{}, err
 	}
+
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	if response.StatusCode != 200 {
 		return []byte{}, errors.New(fmt.Sprintf("unexpected status code: %d", response.StatusCode))
 	}

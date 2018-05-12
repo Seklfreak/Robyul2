@@ -40,13 +40,14 @@ func NetGetUA(url string, useragent string) []byte {
 	response, err := client.Do(request)
 	Relax(err)
 
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
 		panic(errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode)))
 	} else {
-		// Read body
-		defer response.Body.Close()
-
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, response.Body)
 		Relax(err)
@@ -76,13 +77,14 @@ func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
 		return []byte{}, errors.New("expected status 200; got " + strconv.Itoa(response.StatusCode))
 	} else {
-		// Read body
-		defer response.Body.Close()
-
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, response.Body)
 		if err != nil {
@@ -116,13 +118,14 @@ func NetGetUAWithErrorAndTransport(url string, useragent string, transport http.
 		return []byte{}, err
 	}
 
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
 		return []byte{}, errors.New("expected status 200; got " + strconv.Itoa(response.StatusCode))
 	} else {
-		// Read body
-		defer response.Body.Close()
-
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, response.Body)
 		if err != nil {
@@ -155,15 +158,16 @@ func NetGetUAWithErrorAndTimeout(url string, useragent string, timeout time.Dura
 		return []byte{}, err
 	}
 
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
 		if err != nil {
 			return []byte{}, errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode))
 		}
 	} else {
-		// Read body
-		defer response.Body.Close()
-
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, response.Body)
 		if err != nil {
@@ -198,13 +202,14 @@ func NetPostUA(url string, data string, useragent string) []byte {
 	response, err := client.Do(request)
 	Relax(err)
 
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
 		panic(errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode)))
 	} else {
-		// Read body
-		defer response.Body.Close()
-
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, response.Body)
 		Relax(err)
@@ -234,13 +239,14 @@ func NetPostUAWithError(url string, data string, useragent string) (result []byt
 		return result, err
 	}
 
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	// Only continue if code was 200
 	if response.StatusCode != 200 {
 		return result, errors.New("Expected status 200; Got " + strconv.Itoa(response.StatusCode))
 	} else {
-		// Read body
-		defer response.Body.Close()
-
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, response.Body)
 		if err != nil {

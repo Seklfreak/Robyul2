@@ -33,6 +33,10 @@ func UploadImage(imageData []byte) (hostedUrl string, err error) {
 		return "", err
 	}
 
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+
 	var imgurResponse struct {
 		Data struct {
 			Link  string `json:"link"`
