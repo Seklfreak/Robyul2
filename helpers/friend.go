@@ -74,7 +74,7 @@ func FriendRequest(friend *discordgo.Session, method string, endpoint string) (r
 		return []byte{}, err
 	}
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 

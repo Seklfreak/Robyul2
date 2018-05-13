@@ -40,7 +40,7 @@ func NetGetUA(url string, useragent string) []byte {
 	response, err := client.Do(request)
 	Relax(err)
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 
@@ -77,7 +77,7 @@ func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 
@@ -118,7 +118,7 @@ func NetGetUAWithErrorAndTransport(url string, useragent string, transport http.
 		return []byte{}, err
 	}
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 
@@ -158,7 +158,7 @@ func NetGetUAWithErrorAndTimeout(url string, useragent string, timeout time.Dura
 		return []byte{}, err
 	}
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 
@@ -202,7 +202,7 @@ func NetPostUA(url string, data string, useragent string) []byte {
 	response, err := client.Do(request)
 	Relax(err)
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 
@@ -239,7 +239,7 @@ func NetPostUAWithError(url string, data string, useragent string) (result []byt
 		return result, err
 	}
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 

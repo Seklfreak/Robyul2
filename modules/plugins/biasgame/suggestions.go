@@ -134,7 +134,10 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.suggestion.invalid-url"))
 		return
 	}
-	defer resp.Body.Close()
+
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 
 	// make sure image is png or jpeg
 	if resp.Header.Get("Content-type") != "image/png" && resp.Header.Get("Content-type") != "image/jpeg" {

@@ -978,7 +978,7 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
 			}
 		}
-		if resp.Body != nil {
+		if resp != nil && resp.Body != nil {
 			defer resp.Body.Close()
 		}
 	}

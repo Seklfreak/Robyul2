@@ -143,9 +143,10 @@ func (t *Translator) Action(command string, content string, msg *discordgo.Messa
 				continue
 			}
 
-			if response.Body != nil {
+			if response != nil && response.Body != nil {
 				defer response.Body.Close()
 			}
+
 			if response.StatusCode == 200 {
 				resultParsed, err := gabs.ParseJSONBuffer(response.Body)
 				if err != nil {

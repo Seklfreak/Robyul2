@@ -174,7 +174,11 @@ func (l *Lyrics) GeniusRequest(location string, object interface{}) error {
 	req.Header.Add("User-Agent", helpers.DEFAULT_UA)
 	req.Header.Add("Authorization", helpers.GetConfig().Path("genius.token").Data().(string))
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
+
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
 	if err != nil {
 		return err
 	}

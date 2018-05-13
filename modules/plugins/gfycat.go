@@ -91,7 +91,11 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	helpers.Relax(err)
 	response, err := httpClient.Do(request)
 	helpers.Relax(err)
-	defer response.Body.Close()
+
+	if response != nil && response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	buf := bytes.NewBuffer(nil)
 	_, err = io.Copy(buf, response.Body)
 	helpers.Relax(err)
@@ -214,7 +218,11 @@ func (m *Gfycat) getAccessToken() string {
 	helpers.Relax(err)
 	response, err := httpClient.Do(request)
 	helpers.Relax(err)
-	defer response.Body.Close()
+
+	if response != nil && response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	buf := bytes.NewBuffer(nil)
 	_, err = io.Copy(buf, response.Body)
 	helpers.Relax(err)

@@ -426,6 +426,13 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 								},
 							},
 						})
+						if err != nil {
+							if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
+								if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+									return
+								}
+							}
+						}
 						helpers.RelaxLog(err)
 						return
 					}
@@ -445,6 +452,13 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 									},
 								},
 							})
+							if err != nil {
+								if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
+									if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
+										return
+									}
+								}
+							}
 							helpers.RelaxLog(err)
 							return
 						}

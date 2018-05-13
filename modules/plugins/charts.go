@@ -563,7 +563,9 @@ func (m *Charts) DoMelonRequest(url string) []byte {
 	response, err := client.Do(request)
 	helpers.Relax(err)
 
-	defer response.Body.Close()
+	if response != nil && response.Body != nil {
+		defer response.Body.Close()
+	}
 
 	buf := bytes.NewBuffer(nil)
 	_, err = io.Copy(buf, response.Body)

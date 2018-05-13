@@ -60,7 +60,7 @@ func updateDiscordBotsOrg(numOfGuilds int) (err error) {
 		return err
 	}
 
-	if resp.Body != nil {
+	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 

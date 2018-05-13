@@ -43,7 +43,7 @@ func TakeHTMLScreenshot(html string, width, height int) (data []byte, err error)
 		return nil, err
 	}
 
-	if response.Body != nil {
+	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 

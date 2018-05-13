@@ -60,7 +60,7 @@ func IsBannedOnBansdiscordlistNet(userID string) (isBanned bool, err error) {
 		return false, err
 	}
 
-	if resp.Body != nil {
+	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 

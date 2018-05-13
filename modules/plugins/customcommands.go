@@ -12,6 +12,8 @@ import (
 
 	"mime"
 
+	"sync"
+
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
@@ -36,6 +38,7 @@ func (cc *CustomCommands) Commands() []string {
 
 var (
 	customCommandsCache            []models.CustomCommandsEntry
+	customCommandsCacheLock        sync.Mutex
 	customCommandsAllowedFiletypes = []string{"image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm"}
 )
 
@@ -218,6 +221,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.add-success"))
 			helpers.Relax(err)
+			customCommandsCacheLock.Lock()
+			defer customCommandsCacheLock.Unlock()
 			customCommandsCache, err = cc.getAllCustomCommands()
 			helpers.Relax(err)
 			return
@@ -432,6 +437,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.delete-success"))
 			helpers.Relax(err)
+			customCommandsCacheLock.Lock()
+			defer customCommandsCacheLock.Unlock()
 			customCommandsCache, err = cc.getAllCustomCommands()
 			helpers.Relax(err)
 			return
@@ -544,6 +551,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.edit-success"))
 			helpers.Relax(err)
+			customCommandsCacheLock.Lock()
+			defer customCommandsCacheLock.Unlock()
 			customCommandsCache, err = cc.getAllCustomCommands()
 			helpers.Relax(err)
 			return
@@ -551,6 +560,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 			helpers.RequireBotAdmin(msg, func() {
 				session.ChannelTyping(msg.ChannelID)
 				var err error
+				customCommandsCacheLock.Lock()
+				defer customCommandsCacheLock.Unlock()
 				customCommandsCache, err = cc.getAllCustomCommands()
 				helpers.Relax(err)
 				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.customcommands.refreshed-commands"))
@@ -726,6 +737,8 @@ func (cc *CustomCommands) Action(command string, content string, msg *discordgo.
 
 				_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> I imported **%s** custom commands.", msg.Author.ID, humanize.Comma(int64(i))))
 				helpers.Relax(err)
+				customCommandsCacheLock.Lock()
+				defer customCommandsCacheLock.Unlock()
 				customCommandsCache, err = cc.getAllCustomCommands()
 				helpers.Relax(err)
 			})
@@ -853,11 +866,18 @@ func (cc *CustomCommands) OnMessage(content string, msg *discordgo.Message, sess
 				helpers.RelaxLog(err)
 				return
 			}
-			customCommandsCache[i].Triggered += 1
+
+			customCommandsCacheLock.Lock()
+			if len(customCommandsCache) > i {
+				customCommandsCache[i].Triggered += 1
+			}
+			customCommandsCacheLock.Unlock()
 
 			// increase triggered in DB by one
-			err = helpers.MDbUpdate(models.CustomCommandsTable, customCommandsCache[i].ID, bson.M{"$inc": bson.M{"triggered": 1}})
-			helpers.RelaxLog(err)
+			err = helpers.MDbUpdate(models.CustomCommandsTable, customCommand.ID, bson.M{"$inc": bson.M{"triggered": 1}})
+			if err != nil && !helpers.IsMdbNotFound(err) {
+				helpers.RelaxLog(err)
+			}
 
 			metrics.CustomCommandsTriggered.Add(1)
 			return

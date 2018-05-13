@@ -71,7 +71,7 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 	if err == nil {
 		req.Header.Set("Accept-Language", "en-US,en;q=0.5")
 		resp, _ := httpClient.Do(req)
-		if resp.Body != nil {
+		if resp != nil && resp.Body != nil {
 			defer resp.Body.Close()
 		}
 		if err == nil {
@@ -117,7 +117,11 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 		}
 	}
 	helpers.Relax(err)
-	defer response.Body.Close()
+
+	if response != nil && response.Body != nil {
+		defer response.Body.Close()
+	}
+
 	buf := bytes.NewBuffer(nil)
 	_, err = io.Copy(buf, response.Body)
 	helpers.Relax(err)

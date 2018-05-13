@@ -33,7 +33,7 @@ func UploadImage(imageData []byte) (hostedUrl string, err error) {
 		return "", err
 	}
 
-	if res.Body != nil {
+	if res != nil && res.Body != nil {
 		defer res.Body.Close()
 	}
 
