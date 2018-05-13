@@ -656,8 +656,8 @@ func GetElasticPendingAuditLogBackfillEventlogs(createdAt time.Time, guildID, ta
 			continue
 		}
 
-		// max time difference between elastic event and audit log event: 5 seconds
-		if eventlog.CreatedAt.Sub(createdAt).Seconds() > 5 || eventlog.CreatedAt.Sub(createdAt).Seconds() < -5 {
+		// max time difference between elastic event and audit log event: 1 seconds
+		if eventlog.CreatedAt.Sub(createdAt).Seconds() > 1 || eventlog.CreatedAt.Sub(createdAt).Seconds() < -1 {
 			//fmt.Println("backfilled rejected for", item.Id, "timeDiff:", eventlog.CreatedAt.Sub(createdAt).Seconds())
 			continue
 		}
