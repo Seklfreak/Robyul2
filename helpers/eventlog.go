@@ -273,6 +273,8 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 		}
 	}
 
+	embed.Description += "\n"
+
 	// add author information if issuer is given
 	if userID != "" {
 		user, err := GetUserWithoutAPI(userID)
@@ -285,7 +287,7 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 			Name:    user.Username + "#" + user.Discriminator + " #" + userID,
 			IconURL: user.AvatarURL("64"),
 		}
-		embed.Description += "\nExecuted by <@" + userID + ">"
+		embed.Description += "By <@" + userID + "> "
 	}
 
 	// add target icon and description text if possible
@@ -295,15 +297,15 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 
 		switch targetType {
 		case models.EventlogTargetTypeRole:
-			embed.Description += "\nTarget <@&" + strings.Join(targetIDs, ">, <@&") + ">"
+			embed.Description += "On <@&" + strings.Join(targetIDs, ">, <@&") + ">"
 		case models.EventlogTargetTypeChannel:
-			embed.Description += "\nTarget <#" + strings.Join(targetIDs, ">, <#") + ">"
+			embed.Description += "On <#" + strings.Join(targetIDs, ">, <#") + ">"
 		case models.EventlogTargetTypeUser:
 			user, err := GetUserWithoutAPI(targetIDs[0])
 			if err == nil {
 				embed.Thumbnail.URL = user.AvatarURL("256")
 			}
-			embed.Description += "\nTarget <@" + strings.Join(targetIDs, ">, <@") + ">"
+			embed.Description += "On <@" + strings.Join(targetIDs, ">, <@") + ">"
 		case models.EventlogTargetTypeGuild:
 			guild, err := GetGuildWithoutApi(targetIDs[0])
 			if err == nil && guild.Icon != "" {
