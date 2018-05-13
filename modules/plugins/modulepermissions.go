@@ -323,6 +323,11 @@ func (mp *ModulePermissions) actionAllow(args []string, in *discordgo.Message, o
 }
 
 func (mp *ModulePermissions) actionDeny(args []string, in *discordgo.Message, out **discordgo.MessageSend) modulePermissionsAction {
+	if !helpers.IsMod(in) {
+		*out = mp.newMsg("mod.no_permission")
+		return mp.actionFinish
+	}
+
 	if len(args) < 3 {
 		*out = mp.newMsg("bot.arguments.too-few")
 		return mp.actionFinish
