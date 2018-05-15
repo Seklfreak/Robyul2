@@ -37,6 +37,7 @@ func (m *Handler) checkInstagramPublicFeedLoop() {
 		}()
 	}()
 
+	var wg sync.WaitGroup
 	for {
 		bundledEntries, entriesCount, err := m.getBundledEntries()
 		helpers.Relax(err)
@@ -46,12 +47,13 @@ func (m *Handler) checkInstagramPublicFeedLoop() {
 			len(bundledEntries), entriesCount, InstagramGraphQlWorkers)
 		start := time.Now()
 
+		wg.Add(InstagramGraphQlWorkers)
+
 		jobs := make(chan map[string][]models.InstagramEntry, 0)
-		results := make(chan int, 0)
 
 		workerEntries := make(map[int]map[string][]models.InstagramEntry, 0)
 		for w := 1; w <= InstagramGraphQlWorkers; w++ {
-			go m.checkInstagramPublicFeedLoopWorker(w, jobs, results)
+			go m.checkInstagramPublicFeedLoopWorker(w, jobs, &wg)
 			workerEntries[w] = make(map[string][]models.InstagramEntry)
 		}
 
@@ -69,9 +71,7 @@ func (m *Handler) checkInstagramPublicFeedLoop() {
 		}
 		close(jobs)
 
-		for a := 1; a <= InstagramGraphQlWorkers; a++ {
-			<-results
-		}
+		wg.Wait()
 		elapsed := time.Since(start)
 		log.Infof(
 			"checked graphql feed on %d accounts for %d feeds with %d workers, took %s",
@@ -84,11 +84,11 @@ func (m *Handler) checkInstagramPublicFeedLoop() {
 	}
 }
 
-func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[string][]models.InstagramEntry, results chan<- int) {
+func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[string][]models.InstagramEntry, wg *sync.WaitGroup) {
+	defer helpers.Recover()
 	defer func() {
-		helpers.Recover()
-		if results != nil && jobs != nil {
-			results <- len(jobs)
+		if wg != nil {
+			wg.Done()
 		}
 	}()
 
@@ -202,7 +202,6 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 			}
 		}
 	}
-	results <- len(jobs)
 }
 
 /*
