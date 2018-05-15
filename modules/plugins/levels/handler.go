@@ -3200,11 +3200,11 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 					isBirthday = true
 				}
 			}
-		}
 
-		userBirthdayText = "<i class=\"fa fa-birthday-cake\" aria-hidden=\"true\"></i> " + userData.Birthday
-		if isBirthday {
-			userBirthdayText = "<i class=\"fa fa-birthday-cake\" aria-hidden=\"true\"></i> Today!"
+			userBirthdayText = "<i class=\"fa fa-birthday-cake\" aria-hidden=\"true\"></i> " + birthdayTime.Format("Jan 2")
+			if isBirthday {
+				userBirthdayText = "<i class=\"fa fa-birthday-cake\" aria-hidden=\"true\"></i> Today!"
+			}
 		}
 	}
 
