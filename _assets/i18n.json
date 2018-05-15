@@ -246,7 +246,7 @@
       "no-weather": "I couldn't find any weather for the given location. <:googlespeaknoevil:317036753074651139>",
       "weather-embed-title": "Weather in %s",
       "embed-footer": "powered by Dark Sky",
-      "current-weather-description": "%s **%s**\n🌡 Temparature **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\n🌬 Wind **%s m/s** (%s mph)\n💦 Humidity **%s %%**",
+      "current-weather-description": "%s **%s**\n🌡 Temperature **%s °C** (%s °F), Feels Like: **%s °C** (%s °F)\n🌬 Wind **%s m/s** (%s mph)\n💦 Humidity **%s %%**",
       "week-title": "This week",
       "embed-footer-imageurl": "https://i.imgur.com/JlQzNZx.png"
     },
