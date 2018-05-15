@@ -3,12 +3,9 @@ package rest
 import (
 	"fmt"
 
-	"errors"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/bwmarrin/discordgo"
 )
 
 func getGuildFeatures(guildID string) (features models.Rest_Guild_Features) {
@@ -77,52 +74,9 @@ func getGuildSettings(guildID, userID string) (settings models.Rest_Settings) {
 		Strings: make([]models.Rest_Setting_String, 0),
 	}
 
-	guildSettings := helpers.GuildSettingsGetCached(guildID)
-
-	if !guildSettings.EventlogDisabled {
-		newSetting := models.Rest_Setting_String{
-			Key:    "eventlog_discord_channelid",
-			Level:  helpers.SettingLevelMod,
-			Values: guildSettings.EventlogChannelIDs,
-		}
-
-		if newSetting.Values == nil {
-			newSetting.Values = make([]string, 0)
-		}
-
-		if !helpers.IsModByID(guildID, userID) {
-			newSetting.Values = nil
-		}
-
-		settings.Strings = append(settings.Strings, newSetting)
-	}
-
 	return
 }
 
 func setGuildStringSetting(guildID, userID, key string, values []string) (err error) {
-	switch key {
-	case "eventlog_discord_channelid":
-		if !helpers.IsModByID(guildID, userID) {
-			return errors.New("not allowed")
-		}
-		var guild *discordgo.Guild
-		guild, err = helpers.GetGuild(guildID)
-		if err != nil {
-			return err
-		}
-		guildSettings := helpers.GuildSettingsGetCached(guildID)
-		guildSettings.EventlogChannelIDs = make([]string, 0)
-		for _, value := range values {
-			for _, channel := range guild.Channels {
-				if channel.ID == value {
-					guildSettings.EventlogChannelIDs = append(guildSettings.EventlogChannelIDs, channel.ID)
-				}
-			}
-		}
-		err = helpers.GuildSettingsSet(guildID, guildSettings)
-		return
-	}
-
 	return
 }

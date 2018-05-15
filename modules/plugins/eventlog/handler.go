@@ -64,13 +64,71 @@ func (h *Handler) actionStart(args []string, in *discordgo.Message, out **discor
 		return h.actionFinish
 	}
 
-	switch args[0] {
-	//case "foo
-	//	return h.actionFoo
+	switch strings.ToLower(args[0]) {
+	case "set-log", "set-log-channel":
+		return h.actionSetLogChannel
 	}
 
 	*out = h.newMsg("bot.arguments.invalid")
 	return nil
+}
+
+// [p]eventlog set-log [<#channel or channel id>]
+func (h *Handler) actionSetLogChannel(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
+	if !helpers.IsMod(in) {
+		*out = h.newMsg("mod.no_permission")
+		return h.actionFinish
+	}
+
+	sourceChannel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+
+	targetChannel, err := helpers.GetChannel(in.ChannelID)
+	helpers.Relax(err)
+	if len(args) >= 2 {
+		targetChannel, err = helpers.GetChannelFromMention(in, args[1])
+		helpers.Relax(err)
+	}
+
+	var setMessage string
+
+	newLogChannelIDs := make([]string, 0)
+	settings := helpers.GuildSettingsGetCached(sourceChannel.GuildID)
+	var removed bool
+	for _, currentLogChannelID := range settings.EventlogChannelIDs {
+		if currentLogChannelID == targetChannel.ID {
+			removed = true
+			setMessage = helpers.GetTextF("plugins.eventlog.channel-removed", targetChannel.ID)
+			continue
+		}
+		newLogChannelIDs = append(newLogChannelIDs, currentLogChannelID)
+	}
+
+	if !removed {
+		newLogChannelIDs = append(newLogChannelIDs, targetChannel.ID)
+		setMessage = helpers.GetTextF("plugins.eventlog.channel-added", targetChannel.ID)
+	}
+
+	_, err = helpers.EventlogLog(time.Now(), sourceChannel.GuildID, sourceChannel.GuildID,
+		models.EventlogTargetTypeGuild, in.Author.ID,
+		models.EventlogTypeRobyulEventlogConfigUpdate, "",
+		[]models.ElasticEventlogChange{
+			{
+				Key:      "eventlog_log_channelids",
+				OldValue: strings.Join(settings.EventlogChannelIDs, ","),
+				NewValue: strings.Join(newLogChannelIDs, ","),
+				Type:     models.EventlogTargetTypeChannel,
+			},
+		},
+		nil, false)
+	helpers.RelaxLog(err)
+
+	settings.EventlogChannelIDs = newLogChannelIDs
+	err = helpers.GuildSettingsSet(sourceChannel.GuildID, settings)
+	helpers.Relax(err)
+
+	*out = h.newMsg(setMessage)
+	return h.actionFinish
 }
 
 // [p]toggle-eventlog
