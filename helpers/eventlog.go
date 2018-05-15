@@ -73,20 +73,24 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		)
 	*/
 
+	eventlogID, err := ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill, nil)
+	if err != nil {
+		return false, err
+	}
+
 	messageIDs := make([]string, 0)
 	eventlogChannelIDs := GuildSettingsGetCached(guildID).EventlogChannelIDs
 	for _, eventlogChannelID := range eventlogChannelIDs {
-		messages, _ := SendEmbed(eventlogChannelID, getEventlogEmbed(createdAt, guildID, targetID, targetType, userID,
+		messages, _ := SendEmbed(eventlogChannelID, getEventlogEmbed(eventlogID, createdAt, guildID, targetID, targetType, userID,
 			actionType, reason, cleanChanges(changes), cleanOptions(options), waitingForAuditLogBackfill))
 		if messages != nil && len(messages) >= 1 {
 			messageIDs = append(messageIDs, eventlogChannelID+"|"+messages[0].ID)
 		}
 	}
 
-	err = ElasticAddEventlog(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill, messageIDs)
-
+	_, err = ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, messageIDs)
 	if err != nil {
-		return false, err
+		return true, err
 	}
 
 	return true, nil
@@ -96,13 +100,13 @@ func EventlogLogUpdate(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
 	reason string, auditLogBackfilled bool) (err error) {
 	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, cleanOptions(options), cleanChanges(changes), reason,
-		auditLogBackfilled)
+		auditLogBackfilled, nil)
 	if err != nil {
 		return
 	}
 
 	if eventlogItem != nil && eventlogItem.EventlogMessages != nil && len(eventlogItem.EventlogMessages) > 0 {
-		embed := getEventlogEmbed(eventlogItem.CreatedAt, eventlogItem.GuildID, eventlogItem.TargetID,
+		embed := getEventlogEmbed(elasticID, eventlogItem.CreatedAt, eventlogItem.GuildID, eventlogItem.TargetID,
 			eventlogItem.TargetType, eventlogItem.UserID, eventlogItem.ActionType, eventlogItem.Reason,
 			eventlogItem.Changes, eventlogItem.Options, eventlogItem.WaitingFor.AuditLogBackfill)
 		for _, messageID := range eventlogItem.EventlogMessages {
@@ -173,7 +177,7 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 	return names
 }
 
-func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
+func getEventlogEmbed(eventlogID string, createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (embed *discordgo.MessageEmbed) {
 
 	// get target text
@@ -195,8 +199,8 @@ func getEventlogEmbed(createdAt time.Time, guildID, targetID, targetType, userID
 			Value: reason,
 		},
 		},
-		Footer: &discordgo.MessageEmbedFooter{Text: "Robyul Eventlog is currently in Beta"}, // beta disclaimer
-		Color:  GetDiscordColorFromHex("#73d016"),                                           // lime gree
+		Footer: &discordgo.MessageEmbedFooter{Text: "#" + eventlogID + " • Robyul Eventlog is currently in Beta"}, // #id + beta disclaimer
+		Color:  GetDiscordColorFromHex("#73d016"),                                                                 // lime gree
 	}
 
 	// mark possibly destructive events red
