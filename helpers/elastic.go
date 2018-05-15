@@ -494,6 +494,18 @@ func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTi
 	return err
 }
 
+func ElasticGetEventlog(eventlogID string) (eventlogItem *models.ElasticEventlog, err error) {
+	get1, err := cache.GetElastic().Get().Index(models.ElasticIndexEventlogs).Type("doc").Id(eventlogID).
+		Do(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	var elasticEventlog models.ElasticEventlog
+	err = json.Unmarshal(*get1.Source, &elasticEventlog)
+	return &elasticEventlog, err
+}
+
 func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool, messageIDs []string) (id string, err error) {
 	if !cache.HasElastic() {

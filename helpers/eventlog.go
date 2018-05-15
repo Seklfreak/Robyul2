@@ -88,9 +88,17 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		}
 	}
 
-	_, err = ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, messageIDs)
+	eventlogItem, err := ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, messageIDs)
 	if err != nil {
 		return true, err
+	}
+
+	if len(messageIDs) > 0 && CanRevert(*eventlogItem) {
+		// add reactions
+		for _, messageID := range messageIDs {
+			messageIDParts := strings.SplitN(messageID, "|", 2)
+			cache.GetSession().MessageReactionAdd(messageIDParts[0], messageIDParts[1], "↩")
+		}
 	}
 
 	return true, nil
@@ -1023,6 +1031,13 @@ func StoreBoolAsString(input bool) (output string) {
 	} else {
 		return "no"
 	}
+}
+
+func GetStringAsBool(input string) bool {
+	if input == "yes" {
+		return true
+	}
+	return false
 }
 
 func cleanChanges(oldChanges []models.ElasticEventlogChange) (newChanges []models.ElasticEventlogChange) {

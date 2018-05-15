@@ -126,7 +126,73 @@ func (h *Handler) OnGuildMemberRemove(member *discordgo.Member, session *discord
 }
 
 func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+	// only react to ↩
+	if reaction.Emoji.Name != "↩" {
+		return
+	}
 
+	channel, err := helpers.GetChannel(reaction.ChannelID)
+	if err != nil {
+		return
+	}
+
+	// skip non mods
+	if !helpers.IsModByID(channel.GuildID, reaction.UserID) {
+		return
+	}
+
+	// check if happend in log channel
+	var logChannel bool
+	for _, logChannelID := range helpers.GuildSettingsGetCached(channel.GuildID).EventlogChannelIDs {
+		if logChannelID == reaction.ChannelID {
+			logChannel = true
+		}
+	}
+	if !logChannel {
+		return
+	}
+
+	// get target message
+	message, err := helpers.GetMessage(reaction.ChannelID, reaction.MessageID)
+	if err != nil {
+		return
+	}
+
+	// skip if target message is by robyul and has embeds
+	if message.Author.ID != cache.GetSession().State.User.ID || len(message.Embeds) <= 0 {
+		return
+	}
+
+	// try to find correct embed
+	var targetEmbed *discordgo.MessageEmbed
+	for _, embed := range message.Embeds {
+		if embed != nil && embed.Footer != nil && strings.HasPrefix(embed.Footer.Text, "#") {
+			targetEmbed = embed
+		}
+	}
+
+	if targetEmbed == nil {
+		return
+	}
+
+	// try to get eventlog ID
+	ID := strings.TrimPrefix(strings.SplitN(targetEmbed.Footer.Text, " ", 2)[0], "#")
+
+	// try to get eventlog Item
+	eventlogItem, err := helpers.ElasticGetEventlog(ID)
+	if err != nil {
+		return
+	}
+
+	if !helpers.CanRevert(*eventlogItem) {
+		return
+	}
+
+	err = helpers.Revert(*eventlogItem)
+	cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
+	if err != nil {
+		helpers.SendMessage(reaction.ChannelID, "Error reverting change: "+err.Error()) // TODO: better error message
+	}
 }
 
 func (h *Handler) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
