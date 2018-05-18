@@ -1,112 +1,200 @@
 package biasgame
 
 import (
+	"bytes"
 	"fmt"
 	"image"
-	"image/draw"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"image/png"
+	"math/rand"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
+	"github.com/nfnt/resize"
 
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
-	"github.com/nfnt/resize"
-	"github.com/sethgrid/pester"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/googleapi"
 )
 
-// startCacheRefreshLoop will refresh the image cache for both misc image and bias images
-func startCacheRefreshLoop() {
-	bgLog().Info("Starting biasgame refresh image cache loop")
+// holds all available idols in the game
+var allBiasChoices []*biasChoice
+var allBiasesMutex sync.RWMutex
 
-	go func() {
-		defer helpers.Recover()
+//////////////////////////////////
+//     BIAS CHOICE FUNCTIONS    //
+//////////////////////////////////
 
-		for {
-			time.Sleep(time.Hour * 12)
+// will return a random image for the bias,
+//  if an image has already been chosen for the given game and bias thenit will use that one
+func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Image {
+	var imageIndex int
 
-			bgLog().Info("Refreshing image cache...")
-			refreshBiasChoices(true)
+	// check if a random image for the idol has already been chosen for this game
+	//  also make sure that biasimages array contains the index. it may have been changed due to a refresh
+	if imagePos, ok := (*gameImageIndex)[b.NameAndGroup]; ok && len(b.BiasImages) > imagePos {
+		imageIndex = imagePos
+	} else {
+		imageIndex = rand.Intn(len(b.BiasImages))
+		(*gameImageIndex)[b.NameAndGroup] = imageIndex
+	}
 
-			bgLog().Info("Biasgame image cache has been refresh")
-		}
-	}()
-
-	bgLog().Info("Starting biasgame current games cache loop")
-	go func() {
-		defer helpers.Recover()
-
-		for {
-			time.Sleep(time.Second * 30)
-
-			// save any currently running games
-			err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)
-			helpers.Relax(err)
-			bgLog().Infof("Cached %d singleplayer biasgames to redis", len(getCurrentSinglePlayerGames()))
-
-			err = setBiasGameCache("currentMultiPlayerGames", getCurrentMultiPlayerGames(), 0)
-			helpers.Relax(err)
-			bgLog().Infof("Cached %d multiplayer biasgames to redis", len(getCurrentMultiPlayerGames()))
-		}
-	}()
-
+	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].getImgBytes()))
+	helpers.Relax(err)
+	return img
 }
 
-// loadMiscImages handles loading other images besides the idol images
-func loadMiscImages() {
-	validMiscImages := []string{
-		"verses.png",
-		"top-eight-bracket.png",
-		"shadow-border.png",
-		"crown.png",
+//////////////////////////////////
+//     BIAS IMAGE FUNCTIONS     //
+//////////////////////////////////
+
+// will get the bytes to the correctly sized image bytes
+func (b biasImage) getImgBytes() []byte {
+
+	// image bytes is sometimes loaded if the object needs to be deleted
+	if b.ImageBytes != nil {
+		return b.ImageBytes
 	}
 
-	miscImagesFolderPath := helpers.GetConfig().Path("assets_folder").Data().(string) + "biasgame/misc/"
+	// get image bytes
+	imgBytes, err := helpers.RetrieveFileWithoutLogging(b.ObjectName)
+	helpers.Relax(err)
 
-	// load misc images
-	for _, fileName := range validMiscImages {
+	img, _, err := helpers.DecodeImageBytes(imgBytes)
+	helpers.Relax(err)
 
-		// check if file exists
-		filePath := miscImagesFolderPath + fileName
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			helpers.Relax(err)
-		}
+	// check if the image is already the correct size, otherwise resize it
+	if img.Bounds().Dx() == IMAGE_RESIZE_HEIGHT && img.Bounds().Dy() == IMAGE_RESIZE_HEIGHT {
+		return imgBytes
+	} else {
 
-		// open file and decode it
-		file, err := os.Open(filePath)
-		helpers.Relax(err)
-		img, _, err := image.Decode(file)
-		helpers.Relax(err)
+		// resize image to the correct size
+		img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
 
-		// resize misc images as needed
-		switch fileName {
-		case "verses.png":
-			versesImage = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
-		case "shadow-border.png":
-			shadowBorder = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
-		case "crown.png":
-			crown = resize.Resize(IMAGE_RESIZE_HEIGHT/2, 0, img, resize.Lanczos3)
-		case "top-eight-bracket.png":
-			winnerBracket = img
-		}
-		bgLog().Infof("Loading biasgame misc image: %s", fileName)
+		// AFTER resizing, re-encode the bytes
+		resizedImgBytes := new(bytes.Buffer)
+		encoder := new(png.Encoder)
+		encoder.CompressionLevel = -2
+		encoder.Encode(resizedImgBytes, img)
+
+		return resizedImgBytes.Bytes()
+	}
+}
+
+// getMatchingIdolAndGroup will do a loose comparison of the name and group passed to the ones that already exist
+//  1st return is true if group exists
+//  2nd return is true if idol exists in the group
+//  3rd will be a reference to the matching idol
+func getMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *biasChoice) {
+	groupMatch := false
+	nameMatch := false
+	var matchingBiasChoice *biasChoice
+
+	groupAliases := getGroupAliases()
+
+	// create map of group => idols in group
+	groupIdolMap := make(map[string][]*biasChoice)
+	for _, bias := range getAllBiases() {
+		groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], bias)
 	}
 
-	// append crown to top eight
-	bracketImage := image.NewRGBA(winnerBracket.Bounds())
-	draw.Draw(bracketImage, winnerBracket.Bounds(), winnerBracket, image.Point{0, 0}, draw.Src)
-	draw.Draw(bracketImage, crown.Bounds().Add(image.Pt(230, 5)), crown, image.ZP, draw.Over)
-	winnerBracket = bracketImage.SubImage(bracketImage.Rect)
+	// check if the group suggested matches a current group. do loose comparison
+	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
+	for k, v := range groupIdolMap {
+		curGroup := strings.ToLower(reg.ReplaceAllString(k, ""))
+		sugGroup := strings.ToLower(reg.ReplaceAllString(searchGroup, ""))
+
+		// check if group matches, if not check the aliases
+		if curGroup == sugGroup {
+
+			groupMatch = true
+		} else {
+
+			// if this group has any aliases check if the group we're
+			//   searching for matches one of the aliases
+		GroupLoop:
+			for aliasGroup, aliases := range groupAliases {
+				regGroup := strings.ToLower(reg.ReplaceAllString(aliasGroup, ""))
+				if regGroup != curGroup {
+					continue
+				}
+
+				for _, alias := range aliases {
+					regAlias := strings.ToLower(reg.ReplaceAllString(alias, ""))
+					if regAlias == sugGroup {
+						groupMatch = true
+						break GroupLoop
+					}
+				}
+			}
+		}
+
+		if groupMatch {
+
+			// check if the idols name matches
+			for _, idol := range v {
+				curName := strings.ToLower(reg.ReplaceAllString(idol.BiasName, ""))
+				sugName := strings.ToLower(reg.ReplaceAllString(searchName, ""))
+
+				if curName == sugName {
+					nameMatch = true
+					matchingBiasChoice = idol
+					break
+				}
+			}
+			break
+		}
+	}
+
+	return groupMatch, nameMatch, matchingBiasChoice
+}
+
+// does a loose comparison of the group name to see if it exists
+// return 1: if a matching group exists
+// return 2: what the real group name is
+func getMatchingGroup(searchGroup string) (bool, string) {
+
+	allGroupsMap := make(map[string]bool)
+	for _, bias := range getAllBiases() {
+		allGroupsMap[bias.GroupName] = true
+	}
+
+	groupAliases := getGroupAliases()
+
+	// check if the group suggested matches a current group. do loose comparison
+	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
+	for k, _ := range allGroupsMap {
+		curGroup := strings.ToLower(reg.ReplaceAllString(k, ""))
+		sugGroup := strings.ToLower(reg.ReplaceAllString(searchGroup, ""))
+
+		// if groups match, set the suggested group to the current group
+		if curGroup == sugGroup {
+			return true, k
+		}
+
+		// if this group has any aliases check if the group we're
+		//   searching for matches one of the aliases
+		for aliasGroup, aliases := range groupAliases {
+			regGroup := strings.ToLower(reg.ReplaceAllString(aliasGroup, ""))
+			if regGroup != curGroup {
+				continue
+			}
+
+			for _, alias := range aliases {
+				regAlias := strings.ToLower(reg.ReplaceAllString(alias, ""))
+				if regAlias == sugGroup {
+					return true, k
+				}
+			}
+		}
+	}
+
+	return false, ""
 }
 
 // refreshBiasChoices refreshes the list of bias choices.
@@ -170,46 +258,6 @@ func refreshBiasChoices(skipCache bool) {
 	if len(getAllBiases()) > 0 {
 		err = setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
 		helpers.RelaxLog(err)
-	}
-}
-
-// addDriveFileToAllBiases will take a drive file, convert it to a bias object,
-//   and add it to allBiasChoices or add a new image if the idol already exists
-func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
-
-	// get suggestion details and add to biasEntry table
-	biasEntry := models.BiasGameIdolEntry{
-		ID:         "",
-		Gender:     suggestion.Gender,
-		GroupName:  suggestion.GrouopName,
-		Name:       suggestion.Name,
-		ObjectName: suggestion.ObjectName,
-	}
-
-	// insert file to mongodb
-	_, err := helpers.MDbInsert(models.BiasGameIdolsTable, biasEntry)
-	helpers.Relax(err)
-
-	newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
-
-	// if the bias already exists, then just add this picture to the image array for the idol
-	biasExists := false
-	for _, currentBias := range getAllBiases() {
-		if currentBias.NameAndGroup == newBiasChoice.NameAndGroup {
-			currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
-			biasExists = true
-			break
-		}
-	}
-
-	// if its a new bias, update all biases array
-	if biasExists == false {
-		setAllBiases(append(getAllBiases(), &newBiasChoice))
-	}
-
-	// cache all biases
-	if len(getAllBiases()) > 0 {
-		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
 	}
 }
 
@@ -395,113 +443,6 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 	}
 
 	return recordsFound, statsFound, statsUpdated
-}
-
-// runGoogleDriveMigration Should only be run on rare occasions when issues occur with object storage or setting up a new object storage
-//  note: takes a very long time to complete
-func runGoogleDriveMigration(msg *discordgo.Message) {
-	girlFolderId := helpers.GetConfig().Path("biasgame.girl_folder_id").Data().(string)
-	boyFolderId := helpers.GetConfig().Path("biasgame.boy_folder_id").Data().(string)
-
-	// get files from drive
-	girlFiles := getFilesFromDriveFolder(girlFolderId)
-	boyFiles := getFilesFromDriveFolder(boyFolderId)
-	allFiles := append(girlFiles, boyFiles...)
-
-	amountMigrated := 0
-
-	// confirm files were found
-	if len(allFiles) > 0 {
-
-		bgLog().Info("--Migrating google drive biasgame images to object storage. Total images found: ", len(allFiles))
-		for _, file := range allFiles {
-			// determine gender from folder
-			var gender string
-			if file.Parents[0] == girlFolderId {
-				gender = "girl"
-			} else {
-				gender = "boy"
-			}
-
-			// get bias name and group name from file name
-			groupBias := strings.TrimSuffix(file.Name, filepath.Ext(file.Name))
-
-			biasEntry := models.BiasGameIdolEntry{
-				ID:        "",
-				DriveID:   file.Id,
-				Gender:    gender,
-				GroupName: strings.Split(groupBias, "_")[0],
-				Name:      strings.Split(groupBias, "_")[1],
-			}
-
-			// check if a record with this drive id already exists
-			//  this means its been migrated before and should not be remigrated
-			count, err := helpers.MdbCount(models.BiasGameIdolsTable, bson.M{"driveid": biasEntry.DriveID})
-			if err != nil {
-				bgLog().Errorf("Error getting count for drive id '%s'. Error: %s", biasEntry.DriveID, err.Error())
-				continue
-			}
-			if count != 0 {
-				bgLog().Infof("Drive id '%s' has already been migrated. Skipping", biasEntry.DriveID)
-				continue
-			}
-			bgLog().Infof("Migrating Drive id '%s'. Idol Name: %s | Group Name: %s", biasEntry.DriveID, biasEntry.Name, biasEntry.GroupName)
-
-			// get image
-			res, err := pester.Get(file.WebContentLink)
-			helpers.Relax(err)
-			imgBytes, err := ioutil.ReadAll(res.Body)
-
-			// store file in object storage
-			objectName, err := helpers.AddFile("", imgBytes, helpers.AddFileMetadata{
-				Filename:           file.WebContentLink,
-				ChannelID:          msg.ChannelID,
-				UserID:             msg.Author.ID,
-				AdditionalMetadata: nil,
-			}, "biasgame", false)
-
-			// set object name
-			biasEntry.ObjectName = objectName
-
-			// insert file to mongodb
-			_, err = helpers.MDbInsert(models.BiasGameIdolsTable, biasEntry)
-			if err != nil {
-				bgLog().Errorf("Error migrating drive id '%s'. Error: %s", biasEntry.DriveID, err.Error())
-			}
-			amountMigrated++
-		}
-		bgLog().Info("--Google drive migration complete--")
-		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Migration Complete. Files Migrated: %d", amountMigrated))
-
-	} else {
-		bgLog().Warn("No biasgame file found!")
-	}
-}
-
-// getFilesFromDriveFolder
-func getFilesFromDriveFolder(folderId string) []*drive.File {
-	driveService := cache.GetGoogleDriveService()
-
-	// get girls image from google drive
-	results, err := driveService.Files.List().Q(fmt.Sprintf(DRIVE_SEARCH_TEXT, folderId)).Fields(googleapi.Field("nextPageToken, files(name, id, parents, webViewLink, webContentLink)")).PageSize(1000).Do()
-	if err != nil {
-		return nil
-	}
-	allFiles := results.Files
-
-	// retry for more bias images if needed
-	pageToken := results.NextPageToken
-	for pageToken != "" {
-		results, err = driveService.Files.List().Q(fmt.Sprintf(DRIVE_SEARCH_TEXT, folderId)).Fields(googleapi.Field("nextPageToken, files(name, id, parents, webViewLink, webContentLink)")).PageSize(1000).PageToken(pageToken).Do()
-		pageToken = results.NextPageToken
-		if len(results.Files) > 0 {
-			allFiles = append(allFiles, results.Files...)
-		} else {
-			break
-		}
-	}
-
-	return allFiles
 }
 
 // updateImageInfo updates a specific image and its related bias info
@@ -707,4 +648,24 @@ BiasLoop:
 
 	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Deleted image with object name: %s", targetObjectName))
 
+}
+
+// getAllBiases getter for all biases
+func getAllBiases() []*biasChoice {
+	allBiasesMutex.RLock()
+	defer allBiasesMutex.RUnlock()
+
+	if allBiasChoices == nil {
+		return nil
+	}
+
+	return allBiasChoices
+}
+
+// setAllBiases setter for all biases
+func setAllBiases(biases []*biasChoice) {
+	allBiasesMutex.Lock()
+	defer allBiasesMutex.Unlock()
+
+	allBiasChoices = biases
 }

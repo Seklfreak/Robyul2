@@ -2,10 +2,13 @@ package biasgame
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -586,7 +589,7 @@ func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 }
 
 // sendSimilarImages will check for images that are similar to the given images
-//  and send them back in a paged embe
+//  and send them back in a paged embed
 func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 	matchingImages := make(map[int][]biasImage, 0)
 	var compareValues []int
@@ -635,5 +638,93 @@ func clearSuggestionsChannel() {
 
 	for _, msg := range messagesArray {
 		cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg.ID)
+	}
+}
+
+// addSuggestionToGame will add the given suggestion entry to the available idols
+func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
+
+	// get suggestion details and add to biasEntry table
+	biasEntry := models.BiasGameIdolEntry{
+		ID:         "",
+		Gender:     suggestion.Gender,
+		GroupName:  suggestion.GrouopName,
+		Name:       suggestion.Name,
+		ObjectName: suggestion.ObjectName,
+	}
+
+	// insert file to mongodb
+	_, err := helpers.MDbInsert(models.BiasGameIdolsTable, biasEntry)
+	helpers.Relax(err)
+
+	newBiasChoice := makeBiasChoiceFromBiasEntry(biasEntry)
+
+	// if the bias already exists, then just add this picture to the image array for the idol
+	biasExists := false
+	for _, currentBias := range getAllBiases() {
+		if currentBias.NameAndGroup == newBiasChoice.NameAndGroup {
+			currentBias.BiasImages = append(currentBias.BiasImages, newBiasChoice.BiasImages[0])
+			biasExists = true
+			break
+		}
+	}
+
+	// if its a new bias, update all biases array
+	if biasExists == false {
+		setAllBiases(append(getAllBiases(), &newBiasChoice))
+	}
+
+	// cache all biases
+	if len(getAllBiases()) > 0 {
+		setBiasGameCache("allbiaschoices", getAllBiases(), time.Hour*24*7)
+	}
+}
+
+// getUserInputPage waits for the user to enter a number
+func getSuggestionDenialInput(channelID string) (int, error) {
+	queryMsg, err := helpers.SendMessage(channelID, "Enter the number for the reason you would like to deny with.")
+	if err != nil {
+		return 0, err
+	}
+
+	defer cache.GetSession().ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
+
+	timeoutChan := make(chan int)
+	go func() {
+		time.Sleep(time.Second * 45)
+		timeoutChan <- 0
+	}()
+
+	for {
+		userInputChan := make(chan *discordgo.MessageCreate)
+		cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
+			userInputChan <- e
+		})
+
+		select {
+		case userMsg := <-userInputChan:
+			if userMsg.Author.Bot {
+				continue
+			}
+			if userMsg.ChannelID != channelID {
+				continue
+			}
+
+			// delete user message and remove reaction
+			go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
+
+			// get page number from user text
+			re := regexp.MustCompile("[0-9]+")
+			if userEnteredNum, err := strconv.Atoi(re.FindString(userMsg.Content)); err == nil {
+
+				if userEnteredNum > 0 {
+					return userEnteredNum, nil
+				}
+			} else {
+				return 0, errors.New("Number not found in input")
+			}
+		case <-timeoutChan:
+			return 0, errors.New("Timed out")
+		}
 	}
 }

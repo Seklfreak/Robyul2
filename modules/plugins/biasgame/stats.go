@@ -17,14 +17,6 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-type rankingStruct struct {
-	userId           string
-	guildId          string
-	amountOfGames    int
-	idolWithMostWins string
-	userName         string
-}
-
 // displayBiasGameStats will display stats for the bias game based on the stats message
 func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
@@ -400,8 +392,8 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 func displayCurrentGameStats(msg *discordgo.Message) {
 
 	blankField := &discordgo.MessageEmbedField{
-		Name:   ZERO_WIDTH_SPACE,
-		Value:  ZERO_WIDTH_SPACE,
+		Name:   helpers.ZERO_WIDTH_SPACE,
+		Value:  helpers.ZERO_WIDTH_SPACE,
 		Inline: true,
 	}
 
