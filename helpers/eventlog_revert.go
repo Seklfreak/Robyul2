@@ -8,7 +8,6 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -22,7 +21,13 @@ func CanRevert(item models.ElasticEventlog) bool {
 		if len(item.Changes) > 0 {
 			return true
 		}
+	case models.EventlogTypeRoleUpdate:
+		if len(item.Changes) > 0 {
+			return true
+		}
 	}
+
+	// TODO: check allowed keys
 
 	return false
 }
@@ -57,12 +62,48 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		cache.GetSession().ChannelEditComplex(item.TargetID, channelEdit)
+		_, err = cache.GetSession().ChannelEditComplex(item.TargetID, channelEdit)
 		if err != nil {
 			return err
 		}
 
 		return logRevert(channel.GuildID, userID, eventlogID)
+	case models.EventlogTypeRoleUpdate:
+		role, err := cache.GetSession().State.Role(item.GuildID, item.TargetID)
+		if err != nil {
+			return err
+		}
+
+		newName := role.Name
+		newMentionable := role.Mentionable
+		newHoist := role.Hoist
+		newColor := role.Color
+		newPermissions := role.Permissions
+
+		for _, change := range item.Changes {
+			switch change.Key {
+			case "role_name":
+				newName = change.OldValue
+			case "role_mentionable":
+				newMentionable = GetStringAsBool(change.OldValue)
+			case "role_hoist":
+				newHoist = GetStringAsBool(change.OldValue)
+			case "role_color":
+				newColor = GetDiscordColorFromHex(change.OldValue)
+			case "role_permissions":
+				tempPermissions, err := strconv.Atoi(change.OldValue)
+				if err == nil {
+					newPermissions = tempPermissions
+				}
+			}
+		}
+
+		role, err = cache.GetSession().GuildRoleEdit(item.GuildID, item.TargetID, newName, newColor, newHoist, newPermissions, newMentionable)
+		if err != nil {
+			return err
+		}
+
+		return logRevert(item.GuildID, userID, eventlogID)
 	}
 
 	return errors.New("eventlog action type not supported")
@@ -104,6 +145,5 @@ func logRevert(guildID, userID, eventlogID string) error {
 		false,
 		true,
 	)
-	spew.Dump(err)
 	return err
 }
