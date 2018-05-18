@@ -188,7 +188,7 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 		return
 	}
 
-	err = helpers.Revert(*eventlogItem)
+	err = helpers.Revert(ID, reaction.UserID, *eventlogItem)
 	cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
 	if err != nil {
 		helpers.SendMessage(reaction.ChannelID, "Error reverting change: "+err.Error()) // TODO: better error message

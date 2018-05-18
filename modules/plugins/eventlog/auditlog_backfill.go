@@ -109,6 +109,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -145,6 +146,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -181,6 +183,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -217,6 +220,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -253,6 +257,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -289,6 +294,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -365,6 +371,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -401,6 +408,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -425,6 +433,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -461,6 +470,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -500,6 +510,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -536,6 +547,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -572,6 +584,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -608,6 +621,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -644,6 +658,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++
@@ -680,6 +695,7 @@ func auditlogBackfillLoop() {
 							nil,
 							result.Reason,
 							true,
+							false,
 						)
 						helpers.RelaxLog(err)
 						successfulBackfills++

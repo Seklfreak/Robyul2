@@ -544,7 +544,7 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 
 func ElasticUpdateEventLog(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
-	reason string, auditLogBackfilled bool, logMessageIDs []string) (eventlogItem *models.ElasticEventlog, err error) {
+	reason string, auditLogBackfilled bool, reverted bool, logMessageIDs []string) (eventlogItem *models.ElasticEventlog, err error) {
 	if !cache.HasElastic() {
 		return nil, errors.New("no elastic client")
 	}
@@ -552,7 +552,7 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 	get1, err := cache.GetElastic().Get().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).
 		Do(context.Background())
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	var elasticEventlog models.ElasticEventlog
@@ -617,7 +617,6 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 			if elasticEventlog.Reason == "" {
 				elasticEventlog.Reason = reason
 			} else {
-
 				elasticEventlog.Reason += " | " + reason
 			}
 		}
@@ -629,6 +628,10 @@ func ElasticUpdateEventLog(elasticID string, UserID string,
 
 	if logMessageIDs != nil {
 		elasticEventlog.EventlogMessages = logMessageIDs
+	}
+
+	if reverted {
+		elasticEventlog.Reverted = reverted
 	}
 
 	_, err = cache.GetElastic().Update().Index(models.ElasticIndexEventlogs).Type("doc").Id(elasticID).

@@ -88,7 +88,7 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		}
 	}
 
-	eventlogItem, err := ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, messageIDs)
+	eventlogItem, err := ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, false, messageIDs)
 	if err != nil {
 		return true, err
 	}
@@ -106,9 +106,9 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 
 func EventlogLogUpdate(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
-	reason string, auditLogBackfilled bool) (err error) {
+	reason string, auditLogBackfilled, reverted bool) (err error) {
 	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, cleanOptions(options), cleanChanges(changes), reason,
-		auditLogBackfilled, nil)
+		auditLogBackfilled, reverted, nil)
 	if err != nil {
 		return
 	}
@@ -179,6 +179,11 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 			}
 		case models.EventlogTargetTypeMessage:
 			break
+		case models.EventlogTargetTypeRobyulEventlogItem:
+			eventlogItem, err := ElasticGetEventlog(id)
+			if err == nil {
+				targetName = eventlogItem.ActionType
+			}
 		}
 		names = append(names, targetName)
 	}
