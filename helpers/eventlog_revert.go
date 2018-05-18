@@ -16,19 +16,34 @@ func CanRevert(item models.ElasticEventlog) bool {
 		return false
 	}
 
+	if len(item.Changes) <= 0 {
+		return false
+	}
+
 	switch item.ActionType {
 	case models.EventlogTypeChannelUpdate:
-		if len(item.Changes) > 0 {
+		if containsAllowedChanges(item, []string{"channel_name", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid"}) {
 			return true
 		}
 	case models.EventlogTypeRoleUpdate:
-		if len(item.Changes) > 0 {
+		if containsAllowedChanges(item, []string{"role_name", "role_mentionable", "role_hoist", "role_color", "role_permissions"}) {
 			return true
 		}
 	}
 
-	// TODO: check allowed keys
+	return false
+}
 
+func containsAllowedChanges(eventlogEntry models.ElasticEventlog, keys []string) bool {
+	if len(eventlogEntry.Changes) > 0 {
+		for _, change := range eventlogEntry.Changes {
+			for _, key := range keys {
+				if change.Key == key {
+					return true
+				}
+			}
+		}
+	}
 	return false
 }
 
