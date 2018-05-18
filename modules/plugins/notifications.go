@@ -735,10 +735,14 @@ NextKeyword:
 			continue
 		}
 
+		escapedContent := strings.Replace(msg.Content, "```", "", -1)
+		escapedContent = strings.Replace(escapedContent, "`", "'", -1)
+		escapedContent = strings.TrimSpace(strings.Trim(escapedContent, "\n"))
+
 		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
 		case 2:
 			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.\n\u200B",
-				msg.Content,
+				escapedContent,
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
@@ -806,7 +810,7 @@ NextKeyword:
 				fmt.Sprintf("<#%s>", channel.ID),
 				guild.Name,
 				messageTime.UTC().Format("15:04:05"),
-				msg.Content,
+				escapedContent,
 			), "\n") {
 				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
 				if err != nil {
