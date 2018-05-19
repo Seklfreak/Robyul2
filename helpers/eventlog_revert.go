@@ -5,9 +5,12 @@ import (
 
 	"time"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/json-iterator/go"
 	"github.com/pkg/errors"
 )
 
@@ -22,7 +25,7 @@ func CanRevert(item models.ElasticEventlog) bool {
 
 	switch item.ActionType {
 	case models.EventlogTypeChannelUpdate:
-		if containsAllowedChanges(item, []string{"channel_name", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid"}) {
+		if containsAllowedChanges(item, []string{"channel_name", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid", "channel_permissionoverwrites"}) {
 			return true
 		}
 	case models.EventlogTypeRoleUpdate:
@@ -74,6 +77,18 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 				}
 			case "channel_parentid":
 				channelEdit.ParentID = change.OldValue
+			case "channel_permissionoverwrites":
+				newOverwrites := make([]*discordgo.PermissionOverwrite, 0)
+				oldOverwritesTexts := strings.Split(change.OldValue, ";")
+				for _, oldOverwriteText := range oldOverwritesTexts {
+					var oldOverwrite *discordgo.PermissionOverwrite
+					err = jsoniter.UnmarshalFromString(oldOverwriteText, &oldOverwrite)
+					RelaxLog(err)
+					if err == nil && oldOverwrite != nil {
+						newOverwrites = append(newOverwrites, oldOverwrite)
+					}
+				}
+				channelEdit.PermissionOverwrites = newOverwrites
 			}
 		}
 
