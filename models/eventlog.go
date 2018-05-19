@@ -19,13 +19,15 @@ const (
 
 	EventlogTypeInvitePosted = "Invite_Posted" // EvenlogTargetTypeGuild
 
-	EventlogTargetTypeUser       = "user"
-	EventlogTargetTypeChannel    = "channel"
-	EventlogTargetTypeRole       = "role"
-	EventlogTargetTypeEmoji      = "emoji"
-	EventlogTargetTypeGuild      = "guild"
-	EventlogTargetTypeMessage    = "message"
-	EventlogTargetTypeInviteCode = "invite_code"
+	EventlogTargetTypeUser             = "user"
+	EventlogTargetTypeChannel          = "channel"
+	EventlogTargetTypeRole             = "role"
+	EventlogTargetTypeEmoji            = "emoji"
+	EventlogTargetTypeGuild            = "guild"
+	EventlogTargetTypeMessage          = "message"
+	EventlogTargetTypeInviteCode       = "invite_code"
+	EventlogTargetTypeChannelOverwrite = "channel_overwrite"
+	EventlogTargetTypeRolePermissions  = "role_permissions"
 
 	EventlogTypeRobyulBadgeCreate                   = "Robyul_Badge_Create"                    // EventlogTargetTypeRobyulBadge
 	EventlogTypeRobyulBadgeDelete                   = "Robyul_Badge_Delete"                    // EventlogTargetTypeRobyulBadge

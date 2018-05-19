@@ -18,6 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/json-iterator/go"
 )
 
 var (
@@ -867,15 +868,32 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 	}
 
 	if !ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
-		// TODO: handle permission overwrites
-		/*
-				changes = append(changes, models.ElasticEventlogChange{
-					Key:      "channel_permissionoverwrites",
-					OldValue: oldChannel.PermissionOverwrites,
-					NewValue: newChannel.PermissionOverwrites,
-				})
+		var oldOverwrites, newOverwrites string
+		for _, oldOverwrite := range oldChannel.PermissionOverwrites {
+			oldOverwriteText, err := jsoniter.MarshalToString(oldOverwrite)
+			RelaxLog(err)
+			if err == nil {
+				oldOverwrites += oldOverwriteText + ","
+			}
+		}
+		oldOverwrites = strings.TrimRight(oldOverwrites, ",")
+		for _, newOverwrite := range newChannel.PermissionOverwrites {
+			newOverwriteText, err := jsoniter.MarshalToString(newOverwrite)
+			RelaxLog(err)
+			if err == nil {
+				newOverwrites += newOverwriteText + ","
+			}
+		}
+		newOverwrites = strings.TrimRight(newOverwrites, ",")
+		if oldOverwrites != "" && newOverwrites != "" {
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "channel_permissionoverwrites",
+				OldValue: oldOverwrites,
+				NewValue: newOverwrites,
+				Type:     models.EventlogTargetTypeChannelOverwrite,
+			})
 			backfill = true
-		*/
+		}
 	}
 
 	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, backfill)
@@ -1019,6 +1037,7 @@ func OnEventlogRoleUpdate(guildID string, oldRole, newRole *discordgo.Role) {
 			Key:      "role_permissions",
 			OldValue: strconv.Itoa(oldRole.Permissions),
 			NewValue: strconv.Itoa(newRole.Permissions),
+			Type:     models.EventlogTargetTypeRolePermissions,
 		})
 	}
 
