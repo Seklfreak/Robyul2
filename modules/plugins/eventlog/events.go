@@ -70,30 +70,30 @@ func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *dis
 		[]models.ElasticEventlogOption{
 			{
 				Key:   "invite_code",
-				Value: strings.Join(invitesCodes, ","),
+				Value: strings.Join(invitesCodes, ";"),
 				Type:  models.EventlogTargetTypeInviteCode,
 			},
 			{
 				Key:   "invite_guildid",
-				Value: strings.Join(postedInviteGuildIDs, ","),
+				Value: strings.Join(postedInviteGuildIDs, ";"),
 				Type:  models.EventlogTargetTypeGuild,
 			},
 			{
 				Key:   "invite_guildname",
-				Value: strings.Join(postedInviteGuildNames, ","),
+				Value: strings.Join(postedInviteGuildNames, ";"),
 			},
 			{
 				Key:   "invite_guildmembercount",
-				Value: strings.Join(postedInviteGuildMemberCounts, ","),
+				Value: strings.Join(postedInviteGuildMemberCounts, ";"),
 			},
 			{
 				Key:   "invite_channelid",
-				Value: strings.Join(postedInviteChannelIDs, ","),
+				Value: strings.Join(postedInviteChannelIDs, ";"),
 				Type:  models.EventlogTargetTypeChannel,
 			},
 			{
 				Key:   "invite_inviterid",
-				Value: strings.Join(postedInviteInviterUserIDs, ","),
+				Value: strings.Join(postedInviteInviterUserIDs, ";"),
 				Type:  models.EventlogTargetTypeUser,
 			},
 		},

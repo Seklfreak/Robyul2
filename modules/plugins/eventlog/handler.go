@@ -115,8 +115,8 @@ func (h *Handler) actionSetLogChannel(args []string, in *discordgo.Message, out 
 		[]models.ElasticEventlogChange{
 			{
 				Key:      "eventlog_log_channelids",
-				OldValue: strings.Join(settings.EventlogChannelIDs, ","),
-				NewValue: strings.Join(newLogChannelIDs, ","),
+				OldValue: strings.Join(settings.EventlogChannelIDs, ";"),
+				NewValue: strings.Join(newLogChannelIDs, ";"),
 				Type:     models.EventlogTargetTypeChannel,
 			},
 		},
