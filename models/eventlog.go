@@ -151,6 +151,9 @@ const (
 	AuditLogBackfillTypeRoleUpdate
 	AuditlogBackfillTypeMemberRoleUpdate
 	AuditlogBackfillTypeMemberUpdate
+	AuditLogBackfillTypeChannelOverridesAdd
+	AuditLogBackfillTypeChannelOverridesRemove
+	AuditLogBackfillTypeChannelOverridesUpdate
 )
 
 type AuditLogBackfillRequest struct {

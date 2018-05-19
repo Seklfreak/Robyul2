@@ -153,9 +153,18 @@ func auditlogBackfillLoop() {
 					}
 				}
 				break
-			case models.AuditLogBackfillTypeChannelUpdate:
+			case models.AuditLogBackfillTypeChannelUpdate, models.AuditLogBackfillTypeChannelOverridesAdd, models.AuditLogBackfillTypeChannelOverridesRemove, models.AuditLogBackfillTypeChannelOverridesUpdate:
 				logger().Infof("doing channel update backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
-				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", discordgo.AuditLogActionChannelUpdate, backfill.Count)
+				backfillRequestType := discordgo.AuditLogActionChannelUpdate
+				switch backfill.Type {
+				case models.AuditLogBackfillTypeChannelOverridesAdd:
+					backfillRequestType = discordgo.AuditLogActionChannelOverwriteCreate
+				case models.AuditLogBackfillTypeChannelOverridesRemove:
+					backfillRequestType = discordgo.AuditLogActionChannelOverwriteDelete
+				case models.AuditLogBackfillTypeChannelOverridesUpdate:
+					backfillRequestType = discordgo.AuditLogActionChannelOverwriteUpdate
+				}
+				results, err := cache.GetSession().GuildAuditLog(backfill.GuildID, "", "", backfillRequestType, backfill.Count)
 				if err != nil {
 					if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 						continue

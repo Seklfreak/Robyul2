@@ -844,7 +844,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.Channel) {
 	leftAt := time.Now()
 
-	var backfill bool
+	var backfill, channelOverwriteAddBackfill, channelOverwriteRemoveBackfill, channelOverwriteUpdateBackfill bool
 
 	changes := make([]models.ElasticEventlogChange, 0)
 
@@ -919,6 +919,13 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 				newOverwrites += newOverwriteText + ";"
 			}
 		}
+		if len(oldChannel.PermissionOverwrites) > len(newChannel.PermissionOverwrites) {
+			channelOverwriteRemoveBackfill = true
+		} else if len(oldChannel.PermissionOverwrites) < len(newChannel.PermissionOverwrites) {
+			channelOverwriteAddBackfill = true
+		} else {
+			channelOverwriteUpdateBackfill = true
+		}
 		newOverwrites = strings.TrimRight(newOverwrites, ";")
 		if oldOverwrites != "" && newOverwrites != "" {
 			changes = append(changes, models.ElasticEventlogChange{
@@ -927,15 +934,36 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 				NewValue: newOverwrites,
 				Type:     models.EventlogTargetTypePermissionOverwrite,
 			})
-			backfill = true
 		}
 	}
 
-	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, backfill)
+	requireBackfill := backfill
+	if channelOverwriteAddBackfill {
+		requireBackfill = true
+	}
+	if channelOverwriteRemoveBackfill {
+		requireBackfill = true
+	}
+	if channelOverwriteUpdateBackfill {
+		requireBackfill = true
+	}
+
+	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, requireBackfill)
 	RelaxLog(err)
-	if added && backfill {
-		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelUpdate, "")
-		RelaxLog(err)
+	if added {
+		if backfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelUpdate, "")
+			RelaxLog(err)
+		} else if channelOverwriteAddBackfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelOverridesAdd, "")
+			RelaxLog(err)
+		} else if channelOverwriteRemoveBackfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelOverridesRemove, "")
+			RelaxLog(err)
+		} else if channelOverwriteUpdateBackfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelOverridesUpdate, "")
+			RelaxLog(err)
+		}
 	}
 }
 
