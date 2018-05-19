@@ -19,17 +19,33 @@ func CanRevert(item models.ElasticEventlog) bool {
 		return false
 	}
 
-	if len(item.Changes) <= 0 {
+	if len(item.Changes) <= 0 && len(item.Options) <= 0 {
 		return false
 	}
 
 	switch item.ActionType {
 	case models.EventlogTypeChannelUpdate:
-		if containsAllowedChanges(item, []string{"channel_name", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid", "channel_permissionoverwrites"}) {
+		if containsAllowedChangesOrOptions(
+			item,
+			[]string{"channel_name", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid", "channel_permissionoverwrites"},
+			nil,
+		) {
 			return true
 		}
 	case models.EventlogTypeRoleUpdate:
-		if containsAllowedChanges(item, []string{"role_name", "role_mentionable", "role_hoist", "role_color", "role_permissions"}) {
+		if containsAllowedChangesOrOptions(
+			item,
+			[]string{"role_name", "role_mentionable", "role_hoist", "role_color", "role_permissions"},
+			nil,
+		) {
+			return true
+		}
+	case models.EventlogTypeMemberUpdate:
+		if containsAllowedChangesOrOptions(
+			item,
+			[]string{"member_nick"},
+			[]string{"member_roles_added", "member_roles_removed"},
+		) {
 			return true
 		}
 	}
@@ -37,11 +53,20 @@ func CanRevert(item models.ElasticEventlog) bool {
 	return false
 }
 
-func containsAllowedChanges(eventlogEntry models.ElasticEventlog, keys []string) bool {
+func containsAllowedChangesOrOptions(eventlogEntry models.ElasticEventlog, changes []string, options []string) bool {
 	if len(eventlogEntry.Changes) > 0 {
 		for _, change := range eventlogEntry.Changes {
-			for _, key := range keys {
+			for _, key := range changes {
 				if change.Key == key {
+					return true
+				}
+			}
+		}
+	}
+	if len(eventlogEntry.Options) > 0 {
+		for _, option := range eventlogEntry.Options {
+			for _, key := range options {
+				if option.Key == key {
 					return true
 				}
 			}
@@ -131,6 +156,37 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		role, err = cache.GetSession().GuildRoleEdit(item.GuildID, item.TargetID, newName, newColor, newHoist, newPermissions, newMentionable)
 		if err != nil {
 			return err
+		}
+
+		return logRevert(item.GuildID, userID, eventlogID)
+	case models.EventlogTypeMemberUpdate:
+		for _, change := range item.Changes {
+			switch change.Key {
+			case "member_nick":
+				err = cache.GetSession().GuildMemberNickname(item.GuildID, item.TargetID, change.OldValue)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		for _, option := range item.Options {
+			switch option.Key {
+			case "member_roles_added":
+				for _, roleID := range strings.Split(option.Value, ";") {
+					err = cache.GetSession().GuildMemberRoleRemove(item.GuildID, item.TargetID, roleID)
+					if err != nil {
+						return err
+					}
+				}
+			case "member_roles_removed":
+				for _, roleID := range strings.Split(option.Value, ";") {
+					err = cache.GetSession().GuildMemberRoleAdd(item.GuildID, item.TargetID, roleID)
+					if err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		return logRevert(item.GuildID, userID, eventlogID)
