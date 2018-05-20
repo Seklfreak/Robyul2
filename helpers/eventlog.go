@@ -417,6 +417,18 @@ func getEventlogEmbed(eventlogID string, createdAt time.Time, guildID, targetID,
 		}
 	}
 
+	// overwrite values with persistent values if possible
+	// (object storage link instead of discord link)
+	for _, change := range changes {
+		switch change.Key {
+		case "guild_icon_object":
+			fileLink, err := GetFileLink(change.NewValue)
+			if err == nil {
+				embed.Thumbnail.URL = fileLink
+			}
+		}
+	}
+
 	return embed
 }
 
