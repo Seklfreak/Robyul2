@@ -1,17 +1,23 @@
 package helpers
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/base64"
+	"image"
+	"image/jpeg"
 	"strconv"
-
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/json-iterator/go"
 	"github.com/pkg/errors"
+
+	_ "image/gif"
+	_ "image/png"
 )
 
 func CanRevert(item models.ElasticEventlog) bool {
@@ -45,6 +51,14 @@ func CanRevert(item models.ElasticEventlog) bool {
 			item,
 			[]string{"member_nick"},
 			[]string{"member_roles_added", "member_roles_removed"},
+		) {
+			return true
+		}
+	case models.EventlogTypeGuildUpdate:
+		if containsAllowedChangesOrOptions(
+			item,
+			[]string{"guild_name", "guild_icon_object", "guild_region", "guild_afkchannelid", "guild_afktimeout", "guild_verificationlevel", "guild_defaultmessagenotifications"},
+			nil,
 		) {
 			return true
 		}
@@ -190,6 +204,76 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		}
 
 		return logRevert(item.GuildID, userID, eventlogID)
+	case models.EventlogTypeGuildUpdate:
+		guild, err := GetGuildWithoutApi(item.TargetID)
+		if err != nil {
+			return err
+		}
+
+		guildParams := discordgo.GuildParams{
+			DefaultMessageNotifications: guild.DefaultMessageNotifications,
+			AfkTimeout:                  guild.AfkTimeout,
+			AfkChannelID:                guild.AfkChannelID,
+		}
+
+		for _, change := range item.Changes {
+			switch change.Key {
+			case "guild_name":
+				guildParams.Name = change.OldValue
+			case "guild_icon_object":
+				// retrieve previous icon
+				iconData, err := RetrieveFile(change.OldValue)
+				if err != nil {
+					return err
+				}
+
+				// read icon
+				iconImage, _, err := image.Decode(bytes.NewReader(iconData))
+				if err != nil {
+					return err
+				}
+
+				// convert icon to jpeg
+				var jpegIconBuffer bytes.Buffer
+				err = jpeg.Encode(bufio.NewWriter(&jpegIconBuffer), iconImage, nil)
+				if err != nil {
+					return err
+				}
+
+				// encode jpeg to base64
+				iconJpegBase64 := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(jpegIconBuffer.Bytes())
+
+				guildParams.Icon = iconJpegBase64
+			case "guild_region":
+				guildParams.Region = change.OldValue
+			case "guild_afkchannelid":
+				guildParams.AfkChannelID = change.OldValue
+			case "guild_afktimeout":
+				newTimeout, err := strconv.Atoi(change.OldValue)
+				RelaxLog(err)
+				if err == nil {
+					guildParams.AfkTimeout = newTimeout
+				}
+			case "guild_verificationlevel":
+				newVerificationLevel, err := strconv.Atoi(change.OldValue)
+				RelaxLog(err)
+				if err == nil {
+					level := discordgo.VerificationLevel(newVerificationLevel)
+					guildParams.VerificationLevel = &level
+				}
+			case "guild_defaultmessagenotifications":
+				newDefaultMessageNotifications, err := strconv.Atoi(change.OldValue)
+				RelaxLog(err)
+				if err == nil {
+					guildParams.DefaultMessageNotifications = newDefaultMessageNotifications
+				}
+			}
+		}
+
+		_, err = cache.GetSession().GuildEdit(item.TargetID, guildParams)
+
+		return logRevert(item.GuildID, userID, eventlogID)
+
 	}
 
 	return errors.New("eventlog action type not supported")

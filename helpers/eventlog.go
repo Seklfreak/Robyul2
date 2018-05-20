@@ -220,6 +220,32 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 					targetName += "Deny " + GetPermissionsText(channelOverwrite.Deny)
 				}
 			}
+		case models.EventlogTargetTypeVerificationLevel:
+			level, err := strconv.Atoi(id)
+			if err == nil {
+				switch discordgo.VerificationLevel(level) {
+				case discordgo.VerificationLevelNone:
+					targetName = "None"
+				case discordgo.VerificationLevelLow:
+					targetName = "Low"
+				case discordgo.VerificationLevelMedium:
+					targetName = "Medium"
+				case discordgo.VerificationLevelHigh:
+					targetName = "High"
+				case 4: // TODO: enum
+					targetName = "Very High"
+				}
+			}
+		case models.EventlogTargetTypeGuildDefaultMessageNotifications:
+			level, err := strconv.Atoi(id)
+			if err == nil {
+				switch level {
+				case 0: // TODO: enum
+					targetName = "All Messages"
+				case 1:
+					targetName = "Only Mentions"
+				}
+			}
 		}
 		names = append(names, targetName)
 	}
@@ -778,39 +804,11 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	}
 
 	if oldGuild.VerificationLevel != newGuild.VerificationLevel {
-		var oldVerificationLevel, newVerificationLevel string
-		switch oldGuild.VerificationLevel {
-		case discordgo.VerificationLevelNone:
-			oldVerificationLevel = "none"
-			break
-		case discordgo.VerificationLevelLow:
-			oldVerificationLevel = "low"
-			break
-		case discordgo.VerificationLevelMedium:
-			oldVerificationLevel = "medium"
-			break
-		case discordgo.VerificationLevelHigh:
-			oldVerificationLevel = "high"
-			break
-		}
-		switch newGuild.VerificationLevel {
-		case discordgo.VerificationLevelNone:
-			newVerificationLevel = "none"
-			break
-		case discordgo.VerificationLevelLow:
-			newVerificationLevel = "low"
-			break
-		case discordgo.VerificationLevelMedium:
-			newVerificationLevel = "medium"
-			break
-		case discordgo.VerificationLevelHigh:
-			newVerificationLevel = "high"
-			break
-		}
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "guild_verificationlevel",
-			OldValue: oldVerificationLevel,
-			NewValue: newVerificationLevel,
+			OldValue: strconv.Itoa(int(oldGuild.VerificationLevel)),
+			NewValue: strconv.Itoa(int(newGuild.VerificationLevel)),
+			Type:     models.EventlogTargetTypeVerificationLevel,
 		})
 	}
 
@@ -830,6 +828,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 			Key:      "guild_defaultmessagenotifications",
 			OldValue: strconv.Itoa(oldGuild.DefaultMessageNotifications),
 			NewValue: strconv.Itoa(newGuild.DefaultMessageNotifications),
+			Type:     models.EventlogTargetTypeGuildDefaultMessageNotifications,
 		})
 	}
 

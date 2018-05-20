@@ -145,7 +145,6 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 			session.ChannelTyping(msg.ChannelID)
 			// @TODO: more secure way to exchange token: create own webhook if no arguments passed
 			helpers.RequireRobyulMod(msg, func() {
-				session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Delete command message to prevent people seeing the token
 				progressMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.mirror.add-channel-progress"))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				if len(progressMessages) <= 0 {
