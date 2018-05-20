@@ -152,6 +152,13 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 		return
 	}
 
+	err = Container.Drain(1, reaction.UserID)
+	if err != nil {
+		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> You are undoing too fast.\nPlease wait a bit.")
+		return
+	}
+
 	// get target message
 	message, err := helpers.GetMessage(reaction.ChannelID, reaction.MessageID)
 	if err != nil {
@@ -189,9 +196,11 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 	}
 
 	err = helpers.Revert(ID, reaction.UserID, *eventlogItem)
-	cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
 	if err != nil {
-		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> Error reverting change: "+err.Error()) // TODO: better error message
+		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> Error reverting change: "+err.Error())
+	} else {
+		cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
 	}
 }
 

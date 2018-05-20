@@ -26,6 +26,8 @@ func (h *Handler) Commands() []string {
 func (h *Handler) Init(session *discordgo.Session) {
 	defer helpers.Recover()
 
+	Container.Init()
+
 	session.AddHandler(h.OnChannelCreate)
 	session.AddHandler(h.OnChannelDelete)
 	session.AddHandler(h.OnGuildRoleCreate)
