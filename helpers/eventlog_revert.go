@@ -62,6 +62,17 @@ func CanRevert(item models.ElasticEventlog) bool {
 		) {
 			return true
 		}
+		/*
+				TODO
+			case models.EventlogTypeEmojiDelete:
+				if containsAllowedChangesOrOptions(
+					item,
+					[]string{"emoji_icon_object"},
+					nil,
+				) {
+					return true
+				}
+		*/
 	}
 
 	return false
@@ -273,6 +284,37 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		_, err = cache.GetSession().GuildEdit(item.TargetID, guildParams)
 
 		return logRevert(item.GuildID, userID, eventlogID)
+		/*
+			TODO
+				case models.EventlogTypeEmojiDelete:
+					var emojiName, emojiImage string
+
+					for _, option := range item.Options {
+						switch option.Key {
+						case "emoji_name":
+							emojiName = emojiName
+						case "emoji_icon_object":
+							// retrieve previous icon
+							iconData, err := RetrieveFile(option.Value)
+							if err != nil {
+								return err
+							}
+
+							// read icon
+							filetype, err := SniffMime(iconData)
+							if err != nil {
+								return err
+							}
+
+							// encode jpeg to base64
+							emojiImage = "data:" + filetype + ";base64," + base64.StdEncoding.EncodeToString(iconData)
+						}
+					}
+
+					// TODO: create new emoji
+
+					return logRevert(item.GuildID, userID, eventlogID)
+		*/
 
 	}
 

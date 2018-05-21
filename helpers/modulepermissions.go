@@ -214,10 +214,10 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	for _, userRoleID := range userRoles {
 		if GetAllowedForRole(channel.GuildID, userRoleID)&module == module ||
 			GetAllowedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"allowed command by role message #%s channel #%s user #%s module %s",
-				msgID, channelID, userID, GetModuleNameById(module),
-			)
+			//cache.GetLogger().WithField("module", "modulepermissions").Infof(
+			//	"allowed command by role message #%s channel #%s user #%s module %s",
+			//	msgID, channelID, userID, GetModuleNameById(module),
+			//)
 			return true
 		}
 	}
@@ -226,10 +226,10 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	for _, userRoleID := range userRoles {
 		if GetDeniedForRole(channel.GuildID, userRoleID)&module == module ||
 			GetDeniedForRole(channel.GuildID, userRoleID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"denied command by role message #%s channel #%s user #%s module %s",
-				msgID, channelID, userID, GetModuleNameById(module),
-			)
+			//cache.GetLogger().WithField("module", "modulepermissions").Infof(
+			//	"denied command by role message #%s channel #%s user #%s module %s",
+			//	msgID, channelID, userID, GetModuleNameById(module),
+			//)
 			return false
 		}
 	}
@@ -247,10 +247,10 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	// denied channel
 	if GetDeniedForChannel(channel.GuildID, channelID)&module == module ||
 		GetDeniedForChannel(channel.GuildID, channelID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"denied command by channel message #%s channel #%s user #%s module %s",
-			msgID, channelID, userID, GetModuleNameById(module),
-		)
+		//cache.GetLogger().WithField("module", "modulepermissions").Infof(
+		//	"denied command by channel message #%s channel #%s user #%s module %s",
+		//	msgID, channelID, userID, GetModuleNameById(module),
+		//)
 		return false
 	}
 
@@ -258,10 +258,10 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	if checkParent {
 		if GetAllowedForChannel(channel.GuildID, channel.ParentID)&module == module ||
 			GetAllowedForChannel(channel.GuildID, channel.ParentID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"allowed command by parent channel message #%s channel #%s user #%s module %s",
-				msgID, channelID, userID, GetModuleNameById(module),
-			)
+			//cache.GetLogger().WithField("module", "modulepermissions").Infof(
+			//	"allowed command by parent channel message #%s channel #%s user #%s module %s",
+			//	msgID, channelID, userID, GetModuleNameById(module),
+			//)
 			return true
 		}
 	}
@@ -270,10 +270,10 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	if checkParent {
 		if GetDeniedForChannel(channel.GuildID, channel.ParentID)&module == module ||
 			GetDeniedForChannel(channel.GuildID, channel.ParentID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-			cache.GetLogger().WithField("module", "modulepermissions").Infof(
-				"denied command by parent channel message #%s channel #%s user #%s module %s",
-				msgID, channelID, userID, GetModuleNameById(module),
-			)
+			//cache.GetLogger().WithField("module", "modulepermissions").Infof(
+			//	"denied command by parent channel message #%s channel #%s user #%s module %s",
+			//	msgID, channelID, userID, GetModuleNameById(module),
+			//)
 			return false
 		}
 	}
