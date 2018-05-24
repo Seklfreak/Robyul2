@@ -62,17 +62,8 @@ func CanRevert(item models.ElasticEventlog) bool {
 		) {
 			return true
 		}
-		/*
-				TODO
-			case models.EventlogTypeEmojiDelete:
-				if containsAllowedChangesOrOptions(
-					item,
-					[]string{"emoji_icon_object"},
-					nil,
-				) {
-					return true
-				}
-		*/
+	case models.EventlogTypeEmojiDelete:
+		return true
 	}
 
 	return false
@@ -282,40 +273,57 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		}
 
 		_, err = cache.GetSession().GuildEdit(item.TargetID, guildParams)
+		if err != nil {
+			return err
+		}
 
 		return logRevert(item.GuildID, userID, eventlogID)
-		/*
-			TODO
-				case models.EventlogTypeEmojiDelete:
-					var emojiName, emojiImage string
+	case models.EventlogTypeEmojiDelete:
+		var emojiName, emojiImage, emojiURL string
+		var emojiRoles []string
 
-					for _, option := range item.Options {
-						switch option.Key {
-						case "emoji_name":
-							emojiName = emojiName
-						case "emoji_icon_object":
-							// retrieve previous icon
-							iconData, err := RetrieveFile(option.Value)
-							if err != nil {
-								return err
-							}
+		emojiURL = discordgo.EndpointEmoji(item.TargetID)
+		for _, option := range item.Options {
+			switch option.Key {
+			case "emoji_animated":
+				if GetStringAsBool(option.Value) {
+					emojiURL = strings.Replace(emojiURL, ".png", ".gif", -1)
+				}
+			}
+		}
 
-							// read icon
-							filetype, err := SniffMime(iconData)
-							if err != nil {
-								return err
-							}
+		// retrieve previous icon
+		iconData, err := NetGetUAWithError(emojiURL, DEFAULT_UA)
+		if err != nil {
+			return err
+		}
 
-							// encode jpeg to base64
-							emojiImage = "data:" + filetype + ";base64," + base64.StdEncoding.EncodeToString(iconData)
-						}
-					}
+		// read icon
+		filetype, err := SniffMime(iconData)
+		if err != nil {
+			return err
+		}
 
-					// TODO: create new emoji
+		// encode jpeg to base64
+		emojiImage = "data:" + filetype + ";base64," + base64.StdEncoding.EncodeToString(iconData)
 
-					return logRevert(item.GuildID, userID, eventlogID)
-		*/
+		for _, option := range item.Options {
+			switch option.Key {
+			case "emoji_name":
+				emojiName = option.Value
+			case "emoji_roleids":
+				if option.Value != "" {
+					emojiRoles = strings.Split(option.Value, ";")
+				}
+			}
+		}
 
+		_, err = cache.GetSession().GuildEmojiCreate(item.GuildID, emojiName, emojiImage, emojiRoles)
+		if err != nil {
+			return err
+		}
+
+		return logRevert(item.GuildID, userID, eventlogID)
 	}
 
 	return errors.New("eventlog action type not supported")
