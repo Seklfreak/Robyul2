@@ -14,6 +14,8 @@ import (
 // module struct
 type BiasGame struct{}
 
+var gameGenders map[string]string
+
 // used to stop commands from going through
 //  before the game is ready after a bot restart
 var moduleIsReady = false
@@ -24,6 +26,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 
 		// set global variables
 		currentSinglePlayerGames = make(map[string]*singleBiasGame)
+		// currentNuguGames = make([]*nuguGame)
 		allowedGameSizes = map[int]bool{
 			32:   true,
 			64:   true,
@@ -42,7 +45,7 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 			allowedMultiGameSizes[10] = true
 		}
 
-		biasGameGenders = map[string]string{
+		gameGenders = map[string]string{
 			"boy":   "boy",
 			"boys":  "boy",
 			"girl":  "girl",
@@ -127,6 +130,7 @@ func (b *BiasGame) Uninit(session *discordgo.Session) {
 // Will validate if the passed command entered is used for this plugin
 func (b *BiasGame) Commands() []string {
 	return []string{
+		"nugugame",
 		"biasgame",
 		"biasgame-edit",
 	}
@@ -276,7 +280,7 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
 			singleGame.sendBiasGameRound()
 
-		} else if _, ok := biasGameGenders[commandArgs[0]]; ok {
+		} else if _, ok := gameGenders[commandArgs[0]]; ok {
 
 			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
 			singleGame.sendBiasGameRound()
@@ -285,6 +289,8 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 		fieldToUpdate := commandArgs[0]
 		fieldValue := strings.Join(commandArgs[1:], " ")
 		UpdateSuggestionDetails(msg, fieldToUpdate, fieldValue)
+	} else if command == "nugugame" {
+		startNuguGame(msg, commandArgs)
 	}
 }
 

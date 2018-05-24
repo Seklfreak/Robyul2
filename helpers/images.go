@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/draw"
+	"image/png"
 	"io"
 
 	"github.com/corona10/goimagehash"
@@ -118,4 +119,13 @@ func GetImageHashString(img image.Image) (string, error) {
 // DecodeImageBytes
 func DecodeImageBytes(imageBytes []byte) (image.Image, string, error) {
 	return image.Decode(bytes.NewReader(imageBytes))
+}
+
+// ImageToReader will take the given image and return a reader of the bytes
+func ImageToReader(sourceImage image.Image) *bytes.Reader {
+	buf := new(bytes.Buffer)
+	encoder := new(png.Encoder)
+	encoder.CompressionLevel = -2
+	encoder.Encode(buf, sourceImage)
+	return bytes.NewReader(buf.Bytes())
 }

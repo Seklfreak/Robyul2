@@ -43,7 +43,6 @@ var currentMultiPlayerGamesMutex sync.RWMutex
 // game configs
 var allowedGameSizes map[int]bool
 var allowedMultiGameSizes map[int]bool
-var biasGameGenders map[string]string
 
 // top 8 bracket
 var bracketImageOffsets map[int]image.Point
@@ -82,7 +81,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 			for _, arg := range commandArgs {
 
 				// gender check
-				if gender, ok := biasGameGenders[arg]; ok == true {
+				if gender, ok := gameGenders[arg]; ok == true {
 					gameGender = gender
 					continue
 				}
@@ -419,7 +418,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		for _, arg := range commandArgs {
 
 			// gender check
-			if gender, ok := biasGameGenders[arg]; ok == true {
+			if gender, ok := gameGenders[arg]; ok == true {
 				gameGender = gender
 				continue
 			}

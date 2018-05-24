@@ -31,7 +31,7 @@ type singleBiasGame struct {
 	ReadyForReaction bool   // used to make sure multiple reactions aren't counted
 	Gender           string // girl, boy, mixed
 
-	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
+	// a map of idol name and group => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
 	GameImageIndex map[string]int
 }
 
