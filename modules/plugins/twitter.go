@@ -171,6 +171,28 @@ func (t *Twitter) startTwitterStream() {
 	helpers.Relax(err)
 
 	for _, entry := range twitterEntriesCache {
+		// check if channel exists
+		channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
+		if err != nil || channel == nil || channel.ID == "" {
+			continue
+		}
+
+		// check if we can send messages
+		channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+		if err != nil {
+			continue
+		}
+
+		if channelPermission&discordgo.PermissionSendMessages != discordgo.PermissionSendMessages {
+			continue
+		}
+
+		if entry.PostMode == models.TwitterPostModeRobyulEmbed {
+			if channelPermission&discordgo.PermissionEmbedLinks != discordgo.PermissionEmbedLinks {
+				continue
+			}
+		}
+
 		idToAdd := entry.AccountID
 
 		if idToAdd == "" && entry.AccountScreenName != "" {
@@ -267,11 +289,26 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		bundledEntries = make(map[string][]models.TwitterEntry, 0)
 
 		for _, entry := range twitterEntriesCache {
+			// check if channel exists
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 			if err != nil || channel == nil || channel.ID == "" {
-				//cache.GetLogger().WithField("module", "twitter").Warn(fmt.Sprintf("skipped twitter @%s for Channel #%s on Guild #%s: channel not found!",
-				//	entry.AccountScreenName, entry.ChannelID, entry.ServerID))
 				continue
+			}
+
+			// check if we can send messages
+			channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+			if err != nil {
+				continue
+			}
+
+			if channelPermission&discordgo.PermissionSendMessages != discordgo.PermissionSendMessages {
+				continue
+			}
+
+			if entry.PostMode == models.TwitterPostModeRobyulEmbed {
+				if channelPermission&discordgo.PermissionEmbedLinks != discordgo.PermissionEmbedLinks {
+					continue
+				}
 			}
 
 			if _, ok := bundledEntries[entry.AccountScreenName]; ok {
