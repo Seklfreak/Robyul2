@@ -489,11 +489,6 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 	})
 
 	options = append(options, models.ElasticEventlogOption{
-		Key:   "emoji_apiname",
-		Value: emoji.APIName(),
-	})
-
-	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
 		Value: strings.Join(emoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
@@ -542,11 +537,6 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 	})
 
 	options = append(options, models.ElasticEventlogOption{
-		Key:   "emoji_apiname",
-		Value: emoji.APIName(),
-	})
-
-	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
 		Value: strings.Join(emoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
@@ -587,11 +577,6 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_animated",
 		Value: StoreBoolAsString(newEmoji.Animated),
-	})
-
-	options = append(options, models.ElasticEventlogOption{
-		Key:   "emoji_apiname",
-		Value: newEmoji.APIName(),
 	})
 
 	options = append(options, models.ElasticEventlogOption{
@@ -647,14 +632,6 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 			Key:      "emoji_animated",
 			OldValue: StoreBoolAsString(oldEmoji.Animated),
 			NewValue: StoreBoolAsString(newEmoji.Animated),
-		})
-	}
-
-	if oldEmoji.APIName() != newEmoji.APIName() {
-		changes = append(changes, models.ElasticEventlogChange{
-			Key:      "emoji_apiname",
-			OldValue: oldEmoji.APIName(),
-			NewValue: newEmoji.APIName(),
 		})
 	}
 
