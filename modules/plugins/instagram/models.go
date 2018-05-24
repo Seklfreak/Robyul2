@@ -7,8 +7,10 @@ import (
 
 	"time"
 
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
 )
 
@@ -352,6 +354,22 @@ func (m *Handler) getBundledEntries() (bundledEntries map[string][]models.Instag
 			//cache.GetLogger().WithField("module", "instagram").Infof("skipped instagram @%s for Channel #%s on Guild #%s: channel not found!",
 			//	entry.Username, entry.ChannelID, entry.ServerID)
 			continue
+		}
+
+		// check if we can send messages
+		channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+		if err != nil {
+			continue
+		}
+
+		if channelPermission&discordgo.PermissionSendMessages != discordgo.PermissionSendMessages {
+			continue
+		}
+
+		if entry.SendPostType == models.InstagramSendPostTypeRobyulEmbed {
+			if channelPermission&discordgo.PermissionEmbedLinks != discordgo.PermissionEmbedLinks {
+				continue
+			}
 		}
 
 		if _, ok := bundledEntries[entry.Username]; ok {
