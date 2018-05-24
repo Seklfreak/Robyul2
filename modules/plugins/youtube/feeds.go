@@ -79,6 +79,12 @@ func (f *feeds) check() {
 }
 
 func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeChannelEntry {
+	// check if we have access to channel
+	channel, err := helpers.GetChannelWithoutApi(e.ChannelID)
+	if err != nil || channel == nil || channel.ID == "" {
+		return e
+	}
+
 	// set iso8601 time which will be used search query filter "published after"
 	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
 	publishedAfter := lastSuccessfulCheckTime.
