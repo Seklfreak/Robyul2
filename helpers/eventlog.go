@@ -12,8 +12,6 @@ import (
 
 	"errors"
 
-	"fmt"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -391,15 +389,13 @@ func getEventlogEmbed(eventlogID string, createdAt time.Time, guildID, targetID,
 				embed.Thumbnail.URL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon) + "?size=256"
 			}
 		case models.EventlogTargetTypeEmoji:
-			objectName, err := getDiscordFileHashObject("emoji_icon_object",
-				targetIDs[0],
-				discordgo.EndpointEmoji(targetIDs[0]),
-				"", "", guildID)
-			if err == nil {
-				fileLink, err := GetFileLink(objectName)
-				if err == nil {
-					fmt.Println(fileLink)
-					embed.Thumbnail.URL = fileLink
+			embed.Thumbnail.URL = discordgo.EndpointEmoji(targetIDs[0])
+			for _, option := range options {
+				switch option.Key {
+				case "emoji_animated":
+					if GetStringAsBool(option.Value) {
+						embed.Thumbnail.URL = strings.Replace(embed.Thumbnail.URL, ".png", ".gif", -1)
+					}
 				}
 			}
 		case models.EventlogTargetTypeRobyulBadge:
@@ -463,11 +459,6 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 
 	options := make([]models.ElasticEventlogOption, 0)
 
-	iconObjectOption := getDiscordFileHashOption("emoji_icon_object",
-		emoji.ID,
-		discordgo.EndpointEmoji(emoji.ID),
-		"", "", guildID)
-
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_name",
 		Value: emoji.Name,
@@ -493,10 +484,6 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 		Value: strings.Join(emoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
 	})
-
-	if iconObjectOption.Value != "" {
-		options = append(options, iconObjectOption)
-	}
 
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiCreate, "", nil, options, true)
 	RelaxLog(err)
@@ -511,11 +498,6 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 
 	options := make([]models.ElasticEventlogOption, 0)
 
-	iconObjectOption := getDiscordFileHashOption("emoji_icon_object",
-		emoji.ID,
-		discordgo.EndpointEmoji(emoji.ID),
-		"", "", guildID)
-
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_name",
 		Value: emoji.Name,
@@ -541,10 +523,6 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 		Value: strings.Join(emoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
 	})
-
-	if iconObjectOption.Value != "" {
-		options = append(options, iconObjectOption)
-	}
 
 	added, err := EventlogLog(leftAt, guildID, emoji.ID, models.EventlogTargetTypeEmoji, "", models.EventlogTypeEmojiDelete, "", nil, options, true)
 	RelaxLog(err)
