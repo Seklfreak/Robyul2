@@ -26,6 +26,8 @@ func (h *Handler) Commands() []string {
 func (h *Handler) Init(session *discordgo.Session) {
 	defer helpers.Recover()
 
+	Container.Init()
+
 	session.AddHandler(h.OnChannelCreate)
 	session.AddHandler(h.OnChannelDelete)
 	session.AddHandler(h.OnGuildRoleCreate)
@@ -115,8 +117,8 @@ func (h *Handler) actionSetLogChannel(args []string, in *discordgo.Message, out 
 		[]models.ElasticEventlogChange{
 			{
 				Key:      "eventlog_log_channelids",
-				OldValue: strings.Join(settings.EventlogChannelIDs, ","),
-				NewValue: strings.Join(newLogChannelIDs, ","),
+				OldValue: strings.Join(settings.EventlogChannelIDs, ";"),
+				NewValue: strings.Join(newLogChannelIDs, ";"),
 				Type:     models.EventlogTargetTypeChannel,
 			},
 		},

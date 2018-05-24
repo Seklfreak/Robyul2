@@ -88,7 +88,7 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	var pastUsernamesText, pastNicknamesText string
 
 	pastUsernames, err := n.GetUsernames(user.ID)
-	if err != nil && strings.Contains(err.Error(), "no username entries") {
+	if err != nil && !strings.Contains(err.Error(), "no username entries") {
 		helpers.Relax(err)
 	}
 

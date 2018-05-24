@@ -45,8 +45,8 @@ func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err erro
 		err = msgpack.Unmarshal(keyBytes, &webhook)
 		RelaxLog(err)
 		if err == nil && webhook.ID != "" && webhook.Token != "" {
-			cache.GetLogger().WithField("module", "webhooks").Infof(
-				"got webhook for #%s from cache", channelID)
+			//cache.GetLogger().WithField("module", "webhooks").Infof(
+			//	"got webhook for #%s from cache", channelID)
 			return webhook, nil
 		}
 	}
@@ -72,8 +72,8 @@ func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err erro
 		for _, existingWebhook := range existingWebhooks {
 			if existingWebhook.ID != "" && existingWebhook.Token != "" {
 				webhook = existingWebhook
-				cache.GetLogger().WithField("module", "webhooks").Infof(
-					"got webhook for #%s from existing webhooks", channelID)
+				//cache.GetLogger().WithField("module", "webhooks").Infof(
+				//	"got webhook for #%s from existing webhooks", channelID)
 			}
 		}
 	}

@@ -70,30 +70,30 @@ func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *dis
 		[]models.ElasticEventlogOption{
 			{
 				Key:   "invite_code",
-				Value: strings.Join(invitesCodes, ","),
+				Value: strings.Join(invitesCodes, ";"),
 				Type:  models.EventlogTargetTypeInviteCode,
 			},
 			{
 				Key:   "invite_guildid",
-				Value: strings.Join(postedInviteGuildIDs, ","),
+				Value: strings.Join(postedInviteGuildIDs, ";"),
 				Type:  models.EventlogTargetTypeGuild,
 			},
 			{
 				Key:   "invite_guildname",
-				Value: strings.Join(postedInviteGuildNames, ","),
+				Value: strings.Join(postedInviteGuildNames, ";"),
 			},
 			{
 				Key:   "invite_guildmembercount",
-				Value: strings.Join(postedInviteGuildMemberCounts, ","),
+				Value: strings.Join(postedInviteGuildMemberCounts, ";"),
 			},
 			{
 				Key:   "invite_channelid",
-				Value: strings.Join(postedInviteChannelIDs, ","),
+				Value: strings.Join(postedInviteChannelIDs, ";"),
 				Type:  models.EventlogTargetTypeChannel,
 			},
 			{
 				Key:   "invite_inviterid",
-				Value: strings.Join(postedInviteInviterUserIDs, ","),
+				Value: strings.Join(postedInviteInviterUserIDs, ";"),
 				Type:  models.EventlogTargetTypeUser,
 			},
 		},
@@ -152,6 +152,13 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 		return
 	}
 
+	err = Container.Drain(1, reaction.UserID)
+	if err != nil {
+		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> You are undoing too fast.\nPlease wait a bit.")
+		return
+	}
+
 	// get target message
 	message, err := helpers.GetMessage(reaction.ChannelID, reaction.MessageID)
 	if err != nil {
@@ -188,10 +195,12 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 		return
 	}
 
-	err = helpers.Revert(*eventlogItem)
-	cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
+	err = helpers.Revert(ID, reaction.UserID, *eventlogItem)
 	if err != nil {
-		helpers.SendMessage(reaction.ChannelID, "Error reverting change: "+err.Error()) // TODO: better error message
+		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> Error reverting change: "+err.Error())
+	} else {
+		cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
 	}
 }
 

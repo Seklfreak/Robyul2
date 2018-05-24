@@ -200,7 +200,7 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 				[]models.ElasticEventlogOption{
 					{
 						Key:   "starboard_emoji",
-						Value: strings.Join(s.getEmoji(channel.GuildID), ","),
+						Value: strings.Join(s.getEmoji(channel.GuildID), ";"),
 						Type:  models.EventlogTargetTypeEmoji,
 					},
 					{
@@ -251,7 +251,7 @@ func (s *Starboard) actionSet(args []string, in *discordgo.Message, out **discor
 		[]models.ElasticEventlogOption{
 			{
 				Key:   "starboard_emoji",
-				Value: strings.Join(s.getEmoji(channel.GuildID), ","),
+				Value: strings.Join(s.getEmoji(channel.GuildID), ";"),
 				Type:  models.EventlogTargetTypeEmoji,
 			},
 			{
@@ -389,8 +389,8 @@ func (s *Starboard) actionEmoji(args []string, in *discordgo.Message, out **disc
 		[]models.ElasticEventlogChange{
 			{
 				Key:      "starboard_emoji",
-				OldValue: strings.Join(emojiBefore, ","),
-				NewValue: strings.Join(s.getEmoji(channel.GuildID), ","),
+				OldValue: strings.Join(emojiBefore, ";"),
+				NewValue: strings.Join(s.getEmoji(channel.GuildID), ";"),
 			},
 		},
 		options, false)

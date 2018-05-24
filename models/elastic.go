@@ -92,6 +92,7 @@ type ElasticEventlog struct {
 		AuditLogBackfill bool
 	}
 	EventlogMessages []string
+	Reverted         bool
 }
 
 type ElasticEventlogChange struct {

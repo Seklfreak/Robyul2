@@ -92,6 +92,10 @@ func m55_create_elastic_index_eventlogs() {
 							},
 						},
 					},
+					"Reverted": map[string]interface{}{
+						"type":       "boolean",
+						"null_value": false,
+					},
 					"EventlogMessages": map[string]interface{}{
 						"type": "text",
 					},

@@ -19,13 +19,17 @@ const (
 
 	EventlogTypeInvitePosted = "Invite_Posted" // EvenlogTargetTypeGuild
 
-	EventlogTargetTypeUser       = "user"
-	EventlogTargetTypeChannel    = "channel"
-	EventlogTargetTypeRole       = "role"
-	EventlogTargetTypeEmoji      = "emoji"
-	EventlogTargetTypeGuild      = "guild"
-	EventlogTargetTypeMessage    = "message"
-	EventlogTargetTypeInviteCode = "invite_code"
+	EventlogTargetTypeUser                             = "user"
+	EventlogTargetTypeChannel                          = "channel"
+	EventlogTargetTypeRole                             = "role"
+	EventlogTargetTypeEmoji                            = "emoji"
+	EventlogTargetTypeGuild                            = "guild"
+	EventlogTargetTypeMessage                          = "message"
+	EventlogTargetTypeInviteCode                       = "invite_code"
+	EventlogTargetTypePermissionOverwrite              = "permission_overwrite"
+	EventlogTargetTypeRolePermissions                  = "role_permissions"
+	EventlogTargetTypeVerificationLevel                = "verification_level"
+	EventlogTargetTypeGuildDefaultMessageNotifications = "guild_default_message_notifications"
 
 	EventlogTypeRobyulBadgeCreate                   = "Robyul_Badge_Create"                    // EventlogTargetTypeRobyulBadge
 	EventlogTypeRobyulBadgeDelete                   = "Robyul_Badge_Delete"                    // EventlogTargetTypeRobyulBadge
@@ -111,6 +115,7 @@ const (
 	EventlogTypeRobyulEventlogConfigUpdate          = "Robyul_Module_Eventlog_Config_Update"   // EventlogTargetTypeGuild
 	EventlogTypeRobyulTwitterFeedAdd                = "Robyul_Twitter_Feed_Add"                // EventlogTargetTypeRobyulTwitterFeed
 	EventlogTypeRobyulTwitterFeedRemove             = "Robyul_Twitter_Feed_Remove"             // EventlogTargetTypeRobyulTwitterFeed
+	EventlogTypeRobyulActionRevert                  = "Robyul_Action_Revert"                   // EventlogTargetTypeRobyulEventlogItem
 
 	EventlogTargetTypeRobyulBadge               = "robyul-badge"
 	EventlogTargetTypeRobyulVliveFeed           = "robyul-vlive-feed"
@@ -125,6 +130,7 @@ const (
 	EventlogTargetTypeRobyulTwitterFeed         = "robyul-twitter-feed"
 	EventlogTargetTypeRobyulPublicObject        = "robyul-public-object"
 	EventlogTargetTypeRobyulMirrorType          = "robyul-mirror-type"
+	EventlogTargetTypeRobyulEventlogItem        = "robyul-eventlog-item"
 
 	AuditLogBackfillRedisList = "robyul-discord:eventlog:auditlog-backfills:v2"
 )
@@ -147,6 +153,9 @@ const (
 	AuditLogBackfillTypeRoleUpdate
 	AuditlogBackfillTypeMemberRoleUpdate
 	AuditlogBackfillTypeMemberUpdate
+	AuditLogBackfillTypeChannelOverridesAdd
+	AuditLogBackfillTypeChannelOverridesRemove
+	AuditLogBackfillTypeChannelOverridesUpdate
 )
 
 type AuditLogBackfillRequest struct {

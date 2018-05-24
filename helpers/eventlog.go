@@ -18,6 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/json-iterator/go"
 )
 
 var (
@@ -88,7 +89,7 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		}
 	}
 
-	eventlogItem, err := ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, messageIDs)
+	eventlogItem, err := ElasticUpdateEventLog(eventlogID, "", nil, nil, "", false, false, messageIDs)
 	if err != nil {
 		return true, err
 	}
@@ -106,9 +107,9 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 
 func EventlogLogUpdate(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
-	reason string, auditLogBackfilled bool) (err error) {
+	reason string, auditLogBackfilled, reverted bool) (err error) {
 	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, cleanOptions(options), cleanChanges(changes), reason,
-		auditLogBackfilled, nil)
+		auditLogBackfilled, reverted, nil)
 	if err != nil {
 		return
 	}
@@ -132,7 +133,7 @@ func EventlogLogUpdate(elasticID string, UserID string,
 
 func eventlogTargetsToText(guildID, targetType, idsText string) (names []string) {
 	names = make([]string, 0)
-	ids := strings.Split(idsText, ",")
+	ids := strings.Split(idsText, ";")
 	for _, id := range ids {
 		targetName := id
 		switch targetType {
@@ -179,6 +180,72 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 			}
 		case models.EventlogTargetTypeMessage:
 			break
+		case models.EventlogTargetTypeRobyulEventlogItem:
+			eventlogItem, err := ElasticGetEventlog(id)
+			if err == nil {
+				targetName = eventlogItem.ActionType
+			}
+		case models.EventlogTargetTypeRolePermissions:
+			idNum, err := strconv.Atoi(id)
+			if err == nil {
+				targetName = GetPermissionsText(idNum)
+			}
+		case models.EventlogTargetTypePermissionOverwrite:
+			var channelOverwrite discordgo.PermissionOverwrite
+			err := jsoniter.UnmarshalFromString(id, &channelOverwrite)
+			if err == nil {
+				if channelOverwrite.Allow == 0 && channelOverwrite.Deny == 0 {
+					continue
+				}
+				switch channelOverwrite.Type {
+				case "member":
+					targetUser, err := GetUserWithoutAPI(channelOverwrite.ID)
+					if err == nil {
+						targetName = targetUser.Username + "#" + targetUser.Discriminator + ": "
+					} else {
+						targetName = "User #" + channelOverwrite.ID
+					}
+				case "role":
+					targetRole, err := cache.GetSession().State.Role(guildID, channelOverwrite.ID)
+					if err == nil {
+						targetName = "@" + targetRole.Name + ": "
+					} else {
+						targetName = "Role #" + channelOverwrite.ID
+					}
+				}
+				if channelOverwrite.Allow > 0 {
+					targetName += "Allow " + GetPermissionsText(channelOverwrite.Allow)
+				}
+				if channelOverwrite.Deny > 0 {
+					targetName += "Deny " + GetPermissionsText(channelOverwrite.Deny)
+				}
+			}
+		case models.EventlogTargetTypeVerificationLevel:
+			level, err := strconv.Atoi(id)
+			if err == nil {
+				switch discordgo.VerificationLevel(level) {
+				case discordgo.VerificationLevelNone:
+					targetName = "None"
+				case discordgo.VerificationLevelLow:
+					targetName = "Low"
+				case discordgo.VerificationLevelMedium:
+					targetName = "Medium"
+				case discordgo.VerificationLevelHigh:
+					targetName = "High"
+				case 4: // TODO: enum
+					targetName = "Very High"
+				}
+			}
+		case models.EventlogTargetTypeGuildDefaultMessageNotifications:
+			level, err := strconv.Atoi(id)
+			if err == nil {
+				switch level {
+				case 0: // TODO: enum
+					targetName = "All Messages"
+				case 1:
+					targetName = "Only Mentions"
+				}
+			}
 		}
 		names = append(names, targetName)
 	}
@@ -350,6 +417,18 @@ func getEventlogEmbed(eventlogID string, createdAt time.Time, guildID, targetID,
 		}
 	}
 
+	// overwrite values with persistent values if possible
+	// (object storage link instead of discord link)
+	for _, change := range changes {
+		switch change.Key {
+		case "guild_icon_object":
+			fileLink, err := GetFileLink(change.NewValue)
+			if err == nil {
+				embed.Thumbnail.URL = fileLink
+			}
+		}
+	}
+
 	return embed
 }
 
@@ -416,7 +495,7 @@ func OnEventlogEmojiCreate(guildID string, emoji *discordgo.Emoji) {
 
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
-		Value: strings.Join(emoji.Roles, ","),
+		Value: strings.Join(emoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
 	})
 
@@ -469,7 +548,7 @@ func OnEventlogEmojiDelete(guildID string, emoji *discordgo.Emoji) {
 
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
-		Value: strings.Join(emoji.Roles, ","),
+		Value: strings.Join(emoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
 	})
 
@@ -517,7 +596,7 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 
 	options = append(options, models.ElasticEventlogOption{
 		Key:   "emoji_roleids",
-		Value: strings.Join(newEmoji.Roles, ","),
+		Value: strings.Join(newEmoji.Roles, ";"),
 		Type:  models.EventlogTargetTypeRole,
 	})
 
@@ -525,14 +604,14 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	if len(rolesAdded) >= 0 {
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "emoji_roleids_added",
-			Value: strings.Join(rolesAdded, ","),
+			Value: strings.Join(rolesAdded, ";"),
 			Type:  models.EventlogTargetTypeRole,
 		})
 	}
 	if len(rolesRemoved) >= 0 {
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "emoji_roleids_removed",
-			Value: strings.Join(rolesRemoved, ","),
+			Value: strings.Join(rolesRemoved, ";"),
 			Type:  models.EventlogTargetTypeRole,
 		})
 	}
@@ -582,8 +661,8 @@ func OnEventlogEmojiUpdate(guildID string, oldEmoji, newEmoji *discordgo.Emoji) 
 	if len(rolesAdded) > 0 || len(rolesRemoved) > 0 {
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "emoji_roleids",
-			OldValue: strings.Join(oldEmoji.Roles, ","),
-			NewValue: strings.Join(newEmoji.Roles, ","),
+			OldValue: strings.Join(oldEmoji.Roles, ";"),
+			NewValue: strings.Join(newEmoji.Roles, ";"),
 			Type:     models.EventlogTargetTypeRole,
 		})
 	}
@@ -737,39 +816,11 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	}
 
 	if oldGuild.VerificationLevel != newGuild.VerificationLevel {
-		var oldVerificationLevel, newVerificationLevel string
-		switch oldGuild.VerificationLevel {
-		case discordgo.VerificationLevelNone:
-			oldVerificationLevel = "none"
-			break
-		case discordgo.VerificationLevelLow:
-			oldVerificationLevel = "low"
-			break
-		case discordgo.VerificationLevelMedium:
-			oldVerificationLevel = "medium"
-			break
-		case discordgo.VerificationLevelHigh:
-			oldVerificationLevel = "high"
-			break
-		}
-		switch newGuild.VerificationLevel {
-		case discordgo.VerificationLevelNone:
-			newVerificationLevel = "none"
-			break
-		case discordgo.VerificationLevelLow:
-			newVerificationLevel = "low"
-			break
-		case discordgo.VerificationLevelMedium:
-			newVerificationLevel = "medium"
-			break
-		case discordgo.VerificationLevelHigh:
-			newVerificationLevel = "high"
-			break
-		}
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "guild_verificationlevel",
-			OldValue: oldVerificationLevel,
-			NewValue: newVerificationLevel,
+			OldValue: strconv.Itoa(int(oldGuild.VerificationLevel)),
+			NewValue: strconv.Itoa(int(newGuild.VerificationLevel)),
+			Type:     models.EventlogTargetTypeVerificationLevel,
 		})
 	}
 
@@ -789,6 +840,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 			Key:      "guild_defaultmessagenotifications",
 			OldValue: strconv.Itoa(oldGuild.DefaultMessageNotifications),
 			NewValue: strconv.Itoa(newGuild.DefaultMessageNotifications),
+			Type:     models.EventlogTargetTypeGuildDefaultMessageNotifications,
 		})
 	}
 
@@ -803,7 +855,7 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.Channel) {
 	leftAt := time.Now()
 
-	var backfill bool
+	var backfill, channelOverwriteAddBackfill, channelOverwriteRemoveBackfill, channelOverwriteUpdateBackfill bool
 
 	changes := make([]models.ElasticEventlogChange, 0)
 
@@ -862,22 +914,67 @@ func OnEventlogChannelUpdate(guildID string, oldChannel, newChannel *discordgo.C
 	}
 
 	if !ChannelOverwritesMatch(oldChannel.PermissionOverwrites, newChannel.PermissionOverwrites) {
-		// TODO: handle permission overwrites
-		/*
-				changes = append(changes, models.ElasticEventlogChange{
-					Key:      "channel_permissionoverwrites",
-					OldValue: oldChannel.PermissionOverwrites,
-					NewValue: newChannel.PermissionOverwrites,
-				})
-			backfill = true
-		*/
+		var oldOverwrites, newOverwrites string
+		for _, oldOverwrite := range oldChannel.PermissionOverwrites {
+			oldOverwriteText, err := jsoniter.MarshalToString(oldOverwrite)
+			RelaxLog(err)
+			if err == nil {
+				oldOverwrites += oldOverwriteText + ";"
+			}
+		}
+		oldOverwrites = strings.TrimRight(oldOverwrites, ";")
+		for _, newOverwrite := range newChannel.PermissionOverwrites {
+			newOverwriteText, err := jsoniter.MarshalToString(newOverwrite)
+			RelaxLog(err)
+			if err == nil {
+				newOverwrites += newOverwriteText + ";"
+			}
+		}
+		if len(oldChannel.PermissionOverwrites) > len(newChannel.PermissionOverwrites) {
+			channelOverwriteRemoveBackfill = true
+		} else if len(oldChannel.PermissionOverwrites) < len(newChannel.PermissionOverwrites) {
+			channelOverwriteAddBackfill = true
+		} else {
+			channelOverwriteUpdateBackfill = true
+		}
+		newOverwrites = strings.TrimRight(newOverwrites, ";")
+		if oldOverwrites != "" && newOverwrites != "" {
+			changes = append(changes, models.ElasticEventlogChange{
+				Key:      "channel_permissionoverwrites",
+				OldValue: oldOverwrites,
+				NewValue: newOverwrites,
+				Type:     models.EventlogTargetTypePermissionOverwrite,
+			})
+		}
 	}
 
-	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, backfill)
+	requireBackfill := backfill
+	if channelOverwriteAddBackfill {
+		requireBackfill = true
+	}
+	if channelOverwriteRemoveBackfill {
+		requireBackfill = true
+	}
+	if channelOverwriteUpdateBackfill {
+		requireBackfill = true
+	}
+
+	added, err := EventlogLog(leftAt, guildID, newChannel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelUpdate, "", changes, nil, requireBackfill)
 	RelaxLog(err)
-	if added && backfill {
-		err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelUpdate, "")
-		RelaxLog(err)
+	if added {
+		if backfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelUpdate, "")
+			RelaxLog(err)
+		} else if channelOverwriteAddBackfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelOverridesAdd, "")
+			RelaxLog(err)
+		} else if channelOverwriteRemoveBackfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelOverridesRemove, "")
+			RelaxLog(err)
+		} else if channelOverwriteUpdateBackfill {
+			err := RequestAuditLogBackfill(guildID, models.AuditLogBackfillTypeChannelOverridesUpdate, "")
+			RelaxLog(err)
+		}
 	}
 }
 
@@ -895,15 +992,15 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 	if len(rolesAdded) > 0 || len(rolesRemoved) > 0 {
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "member_roles",
-			OldValue: strings.Join(oldMember.Roles, ","),
-			NewValue: strings.Join(newMember.Roles, ","),
+			OldValue: strings.Join(oldMember.Roles, ";"),
+			NewValue: strings.Join(newMember.Roles, ";"),
 			Type:     models.EventlogTargetTypeRole,
 		})
 
 		if len(rolesAdded) > 0 {
 			options = append(options, models.ElasticEventlogOption{
 				Key:   "member_roles_added",
-				Value: strings.Join(rolesAdded, ","),
+				Value: strings.Join(rolesAdded, ";"),
 				Type:  models.EventlogTargetTypeRole,
 			})
 		}
@@ -911,7 +1008,7 @@ func OnEventlogMemberUpdate(guildID string, oldMember, newMember *discordgo.Memb
 		if len(rolesRemoved) > 0 {
 			options = append(options, models.ElasticEventlogOption{
 				Key:   "member_roles_removed",
-				Value: strings.Join(rolesRemoved, ","),
+				Value: strings.Join(rolesRemoved, ";"),
 				Type:  models.EventlogTargetTypeRole,
 			})
 		}
@@ -1014,6 +1111,7 @@ func OnEventlogRoleUpdate(guildID string, oldRole, newRole *discordgo.Role) {
 			Key:      "role_permissions",
 			OldValue: strconv.Itoa(oldRole.Permissions),
 			NewValue: strconv.Itoa(newRole.Permissions),
+			Type:     models.EventlogTargetTypeRolePermissions,
 		})
 	}
 

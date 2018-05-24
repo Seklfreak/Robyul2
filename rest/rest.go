@@ -157,6 +157,11 @@ func NewRestServices() []*restful.WebService {
 		Produces(restful.MIME_JSON)
 	service.Route(service.GET("").Filter(webkeyAuthenticate).To(GetAllBackgrounds))
 	services = append(services, service)
+
+	service = new(restful.WebService)
+	service.Route(service.GET("/ping").Filter(webkeyAuthenticate).To(Ping))
+	services = append(services, service)
+
 	return services
 }
 
@@ -1750,5 +1755,10 @@ func GetAllBackgrounds(request *restful.Request, response *restful.Response) {
 	}
 
 	response.WriteEntity(backgrounds)
+	return
+}
+
+func Ping(_ *restful.Request, response *restful.Response) {
+	response.Write([]byte("pong"))
 	return
 }

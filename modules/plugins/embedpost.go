@@ -131,7 +131,7 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 				for _, newMessage := range newMessages {
 					newMessageIDs = append(newMessageIDs, newMessage.ID)
 				}
-				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, strings.Join(newMessageIDs, ","),
+				_, err = helpers.EventlogLog(time.Now(), targetChannel.GuildID, strings.Join(newMessageIDs, ";"),
 					models.EventlogTargetTypeMessage, msg.Author.ID,
 					models.EventlogTypeRobyulPostCreate, "",
 					nil,
