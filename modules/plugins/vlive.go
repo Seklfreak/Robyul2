@@ -71,6 +71,23 @@ func (r *VLive) checkVliveFeedsLoop() {
 		helpers.Relax(err)
 
 		for _, entry := range entries {
+			// check if channel exists
+			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
+			if err != nil || channel == nil || channel.ID == "" {
+				continue
+			}
+
+			// check if we can send messages
+			channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+			if err != nil {
+				continue
+			}
+
+			if channelPermission&discordgo.PermissionSendMessages != discordgo.PermissionSendMessages ||
+				channelPermission&discordgo.PermissionEmbedLinks != discordgo.PermissionEmbedLinks {
+				continue
+			}
+
 			if _, ok := bundledEntries[entry.VLiveChannel.Code]; ok {
 				bundledEntries[entry.VLiveChannel.Code] = append(bundledEntries[entry.VLiveChannel.Code], entry)
 			} else {
