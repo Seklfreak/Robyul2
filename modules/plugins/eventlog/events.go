@@ -36,7 +36,7 @@ func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *dis
 	postedInviteChannelIDs := make([]string, 0)
 	postedInviteInviterUserIDs := make([]string, 0)
 	for _, inviteCode := range invitesCodes {
-		invite, err := helpers.GetInviteWithCounts(inviteCode)
+		invite, err := cache.GetSession().InviteWithCounts(inviteCode)
 		if err == nil && invite != nil && invite.Guild != nil {
 			postedInviteGuildIDs = append(postedInviteGuildIDs, invite.Guild.ID)
 			postedInviteGuildNames = append(postedInviteGuildNames, invite.Guild.Name)
