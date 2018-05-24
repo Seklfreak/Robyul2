@@ -8,13 +8,13 @@ import (
 
 const (
 	// How many keys a bucket may contain when created
-	BUCKET_INITIAL_FILL = 3
+	BUCKET_INITIAL_FILL = 5
 
 	// The maximum amount of keys a user may possess
-	BUCKET_UPPER_BOUND = 3
+	BUCKET_UPPER_BOUND = 5
 
 	// How often new keys drip into the buckets
-	DROP_INTERVAL = 20 * time.Second
+	DROP_INTERVAL = 15 * time.Second
 
 	// How many keys may drop at a time
 	DROP_SIZE = 1
