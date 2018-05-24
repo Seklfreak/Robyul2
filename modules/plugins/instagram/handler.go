@@ -11,7 +11,6 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
-	"github.com/ahmdrz/goinsta"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -20,7 +19,6 @@ import (
 type Handler struct{}
 
 var (
-	instagramClient      *goinsta.Instagram
 	instagramPicUrlRegex *regexp.Regexp
 )
 
@@ -47,52 +45,6 @@ func (m *Handler) Init(session *discordgo.Session) {
 			m.checkInstagramPublicFeedLoop()
 		}()
 		cache.GetLogger().WithField("module", "instagram").Info("Started Instagram GraphQl Feed loop")
-
-		/*
-			if helpers.GetConfig().Path("instagram.username").Data().(string) != "" &&
-				helpers.GetConfig().Path("instagram.password").Data().(string) != "" {
-				storedInstagram, err := cache.GetRedisClient().Get(instagramSessionKey).Bytes()
-				if err == nil {
-					instagramClient, err = goinstaStore.Import(storedInstagram, make([]byte, 32))
-					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "instagram").Infof(
-						"restoring instagram session from redis",
-					)
-				} else {
-					instagramClient = goinsta.New(
-						helpers.GetConfig().Path("instagram.username").Data().(string),
-						helpers.GetConfig().Path("instagram.password").Data().(string),
-					)
-					cache.GetLogger().WithField("module", "instagram").Infof(
-						"starting new instagram session",
-					)
-				}
-				// set proxy
-				instagramClient.Proxy = helpers.GetConfig().Path("instagram.proxy").Data().(string)
-				err = instagramClient.Login()
-				helpers.Relax(err)
-				cache.GetLogger().WithField("module", "instagram").Infof(
-					"logged in to instagram as @%s",
-					instagramClient.Informations.Username,
-				)
-				storedInstagram, err = goinstaStore.Export(instagramClient, make([]byte, 32))
-				helpers.Relax(err)
-				err = cache.GetRedisClient().Set(instagramSessionKey, storedInstagram, 0).Err()
-				helpers.Relax(err)
-				cache.GetLogger().WithField("module", "instagram").Infof(
-					"stored instagram session in redis",
-				)
-
-				instagramPicUrlRegex, err = regexp.Compile(instagramPicUrlRegexText)
-				helpers.Relax(err)
-
-				go func() {
-					defer helpers.Recover()
-					m.checkInstagramStoryLoop()
-				}()
-				cache.GetLogger().WithField("module", "instagram").Info("Started checkInstagramStoryLoop")
-			}
-		*/
 	}()
 }
 
@@ -379,15 +331,6 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				helpers.SendMessage(msg.ChannelID, messageText)
 				return
 			})
-		case "login":
-			helpers.RequireRobyulMod(msg, func() {
-				err := instagramClient.Login()
-				helpers.Relax(err)
-
-				helpers.SendMessage(msg.ChannelID, "plugins.instagram.logged-in")
-				return
-			})
-			return
 		default:
 			session.ChannelTyping(msg.ChannelID)
 			instagramUsername := strings.Replace(args[0], "@", "", 1)

@@ -155,10 +155,6 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/ahmdrz/goinsta"
-  branch = "master"
-
-[[constraint]]
   branch = "master"
   name = "github.com/Krognol/go-wolfram"
 

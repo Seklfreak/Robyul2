@@ -102,16 +102,6 @@
   revision = "28ebf2756ecc6c69262fba5d5c2f80c0e6dce5e8"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/ahmdrz/goinsta"
-  packages = [
-    ".",
-    "response",
-    "uuid"
-  ]
-  revision = "f53fe58fa08bfdf622102ebc13389bb759479eb1"
-
-[[projects]]
   name = "github.com/andybalholm/cascadia"
   packages = ["."]
   revision = "901648c87902174f774fac311d7f176f8647bdaa"
@@ -837,6 +827,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8822ac5ce15a20b1570f849008667f1b05b108cd1ddb6f20ecf5cc9316159bcb"
+  inputs-digest = "b627421fd8b7e8b040f7b09e6ae782a62ef3c446fa0d93e24e7e3944cb8741e3"
   solver-name = "gps-cdcl"
   solver-version = 1
