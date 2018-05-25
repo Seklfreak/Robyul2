@@ -244,6 +244,22 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 					targetName = "Only Mentions"
 				}
 			}
+		case models.EventlogTargetTypeChannelType:
+			level, err := strconv.Atoi(id)
+			if err == nil {
+				switch discordgo.ChannelType(level) {
+				case discordgo.ChannelTypeGuildText:
+					targetName = "Text"
+				case discordgo.ChannelTypeDM:
+					targetName = "DM"
+				case discordgo.ChannelTypeGuildVoice:
+					targetName = "Voice"
+				case discordgo.ChannelTypeGroupDM:
+					targetName = "Group DM"
+				case discordgo.ChannelTypeGuildCategory:
+					targetName = "Category"
+				}
+			}
 		}
 		names = append(names, targetName)
 	}

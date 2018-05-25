@@ -72,6 +72,14 @@ func CanRevert(item models.ElasticEventlog) bool {
 		) {
 			return true
 		}
+	case models.EventlogTypeChannelDelete:
+		if containsAllowedChangesOrOptions(
+			item,
+			nil,
+			[]string{"channel_name", "channel_type", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid", "channel_permissionoverwrites"},
+		) {
+			return true
+		}
 	}
 
 	return false
@@ -348,6 +356,66 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		}
 
 		_, err = cache.GetSession().GuildEmojiEdit(item.GuildID, item.TargetID, emojiName, emoji.Roles)
+		if err != nil {
+			return err
+		}
+
+		return logRevert(item.GuildID, userID, eventlogID)
+	case models.EventlogTypeChannelDelete:
+		var channelName, channelTopic, channelParentID string
+		var channelType discordgo.ChannelType
+		var channelNSFW bool
+		var channelBitrate int
+		channelOverwrites := make([]*discordgo.PermissionOverwrite, 0)
+
+		for _, option := range item.Options {
+			switch option.Key {
+			case "channel_name":
+				channelName = option.Value
+			case "channel_type":
+				level, err := strconv.Atoi(option.Value)
+				if err == nil {
+					channelType = discordgo.ChannelType(level)
+				}
+			case "channel_topic":
+				channelTopic = option.Value
+			case "channel_nsfw":
+				if GetStringAsBool(option.Value) {
+					channelNSFW = true
+				}
+			case "channel_bitrate":
+				bitrate, err := strconv.Atoi(option.Value)
+				if err == nil {
+					channelBitrate = bitrate
+				}
+			case "channel_parentid":
+				channelParentID = option.Value
+			case "channel_permissionoverwrites":
+				overwritesTexts := strings.Split(option.Value, ";")
+				for _, overwriteText := range overwritesTexts {
+					var overwrite *discordgo.PermissionOverwrite
+					err = jsoniter.UnmarshalFromString(overwriteText, &overwrite)
+					RelaxLog(err)
+					if err == nil && overwrite != nil {
+						channelOverwrites = append(channelOverwrites, overwrite)
+					}
+				}
+			}
+		}
+
+		channel, err := cache.GetSession().GuildChannelCreate(item.GuildID, channelName, channelType)
+		if err != nil {
+			return err
+		}
+
+		_, err = cache.GetSession().ChannelEditComplex(channel.ID, &discordgo.ChannelEdit{
+			Name:                 channelName,
+			Topic:                channelTopic,
+			NSFW:                 channelNSFW,
+			Bitrate:              channelBitrate,
+			PermissionOverwrites: channelOverwrites,
+			ParentID:             channelParentID,
+		})
 		if err != nil {
 			return err
 		}
