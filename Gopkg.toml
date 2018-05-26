@@ -201,3 +201,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/lucazulian/cryptocomparego"
+
+[[constraint]]
+  name = "github.com/stackimpact/stackimpact-go"
+  version = "2.3.9"

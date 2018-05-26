@@ -563,6 +563,16 @@
   version = "v1.0.5"
 
 [[projects]]
+  name = "github.com/stackimpact/stackimpact-go"
+  packages = [
+    ".",
+    "internal",
+    "internal/pprof/profile"
+  ]
+  revision = "4527daa58297dc6de4c63654cc6c32f0e6b1af74"
+  version = "v2.3.9"
+
+[[projects]]
   branch = "master"
   name = "github.com/streadway/amqp"
   packages = ["."]
@@ -830,6 +840,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b627421fd8b7e8b040f7b09e6ae782a62ef3c446fa0d93e24e7e3944cb8741e3"
+  inputs-digest = "6b0d2877a9e436cce9fd9bc0ef617600e0db0d32ec50d06b8be3b830bfa3a309"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -144,5 +144,8 @@
   "polr": {
     "url": "https://demo.polr.me/api/",
     "api-key": ""
+  },
+  "stackimpact": {
+    "key": ""
   }
 }
