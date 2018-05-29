@@ -83,7 +83,7 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 			RetryUserInfo:
 				instagramUser, _, err := m.getInformationAndPosts(instagramUsername, proxy)
 				if err != nil || instagramUser.IsPrivate {
-					if err != nil && strings.Contains(err.Error(), "expected status 200; got 429") {
+					if err != nil && m.retryOnError(err) {
 						proxy, err = helpers.GetRandomProxy()
 						helpers.Relax(err)
 						goto RetryUserInfo
