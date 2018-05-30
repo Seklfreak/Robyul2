@@ -323,7 +323,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Users", Value: strconv.Itoa(len(users)), Inline: true},
 
 				// Machinery
-				{Name: "Marchinery", Value: machineryText, Inline: true},
+				{Name: "Machinery", Value: machineryText, Inline: true},
 
 				// MongoDB
 				{Name: "MongoDB Status", Value: mongodbStatusText, Inline: true},
