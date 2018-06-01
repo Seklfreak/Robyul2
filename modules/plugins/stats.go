@@ -323,7 +323,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Users", Value: strconv.Itoa(len(users)), Inline: true},
 
 				// Machinery
-				{Name: "Marchinery", Value: machineryText, Inline: true},
+				{Name: "Machinery", Value: machineryText, Inline: true},
 
 				// MongoDB
 				{Name: "MongoDB Status", Value: mongodbStatusText, Inline: true},
@@ -1474,7 +1474,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			inviteCodes = append(inviteCodes, args[0])
 		}
 
-		invite, err := helpers.GetInviteWithCounts(inviteCodes[0])
+		invite, err := cache.GetSession().InviteWithCounts(inviteCodes[0])
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownInvite {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.unknown-invite"))

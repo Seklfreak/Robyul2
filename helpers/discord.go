@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -1554,39 +1553,6 @@ func DeleteMessageWithDelay(msg *discordgo.Message, delay time.Duration) (err er
 
 	time.Sleep(delay)
 	return cache.GetSession().ChannelMessageDelete(msg.ChannelID, msg.ID)
-}
-
-type InviteWithCounts struct {
-	Guild                    *discordgo.Guild    `json:"guild"`
-	Channel                  *discordgo.Channel  `json:"channel"`
-	Inviter                  *discordgo.User     `json:"inviter"`
-	Code                     string              `json:"code"`
-	CreatedAt                discordgo.Timestamp `json:"created_at"`
-	MaxAge                   int                 `json:"max_age"`
-	Uses                     int                 `json:"uses"`
-	MaxUses                  int                 `json:"max_uses"`
-	XkcdPass                 string              `json:"xkcdpass"`
-	Revoked                  bool                `json:"revoked"`
-	Temporary                bool                `json:"temporary"`
-	ApproximateMemberCount   int                 `json:"approximate_member_count"`
-	ApproximatePresenceCount int                 `json:"approximate_presence_count"`
-}
-
-func GetInviteWithCounts(inviteCode string) (invite *InviteWithCounts, err error) {
-	respBody, err := cache.GetSession().RequestWithBucketID(
-		"GET", discordgo.EndpointInvite(inviteCode)+"?with_counts=true",
-		nil, discordgo.EndpointInvite(""),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(respBody, &invite)
-	if err != nil {
-		return nil, err
-	}
-
-	return invite, nil
 }
 
 // ReplaceEmojis, replaces emoji mentions with text

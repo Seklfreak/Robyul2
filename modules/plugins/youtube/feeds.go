@@ -9,6 +9,7 @@ import (
 
 	youtubeService "github.com/Seklfreak/Robyul2/services/youtube"
 
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
@@ -79,6 +80,23 @@ func (f *feeds) check() {
 }
 
 func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeChannelEntry {
+	// check if we have access to channel
+	channel, err := helpers.GetChannelWithoutApi(e.ChannelID)
+	if err != nil || channel == nil || channel.ID == "" {
+		return e
+	}
+
+	// check if we can send messages and embed links in channel
+	channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+	if err != nil {
+		return e
+	}
+
+	if channelPermission&discordgo.PermissionSendMessages != discordgo.PermissionSendMessages ||
+		channelPermission&discordgo.PermissionEmbedLinks != discordgo.PermissionEmbedLinks {
+		return e
+	}
+
 	// set iso8601 time which will be used search query filter "published after"
 	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
 	publishedAfter := lastSuccessfulCheckTime.

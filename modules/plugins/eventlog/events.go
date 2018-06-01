@@ -10,6 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/json-iterator/go"
 )
 
 func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -36,7 +37,7 @@ func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *dis
 	postedInviteChannelIDs := make([]string, 0)
 	postedInviteInviterUserIDs := make([]string, 0)
 	for _, inviteCode := range invitesCodes {
-		invite, err := helpers.GetInviteWithCounts(inviteCode)
+		invite, err := cache.GetSession().InviteWithCounts(inviteCode)
 		if err == nil && invite != nil && invite.Guild != nil {
 			postedInviteGuildIDs = append(postedInviteGuildIDs, invite.Guild.ID)
 			postedInviteGuildNames = append(postedInviteGuildNames, invite.Guild.Name)
@@ -220,26 +221,11 @@ func (h *Handler) OnChannelCreate(session *discordgo.Session, channel *discordgo
 			Value: channel.Name,
 		})
 
-		switch channel.Type {
-		case discordgo.ChannelTypeGuildCategory:
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "channel_type",
-				Value: "category",
-			})
-			break
-		case discordgo.ChannelTypeGuildText:
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "channel_type",
-				Value: "text",
-			})
-			break
-		case discordgo.ChannelTypeGuildVoice:
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "channel_type",
-				Value: "voice",
-			})
-			break
-		}
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_type",
+			Value: strconv.Itoa(int(channel.Type)),
+			Type:  models.EventlogTargetTypeChannelType,
+		})
 
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "channel_topic",
@@ -302,26 +288,11 @@ func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo
 			Value: channel.Name,
 		})
 
-		switch channel.Type {
-		case discordgo.ChannelTypeGuildCategory:
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "channel_type",
-				Value: "category",
-			})
-			break
-		case discordgo.ChannelTypeGuildText:
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "channel_type",
-				Value: "text",
-			})
-			break
-		case discordgo.ChannelTypeGuildVoice:
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "channel_type",
-				Value: "voice",
-			})
-			break
-		}
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_type",
+			Value: strconv.Itoa(int(channel.Type)),
+			Type:  models.EventlogTargetTypeChannelType,
+		})
 
 		options = append(options, models.ElasticEventlogOption{
 			Key:   "channel_topic",
@@ -355,13 +326,19 @@ func (h *Handler) OnChannelDelete(session *discordgo.Session, channel *discordgo
 			Type:  models.EventlogTargetTypeChannel,
 		})
 
-		/*
-			TODO: handle permission overwrites
-			options = append(options, models.ElasticEventlogOption{
-				Key:   "permission_overwrites",
-				Value: channel.PermissionOverwrites,
-			})
-		*/
+		var channelOverwrites string
+		for _, overwrite := range channel.PermissionOverwrites {
+			channelOverwriteText, err := jsoniter.MarshalToString(overwrite)
+			helpers.RelaxLog(err)
+			if err == nil {
+				channelOverwrites += channelOverwriteText + ";"
+			}
+		}
+		options = append(options, models.ElasticEventlogOption{
+			Key:   "channel_permissionoverwrites",
+			Value: channelOverwrites,
+			Type:  models.EventlogTargetTypePermissionOverwrite,
+		})
 
 		added, err := helpers.EventlogLog(leftAt, channel.GuildID, channel.ID, models.EventlogTargetTypeChannel, "", models.EventlogTypeChannelDelete, "", nil, options, true)
 		helpers.RelaxLog(err)

@@ -201,7 +201,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 				serverRoles, err := session.GuildRoles(channel.GuildID)
 				if err != nil {
 					if errD := err.(*discordgo.RESTError); errD != nil {
-						if errD.Message.Code == 50013 {
+						if errD.Message.Code == discordgo.ErrCodeMissingPermissions {
 							_, err = helpers.SendMessage(msg.ChannelID, "Please give me the `Manage Roles` permission to use this feature.")
 							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 							return
@@ -222,8 +222,8 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 				if targetRole == nil || targetRole.ID == "" {
-					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-					return
+					targetRole = new(discordgo.Role)
+					targetRole.ID = roleNameToMatch
 				}
 
 				settings := helpers.GuildSettingsGetCached(channel.GuildID)

@@ -4,18 +4,18 @@ const (
 	EventlogTypeMemberJoin    = "Member_Join"    // EventlogTargetTypeUser
 	EventlogTypeMemberLeave   = "Member_Leave"   // EventlogTargetTypeUser
 	EventlogTypeChannelCreate = "Channel_Create" // EventlogTargetTypeChannel
-	EventlogTypeChannelDelete = "Channel_Delete" // EventlogTargetTypeChannel
-	EventlogTypeChannelUpdate = "Channel_Update" // EventlogTargetTypeChannel
+	EventlogTypeChannelDelete = "Channel_Delete" // EventlogTargetTypeChannel, reversible
+	EventlogTypeChannelUpdate = "Channel_Update" // EventlogTargetTypeChannel, reversible
 	EventlogTypeRoleCreate    = "Role_Create"    // EventlogTargetTypeRole
 	EventlogTypeRoleDelete    = "Role_Delete"    // EventlogTargetTypeRole
 	EventlogTypeBanAdd        = "Ban_Add"        // EventlogTargetTypeUser
 	EventlogTypeBanRemove     = "Ban_Remove"     // EventlogTargetTypeUser
 	EventlogTypeEmojiCreate   = "Emoji_Create"   // EventlogTargetTypeEmoji
-	EventlogTypeEmojiDelete   = "Emoji_Delete"   // EventlogTargetTypeEmoji
-	EventlogTypeEmojiUpdate   = "Emoji_Update"   // EventlogTargetTypeEmoji
-	EventlogTypeGuildUpdate   = "Guild_Update"   // EventlogTargetTypeGuild
-	EventlogTypeMemberUpdate  = "Member_Update"  // EventlogTargetTypeUser
-	EventlogTypeRoleUpdate    = "Role_Update"    // EventlogTargetTypeRole
+	EventlogTypeEmojiDelete   = "Emoji_Delete"   // EventlogTargetTypeEmoji, reversible
+	EventlogTypeEmojiUpdate   = "Emoji_Update"   // EventlogTargetTypeEmoji, reversible
+	EventlogTypeGuildUpdate   = "Guild_Update"   // EventlogTargetTypeGuild, reversible
+	EventlogTypeMemberUpdate  = "Member_Update"  // EventlogTargetTypeUser, reversible
+	EventlogTypeRoleUpdate    = "Role_Update"    // EventlogTargetTypeRole, reversible
 
 	EventlogTypeInvitePosted = "Invite_Posted" // EvenlogTargetTypeGuild
 
@@ -30,6 +30,7 @@ const (
 	EventlogTargetTypeRolePermissions                  = "role_permissions"
 	EventlogTargetTypeVerificationLevel                = "verification_level"
 	EventlogTargetTypeGuildDefaultMessageNotifications = "guild_default_message_notifications"
+	EventlogTargetTypeChannelType                      = "channel_type"
 
 	EventlogTypeRobyulBadgeCreate                   = "Robyul_Badge_Create"                    // EventlogTargetTypeRobyulBadge
 	EventlogTypeRobyulBadgeDelete                   = "Robyul_Badge_Delete"                    // EventlogTargetTypeRobyulBadge

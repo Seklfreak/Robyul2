@@ -62,17 +62,24 @@ func CanRevert(item models.ElasticEventlog) bool {
 		) {
 			return true
 		}
-		/*
-				TODO
-			case models.EventlogTypeEmojiDelete:
-				if containsAllowedChangesOrOptions(
-					item,
-					[]string{"emoji_icon_object"},
-					nil,
-				) {
-					return true
-				}
-		*/
+	case models.EventlogTypeEmojiDelete:
+		return true
+	case models.EventlogTypeEmojiUpdate:
+		if containsAllowedChangesOrOptions(
+			item,
+			[]string{"emoji_name"},
+			nil,
+		) {
+			return true
+		}
+	case models.EventlogTypeChannelDelete:
+		if containsAllowedChangesOrOptions(
+			item,
+			nil,
+			[]string{"channel_name", "channel_type", "channel_topic", "channel_nsfw", "channel_bitrate", "channel_parentid", "channel_permissionoverwrites"},
+		) {
+			return true
+		}
 	}
 
 	return false
@@ -282,40 +289,138 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		}
 
 		_, err = cache.GetSession().GuildEdit(item.TargetID, guildParams)
+		if err != nil {
+			return err
+		}
 
 		return logRevert(item.GuildID, userID, eventlogID)
-		/*
-			TODO
-				case models.EventlogTypeEmojiDelete:
-					var emojiName, emojiImage string
+	case models.EventlogTypeEmojiDelete:
+		var emojiName, emojiImage, emojiURL string
+		var emojiRoles []string
 
-					for _, option := range item.Options {
-						switch option.Key {
-						case "emoji_name":
-							emojiName = emojiName
-						case "emoji_icon_object":
-							// retrieve previous icon
-							iconData, err := RetrieveFile(option.Value)
-							if err != nil {
-								return err
-							}
+		emojiURL = discordgo.EndpointEmoji(item.TargetID)
+		for _, option := range item.Options {
+			switch option.Key {
+			case "emoji_animated":
+				if GetStringAsBool(option.Value) {
+					emojiURL = strings.Replace(emojiURL, ".png", ".gif", -1)
+				}
+			}
+		}
 
-							// read icon
-							filetype, err := SniffMime(iconData)
-							if err != nil {
-								return err
-							}
+		// retrieve previous icon
+		iconData, err := NetGetUAWithError(emojiURL, DEFAULT_UA)
+		if err != nil {
+			return err
+		}
 
-							// encode jpeg to base64
-							emojiImage = "data:" + filetype + ";base64," + base64.StdEncoding.EncodeToString(iconData)
-						}
+		// read icon
+		filetype, err := SniffMime(iconData)
+		if err != nil {
+			return err
+		}
+
+		// encode jpeg to base64
+		emojiImage = "data:" + filetype + ";base64," + base64.StdEncoding.EncodeToString(iconData)
+
+		for _, option := range item.Options {
+			switch option.Key {
+			case "emoji_name":
+				emojiName = option.Value
+			case "emoji_roleids":
+				if option.Value != "" {
+					emojiRoles = strings.Split(option.Value, ";")
+				}
+			}
+		}
+
+		_, err = cache.GetSession().GuildEmojiCreate(item.GuildID, emojiName, emojiImage, emojiRoles)
+		if err != nil {
+			return err
+		}
+
+		return logRevert(item.GuildID, userID, eventlogID)
+	case models.EventlogTypeEmojiUpdate:
+		emoji, err := cache.GetSession().State.Emoji(item.GuildID, item.TargetID)
+		if err != nil {
+			return err
+		}
+
+		var emojiName string
+
+		for _, change := range item.Changes {
+			switch change.Key {
+			case "emoji_name":
+				emojiName = change.OldValue
+			}
+		}
+
+		_, err = cache.GetSession().GuildEmojiEdit(item.GuildID, item.TargetID, emojiName, emoji.Roles)
+		if err != nil {
+			return err
+		}
+
+		return logRevert(item.GuildID, userID, eventlogID)
+	case models.EventlogTypeChannelDelete:
+		var channelName, channelTopic, channelParentID string
+		var channelType discordgo.ChannelType
+		var channelNSFW bool
+		var channelBitrate int
+		channelOverwrites := make([]*discordgo.PermissionOverwrite, 0)
+
+		for _, option := range item.Options {
+			switch option.Key {
+			case "channel_name":
+				channelName = option.Value
+			case "channel_type":
+				level, err := strconv.Atoi(option.Value)
+				if err == nil {
+					channelType = discordgo.ChannelType(level)
+				}
+			case "channel_topic":
+				channelTopic = option.Value
+			case "channel_nsfw":
+				if GetStringAsBool(option.Value) {
+					channelNSFW = true
+				}
+			case "channel_bitrate":
+				bitrate, err := strconv.Atoi(option.Value)
+				if err == nil {
+					channelBitrate = bitrate
+				}
+			case "channel_parentid":
+				channelParentID = option.Value
+			case "channel_permissionoverwrites":
+				overwritesTexts := strings.Split(option.Value, ";")
+				for _, overwriteText := range overwritesTexts {
+					var overwrite *discordgo.PermissionOverwrite
+					err = jsoniter.UnmarshalFromString(overwriteText, &overwrite)
+					RelaxLog(err)
+					if err == nil && overwrite != nil {
+						channelOverwrites = append(channelOverwrites, overwrite)
 					}
+				}
+			}
+		}
 
-					// TODO: create new emoji
+		channel, err := cache.GetSession().GuildChannelCreate(item.GuildID, channelName, channelType)
+		if err != nil {
+			return err
+		}
 
-					return logRevert(item.GuildID, userID, eventlogID)
-		*/
+		_, err = cache.GetSession().ChannelEditComplex(channel.ID, &discordgo.ChannelEdit{
+			Name:                 channelName,
+			Topic:                channelTopic,
+			NSFW:                 channelNSFW,
+			Bitrate:              channelBitrate,
+			PermissionOverwrites: channelOverwrites,
+			ParentID:             channelParentID,
+		})
+		if err != nil {
+			return err
+		}
 
+		return logRevert(item.GuildID, userID, eventlogID)
 	}
 
 	return errors.New("eventlog action type not supported")
