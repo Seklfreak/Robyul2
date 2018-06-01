@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 
@@ -72,7 +74,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		game.ChannelID = msg.ChannelID
 		singleGame = game
 	} else {
-		var biasChoices []*biasChoice
+		var biasChoices []*idols.Idol
 		gameGender := "mixed"
 		gameSize := 32
 
@@ -108,13 +110,13 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		// if this isn't a mixed game then filter all choices by the gender
 		if gameGender != "mixed" {
 
-			for _, bias := range getAllBiases() {
+			for _, bias := range idols.GetAllIdols() {
 				if bias.Gender == gameGender {
 					biasChoices = append(biasChoices, bias)
 				}
 			}
 		} else {
-			biasChoices = getAllBiases()
+			biasChoices = idols.GetAllIdols()
 		}
 
 		// confirm we have enough biases to choose from for the game size this should be
@@ -246,8 +248,9 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	}
 
 	// get random images
-	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
-	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
+
+	img1 := getSemiRandomIdolImage(g.BiasQueue[0], &g.GameImageIndex)
+	img2 := getSemiRandomIdolImage(g.BiasQueue[1], &g.GameImageIndex)
 
 	// create round message
 	messageString := fmt.Sprintf("**@%s**\nIdols Remaining: %d\n%s %s vs %s %s",
@@ -311,7 +314,7 @@ func (g *singleBiasGame) sendWinnerMessage() {
 			resizeTo = newResizeVal
 		}
 
-		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.GameImageIndex), resize.Lanczos3)
+		ri := resize.Resize(0, resizeTo, getSemiRandomIdolImage(bias, &g.GameImageIndex), resize.Lanczos3)
 
 		draw.Draw(bracketImage, ri.Bounds().Add(bracketImageOffsets[i]), ri, image.ZP, draw.Over)
 	}
@@ -442,18 +445,18 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
-	var biasChoices []*biasChoice
+	var biasChoices []*idols.Idol
 
 	// if this isn't a mixed game then filter all choices by the gender
 	if gameGender != "mixed" {
 
-		for _, bias := range getAllBiases() {
+		for _, bias := range idols.GetAllIdols() {
 			if bias.Gender == gameGender {
 				biasChoices = append(biasChoices, bias)
 			}
 		}
 	} else {
-		biasChoices = getAllBiases()
+		biasChoices = idols.GetAllIdols()
 	}
 
 	// confirm we have enough biases for a multiplayer game
@@ -505,8 +508,9 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	}
 
 	// get random images to use
-	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
-	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
+
+	img1 := getSemiRandomIdolImage(g.BiasQueue[0], &g.GameImageIndex)
+	img2 := getSemiRandomIdolImage(g.BiasQueue[1], &g.GameImageIndex)
 
 	// create round message
 	messageString := fmt.Sprintf("**Multi Game**\nIdols Remaining: %d\n%s %s vs %s %s",
@@ -717,7 +721,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 			resizeTo = newResizeVal
 		}
 
-		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.GameImageIndex), resize.Lanczos3)
+		ri := resize.Resize(0, resizeTo, getSemiRandomIdolImage(bias, &g.GameImageIndex), resize.Lanczos3)
 
 		draw.Draw(bracketImage, ri.Bounds().Add(bracketImageOffsets[i]), ri, image.ZP, draw.Over)
 	}
@@ -839,22 +843,8 @@ func getCurrentMultiPlayerGames() []*multiBiasGame {
 	return gamesCopy
 }
 
-// startCacheRefreshLoop will refresh the image cache for both misc image and bias images
+// startCacheRefreshLoop will refresh the cache for biasgames
 func startCacheRefreshLoop() {
-	bgLog().Info("Starting biasgame refresh image cache loop")
-	go func() {
-		defer helpers.Recover()
-
-		for {
-			time.Sleep(time.Hour * 12)
-
-			bgLog().Info("Refreshing image cache...")
-			refreshBiasChoices(true)
-
-			bgLog().Info("Biasgame image cache has been refresh")
-		}
-	}()
-
 	bgLog().Info("Starting biasgame current games cache loop")
 	go func() {
 		defer helpers.Recover()

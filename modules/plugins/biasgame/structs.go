@@ -1,48 +1,33 @@
 package biasgame
 
 import (
+	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/bwmarrin/discordgo"
 )
-
-type biasImage struct {
-	ImageBytes []byte
-	HashString string
-	ObjectName string
-}
-
-type biasChoice struct {
-	BiasName     string
-	GroupName    string
-	Gender       string
-	NameAndGroup string
-	BiasImages   []biasImage
-}
 
 type singleBiasGame struct {
 	User             *discordgo.User
 	ChannelID        string
-	RoundLosers      []*biasChoice
-	RoundWinners     []*biasChoice
-	BiasQueue        []*biasChoice
-	TopEight         []*biasChoice
-	GameWinnerBias   *biasChoice
+	RoundLosers      []*idols.Idol
+	RoundWinners     []*idols.Idol
+	BiasQueue        []*idols.Idol
+	TopEight         []*idols.Idol
+	GameWinnerBias   *idols.Idol
 	IdolsRemaining   int
 	LastRoundMessage *discordgo.Message
 	ReadyForReaction bool   // used to make sure multiple reactions aren't counted
 	Gender           string // girl, boy, mixed
-
-	// a map of idol name and group => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
-	GameImageIndex map[string]int
+	GameImageIndex   map[string]int
 }
 
 type multiBiasGame struct {
 	CurrentRoundMessageId string // used to find game when reactions are added
 	ChannelID             string
-	RoundLosers           []*biasChoice
-	RoundWinners          []*biasChoice
-	BiasQueue             []*biasChoice
-	TopEight              []*biasChoice
-	GameWinnerBias        *biasChoice
+	RoundLosers           []*idols.Idol
+	RoundWinners          []*idols.Idol
+	BiasQueue             []*idols.Idol
+	TopEight              []*idols.Idol
+	GameWinnerBias        *idols.Idol
 	IdolsRemaining        int
 	LastRoundMessage      *discordgo.Message
 	Gender                string // girl, boy, mixed

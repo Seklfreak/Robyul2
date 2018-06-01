@@ -6,13 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 )
 
 // module struct
-type BiasGame struct{}
+type Module struct{}
 
 var gameGenders map[string]string
 
@@ -20,13 +19,12 @@ var gameGenders map[string]string
 //  before the game is ready after a bot restart
 var moduleIsReady = false
 
-func (b *BiasGame) Init(session *discordgo.Session) {
+func (m *Module) Init(session *discordgo.Session) {
 	go func() {
 		defer helpers.Recover()
 
 		// set global variables
 		currentSinglePlayerGames = make(map[string]*singleBiasGame)
-		// currentNuguGames = make([]*nuguGame)
 		allowedGameSizes = map[int]bool{
 			32:   true,
 			64:   true,
@@ -80,7 +78,6 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 		}
 
 		// load all images and information
-		refreshBiasChoices(false)
 		loadMiscImages()
 
 		startCacheRefreshLoop()
@@ -105,16 +102,11 @@ func (b *BiasGame) Init(session *discordgo.Session) {
 
 		moduleIsReady = true
 
-		// load aliases
-		initAliases()
-
-		// set up suggestions channel
-		initSuggestionChannel()
 	}()
 }
 
 // Uninit called when bot is shutting down
-func (b *BiasGame) Uninit(session *discordgo.Session) {
+func (m *Module) Uninit(session *discordgo.Session) {
 
 	// save any currently running games
 	err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)
@@ -128,16 +120,14 @@ func (b *BiasGame) Uninit(session *discordgo.Session) {
 }
 
 // Will validate if the passed command entered is used for this plugin
-func (b *BiasGame) Commands() []string {
+func (m *Module) Commands() []string {
 	return []string{
-		"nugugame",
 		"biasgame",
-		"biasgame-edit",
 	}
 }
 
 // Main Entry point for the plugin
-func (b *BiasGame) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Module) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGames) {
 		return
 	}
@@ -177,81 +167,11 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 
 			showRankings(msg, commandArgs, false)
 
-		} else if commandArgs[0] == "suggest" {
-
-			processImageSuggestion(msg, content)
-
-		} else if commandArgs[0] == "migrate-drive-images" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				runGoogleDriveMigration(msg)
-			})
-
-		} else if commandArgs[0] == "delete-image" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				deleteBiasImage(msg, content)
-			})
-
-		} else if commandArgs[0] == "update-image" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateImageInfo(msg, content)
-			})
-
-		} else if commandArgs[0] == "update-group" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateGroupInfo(msg, content)
-			})
-
 		} else if commandArgs[0] == "update-stats" {
 
 			helpers.RequireRobyulMod(msg, func() {
 				updateGameStatsFromMsg(msg, content)
 			})
-
-		} else if commandArgs[0] == "update" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateIdolInfoFromMsg(msg, content)
-			})
-
-		} else if isCommandAlias(commandArgs[0], "image-ids") {
-
-			// shows images with object ids
-			helpers.RequireRobyulMod(msg, func() {
-				showImagesForIdol(msg, content, true)
-			})
-
-		} else if isCommandAlias(commandArgs[0], "images") {
-
-			showImagesForIdol(msg, content, false)
-
-		} else if commandArgs[0] == "alias" {
-
-			if len(commandArgs) < 2 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-				return
-			}
-
-			switch commandArgs[1] {
-			case "add":
-				helpers.RequireRobyulMod(msg, func() {
-					addGroupAlias(msg, content)
-				})
-				break
-			case "list":
-				listGroupAliases(msg)
-				break
-			case "delete", "del":
-				helpers.RequireRobyulMod(msg, func() {
-					deleteGroupAlias(msg, content)
-				})
-				break
-			default:
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-			}
 
 		} else if isCommandAlias(commandArgs[0], "current") {
 			displayCurrentGameStats(msg)
@@ -259,21 +179,6 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 		} else if isCommandAlias(commandArgs[0], "multi") {
 
 			startMultiPlayerGame(msg, commandArgs)
-
-		} else if commandArgs[0] == "idols" {
-
-			listIdolsInGame(msg)
-
-		} else if commandArgs[0] == "refresh-images" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))
-				helpers.Relax(err)
-				refreshBiasChoices(true)
-
-				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
-			})
 
 		} else if _, err := strconv.Atoi(commandArgs[0]); err == nil {
 
@@ -285,17 +190,11 @@ func (b *BiasGame) Action(command string, content string, msg *discordgo.Message
 			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
 			singleGame.sendBiasGameRound()
 		}
-	} else if command == "biasgame-edit" { // edit is used for changing details of suggestions
-		fieldToUpdate := commandArgs[0]
-		fieldValue := strings.Join(commandArgs[1:], " ")
-		UpdateSuggestionDetails(msg, fieldToUpdate, fieldValue)
-	} else if command == "nugugame" {
-		startNuguGame(msg, commandArgs)
 	}
 }
 
 // Called whenever a reaction is added to any message
-func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
+func (m *Module) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
 	defer helpers.Recover()
 	if moduleIsReady == false || reaction == nil {
 		return
@@ -305,10 +204,6 @@ func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session
 	if game := getSinglePlayerGameByUserID(reaction.UserID); game != nil {
 		game.processVote(reaction)
 	}
-
-	// check if this was a reaction to a idol suggestion.
-	//  if it was accepted an image will be returned to be added to the biasChoices
-	CheckSuggestionReaction(reaction)
 }
 
 // holds aliases for commands
@@ -319,18 +214,6 @@ func isCommandAlias(input, targetCommand string) bool {
 	}
 
 	var aliasMap = map[string]string{
-		"images": "images",
-		"image":  "images",
-		"pic":    "images",
-		"pics":   "images",
-		"img":    "images",
-		"imgs":   "images",
-
-		"image-ids":  "image-ids",
-		"images-ids": "image-ids",
-		"pic-ids":    "image-ids",
-		"pics-ids":   "image-ids",
-
 		"rankings": "rankings",
 		"ranking":  "rankings",
 		"rank":     "rankings",
@@ -356,17 +239,17 @@ func isCommandAlias(input, targetCommand string) bool {
 }
 
 ///// Unused functions requried by ExtendedPlugin interface
-func (b *BiasGame) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Module) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 }
-func (b *BiasGame) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+func (m *Module) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 }
-func (b *BiasGame) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+func (m *Module) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
 }
-func (b *BiasGame) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
+func (m *Module) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 }
-func (b *BiasGame) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
+func (m *Module) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
 }
-func (b *BiasGame) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
+func (m *Module) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
 }
-func (b *BiasGame) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+func (m *Module) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
 }

@@ -1,4 +1,4 @@
-package biasgame
+package idols
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func initAliases() {
 	groupAliasesMap = make(map[string][]string)
 
 	groupAliasMutex.Lock()
-	getBiasGameCache(GROUP_ALIAS_KEY, &groupAliasesMap)
+	getModuleCache(GROUP_ALIAS_KEY, &groupAliasesMap)
 	groupAliasMutex.Unlock()
 }
 
@@ -55,7 +55,7 @@ func addGroupAlias(msg *discordgo.Message, content string) {
 	newAliasName := commandArgs[3]
 
 	// check that the group we're adding the alias too actually exists
-	if exists, realGroupName := getMatchingGroup(targetGroup); exists == false {
+	if exists, realGroupName := GetMatchingGroup(targetGroup); exists == false {
 		helpers.SendMessage(msg.ChannelID, "Could not add alias for that group because the group does not exist.")
 		return
 	} else {
@@ -63,7 +63,7 @@ func addGroupAlias(msg *discordgo.Message, content string) {
 	}
 
 	// make sure the alias doesn't match an existing group already
-	if exists, matchinGroup := getMatchingGroup(newAliasName); exists {
+	if exists, matchinGroup := GetMatchingGroup(newAliasName); exists {
 		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("The alias you are trying to add already exists for the group **%s**", matchinGroup))
 		return
 	}
@@ -88,7 +88,7 @@ func addGroupAlias(msg *discordgo.Message, content string) {
 	groupAliasMutex.Unlock()
 
 	// save to redis
-	setBiasGameCache(GROUP_ALIAS_KEY, getGroupAliases(), 0)
+	setModuleCache(GROUP_ALIAS_KEY, getGroupAliases(), 0)
 
 	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("The alias *%s* has been added for the group **%s**", newAliasName, targetGroup))
 }
@@ -141,7 +141,7 @@ GroupAliasLoop:
 	// if no alias was deleted, send a message
 	if aliasDeleted {
 		// save to redis
-		setBiasGameCache(GROUP_ALIAS_KEY, getGroupAliases(), 0)
+		setModuleCache(GROUP_ALIAS_KEY, getGroupAliases(), 0)
 	} else {
 		helpers.SendMessage(msg.ChannelID, "Alias not found, no alias was deleted")
 	}
@@ -155,7 +155,7 @@ func listGroupAliases(msg *discordgo.Message) {
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED,
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    "Current biasgame group aliases",
+			Name:    "Current group aliases",
 			IconURL: msg.Author.AvatarURL("512"),
 		},
 	}
@@ -181,7 +181,7 @@ func listGroupAliases(msg *discordgo.Message) {
 		})
 
 		// get the matching group, the aliases might have been saved before a small change was made to the real group name. i want to account for that
-		if exists, realGroupName := getMatchingGroup(groupName); exists {
+		if exists, realGroupName := GetMatchingGroup(groupName); exists {
 
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   realGroupName,

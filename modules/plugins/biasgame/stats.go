@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -105,108 +106,6 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	statsTitle = fmt.Sprintf("%s (%s games)", statsTitle, humanize.Comma(int64(totalGames)))
 
 	sendStatsMessage(msg, statsTitle, countsHeader, biasCounts, iconURL, targetName)
-}
-
-// listIdolsInGame will list all idols that can show up in the biasgame
-func listIdolsInGame(msg *discordgo.Message) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
-
-	genderCountMap := make(map[string]int)
-	genderGroupCountMap := make(map[string]int)
-
-	// create map of idols and there group
-	groupIdolMap := make(map[string][]string)
-	for _, bias := range getAllBiases() {
-
-		// count idols and groups
-		genderCountMap[bias.Gender]++
-		if _, ok := groupIdolMap[bias.GroupName]; !ok {
-			genderGroupCountMap[bias.Gender]++
-		}
-
-		if len(bias.BiasImages) > 1 {
-			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s (%s)",
-				bias.BiasName, humanize.Comma(int64(len(bias.BiasImages)))))
-		} else {
-
-			groupIdolMap[bias.GroupName] = append(groupIdolMap[bias.GroupName], fmt.Sprintf("%s", bias.BiasName))
-		}
-	}
-
-	embed := &discordgo.MessageEmbed{
-		Color: 0x0FADED, // blueish
-		Author: &discordgo.MessageEmbedAuthor{
-			Name: "All Idols Available In Bias Game",
-		},
-		Title: fmt.Sprintf("%s Total | %s Girls, %s Boys | %s Girl Groups, %s Boy Groups",
-			humanize.Comma(int64(len(getAllBiases()))),
-			humanize.Comma(int64(genderCountMap["girl"])),
-			humanize.Comma(int64(genderCountMap["boy"])),
-			humanize.Comma(int64(genderGroupCountMap["girl"])),
-			humanize.Comma(int64(genderGroupCountMap["boy"])),
-		),
-		Footer: &discordgo.MessageEmbedFooter{
-			Text: "Numbers show idols picture count",
-		},
-	}
-
-	// make fields for each group and the idols in the group.
-	for group, idols := range groupIdolMap {
-
-		// sort idols by name
-		sort.Slice(idols, func(i, j int) bool {
-			return idols[i] < idols[j]
-		})
-
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   group,
-			Value:  strings.Join(idols, ", "),
-			Inline: false,
-		})
-	}
-
-	// sort fields by group name
-	sort.Slice(embed.Fields, func(i, j int) bool {
-		return strings.ToLower(embed.Fields[i].Name) < strings.ToLower(embed.Fields[j].Name)
-	})
-
-	helpers.SendPagedMessage(msg, embed, 10)
-}
-
-// showImagesForIdol will show a embed message with all the available images for an idol
-func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectNames bool) {
-	defer helpers.Recover()
-	cache.GetSession().ChannelTyping(msg.ChannelID)
-
-	commandArgs, err := helpers.ToArgv(msgContent)
-	if err != nil {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-		return
-	}
-	commandArgs = commandArgs[1:]
-
-	if len(commandArgs) < 2 {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
-		return
-	}
-
-	// get matching idol to the group and name entered
-	//  if we can't get one display an error
-	groupMatch, nameMatch, matchIdol := getMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
-	if matchIdol == nil || groupMatch == false || nameMatch == false {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
-		return
-	}
-
-	// get bytes of all the images
-	var idolImages []biasImage
-	for _, bImag := range matchIdol.BiasImages {
-		idolImages = append(idolImages, bImag)
-	}
-
-	sendPagedEmbedOfImages(msg, idolImages, showObjectNames,
-		fmt.Sprintf("Images for %s %s", matchIdol.GroupName, matchIdol.BiasName),
-		fmt.Sprintf("Total Images: %s", humanize.Comma(int64(len(matchIdol.BiasImages)))))
 }
 
 // listIdolsInGame will list all idols that can show up in the biasgame
@@ -678,7 +577,7 @@ func sendStatsMessage(msg *discordgo.Message, title string, countLabel string, d
 }
 
 // compileGameWinnersLosers will loop through the biases and convert them to []models.BiasGameIdolEntry
-func compileGameWinnersLosers(biases []*biasChoice) []models.BiasGameIdolEntry {
+func compileGameWinnersLosers(biases []*idols.Idol) []models.BiasGameIdolEntry {
 
 	var biasEntries []models.BiasGameIdolEntry
 	for _, bias := range biases {
@@ -709,7 +608,7 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 	}
 
 	// find matching idol
-	_, _, bias := getMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
+	_, _, bias := idols.GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
 	if bias == nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
@@ -893,7 +792,7 @@ MultiWinLoop:
 
 	// get random image from the thumbnail
 	imageIndex := rand.Intn(len(bias.BiasImages))
-	thumbnailReader := bytes.NewReader(bias.BiasImages[imageIndex].getImgBytes())
+	thumbnailReader := bytes.NewReader(bias.BiasImages[imageIndex].GetResizeImgBytes(IMAGE_RESIZE_HEIGHT))
 
 	msgSend := &discordgo.MessageSend{
 		Files: []*discordgo.File{{
@@ -922,7 +821,7 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	}
 
 	// find matching idol
-	groupMatched, targetGroupName := getMatchingGroup(commandArgs[0])
+	groupMatched, targetGroupName := idols.GetMatchingGroup(commandArgs[0])
 	if !groupMatched {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
 		return
@@ -1092,8 +991,8 @@ MultiWinLoop:
 	}
 
 	// get all images for the group
-	var allGroupImages []biasImage
-	for _, bias := range getAllBiases() {
+	var allGroupImages []idols.IdolImage
+	for _, bias := range idols.GetAllIdols() {
 		if bias.GroupName != targetGroupName {
 			continue
 		}
@@ -1135,7 +1034,7 @@ MultiWinLoop:
 
 	// get random image from the thumbnail
 	imageIndex := rand.Intn(len(allGroupImages))
-	thumbnailReader := bytes.NewReader(allGroupImages[imageIndex].getImgBytes())
+	thumbnailReader := bytes.NewReader(allGroupImages[imageIndex].GetImgBytes())
 
 	msgSend := &discordgo.MessageSend{
 		Files: []*discordgo.File{{

@@ -5,8 +5,10 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins/biasgame"
 	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
 	"github.com/Seklfreak/Robyul2/modules/plugins/google"
+	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
+	"github.com/Seklfreak/Robyul2/modules/plugins/nugugame"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 )
 
@@ -88,6 +90,8 @@ var (
 		&plugins.Twitter{},
 		&eventlog.Handler{},
 		&plugins.Perspective{},
-		&biasgame.BiasGame{},
+		&biasgame.Module{},
+		&idols.Module{},
+		&nugugame.Module{},
 	}
 )

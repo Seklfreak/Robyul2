@@ -1,38 +1,31 @@
-package biasgame
+package idols
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"image"
-	"image/draw"
-	"math/rand"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis"
-	json "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 )
 
-// giveImageShadowBorder give the round image a shadow border
-func giveImageShadowBorder(img image.Image, offsetX int, offsetY int) image.Image {
-	rgba := image.NewRGBA(shadowBorder.Bounds())
-	draw.Draw(rgba, shadowBorder.Bounds(), shadowBorder, image.Point{0, 0}, draw.Src)
-	draw.Draw(rgba, img.Bounds().Add(image.Pt(offsetX, offsetY)), img, image.ZP, draw.Over)
-	return rgba.SubImage(rgba.Rect)
+var alphaNumericRegex *regexp.Regexp
+
+// bgLog is just a small helper function for logging in this module
+func log() *logrus.Entry {
+	return cache.GetLogger().WithField("module", "idols")
 }
 
-// bgLog is just a small helper function for logging in the biasgame
-func bgLog() *logrus.Entry {
-	return cache.GetLogger().WithField("module", "biasgame")
-}
-
-// getBiasGameCache
-func getBiasGameCache(key string, data interface{}) error {
+// getIdolCache for easily getting redis cache specific to idols
+func getModuleCache(key string, data interface{}) error {
 	// get cache with given key
-	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:biasgame:%s", key)).Bytes()
+	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:idols:%s", key)).Bytes()
 	if err != nil || err == redis.Nil {
 		return err
 	}
@@ -48,27 +41,26 @@ func getBiasGameCache(key string, data interface{}) error {
 	return err
 }
 
-// setBiasGameCache
-func setBiasGameCache(key string, data interface{}, time time.Duration) error {
+// setIdolsCache for easily setting redis cache specific to idols
+func setModuleCache(key string, data interface{}, time time.Duration) error {
 	marshaledData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time).Result()
+	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:idols:%s", key), marshaledData, time).Result()
 	return err
 }
 
-// delBiasGameCache
-func delBiasGameCache(keys ...string) {
-	for _, key := range keys {
-
-		cache.GetRedisClient().Del(fmt.Sprintf("robyul2-discord:biasgame:%s", key)).Result()
-	}
+// alphaNumericCompare does a case insensitive alpha numeric comparison of two input
+func alphaNumericCompare(input1, input2 string) bool {
+	regInput1 := strings.ToLower(alphaNumericRegex.ReplaceAllString(input1, ""))
+	regInput2 := strings.ToLower(alphaNumericRegex.ReplaceAllString(input2, ""))
+	return regInput1 == regInput2
 }
 
 // sendPagedEmbedOfImages takes the given image []byte and sends them in a paged embed
-func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []biasImage, displayObjectIds bool, authorName, description string) {
+func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []IdolImage, displayObjectIds bool, authorName, description string) {
 	positionMap := []string{"Top Left", "Top Right", "Bottom Left", "Bottom Right"}
 
 	// create images embed message
@@ -88,7 +80,7 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []biasImage, di
 	// loop through images, make a 2x2 collage and set it as a file
 	var images [][]byte
 	for i, img := range imagesToSend {
-		images = append(images, img.getImgBytes())
+		images = append(images, img.GetResizeImgBytes(IMAGE_RESIZE_HEIGHT))
 
 		if displayObjectIds {
 
@@ -125,36 +117,4 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []biasImage, di
 
 	// send paged embed
 	helpers.SendPagedImageMessage(msg, imagesMessage, 4)
-}
-
-// <3
-func getRandomNayoungEmoji() string {
-	nayoungEmojiArray := []string{
-		":nayoungthumbsup:430592739839705091",
-		":nayoungsalute:430592737340030979",
-		":nayounghype:430592740066066433",
-		":nayoungheart6:430592739868934164",
-		":nayoungheart2:430592737004224514",
-		":nayoungheart:430592736496713738",
-		":nayoungok:424683077793611777",
-		"a:anayoungminnie:430592552610299924",
-	}
-
-	randomIndex := rand.Intn(len(nayoungEmojiArray))
-	return nayoungEmojiArray[randomIndex]
-}
-
-// checks if the error is a permissions error and notifies the user
-func checkPermissionError(err error, channelID string) bool {
-	if err == nil {
-		return false
-	}
-
-	// check if error is a permissions error
-	if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-		if err.Message.Code == discordgo.ErrCodeMissingPermissions {
-			return true
-		}
-	}
-	return false
 }

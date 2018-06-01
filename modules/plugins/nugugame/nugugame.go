@@ -1,8 +1,7 @@
-package biasgame
+package nugugame
 
 import (
 	"fmt"
-	"image"
 	"math/rand"
 	"regexp"
 	"strings"
@@ -11,31 +10,16 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/bwmarrin/discordgo"
-	"github.com/nfnt/resize"
 	uuid "github.com/satori/go.uuid"
 )
 
-type nuguGame struct {
-	UUID              string
-	User              *discordgo.User
-	ChannelID         string
-	CorrectIdols      []*biasChoice
-	IncorrectIdols    []*biasChoice
-	WaitingForMessage bool
-	CurrentIdol       *biasChoice
-	Gender            string // girl, boy, mixed
-	GameImageIndex    map[string]int
-	RoundDelay        time.Duration
-	GameType          string // idol, group
-	IsMultigame       bool   // if true all messages in the channel will be account for
-	LastRoundMessage  *discordgo.Message
-
-	// Lives                int // amount of lives the user has left ?
-}
-
 const (
 	NUGUGAME_IMAGE_RESIZE_HEIGHT = 200
+	NUGUGAME_DEFULT_ROUND_DELAY  = 15
+	NUGUGAME_ROUND_DELETE_DELAY  = 1 * time.Second
+	CHECKMARK_EMOJI              = "✅"
 )
 
 var currentNuguGames []*nuguGame
@@ -47,12 +31,12 @@ var currentNuguGamesMutex sync.RWMutex
 
 // startNuguGame will create and the start the nugu game for the user
 func startNuguGame(msg *discordgo.Message, commandArgs []string) {
-	bgLog().Println("starting nugu game...")
+	log().Println("starting nugu game...")
 
 	// if the user already has a game, do nothing
 	if game := getNuguGameByUserID(msg.Author.ID); game != nil {
 		// todo: maybe send a message here letting the user know they have a game going?
-		bgLog().Warnln("nugu game found for user...")
+		log().Warnln("nugu game found for user...")
 
 		return
 	}
@@ -102,7 +86,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 		ChannelID:         msg.ChannelID,
 		Gender:            gameGender,
 		WaitingForMessage: false,
-		RoundDelay:        10,
+		RoundDelay:        NUGUGAME_DEFULT_ROUND_DELAY,
 		IsMultigame:       isMulti,
 		GameType:          gameType,
 	}
@@ -114,7 +98,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 
 // sendRound sends the next round in the game
 func (g *nuguGame) sendRound() {
-	bgLog().Println("Sending nugu game round...")
+	log().Println("Sending nugu game round...")
 
 	// if already waiting for user message, do not send the next round
 	if g.WaitingForMessage == true {
@@ -123,19 +107,23 @@ func (g *nuguGame) sendRound() {
 
 	// delete last round message if there was one
 	if g.LastRoundMessage != nil {
-		go cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
+		go helpers.DeleteMessageWithDelay(g.LastRoundMessage, NUGUGAME_ROUND_DELETE_DELAY)
 	}
 
 	// get a random idol to send round for
 	g.CurrentIdol = g.getNewRandomIdol()
 
 	// get an image for the current idol and resize it
-	idolImage := g.CurrentIdol.getRandomBiasImage(&g.GameImageIndex)
-	idolImage = resizeForNuguGame(idolImage)
+	idolImage := g.CurrentIdol.GetResizedRandomImage(NUGUGAME_IMAGE_RESIZE_HEIGHT)
 
 	roundMessage := "What is the idols name?"
 	if g.GameType == "group" {
 		roundMessage = "What is the idols group name?"
+	}
+	if !g.IsMultigame {
+		roundMessage = fmt.Sprintf("**@%s**\nCurrent Score: %d\n%s", g.User.Username, len(g.CorrectIdols), roundMessage)
+	} else {
+		roundMessage = fmt.Sprintf("**Multi Game**\nCurrent Score: %d\n%s", len(g.CorrectIdols), roundMessage)
 	}
 
 	// send round message
@@ -144,7 +132,6 @@ func (g *nuguGame) sendRound() {
 		if checkPermissionError(err, g.ChannelID) {
 			helpers.SendMessage(g.ChannelID, helpers.GetText("bot.errors.no-file"))
 		}
-
 		return
 	}
 
@@ -156,7 +143,7 @@ func (g *nuguGame) sendRound() {
 
 // waitforguess will watch the users messages in the channel for correct guess
 func (g *nuguGame) watchForGuess() {
-	bgLog().Println("waiting for nugu game guess...")
+	log().Println("waiting for nugu game guess...")
 
 	go func() {
 		defer helpers.Recover()
@@ -192,11 +179,18 @@ func (g *nuguGame) watchForGuess() {
 					correctAnswer = strings.ToLower(re.ReplaceAllString(g.CurrentIdol.GroupName, ""))
 				}
 
-				bgLog().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.BiasName, correctAnswer)
+				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.BiasName, correctAnswer)
 
 				// check if the user guess contains the idols name
 				if userGuess == correctAnswer {
-					cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+
+					if g.IsMultigame {
+
+						cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+					} else {
+						go helpers.DeleteMessageWithDelay(userMsg.Message, NUGUGAME_ROUND_DELETE_DELAY)
+					}
+
 					g.CorrectIdols = append(g.CorrectIdols, g.CurrentIdol)
 					g.WaitingForMessage = false
 					g.sendRound()
@@ -235,19 +229,29 @@ func (g *nuguGame) deleteGame() {
 }
 
 // getNewRandomIdol will get a random idol for the game, respecting game options and not duplicating previous idols
-func (g *nuguGame) getNewRandomIdol() *biasChoice {
-	var idol *biasChoice
-	var idolPool []*biasChoice
+func (g *nuguGame) getNewRandomIdol() *idols.Idol {
+	var idol *idols.Idol
+	var idolPool []*idols.Idol
 
-	// if this isn't a mixed game then filter all choices by the gender
-	if g.Gender != "mixed" {
-		for _, bias := range getAllBiases() {
-			if bias.Gender == g.Gender && (bias.GroupName == "PRISTIN" || bias.GroupName == "CLC" || bias.GroupName == "Twice" || bias.GroupName == "RedVelvet" || bias.GroupName == "GFriend") {
+	if true || !helpers.DEBUG_MODE {
+
+		// if this isn't a mixed game then filter all choices by the gender
+		if g.Gender != "mixed" {
+			for _, bias := range idols.GetAllIdols() {
+				if bias.Gender == g.Gender {
+					idolPool = append(idolPool, bias)
+				}
+			}
+		} else {
+			idolPool = idols.GetAllIdols()
+		}
+
+	} else {
+		for _, bias := range idols.GetAllIdols() {
+			if bias.GroupName == "PRISTIN" || bias.GroupName == "CLC" || bias.GroupName == "TWICE" {
 				idolPool = append(idolPool, bias)
 			}
 		}
-	} else {
-		idolPool = getAllBiases()
 	}
 
 	// get random biases for the game
@@ -297,12 +301,4 @@ func getNuguGameByUserID(userID string) *nuguGame {
 	// }
 
 	return game
-
-}
-
-// resizeForNuguGame will resize images to be the correct size for the nugu game
-func resizeForNuguGame(img image.Image) image.Image {
-
-	// resize image to the correct size
-	return resize.Resize(0, NUGUGAME_IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
 }
