@@ -38,8 +38,6 @@ import (
 	drive "google.golang.org/api/drive/v3"
 
 	_ "net/http/pprof"
-
-	"github.com/stackimpact/stackimpact-go"
 )
 
 var (
@@ -109,21 +107,6 @@ func main() {
 	}
 
 	log.WithField("module", "launcher").Info("Booting Robyul...")
-
-	// start stackimpact
-	if config.ExistsP("stackimpact.key") && config.Path("stackimpact.key").Data().(string) != "" {
-		log.WithField("module", "launcher").Info("Connecting to stackimpact...")
-		stackimpactOptions := stackimpact.Options{
-			AgentKey:       config.Path("stackimpact.key").Data().(string),
-			AppName:        "Robyul",
-			AppVersion:     version.BOT_VERSION,
-			AppEnvironment: "PROD",
-		}
-		if helpers.DEBUG_MODE {
-			stackimpactOptions.AppEnvironment = "DEV"
-		}
-		stackimpact.Start(stackimpactOptions)
-	}
 
 	// Read i18n
 	helpers.LoadTranslations()
