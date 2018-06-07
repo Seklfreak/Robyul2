@@ -105,10 +105,10 @@ func (s *Stats) handleVoiceStateUpdate(session *discordgo.Session, update *disco
 					err := helpers.ElasticAddVoiceSession(update.GuildID, channelID, update.UserID,
 						start, now)
 					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "stats").Infof(
-						"saved voice session Guild #%s User #%s Channel #%s Duration %d (disconnect)",
-						update.GuildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
-					)
+					//cache.GetLogger().WithField("module", "stats").Infof(
+					//	"saved voice session Guild #%s User #%s Channel #%s Duration %d (disconnect)",
+					//	update.GuildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
+					//)
 				}()
 			} else {
 				newVoiceSessionStarts = append(newVoiceSessionStarts, voiceSessionStart)
