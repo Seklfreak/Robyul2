@@ -1882,40 +1882,61 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		})
 		return
-	case "create-invite":
-		helpers.RequireRobyulMod(msg, func() {
-			session.ChannelTyping(msg.ChannelID)
+	case "create-invite": // [p]create-invite <#channel or channel ID> <age> <uses> [<guild ID>]
+		if !helpers.IsMod(msg) {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
+			return
+		}
 
-			args := strings.Fields(content)
-			if len(args) < 1 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-				return
+		session.ChannelTyping(msg.ChannelID)
+
+		args := strings.Fields(msg.Content)
+		if len(args) < 4 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			return
+		}
+
+		targetGuildID := msg.GuildID
+
+		if len(args) >= 5 && helpers.IsRobyulMod(msg.Author.ID) {
+			targetGuildID = args[4]
+		}
+
+		targetChannel, err := helpers.GetGlobalChannelFromMention(args[1])
+		helpers.Relax(err)
+
+		if targetChannel.GuildID != targetGuildID {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			return
+		}
+
+		maxAge, err := time.ParseDuration(args[2])
+		if err != nil {
+			maxAge = time.Hour // 1 hour
+			if args[2] == "0" {
+				maxAge = 0
 			}
-			guild, err := helpers.GetGuild(args[0])
-			helpers.Relax(err)
+		}
 
-			for _, channel := range guild.Channels {
-				invite, err := session.ChannelInviteCreate(channel.ID, discordgo.Invite{
-					MaxAge:    60 * 60,
-					MaxUses:   0,
-					Temporary: false,
-				})
-				if err != nil {
-					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Unable to create an invite in: `#%s (#%s)`",
-						channel.Name, channel.ID))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-				} else {
-					_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Created invite: `https://discord.gg/%s` for: `#%s (#%s)`",
-						invite.Code, channel.Name, channel.ID))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					return
-				}
-			}
+		maxUses, err := strconv.Atoi(args[3])
+		if err != nil {
+			maxUses = 5 // five uses
+		}
 
-			_, err = helpers.SendMessage(msg.ChannelID, "No channels left to try. <:blobugh:317047327443517442>")
+		invite, err := session.ChannelInviteCreate(targetChannel.ID, discordgo.Invite{
+			MaxAge:  int(maxAge.Seconds()),
+			MaxUses: maxUses,
+			Unique:  true,
+		})
+		if err != nil {
+			_, err = helpers.SendMessage(msg.ChannelID, "Unable to create the invite!")
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			return
-		})
+		}
+
+		_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Created invite: `https://discord.gg/%s` for: <#%s>",
+			invite.Code, targetChannel.ID))
+		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	case "prefix":
 		session.ChannelTyping(msg.ChannelID)
