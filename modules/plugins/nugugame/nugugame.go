@@ -174,12 +174,12 @@ func (g *nuguGame) watchForGuess() {
 
 				userGuess := strings.ToLower(re.ReplaceAllString(userMsg.Content, ""))
 
-				correctAnswer := strings.ToLower(re.ReplaceAllString(g.CurrentIdol.BiasName, ""))
+				correctAnswer := strings.ToLower(re.ReplaceAllString(g.CurrentIdol.Name, ""))
 				if g.GameType == "group" {
 					correctAnswer = strings.ToLower(re.ReplaceAllString(g.CurrentIdol.GroupName, ""))
 				}
 
-				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.BiasName, correctAnswer)
+				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.Name, correctAnswer)
 
 				// check if the user guess contains the idols name
 				if userGuess == correctAnswer {
@@ -200,7 +200,7 @@ func (g *nuguGame) watchForGuess() {
 				// do nothing if the user message doesn't match, they could just be talking...
 
 			case <-timeoutChan:
-				helpers.SendMessage(g.ChannelID, fmt.Sprintf("Game Over. The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.BiasName))
+				helpers.SendMessage(g.ChannelID, fmt.Sprintf("Game Over. The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
 				g.deleteGame()
 				return
 			}
@@ -254,7 +254,7 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 		}
 	}
 
-	// get random biases for the game
+	// get random idol for the game
 RandomIdolLoop:
 	for true {
 		randomIdol := idolPool[rand.Intn(len(idolPool))]

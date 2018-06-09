@@ -7,11 +7,25 @@ import (
 )
 
 const (
-	IdolsTable           MongoDbCollection = "biasgame_idols"
+	OldIdolsTable        MongoDbCollection = "biasgame_idols"
+	IdolTable            MongoDbCollection = "idols"
 	IdolSuggestionsTable MongoDbCollection = "biasgame_suggestions"
 )
 
+type IdolImageEntry struct {
+	HashString string
+	ObjectName string
+}
+
 type IdolEntry struct {
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	Name      string
+	GroupName string
+	Gender    string
+	Images    []IdolImageEntry
+}
+
+type OldIdolEntry struct {
 	ID         bson.ObjectId `bson:"_id,omitempty"`
 	Name       string
 	GroupName  string

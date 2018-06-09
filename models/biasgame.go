@@ -12,9 +12,9 @@ type BiasGameEntry struct {
 	ID           bson.ObjectId `bson:"_id,omitempty"`
 	UserID       string
 	GuildID      string
-	GameWinner   IdolEntry
-	RoundWinners []IdolEntry
-	RoundLosers  []IdolEntry
+	GameWinner   OldIdolEntry
+	RoundWinners []OldIdolEntry
+	RoundLosers  []OldIdolEntry
 	Gender       string // girl, boy, mixed
 	GameType     string // single, multi
 }

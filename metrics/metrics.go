@@ -241,7 +241,7 @@ func CollectRuntimeMetrics() {
 
 		VanityInvitesCount.Set(entriesCountMgo(models.VanityInvitesTable, nil))
 
-		BiasgameImagesCount.Set(entriesCountMgo(models.IdolsTable, nil))
+		BiasgameImagesCount.Set(entriesCountMgo(models.OldIdolsTable, nil))
 
 		BiasgameSuggestionsCount.Set(entriesCountMgo(models.IdolSuggestionsTable, bson.M{"status": ""}))
 

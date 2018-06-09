@@ -257,15 +257,15 @@ func (g *singleBiasGame) sendBiasGameRound() {
 		g.User.Username,
 		g.IdolsRemaining,
 		g.BiasQueue[0].GroupName,
-		g.BiasQueue[0].BiasName,
+		g.BiasQueue[0].Name,
 		g.BiasQueue[1].GroupName,
-		g.BiasQueue[1].BiasName)
+		g.BiasQueue[1].Name)
 
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
 	encoder.CompressionLevel = -2
-	encoder.Encode(buf, makeVSImage(img1, img2))
+	encoder.Encode(buf, MakeVSImage(img1, img2))
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
@@ -329,14 +329,14 @@ func (g *singleBiasGame) sendWinnerMessage() {
 	messageString := fmt.Sprintf("%s\nWinner: %s %s!",
 		g.User.Mention(),
 		g.GameWinnerBias.GroupName,
-		g.GameWinnerBias.BiasName)
+		g.GameWinnerBias.Name)
 
 	// send message
 	winnerMsgs, err := helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
 	helpers.Relax(err)
 
 	// if the winner is nayoung, add a nayoung emoji <3 <3 <3
-	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.BiasName) == "nayoung" {
+	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.Name) == "nayoung" {
 		cache.GetSession().MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
 	}
 }
@@ -516,15 +516,15 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	messageString := fmt.Sprintf("**Multi Game**\nIdols Remaining: %d\n%s %s vs %s %s",
 		g.IdolsRemaining,
 		g.BiasQueue[0].GroupName,
-		g.BiasQueue[0].BiasName,
+		g.BiasQueue[0].Name,
 		g.BiasQueue[1].GroupName,
-		g.BiasQueue[1].BiasName)
+		g.BiasQueue[1].Name)
 
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
 	encoder.CompressionLevel = -2 // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
-	encoder.Encode(buf, makeVSImage(img1, img2))
+	encoder.Encode(buf, MakeVSImage(img1, img2))
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
@@ -735,7 +735,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 
 	messageString := fmt.Sprintf("**Multi Game**\nWinner: %s %s!",
 		g.GameWinnerBias.GroupName,
-		g.GameWinnerBias.BiasName)
+		g.GameWinnerBias.Name)
 
 	// send message
 	helpers.SendFile(g.ChannelID, "biasgame_multi_winner.png", myReader, messageString)
@@ -913,8 +913,8 @@ func loadMiscImages() {
 	winnerBracket = bracketImage.SubImage(bracketImage.Rect)
 }
 
-// makeVSImage will make the image that shows for rounds in the biasgame
-func makeVSImage(img1, img2 image.Image) image.Image {
+// MakeVSImage will make the image that shows for rounds in the biasgame
+func MakeVSImage(img1, img2 image.Image) image.Image {
 	// resize images if needed
 	if img1.Bounds().Dy() != IMAGE_RESIZE_HEIGHT || img2.Bounds().Dy() != IMAGE_RESIZE_HEIGHT {
 		img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)

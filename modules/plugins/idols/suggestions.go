@@ -179,7 +179,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 
 	// compare the given image to all images currently available in the game
 	for _, idol := range GetAllIdols() {
-		for _, curIdolImage := range idol.BiasImages {
+		for _, curIdolImage := range idol.Images {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curIdolImage.HashString)
 			if err != nil {
 				log().Errorf("Comparison error: %s", err.Error())
@@ -571,13 +571,13 @@ func loadUnresolvedSuggestions() {
 // checkIdolAndGroupExist does a loose comparison of the suggested idols and idols that already exist
 func checkIdolAndGroupExist(sug *models.IdolSuggestionEntry) {
 
-	groupMatched, _, matchingBias := GetMatchingIdolAndGroup(sug.GrouopName, sug.Name)
+	groupMatched, _, matchingIdol := GetMatchingIdolAndGroup(sug.GrouopName, sug.Name)
 
 	// if a matching idol was found then set the suggested name and group to match
-	if matchingBias != nil {
-		sug.GrouopName = matchingBias.GroupName
+	if matchingIdol != nil {
+		sug.GrouopName = matchingIdol.GroupName
 		sug.GroupMatch = true
-		sug.Name = matchingBias.BiasName
+		sug.Name = matchingIdol.Name
 		sug.IdolMatch = true
 
 	} else if groupMatched {
@@ -596,8 +596,8 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 	var compareValues []int
 
 	// compare the given image to all images currently available in the game
-	for _, bias := range GetAllIdols() {
-		for _, curBImage := range bias.BiasImages {
+	for _, idol := range GetAllIdols() {
+		for _, curBImage := range idol.Images {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
 			if err != nil {
 				log().Errorf("Comparison error: %s", err.Error())
@@ -646,7 +646,7 @@ func clearSuggestionsChannel() {
 func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 
 	// get suggestion details and add to idolEntry table
-	idolEntry := models.IdolEntry{
+	idolEntry := models.OldIdolEntry{
 		ID:         "",
 		Gender:     suggestion.Gender,
 		GroupName:  suggestion.GrouopName,
@@ -655,27 +655,27 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 	}
 
 	// insert file to mongodb
-	_, err := helpers.MDbInsert(models.IdolsTable, idolEntry)
+	_, err := helpers.MDbInsert(models.OldIdolsTable, idolEntry)
 	helpers.Relax(err)
 
-	newBiasChoice := makeIdolFromIdolEntry(idolEntry)
+	newIdol := makeIdolFromOldIdolEntry(idolEntry)
 
-	// if the bias already exists, then just add this picture to the image array for the idol
+	// if the idol already exists, then just add this picture to the image array for the idol
 	idolExists := false
 	for _, currentIdol := range GetAllIdols() {
-		if currentIdol.NameAndGroup == newBiasChoice.NameAndGroup {
-			currentIdol.BiasImages = append(currentIdol.BiasImages, newBiasChoice.BiasImages[0])
+		if currentIdol.NameAndGroup == newIdol.NameAndGroup {
+			currentIdol.Images = append(currentIdol.Images, newIdol.Images[0])
 			idolExists = true
 			break
 		}
 	}
 
-	// if its a new bias, update all biases array
+	// if its a new idol, update all idols array
 	if idolExists == false {
-		setAllIdols(append(GetAllIdols(), &newBiasChoice))
+		setAllIdols(append(GetAllIdols(), &newIdol))
 	}
 
-	// cache all biases
+	// cache all idols
 	if len(GetAllIdols()) > 0 {
 		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
 	}

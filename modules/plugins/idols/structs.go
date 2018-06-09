@@ -7,9 +7,9 @@ type IdolImage struct {
 }
 
 type Idol struct {
-	BiasName     string
+	Name         string
 	GroupName    string
 	Gender       string
 	NameAndGroup string
-	BiasImages   []IdolImage
+	Images       []IdolImage
 }

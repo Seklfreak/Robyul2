@@ -46,7 +46,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	statsTitle := ""
 	countsHeader := ""
 
-	// loop through the results and compile a map of [biasgroup biasname]number of occurences
+	// loop through the results and compile a map of [biasgroup Name]number of occurences
 	biasCounts := make(map[string]int)
 	for _, game := range games {
 		groupAndName := ""
@@ -321,9 +321,9 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 
 			message := fmt.Sprintf("W: %s %s\nL: %s %s\n",
 				game.RoundWinners[i].GroupName,
-				game.RoundWinners[i].BiasName,
+				game.RoundWinners[i].Name,
 				game.RoundLosers[i].GroupName,
-				game.RoundLosers[i].BiasName)
+				game.RoundLosers[i].Name)
 
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   fieldName,
@@ -375,8 +375,8 @@ func recordSingleGamesStats(game *singleBiasGame) {
 		Gender:       game.Gender,
 		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
 		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
-		GameWinner: models.IdolEntry{
-			Name:      game.GameWinnerBias.BiasName,
+		GameWinner: models.OldIdolEntry{
+			Name:      game.GameWinnerBias.Name,
 			GroupName: game.GameWinnerBias.GroupName,
 			Gender:    game.GameWinnerBias.Gender,
 		},
@@ -404,8 +404,8 @@ func recordMultiGamesStats(game *multiBiasGame) {
 		Gender:       game.Gender,
 		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
 		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
-		GameWinner: models.IdolEntry{
-			Name:      game.GameWinnerBias.BiasName,
+		GameWinner: models.OldIdolEntry{
+			Name:      game.GameWinnerBias.Name,
 			GroupName: game.GameWinnerBias.GroupName,
 			Gender:    game.GameWinnerBias.Gender,
 		},
@@ -494,11 +494,11 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 }
 
 // complieGameStats will convert records from database into a:
-// 		map[int number of occurentces]string group or biasnames comma delimited
+// 		map[int number of occurentces]string group or Names comma delimited
 // 		will also return []int of the sorted unique counts for reliable looping later
 func complieGameStats(records map[string]int) (map[int][]string, []int) {
 
-	// use map of counts to compile a new map of [unique occurence amounts]biasnames
+	// use map of counts to compile a new map of [unique occurence amounts]Names
 	var uniqueCounts []int
 	compiledData := make(map[int][]string)
 	for k, v := range records {
@@ -576,13 +576,13 @@ func sendStatsMessage(msg *discordgo.Message, title string, countLabel string, d
 	helpers.SendPagedMessage(msg, embed, 5)
 }
 
-// compileGameWinnersLosers will loop through the biases and convert them to []models.IdolEntry
-func compileGameWinnersLosers(biases []*idols.Idol) []models.IdolEntry {
+// compileGameWinnersLosers will loop through the biases and convert them to []models.OldIdolEntry
+func compileGameWinnersLosers(biases []*idols.Idol) []models.OldIdolEntry {
 
-	var biasEntries []models.IdolEntry
+	var biasEntries []models.OldIdolEntry
 	for _, bias := range biases {
-		biasEntries = append(biasEntries, models.IdolEntry{
-			Name:      bias.BiasName,
+		biasEntries = append(biasEntries, models.OldIdolEntry{
+			Name:      bias.Name,
 			GroupName: bias.GroupName,
 			Gender:    bias.Gender,
 		})
@@ -617,8 +617,8 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 	// get all the games that the target idol has been in
 	queryParams := bson.M{"$or": []bson.M{
 		// check if idol is in round winner or losers array
-		bson.M{"roundwinners": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.BiasName}}},
-		bson.M{"roundlosers": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.BiasName}}},
+		bson.M{"roundwinners": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.Name}}},
+		bson.M{"roundlosers": bson.M{"$elemMatch": bson.M{"groupname": bias.GroupName, "name": bias.Name}}},
 	}}
 
 	// exclude rounds from rankings query for better performance
@@ -647,7 +647,7 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 		}
 	}
 
-	biasGroupName := fmt.Sprintf("%s %s", bias.GroupName, bias.BiasName)
+	biasGroupName := fmt.Sprintf("%s %s", bias.GroupName, bias.Name)
 
 	// get overall win rank
 	compiledData, uniqueCounts := complieGameStats(allGamesIdolWinCounts)
@@ -698,7 +698,7 @@ MultiWinLoop:
 	for _, game := range targetIdolGames {
 
 		// win game
-		if game.GameWinner.GroupName == bias.GroupName && game.GameWinner.Name == bias.BiasName {
+		if game.GameWinner.GroupName == bias.GroupName && game.GameWinner.Name == bias.Name {
 			userGameWinMap[game.UserID]++
 			guildGameWinMap[game.GuildID]++
 			totalGameWins++
@@ -706,14 +706,14 @@ MultiWinLoop:
 
 		// round win
 		for _, round := range game.RoundWinners {
-			if round.GroupName == bias.GroupName && round.Name == bias.BiasName {
+			if round.GroupName == bias.GroupName && round.Name == bias.Name {
 				totalRounds++
 				totalRoundWins++
 			}
 		}
 		// round lose
 		for _, round := range game.RoundLosers {
-			if round.GroupName == bias.GroupName && round.Name == bias.BiasName {
+			if round.GroupName == bias.GroupName && round.Name == bias.Name {
 				totalRounds++
 			}
 		}
@@ -753,7 +753,7 @@ MultiWinLoop:
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: fmt.Sprintf("Stats for %s %s", bias.GroupName, bias.BiasName),
+			Name: fmt.Sprintf("Stats for %s %s", bias.GroupName, bias.Name),
 		},
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
 			URL: "attachment://idol_stats_thumbnail.png",
@@ -778,7 +778,7 @@ MultiWinLoop:
 
 	// add fields
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(bias.BiasImages)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(bias.Images)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolSingleWinRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolMultiWinRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: humanize.Comma(int64(totalGameWins)), Inline: true})
@@ -791,8 +791,8 @@ MultiWinLoop:
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Server With Most Wins", Value: fmt.Sprintf("%s (%s wins)", guildNameMostWins, humanize.Comma(int64(highestServerWins))), Inline: true})
 
 	// get random image from the thumbnail
-	imageIndex := rand.Intn(len(bias.BiasImages))
-	thumbnailReader := bytes.NewReader(bias.BiasImages[imageIndex].GetResizeImgBytes(IMAGE_RESIZE_HEIGHT))
+	imageIndex := rand.Intn(len(bias.Images))
+	thumbnailReader := bytes.NewReader(bias.Images[imageIndex].GetResizeImgBytes(IMAGE_RESIZE_HEIGHT))
 
 	msgSend := &discordgo.MessageSend{
 		Files: []*discordgo.File{{
@@ -998,8 +998,8 @@ MultiWinLoop:
 		}
 
 		// get random picture for the idol
-		imageIndex := rand.Intn(len(bias.BiasImages))
-		allGroupImages = append(allGroupImages, bias.BiasImages[imageIndex])
+		imageIndex := rand.Intn(len(bias.Images))
+		allGroupImages = append(allGroupImages, bias.Images[imageIndex])
 	}
 
 	// get group member with most wins

@@ -61,6 +61,10 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 	if command == "idol" {
 
 		switch commandArgs[0] {
+		case "migrate-idols":
+			helpers.RequireRobyulMod(msg, func() {
+				migrateIdols(msg, content)
+			})
 		case "suggest":
 			processImageSuggestion(msg, content)
 		case "delete-image":
@@ -81,7 +85,17 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 			helpers.RequireRobyulMod(msg, func() {
 				updateIdolInfoFromMsg(msg, content)
 			})
-		case "refresh-images":
+		case "refresh-idols-old":
+			helpers.RequireRobyulMod(msg, func() {
+				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))
+				helpers.Relax(err)
+				refreshIdolsFromOld(true)
+
+				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
+			})
+
+		case "refresh-idols":
 
 			helpers.RequireRobyulMod(msg, func() {
 				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))

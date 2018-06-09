@@ -168,15 +168,15 @@ func getSemiRandomIdolImage(idol *idols.Idol, gameImageIndex *map[string]int) im
 	var imageIndex int
 
 	// check if a random image for the idol has already been chosen for this game
-	//  also make sure that biasimages array contains the index. it may have been changed due to a refresh
-	if imagePos, ok := (*gameImageIndex)[idol.NameAndGroup]; ok && len(idol.BiasImages) > imagePos {
+	//  also make sure that Images array contains the index. it may have been changed due to a refresh
+	if imagePos, ok := (*gameImageIndex)[idol.NameAndGroup]; ok && len(idol.Images) > imagePos {
 		imageIndex = imagePos
 	} else {
-		imageIndex = rand.Intn(len(idol.BiasImages))
+		imageIndex = rand.Intn(len(idol.Images))
 		(*gameImageIndex)[idol.NameAndGroup] = imageIndex
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(idol.BiasImages[imageIndex].GetResizeImgBytes(IMAGE_RESIZE_HEIGHT)))
+	img, _, err := image.Decode(bytes.NewReader(idol.Images[imageIndex].GetResizeImgBytes(IMAGE_RESIZE_HEIGHT)))
 	helpers.Relax(err)
 	return img
 }
