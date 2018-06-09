@@ -792,8 +792,8 @@
       },
       "refresh": {
         "not-bot-owner": "Sorry, this command can only be run by the bot owner :(",
-        "refresing": "Refreshing biasgame images...",
-        "refresh-done": "Biasgame images have been refreshed."
+        "refresing": "Refreshing idol images...",
+        "refresh-done": "Idol images have been refreshed."
       }
     },
     "move": {
