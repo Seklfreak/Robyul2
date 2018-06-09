@@ -29,6 +29,11 @@ type mgoLogger struct {
 }
 
 func (mgol mgoLogger) Output(calldepth int, s string) error {
+	// ignore SYNC messages
+	if strings.HasPrefix(s, "SYNC ") {
+		return nil
+	}
+
 	cache.GetLogger().WithField("module", "mdb").Info(s)
 	return nil
 }
@@ -41,6 +46,7 @@ func ConnectMDB(url string, database string) {
 	log.WithField("module", "mdb").Info("Connecting to " + url)
 
 	mgoL := new(mgoLogger)
+	mgo.SetDebug(false)
 	mgo.SetLogger(mgoL)
 
 	cache.GetLogger()

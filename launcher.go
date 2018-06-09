@@ -25,7 +25,6 @@ import (
 	"github.com/Seklfreak/Robyul2/robyulstate"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/Seklfreak/polr-go"
-	"github.com/bshuster-repo/logruzio"
 	"github.com/bwmarrin/discordgo"
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
@@ -35,11 +34,9 @@ import (
 	"github.com/olivere/elastic"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
-	drive "google.golang.org/api/drive/v3"
+	"google.golang.org/api/drive/v3"
 
 	_ "net/http/pprof"
-
-	"github.com/stackimpact/stackimpact-go"
 )
 
 var (
@@ -96,34 +93,7 @@ func main() {
 		))
 	}
 
-	if config.Path("logging.logzio_token").Data().(string) != "" {
-		logruzioCtx := logrus.Fields{}
-		if version.BOT_VERSION != "UNSET" {
-			logruzioCtx["version"] = version.BOT_VERSION
-		}
-		hook, err := logruzio.New(config.Path("logging.logzio_token").Data().(string), "robyul-discord", logruzioCtx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Hooks.Add(hook)
-	}
-
 	log.WithField("module", "launcher").Info("Booting Robyul...")
-
-	// start stackimpact
-	if config.ExistsP("stackimpact.key") && config.Path("stackimpact.key").Data().(string) != "" {
-		log.WithField("module", "launcher").Info("Connecting to stackimpact...")
-		stackimpactOptions := stackimpact.Options{
-			AgentKey:       config.Path("stackimpact.key").Data().(string),
-			AppName:        "Robyul",
-			AppVersion:     version.BOT_VERSION,
-			AppEnvironment: "PROD",
-		}
-		if helpers.DEBUG_MODE {
-			stackimpactOptions.AppEnvironment = "DEV"
-		}
-		stackimpact.Start(stackimpactOptions)
-	}
 
 	// Read i18n
 	helpers.LoadTranslations()

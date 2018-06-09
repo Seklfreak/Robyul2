@@ -65,6 +65,10 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		createdAt = time.Now()
 	}
 
+	if !cache.HasElastic() {
+		return false, nil
+	}
+
 	/*
 		cache.GetLogger().WithField("module", "helpers/eventlog").Debugf(
 			"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",

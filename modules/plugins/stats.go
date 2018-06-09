@@ -36,8 +36,8 @@ type Stats struct{}
 func (s *Stats) Commands() []string {
 	return []string{
 		"stats",
-		"serverinfo",
-		"userinfo",
+		"serverinfo", "sinfo",
+		"userinfo", "uinfo",
 		"voicestats",
 		"emotes",
 		"emojis",
@@ -102,13 +102,15 @@ func (s *Stats) handleVoiceStateUpdate(session *discordgo.Session, update *disco
 						return
 					}
 
-					err := helpers.ElasticAddVoiceSession(update.GuildID, channelID, update.UserID,
-						start, now)
-					helpers.Relax(err)
-					cache.GetLogger().WithField("module", "stats").Infof(
-						"saved voice session Guild #%s User #%s Channel #%s Duration %d (disconnect)",
-						update.GuildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
-					)
+					if cache.HasElastic() {
+						err := helpers.ElasticAddVoiceSession(update.GuildID, channelID, update.UserID,
+							start, now)
+						helpers.Relax(err)
+					}
+					//cache.GetLogger().WithField("module", "stats").Infof(
+					//	"saved voice session Guild #%s User #%s Channel #%s Duration %d (disconnect)",
+					//	update.GuildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
+					//)
 				}()
 			} else {
 				newVoiceSessionStarts = append(newVoiceSessionStarts, voiceSessionStart)
@@ -136,9 +138,11 @@ func (s *Stats) handleVoiceStateUpdate(session *discordgo.Session, update *disco
 						return
 					}
 
-					err := helpers.ElasticAddVoiceSession(guildID, channelID, update.UserID,
-						start, now)
-					helpers.Relax(err)
+					if cache.HasElastic() {
+						err := helpers.ElasticAddVoiceSession(guildID, channelID, update.UserID,
+							start, now)
+						helpers.Relax(err)
+					}
 					cache.GetLogger().WithField("module", "stats").Infof(
 						"saved voice session Guild #%s User #%s Channel #%s Duration %d (channel change)",
 						guildID, channelID, update.UserID, int(now.Sub(start).Seconds()),
@@ -359,7 +363,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = helpers.SendEmbed(msg.ChannelID, statsEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
-	case "serverinfo":
+	case "serverinfo", "sinfo":
 		session.ChannelTyping(msg.ChannelID)
 
 		args := strings.Fields(content)
@@ -497,7 +501,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		_, err = helpers.SendEmbed(msg.ChannelID, serverinfoEmbed)
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
-	case "userinfo":
+	case "userinfo", "uinfo":
 		session.ChannelTyping(msg.ChannelID)
 		targetUser, err := helpers.GetUser(msg.Author.ID)
 		helpers.Relax(err)
@@ -783,28 +787,31 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
+		voiceStatSummaryText := "N/A"
+		if cache.HasElastic() {
+			durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
 
-		termQuery := elastic.NewQueryStringQuery("GuildID:" + currentGuild.ID + " AND UserID:" + targetUser.ID)
-		searchResult, err := cache.GetElastic().Search().
-			Index(models.ElasticIndexVoiceSessions).
-			Type("doc").
-			Query(termQuery).
-			Aggregation("total", durationSumAgg).
-			Size(0).
-			Do(context.Background())
-		helpers.Relax(err)
+			termQuery := elastic.NewQueryStringQuery("GuildID:" + currentGuild.ID + " AND UserID:" + targetUser.ID)
+			searchResult, err := cache.GetElastic().Search().
+				Index(models.ElasticIndexVoiceSessions).
+				Type("doc").
+				Query(termQuery).
+				Aggregation("total", durationSumAgg).
+				Size(0).
+				Do(context.Background())
+			helpers.Relax(err)
 
-		var voiceStatSummaryText string
-		if agg, found := searchResult.Aggregations.Sum("total"); found {
-			totalDuration := int64(*agg.Value)
-			voiceStatSummaryText = "Total duration connected: "
-			if totalDuration > 0 {
-				voiceStatSummaryText += helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(totalDuration))) + "\n"
-				voiceStatSummaryText += fmt.Sprintf("Try `%svoicestats @%s` to view the complete voice stats for this user!",
-					helpers.GetPrefixForServer(currentGuild.ID), fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator))
-			} else {
-				voiceStatSummaryText += "None"
+			voiceStatSummaryText = ""
+			if agg, found := searchResult.Aggregations.Sum("total"); found {
+				totalDuration := int64(*agg.Value)
+				voiceStatSummaryText = "Total duration connected: "
+				if totalDuration > 0 {
+					voiceStatSummaryText += helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(totalDuration))) + "\n"
+					voiceStatSummaryText += fmt.Sprintf("Try `%svoicestats @%s` to view the complete voice stats for this user!",
+						helpers.GetPrefixForServer(currentGuild.ID), fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator))
+				} else {
+					voiceStatSummaryText += "None"
+				}
 			}
 		}
 
@@ -987,6 +994,13 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		helpers.RelaxEmbed(err, msg.ChannelID, msg.ID)
 	case "voicestats": // [p]voicestats <user> or [p]voicestats top // @TODO: sort by time connected
 		session.ChannelTyping(msg.ChannelID)
+
+		if !cache.HasElastic() {
+			_, err := helpers.SendMessage(msg.ChannelID, "Voice Stats are currently unavailable. Please try again later.")
+			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			return
+		}
+
 		targetUser, err := helpers.GetUser(msg.Author.ID)
 		helpers.Relax(err)
 		args := strings.Fields(content)

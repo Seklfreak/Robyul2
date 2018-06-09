@@ -25,6 +25,11 @@ func auditlogBackfillLoop() {
 
 	for {
 		time.Sleep(time.Minute * 1)
+
+		if !cache.HasElastic() {
+			continue
+		}
+
 		start := time.Now()
 
 		redis := cache.GetRedisClient()

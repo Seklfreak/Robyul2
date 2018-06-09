@@ -101,6 +101,11 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 
 			facebookPage, err := m.lookupFacebookPage(facebookUsername)
 			if err != nil {
+				if strings.Contains(err.Error(), "Application request limit reached") {
+					log.WithField("module", "facebook").Infoln("facebook api limit reached, retrying in one minute")
+					time.Sleep(time.Minute)
+					continue
+				}
 				log.WithField("module", "facebook").Warnf("updating facebook account %s failed: %s", facebookUsername, err.Error())
 				continue
 			}
@@ -138,7 +143,7 @@ func (m *Facebook) checkFacebookFeedsLoop() {
 					helpers.Relax(err)
 				}
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 
 		if len(entries) <= 10 {
