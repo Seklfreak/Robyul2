@@ -34,7 +34,7 @@ const (
 
 var imageSuggestionChannlId string
 var imageSuggestionChannel *discordgo.Channel
-var suggestionQueue []*models.BiasGameSuggestionEntry
+var suggestionQueue []*models.IdolSuggestionEntry
 var suggestionEmbedMessageId string // id of the embed message where suggestions are accepted/denied
 var exampleRoundPicId string
 var suggestionQueueCountMessageId string
@@ -229,7 +229,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.thanks-for-suggestion", msg.Author.Mention()))
 
 	// create suggetion
-	suggestion := &models.BiasGameSuggestionEntry{
+	suggestion := &models.IdolSuggestionEntry{
 		UserID:          msg.Author.ID,
 		ChannelID:       msg.ChannelID,
 		Gender:          suggestionArgs[0],
@@ -245,7 +245,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 
 	// save suggetion to database and memory
 	suggestionQueue = append(suggestionQueue, suggestion)
-	helpers.MDbInsert(models.BiasGameSuggestionsTable, suggestion)
+	helpers.MDbInsert(models.IdolSuggestionsTable, suggestion)
 	updateSuggestionQueueCount()
 
 	if len(suggestionQueue) == 1 || len(suggestionQueue) == 0 {
@@ -330,7 +330,7 @@ func checkSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 		// update db record
 		cs.ProcessedByUserId = reaction.UserID
 		cs.LastModifiedOn = time.Now()
-		go helpers.MDbUpsertID(models.BiasGameSuggestionsTable, cs.ID, cs)
+		go helpers.MDbUpsertID(models.IdolSuggestionsTable, cs.ID, cs)
 
 		// send a message to the user who suggested the image
 		dmChannel, err := cache.GetSession().UserChannelCreate(cs.UserID)
@@ -382,7 +382,7 @@ func updateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value
 	}
 
 	// save changes and update embed message
-	helpers.MDbUpsertID(models.BiasGameSuggestionsTable, cs.ID, cs)
+	helpers.MDbUpsertID(models.IdolSuggestionsTable, cs.ID, cs)
 	updateCurrentSuggestionEmbed()
 }
 
@@ -390,7 +390,7 @@ func updateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value
 func updateCurrentSuggestionEmbed() {
 	var embed *discordgo.MessageEmbed
 	var msgSend *discordgo.MessageSend
-	var cs *models.BiasGameSuggestionEntry
+	var cs *models.IdolSuggestionEntry
 
 	if exampleRoundPicId != "" {
 		go cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, exampleRoundPicId)
@@ -565,11 +565,11 @@ func loadUnresolvedSuggestions() {
 
 	queryParams["status"] = ""
 
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameSuggestionsTable).Find(queryParams)).All(&suggestionQueue)
+	helpers.MDbIter(helpers.MdbCollection(models.IdolSuggestionsTable).Find(queryParams)).All(&suggestionQueue)
 }
 
 // checkIdolAndGroupExist does a loose comparison of the suggested idols and idols that already exist
-func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
+func checkIdolAndGroupExist(sug *models.IdolSuggestionEntry) {
 
 	groupMatched, _, matchingBias := GetMatchingIdolAndGroup(sug.GrouopName, sug.Name)
 
@@ -643,10 +643,10 @@ func clearSuggestionsChannel() {
 }
 
 // addSuggestionToGame will add the given suggestion entry to the available idols
-func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
+func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 
 	// get suggestion details and add to idolEntry table
-	idolEntry := models.BiasGameIdolEntry{
+	idolEntry := models.IdolEntry{
 		ID:         "",
 		Gender:     suggestion.Gender,
 		GroupName:  suggestion.GrouopName,
@@ -655,7 +655,7 @@ func addSuggestionToGame(suggestion *models.BiasGameSuggestionEntry) {
 	}
 
 	// insert file to mongodb
-	_, err := helpers.MDbInsert(models.BiasGameIdolsTable, idolEntry)
+	_, err := helpers.MDbInsert(models.IdolsTable, idolEntry)
 	helpers.Relax(err)
 
 	newBiasChoice := makeIdolFromIdolEntry(idolEntry)

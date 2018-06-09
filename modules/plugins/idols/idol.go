@@ -176,8 +176,8 @@ func refreshIdols(skipCache bool) {
 		log().Info("Idols loading from mongodb. Cache not set or expired.")
 	}
 
-	var idolEntries []models.BiasGameIdolEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{})).All(&idolEntries)
+	var idolEntries []models.IdolEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.IdolsTable).Find(bson.M{})).All(&idolEntries)
 	helpers.Relax(err)
 
 	log().Infof("Loading idols. Total image records: %d", len(idolEntries))
@@ -189,7 +189,7 @@ func refreshIdols(skipCache bool) {
 	sem := make(chan bool, 50)
 	for _, idolEntry := range idolEntries {
 		sem <- true
-		go func(idolEntry models.BiasGameIdolEntry) {
+		go func(idolEntry models.IdolEntry) {
 			defer func() { <-sem }()
 			defer helpers.Recover()
 
@@ -223,7 +223,7 @@ func refreshIdols(skipCache bool) {
 }
 
 // makeIdolFromIdolEntry takes a mdb idol entry and makes a idol
-func makeIdolFromIdolEntry(entry models.BiasGameIdolEntry) Idol {
+func makeIdolFromIdolEntry(entry models.IdolEntry) Idol {
 	iImage := IdolImage{
 		ObjectName: entry.ObjectName,
 	}
@@ -390,8 +390,8 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 	setAllIdols(allIdols)
 
 	// update database
-	var idolsToUpdate []models.BiasGameIdolEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&idolsToUpdate)
+	var idolsToUpdate []models.IdolEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.IdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&idolsToUpdate)
 	helpers.Relax(err)
 
 	for _, idol := range idolsToUpdate {
@@ -399,7 +399,7 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 		idol.GroupName = newGroup
 		idol.Gender = newGender
 
-		err := helpers.MDbUpsertID(models.BiasGameIdolsTable, idol.ID, idol)
+		err := helpers.MDbUpsertID(models.IdolsTable, idol.ID, idol)
 		helpers.Relax(err)
 	}
 
@@ -491,8 +491,8 @@ IdolsLoop:
 	groupCheck, nameCheck, idolToUpdate := GetMatchingIdolAndGroup(newGroup, newName)
 
 	// update database
-	var idolsToUpdate []models.BiasGameIdolEntry
-	err = helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&idolsToUpdate)
+	var idolsToUpdate []models.IdolEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.IdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&idolsToUpdate)
 	helpers.Relax(err)
 
 	// if a database entry were found, update it
@@ -501,7 +501,7 @@ IdolsLoop:
 		updateIdol.Name = newName
 		updateIdol.GroupName = newGroup
 		updateIdol.Gender = newGender
-		err := helpers.MDbUpsertID(models.BiasGameIdolsTable, updateIdol.ID, updateIdol)
+		err := helpers.MDbUpsertID(models.IdolsTable, updateIdol.ID, updateIdol)
 		helpers.Relax(err)
 
 		// if the new group/name already exists in memory, add image to that idol. otherwise create it
@@ -592,15 +592,15 @@ IdolLoop:
 	}
 
 	// update database
-	var idolToDelete []models.BiasGameIdolEntry
-	err = helpers.MDbIter(helpers.MdbCollection(models.BiasGameIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&idolToDelete)
+	var idolToDelete []models.IdolEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.IdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&idolToDelete)
 	helpers.Relax(err)
 
 	// if a database entry were found, update it
 	if len(idolToDelete) == 1 {
 
 		// delete from database
-		err := helpers.MDbDelete(models.BiasGameIdolsTable, idolToDelete[0].ID)
+		err := helpers.MDbDelete(models.IdolsTable, idolToDelete[0].ID)
 		helpers.Relax(err)
 
 		// delete object

@@ -375,7 +375,7 @@ func recordSingleGamesStats(game *singleBiasGame) {
 		Gender:       game.Gender,
 		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
 		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
-		GameWinner: models.BiasGameIdolEntry{
+		GameWinner: models.IdolEntry{
 			Name:      game.GameWinnerBias.BiasName,
 			GroupName: game.GameWinnerBias.GroupName,
 			Gender:    game.GameWinnerBias.Gender,
@@ -404,7 +404,7 @@ func recordMultiGamesStats(game *multiBiasGame) {
 		Gender:       game.Gender,
 		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
 		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
-		GameWinner: models.BiasGameIdolEntry{
+		GameWinner: models.IdolEntry{
 			Name:      game.GameWinnerBias.BiasName,
 			GroupName: game.GameWinnerBias.GroupName,
 			Gender:    game.GameWinnerBias.Gender,
@@ -576,12 +576,12 @@ func sendStatsMessage(msg *discordgo.Message, title string, countLabel string, d
 	helpers.SendPagedMessage(msg, embed, 5)
 }
 
-// compileGameWinnersLosers will loop through the biases and convert them to []models.BiasGameIdolEntry
-func compileGameWinnersLosers(biases []*idols.Idol) []models.BiasGameIdolEntry {
+// compileGameWinnersLosers will loop through the biases and convert them to []models.IdolEntry
+func compileGameWinnersLosers(biases []*idols.Idol) []models.IdolEntry {
 
-	var biasEntries []models.BiasGameIdolEntry
+	var biasEntries []models.IdolEntry
 	for _, bias := range biases {
-		biasEntries = append(biasEntries, models.BiasGameIdolEntry{
+		biasEntries = append(biasEntries, models.IdolEntry{
 			Name:      bias.BiasName,
 			GroupName: bias.GroupName,
 			Gender:    bias.Gender,
