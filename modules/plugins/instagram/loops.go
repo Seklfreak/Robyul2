@@ -228,7 +228,8 @@ func (m *Handler) retryOnError(err error) (retry bool) {
 			strings.Contains(err.Error(), "expected status 200; got 500") ||
 			strings.Contains(err.Error(), "expected status 200; got 502") ||
 			strings.Contains(err.Error(), "expected status 200; got 503") ||
-			strings.Contains(err.Error(), "tls: bad record MAC") {
+			strings.Contains(err.Error(), "tls: bad record MAC") ||
+			strings.Contains(err.Error(), "unexpected EOF") {
 			return true
 		}
 	}
