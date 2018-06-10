@@ -576,47 +576,71 @@ IdolsLoop:
 		return
 	}
 
-	// create new image with given object name
-	newIdolImage := IdolImage{
-		ObjectName: targetObjectName,
-	}
-
-	// get image hash from object name
-	img, _, err := helpers.DecodeImageBytes(newIdolImage.GetImgBytes())
-	helpers.Relax(err)
-	imgHash, err := helpers.GetImageHashString(img)
-	helpers.Relax(err)
-	newIdolImage.HashString = imgHash
-
 	// attempt to get matching idol
 	groupCheck, nameCheck, idolToUpdate := GetMatchingIdolAndGroup(newGroup, newName)
 
-	// update database
-	var idolsToUpdate []models.OldIdolEntry
-	err = helpers.MDbIter(helpers.MdbCollection(models.OldIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&idolsToUpdate)
+	// get mdb record by object name
+	var mongoRecordToUpdate models.IdolEntry
+	err = helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"images.objectname": targetObjectName}), &mongoRecordToUpdate)
 	helpers.Relax(err)
 
-	// if a database entry were found, update it
-	if len(idolsToUpdate) == 1 {
-		updateIdol := idolsToUpdate[0]
-		updateIdol.Name = newName
-		updateIdol.GroupName = newGroup
-		updateIdol.Gender = newGender
-		err := helpers.MDbUpsertID(models.OldIdolsTable, updateIdol.ID, updateIdol)
+	// if a database entry was found, update it
+	if mongoRecordToUpdate.Name != "" {
+
+		// get the image being updated, and remove the image from the mdb idol record
+		var mdbImageRecord models.IdolImageEntry
+		for imageIndex, mdbIdolImages := range mongoRecordToUpdate.Images {
+			if mdbIdolImages.ObjectName == targetObjectName {
+				mdbImageRecord = mdbIdolImages
+				mongoRecordToUpdate.Images = append(mongoRecordToUpdate.Images[:imageIndex], mongoRecordToUpdate.Images[imageIndex+1:]...)
+			}
+		}
+
+		// if the idol has no images left, delete it. else update it
+		var err error
+		if len(mongoRecordToUpdate.Images) == 0 {
+			err = helpers.MDbDelete(models.IdolTable, mongoRecordToUpdate.ID)
+		} else {
+			err = helpers.MDbUpsertID(models.IdolTable, mongoRecordToUpdate.ID, mongoRecordToUpdate)
+		}
 		helpers.Relax(err)
 
-		// if the new group/name already exists in memory, add image to that idol. otherwise create it
+		// if the new group/name already exists, add image to that idol. otherwise create new idol
 		if groupCheck && nameCheck && idolToUpdate != nil {
+
+			var targetIdol models.IdolEntry
+			err = helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"name": idolToUpdate.Name, "groupname": idolToUpdate.GroupName}), &targetIdol)
+			helpers.Relax(err)
+
+			targetIdol.Images = append(targetIdol.Images, mdbImageRecord)
+			err := helpers.MDbUpsertID(models.IdolTable, targetIdol.ID, targetIdol)
+			helpers.Relax(err)
+
 			allIdolsMutex.Lock()
-			idolToUpdate.Images = append(idolToUpdate.Images, newIdolImage)
+			idolToUpdate.Images = append(idolToUpdate.Images, IdolImage{
+				ObjectName: mdbImageRecord.ObjectName,
+				HashString: mdbImageRecord.HashString,
+			})
 			allIdolsMutex.Unlock()
 		} else {
-			newIdol := makeIdolFromOldIdolEntry(updateIdol)
+
+			newIdolEntry := models.IdolEntry{
+				ID:        "",
+				Name:      newName,
+				GroupName: newGroup,
+				Gender:    newGender,
+				Images:    []models.IdolImageEntry{mdbImageRecord},
+			}
+			_, err := helpers.MDbInsert(models.IdolTable, newIdolEntry)
+			helpers.Relax(err)
+
+			newIdol := makeIdolFromIdolEntry(newIdolEntry)
 			setAllIdols(append(GetAllIdols(), &newIdol))
 		}
+
 	} else {
 		// oh boy... these should not happen
-		if len(idolsToUpdate) == 0 {
+		if mongoRecordToUpdate.Name != "" {
 			helpers.SendMessage(msg.ChannelID, "No image with that object name was found IN MONGO, but the image was found memory. Data is out of sync, please refresh-images.")
 		} else {
 			helpers.SendMessage(msg.ChannelID, "To many images with that object name were found IN MONGO. This should never occur, please clean up the extra records manually and refresh-images")
