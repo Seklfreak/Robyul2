@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -645,26 +647,52 @@ func clearSuggestionsChannel() {
 // addSuggestionToGame will add the given suggestion entry to the available idols
 func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 
-	// get suggestion details and add to idolEntry table
-	idolEntry := models.OldIdolEntry{
-		ID:         "",
-		Gender:     suggestion.Gender,
-		GroupName:  suggestion.GrouopName,
-		Name:       suggestion.Name,
-		ObjectName: suggestion.ObjectName,
+	// check if an idol with the suggested name and group already exists
+	var idolEntry models.IdolEntry
+	err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"name": suggestion.Name, "groupname": suggestion.GrouopName}), &idolEntry)
+	if err.Error() != "not found" {
+		helpers.Relax(err)
 	}
 
-	// insert file to mongodb
-	_, err := helpers.MDbInsert(models.OldIdolsTable, idolEntry)
-	helpers.Relax(err)
+	newIdolImage := models.IdolImageEntry{
+		ObjectName: suggestion.ObjectName,
+		HashString: suggestion.ImageHashString,
+	}
+	spew.Dump(idolEntry)
 
-	newIdol := makeIdolFromOldIdolEntry(idolEntry)
+	// if it doesn't exist then create one, otherwise update the existing one with the new image
+	if idolEntry.Name == "" {
+
+		// get suggestion details and create idol entry record
+		idolEntry = models.IdolEntry{
+			ID:        "",
+			Gender:    suggestion.Gender,
+			GroupName: suggestion.GrouopName,
+			Name:      suggestion.Name,
+			Images:    []models.IdolImageEntry{newIdolImage},
+		}
+
+		// insert file to mongodb
+		_, err := helpers.MDbInsert(models.IdolTable, idolEntry)
+		helpers.Relax(err)
+
+	} else {
+
+		idolEntry.Images = append(idolEntry.Images, newIdolImage)
+		err := helpers.MDbUpsertID(models.IdolTable, idolEntry.ID, idolEntry)
+		helpers.Relax(err)
+	}
+
+	newIdol := makeIdolFromIdolEntry(idolEntry)
 
 	// if the idol already exists, then just add this picture to the image array for the idol
 	idolExists := false
 	for _, currentIdol := range GetAllIdols() {
 		if currentIdol.NameAndGroup == newIdol.NameAndGroup {
-			currentIdol.Images = append(currentIdol.Images, newIdol.Images[0])
+			currentIdol.Images = append(currentIdol.Images, IdolImage{
+				ObjectName: suggestion.ObjectName,
+				HashString: suggestion.ImageHashString,
+			})
 			idolExists = true
 			break
 		}
