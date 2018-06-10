@@ -657,7 +657,7 @@ IdolsLoop:
 
 }
 
-// deleteImage updates a specific image and its related idol info
+// deleteImage deletes a image from an idol record. will delete idol as well if its the last image
 func deleteImage(msg *discordgo.Message, content string) {
 	contentArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -716,20 +716,34 @@ IdolLoop:
 		return
 	}
 
-	// update database
-	var idolToDelete []models.OldIdolEntry
-	err = helpers.MDbIter(helpers.MdbCollection(models.OldIdolsTable).Find(bson.M{"objectname": targetObjectName})).All(&idolToDelete)
+	// get mdb record by object name
+	var mongoRecordToUpdate models.IdolEntry
+	err = helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"images.objectname": targetObjectName}), &mongoRecordToUpdate)
 	helpers.Relax(err)
 
 	// if a database entry were found, update it
-	if len(idolToDelete) == 1 {
+	if mongoRecordToUpdate.Name != "" {
 
-		// delete from database
-		err := helpers.MDbDelete(models.OldIdolsTable, idolToDelete[0].ID)
+		// get the image being updated, and remove the image from the mdb idol record
+		var mdbImageRecord models.IdolImageEntry
+		for imageIndex, mdbIdolImages := range mongoRecordToUpdate.Images {
+			if mdbIdolImages.ObjectName == targetObjectName {
+				mdbImageRecord = mdbIdolImages
+				mongoRecordToUpdate.Images = append(mongoRecordToUpdate.Images[:imageIndex], mongoRecordToUpdate.Images[imageIndex+1:]...)
+			}
+		}
+
+		// if the idol has no images left, delete it. else update it
+		var err error
+		if len(mongoRecordToUpdate.Images) == 0 {
+			err = helpers.MDbDelete(models.IdolTable, mongoRecordToUpdate.ID)
+		} else {
+			err = helpers.MDbUpsertID(models.IdolTable, mongoRecordToUpdate.ID, mongoRecordToUpdate)
+		}
 		helpers.Relax(err)
 
 		// delete object
-		helpers.DeleteFile(targetObjectName)
+		helpers.DeleteFile(mdbImageRecord.ObjectName)
 	}
 
 	// update cache
