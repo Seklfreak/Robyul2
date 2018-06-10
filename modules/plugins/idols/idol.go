@@ -287,7 +287,7 @@ func refreshIdols(skipCache bool) {
 	}
 }
 
-// makeIdolFromOldIdolEntry takes a mdb idol entry and makes a idol
+// makeIdolFromIdolEntry takes a mdb idol entry and makes a idol
 func makeIdolFromIdolEntry(entry models.IdolEntry) Idol {
 	// create new idol from the idol entry in mongo
 	newIdol := Idol{
@@ -332,7 +332,7 @@ func makeIdolFromOldIdolEntry(entry models.OldIdolEntry) Idol {
 }
 
 // updateGroupInfo if a target group is found, this will update the group name
-//  for all members as well as updating all the stats for those members
+//  for all members
 func updateGroupInfo(msg *discordgo.Message, content string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
@@ -362,16 +362,14 @@ func updateGroupInfo(msg *discordgo.Message, content string) {
 
 	// update all idols in the target group
 	var idolsUpdated int
-	var allStatsUpdated int
 	for _, idol := range GetAllIdols() {
 		if idol.GroupName == targetGroup {
 
-			recordsUpdated, _, statsUpdated := updateIdolInfo(idol.GroupName, idol.Name, newGroup, idol.Name, idol.Gender)
+			recordsUpdated := updateIdolInfo(idol.GroupName, idol.Name, newGroup, idol.Name, idol.Gender)
 			if recordsUpdated != 0 {
 				idolsUpdated++
-				allStatsUpdated += statsUpdated
 			}
-			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Idol: **%s** %s => **%s** %s \nStats Updated: %s", targetGroup, idol.Name, newGroup, idol.Name, humanize.Comma(int64(statsUpdated))))
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Updated Idol: **%s** %s => **%s** %s", targetGroup, idol.Name, newGroup, idol.Name))
 
 			// sleep so mongo doesn't get flooded with update reqeusts
 			time.Sleep(time.Second / 5)
@@ -382,7 +380,7 @@ func updateGroupInfo(msg *discordgo.Message, content string) {
 	if idolsUpdated == 0 {
 		helpers.SendMessage(msg.ChannelID, "No Idols found in the given group.")
 	} else {
-		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Group Information updated. \nIdols Updated: %d \nTotal Stats Updated: %s", idolsUpdated, humanize.Comma(int64(allStatsUpdated))))
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Group Information updated. \nIdols Updated: %d", idolsUpdated))
 	}
 }
 
@@ -416,28 +414,23 @@ func updateIdolInfoFromMsg(msg *discordgo.Message, content string) {
 	newGender := contentArgs[4]
 
 	// update idol
-	recordsUpdated, _, statsUpdated := updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender)
+	recordsUpdated := updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender)
 
 	// check if an idol record was updated
 	if recordsUpdated == 0 {
 		helpers.SendMessage(msg.ChannelID, "No Idols found with that exact group and name.")
 	} else {
-		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Idol Information updated. \nOld: **%s** %s \nNew: **%s** %s \nStats Updated: %d", targetGroup, targetName, newGroup, newName, statsUpdated))
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Idol Information updated. \nOld: **%s** %s \nNew: **%s** %s", targetGroup, targetName, newGroup, newName))
 	}
 }
 
-// updateIdolInfo updates a idols group, name, and/or gender depending on args
-//  return 1: idol records updated
-//  return 2: stats records found
-//  return 3: stats records updated
-func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string) (int, int, int) {
+// updateIdolInfo updates a idols group, name, and gender depending on args
+func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string) int {
 
 	// attempt to find a matching idol of the new group and name,
 	_, _, matchingIdol := GetMatchingIdolAndGroup(newGroup, newName)
 
 	recordsFound := 0
-	statsFound := 0
-	statsUpdated := 0
 
 	// update idols in memory
 	allIdols := GetAllIdols()
@@ -454,17 +447,7 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 			matchingIdol.Images = append(matchingIdol.Images, targetIdol.Images...)
 			allIdols = append(allIdols[:idolIndex], allIdols[idolIndex+1:]...)
 
-			// update previous game stats
-			// TODO
-			// statsFound, statsUpdated = updateGameStats(targetIdol.GroupName, targetIdol.Name, matchingIdol.GroupName, matchingIdol.Name, matchingIdol.Gender)
-			statsFound, statsUpdated = 0, 0
-
 		} else {
-
-			// update previous game stats
-			// TODO
-			// statsFound, statsUpdated = updateGameStats(targetIdol.GroupName, targetIdol.Name, newGroup, newName, newGender)
-			statsFound, statsUpdated = 0, 0
 
 			// update targetIdol name and group
 			targetIdol.Name = newName
@@ -476,17 +459,49 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 	setAllIdols(allIdols)
 
 	// update database
-	var idolsToUpdate []models.OldIdolEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.OldIdolsTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&idolsToUpdate)
+	var idolsToUpdate []models.IdolEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.IdolTable).Find(bson.M{"groupname": targetGroup, "name": targetName})).All(&idolsToUpdate)
 	helpers.Relax(err)
 
-	for _, idol := range idolsToUpdate {
-		idol.Name = newName
-		idol.GroupName = newGroup
-		idol.Gender = newGender
+	targetIdolFound := false
 
-		err := helpers.MDbUpsertID(models.OldIdolsTable, idol.ID, idol)
+	// if a matching idol was found then assign all the images to the target idol and delete the current
+	if matchingIdol != nil {
+
+		var targetIdol models.IdolEntry
+		err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"groupname": matchingIdol.GroupName, "name": matchingIdol.Name}), &targetIdol)
 		helpers.Relax(err)
+
+		// make sure mongo returned a valid target idol
+		if targetIdol.GroupName != "" {
+			targetIdolFound = true
+
+			// assign all images to the target idol
+			for _, idol := range idolsToUpdate {
+				targetIdol.Images = append(targetIdol.Images, idol.Images...)
+
+				// delete current idol record
+				err = helpers.MDbDelete(models.IdolTable, idol.ID)
+				helpers.Relax(err)
+			}
+
+			// save target idol with new images
+			err := helpers.MDbUpsertID(models.IdolTable, targetIdol.ID, targetIdol)
+			helpers.Relax(err)
+		}
+	}
+
+	// if a matching idol was NOT found and a target idol in mongo wasn't found, simply rename
+	if matchingIdol == nil && !targetIdolFound {
+
+		for _, idol := range idolsToUpdate {
+			idol.Name = newName
+			idol.GroupName = newGroup
+			idol.Gender = newGender
+
+			err := helpers.MDbUpsertID(models.IdolTable, idol.ID, idol)
+			helpers.Relax(err)
+		}
 	}
 
 	// update cache
@@ -494,7 +509,7 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
 	}
 
-	return recordsFound, statsFound, statsUpdated
+	return recordsFound
 }
 
 // updateImageInfo updates a specific image and its related idol info
