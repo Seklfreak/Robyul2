@@ -122,7 +122,7 @@ func GetMatchingGroup(searchGroup string) (bool, string) {
 		// if this group has any aliases check if the group we're
 		//   searching for matches one of the aliases
 		for aliasGroup, aliases := range groupAliases {
-			if alphaNumericCompare(aliasGroup, currentGroup) {
+			if !alphaNumericCompare(aliasGroup, currentGroup) {
 				continue
 			}
 
