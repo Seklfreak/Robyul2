@@ -18,11 +18,12 @@ type IdolImageEntry struct {
 }
 
 type IdolEntry struct {
-	ID        bson.ObjectId `bson:"_id,omitempty"`
-	Name      string
-	GroupName string
-	Gender    string
-	Images    []IdolImageEntry
+	ID          bson.ObjectId `bson:"_id,omitempty"`
+	NameAliases []string
+	Name        string
+	GroupName   string
+	Gender      string
+	Images      []IdolImageEntry
 }
 
 type OldIdolEntry struct {

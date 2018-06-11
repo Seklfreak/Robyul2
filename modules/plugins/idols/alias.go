@@ -6,10 +6,13 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/globalsign/mgo/bson"
 )
 
 const (
@@ -36,8 +39,8 @@ func getGroupAliases() map[string][]string {
 	return groupAliasesMap
 }
 
-// addGroupAlias will add an alias for a group
-func addGroupAlias(msg *discordgo.Message, content string) {
+// addGroupAlias will add an alias for a group or idol depending on the amount of arguments
+func addAlias(msg *discordgo.Message, content string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	// validate arguments
@@ -46,13 +49,77 @@ func addGroupAlias(msg *discordgo.Message, content string) {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		return
 	}
-	if len(commandArgs) != 4 {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+
+	// IDOL ALIAS
+	if len(commandArgs) == 5 {
+		addIdolAlias(msg, commandArgs[2], commandArgs[3], commandArgs[4])
 		return
 	}
 
-	targetGroup := commandArgs[2]
-	newAliasName := commandArgs[3]
+	// GROUP ALIAS
+	if len(commandArgs) == 4 {
+		addGroupAlias(msg, commandArgs[2], commandArgs[3])
+		return
+	}
+
+	helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+}
+
+// addIdolAlias will add an alias for a idol
+func addIdolAlias(msg *discordgo.Message, targetGroup string, targetName string, newAliasName string) {
+
+	// check that the idol we're adding the alias too actually exists
+	var targetIdol *Idol
+
+	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName); targetIdol == nil {
+		helpers.SendMessage(msg.ChannelID, "Could not add alias for that idol because the idol could not be foudn.")
+		return
+	}
+
+	// -- confirm alias does not match the idol name or another alias in the same group
+	// make map of group => []idol names and aliases
+	groupIdolMap := make(map[string][]string)
+	for _, idol := range GetAllIdols() {
+		groupIdolMap[idol.GroupName] = append(groupIdolMap[idol.GroupName], idol.Name)
+		groupIdolMap[idol.GroupName] = append(groupIdolMap[idol.GroupName], idol.NameAliases...)
+	}
+
+	// confirm new alias doesn't match alias or name within a group
+	for _, currentNamesOrAliases := range groupIdolMap {
+		for _, currentName := range currentNamesOrAliases {
+			if alphaNumericCompare(currentName, newAliasName) {
+				helpers.SendMessage(msg.ChannelID, "That alias already exists for an idol in the group.")
+				return
+			}
+		}
+	}
+
+	// add alias in memory
+	allIdolsMutex.Lock()
+	targetIdol.NameAliases = append(targetIdol.NameAliases, newAliasName)
+	allIdolsMutex.Unlock()
+
+	// update cache
+	if len(GetAllIdols()) > 0 {
+		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
+	}
+
+	// add alias in mongo
+	var mongoIdol models.IdolEntry
+	err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"groupname": targetIdol.GroupName, "name": targetIdol.Name}), &mongoIdol)
+	helpers.Relax(err)
+
+	mongoIdol.NameAliases = append(mongoIdol.NameAliases, newAliasName)
+
+	// save target idol with new images
+	err = helpers.MDbUpsertID(models.IdolTable, mongoIdol.ID, mongoIdol)
+	helpers.Relax(err)
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("The alias *%s* has been added for %s %s", newAliasName, targetIdol.GroupName, targetIdol.Name))
+}
+
+// addGroupAlias will add an alias for a group
+func addGroupAlias(msg *discordgo.Message, targetGroup string, newAliasName string) {
 
 	// check that the group we're adding the alias too actually exists
 	if exists, realGroupName := GetMatchingGroup(targetGroup); exists == false {
@@ -94,19 +161,60 @@ func addGroupAlias(msg *discordgo.Message, content string) {
 }
 
 // deleteGroupAlias will delete the alias if it is found
-func deleteGroupAlias(msg *discordgo.Message, content string) {
+func deleteIdolAlias(msg *discordgo.Message, commandArgs []string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
-	// validate arguments
-	commandArgs, err := helpers.ToArgv(content)
-	if err != nil {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+	targetGroup := commandArgs[2]
+	targetName := commandArgs[3]
+	aliasToDelete := commandArgs[4]
+
+	var targetIdol *Idol
+	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName); targetIdol == nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
 	}
-	if len(commandArgs) != 3 {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+
+	aliasFound := false
+	for index, alias := range targetIdol.NameAliases {
+		if alphaNumericCompare(alias, aliasToDelete) {
+			aliasToDelete = alias
+			aliasFound = true
+			allIdolsMutex.Lock()
+			targetIdol.NameAliases = append(targetIdol.NameAliases[:index], targetIdol.NameAliases[index+1:]...)
+			allIdolsMutex.Unlock()
+			break
+		}
+	}
+
+	if aliasFound == false {
+		helpers.SendMessage(msg.ChannelID, "That alias was not found for the given idol.")
 		return
 	}
+
+	// update cache
+	if len(GetAllIdols()) > 0 {
+		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
+	}
+
+	var mongoIdol models.IdolEntry
+	err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"groupname": targetIdol.GroupName, "name": targetIdol.Name}), &mongoIdol)
+	helpers.Relax(err)
+
+	for index, alias := range mongoIdol.NameAliases {
+		if alphaNumericCompare(alias, aliasToDelete) {
+			mongoIdol.NameAliases = append(mongoIdol.NameAliases[:index], mongoIdol.NameAliases[index+1:]...)
+			break
+		}
+	}
+	err = helpers.MDbUpsertID(models.IdolTable, mongoIdol.ID, mongoIdol)
+	helpers.Relax(err)
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Deleted the alias *%s* from %s %s", aliasToDelete, targetIdol.GroupName, targetIdol.Name))
+}
+
+// deleteGroupAlias will delete the alias if it is found
+func deleteGroupAlias(msg *discordgo.Message, commandArgs []string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	aliasToDelete := commandArgs[2]
 
@@ -147,7 +255,117 @@ GroupAliasLoop:
 	}
 }
 
-// listGroupAliases will display the current aliases in a embed message
+// listAliases will list group aliases or idol name aliases for a group or idol
+func listAliases(msg *discordgo.Message, content string) {
+	contentArgs, err := helpers.ToArgv(content)
+	helpers.Relax(err)
+
+	// if enough args were passed, attempt to list aliases for idols
+	switch len(contentArgs) {
+	case 2:
+		listGroupAliases(msg)
+		break
+	case 3:
+		listNameAliasesByGroup(msg, contentArgs[2])
+		break
+	case 4:
+		listNameAliases(msg, contentArgs[2], contentArgs[3])
+		break
+	default:
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+
+	}
+}
+
+// listNameAliases lists aliases for a idol
+func listNameAliases(msg *discordgo.Message, targetGroup string, targetName string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	var targetIdol *Idol
+	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName); targetIdol == nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
+		return
+	}
+
+	// make sure there are aliases to display
+	if len(targetIdol.NameAliases) == 0 {
+		helpers.SendMessage(msg.ChannelID, "No aliases have been set for the given idol.")
+		return
+	}
+
+	// set up base embed
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED,
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    fmt.Sprintf("Current aliases for %s %s", targetIdol.GroupName, targetIdol.Name),
+			IconURL: msg.Author.AvatarURL("512"),
+		},
+	}
+
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+		Name:   "Name Aliases",
+		Value:  strings.Join(targetIdol.NameAliases, ", "),
+		Inline: true,
+	})
+
+	helpers.SendEmbed(msg.ChannelID, embed)
+}
+
+// listNameAliasesByGroup lists aliases for a group
+func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	var realGroupName string
+	if _, realGroupName = GetMatchingGroup(targetGroup); realGroupName == "" {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
+		return
+	}
+
+	// set up base embed
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED,
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    fmt.Sprintf("Current aliases for %s", realGroupName),
+			IconURL: msg.Author.AvatarURL("512"),
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "attachment://idol_stats_thumbnail.png",
+		},
+	}
+
+	// add field for group alias for the given group
+	aliasesForThisGroup := getGroupAliases()[realGroupName]
+	if len(aliasesForThisGroup) > 0 {
+
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "Group Aliases",
+			Value:  strings.Join(aliasesForThisGroup, ", "),
+			Inline: false,
+		})
+	}
+
+	// add fields for name aliases for all idols
+	for _, idol := range GetAllIdols() {
+		if realGroupName == idol.GroupName && len(idol.NameAliases) > 0 {
+
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   idol.Name,
+				Value:  strings.Join(idol.NameAliases, ", "),
+				Inline: false,
+			})
+		}
+	}
+
+	// make sure there are aliases to display
+	if len(embed.Fields) == 0 {
+		helpers.SendMessage(msg.ChannelID, "No aliases have been set yet for the given group.")
+		return
+	}
+
+	helpers.SendPagedMessage(msg, embed, 7)
+}
+
+// listGroupAliases will display the current group aliases in a embed message
 func listGroupAliases(msg *discordgo.Message) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 

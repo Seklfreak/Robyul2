@@ -83,6 +83,7 @@ func GetMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *Idol)
 	}
 
 	// find matching idol in the matching group
+IdolLoop:
 	for _, idol := range GetAllIdols() {
 
 		if idol.GroupName != realMatchingGroupName {
@@ -93,6 +94,15 @@ func GetMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *Idol)
 			nameMatch = true
 			matchingIdol = idol
 			break
+		}
+
+		// if the given name doesn't match, check the aliases
+		for _, alias := range idol.NameAliases {
+			if alphaNumericCompare(alias, searchName) {
+				nameMatch = true
+				matchingIdol = idol
+				break IdolLoop
+			}
 		}
 	}
 
@@ -294,6 +304,7 @@ func makeIdolFromIdolEntry(entry models.IdolEntry) Idol {
 		Name:         entry.Name,
 		GroupName:    entry.GroupName,
 		NameAndGroup: entry.Name + entry.GroupName,
+		NameAliases:  entry.NameAliases,
 		Gender:       entry.Gender,
 	}
 

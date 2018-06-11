@@ -127,15 +127,32 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 			switch commandArgs[1] {
 			case "add":
 				helpers.RequireRobyulMod(msg, func() {
-					addGroupAlias(msg, content)
+					addAlias(msg, content)
 				})
 				break
 			case "list":
-				listGroupAliases(msg)
+				listAliases(msg, content)
 				break
 			case "delete", "del":
 				helpers.RequireRobyulMod(msg, func() {
-					deleteGroupAlias(msg, content)
+
+					// validate arguments
+					commandArgs, err := helpers.ToArgv(content)
+					if err != nil {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+						return
+					}
+
+					if len(commandArgs) == 3 {
+						deleteGroupAlias(msg, commandArgs)
+						return
+					}
+
+					if len(commandArgs) == 5 {
+						deleteIdolAlias(msg, commandArgs)
+						return
+					}
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 				})
 				break
 			default:

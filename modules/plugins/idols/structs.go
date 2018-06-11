@@ -8,6 +8,7 @@ type IdolImage struct {
 
 type Idol struct {
 	Name         string
+	NameAliases  []string
 	GroupName    string
 	Gender       string
 	NameAndGroup string
