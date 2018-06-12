@@ -79,7 +79,6 @@ type InspectTriggersEnabled struct {
 	UserBannedOnOtherServers bool
 	UserNoCommonServers      bool
 	UserNewlyCreatedAccount  bool
-	UserReported             bool
 	UserMultipleJoins        bool
 	UserBannedDiscordlistNet bool // https://bans.discordlist.net/
 	UserJoins                bool

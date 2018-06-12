@@ -42,7 +42,6 @@ var (
 		&plugins.Nuke{},
 		&plugins.Dig{},
 		&plugins.Streamable{},
-		&plugins.Troublemaker{},
 		&plugins.Lyrics{},
 		&plugins.Friend{},
 		&plugins.Names{},
