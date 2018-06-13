@@ -1873,15 +1873,18 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 		maxAge, err := time.ParseDuration(args[2])
 		if err != nil {
-			maxAge = time.Hour // 1 hour
 			if args[2] == "0" {
 				maxAge = 0
+			} else {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
 			}
 		}
 
 		maxUses, err := strconv.Atoi(args[3])
 		if err != nil {
-			maxUses = 5 // five uses
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			return
 		}
 
 		invite, err := session.ChannelInviteCreate(targetChannel.ID, discordgo.Invite{
