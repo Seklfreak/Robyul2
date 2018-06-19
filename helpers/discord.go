@@ -1250,7 +1250,7 @@ func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err e
 }
 
 func CleanDiscordContent(content string) (output string) {
-	return strings.Replace(content, "@everyone", "@"+ZERO_WIDTH_SPACE+"everyone", -1)
+	return strings.Replace(strings.Replace(content, "@everyone", "@"+ZERO_WIDTH_SPACE+"everyone", -1), "@here", "@"+ZERO_WIDTH_SPACE+"here", -1)
 }
 
 // Applies Embed Limits to the given Embed
