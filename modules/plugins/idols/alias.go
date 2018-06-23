@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -328,13 +330,16 @@ func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
 			Name:    fmt.Sprintf("Current aliases for %s", realGroupName),
 			IconURL: msg.Author.AvatarURL("512"),
 		},
-		Thumbnail: &discordgo.MessageEmbedThumbnail{
-			URL: "attachment://idol_stats_thumbnail.png",
-		},
 	}
 
 	// add field for group alias for the given group
-	aliasesForThisGroup := getGroupAliases()[realGroupName]
+	var aliasesForThisGroup []string
+	for group, aliases := range getGroupAliases() {
+		if alphaNumericCompare(realGroupName, group) {
+			aliasesForThisGroup = aliases
+		}
+	}
+	spew.Dump(aliasesForThisGroup)
 	if len(aliasesForThisGroup) > 0 {
 
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
