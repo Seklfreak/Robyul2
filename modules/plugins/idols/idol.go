@@ -266,25 +266,10 @@ func refreshIdols(skipCache bool) {
 	var tempAllIdols []*Idol
 
 	// run limited amount of goroutines at the same time
-	mux := new(sync.Mutex)
-	sem := make(chan bool, 50)
 	for _, idolEntry := range idolEntries {
-		sem <- true
-		go func(idolEntry models.IdolEntry) {
-			defer func() { <-sem }()
-			defer helpers.Recover()
-
-			// create new idol from the idol entry in mongo
-			newIdol := makeIdolFromIdolEntry(idolEntry)
-
-			mux.Lock()
-			defer mux.Unlock()
-
-			tempAllIdols = append(tempAllIdols, &newIdol)
-		}(idolEntry)
-	}
-	for i := 0; i < cap(sem); i++ {
-		sem <- true
+		// create new idol from the idol entry in mongo
+		newIdol := makeIdolFromIdolEntry(idolEntry)
+		tempAllIdols = append(tempAllIdols, &newIdol)
 	}
 
 	log().Info("Amount of idols loaded: ", len(tempAllIdols))
