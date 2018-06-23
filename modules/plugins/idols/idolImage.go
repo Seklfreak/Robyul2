@@ -2,9 +2,12 @@ package idols
 
 import (
 	"bytes"
+	"fmt"
 	"image/png"
+	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/bwmarrin/discordgo"
 	"github.com/nfnt/resize"
 )
 
@@ -44,4 +47,47 @@ func (i IdolImage) GetResizeImgBytes(resizeHeight int) []byte {
 
 		return resizedImgBytes.Bytes()
 	}
+}
+
+// validateImages will read the idols table to retrieve all image object names. then it will make a call to retrieve all images
+// TODO: not complete. works but isn't useful yet, not sure what all i want this to do. just list object names? could be a lot to list in discord if something was wrong. auto delete?
+func validateImages(msg *discordgo.Message, content string) {
+
+	contentArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
+
+	// options
+	listObjectName := false
+
+	// check for options
+	for _, option := range contentArgs {
+		if option == "list" {
+			listObjectName = true
+		}
+	}
+
+	helpers.SendMessage(msg.ChannelID, "Checking idol images..")
+
+	// loop through idol images and check if object exists
+	var missingImages []string
+	for _, idol := range GetAllIdols() {
+		for _, image := range idol.Images {
+			if !helpers.ObjectExists(image.ObjectName) {
+				missingImages = append(missingImages, image.ObjectName)
+				log().Infoln("----Idol image does not exist in minio: ", image.ObjectName)
+			}
+		}
+	}
+
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Done.\nMissing Images: %d", len(missingImages)))
+
+	// list out object names if wanted
+	if listObjectName {
+		printableObjectNames := strings.Join(missingImages, "\n")
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Missing Image Object Names: \n%s", printableObjectNames))
+	}
+
 }

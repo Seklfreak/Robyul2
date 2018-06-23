@@ -67,6 +67,10 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 			})
 		case "suggest":
 			processImageSuggestion(msg, content)
+		case "validate-images":
+			helpers.RequireRobyulMod(msg, func() {
+				validateImages(msg, content)
+			})
 		case "delete-image":
 			helpers.RequireRobyulMod(msg, func() {
 				deleteImage(msg, content)
