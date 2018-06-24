@@ -2869,6 +2869,11 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 
 					targetChannel, err := helpers.GetChannelWithoutApi(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel)
 					if err == nil {
+						// confirm user is still in Guild before sending
+						if !helpers.GetIsInGuild(targetGuild.ID, user.User.ID) {
+							continue
+						}
+
 						_, err = helpers.SendEmbed(targetChannel.ID, resultEmbed)
 						if err != nil {
 							cache.GetLogger().WithField("module", "mod").Warnf("Failed to send guild ban inspect to channel #%s on guild #%s: %s",
