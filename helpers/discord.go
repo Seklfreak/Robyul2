@@ -1573,3 +1573,13 @@ func ReplaceEmojis(content string) (result string) {
 
 	return content
 }
+
+// MessageDeeplink returns a direct link to a discord message
+func MessageDeeplink(channelID, messageID string) string {
+	channel, err := GetChannelWithoutApi(channelID)
+	if err != nil {
+		return ""
+	}
+
+	return "https://discordapp.com/channels/" + channel.GuildID + "/" + channelID + "/" + messageID
+}

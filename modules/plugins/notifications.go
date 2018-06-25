@@ -386,13 +386,13 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 					}()
 				})
 			}
-		case "toggle-mode", "toggle-modes":
+		case "toggle-mode", "toggle-modes", "toggle-layout", "toggle-layouts":
 			session.ChannelTyping(msg.ChannelID)
 
 			var message string
 
 			newValue := helpers.GetUserConfigInt(msg.Author.ID, UserConfigNotificationsLayoutModeKey, 1) + 1
-			if newValue > 3 {
+			if newValue > 4 {
 				newValue = 1
 			}
 
@@ -402,6 +402,9 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 				break
 			case 3:
 				message = helpers.GetTextF("plugins.notifications.mode-3")
+				break
+			case 4:
+				message = helpers.GetTextF("plugins.notifications.mode-4")
 				break
 			default:
 				message = helpers.GetTextF("plugins.notifications.mode-1")
@@ -759,7 +762,7 @@ NextKeyword:
 		case 3:
 			notificationEmbed := &discordgo.MessageEmbed{
 				Description: fmt.Sprintf(
-					"`@%s` mentioned %s on `%s` in `#%s`",
+					"`@%s` mentioned %s on `%s` in `#%s`\n"+helpers.MessageDeeplink(msg.ChannelID, msg.ID),
 					msg.Author.Username,
 					keywordsTriggeredText,
 					guild.Name,
@@ -801,6 +804,23 @@ NextKeyword:
 			_, err = helpers.SendEmbed(dmChannel.ID, notificationEmbed)
 			if err != nil {
 				cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
+			}
+			break
+		case 4:
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
+				pendingNotification.Author.User.Username,
+				keywordsTriggeredText,
+				fmt.Sprintf("<#%s>", channel.ID),
+				guild.Name,
+				messageTime.UTC().Format("15:04:05"),
+				helpers.MessageDeeplink(msg.ChannelID, msg.ID),
+				escapedContent,
+			), "\n") {
+				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
+				if err != nil {
+					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
+					continue
+				}
 			}
 			break
 		default:
