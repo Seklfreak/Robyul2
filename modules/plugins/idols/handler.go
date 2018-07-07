@@ -91,23 +91,23 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 			})
 		case "refresh-idols-old":
 			helpers.RequireRobyulMod(msg, func() {
-				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))
+				newMessages, err := helpers.SendMessage(msg.ChannelID, "Refreshign Idols...")
 				helpers.Relax(err)
 				refreshIdolsFromOld(true)
 
 				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
+				helpers.SendMessage(msg.ChannelID, "Idol info and images have been refreshed.")
 			})
 
 		case "refresh-idols":
 
 			helpers.RequireRobyulMod(msg, func() {
-				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))
+				newMessages, err := helpers.SendMessage(msg.ChannelID, "Refreshign Idols...")
 				helpers.Relax(err)
 				refreshIdols(true)
 
 				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
+				helpers.SendMessage(msg.ChannelID, "Idol info and images have been refreshed.")
 			})
 		case "images", "image", "pic", "pics", "img", "imgs":
 
