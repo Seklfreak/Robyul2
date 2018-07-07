@@ -1,5 +1,9 @@
 package idols
 
+import (
+	"github.com/globalsign/mgo/bson"
+)
+
 type IdolImage struct {
 	ImageBytes []byte
 	HashString string
@@ -7,6 +11,7 @@ type IdolImage struct {
 }
 
 type Idol struct {
+	ID           bson.ObjectId
 	Name         string
 	NameAliases  []string
 	GroupName    string

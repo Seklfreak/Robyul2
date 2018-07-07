@@ -167,6 +167,11 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 
 			showRankings(msg, commandArgs, false)
 
+		} else if commandArgs[0] == "migrate-games" {
+
+			helpers.RequireRobyulMod(msg, func() {
+				runGameMigration(msg, content)
+			})
 		} else if commandArgs[0] == "update-stats" {
 
 			helpers.RequireRobyulMod(msg, func() {

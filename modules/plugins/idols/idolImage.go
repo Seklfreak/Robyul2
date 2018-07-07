@@ -89,5 +89,4 @@ func validateImages(msg *discordgo.Message, content string) {
 		printableObjectNames := strings.Join(missingImages, "\n")
 		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Missing Image Object Names: \n%s", printableObjectNames))
 	}
-
 }

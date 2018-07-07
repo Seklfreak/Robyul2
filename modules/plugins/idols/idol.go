@@ -65,6 +65,20 @@ func GetAllIdols() []*Idol {
 //  Public Functions  //
 ////////////////////////
 
+// GetMatchingIdolById will get a matching idol based on the given id, will return nil if non is found
+func GetMatchingIdolById(id bson.ObjectId) *Idol {
+	var matchingIdol *Idol
+
+	for _, idol := range GetAllIdols() {
+		if idol.ID == id {
+			matchingIdol = idol
+			break
+		}
+	}
+
+	return matchingIdol
+}
+
 // GetMatchingIdolAndGroup will do a loose comparison of the name and group passed to the ones that already exist
 //  1st return is true if group exists
 //  2nd return is true if idol exists in the group
@@ -286,6 +300,7 @@ func refreshIdols(skipCache bool) {
 func makeIdolFromIdolEntry(entry models.IdolEntry) Idol {
 	// create new idol from the idol entry in mongo
 	newIdol := Idol{
+		ID:           entry.ID,
 		Name:         entry.Name,
 		GroupName:    entry.GroupName,
 		NameAndGroup: entry.Name + entry.GroupName,

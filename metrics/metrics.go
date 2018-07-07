@@ -245,7 +245,7 @@ func CollectRuntimeMetrics() {
 
 		BiasgameSuggestionsCount.Set(entriesCountMgo(models.IdolSuggestionsTable, bson.M{"status": ""}))
 
-		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable, nil))
+		BiasgameGamesCount.Set(entriesCountMgo(models.OldBiasGameTable, nil))
 
 		var key string
 		if cache.HasMachineryRedisClient() {
