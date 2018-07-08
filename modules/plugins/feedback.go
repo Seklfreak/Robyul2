@@ -3,8 +3,11 @@ package plugins
 import (
 	"strings"
 
+	"time"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/VojtechVitek/go-trello"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
@@ -76,6 +79,9 @@ func (f *Feedback) actionStart(command string, args []string, in *discordgo.Mess
 
 	switch command {
 	case "suggestion", "suggest", "feedback":
+		if len(args) >= 1 && args[0] == "set-log" && helpers.IsRobyulMod(in.Author.ID) {
+			return f.actionSetLog
+		}
 		return f.actionSuggestion
 	case "issue", "bug":
 		return f.actionIssue
@@ -98,13 +104,20 @@ func (f *Feedback) actionSuggestion(command string, args []string, in *discordgo
 		cardDesc = strings.Join(strings.Split(content, "|")[1:], "|")
 	}
 
-	_, err := trelloListSuggestions.AddCard(trello.Card{
+	card, err := trelloListSuggestions.AddCard(trello.Card{
 		Name: strings.TrimSpace(cardName),
 		Desc: strings.TrimSpace(cardDesc),
 	})
 	helpers.Relax(err)
 
 	f.logger().Infof("user #%s submitted a suggestion: %s", in.Author.ID, content)
+
+	// log suggestion to discord
+	logChannelID, err := helpers.GetBotConfigString(models.FeedbackLogChannelKey)
+	if err == nil && logChannelID != "" {
+		_, err = helpers.SendEmbed(logChannelID, getLogEmbed("New Suggestion: "+cardName, cardDesc, card.Url, in.Author))
+		helpers.RelaxLog(err)
+	}
 
 	*out = f.newMsg("plugins.feedback.suggestion-received")
 	return f.actionFinish
@@ -123,7 +136,7 @@ func (f *Feedback) actionIssue(command string, args []string, in *discordgo.Mess
 		cardDesc = strings.Join(strings.Split(content, "|")[1:], "|")
 	}
 
-	_, err := trelloListIssues.AddCard(trello.Card{
+	card, err := trelloListIssues.AddCard(trello.Card{
 		Name: strings.TrimSpace(cardName),
 		Desc: strings.TrimSpace(cardDesc),
 	})
@@ -131,8 +144,51 @@ func (f *Feedback) actionIssue(command string, args []string, in *discordgo.Mess
 
 	f.logger().Infof("user #%s submitted an issue: %s", in.Author.ID, content)
 
+	// log issue to discord
+	logChannelID, err := helpers.GetBotConfigString(models.FeedbackLogChannelKey)
+	if err == nil && logChannelID != "" {
+		_, err = helpers.SendEmbed(logChannelID, getLogEmbed("New Issue: "+cardName, cardDesc, card.Url, in.Author))
+		helpers.RelaxLog(err)
+	}
+
 	*out = f.newMsg("plugins.feedback.issue-received")
 	return f.actionFinish
+}
+
+func (f *Feedback) actionSetLog(command string, args []string, in *discordgo.Message, out **discordgo.MessageSend) feedbackAction {
+	if !helpers.IsRobyulMod(in.Author.ID) {
+		*out = f.newMsg("robyulmod.no_permission")
+		return f.actionFinish
+	}
+
+	var err error
+	var targetChannel *discordgo.Channel
+	if len(args) >= 2 {
+		targetChannel, err = helpers.GetChannelFromMention(in, args[1])
+		helpers.Relax(err)
+	}
+
+	if targetChannel != nil && targetChannel.ID != "" {
+		err = helpers.SetBotConfigString(models.FeedbackLogChannelKey, targetChannel.ID)
+	} else {
+		err = helpers.SetBotConfigString(models.FeedbackLogChannelKey, "")
+	}
+
+	*out = f.newMsg("plugins.feedback.setlog-success")
+	return f.actionFinish
+}
+
+func getLogEmbed(title, description, url string, author *discordgo.User) *discordgo.MessageEmbed {
+	return &discordgo.MessageEmbed{
+		URL:         url,
+		Title:       title,
+		Description: description,
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    author.Username + "#" + author.Discriminator + " (#" + author.ID + ")",
+			IconURL: author.AvatarURL(""),
+		},
+	}
 }
 
 func (f *Feedback) actionFinish(command string, args []string, in *discordgo.Message, out **discordgo.MessageSend) feedbackAction {
