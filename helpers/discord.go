@@ -46,7 +46,9 @@ var RobyulMod = []string{
 	"132633380628987904", // Sunny
 }
 var Blacklisted = []string{
-	"171883318386753536", // ForRyu
+	"171883318386753536",
+	"418940588596133888",
+	"392058919595278336",
 }
 var BlacklistedGuildIDs []string
 
