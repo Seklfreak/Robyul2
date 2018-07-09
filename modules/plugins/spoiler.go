@@ -14,6 +14,7 @@ import (
 
 	"strconv"
 
+	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
@@ -47,7 +48,9 @@ func (s *Spoiler) Init(session *discordgo.Session) {
 	s.cachePath = helpers.GetConfig().Path("cache_folder").Data().(string)
 
 	s.ffmpegBinary, err = exec.LookPath("ffmpeg")
-	helpers.Relax(err)
+	if err != nil {
+		cache.GetLogger().WithField("module", "spoiler").Infoln("module disabled: ffmpeg not found")
+	}
 
 	s.env = os.Environ()
 
@@ -60,6 +63,10 @@ func (s *Spoiler) Init(session *discordgo.Session) {
 
 func (s *Spoiler) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermSpoiler) {
+		return
+	}
+
+	if s.ffmpegBinary == "" {
 		return
 	}
 
