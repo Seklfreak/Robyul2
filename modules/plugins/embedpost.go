@@ -34,7 +34,7 @@ func (m *EmbedPost) Action(command string, content string, msg *discordgo.Messag
 	}
 
 	helpers.RequireMod(msg, func() {
-		args := strings.Split(content, " ")
+		args := strings.Fields(content)
 
 		if len(args) < 2 {
 			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
