@@ -1205,7 +1205,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 
 		resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
 		resultText := helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
-		resultText += fmt.Sprintf("Username: `%s#%s,` ID: `#%s`",
+		resultText += fmt.Sprintf("Username: `%s#%s`, ID: `#%s`",
 			targetUser.Username, targetUser.Discriminator, targetUser.ID)
 		if helpers.GetAvatarUrl(targetUser) != "" {
 			resultText += fmt.Sprintf(", DP: <%s>", helpers.GetAvatarUrl(targetUser))
