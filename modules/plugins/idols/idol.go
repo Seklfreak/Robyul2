@@ -525,6 +525,8 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 
 // updateImageInfo updates a specific image and its related idol info
 func updateImageInfo(msg *discordgo.Message, content string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
 	contentArgs, err := helpers.ToArgv(content)
 	if err != nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
