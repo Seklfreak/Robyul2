@@ -303,6 +303,10 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 			}
 		}
 
+		if len(displayName) > 22 {
+			displayName = displayName[0:22] + "..."
+		}
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   fmt.Sprintf("Rank #%d", i+1),
 			Value:  displayName,
