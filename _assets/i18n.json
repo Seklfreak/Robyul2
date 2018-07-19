@@ -586,6 +586,7 @@
       "noti-join-not-whitelisted": ":x: Robyul joined a not whitelisted Guild: %s `(#%s)`!",
       "noti-join": ":arrow_forward: Robyul joined Guild: %s `(#%s)`\n:black_small_square: by %s (`#%s`)\n:black_small_square: %d members",
       "noti-leave": ":arrow_backward: Robyul left Guild: %s `(#%s)`\n:black_small_square: by %s (`#%s`)",
+      "noti-expired": ":warning: Whitelist for Guild: %s `(#%s)` has expired. Whitelist entry removed.",
       "add-success": ":white_check_mark: Added Guild %s `(#%s)` to the whitelist.",
       "add-error-duplicate": ":x: Guild %s `(#%s)` is already on the whitelist.",
       "remove-error-not-found": ":x: Guild %s `(#%s)` is not on the whitelist.",
