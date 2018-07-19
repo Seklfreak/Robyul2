@@ -22,7 +22,7 @@ type Notifications struct{}
 var (
 	notificationSettingsCache      []models.NotificationsEntry
 	ignoredChannelsCache           []models.NotificationsIgnoredChannelsEntry
-	ValidTextDelimiters            = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“"}
+	ValidTextDelimiters            = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“", "‘"}
 	NotificationsWhitelistedBotIDs = []string{
 		"430101373397368842", // Test Webhook (Sekl)
 
