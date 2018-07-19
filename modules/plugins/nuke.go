@@ -22,6 +22,19 @@ func (n *Nuke) Commands() []string {
 
 func (n *Nuke) Init(session *discordgo.Session) {
 	splitChooseRegex = regexp.MustCompile(`'.*?'|".*?"|\S+`)
+
+	// add nuke'd users to global blacklist
+	var entryBucket []models.NukelogEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.NukelogTable).Find(nil).Sort("nukedat")).All(&entryBucket)
+	helpers.Relax(err)
+
+	newBlacklist := helpers.Blacklisted
+
+	for _, entry := range entryBucket {
+		newBlacklist = append(newBlacklist, entry.UserID)
+	}
+
+	helpers.Blacklisted = newBlacklist
 }
 
 func (n *Nuke) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -124,6 +137,9 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 								}
 							}
 						}
+
+						// add user to global blacklist
+						helpers.Blacklisted = append(helpers.Blacklisted, targetUser.ID)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.nuke-completed", bannedOnN))
 						helpers.Relax(err)
