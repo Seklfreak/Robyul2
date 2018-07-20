@@ -36,7 +36,7 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 		return
 	}
 
-	endpoint := "http://api.urbandictionary.com/v0/define?term=" + url.QueryEscape(content)
+	endpoint := "https://api.urbandictionary.com/v0/define?term=" + url.QueryEscape(content)
 
 	result, err := helpers.NetGetUAWithError(endpoint, helpers.DEFAULT_UA)
 	helpers.Relax(err)
@@ -55,21 +55,20 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 	object, e := res[0].ChildrenMap()
 	helpers.Relax(e)
 
-	children, e := json.Path("tags").Children()
-	helpers.Relax(e)
-
-	tags := ""
-	for _, child := range children {
-		tags += child.Data().(string) + ", "
-	}
-	tags = strings.TrimRight(tags, ", ")
-
 	description := object["definition"].Data().(string)
+	description = strings.Replace(description, "["+strings.Title(object["word"].Data().(string))+"]", "**"+strings.Title(object["word"].Data().(string))+"**", -1)
+	description = strings.Replace(description, "["+object["word"].Data().(string)+"]", "**"+object["word"].Data().(string)+"**", -1)
+	description = strings.Replace(description, "[", "", -1)
+	description = strings.Replace(description, "]", "", -1)
 	if len(description) > 1000 {
 		description = description[:998] + " …"
 	}
 
 	example := object["example"].Data().(string)
+	example = strings.Replace(example, "["+strings.Title(object["word"].Data().(string))+"]", "**"+strings.Title(object["word"].Data().(string))+"**", -1)
+	example = strings.Replace(example, "["+object["word"].Data().(string)+"]", "**"+object["word"].Data().(string)+"**", -1)
+	example = strings.Replace(example, "[", "", -1)
+	example = strings.Replace(example, "]", "", -1)
 	if len(example) > 250 {
 		example = example[:248] + " …"
 	}
@@ -87,9 +86,6 @@ func (u *UrbanDict) Action(command string, content string, msg *discordgo.Messag
 
 	if example != "" {
 		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Example(s)", Value: example, Inline: false})
-	}
-	if tags != "" {
-		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{Name: "Tags", Value: tags, Inline: false})
 	}
 	if strconv.FormatFloat(object["thumbs_up"].Data().(float64), 'f', 0, 64) != "0" || strconv.FormatFloat(object["thumbs_down"].Data().(float64), 'f', 0, 64) != "0" {
 		definitionEmbed.Fields = append(definitionEmbed.Fields, &discordgo.MessageEmbedField{
