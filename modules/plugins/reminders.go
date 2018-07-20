@@ -44,7 +44,11 @@ func (r *Reminders) Init(session *discordgo.Session) {
 		for {
 			reminderBucket := make([]models.RemindersEntry, 0)
 			err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.RemindersTable).Find(nil)).All(&reminderBucket)
-			helpers.Relax(err)
+			if err != nil {
+				helpers.RelaxLog(err)
+				time.Sleep(10 * time.Second)
+				continue
+			}
 
 			for _, reminders := range reminderBucket {
 				changes := false
@@ -55,17 +59,17 @@ func (r *Reminders) Init(session *discordgo.Session) {
 
 					if reminder.Timestamp <= time.Now().Unix() {
 						dmChannel, err := session.UserChannelCreate(reminders.UserID)
-						helpers.Relax(err)
+						if err == nil {
+							content := ":alarm_clock: You wanted me to remind you about this:\n" + "```" + helpers.ZERO_WIDTH_SPACE + reminder.Message + "```"
+							if reminder.Message == "" {
+								content = ":alarm_clock: You wanted me to remind you about something, but you didn't tell me about what. <:blobthinking:317028940885524490>"
+							}
 
-						content := ":alarm_clock: You wanted me to remind you about this:\n" + "```" + helpers.ZERO_WIDTH_SPACE + reminder.Message + "```"
-						if reminder.Message == "" {
-							content = ":alarm_clock: You wanted me to remind you about something, but you didn't tell me about what. <:blobthinking:317028940885524490>"
+							helpers.SendMessage(
+								dmChannel.ID,
+								content,
+							)
 						}
-
-						helpers.SendMessage(
-							dmChannel.ID,
-							content,
-						)
 
 						reminders.Reminders = append(reminders.Reminders[:idx], reminders.Reminders[idx+1:]...)
 						changes = true
@@ -78,7 +82,7 @@ func (r *Reminders) Init(session *discordgo.Session) {
 						reminders.ID,
 						reminders,
 					)
-					helpers.Relax(err)
+					helpers.RelaxLog(err)
 				}
 			}
 
