@@ -148,6 +148,12 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
 			singleGame.sendBiasGameRound()
 
+		} else if commandArgs[0] == "group-stats" {
+
+			displayGroupStats(msg, content)
+		} else if commandArgs[0] == "idol-stats" {
+			displayIdolStats(msg, content)
+
 		} else if commandArgs[0] == "stats" {
 
 			// stats
