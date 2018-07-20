@@ -72,7 +72,7 @@ func addIdolAlias(msg *discordgo.Message, targetGroup string, targetName string,
 	var targetIdol *Idol
 
 	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName, true); targetIdol == nil {
-		helpers.SendMessage(msg.ChannelID, "Could not add alias for that idol because the idol could not be foudn.")
+		helpers.SendMessage(msg.ChannelID, "Could not add alias for that idol because the idol could not be found.")
 		return
 	}
 
