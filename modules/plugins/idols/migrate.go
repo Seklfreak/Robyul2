@@ -49,13 +49,17 @@ func migrateIdols(msg *discordgo.Message, content string) {
 			}
 			newIdolEntry.Images = append(newIdolEntry.Images, newImageEntry)
 		}
-		newBsonId, err := helpers.MDbInsert(models.IdolTable, newIdolEntry)
+		if len(newIdolEntry.Images) == 0 {
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Could not migrate %s %s due to missing images", newIdolEntry.GroupName, newIdolEntry.Name))
+			continue
+		}
+		_, err := helpers.MDbInsert(models.IdolTable, newIdolEntry)
 		if err != nil {
 			cache.GetLogger().Errorln(err.Error())
-		} else {
-			cache.GetLogger().Infoln("New idol record created: ", newBsonId)
 		}
 	}
+
+	refreshIdols(true)
 
 	helpers.SendMessage(msg.ChannelID, "Migration done.")
 }

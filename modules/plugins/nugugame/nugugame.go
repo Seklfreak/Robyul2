@@ -237,17 +237,17 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 
 		// if this isn't a mixed game then filter all choices by the gender
 		if g.Gender != "mixed" {
-			for _, bias := range idols.GetAllIdols() {
+			for _, bias := range idols.GetActiveIdols() {
 				if bias.Gender == g.Gender {
 					idolPool = append(idolPool, bias)
 				}
 			}
 		} else {
-			idolPool = idols.GetAllIdols()
+			idolPool = idols.GetActiveIdols()
 		}
 
 	} else {
-		for _, bias := range idols.GetAllIdols() {
+		for _, bias := range idols.GetActiveIdols() {
 			if bias.GroupName == "PRISTIN" || bias.GroupName == "CLC" || bias.GroupName == "TWICE" {
 				idolPool = append(idolPool, bias)
 			}

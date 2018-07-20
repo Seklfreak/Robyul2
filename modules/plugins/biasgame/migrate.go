@@ -21,7 +21,8 @@ func runGameMigration(msg *discordgo.Message, content string) {
 		cache.GetLogger().Errorln(err.Error())
 		return
 	}
-	if count > 0 {
+	// checking for greater than 10000 because we still want to allow games to be recorded while migration is running
+	if count > 10000 {
 		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Migration has already been run. If something went wrong please drop table **%s** and run this again.", models.BiasGameTable))
 		return
 	}
@@ -61,7 +62,7 @@ func runGameMigration(msg *discordgo.Message, content string) {
 		if objectId, ok := idolNameToId[gameEntry.GameWinner.GroupName+"="+gameEntry.GameWinner.Name]; ok {
 			newGameEntry.GameWinner = objectId
 		} else {
-			_, _, idol := idols.GetMatchingIdolAndGroup(gameEntry.GameWinner.GroupName, gameEntry.GameWinner.Name)
+			_, _, idol := idols.GetMatchingIdolAndGroup(gameEntry.GameWinner.GroupName, gameEntry.GameWinner.Name, false)
 			idolNameToId[gameEntry.GameWinner.GroupName+"="+gameEntry.GameWinner.Name] = idol.ID
 			newGameEntry.GameWinner = idol.ID
 		}
@@ -70,7 +71,7 @@ func runGameMigration(msg *discordgo.Message, content string) {
 			if objectId, ok := idolNameToId[round.GroupName+"="+round.Name]; ok {
 				newGameEntry.RoundWinners = append(newGameEntry.RoundWinners, objectId)
 			} else {
-				_, _, idol := idols.GetMatchingIdolAndGroup(round.GroupName, round.Name)
+				_, _, idol := idols.GetMatchingIdolAndGroup(round.GroupName, round.Name, false)
 				idolNameToId[round.GroupName+"="+round.Name] = idol.ID
 				newGameEntry.RoundWinners = append(newGameEntry.RoundWinners, idol.ID)
 			}
@@ -80,7 +81,7 @@ func runGameMigration(msg *discordgo.Message, content string) {
 			if objectId, ok := idolNameToId[round.GroupName+"="+round.Name]; ok {
 				newGameEntry.RoundLosers = append(newGameEntry.RoundLosers, objectId)
 			} else {
-				_, _, idol := idols.GetMatchingIdolAndGroup(round.GroupName, round.Name)
+				_, _, idol := idols.GetMatchingIdolAndGroup(round.GroupName, round.Name, false)
 				idolNameToId[round.GroupName+"="+round.Name] = idol.ID
 				newGameEntry.RoundLosers = append(newGameEntry.RoundLosers, idol.ID)
 			}
@@ -136,7 +137,7 @@ func findBiasgamesWithoutExistingIdols(gameEntries []models.OldBiasGameEntry) ([
 	gamesWithoutExistingWinner := make(map[string]bool)
 	for groupAndName, _ := range uniqueNames {
 		splitGroupAndName := strings.Split(groupAndName, "=")
-		_, _, idol := idols.GetMatchingIdolAndGroup(splitGroupAndName[0], splitGroupAndName[1])
+		_, _, idol := idols.GetMatchingIdolAndGroup(splitGroupAndName[0], splitGroupAndName[1], false)
 
 		if idol == nil {
 			gamesWithoutExistingWinner[splitGroupAndName[0]+" "+splitGroupAndName[1]] = true

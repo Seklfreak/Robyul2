@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -69,7 +67,7 @@ func initSuggestionChannel() {
 
 	// make a message on how to edit suggestions
 	helpMessage := "```Editable Fields: name, group, gender, notes\n" +
-		"Command: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "sug-edit {field} new field value...\n\n" +
+		"Command: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "s-edit {field} new field value...\n\n" +
 		"\n1. " + predefinedDenyMessages[1] +
 		"\n2. " + predefinedDenyMessages[2] +
 		"\n3. " + predefinedDenyMessages[3] +
@@ -180,7 +178,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	helpers.Relax(err)
 
 	// compare the given image to all images currently available in the game
-	for _, idol := range GetAllIdols() {
+	for _, idol := range GetActiveIdols() {
 		for _, curIdolImage := range idol.Images {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curIdolImage.HashString)
 			if err != nil {
@@ -573,7 +571,7 @@ func loadUnresolvedSuggestions() {
 // checkIdolAndGroupExist does a loose comparison of the suggested idols and idols that already exist
 func checkIdolAndGroupExist(sug *models.IdolSuggestionEntry) {
 
-	groupMatched, _, matchingIdol := GetMatchingIdolAndGroup(sug.GrouopName, sug.Name)
+	groupMatched, _, matchingIdol := GetMatchingIdolAndGroup(sug.GrouopName, sug.Name, false)
 
 	// if a matching idol was found then set the suggested name and group to match
 	if matchingIdol != nil {
@@ -584,7 +582,7 @@ func checkIdolAndGroupExist(sug *models.IdolSuggestionEntry) {
 
 	} else if groupMatched {
 		// if the group matched, get the group name
-		if exist, realGroupName := GetMatchingGroup(sug.GrouopName); exist {
+		if exist, realGroupName := GetMatchingGroup(sug.GrouopName, false); exist {
 			sug.GrouopName = realGroupName
 			sug.GroupMatch = true
 		}
@@ -598,7 +596,7 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 	var compareValues []int
 
 	// compare the given image to all images currently available in the game
-	for _, idol := range GetAllIdols() {
+	for _, idol := range GetActiveIdols() {
 		for _, curBImage := range idol.Images {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
 			if err != nil {
@@ -650,7 +648,7 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 	// check if an idol with the suggested name and group already exists
 	var idolEntry models.IdolEntry
 	err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"name": suggestion.Name, "groupname": suggestion.GrouopName}), &idolEntry)
-	if err.Error() != "not found" {
+	if err != nil && err.Error() != "not found" {
 		helpers.Relax(err)
 	}
 
@@ -658,7 +656,6 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 		ObjectName: suggestion.ObjectName,
 		HashString: suggestion.ImageHashString,
 	}
-	spew.Dump(idolEntry)
 
 	// if it doesn't exist then create one, otherwise update the existing one with the new image
 	if idolEntry.Name == "" {
@@ -673,8 +670,9 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 		}
 
 		// insert file to mongodb
-		_, err := helpers.MDbInsert(models.IdolTable, idolEntry)
+		newIdolId, err := helpers.MDbInsert(models.IdolTable, idolEntry)
 		helpers.Relax(err)
+		idolEntry.ID = newIdolId
 
 	} else {
 
@@ -693,7 +691,12 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 				ObjectName: suggestion.ObjectName,
 				HashString: suggestion.ImageHashString,
 			})
-			idolExists = true
+
+			if currentIdol.Deleted == false {
+				idolExists = true
+			} else {
+				currentIdol.Deleted = false
+			}
 			break
 		}
 	}

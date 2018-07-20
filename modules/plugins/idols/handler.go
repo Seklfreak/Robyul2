@@ -47,6 +47,8 @@ func (i *Module) Uninit(session *discordgo.Session) {
 func (i *Module) Commands() []string {
 	return []string{
 		"idol",
+		"sug-edit",
+		"s-edit",
 	}
 }
 
@@ -99,7 +101,7 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, "Idol info and images have been refreshed.")
 			})
 
-		case "refresh-idols":
+		case "refresh", "refresh-idols":
 
 			helpers.RequireRobyulMod(msg, func() {
 				newMessages, err := helpers.SendMessage(msg.ChannelID, "Refreshign Idols...")
@@ -120,7 +122,7 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 			})
 		case "list":
 
-			listIdolsInGame(msg)
+			listIdols(msg)
 		case "alias":
 
 			if len(commandArgs) < 2 {
@@ -163,7 +165,7 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 			}
 		}
-	} else if command == "sug-edit" { // edit is used for changing details of suggestions
+	} else if command == "sug-edit" || command == "s-edit" { // edit is used for changing details of suggestions
 		fieldToUpdate := commandArgs[0]
 		fieldValue := strings.Join(commandArgs[1:], " ")
 		updateSuggestionDetails(msg, fieldToUpdate, fieldValue)

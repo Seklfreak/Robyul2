@@ -22,6 +22,21 @@ import (
 func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
+	// if there is only one arg check if it matches a valid group, if so send to group stats
+	contentArg, _ := helpers.ToArgv(statsMessage)
+	bgLog().Infoln(contentArg)
+	if len(contentArg) == 2 {
+		if exists, _ := idols.GetMatchingGroup(contentArg[1], true); exists {
+			displayGroupStats(msg, statsMessage)
+			return
+		}
+	} else if len(contentArg) == 3 {
+		if _, _, idol := idols.GetMatchingIdolAndGroup(contentArg[1], contentArg[2], true); idol != nil {
+			displayIdolStats(msg, statsMessage)
+			return
+		}
+	}
+
 	queryParams, iconURL, targetName := getStatsQueryInfo(msg, statsMessage)
 
 	// check if round information is required
@@ -139,7 +154,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	sendStatsMessage(msg, statsTitle, countsHeader, biasCounts, iconURL, targetName)
 }
 
-// listIdolsInGame will list all idols that can show up in the biasgame
+// showRankings will show the user rankings for biasgame
 func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bool) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
@@ -612,7 +627,7 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 	}
 
 	// find matching idol
-	_, _, targetIdol := idols.GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
+	_, _, targetIdol := idols.GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1], true)
 	if targetIdol == nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
@@ -830,7 +845,7 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	}
 
 	// find matching idol
-	groupMatched, targetGroupName := idols.GetMatchingGroup(commandArgs[0])
+	groupMatched, targetGroupName := idols.GetMatchingGroup(commandArgs[0], false)
 	if !groupMatched {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
 		return
@@ -1012,7 +1027,7 @@ MultiWinLoop:
 
 	// get all images for the group
 	var allGroupImages []idols.IdolImage
-	for _, bias := range idols.GetAllIdols() {
+	for _, bias := range idols.GetActiveIdols() {
 		if bias.GroupName != targetGroupName {
 			continue
 		}

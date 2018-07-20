@@ -50,7 +50,7 @@ func (i IdolImage) GetResizeImgBytes(resizeHeight int) []byte {
 }
 
 // validateImages will read the idols table to retrieve all image object names. then it will make a call to retrieve all images
-// TODO: not complete. works but isn't useful yet, not sure what all i want this to do. just list object names? could be a lot to list in discord if something was wrong. auto delete?
+//  Note: to avoid spam, missing images object names are logged to console, not displayed in discord
 func validateImages(msg *discordgo.Message, content string) {
 
 	contentArgs, err := helpers.ToArgv(content)
@@ -73,11 +73,11 @@ func validateImages(msg *discordgo.Message, content string) {
 
 	// loop through idol images and check if object exists
 	var missingImages []string
-	for _, idol := range GetAllIdols() {
+	for _, idol := range GetActiveIdols() {
 		for _, image := range idol.Images {
 			if !helpers.ObjectExists(image.ObjectName) {
 				missingImages = append(missingImages, image.ObjectName)
-				log().Infoln("----Idol image does not exist in minio: ", image.ObjectName)
+				log().Infoln("Idol image does not exist in minio: ", image.ObjectName)
 			}
 		}
 	}

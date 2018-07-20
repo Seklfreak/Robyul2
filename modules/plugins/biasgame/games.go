@@ -110,13 +110,13 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		// if this isn't a mixed game then filter all choices by the gender
 		if gameGender != "mixed" {
 
-			for _, bias := range idols.GetAllIdols() {
+			for _, bias := range idols.GetActiveIdols() {
 				if bias.Gender == gameGender {
 					biasChoices = append(biasChoices, bias)
 				}
 			}
 		} else {
-			biasChoices = idols.GetAllIdols()
+			biasChoices = idols.GetActiveIdols()
 		}
 
 		// confirm we have enough biases to choose from for the game size this should be
@@ -450,13 +450,13 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 	// if this isn't a mixed game then filter all choices by the gender
 	if gameGender != "mixed" {
 
-		for _, bias := range idols.GetAllIdols() {
+		for _, bias := range idols.GetActiveIdols() {
 			if bias.Gender == gameGender {
 				biasChoices = append(biasChoices, bias)
 			}
 		}
 	} else {
-		biasChoices = idols.GetAllIdols()
+		biasChoices = idols.GetActiveIdols()
 	}
 
 	// confirm we have enough biases for a multiplayer game

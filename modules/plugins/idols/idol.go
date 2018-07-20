@@ -23,6 +23,7 @@ const (
 
 // holds all available idols
 var allIdols []*Idol
+var activeIdols []*Idol
 var allIdolsMutex sync.RWMutex
 
 ////////////////////
@@ -53,12 +54,14 @@ func (i *Idol) GetResizedRandomImage(resize int) image.Image {
 func GetAllIdols() []*Idol {
 	allIdolsMutex.RLock()
 	defer allIdolsMutex.RUnlock()
-
-	if allIdols == nil {
-		return nil
-	}
-
 	return allIdols
+}
+
+// GetActiveIdols will return only active idols and idols with images
+func GetActiveIdols() []*Idol {
+	allIdolsMutex.RLock()
+	defer allIdolsMutex.RUnlock()
+	return activeIdols
 }
 
 ////////////////////////
@@ -83,13 +86,13 @@ func GetMatchingIdolById(id bson.ObjectId) *Idol {
 //  1st return is true if group exists
 //  2nd return is true if idol exists in the group
 //  3rd will be a reference to the matching idol
-func GetMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *Idol) {
+func GetMatchingIdolAndGroup(searchGroup, searchName string, activeOnly bool) (bool, bool, *Idol) {
 	groupMatch := false
 	nameMatch := false
 	var matchingIdol *Idol
 
 	// find a matching group
-	groupMatch, realMatchingGroupName := GetMatchingGroup(searchGroup)
+	groupMatch, realMatchingGroupName := GetMatchingGroup(searchGroup, activeOnly)
 
 	// if no matching group was found, just return 0 values
 	if !groupMatch {
@@ -97,8 +100,16 @@ func GetMatchingIdolAndGroup(searchGroup, searchName string) (bool, bool, *Idol)
 	}
 
 	// find matching idol in the matching group
+	var idolsToCheck []*Idol
+	if activeOnly {
+		idolsToCheck = GetActiveIdols()
+	} else {
+		idolsToCheck = GetAllIdols()
+	}
+
+	allIdolsMutex.RLock()
 IdolLoop:
-	for _, idol := range GetAllIdols() {
+	for _, idol := range idolsToCheck {
 
 		if idol.GroupName != realMatchingGroupName {
 			continue
@@ -119,6 +130,7 @@ IdolLoop:
 			}
 		}
 	}
+	allIdolsMutex.RUnlock()
 
 	return groupMatch, nameMatch, matchingIdol
 }
@@ -126,11 +138,18 @@ IdolLoop:
 // getMatchingGroup will do a loose comparison of the group name to see if it exists
 // return 1: if a matching group exists
 // return 2: what the real group name is
-func GetMatchingGroup(searchGroup string) (bool, string) {
+func GetMatchingGroup(searchGroup string, activeOnly bool) (bool, string) {
 
 	allGroupsMap := make(map[string]bool)
-	for _, idol := range GetAllIdols() {
-		allGroupsMap[idol.GroupName] = true
+	if activeOnly {
+		for _, idol := range GetActiveIdols() {
+			allGroupsMap[idol.GroupName] = true
+		}
+	} else {
+
+		for _, idol := range GetAllIdols() {
+			allGroupsMap[idol.GroupName] = true
+		}
 	}
 
 	groupAliases := getGroupAliases()
@@ -175,7 +194,7 @@ func startCacheRefreshLoop() {
 			time.Sleep(time.Hour * 12)
 
 			log().Info("Refreshing image cache...")
-			refreshIdolsFromOld(true)
+			refreshIdols(true)
 
 			log().Info("Idol image cache has been refresh")
 		}
@@ -364,7 +383,7 @@ func updateGroupInfo(msg *discordgo.Message, content string) {
 	newGroup := contentArgs[1]
 
 	// confirm target group exists
-	if matched, realGroupName := GetMatchingGroup(targetGroup); !matched {
+	if matched, realGroupName := GetMatchingGroup(targetGroup, true); !matched {
 		helpers.SendMessage(msg.ChannelID, "No group found with that exact name.")
 		return
 	} else {
@@ -439,7 +458,7 @@ func updateIdolInfoFromMsg(msg *discordgo.Message, content string) {
 func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string) int {
 
 	// attempt to find a matching idol of the new group and name,
-	_, _, matchingIdol := GetMatchingIdolAndGroup(newGroup, newName)
+	_, _, matchingIdol := GetMatchingIdolAndGroup(newGroup, newName, false)
 
 	recordsFound := 0
 
@@ -490,6 +509,9 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 			// assign all images to the target idol
 			for _, idol := range idolsToUpdate {
 				targetIdol.Images = append(targetIdol.Images, idol.Images...)
+
+				_, err = updateBiasgame(idol.ID, targetIdol.ID)
+				helpers.Relax(err)
 
 				// delete current idol record
 				err = helpers.MDbDelete(models.IdolTable, idol.ID)
@@ -590,7 +612,7 @@ IdolsLoop:
 	}
 
 	// attempt to get matching idol
-	groupCheck, nameCheck, idolToUpdate := GetMatchingIdolAndGroup(newGroup, newName)
+	groupCheck, nameCheck, idolToUpdate := GetMatchingIdolAndGroup(newGroup, newName, false)
 
 	// get mdb record by object name
 	var mongoRecordToUpdate models.IdolEntry
@@ -610,8 +632,10 @@ IdolsLoop:
 		}
 
 		// if the idol has no images left, delete it. else update it
+		var deleteIdolId bson.ObjectId
 		var err error
 		if len(mongoRecordToUpdate.Images) == 0 {
+			deleteIdolId = mongoRecordToUpdate.ID
 			err = helpers.MDbDelete(models.IdolTable, mongoRecordToUpdate.ID)
 		} else {
 			err = helpers.MDbUpsertID(models.IdolTable, mongoRecordToUpdate.ID, mongoRecordToUpdate)
@@ -629,6 +653,12 @@ IdolsLoop:
 			err := helpers.MDbUpsertID(models.IdolTable, targetIdol.ID, targetIdol)
 			helpers.Relax(err)
 
+			// if an idol was deleted update the biasgame stats to be for the new idol
+			if deleteIdolId != "" {
+				_, err = updateBiasgame(deleteIdolId, targetIdol.ID)
+				helpers.Relax(err)
+			}
+
 			allIdolsMutex.Lock()
 			idolToUpdate.Images = append(idolToUpdate.Images, IdolImage{
 				ObjectName: mdbImageRecord.ObjectName,
@@ -644,11 +674,18 @@ IdolsLoop:
 				Gender:    newGender,
 				Images:    []models.IdolImageEntry{mdbImageRecord},
 			}
-			_, err := helpers.MDbInsert(models.IdolTable, newIdolEntry)
+
+			newIdolID, err := helpers.MDbInsert(models.IdolTable, newIdolEntry)
 			helpers.Relax(err)
+			newIdolEntry.ID = newIdolID
 
 			newIdol := makeIdolFromIdolEntry(newIdolEntry)
 			setAllIdols(append(GetAllIdols(), &newIdol))
+
+			if deleteIdolId != "" {
+				_, err = updateBiasgame(deleteIdolId, newIdol.ID)
+				helpers.Relax(err)
+			}
 		}
 
 	} else {
@@ -749,7 +786,10 @@ IdolLoop:
 		// if the idol has no images left, delete it. else update it
 		var err error
 		if len(mongoRecordToUpdate.Images) == 0 {
-			err = helpers.MDbDelete(models.IdolTable, mongoRecordToUpdate.ID)
+
+			// dont fully delete it because the idol is still referenced in biasgame and possibly other modules
+			mongoRecordToUpdate.Deleted = true
+			err = helpers.MDbUpsertID(models.IdolTable, mongoRecordToUpdate.ID, mongoRecordToUpdate)
 		} else {
 			err = helpers.MDbUpsertID(models.IdolTable, mongoRecordToUpdate.ID, mongoRecordToUpdate)
 		}
@@ -771,9 +811,17 @@ IdolLoop:
 // setAllIdols setter for all idols
 func setAllIdols(idols []*Idol) {
 	allIdolsMutex.Lock()
-	defer allIdolsMutex.Unlock()
+	allIdolsMutex.Unlock()
 
 	allIdols = idols
+
+	// set active idols
+	activeIdols = nil
+	for _, idol := range idols {
+		if idol.Deleted == false && len(idol.Images) != 0 {
+			activeIdols = append(activeIdols, idol)
+		}
+	}
 }
 
 // showImagesForIdol will show a embed message with all the available images for an idol
@@ -795,7 +843,7 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 
 	// get matching idol to the group and name entered
 	//  if we can't get one display an error
-	groupMatch, nameMatch, matchIdol := GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1])
+	groupMatch, nameMatch, matchIdol := GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1], true)
 	if matchIdol == nil || groupMatch == false || nameMatch == false {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
@@ -812,8 +860,8 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 		fmt.Sprintf("Total Images: %s", humanize.Comma(int64(len(matchIdol.Images)))))
 }
 
-// listIdolsInGame will list all idols
-func listIdolsInGame(msg *discordgo.Message) {
+// listIdols will list all idols
+func listIdols(msg *discordgo.Message) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	genderCountMap := make(map[string]int)
@@ -821,7 +869,7 @@ func listIdolsInGame(msg *discordgo.Message) {
 
 	// create map of idols and there group
 	groupIdolMap := make(map[string][]string)
-	for _, idol := range GetAllIdols() {
+	for _, idol := range GetActiveIdols() {
 
 		// count idols and groups
 		genderCountMap[idol.Gender]++
@@ -844,7 +892,7 @@ func listIdolsInGame(msg *discordgo.Message) {
 			Name: "All Idols Available",
 		},
 		Title: fmt.Sprintf("%s Total | %s Girls, %s Boys | %s Girl Groups, %s Boy Groups",
-			humanize.Comma(int64(len(GetAllIdols()))),
+			humanize.Comma(int64(len(GetActiveIdols()))),
 			humanize.Comma(int64(genderCountMap["girl"])),
 			humanize.Comma(int64(genderCountMap["boy"])),
 			humanize.Comma(int64(genderGroupCountMap["girl"])),
@@ -876,4 +924,47 @@ func listIdolsInGame(msg *discordgo.Message) {
 	})
 
 	helpers.SendPagedMessage(msg, embed, 10)
+}
+
+// updateBiasgame update the idol id for biasgame records
+//  this can't be included in the biasgame package because of circular imports
+func updateBiasgame(targetId, newId bson.ObjectId) (int, error) {
+
+	// update biasgame stats
+	// update is done in pairs, first the select query, and then the update.
+	updateArray := []interface{}{
+		bson.M{"gamewinner": targetId},
+		bson.M{"$set": bson.M{"gamewinner": newId}},
+
+		bson.M{"roundwinners": targetId},
+		bson.M{"$set": bson.M{"roundwinners.$": newId}},
+
+		bson.M{"roundlosers": targetId},
+		bson.M{"$set": bson.M{"roundlosers.$": newId}},
+	}
+
+	modified := 0
+
+	// update in a loop as $ is a positional operator and therefore not all array elements for the round will be updated immediatly. loop through and update them until completed
+	//   wish this wasn't needed but mgo doesn't have a proper way to do arrayfilter with update multi mongo operation
+	for true {
+
+		// run bulk operation to update records
+		bulkOperation := helpers.MdbCollection(models.BiasGameTable).Bulk()
+		bulkOperation.UpdateAll(updateArray...)
+		bulkResults, err := bulkOperation.Run()
+		if err != nil {
+			log().Errorln("Bulk update error: ", err.Error())
+			return 0, err
+		}
+
+		modified += bulkResults.Modified
+
+		// break when no more records are being modified
+		if bulkResults.Modified == 0 {
+			break
+		}
+	}
+
+	return modified, nil
 }

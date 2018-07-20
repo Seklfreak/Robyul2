@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -73,7 +71,7 @@ func addIdolAlias(msg *discordgo.Message, targetGroup string, targetName string,
 	// check that the idol we're adding the alias too actually exists
 	var targetIdol *Idol
 
-	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName); targetIdol == nil {
+	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName, true); targetIdol == nil {
 		helpers.SendMessage(msg.ChannelID, "Could not add alias for that idol because the idol could not be foudn.")
 		return
 	}
@@ -124,7 +122,7 @@ func addIdolAlias(msg *discordgo.Message, targetGroup string, targetName string,
 func addGroupAlias(msg *discordgo.Message, targetGroup string, newAliasName string) {
 
 	// check that the group we're adding the alias too actually exists
-	if exists, realGroupName := GetMatchingGroup(targetGroup); exists == false {
+	if exists, realGroupName := GetMatchingGroup(targetGroup, true); exists == false {
 		helpers.SendMessage(msg.ChannelID, "Could not add alias for that group because the group does not exist.")
 		return
 	} else {
@@ -132,19 +130,15 @@ func addGroupAlias(msg *discordgo.Message, targetGroup string, newAliasName stri
 	}
 
 	// make sure the alias doesn't match an existing group already
-	if exists, matchinGroup := GetMatchingGroup(newAliasName); exists {
+	if exists, matchinGroup := GetMatchingGroup(newAliasName, false); exists {
 		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("The alias you are trying to add already exists for the group **%s**", matchinGroup))
 		return
 	}
 
 	// check if the alias already exists
-	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
-	newAliasReg := strings.ToLower(reg.ReplaceAllString(newAliasName, ""))
 	for curGroup, aliases := range getGroupAliases() {
 		for _, alias := range aliases {
-			curAlias := strings.ToLower(reg.ReplaceAllString(alias, ""))
-
-			if curAlias == newAliasReg {
+			if alphaNumericCompare(newAliasName, alias) {
 				helpers.SendMessage(msg.ChannelID, fmt.Sprintf("This group alias already exists for the group **%s**", curGroup))
 				return
 			}
@@ -171,7 +165,7 @@ func deleteIdolAlias(msg *discordgo.Message, commandArgs []string) {
 	aliasToDelete := commandArgs[4]
 
 	var targetIdol *Idol
-	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName); targetIdol == nil {
+	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName, false); targetIdol == nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
 	}
@@ -284,7 +278,7 @@ func listNameAliases(msg *discordgo.Message, targetGroup string, targetName stri
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	var targetIdol *Idol
-	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName); targetIdol == nil {
+	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName, true); targetIdol == nil {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
 		return
 	}
@@ -318,7 +312,7 @@ func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	var realGroupName string
-	if _, realGroupName = GetMatchingGroup(targetGroup); realGroupName == "" {
+	if _, realGroupName = GetMatchingGroup(targetGroup, true); realGroupName == "" {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
 		return
 	}
@@ -339,7 +333,7 @@ func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
 			aliasesForThisGroup = aliases
 		}
 	}
-	spew.Dump(aliasesForThisGroup)
+
 	if len(aliasesForThisGroup) > 0 {
 
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -350,7 +344,7 @@ func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
 	}
 
 	// add fields for name aliases for all idols
-	for _, idol := range GetAllIdols() {
+	for _, idol := range GetActiveIdols() {
 		if realGroupName == idol.GroupName && len(idol.NameAliases) > 0 {
 
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -404,7 +398,7 @@ func listGroupAliases(msg *discordgo.Message) {
 		})
 
 		// get the matching group, the aliases might have been saved before a small change was made to the real group name. i want to account for that
-		if exists, realGroupName := GetMatchingGroup(groupName); exists {
+		if exists, realGroupName := GetMatchingGroup(groupName, true); exists {
 
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   realGroupName,

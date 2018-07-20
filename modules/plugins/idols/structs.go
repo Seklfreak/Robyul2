@@ -18,4 +18,5 @@ type Idol struct {
 	Gender       string
 	NameAndGroup string
 	Images       []IdolImage
+	Deleted      bool
 }
