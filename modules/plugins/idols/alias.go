@@ -76,12 +76,13 @@ func addIdolAlias(msg *discordgo.Message, targetGroup string, targetName string,
 		return
 	}
 
-	// -- confirm alias does not match the idol name or another alias in the same group
 	// make map of group => []idol names and aliases
 	groupIdolMap := make(map[string][]string)
 	for _, idol := range GetAllIdols() {
-		groupIdolMap[idol.GroupName] = append(groupIdolMap[idol.GroupName], idol.Name)
-		groupIdolMap[idol.GroupName] = append(groupIdolMap[idol.GroupName], idol.NameAliases...)
+		if idol.GroupName == targetIdol.GroupName {
+			groupIdolMap[idol.GroupName] = append(groupIdolMap[idol.GroupName], idol.Name)
+			groupIdolMap[idol.GroupName] = append(groupIdolMap[idol.GroupName], idol.NameAliases...)
+		}
 	}
 
 	// confirm new alias doesn't match alias or name within a group
