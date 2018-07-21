@@ -69,6 +69,10 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		return false, nil
 	}
 
+	if eventlogEventIsIgnored(createdAt, guildID, targetID, targetType, userID, actionType, reason, changes, options, waitingForAuditLogBackfill) {
+		return false, nil
+	}
+
 	/*
 		cache.GetLogger().WithField("module", "helpers/eventlog").Debugf(
 			"adding to eventlog time %s guildID %s targetID %s userID %s actionType %s reason %s changes %+v options %+v",

@@ -330,6 +330,7 @@
       "mode-1": "Your notifications will sent to you in the following format now: `content after title`.",
       "mode-2": "Your notifications will sent to you in the following format now: `content before title`.",
       "mode-3": "Your notifications will sent to you in the following format now: `embed with context`.",
+      "mode-4": "Your notifications will sent to you in the following format now: `content after title with deeplink`.",
       "keyword-ignore-not-found-error": "I wasn't able to find the global keyword you want to ignore on this server. <:blobglare:317044032658341888>",
       "keyword-ignore-guild-added": "I will ignore this keyword on this server now. <a:ablobgrimace:394026913108328449>",
       "keyword-ignore-guild-removed": "I will no longer ignore this keyword on this server. <a:ablobshocked:394026914076950539>"
@@ -585,6 +586,7 @@
       "noti-join-not-whitelisted": ":x: Robyul joined a not whitelisted Guild: %s `(#%s)`!",
       "noti-join": ":arrow_forward: Robyul joined Guild: %s `(#%s)`\n:black_small_square: by %s (`#%s`)\n:black_small_square: %d members",
       "noti-leave": ":arrow_backward: Robyul left Guild: %s `(#%s)`\n:black_small_square: by %s (`#%s`)",
+      "noti-expired": ":warning: Whitelist for Guild: %s `(#%s)` has expired. Whitelist entry removed.",
       "add-success": ":white_check_mark: Added Guild %s `(#%s)` to the whitelist.",
       "add-error-duplicate": ":x: Guild %s `(#%s)` is already on the whitelist.",
       "remove-error-not-found": ":x: Guild %s `(#%s)` is not on the whitelist.",
@@ -706,7 +708,8 @@
     "feedback": {
       "suggestion-received": "**Thank you!** We received your suggestion. <a:ablobsmile:393869335312990209>\nYou can follow the progress of your suggestion and any other suggestion here: <https://trello.robyul.chat/>.",
       "issue-received": "**Thank you!** We received your issue report. <a:ablobgrimace:394026913108328449>\nYou can follow the progress of your report and any other report here: <https://trello.robyul.chat/>.",
-      "arguments-too-few": "Please tell me more. <:blobthinkingeyes:317044481499201538>"
+      "arguments-too-few": "Please tell me more. <:blobthinkingeyes:317044481499201538>",
+      "setlog-success": "Feedback will now get logged in the given channel."
     },
     "eventlog": {
       "enabled": "The Eventlog has been enabled!\nPlease make sure I have the `View Audit Log` permission for full effectiveness.",

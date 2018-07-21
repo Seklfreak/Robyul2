@@ -77,7 +77,7 @@ func CleverbotIORequest(channel, message string) (response string, err error) {
 	return currentSession.Ask(message)
 }
 
-func ChatbotSendCleverbotIO(session *discordgo.Session, channel string, message string) {
+func ChatbotSendCleverbotIO(session *discordgo.Session, channel, message string, author *discordgo.User) {
 	message, err := CleverbotIORequest(channel, message)
 	if err != nil {
 		RelaxLog(err)
@@ -85,5 +85,5 @@ func ChatbotSendCleverbotIO(session *discordgo.Session, channel string, message 
 		return
 	}
 
-	SendMessage(channel, message)
+	SendMessage(channel, author.Mention()+" "+message)
 }

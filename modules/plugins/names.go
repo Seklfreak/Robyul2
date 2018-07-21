@@ -67,19 +67,17 @@ func (n *Names) Action(command string, content string, msg *discordgo.Message, s
 func (n *Names) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) namesAction {
 	cache.GetSession().ChannelTyping(in.ChannelID)
 
-	if len(args) < 1 {
-		*out = n.newMsg(helpers.GetText("bot.arguments.too-few"))
-		return n.actionFinish
-	}
-
 	return n.actionNames
 }
 
 func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordgo.MessageSend) namesAction {
-	user, err := helpers.GetUserFromMention(args[0])
-	if err != nil || user == nil || user.ID == "" {
-		*out = n.newMsg(helpers.GetText("bot.arguments.invalid"))
-		return n.actionFinish
+	var err error
+	var user *discordgo.User
+	if len(args) >= 1 {
+		user, err = helpers.GetUserFromMention(args[0])
+	}
+	if user == nil || user.ID == "" {
+		user = in.Author
 	}
 	channel, err := helpers.GetChannel(in.ChannelID)
 	helpers.Relax(err)

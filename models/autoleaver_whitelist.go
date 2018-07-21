@@ -17,4 +17,5 @@ type AutoleaverWhitelistEntry struct {
 	AddedAt       time.Time
 	GuildID       string
 	AddedByUserID string
+	Until         time.Time
 }

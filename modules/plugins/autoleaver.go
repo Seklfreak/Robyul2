@@ -30,10 +30,83 @@ func (a *Autoleaver) Commands() []string {
 func (a *Autoleaver) Init(session *discordgo.Session) {
 	session.AddHandler(a.OnGuildCreate)
 	session.AddHandler(a.OnGuildDelete)
+
+	go func() {
+		defer helpers.Recover()
+		a.checkExpiredGuildsLoop()
+	}()
 }
 
 func (a *Autoleaver) Uninit(session *discordgo.Session) {
 
+}
+
+func (a *Autoleaver) checkExpiredGuildsLoop() {
+	defer helpers.Recover()
+	defer func() {
+		go func() {
+			defer helpers.Recover()
+			a.logger().Error("The checkExpiredGuildsLoop died. Please investigate! Will be restarted in 60 seconds")
+			time.Sleep(60 * time.Second)
+			a.checkExpiredGuildsLoop()
+		}()
+	}()
+
+	var err error
+	for {
+		time.Sleep(5 * time.Second)
+
+		err = a.removeExpiredGuilds()
+		helpers.RelaxLog(err)
+	}
+
+}
+
+func (a *Autoleaver) removeExpiredGuilds() error {
+	var entryBucket []models.AutoleaverWhitelistEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&entryBucket)
+	if err != nil {
+		return err
+	}
+
+	// check dates, remove if expired
+	for _, entry := range entryBucket {
+		if entry.Until.IsZero() {
+			continue
+		}
+
+		if time.Now().Before(entry.Until) {
+			continue
+		}
+
+		guildFound, _ := helpers.GetGuild(entry.GuildID)
+		if guildFound == nil || guildFound.ID == "" {
+			guildFound = new(discordgo.Guild)
+			guildFound.ID = entry.GuildID
+			guildFound.Name = "N/A"
+		}
+
+		err = helpers.MDbDelete(models.AutoleaverWhitelistTable, entry.ID)
+		if err != nil {
+			return err
+		}
+
+		expiredTet := helpers.GetTextF("plugins.autoleaver.noti-expired", guildFound.Name, guildFound.ID)
+
+		notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
+		if notificationChannelID != "" {
+			_, err = helpers.SendMessage(notificationChannelID, expiredTet)
+			if err != nil {
+				a.logger().WithField("GuildID", guildFound.ID).Errorf("Expired Notification failed, Error: %s", err.Error())
+			}
+		}
+
+		a.logger().Infoln("removed #" + entry.GuildID + " from whitelist because it expired")
+
+		// TODO: leave guild
+	}
+
+	return nil
 }
 
 func (a *Autoleaver) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -100,6 +173,16 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 		}
 	}
 
+	var until time.Time
+	if len(args) >= 3 {
+		duration, err := time.ParseDuration(args[2])
+		if err != nil {
+			*out = a.newMsg("bot.arguments.invalid")
+			return a.actionFinish
+		}
+		until = time.Now().Add(duration)
+	}
+
 	var entryBucket models.AutoleaverWhitelistEntry
 	err := helpers.MdbOne(
 		helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(bson.M{"guildid": guildID}),
@@ -113,8 +196,10 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 			guildFound.Name = "N/A"
 		}
 
-		*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.add-error-duplicate", guildFound.Name, guildFound.ID))
-		return a.actionFinish
+		if entryBucket.Until.IsZero() {
+			*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.add-error-duplicate", guildFound.Name, guildFound.ID))
+			return a.actionFinish
+		}
 	}
 	if err != nil && !helpers.IsMdbNotFound(err) {
 		helpers.Relax(err)
@@ -127,6 +212,7 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 			AddedAt:       time.Now(),
 			GuildID:       guildID,
 			AddedByUserID: in.Author.ID,
+			Until:         until,
 		},
 	)
 
@@ -137,7 +223,12 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 		guildAdded.Name = "N/A"
 	}
 
-	*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.add-success", guildAdded.Name, guildAdded.ID))
+	message := helpers.GetTextF("plugins.autoleaver.add-success", guildAdded.Name, guildAdded.ID)
+	if !until.IsZero() {
+		message += "\nWhitelisted until " + until.Format(time.ANSIC)
+	}
+
+	*out = a.newMsg(message)
 	return a.actionFinish
 }
 
@@ -271,8 +362,11 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 		return a.actionFinish
 	}
 
+	err := a.removeExpiredGuilds()
+	helpers.Relax(err)
+
 	var entryBucket []models.AutoleaverWhitelistEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&entryBucket)
+	err = helpers.MDbIter(helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&entryBucket)
 	helpers.Relax(err)
 	if entryBucket == nil || len(entryBucket) < 1 {
 		*out = a.newMsg(helpers.GetText("plugins.autoleaver.check-no-entries"))

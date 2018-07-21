@@ -46,7 +46,7 @@ var RobyulMod = []string{
 	"132633380628987904", // Sunny
 }
 var Blacklisted = []string{
-	"171883318386753536", // ForRyu
+	"171883318386753536",
 }
 var BlacklistedGuildIDs []string
 
@@ -1572,4 +1572,14 @@ func ReplaceEmojis(content string) (result string) {
 	}
 
 	return content
+}
+
+// MessageDeeplink returns a direct link to a discord message
+func MessageDeeplink(channelID, messageID string) string {
+	channel, err := GetChannelWithoutApi(channelID)
+	if err != nil {
+		return ""
+	}
+
+	return "https://discordapp.com/channels/" + channel.GuildID + "/" + channelID + "/" + messageID
 }

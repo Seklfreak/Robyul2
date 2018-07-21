@@ -22,6 +22,19 @@ func (n *Nuke) Commands() []string {
 
 func (n *Nuke) Init(session *discordgo.Session) {
 	splitChooseRegex = regexp.MustCompile(`'.*?'|".*?"|\S+`)
+
+	// add nuke'd users to global blacklist
+	var entryBucket []models.NukelogEntry
+	err := helpers.MDbIter(helpers.MdbCollection(models.NukelogTable).Find(nil).Sort("nukedat")).All(&entryBucket)
+	helpers.Relax(err)
+
+	newBlacklist := helpers.Blacklisted
+
+	for _, entry := range entryBucket {
+		newBlacklist = append(newBlacklist, entry.UserID)
+	}
+
+	helpers.Blacklisted = newBlacklist
 }
 
 func (n *Nuke) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -69,7 +82,6 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 								UserID:   targetUser.ID,
 								UserName: targetUser.Username + "#" + targetUser.Discriminator,
 								NukerID:  msg.Author.ID,
-								Reason:   strings.TrimSpace(reason),
 								NukedAt:  time.Now(),
 							},
 						)
@@ -85,7 +97,6 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 						for _, targetGuild := range session.State.Guilds {
 							targetGuildSettings := helpers.GuildSettingsGetCached(targetGuild.ID)
-							fmt.Println("checking server: ", targetGuild.Name)
 							if targetGuildSettings.NukeIsParticipating == true {
 								err = session.GuildBanCreateWithReason(targetGuild.ID, targetUser.ID, reasonText, 1)
 								if err != nil {
@@ -126,6 +137,9 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 								}
 							}
 						}
+
+						// add user to global blacklist
+						helpers.Blacklisted = append(helpers.Blacklisted, targetUser.ID)
 
 						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.nuke-completed", bannedOnN))
 						helpers.Relax(err)
@@ -229,8 +243,8 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 				logMessage := "__**Nuke Log:**__\n"
 				for _, logEntry := range entryBucket {
-					logMessage += fmt.Sprintf("`%s` `#%s` Reason `%s` at `%s UTC`\n",
-						logEntry.UserName, logEntry.UserID, logEntry.Reason, logEntry.NukedAt.Format(time.ANSIC))
+					logMessage += fmt.Sprintf("`%s` `#%s` at `%s UTC`\n",
+						logEntry.UserName, logEntry.UserID, logEntry.NukedAt.Format(time.ANSIC))
 				}
 				logMessage += "_All Usernames are from the time they got nuked._"
 
@@ -298,15 +312,15 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 							}
 						}
 
-						reasonText := fmt.Sprintf("Nuke Apply Ban | Issued by: %s#%s (#%s) | Delete Days: %d | Reason: %s",
-							nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, 0, nukeEntry.Reason)
+						reasonText := fmt.Sprintf("Nuke Apply Ban | Issued by: %s#%s (#%s) | Delete Days: %d",
+							nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, 0)
 
 						err = cache.GetSession().GuildBanCreateWithReason(channel.GuildID, nukeEntry.UserID, reasonText, 0)
 						helpers.Relax(err)
 
 						helpers.SendMessage(msg.ChannelID,
-							fmt.Sprintf(":white_check_mark: Banned User `%s#%s` (`#%s`): `%s`",
-								nukedUser.Username, nukedUser.Discriminator, nukeEntry.UserID, nukeEntry.Reason))
+							fmt.Sprintf(":white_check_mark: Banned User `%s#%s` (`#%s`)",
+								nukedUser.Username, nukedUser.Discriminator, nukeEntry.UserID))
 						nuked++
 					}
 

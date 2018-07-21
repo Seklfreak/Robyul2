@@ -15,6 +15,5 @@ type NukelogEntry struct {
 	UserID   string
 	UserName string
 	NukerID  string
-	Reason   string
 	NukedAt  time.Time
 }

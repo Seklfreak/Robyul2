@@ -122,6 +122,8 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 				continue NextEntry
 			}
 
+			postCheckTime := time.Now()
+
 			for _, receivedPost := range receivedPosts {
 				postHasBeenPostedEverywhere := true
 				for _, entry := range entries {
@@ -189,7 +191,7 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
 					}
 
-					entry.LastPostCheck = time.Now()
+					entry.LastPostCheck = postCheckTime
 					err = helpers.MDbUpdateWithoutLogging(models.InstagramTable, entry.ID, entry)
 					if err != nil {
 						m.unlockEntry(entryID)

@@ -11,8 +11,6 @@ import (
 
 type LogrusFileHook struct {
 	file      *os.File
-	flag      int
-	chmod     os.FileMode
 	formatter *logrus.JSONFormatter
 }
 
@@ -24,7 +22,7 @@ func NewLogrusFileHook(file string, flag int, chmod os.FileMode) (*LogrusFileHoo
 		return nil, err
 	}
 
-	return &LogrusFileHook{logFile, flag, chmod, jsonFormatter}, err
+	return &LogrusFileHook{logFile, jsonFormatter}, err
 }
 
 // Fire event
