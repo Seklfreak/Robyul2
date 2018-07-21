@@ -24,7 +24,6 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 
 	// if there is only one arg check if it matches a valid group, if so send to group stats
 	contentArg, _ := helpers.ToArgv(statsMessage)
-	bgLog().Infoln(contentArg)
 	if len(contentArg) == 2 {
 		if exists, _ := idols.GetMatchingGroup(contentArg[1], true); exists {
 			displayGroupStats(msg, statsMessage)
