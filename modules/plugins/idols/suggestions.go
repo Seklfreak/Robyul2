@@ -677,6 +677,7 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 	} else {
 
 		idolEntry.Images = append(idolEntry.Images, newIdolImage)
+		idolEntry.Deleted = false
 		err := helpers.MDbUpsertID(models.IdolTable, idolEntry.ID, idolEntry)
 		helpers.Relax(err)
 	}
@@ -692,11 +693,13 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 				HashString: suggestion.ImageHashString,
 			})
 
-			if currentIdol.Deleted == false {
-				idolExists = true
-			} else {
-				currentIdol.Deleted = false
+			// if this was a deleted idol and they still had a image loaded in memory, delete it
+			if currentIdol.Deleted == true && currentIdol.Images[0].ImageBytes != nil {
+				currentIdol.Images = currentIdol.Images[1:]
 			}
+
+			currentIdol.Deleted = false
+			idolExists = true
 			break
 		}
 	}
@@ -704,6 +707,8 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 	// if its a new idol, update all idols array
 	if idolExists == false {
 		setAllIdols(append(GetAllIdols(), &newIdol))
+	} else {
+		setAllIdols(GetAllIdols())
 	}
 
 	// cache all idols
