@@ -730,7 +730,7 @@ func deleteImage(msg *discordgo.Message, content string) {
 
 	// find and delete target image by object name
 IdolLoop:
-	for idolIndex, idol := range allIdols {
+	for _, idol := range allIdols {
 
 		// check if image has not been found and deleted, no need to loop through images if it has
 		for i, bImg := range idol.Images {
@@ -744,9 +744,8 @@ IdolLoop:
 					// if the whole idol is getting deleted, we need to load image
 					//   bytes incase the image is being used by a game currently
 					idol.Images[i].ImageBytes = idol.Images[i].GetImgBytes()
+					idol.Deleted = true
 
-					// remove pointer from array. struct will be garbage collected when not used by a game
-					allIdols = append(allIdols[:idolIndex], allIdols[idolIndex+1:]...)
 				} else {
 					// delete image
 					idol.Images = append(idol.Images[:i], idol.Images[i+1:]...)
