@@ -20,6 +20,10 @@ import (
 func WebhookExecuteWithResult(id, token string, data *discordgo.WebhookParams) (message *discordgo.Message, err error) {
 	uri := discordgo.EndpointWebhookToken(id, token) + "?wait=true"
 
+	if data != nil && data.Content != "" {
+		data.Content = CleanDiscordContent(data.Content)
+	}
+
 	result, err := cache.GetSession().RequestWithBucketID("POST", uri, data, discordgo.EndpointWebhookToken("", ""))
 	if err != nil {
 		return message, err
