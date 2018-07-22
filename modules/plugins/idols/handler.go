@@ -21,7 +21,7 @@ func (i *Module) Init(session *discordgo.Session) {
 
 		// compile commonly used regex
 		var err error
-		alphaNumericRegex, err = regexp.Compile("[^a-zA-Z0-9]+")
+		alphaNumericRegex, err = regexp.Compile("[^a-zA-Z0-9가-힣]+")
 		helpers.Relax(err)
 
 		// load all idol images and information

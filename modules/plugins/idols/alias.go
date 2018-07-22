@@ -2,7 +2,6 @@ package idols
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -217,13 +216,12 @@ func deleteGroupAlias(msg *discordgo.Message, commandArgs []string) {
 
 	// find and delete alias if one exists
 	aliasDeleted := false
-	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
-	regToDelete := strings.ToLower(reg.ReplaceAllString(aliasToDelete, ""))
+	regToDelete := strings.ToLower(alphaNumericRegex.ReplaceAllString(aliasToDelete, ""))
 	groupAliasMutex.Lock()
 GroupAliasLoop:
 	for curGroup, aliases := range groupAliasesMap {
 		for i, alias := range aliases {
-			curAlias := strings.ToLower(reg.ReplaceAllString(alias, ""))
+			curAlias := strings.ToLower(alphaNumericRegex.ReplaceAllString(alias, ""))
 
 			if curAlias == regToDelete {
 
@@ -421,11 +419,10 @@ func listGroupAliases(msg *discordgo.Message) {
 
 // getAlisesForGroup gets the aliases for a group if it exists.
 //  first return will be false if the group was not found
-func getAlisesForGroup(targetGroup string) (bool, []string) {
+func GetAlisesForGroup(targetGroup string) (bool, []string) {
 
-	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
 	for aliasGroup, aliases := range getGroupAliases() {
-		group := strings.ToLower(reg.ReplaceAllString(aliasGroup, ""))
+		group := strings.ToLower(alphaNumericRegex.ReplaceAllString(aliasGroup, ""))
 
 		if targetGroup == group {
 			return true, aliases
