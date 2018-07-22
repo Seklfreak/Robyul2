@@ -2,6 +2,7 @@ package nugugame
 
 // Init when the bot starts up
 import (
+	"regexp"
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -16,6 +17,7 @@ var gameGenders map[string]string
 func (m *Module) Init(session *discordgo.Session) {
 	go func() {
 
+		// game genders
 		gameGenders = map[string]string{
 			"boy":   "boy",
 			"boys":  "boy",
@@ -23,6 +25,13 @@ func (m *Module) Init(session *discordgo.Session) {
 			"girls": "girl",
 			"mixed": "mixed",
 		}
+
+		// regex for idol and group names
+		var err error
+		alphaNumericRegex, err = regexp.Compile("[^a-zA-Z0-9가-힣]+")
+		helpers.Relax(err)
+
+		currentNuguGames = make(map[string][]*nuguGame)
 	}()
 }
 
@@ -52,10 +61,22 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 	}
 }
 
+func (m *Module) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+	for _, game := range getNuguGamesByChannelID(msg.ChannelID) {
+		// check if game is waiting for a guess
+		if game.WaitingForGuess {
+			// if the game is not multiplayer, check the message author is the one who created the game
+			if !game.IsMultigame && msg.Author.ID != game.User.ID {
+				continue
+			}
+			game.GuessChannel <- msg
+			break
+		}
+	}
+}
+
 ///// Unused functions requried by ExtendedPlugin interface
 func (m *Module) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
-}
-func (m *Module) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 }
 func (m *Module) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
 }

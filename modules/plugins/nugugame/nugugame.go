@@ -17,13 +17,14 @@ import (
 
 const (
 	NUGUGAME_IMAGE_RESIZE_HEIGHT = 200
-	NUGUGAME_DEFULT_ROUND_DELAY  = 15
-	NUGUGAME_ROUND_DELETE_DELAY  = 1 * time.Second
+	NUGUGAME_DEFULT_ROUND_DELAY  = 12
+	NUGUGAME_ROUND_DELETE_DELAY  = 2 * time.Second
 	CHECKMARK_EMOJI              = "✅"
 )
 
-var currentNuguGames []*nuguGame
+var currentNuguGames map[string][]*nuguGame
 var currentNuguGamesMutex sync.RWMutex
+var alphaNumericRegex *regexp.Regexp
 
 ///////////////////
 //   NUGU GAME   //
@@ -31,13 +32,11 @@ var currentNuguGamesMutex sync.RWMutex
 
 // startNuguGame will create and the start the nugu game for the user
 func startNuguGame(msg *discordgo.Message, commandArgs []string) {
-	log().Println("starting nugu game...")
 
 	// if the user already has a game, do nothing
 	if game := getNuguGameByUserID(msg.Author.ID); game != nil {
 		// todo: maybe send a message here letting the user know they have a game going?
 		log().Warnln("nugu game found for user...")
-
 		return
 	}
 
@@ -81,19 +80,24 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	game := &nuguGame{
-		UUID:              newID.String(),
-		User:              msg.Author,
-		ChannelID:         msg.ChannelID,
-		Gender:            gameGender,
-		WaitingForMessage: false,
-		RoundDelay:        NUGUGAME_DEFULT_ROUND_DELAY,
-		IsMultigame:       isMulti,
-		GameType:          gameType,
+		UUID:            newID.String(),
+		User:            msg.Author,
+		ChannelID:       msg.ChannelID,
+		Gender:          gameGender,
+		WaitingForGuess: false,
+		RoundDelay:      NUGUGAME_DEFULT_ROUND_DELAY,
+		IsMultigame:     isMulti,
+		GameType:        gameType,
 	}
 	game.GameImageIndex = make(map[string]int)
+	game.GuessChannel = make(chan *discordgo.Message)
+	game.TimeoutChannel = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 
 	game.saveGame()
 	game.sendRound()
+
+	// opens game channels and waits for guesses or timeout to be triggered
+	game.watchForGuesses()
 }
 
 // sendRound sends the next round in the game
@@ -101,7 +105,7 @@ func (g *nuguGame) sendRound() {
 	log().Println("Sending nugu game round...")
 
 	// if already waiting for user message, do not send the next round
-	if g.WaitingForMessage == true {
+	if g.WaitingForGuess == true {
 		return
 	}
 
@@ -136,70 +140,71 @@ func (g *nuguGame) sendRound() {
 	}
 
 	// update game state
-	g.WaitingForMessage = true
+	g.WaitingForGuess = true
 	g.LastRoundMessage = fileSendMessage[0]
-	g.watchForGuess()
 }
 
 // waitforguess will watch the users messages in the channel for correct guess
-func (g *nuguGame) watchForGuess() {
+func (g *nuguGame) watchForGuesses() {
 	log().Println("waiting for nugu game guess...")
 
 	go func() {
 		defer helpers.Recover()
 
-		// set up time out channel
-		timeoutChan := make(chan int)
-		go func() {
-			time.Sleep(time.Second * g.RoundDelay)
-			timeoutChan <- 0
-		}()
-
 		// watch for user input
 		for {
-			userInputChan := make(chan *discordgo.MessageCreate)
-			cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
-				userInputChan <- e
-			})
 
 			select {
-			case userMsg := <-userInputChan:
-				// confirm the message belongs to the user and is sent in the games channel
-				if userMsg.ChannelID != g.ChannelID || (!g.IsMultigame && userMsg.Author.ID != g.User.ID) {
-					continue
-				}
+			case userMsg := <-g.GuessChannel:
+				log().Infoln("User Message: ", userMsg)
 
 				// if guess is correct add green check mark too it, save the correct guess, and send next round
-				re := regexp.MustCompile("[^a-zA-Z0-9]+")
+				userGuess := strings.ToLower(alphaNumericRegex.ReplaceAllString(userMsg.Content, ""))
 
-				userGuess := strings.ToLower(re.ReplaceAllString(userMsg.Content, ""))
-
-				correctAnswer := strings.ToLower(re.ReplaceAllString(g.CurrentIdol.Name, ""))
+				var correctAnswers []string
 				if g.GameType == "group" {
-					correctAnswer = strings.ToLower(re.ReplaceAllString(g.CurrentIdol.GroupName, ""))
+					correctAnswers = []string{g.CurrentIdol.GroupName}
+
+					// add aliases as acceptable answers
+					if hasAliases, aliases := idols.GetAlisesForGroup(g.CurrentIdol.GroupName); hasAliases {
+						correctAnswers = append(correctAnswers, aliases...)
+					}
+				} else {
+					correctAnswers = []string{g.CurrentIdol.Name}
+					correctAnswers = append(correctAnswers, g.CurrentIdol.NameAliases...)
 				}
 
-				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.Name, correctAnswer)
+				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.Name, correctAnswers)
 
 				// check if the user guess contains the idols name
-				if userGuess == correctAnswer {
+				for _, correctAnswer := range correctAnswers {
 
-					if g.IsMultigame {
+					correctAnswer = strings.ToLower(alphaNumericRegex.ReplaceAllString(correctAnswer, ""))
+					if userGuess == correctAnswer && g.WaitingForGuess {
+						g.WaitingForGuess = false
 
-						cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
-					} else {
-						go helpers.DeleteMessageWithDelay(userMsg.Message, NUGUGAME_ROUND_DELETE_DELAY)
+						if g.IsMultigame {
+
+							cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+						} else {
+							go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
+						}
+
+						g.CorrectIdols = append(g.CorrectIdols, g.CurrentIdol)
+						g.sendRound()
+
+						// clear timeout channel and reset timer
+						if !g.TimeoutChannel.Stop() {
+							<-g.TimeoutChannel.C
+						}
+						g.TimeoutChannel.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+						break
 					}
-
-					g.CorrectIdols = append(g.CorrectIdols, g.CurrentIdol)
-					g.WaitingForMessage = false
-					g.sendRound()
-					return
 				}
 
 				// do nothing if the user message doesn't match, they could just be talking...
 
-			case <-timeoutChan:
+			case <-g.TimeoutChannel.C:
 				helpers.SendMessage(g.ChannelID, fmt.Sprintf("Game Over. The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
 				g.deleteGame()
 				return
@@ -213,17 +218,19 @@ func (g *nuguGame) saveGame() {
 	currentNuguGamesMutex.Lock()
 	defer currentNuguGamesMutex.Unlock()
 
-	currentNuguGames = append(currentNuguGames, g)
+	currentNuguGames[g.ChannelID] = append(currentNuguGames[g.ChannelID], g)
 }
 
 // deleteGame will delete the game from the current nugu games
 func (g *nuguGame) deleteGame() {
 	currentNuguGamesMutex.Lock()
-	currentNuguGamesMutex.Unlock()
+	defer currentNuguGamesMutex.Unlock()
 
-	for i, game := range currentNuguGames {
-		if game.UUID == g.UUID {
-			currentNuguGames = append(currentNuguGames[:i], currentNuguGames[i+1:]...)
+	for _, games := range currentNuguGames {
+		for i, game := range games {
+			if game.UUID == g.UUID {
+				currentNuguGames[game.ChannelID] = append(currentNuguGames[game.ChannelID][:i], currentNuguGames[game.ChannelID][i+1:]...)
+			}
 		}
 	}
 }
@@ -233,7 +240,7 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	var idol *idols.Idol
 	var idolPool []*idols.Idol
 
-	if true || !helpers.DEBUG_MODE {
+	if !helpers.DEBUG_MODE {
 
 		// if this isn't a mixed game then filter all choices by the gender
 		if g.Gender != "mixed" {
@@ -247,9 +254,20 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 		}
 
 	} else {
+		testGroups := []string{
+			"Pristin",
+			"CLC",
+			"TWICE",
+			"Apink",
+			"BLΛƆKPIИK",
+			"Red Velvet",
+		}
+
 		for _, bias := range idols.GetActiveIdols() {
-			if bias.GroupName == "PRISTIN" || bias.GroupName == "CLC" || bias.GroupName == "TWICE" {
-				idolPool = append(idolPool, bias)
+			for _, group := range testGroups {
+				if bias.GroupName == group {
+					idolPool = append(idolPool, bias)
+				}
 			}
 		}
 	}
@@ -277,6 +295,20 @@ RandomIdolLoop:
 // UTILITY FUNCTIONS //
 ///////////////////////
 
+// getAllNugugames thread safe get for all games
+func getAllNuguGames() map[string][]*nuguGame {
+	currentNuguGamesMutex.RLock()
+	defer currentNuguGamesMutex.RUnlock()
+	return currentNuguGames
+}
+
+// getNuguGamesByChannelID thread safe get for all games in a channel
+func getNuguGamesByChannelID(channelID string) []*nuguGame {
+	currentNuguGamesMutex.RLock()
+	defer currentNuguGamesMutex.RUnlock()
+	return currentNuguGames[channelID]
+}
+
 // getNuguGameByUserID will return the single player nugu game for the user if they have one in progress
 func getNuguGameByUserID(userID string) *nuguGame {
 	if userID == "" {
@@ -286,19 +318,13 @@ func getNuguGameByUserID(userID string) *nuguGame {
 	var game *nuguGame
 
 	currentNuguGamesMutex.RLock()
-	for _, nuguGame := range currentNuguGames {
-		if nuguGame.User != nil && userID == nuguGame.User.ID {
-			game = nuguGame
+	for _, games := range currentNuguGames {
+		for _, nuguGame := range games {
+			if nuguGame.User != nil && userID == nuguGame.User.ID {
+				game = nuguGame
+			}
 		}
 	}
 	currentNuguGamesMutex.RUnlock()
-
-	// if a game is found and is nil, delete it
-	// if ok && game == nil {
-	// 	currentNuguGamesMutex.Lock()
-	// 	delete(currentNuguGames, userID)
-	// 	currentNuguGamesMutex.Unlock()
-	// }
-
 	return game
 }
