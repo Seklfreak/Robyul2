@@ -13,7 +13,7 @@ import (
 
 // log is just a small helper function for logging in this module
 func log() *logrus.Entry {
-	return cache.GetLogger().WithField("module", "idols")
+	return cache.GetLogger().WithField("module", "nugugame")
 }
 
 // getIdolCache for easily getting redis cache specific to idols
