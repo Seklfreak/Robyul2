@@ -422,9 +422,8 @@ func listGroupAliases(msg *discordgo.Message) {
 func GetAlisesForGroup(targetGroup string) (bool, []string) {
 
 	for aliasGroup, aliases := range getGroupAliases() {
-		group := strings.ToLower(alphaNumericRegex.ReplaceAllString(aliasGroup, ""))
 
-		if targetGroup == group {
+		if alphaNumericCompare(targetGroup, aliasGroup) {
 			return true, aliases
 		}
 	}
