@@ -12,19 +12,21 @@ import (
 // module struct
 type Module struct{}
 
-var gameGenders map[string]string
+var gameGenders = map[string]string{
+	"boy":   "boy",
+	"boys":  "boy",
+	"girl":  "girl",
+	"girls": "girl",
+	"mixed": "mixed",
+}
 
 func (m *Module) Init(session *discordgo.Session) {
 	go func() {
 
-		// game genders
-		gameGenders = map[string]string{
-			"boy":   "boy",
-			"boys":  "boy",
-			"girl":  "girl",
-			"girls": "girl",
-			"mixed": "mixed",
-		}
+		// refresh idols in difficulties
+		idolsByDifficultyMutex.Lock()
+		getModuleCache(NUGUGAME_DIFFICULTY_IDOLS_KEY, &idolsByDifficulty)
+		idolsByDifficultyMutex.Unlock()
 
 		// regex for idol and group names
 		var err error
@@ -32,6 +34,8 @@ func (m *Module) Init(session *discordgo.Session) {
 		helpers.Relax(err)
 
 		currentNuguGames = make(map[string][]*nuguGame)
+
+		startDifficultyCacheLoop()
 	}()
 }
 
@@ -57,13 +61,24 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 	commandArgs := strings.Fields(content)
 
 	if command == "nugugame" {
-		startNuguGame(msg, commandArgs)
+		if len(commandArgs) > 0 {
+
+			switch commandArgs[0] {
+			case "list":
+				listIdolsByDifficulty(msg, commandArgs)
+			case "refresh-nugugame":
+				manualRefreshDifficulties(msg)
+			default:
+				startNuguGame(msg, commandArgs)
+			}
+		} else {
+			startNuguGame(msg, commandArgs)
+		}
 	}
 }
 
 func (m *Module) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
 	for _, game := range getNuguGamesByChannelID(msg.ChannelID) {
-		// check if game is waiting for a guess
 		if game.WaitingForGuess {
 			// if the game is not multiplayer, check the message author is the one who created the game
 			if !game.IsMultigame && msg.Author.ID != game.User.ID {

@@ -8,6 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
+	"github.com/globalsign/mgo/bson"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
@@ -45,6 +49,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	gameGender := "girl"
 	isMulti := false
 	gameType := "idol"
+	gameDifficulty := "all"
 
 	// validate game arguments
 	if len(commandArgs) > 0 {
@@ -63,6 +68,11 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 
 			if arg == "group" {
 				gameType = "group"
+				continue
+			}
+
+			if _, ok := idolsByDifficulty[arg]; ok {
+				gameDifficulty = arg
 				continue
 			}
 
@@ -88,10 +98,13 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 		RoundDelay:      NUGUGAME_DEFULT_ROUND_DELAY,
 		IsMultigame:     isMulti,
 		GameType:        gameType,
+		Difficulty:      gameDifficulty,
 	}
 	game.GameImageIndex = make(map[string]int)
 	game.GuessChannel = make(chan *discordgo.Message)
 	game.TimeoutChannel = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+
+	spew.Dump(game)
 
 	game.saveGame()
 	game.sendRound()
@@ -240,17 +253,30 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	var idol *idols.Idol
 	var idolPool []*idols.Idol
 
-	if !helpers.DEBUG_MODE {
+	if true || !helpers.DEBUG_MODE {
 
-		// if this isn't a mixed game then filter all choices by the gender
-		if g.Gender != "mixed" {
-			for _, bias := range idols.GetActiveIdols() {
-				if bias.Gender == g.Gender {
-					idolPool = append(idolPool, bias)
+		idolIds := getNugugameIdolsByDifficulty(g.Difficulty)
+		if len(idolIds) > 0 {
+			for _, idolID := range idolIds {
+				idolForGame := idols.GetMatchingIdolById(bson.ObjectIdHex(idolID))
+
+				if idolForGame != nil && idolForGame.Deleted == false {
+					idolPool = append(idolPool, idolForGame)
 				}
 			}
 		} else {
 			idolPool = idols.GetActiveIdols()
+		}
+
+		// if this isn't a mixed game then filter all choices by the gender
+		if g.Gender != "mixed" {
+			var tempIdolPool []*idols.Idol
+			for _, bias := range idolPool {
+				if bias.Gender == g.Gender {
+					tempIdolPool = append(tempIdolPool, bias)
+				}
+			}
+			idolPool = tempIdolPool
 		}
 
 	} else {
@@ -275,6 +301,7 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	// get random idol for the game
 RandomIdolLoop:
 	for true {
+		log().Infoln("idol pool lengh", len(idolPool))
 		randomIdol := idolPool[rand.Intn(len(idolPool))]
 
 		// if the random idol found matches one the game has had previous then skip it

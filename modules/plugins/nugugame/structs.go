@@ -23,6 +23,7 @@ type nuguGame struct {
 	GuessChannel     chan *discordgo.Message
 	TimeoutChannel   *time.Timer
 	LastRoundMessage *discordgo.Message
+	Difficulty       string
 
 	// Lives                int // amount of lives the user has left ?
 }
