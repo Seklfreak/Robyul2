@@ -179,7 +179,7 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 	var err error
 	var until time.Time
 	if len(args) >= 3 {
-		until, err = tparse.ParseNow(time.ANSIC, "now+"+args[2])
+		until, err = tparse.AddDuration(time.Now(), args[2])
 		if err != nil {
 			*out = a.newMsg("bot.arguments.invalid")
 			return a.actionFinish
