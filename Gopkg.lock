@@ -396,6 +396,12 @@
   revision = "f75101e39ffed7ec9596d6929a8d85bb86223339"
 
 [[projects]]
+  name = "github.com/karrick/tparse"
+  packages = ["."]
+  revision = "b24fe6eb26fe017920b4a500118e7c473d1e37ee"
+  version = "v2.6.0"
+
+[[projects]]
   name = "github.com/kelseyhightower/envconfig"
   packages = ["."]
   revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
@@ -825,6 +831,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c1bb0da452e25ff20aba9254ef41c11bbba9b3b8a2238033260858c62f231a12"
+  inputs-digest = "e2af31e24f7820c16e64f1f20950d05da2c5821b3a6117c88f52407169ec6fc2"
   solver-name = "gps-cdcl"
   solver-version = 1

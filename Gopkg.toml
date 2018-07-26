@@ -197,3 +197,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/lucazulian/cryptocomparego"
+
+[[constraint]]
+  name = "github.com/karrick/tparse"
+  version = "2.6.0"

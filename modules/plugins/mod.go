@@ -2654,7 +2654,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				}
 
 				err := helpers.ElasticAddJoin(member, usedInvite.Code, usedVanityInvite)
-				helpers.Relax(err)
+				helpers.RelaxLog(err)
 			}()
 		}()
 		go func() {
