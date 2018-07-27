@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -50,6 +51,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	isMulti := false
 	gameType := "idol"
 	gameDifficulty := "all"
+	lives := 5
 
 	// validate game arguments
 	if len(commandArgs) > 0 {
@@ -73,6 +75,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 
 			if _, ok := idolsByDifficulty[arg]; ok {
 				gameDifficulty = arg
+				lives = difficultyLives[arg]
 				continue
 			}
 
@@ -99,10 +102,12 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 		IsMultigame:     isMulti,
 		GameType:        gameType,
 		Difficulty:      gameDifficulty,
+		LivesRemaining:  lives,
 	}
 	game.GameImageIndex = make(map[string]int)
 	game.GuessChannel = make(chan *discordgo.Message)
 	game.TimeoutChannel = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+	game.UsersCorrectGuesses = make(map[string][]string)
 
 	spew.Dump(game)
 
@@ -123,7 +128,7 @@ func (g *nuguGame) sendRound() {
 	}
 
 	// delete last round message if there was one
-	if g.LastRoundMessage != nil {
+	if g.LastRoundMessage != nil && len(g.CorrectIdols) != 0 && g.CorrectIdols[len(g.CorrectIdols)-1].ID == g.CurrentIdol.ID {
 		go helpers.DeleteMessageWithDelay(g.LastRoundMessage, NUGUGAME_ROUND_DELETE_DELAY)
 	}
 
@@ -138,9 +143,9 @@ func (g *nuguGame) sendRound() {
 		roundMessage = "What is the idols group name?"
 	}
 	if !g.IsMultigame {
-		roundMessage = fmt.Sprintf("**@%s**\nCurrent Score: %d\n%s", g.User.Username, len(g.CorrectIdols), roundMessage)
+		roundMessage = fmt.Sprintf("**@%s**\nCurrent Score: %d\nLives Remaining: %d\n%s", g.User.Username, len(g.CorrectIdols), g.LivesRemaining, roundMessage)
 	} else {
-		roundMessage = fmt.Sprintf("**Multi Game**\nCurrent Score: %d\n%s", len(g.CorrectIdols), roundMessage)
+		roundMessage = fmt.Sprintf("**Multi Game**\nCurrent Score: %d\nLives Remaining: %d\n%s", len(g.CorrectIdols), g.LivesRemaining, roundMessage)
 	}
 
 	// send round message
@@ -155,6 +160,12 @@ func (g *nuguGame) sendRound() {
 	// update game state
 	g.WaitingForGuess = true
 	g.LastRoundMessage = fileSendMessage[0]
+
+	// clear timeout channel and reset timer
+	if !g.TimeoutChannel.Stop() {
+		<-g.TimeoutChannel.C
+	}
+	g.TimeoutChannel.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 }
 
 // waitforguess will watch the users messages in the channel for correct guess
@@ -166,6 +177,7 @@ func (g *nuguGame) watchForGuesses() {
 
 		// watch for user input
 		for {
+			log().Infoln("loop")
 
 			select {
 			case userMsg := <-g.GuessChannel:
@@ -198,19 +210,16 @@ func (g *nuguGame) watchForGuesses() {
 
 						if g.IsMultigame {
 
+							// if g.CurrentIdol.GroupName
 							cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+
+							g.UsersCorrectGuesses[userMsg.Author.ID] = append(g.UsersCorrectGuesses[userMsg.Author.ID], g.CurrentIdol.ID.Hex())
 						} else {
 							go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
 						}
 
 						g.CorrectIdols = append(g.CorrectIdols, g.CurrentIdol)
 						g.sendRound()
-
-						// clear timeout channel and reset timer
-						if !g.TimeoutChannel.Stop() {
-							<-g.TimeoutChannel.C
-						}
-						g.TimeoutChannel.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 						break
 					}
 				}
@@ -218,12 +227,76 @@ func (g *nuguGame) watchForGuesses() {
 				// do nothing if the user message doesn't match, they could just be talking...
 
 			case <-g.TimeoutChannel.C:
-				helpers.SendMessage(g.ChannelID, fmt.Sprintf("Game Over. The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
-				g.deleteGame()
-				return
+				g.WaitingForGuess = false
+
+				// check if they have lives remaining for the game
+				if g.LivesRemaining > 1 {
+					/*msgs, err := */ helpers.SendMessage(g.ChannelID, fmt.Sprintf("The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
+					// helpers.Relax(err)
+					// go helpers.DeleteMessageWithDelay(msgs[0], NUGUGAME_ROUND_DELETE_DELAY)
+
+					g.LivesRemaining--
+					g.IncorrectIdols = append(g.IncorrectIdols, g.CurrentIdol)
+					g.TimeoutChannel.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+					g.sendRound()
+
+					break
+				} else {
+					g.finishGame()
+					return
+				}
 			}
 		}
 	}()
+}
+
+// finishGame will send the final message and delete the game
+func (g *nuguGame) finishGame() {
+	g.deleteGame()
+	spew.Dump(g.UsersCorrectGuesses)
+
+	var finalMessage string
+	if !g.IsMultigame {
+		finalMessage = fmt.Sprintf("**@%s** Game Over!\nThe idol was: %s %s\nFinal Score: %d", g.User.Username, g.CurrentIdol.GroupName, g.CurrentIdol.Name, len(g.CorrectIdols))
+
+	} else {
+		finalMessage = fmt.Sprintf("**Multi Game** Game Over!\nThe idol was: %s %s\nFinal Score: %d\n__**User Scores**__", g.CurrentIdol.GroupName, g.CurrentIdol.Name, len(g.CorrectIdols))
+
+		// get all scores in array so they can be sorted
+		var userScores []int
+		for _, idolIds := range g.UsersCorrectGuesses {
+			userScores = append(userScores, len(idolIds))
+		}
+		sort.Sort(sort.Reverse(sort.IntSlice(userScores)))
+
+		// loop through user scores highest to lowest and append them to final message
+		for _, userScore := range userScores {
+
+			for userId, idolIds := range g.UsersCorrectGuesses {
+
+				if len(idolIds) == userScore {
+
+					// get user name
+					user, err := helpers.GetUser(userId)
+					var userName string
+					if err != nil || user == nil {
+						userName = "*Unknown*"
+					} else {
+						userName = user.Username
+					}
+
+					finalMessage += fmt.Sprintf("\n%s: %d", userName, userScore)
+
+					// remove user so they don't get printed twice if their score matches someone else
+					delete(g.UsersCorrectGuesses, userId)
+					continue
+				}
+			}
+		}
+
+	}
+
+	helpers.SendMessage(g.ChannelID, finalMessage)
 }
 
 // saveGame saves the nugu game to the current running games
@@ -301,11 +374,10 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	// get random idol for the game
 RandomIdolLoop:
 	for true {
-		log().Infoln("idol pool lengh", len(idolPool))
 		randomIdol := idolPool[rand.Intn(len(idolPool))]
 
 		// if the random idol found matches one the game has had previous then skip it
-		for _, previousGuesses := range g.CorrectIdols {
+		for _, previousGuesses := range append(g.CorrectIdols, g.IncorrectIdols...) {
 			if previousGuesses.NameAndGroup == randomIdol.NameAndGroup {
 				continue RandomIdolLoop
 			}

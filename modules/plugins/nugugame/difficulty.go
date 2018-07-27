@@ -87,10 +87,13 @@ func refreshDifficulties() {
 		return
 	}
 
-	// loop through the results and compile a map of [biasgroup Name]number of occurences
+	// loop through the results and compile a map of [game winner]number of occurences
 	winCounts := make(map[string]int)
 	for _, game := range games {
-		winCounts[game.GameWinner.Hex()] += 1
+		idol := idols.GetMatchingIdolById(game.GameWinner)
+		if idol.Deleted == false && len(idol.Images) != 0 {
+			winCounts[game.GameWinner.Hex()] += 1
+		}
 	}
 
 	// convert data to map[num of occurences]delimited idols
