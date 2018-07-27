@@ -443,13 +443,27 @@ func main() {
 	<-BotRuntimeChannel
 
 	log.WithField("module", "launcher").Info("Robyul is stopping")
-	log.WithField("module", "launcher").Info("Uninitializing plugins...")
-	BotDestroy()
-	log.WithField("module", "launcher").Info("Disconnecting bot discord session...")
-	discord.Close()
-	log.WithField("module", "launcher").Info("Disconnecting friend discord sessions...")
-	for _, friendSession := range cache.GetFriends() {
-		friendSession.Close()
+
+	// shutdown everything
+	finished := make(chan bool, 1)
+	go func() {
+		log.WithField("module", "launcher").Info("Uninitializing plugins...")
+		BotDestroy()
+		log.WithField("module", "launcher").Info("Disconnecting bot discord session...")
+		discord.Close()
+		log.WithField("module", "launcher").Info("Disconnecting friend discord sessions...")
+		for _, friendSession := range cache.GetFriends() {
+			friendSession.Close()
+		}
+		finished <- true
+	}()
+
+	// wait 60 second for everything to finish, or shut it down anyway
+	select {
+	case <-finished:
+		log.WithField("module", "launcher").Infoln("shutdown successful")
+	case <-time.After(60 * time.Second):
+		log.WithField("module", "launcher").Infoln("forcing shutdown after 60 seconds")
 	}
 }
 
