@@ -135,8 +135,20 @@ func (g *nuguGame) sendRound() {
 	// get a random idol to send round for
 	g.CurrentIdol = g.getNewRandomIdol()
 
+	// if current idol is nil assume we're out of usable idols and end hte game
+	if g.CurrentIdol == nil {
+
+		// trigger timeout channel to finish game
+		if !g.TimeoutChannel.Stop() {
+			<-g.TimeoutChannel.C
+		}
+		g.TimeoutChannel.Reset(time.Nanosecond)
+		return
+	}
+
 	// get an image for the current idol and resize it
 	idolImage := g.CurrentIdol.GetResizedRandomImage(NUGUGAME_IMAGE_RESIZE_HEIGHT)
+	idolImage = giveImageShadowBorder(idolImage, 20, 20)
 
 	roundMessage := "What is the idols name?"
 	if g.GameType == "group" {
@@ -230,7 +242,7 @@ func (g *nuguGame) watchForGuesses() {
 				g.WaitingForGuess = false
 
 				// check if they have lives remaining for the game
-				if g.LivesRemaining > 1 {
+				if g.LivesRemaining > 1 && g.CurrentIdol != nil {
 					/*msgs, err := */ helpers.SendMessage(g.ChannelID, fmt.Sprintf("The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
 					// helpers.Relax(err)
 					// go helpers.DeleteMessageWithDelay(msgs[0], NUGUGAME_ROUND_DELETE_DELAY)
@@ -242,6 +254,7 @@ func (g *nuguGame) watchForGuesses() {
 
 					break
 				} else {
+					log().Infoln("done.")
 					g.finishGame()
 					return
 				}
@@ -253,14 +266,19 @@ func (g *nuguGame) watchForGuesses() {
 // finishGame will send the final message and delete the game
 func (g *nuguGame) finishGame() {
 	g.deleteGame()
-	spew.Dump(g.UsersCorrectGuesses)
+
+	// if there is a current idol set, the user missed it and should be printed out what the idol was
+	missedIdolMessage := "\nAll idols for this difficulty have been used."
+	if g.CurrentIdol != nil {
+		missedIdolMessage = fmt.Sprintf("\nThe idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name)
+	}
 
 	var finalMessage string
 	if !g.IsMultigame {
-		finalMessage = fmt.Sprintf("**@%s** Game Over!\nThe idol was: %s %s\nFinal Score: %d", g.User.Username, g.CurrentIdol.GroupName, g.CurrentIdol.Name, len(g.CorrectIdols))
+		finalMessage = fmt.Sprintf("**@%s** Game Over!%s\nFinal Score: %d", g.User.Username, missedIdolMessage, len(g.CorrectIdols))
 
 	} else {
-		finalMessage = fmt.Sprintf("**Multi Game** Game Over!\nThe idol was: %s %s\nFinal Score: %d\n__**User Scores**__", g.CurrentIdol.GroupName, g.CurrentIdol.Name, len(g.CorrectIdols))
+		finalMessage = fmt.Sprintf("**Multi Game** Game Over!%s\nFinal Score: %d\n__User Scores__", missedIdolMessage, len(g.CorrectIdols))
 
 		// get all scores in array so they can be sorted
 		var userScores []int
@@ -369,6 +387,13 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 				}
 			}
 		}
+	}
+
+	idolPool = idolPool[:5]
+
+	// if there are no more unused idols, end the game
+	if len(idolPool) == len(g.CorrectIdols) {
+		return nil
 	}
 
 	// get random idol for the game
