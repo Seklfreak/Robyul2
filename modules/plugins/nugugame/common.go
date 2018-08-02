@@ -3,13 +3,20 @@ package nugugame
 import (
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/draw"
+	"os"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
+	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis"
+	"github.com/nfnt/resize"
 	"github.com/sirupsen/logrus"
 )
+
+var shadowBorder image.Image
 
 // log is just a small helper function for logging in this module
 func log() *logrus.Entry {
@@ -59,4 +66,44 @@ func checkPermissionError(err error, channelID string) bool {
 		}
 	}
 	return false
+}
+
+// giveImageShadowBorder give the round image a shadow border
+func giveImageShadowBorder(img image.Image, offsetX int, offsetY int) image.Image {
+	rgba := image.NewRGBA(shadowBorder.Bounds())
+	draw.Draw(rgba, shadowBorder.Bounds(), shadowBorder, image.Point{0, 0}, draw.Src)
+	draw.Draw(rgba, img.Bounds().Add(image.Pt(offsetX, offsetY)), img, image.ZP, draw.Over)
+	return rgba.SubImage(rgba.Rect)
+}
+
+// loadMiscImages handles loading other images besides the idol images
+func loadMiscImages() {
+
+	validMiscImages := []string{
+		"shadow-border.png",
+	}
+
+	miscImagesFolderPath := helpers.GetConfig().Path("assets_folder").Data().(string) + "biasgame/misc/"
+
+	// load misc images
+	for _, fileName := range validMiscImages {
+
+		// check if file exists
+		filePath := miscImagesFolderPath + fileName
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			helpers.Relax(err)
+		}
+
+		// open file and decode it
+		file, err := os.Open(filePath)
+		helpers.Relax(err)
+		img, _, err := image.Decode(file)
+		helpers.Relax(err)
+
+		// resize misc images as needed
+		switch fileName {
+		case "shadow-border.png":
+			shadowBorder = resize.Resize(0, NUGUGAME_IMAGE_RESIZE_HEIGHT+40, img, resize.Lanczos3)
+		}
+	}
 }

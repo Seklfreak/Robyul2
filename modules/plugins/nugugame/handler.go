@@ -36,6 +36,9 @@ func (m *Module) Init(session *discordgo.Session) {
 		currentNuguGames = make(map[string][]*nuguGame)
 
 		startDifficultyCacheLoop()
+
+		// load all images and information
+		loadMiscImages()
 	}()
 }
 
