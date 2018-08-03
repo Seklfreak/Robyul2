@@ -26,9 +26,9 @@ var difficultyPercentageMap = map[string]float32{
 }
 var difficultyLives = map[string]int{
 	"easy":   3,
-	"medium": 5,
-	"hard":   7,
-	"all":    10,
+	"medium": 3,
+	"hard":   5,
+	"all":    5,
 }
 var idolsByDifficultyMutex sync.RWMutex
 var idolsByDifficulty = map[string][]string{
