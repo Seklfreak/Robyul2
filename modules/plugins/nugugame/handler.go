@@ -51,6 +51,7 @@ func (m *Module) Uninit(session *discordgo.Session) {
 func (m *Module) Commands() []string {
 	return []string{
 		"nugugame",
+		"ng",
 	}
 }
 
@@ -63,14 +64,19 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 	// process text after the initial command
 	commandArgs := strings.Fields(content)
 
-	if command == "nugugame" {
+	if command == "nugugame" || command == "ng" {
 		if len(commandArgs) > 0 {
 
 			switch commandArgs[0] {
 			case "list":
-				listIdolsByDifficulty(msg, commandArgs)
+
+				helpers.RequireRobyulMod(msg, func() {
+					listIdolsByDifficulty(msg, commandArgs)
+				})
 			case "refresh-nugugame":
-				manualRefreshDifficulties(msg)
+				helpers.RequireRobyulMod(msg, func() {
+					manualRefreshDifficulties(msg)
+				})
 			default:
 				startNuguGame(msg, commandArgs)
 			}
