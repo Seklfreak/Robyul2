@@ -40,8 +40,13 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 
 	// if the user already has a game, do nothing
 	if game := getNuguGameByUserID(msg.Author.ID); game != nil {
-		// todo: maybe send a message here letting the user know they have a game going?
-		log().Warnln("nugu game found for user...")
+		helpers.SendMessage(msg.ChannelID, "You already have a current nugu game running, you must finish it before starting a new one.")
+		return
+	}
+
+	// if the user already has a game, do nothing
+	if game := getNuguGamesByChannelID(msg.ChannelID); game != nil {
+		helpers.SendMessage(msg.ChannelID, "Only one running nugu game is allowed per channel.")
 		return
 	}
 
