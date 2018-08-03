@@ -104,10 +104,9 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 		Difficulty:      gameDifficulty,
 		LivesRemaining:  lives,
 	}
-	game.GameImageIndex = make(map[string]int)
 	game.GuessChannel = make(chan *discordgo.Message)
 	game.TimeoutChannel = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
-	game.UsersCorrectGuesses = make(map[string][]string)
+	game.UsersCorrectGuesses = make(map[string][]bson.ObjectId)
 
 	spew.Dump(game)
 
@@ -222,10 +221,9 @@ func (g *nuguGame) watchForGuesses() {
 
 						if g.IsMultigame {
 
-							// if g.CurrentIdol.GroupName
 							cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+							g.UsersCorrectGuesses[userMsg.Author.ID] = append(g.UsersCorrectGuesses[userMsg.Author.ID], currentIdol.ID)
 
-							g.UsersCorrectGuesses[userMsg.Author.ID] = append(g.UsersCorrectGuesses[userMsg.Author.ID], g.CurrentIdol.ID.Hex())
 						} else {
 							go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
 						}
@@ -265,6 +263,7 @@ func (g *nuguGame) watchForGuesses() {
 
 // finishGame will send the final message and delete the game
 func (g *nuguGame) finishGame() {
+	go recordNuguGame(g)
 	g.deleteGame()
 
 	// if there is a current idol set, the user missed it and should be printed out what the idol was
