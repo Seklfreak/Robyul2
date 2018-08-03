@@ -194,23 +194,29 @@ func (g *nuguGame) watchForGuesses() {
 			case userMsg := <-g.GuessChannel:
 				log().Infoln("User Message: ", userMsg)
 
+				// to help with async actions happening. g.currentIdol could be set to nil
+				currentIdol := g.CurrentIdol
+				if currentIdol == nil {
+					continue
+				}
+
 				// if guess is correct add green check mark too it, save the correct guess, and send next round
 				userGuess := strings.ToLower(alphaNumericRegex.ReplaceAllString(userMsg.Content, ""))
 
 				var correctAnswers []string
 				if g.GameType == "group" {
-					correctAnswers = []string{g.CurrentIdol.GroupName}
+					correctAnswers = []string{currentIdol.GroupName}
 
 					// add aliases as acceptable answers
-					if hasAliases, aliases := idols.GetAlisesForGroup(g.CurrentIdol.GroupName); hasAliases {
+					if hasAliases, aliases := idols.GetAlisesForGroup(currentIdol.GroupName); hasAliases {
 						correctAnswers = append(correctAnswers, aliases...)
 					}
 				} else {
-					correctAnswers = []string{g.CurrentIdol.Name}
-					correctAnswers = append(correctAnswers, g.CurrentIdol.NameAliases...)
+					correctAnswers = []string{currentIdol.Name}
+					correctAnswers = append(correctAnswers, currentIdol.NameAliases...)
 				}
 
-				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, g.CurrentIdol.Name, correctAnswers)
+				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, currentIdol.Name, correctAnswers)
 
 				// check if the user guess contains the idols name
 				for _, correctAnswer := range correctAnswers {
@@ -228,7 +234,7 @@ func (g *nuguGame) watchForGuesses() {
 							go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
 						}
 
-						g.CorrectIdols = append(g.CorrectIdols, g.CurrentIdol)
+						g.CorrectIdols = append(g.CorrectIdols, currentIdol)
 						g.sendRound()
 						break
 					}
