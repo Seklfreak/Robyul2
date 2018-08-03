@@ -344,55 +344,32 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	var idol *idols.Idol
 	var idolPool []*idols.Idol
 
-	if true || !helpers.DEBUG_MODE {
+	idolIds := getNugugameIdolsByDifficulty(g.Difficulty)
+	if len(idolIds) > 0 {
+		for _, idolID := range idolIds {
+			idolForGame := idols.GetMatchingIdolById(bson.ObjectIdHex(idolID))
 
-		idolIds := getNugugameIdolsByDifficulty(g.Difficulty)
-		if len(idolIds) > 0 {
-			for _, idolID := range idolIds {
-				idolForGame := idols.GetMatchingIdolById(bson.ObjectIdHex(idolID))
-
-				if idolForGame != nil && idolForGame.Deleted == false {
-					idolPool = append(idolPool, idolForGame)
-				}
+			if idolForGame != nil && idolForGame.Deleted == false {
+				idolPool = append(idolPool, idolForGame)
 			}
-		} else {
-			idolPool = idols.GetActiveIdols()
 		}
-
-		// if this isn't a mixed game then filter all choices by the gender
-		if g.Gender != "mixed" {
-			var tempIdolPool []*idols.Idol
-			for _, bias := range idolPool {
-				if bias.Gender == g.Gender {
-					tempIdolPool = append(tempIdolPool, bias)
-				}
-			}
-			idolPool = tempIdolPool
-		}
-
 	} else {
-		testGroups := []string{
-			"Pristin",
-			"CLC",
-			"TWICE",
-			"Apink",
-			"BLΛƆKPIИK",
-			"Red Velvet",
-		}
-
-		for _, bias := range idols.GetActiveIdols() {
-			for _, group := range testGroups {
-				if bias.GroupName == group {
-					idolPool = append(idolPool, bias)
-				}
-			}
-		}
+		idolPool = idols.GetActiveIdols()
 	}
 
-	idolPool = idolPool[:5]
+	// if this isn't a mixed game then filter all choices by the gender
+	if g.Gender != "mixed" {
+		var tempIdolPool []*idols.Idol
+		for _, bias := range idolPool {
+			if bias.Gender == g.Gender {
+				tempIdolPool = append(tempIdolPool, bias)
+			}
+		}
+		idolPool = tempIdolPool
+	}
 
 	// if there are no more unused idols, end the game
-	if len(idolPool) == len(g.CorrectIdols) {
+	if len(idolPool) == len(append(g.CorrectIdols, g.IncorrectIdols...)) {
 		return nil
 	}
 
