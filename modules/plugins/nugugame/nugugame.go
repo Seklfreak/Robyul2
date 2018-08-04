@@ -288,36 +288,40 @@ func (g *nuguGame) finishGame() {
 		finalMessage = fmt.Sprintf("**@%s** Game Over!%s\nFinal Score: %d", g.User.Username, missedIdolMessage, len(g.CorrectIdols))
 
 	} else {
-		finalMessage = fmt.Sprintf("**Multi Game** Game Over!%s\nFinal Score: %d\n__User Scores__", missedIdolMessage, len(g.CorrectIdols))
+		finalMessage = fmt.Sprintf("**Multi Game** Game Over!%s\nFinal Score: %d", missedIdolMessage, len(g.CorrectIdols))
 
-		// get all scores in array so they can be sorted
-		var userScores []int
-		for _, idolIds := range g.UsersCorrectGuesses {
-			userScores = append(userScores, len(idolIds))
-		}
-		sort.Sort(sort.Reverse(sort.IntSlice(userScores)))
+		if len(g.UsersCorrectGuesses) > 0 {
+			finalMessage += "\n__User Scores__"
 
-		// loop through user scores highest to lowest and append them to final message
-		for _, userScore := range userScores {
+			// get all scores in array so they can be sorted
+			var userScores []int
+			for _, idolIds := range g.UsersCorrectGuesses {
+				userScores = append(userScores, len(idolIds))
+			}
+			sort.Sort(sort.Reverse(sort.IntSlice(userScores)))
 
-			for userId, idolIds := range g.UsersCorrectGuesses {
+			// loop through user scores highest to lowest and append them to final message
+			for _, userScore := range userScores {
 
-				if len(idolIds) == userScore {
+				for userId, idolIds := range g.UsersCorrectGuesses {
 
-					// get user name
-					user, err := helpers.GetUser(userId)
-					var userName string
-					if err != nil || user == nil {
-						userName = "*Unknown*"
-					} else {
-						userName = user.Username
+					if len(idolIds) == userScore {
+
+						// get user name
+						user, err := helpers.GetUser(userId)
+						var userName string
+						if err != nil || user == nil {
+							userName = "*Unknown*"
+						} else {
+							userName = user.Username
+						}
+
+						finalMessage += fmt.Sprintf("\n%s: %d", userName, userScore)
+
+						// remove user so they don't get printed twice if their score matches someone else
+						delete(g.UsersCorrectGuesses, userId)
+						continue
 					}
-
-					finalMessage += fmt.Sprintf("\n%s: %d", userName, userScore)
-
-					// remove user so they don't get printed twice if their score matches someone else
-					delete(g.UsersCorrectGuesses, userId)
-					continue
 				}
 			}
 		}
