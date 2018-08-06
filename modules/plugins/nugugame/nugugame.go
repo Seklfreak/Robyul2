@@ -262,6 +262,11 @@ func (g *nuguGame) watchForGuesses() {
 
 					break
 				} else {
+
+					if g.CurrentIdol != nil {
+						g.IncorrectIdols = append(g.IncorrectIdols, g.CurrentIdol)
+					}
+
 					log().Infoln("done.")
 					g.finishGame()
 					return
