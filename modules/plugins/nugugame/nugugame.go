@@ -51,8 +51,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	// todo set this back to mixed
-	// gameGender := "mixed"
-	gameGender := "girl"
+	gameGender := "mixed"
 	isMulti := false
 	gameType := "idol"
 	gameDifficulty := "all"
