@@ -14,7 +14,7 @@ type NuguGameEntry struct {
 	IncorrectIdols      []bson.ObjectId
 	Gender              string // girl, boy, mixed
 	GameType            string // idol, group
-	IsMultigame         bool   // if true all messages in the channel will be account for
+	IsMultigame         bool
 	Difficulty          string
 	UsersCorrectGuesses map[string][]bson.ObjectId // userid => []ids of idols they got right.  used in multi only
 }

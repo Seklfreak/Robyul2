@@ -77,6 +77,9 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 				helpers.RequireRobyulMod(msg, func() {
 					manualRefreshDifficulties(msg)
 				})
+			case "stats":
+				displayNuguGameStats(msg, commandArgs)
+
 			default:
 				startNuguGame(msg, commandArgs)
 			}
