@@ -343,14 +343,7 @@ func (g *nuguGame) saveGame() {
 func (g *nuguGame) deleteGame() {
 	currentNuguGamesMutex.Lock()
 	defer currentNuguGamesMutex.Unlock()
-
-	for _, games := range currentNuguGames {
-		for i, game := range games {
-			if game.UUID == g.UUID {
-				currentNuguGames[game.ChannelID] = append(currentNuguGames[game.ChannelID][:i], currentNuguGames[game.ChannelID][i+1:]...)
-			}
-		}
-	}
+	delete(currentNuguGames, g.ChannelID)
 }
 
 // getNewRandomIdol will get a random idol for the game, respecting game options and not duplicating previous idols
