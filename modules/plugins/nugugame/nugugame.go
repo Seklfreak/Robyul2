@@ -304,12 +304,15 @@ func (g *nuguGame) finishGame() {
 			}
 			sort.Sort(sort.Reverse(sort.IntSlice(userScores)))
 
+			// used to make sure the user isn't printed twice if their score matches another
+			usedUserIds := make(map[string]bool)
+
 			// loop through user scores highest to lowest and append them to final message
 			for _, userScore := range userScores {
 
 				for userId, idolIds := range g.UsersCorrectGuesses {
 
-					if len(idolIds) == userScore {
+					if len(idolIds) == userScore && !usedUserIds[userId] {
 
 						// get user name
 						user, err := helpers.GetUser(userId)
@@ -323,7 +326,7 @@ func (g *nuguGame) finishGame() {
 						finalMessage += fmt.Sprintf("\n%s: %d", userName, userScore)
 
 						// remove user so they don't get printed twice if their score matches someone else
-						delete(g.UsersCorrectGuesses, userId)
+						usedUserIds[userId] = true
 						continue
 					}
 				}
