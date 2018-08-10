@@ -74,6 +74,9 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 			case "skip":
 				skipNuguGame(msg, commandArgs)
 
+			case "missed":
+				displayMissedIdols(msg, commandArgs)
+
 			case "list":
 
 				helpers.RequireRobyulMod(msg, func() {

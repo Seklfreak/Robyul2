@@ -315,3 +315,173 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	helpers.SendEmbed(msg.ChannelID, embed)
 }
+
+// displayMissedIdols will display the most
+func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
+	// strip out "missed" arg
+	commandArgs = commandArgs[1:]
+
+	targetUser := msg.Author
+
+	// default
+	query := bson.M{"ismultigame": false, "userid": targetUser.ID}
+	isServerQuery := false
+	isGlobalQuery := false
+	var targetGuild *discordgo.Guild
+
+	// check arguments
+	var err error
+	if len(commandArgs) > 0 {
+		for _, arg := range commandArgs {
+
+			if user, err := helpers.GetUserFromMention(arg); err == nil {
+				if _, ok := query["userid"]; ok {
+					targetUser = user
+					query["userid"] = user.ID
+				}
+				continue
+			}
+
+			// check if running stats by server, default to the server of the message
+			if arg == "server" {
+				targetGuild, err = helpers.GetGuild(msg.GuildID)
+				query = bson.M{"guildid": msg.GuildID}
+				isServerQuery = true
+				continue
+			}
+
+			// If stats are for a server, check if they also a serverid so we can run for other servers
+			if isServerQuery {
+				if targetGuild, err = helpers.GetGuild(commandArgs[len(commandArgs)-1]); err == nil {
+					query = bson.M{"guildid": targetGuild.ID}
+					continue
+				}
+			}
+
+			// check if running stats globally, overrides server if both are included for some reason
+			if arg == "global" {
+				targetGuild = nil
+				query = bson.M{}
+
+				isServerQuery = false
+				isGlobalQuery = true
+				continue
+			}
+
+			// if a arg was passed that didn't match any check, send invalid args message
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			return
+		}
+	}
+
+	var games []models.NuguGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query)).All(&games)
+
+	mostMissedIdols := make(map[*idols.Idol]int)
+
+	// compile stats
+	for _, game := range games {
+
+		// get missed idols and groups
+		for _, idolId := range game.IncorrectIdols {
+			idol := idols.GetMatchingIdolById(idolId)
+
+			if idol != nil {
+				mostMissedIdols[idol] += 1
+			}
+		}
+	}
+
+	// ckeck if no idols have been missed
+	if len(mostMissedIdols) == 0 {
+		helpers.SendMessage(msg.ChannelID, "No missed idols found")
+		return
+	}
+
+	// use map of counts to compile a new map of [unique occurence amounts][]idols
+	var uniqueCounts []int
+	compiledData := make(map[int][]string)
+	for k, v := range mostMissedIdols {
+		// store unique counts so the map can be "sorted"
+		if _, ok := compiledData[v]; !ok {
+			uniqueCounts = append(uniqueCounts, v)
+		}
+
+		compiledData[v] = append(compiledData[v], fmt.Sprintf("**%s** %s", k.GroupName, k.Name))
+	}
+
+	// sort biggest to smallest
+	sort.Sort(sort.Reverse(sort.IntSlice(uniqueCounts)))
+
+	// get embed title and icon
+	var embedTitle string
+	var embedIcon string
+	if isGlobalQuery {
+		embedTitle = "Global - Most Missed Idols"
+		embedIcon = cache.GetSession().State.User.AvatarURL("512")
+
+	} else if isServerQuery {
+		embedTitle = "Server - Most Missed Idols"
+		embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+
+	} else {
+		embedTitle = fmt.Sprintf("%s - Most Missed Idols", targetUser.Username)
+		embedIcon = targetUser.AvatarURL("512")
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    embedTitle,
+			IconURL: embedIcon,
+		},
+	}
+
+	countLabel := "Missed Guesses"
+
+	// loop through all the idols by most missed first
+	for _, count := range uniqueCounts {
+
+		// sort idols by group
+		sort.Slice(compiledData[count], func(i, j int) bool {
+			return compiledData[count][i] < compiledData[count][j]
+		})
+
+		joinedNames := strings.Join(compiledData[count], ", ")
+
+		if len(joinedNames) < 1024 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   fmt.Sprintf("%s - %s", countLabel, humanize.Comma(int64(count))),
+				Value:  joinedNames,
+				Inline: false,
+			})
+
+		} else {
+
+			// for a specific count, split into multiple fields of at max 40 names
+			dataForCount := compiledData[count]
+			namesPerField := 40
+			breaker := true
+			for breaker {
+
+				var namesForField string
+				if len(dataForCount) >= namesPerField {
+					namesForField = strings.Join(dataForCount[:namesPerField], ", ")
+					dataForCount = dataForCount[namesPerField:]
+				} else {
+					namesForField = strings.Join(dataForCount, ", ")
+					breaker = false
+				}
+
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   fmt.Sprintf("%s - %s", countLabel, humanize.Comma(int64(count))),
+					Value:  namesForField,
+					Inline: false,
+				})
+
+			}
+		}
+	}
+
+	helpers.SendPagedMessage(msg, embed, 10)
+}
