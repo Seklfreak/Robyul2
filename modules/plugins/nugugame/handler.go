@@ -68,6 +68,12 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 		if len(commandArgs) > 0 {
 
 			switch commandArgs[0] {
+			case "quit", "end", "stop":
+				quitNuguGame(msg, commandArgs)
+
+			case "skip":
+				skipNuguGame(msg, commandArgs)
+
 			case "list":
 
 				helpers.RequireRobyulMod(msg, func() {

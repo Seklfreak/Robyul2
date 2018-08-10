@@ -406,6 +406,50 @@ RandomIdolLoop:
 	return idol
 }
 
+// quitNuguGame allows a user to quit a nugugame early
+func quitNuguGame(msg *discordgo.Message, commandArgs []string) {
+	var game *nuguGame
+
+	// if the user already has a game, do nothing
+	if game = getNuguGameByUserID(msg.Author.ID); game == nil {
+		return
+	}
+
+	if game.IsMultigame == true {
+		helpers.SendMessage(msg.ChannelID, "You may not quit multi games early.")
+		return
+	}
+
+	game.LivesRemaining = 1
+
+	// trigger timeout channel to finish game
+	if !game.TimeoutChannel.Stop() {
+		<-game.TimeoutChannel.C
+	}
+	game.TimeoutChannel.Reset(time.Nanosecond)
+}
+
+// skipNuguGame allows a user to skip a nugugame round
+func skipNuguGame(msg *discordgo.Message, commandArgs []string) {
+	var game *nuguGame
+
+	// if the user already has a game, do nothing
+	if game = getNuguGameByUserID(msg.Author.ID); game == nil {
+		return
+	}
+
+	if game.IsMultigame == true {
+		helpers.SendMessage(msg.ChannelID, "You may not skip multi game rounds.")
+		return
+	}
+
+	// trigger timeout channel to finish game
+	if !game.TimeoutChannel.Stop() {
+		<-game.TimeoutChannel.C
+	}
+	game.TimeoutChannel.Reset(time.Nanosecond)
+}
+
 ///////////////////////
 // UTILITY FUNCTIONS //
 ///////////////////////
