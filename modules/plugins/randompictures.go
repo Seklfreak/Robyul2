@@ -151,7 +151,7 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 							if err == nil {
 								var gPicture *drive.File
 								msgpack.Unmarshal(resultBytes, &gPicture)
-								defer helpers.Recover()
+
 								err = rp.postItem(sourceEntry.GuildID, postToChannelID, "", gPicture, sourceEntry.ID, sourceEntry.PreviousID, strconv.Itoa(chosenPicN))
 								if err != nil {
 									if errG, ok := err.(*googleapi.Error); ok {

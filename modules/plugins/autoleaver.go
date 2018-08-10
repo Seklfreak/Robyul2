@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/karrick/tparse/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -104,6 +105,7 @@ func (a *Autoleaver) removeExpiredGuilds() error {
 		a.logger().Infoln("removed #" + entry.GuildID + " from whitelist because it expired")
 
 		// TODO: leave guild
+		// TODO: DM, after a specified percentage of creation date until deadline date
 	}
 
 	return nil
@@ -173,18 +175,19 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 		}
 	}
 
+	// temporary whitelisting if requested
+	var err error
 	var until time.Time
 	if len(args) >= 3 {
-		duration, err := time.ParseDuration(args[2])
+		until, err = tparse.AddDuration(time.Now(), args[2])
 		if err != nil {
 			*out = a.newMsg("bot.arguments.invalid")
 			return a.actionFinish
 		}
-		until = time.Now().Add(duration)
 	}
 
 	var entryBucket models.AutoleaverWhitelistEntry
-	err := helpers.MdbOne(
+	err = helpers.MdbOne(
 		helpers.MdbCollection(models.AutoleaverWhitelistTable).Find(bson.M{"guildid": guildID}),
 		&entryBucket,
 	)
