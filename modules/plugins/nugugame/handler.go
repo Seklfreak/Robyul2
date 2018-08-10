@@ -86,6 +86,12 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 				helpers.RequireRobyulMod(msg, func() {
 					manualRefreshDifficulties(msg)
 				})
+			case "rankings", "ranking", "ranks", "rank":
+				displayNugugameRanking(msg, commandArgs, false)
+
+			case "server-rankings", "server-ranking", "server-ranks", "server-rank":
+				displayNugugameRanking(msg, commandArgs, true)
+
 			case "stats":
 				displayNuguGameStats(msg, commandArgs)
 

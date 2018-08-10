@@ -11,7 +11,9 @@ type NuguGameEntry struct {
 	UserID              string        // person who start the game
 	GuildID             string
 	CorrectIdols        []bson.ObjectId
+	CorrectIdolsCount   int // allows better performance for simple queries
 	IncorrectIdols      []bson.ObjectId
+	IncorrectIdolsCount int    // allows better performance for simple queries
 	Gender              string // girl, boy, mixed
 	GameType            string // idol, group
 	IsMultigame         bool

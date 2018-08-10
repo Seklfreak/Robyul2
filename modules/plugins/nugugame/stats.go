@@ -2,9 +2,12 @@ package nugugame
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	humanize "github.com/dustin/go-humanize"
 
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 
@@ -62,7 +65,9 @@ func recordNuguGame(g *nuguGame) {
 		UserID:              gameUserId,
 		GuildID:             guild.ID,
 		CorrectIdols:        correctIdolIds,
+		CorrectIdolsCount:   len(correctIdolIds),
 		IncorrectIdols:      incorrectIdolIds,
+		IncorrectIdolsCount: len(incorrectIdolIds),
 		GameType:            game.GameType,
 		Gender:              game.Gender,
 		Difficulty:          game.Difficulty,
@@ -79,9 +84,6 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	commandArgs = commandArgs[1:]
 
 	targetUser := msg.Author
-	if user, err := helpers.GetUserFromMention(msg.Content); err == nil {
-		targetUser = user
-	}
 
 	// default
 	query := bson.M{"ismultigame": false, "userid": targetUser.ID}
@@ -93,6 +95,14 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	var err error
 	if len(commandArgs) > 0 {
 		for _, arg := range commandArgs {
+
+			if user, err := helpers.GetUserFromMention(arg); err == nil {
+				if _, ok := query["userid"]; ok {
+					query["userid"] = user.ID
+					targetUser = user
+				}
+				continue
+			}
 
 			// check if running stats by server, default to the server of the message
 			if arg == "server" {
@@ -145,10 +155,15 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	mostMissedIdols := make(map[*idols.Idol]int)
 	mostMissedGroups := make(map[string]int)
+	var totalCorrectCount int
+	var totalIncorrectCount int
 
 	// compile stats
 	for _, game := range games {
-		gameScore := len(game.CorrectIdols)
+		gameScore := game.CorrectIdolsCount
+
+		totalCorrectCount += game.CorrectIdolsCount
+		totalIncorrectCount += game.IncorrectIdolsCount
 
 		// overall highest score
 		curHighestEverything, _ := strconv.Atoi(highestScores["overall"])
@@ -193,6 +208,14 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
+	var correctGuessPercentage float64
+	totalGuesses := totalCorrectCount + totalIncorrectCount
+	if totalGuesses > 0 {
+		correctGuessPercentage = (float64(totalCorrectCount) / float64(totalGuesses)) * 100
+	} else {
+		correctGuessPercentage = 0
+	}
+
 	// get idol they get wrong the most
 	mostMissedIdol := "*No Stats*"
 	mostMissedGroup := "*No Stats*"
@@ -210,6 +233,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
+	// get embed title and icon
 	var embedTitle string
 	var embedIcon string
 	if isGlobalQuery {
@@ -250,6 +274,11 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			{
 				Name:   "Most Missed Group",
 				Value:  mostMissedGroup,
+				Inline: true,
+			},
+			{
+				Name:   "Correct Guess %",
+				Value:  strconv.FormatFloat(correctGuessPercentage, 'f', 2, 64) + "%",
 				Inline: true,
 			},
 			{
@@ -314,6 +343,148 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	helpers.SendEmbed(msg.ChannelID, embed)
+}
+
+// displayNugugameRanking sends embed of nugu game rankings
+func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServerRanking bool) {
+	// strip out "ranking" arg
+	commandArgs = commandArgs[1:]
+
+	// default query
+	query := bson.M{"ismultigame": false, "gametype": "idol"}
+
+	var targetGuild *discordgo.Guild
+	var isServerQuery bool
+	var err error
+
+	embedIcon := cache.GetSession().State.User.AvatarURL("512")
+	embedTitle := "Nugu Game User Rankings"
+	if isServerRanking {
+		embedTitle = "Nugu Game Server Rankings"
+	}
+
+	// check arguments
+	if len(commandArgs) > 0 {
+		for _, arg := range commandArgs {
+
+			// check if running stats by server, default to the server of the message
+			if arg == "server" && !isServerRanking {
+				targetGuild, err = helpers.GetGuild(msg.GuildID)
+				query["guildid"] = msg.GuildID
+				embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+				isServerQuery = true
+				continue
+			}
+
+			// If stats are for a server, check if they also a serverid so we can run for other servers
+			if isServerQuery && !isServerRanking {
+				if targetGuild, err = helpers.GetGuild(commandArgs[len(commandArgs)-1]); err == nil {
+					query["guildid"] = targetGuild.ID
+					embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+					continue
+				}
+			}
+
+			// check difficulty
+			if _, ok := difficultyLives[arg]; ok {
+				query["difficulty"] = arg
+				continue
+			}
+
+			// if a arg was passed that didn't match any check, send invalid args message
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			return
+		}
+	}
+
+	// run query and check games were returend
+	var games []models.NuguGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query)).All(&games)
+	if len(games) == 0 {
+		helpers.SendMessage(msg.ChannelID, "No rankings found")
+		return
+	}
+
+	// sort games by score
+	sort.Slice(games, func(i, j int) bool {
+		return games[i].CorrectIdolsCount > games[j].CorrectIdolsCount
+	})
+
+	// get top 50 unique users or servers
+	highestScoreGamesMap := make(map[string]models.NuguGameEntry)
+	var highestScoreGames []models.NuguGameEntry
+	for _, game := range games {
+		if isServerRanking {
+
+			if _, ok := highestScoreGamesMap[game.GuildID]; !ok {
+				highestScoreGamesMap[game.GuildID] = game
+				highestScoreGames = append(highestScoreGames, game)
+			}
+		} else {
+
+			if _, ok := highestScoreGamesMap[game.UserID]; !ok {
+				highestScoreGamesMap[game.UserID] = game
+				highestScoreGames = append(highestScoreGames, game)
+			}
+		}
+		if len(highestScoreGamesMap) >= 50 {
+			break
+		}
+	}
+
+	// create embed
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    embedTitle,
+			IconURL: embedIcon,
+		},
+	}
+
+	// add rankings fields
+	for i, game := range highestScoreGames {
+
+		// get display name of user or guilds
+		displayName := "*Unknown*"
+		if isServerRanking {
+
+			guild, err := helpers.GetGuild(game.GuildID)
+			if err == nil {
+				displayName = guild.Name
+			}
+
+		} else {
+
+			user, err := helpers.GetUser(game.UserID)
+			if err == nil {
+				displayName = user.Username
+			}
+		}
+
+		if len(displayName) > 25 {
+			displayName = displayName[0:25] + "..."
+		}
+
+		embed.Fields = append(embed.Fields, []*discordgo.MessageEmbedField{
+			{
+				Name:   fmt.Sprintf("Rank #%d", i+1),
+				Value:  displayName,
+				Inline: true,
+			},
+			{
+				Name:   "Highest Score",
+				Value:  humanize.Comma(int64(game.CorrectIdolsCount)),
+				Inline: true,
+			},
+			{
+				Name:   "Game Difficulty",
+				Value:  game.Difficulty,
+				Inline: true,
+			},
+		}...)
+	}
+
+	helpers.SendPagedMessage(msg, embed, 30)
 }
 
 // displayMissedIdols will display the most
