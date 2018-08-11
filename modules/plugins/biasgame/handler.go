@@ -124,6 +124,7 @@ func (m *Module) Uninit(session *discordgo.Session) {
 func (m *Module) Commands() []string {
 	return []string{
 		"biasgame",
+		"bg",
 	}
 }
 
@@ -142,7 +143,7 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 
 	// process text after the initial command
 	commandArgs := strings.Fields(content)
-	if command == "biasgame" {
+	if command == "biasgame" || command == "bg" {
 
 		if len(commandArgs) == 0 {
 			// start default bias game
