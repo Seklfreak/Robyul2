@@ -1,11 +1,14 @@
-package biasgame
+package idols
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,13 +27,14 @@ const (
 	QUESTIONMARK_EMOJI = "❓"
 	NAV_NUMBERS_EMOJI  = "🔢"
 
-	MAX_IMAGE_SIZE = 2000 // 2000x2000px
-	MIN_IMAGE_SIZE = 150  // 150x150px
+	MAX_IMAGE_SIZE      = 2000 // 2000x2000px
+	MIN_IMAGE_SIZE      = 150  // 150x150px
+	IMAGE_RESIZE_HEIGHT = 150
 )
 
 var imageSuggestionChannlId string
 var imageSuggestionChannel *discordgo.Channel
-var suggestionQueue []*models.BiasGameSuggestionEntry
+var suggestionQueue []*models.IdolSuggestionEntry
 var suggestionEmbedMessageId string // id of the embed message where suggestions are accepted/denied
 var exampleRoundPicId string
 var suggestionQueueCountMessageId string
@@ -63,7 +67,7 @@ func initSuggestionChannel() {
 
 	// make a message on how to edit suggestions
 	helpMessage := "```Editable Fields: name, group, gender, notes\n" +
-		"Command: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "biasgame-edit {field} new field value...\n\n" +
+		"Command: " + helpers.GetPrefixForServer(imageSuggestionChannel.GuildID) + "s-edit {field} new field value...\n\n" +
 		"\n1. " + predefinedDenyMessages[1] +
 		"\n2. " + predefinedDenyMessages[2] +
 		"\n3. " + predefinedDenyMessages[3] +
@@ -78,7 +82,7 @@ func initSuggestionChannel() {
 	updateCurrentSuggestionEmbed()
 }
 
-// processImageSuggestion
+// processImageSuggestion reads a suggestion message, validates it, and adds to suggestion queue if it passes validation
 func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	defer helpers.Recover()
 
@@ -174,11 +178,11 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	helpers.Relax(err)
 
 	// compare the given image to all images currently available in the game
-	for _, bias := range getAllBiases() {
-		for _, curBImage := range bias.BiasImages {
-			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
+	for _, idol := range GetActiveIdols() {
+		for _, curIdolImage := range idol.Images {
+			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curIdolImage.HashString)
 			if err != nil {
-				bgLog().Errorf("Comparison error: %s", err.Error())
+				log().Errorf("Comparison error: %s", err.Error())
 				continue
 			}
 
@@ -194,7 +198,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	for _, suggestion := range suggestionQueue {
 		compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, suggestion.ImageHashString)
 		if err != nil {
-			bgLog().Errorf("Comparison error: %s", err.Error())
+			log().Errorf("Comparison error: %s", err.Error())
 			continue
 		}
 
@@ -225,7 +229,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.biasgame.suggestion.thanks-for-suggestion", msg.Author.Mention()))
 
 	// create suggetion
-	suggestion := &models.BiasGameSuggestionEntry{
+	suggestion := &models.IdolSuggestionEntry{
 		UserID:          msg.Author.ID,
 		ChannelID:       msg.ChannelID,
 		Gender:          suggestionArgs[0],
@@ -241,7 +245,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 
 	// save suggetion to database and memory
 	suggestionQueue = append(suggestionQueue, suggestion)
-	helpers.MDbInsert(models.BiasGameSuggestionsTable, suggestion)
+	helpers.MDbInsert(models.IdolSuggestionsTable, suggestion)
 	updateSuggestionQueueCount()
 
 	if len(suggestionQueue) == 1 || len(suggestionQueue) == 0 {
@@ -256,8 +260,8 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 
 }
 
-// CheckSuggestionReaction will check if the reaction was added to a suggestion message
-func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
+// checkSuggestionReaction will check if the reaction was added to a suggestion message
+func checkSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 	var userResponseMessage string
 
 	// check if the reaction added was valid
@@ -285,7 +289,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			addSuggestionToGame(cs)
 
 			// set image accepted image
-			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Approved** <:blobthumbsup:317043177028714497>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
+			userResponseMessage = fmt.Sprintf("**Idol Suggestion Approved** <:blobthumbsup:317043177028714497>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "approved"
 
 		} else if X_EMOJI == reaction.Emoji.Name || NAV_NUMBERS_EMOJI == reaction.Emoji.Name {
@@ -314,7 +318,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			}
 
 			// image was denied
-			userResponseMessage = fmt.Sprintf("**Bias Game Suggestion Denied** <:notlikeblob:349342777978519562>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
+			userResponseMessage = fmt.Sprintf("**Idol Suggestion Denied** <:notlikeblob:349342777978519562>\nIdol: %s %s\nImage: <%s>", cs.GrouopName, cs.Name, cs.ImageURL)
 			cs.Status = "denied"
 
 			// remove file from objectstorage
@@ -326,7 +330,7 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 		// update db record
 		cs.ProcessedByUserId = reaction.UserID
 		cs.LastModifiedOn = time.Now()
-		go helpers.MDbUpsertID(models.BiasGameSuggestionsTable, cs.ID, cs)
+		go helpers.MDbUpsertID(models.IdolSuggestionsTable, cs.ID, cs)
 
 		// send a message to the user who suggested the image
 		dmChannel, err := cache.GetSession().UserChannelCreate(cs.UserID)
@@ -349,8 +353,8 @@ func CheckSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 	return
 }
 
-// UpdateSuggestionDetails
-func UpdateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value string) {
+// updateSuggestionDetails update the details of the current suggestion in queue
+func updateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value string) {
 	if msg.ChannelID != imageSuggestionChannlId {
 		return
 	}
@@ -378,7 +382,7 @@ func UpdateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value
 	}
 
 	// save changes and update embed message
-	helpers.MDbUpsertID(models.BiasGameSuggestionsTable, cs.ID, cs)
+	helpers.MDbUpsertID(models.IdolSuggestionsTable, cs.ID, cs)
 	updateCurrentSuggestionEmbed()
 }
 
@@ -386,7 +390,7 @@ func UpdateSuggestionDetails(msg *discordgo.Message, fieldToUpdate string, value
 func updateCurrentSuggestionEmbed() {
 	var embed *discordgo.MessageEmbed
 	var msgSend *discordgo.MessageSend
-	var cs *models.BiasGameSuggestionEntry
+	var cs *models.IdolSuggestionEntry
 
 	if exampleRoundPicId != "" {
 		go cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, exampleRoundPicId)
@@ -416,8 +420,8 @@ func updateCurrentSuggestionEmbed() {
 
 		buf := new(bytes.Buffer)
 		encoder := new(png.Encoder)
-		encoder.CompressionLevel = -2 // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
-		encoder.Encode(buf, makeVSImage(suggestedImage, suggestedImage))
+		encoder.CompressionLevel = -2       // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
+		encoder.Encode(buf, suggestedImage) // TODO: add vs image back in
 		myReader := bytes.NewReader(buf.Bytes())
 
 		// get info of user who suggested image
@@ -561,24 +565,24 @@ func loadUnresolvedSuggestions() {
 
 	queryParams["status"] = ""
 
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameSuggestionsTable).Find(queryParams)).All(&suggestionQueue)
+	helpers.MDbIter(helpers.MdbCollection(models.IdolSuggestionsTable).Find(queryParams)).All(&suggestionQueue)
 }
 
-// does a loose comparison of the suggested idols and idols already in the game.
-func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
+// checkIdolAndGroupExist does a loose comparison of the suggested idols and idols that already exist
+func checkIdolAndGroupExist(sug *models.IdolSuggestionEntry) {
 
-	groupMatched, _, matchingBias := getMatchingIdolAndGroup(sug.GrouopName, sug.Name)
+	groupMatched, _, matchingIdol := GetMatchingIdolAndGroup(sug.GrouopName, sug.Name, false)
 
 	// if a matching idol was found then set the suggested name and group to match
-	if matchingBias != nil {
-		sug.GrouopName = matchingBias.GroupName
+	if matchingIdol != nil {
+		sug.GrouopName = matchingIdol.GroupName
 		sug.GroupMatch = true
-		sug.Name = matchingBias.BiasName
+		sug.Name = matchingIdol.Name
 		sug.IdolMatch = true
 
 	} else if groupMatched {
 		// if the group matched, get the group name
-		if exist, realGroupName := getMatchingGroup(sug.GrouopName); exist {
+		if exist, realGroupName := GetMatchingGroup(sug.GrouopName, false); exist {
 			sug.GrouopName = realGroupName
 			sug.GroupMatch = true
 		}
@@ -586,17 +590,17 @@ func checkIdolAndGroupExist(sug *models.BiasGameSuggestionEntry) {
 }
 
 // sendSimilarImages will check for images that are similar to the given images
-//  and send them back in a paged embe
+//  and send them back in a paged embed
 func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
-	matchingImages := make(map[int][]biasImage, 0)
+	matchingImages := make(map[int][]IdolImage, 0)
 	var compareValues []int
 
 	// compare the given image to all images currently available in the game
-	for _, bias := range getAllBiases() {
-		for _, curBImage := range bias.BiasImages {
+	for _, idol := range GetActiveIdols() {
+		for _, curBImage := range idol.Images {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curBImage.HashString)
 			if err != nil {
-				bgLog().Errorf("Comparison error: %s", err.Error())
+				log().Errorf("Comparison error: %s", err.Error())
 				continue
 			}
 
@@ -608,7 +612,7 @@ func sendSimilarImages(msg *discordgo.Message, sugImgHashString string) {
 	}
 
 	// sort the images by the best match first
-	sortedMatchingImages := make([]biasImage, 0)
+	sortedMatchingImages := make([]IdolImage, 0)
 	sort.Ints(compareValues)
 	for _, val := range compareValues {
 		sortedMatchingImages = append(sortedMatchingImages, matchingImages[val]...)
@@ -635,5 +639,129 @@ func clearSuggestionsChannel() {
 
 	for _, msg := range messagesArray {
 		cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg.ID)
+	}
+}
+
+// addSuggestionToGame will add the given suggestion entry to the available idols
+func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
+
+	// check if an idol with the suggested name and group already exists
+	var idolEntry models.IdolEntry
+	err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"name": suggestion.Name, "groupname": suggestion.GrouopName}), &idolEntry)
+	if err != nil && err.Error() != "not found" {
+		helpers.Relax(err)
+	}
+
+	newIdolImage := models.IdolImageEntry{
+		ObjectName: suggestion.ObjectName,
+		HashString: suggestion.ImageHashString,
+	}
+
+	// if it doesn't exist then create one, otherwise update the existing one with the new image
+	if idolEntry.Name == "" {
+
+		// get suggestion details and create idol entry record
+		idolEntry = models.IdolEntry{
+			ID:        "",
+			Gender:    suggestion.Gender,
+			GroupName: suggestion.GrouopName,
+			Name:      suggestion.Name,
+			Images:    []models.IdolImageEntry{newIdolImage},
+		}
+
+		// insert file to mongodb
+		newIdolId, err := helpers.MDbInsert(models.IdolTable, idolEntry)
+		helpers.Relax(err)
+		idolEntry.ID = newIdolId
+
+	} else {
+
+		idolEntry.Images = append(idolEntry.Images, newIdolImage)
+		idolEntry.Deleted = false
+		err := helpers.MDbUpsertID(models.IdolTable, idolEntry.ID, idolEntry)
+		helpers.Relax(err)
+	}
+
+	newIdol := makeIdolFromIdolEntry(idolEntry)
+
+	// if the idol already exists, then just add this picture to the image array for the idol
+	idolExists := false
+	for _, currentIdol := range GetAllIdols() {
+		if currentIdol.NameAndGroup == newIdol.NameAndGroup {
+			currentIdol.Images = append(currentIdol.Images, IdolImage{
+				ObjectName: suggestion.ObjectName,
+				HashString: suggestion.ImageHashString,
+			})
+
+			// if this was a deleted idol and they still had a image loaded in memory, delete it
+			if currentIdol.Deleted == true && currentIdol.Images[0].ImageBytes != nil {
+				currentIdol.Images = currentIdol.Images[1:]
+			}
+
+			currentIdol.Deleted = false
+			idolExists = true
+			break
+		}
+	}
+
+	// if its a new idol, update all idols array
+	if idolExists == false {
+		setAllIdols(append(GetAllIdols(), &newIdol))
+	} else {
+		setAllIdols(GetAllIdols())
+	}
+
+	// cache all idols
+	if len(GetAllIdols()) > 0 {
+		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
+	}
+}
+
+// getUserInputPage waits for the user to enter a number
+func getSuggestionDenialInput(channelID string) (int, error) {
+	queryMsg, err := helpers.SendMessage(channelID, "Enter the number for the reason you would like to deny with.")
+	if err != nil {
+		return 0, err
+	}
+
+	defer cache.GetSession().ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
+
+	timeoutChan := make(chan int)
+	go func() {
+		time.Sleep(time.Second * 45)
+		timeoutChan <- 0
+	}()
+
+	for {
+		userInputChan := make(chan *discordgo.MessageCreate)
+		cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
+			userInputChan <- e
+		})
+
+		select {
+		case userMsg := <-userInputChan:
+			if userMsg.Author.Bot {
+				continue
+			}
+			if userMsg.ChannelID != channelID {
+				continue
+			}
+
+			// delete user message and remove reaction
+			go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
+
+			// get page number from user text
+			re := regexp.MustCompile("[0-9]+")
+			if userEnteredNum, err := strconv.Atoi(re.FindString(userMsg.Content)); err == nil {
+
+				if userEnteredNum > 0 {
+					return userEnteredNum, nil
+				}
+			} else {
+				return 0, errors.New("Number not found in input")
+			}
+		case <-timeoutChan:
+			return 0, errors.New("Timed out")
+		}
 	}
 }

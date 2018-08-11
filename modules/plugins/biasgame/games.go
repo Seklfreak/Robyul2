@@ -8,10 +8,13 @@ import (
 	"image/draw"
 	"image/png"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -20,77 +23,18 @@ import (
 	"github.com/nfnt/resize"
 )
 
-type BiasGame struct{}
-
-type biasImage struct {
-	ImageBytes []byte
-	HashString string
-	ObjectName string
-}
-
-type biasChoice struct {
-	BiasName     string
-	GroupName    string
-	Gender       string
-	NameAndGroup string
-	BiasImages   []biasImage
-}
-
-type singleBiasGame struct {
-	User             *discordgo.User
-	ChannelID        string
-	RoundLosers      []*biasChoice
-	RoundWinners     []*biasChoice
-	BiasQueue        []*biasChoice
-	TopEight         []*biasChoice
-	GameWinnerBias   *biasChoice
-	IdolsRemaining   int
-	LastRoundMessage *discordgo.Message
-	ReadyForReaction bool   // used to make sure multiple reactions aren't counted
-	Gender           string // girl, boy, mixed
-
-	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
-	GameImageIndex map[string]int
-}
-
-type multiBiasGame struct {
-	CurrentRoundMessageId string // used to find game when reactions are added
-	ChannelID             string
-	RoundLosers           []*biasChoice
-	RoundWinners          []*biasChoice
-	BiasQueue             []*biasChoice
-	TopEight              []*biasChoice
-	GameWinnerBias        *biasChoice
-	IdolsRemaining        int
-	LastRoundMessage      *discordgo.Message
-	Gender                string // girl, boy, mixed
-	UserIdsInvolved       []string
-	RoundDelay            int
-	GameIsRunning         bool
-
-	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
-	GameImageIndex map[string]int
-}
-
 const (
-	DRIVE_SEARCH_TEXT    = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
 	IMAGE_RESIZE_HEIGHT  = 150
 	LEFT_ARROW_EMOJI     = "⬅"
 	RIGHT_ARROW_EMOJI    = "➡"
 	ARROW_FORWARD_EMOJI  = "▶"
 	ARROW_BACKWARD_EMOJI = "◀"
-	ZERO_WIDTH_SPACE     = "\u200B"
 )
-
-// used to stop commands from going through
-//  before the game is ready after a bot restart
-var gameIsReady = false
 
 // misc images
 var versesImage image.Image
 var winnerBracket image.Image
 var shadowBorder image.Image
-var crown image.Image
 
 // currently running single or multiplayer games
 var currentSinglePlayerGames map[string]*singleBiasGame
@@ -98,306 +42,13 @@ var currentSinglePlayerGamesMutex sync.RWMutex
 var currentMultiPlayerGames []*multiBiasGame
 var currentMultiPlayerGamesMutex sync.RWMutex
 
-// holds all available idols in the game
-var allBiasChoices []*biasChoice
-var allBiasesMutex sync.RWMutex
-
 // game configs
 var allowedGameSizes map[int]bool
 var allowedMultiGameSizes map[int]bool
-var biasGameGenders map[string]string
 
 // top 8 bracket
 var bracketImageOffsets map[int]image.Point
 var bracketImageResizeMap map[int]uint
-
-// Init when the bot starts up
-func (b *BiasGame) Init(session *discordgo.Session) {
-	go func() {
-		defer helpers.Recover()
-
-		// set global variables
-		currentSinglePlayerGames = make(map[string]*singleBiasGame)
-		allowedGameSizes = map[int]bool{
-			32:   true,
-			64:   true,
-			128:  true,
-			256:  true,
-			512:  true,
-			1024: true,
-		}
-		allowedMultiGameSizes = map[int]bool{
-			32: true,
-			64: true,
-		}
-		// allow games with the size of 10 in debug mode
-		if helpers.DEBUG_MODE {
-			allowedGameSizes[10] = true
-			allowedMultiGameSizes[10] = true
-		}
-
-		biasGameGenders = map[string]string{
-			"boy":   "boy",
-			"boys":  "boy",
-			"girl":  "girl",
-			"girls": "girl",
-			"mixed": "mixed",
-		}
-		// offsets of where bias images need to be placed on bracket image
-		bracketImageOffsets = map[int]image.Point{
-			14: image.Pt(182, 53),
-
-			13: image.Pt(358, 271),
-			12: image.Pt(81, 271),
-
-			11: image.Pt(443, 409),
-			10: image.Pt(305, 409),
-			9:  image.Pt(167, 409),
-			8:  image.Pt(29, 409),
-
-			7: image.Pt(478, 517),
-			6: image.Pt(419, 517),
-			5: image.Pt(340, 517),
-			4: image.Pt(281, 517),
-			3: image.Pt(202, 517),
-			2: image.Pt(143, 517),
-			1: image.Pt(64, 517),
-			0: image.Pt(5, 517),
-		}
-		bracketImageResizeMap = map[int]uint{
-			14: 165,
-			13: 90, 12: 90,
-			11: 60, 10: 60, 9: 60, 8: 60,
-		}
-
-		// load all images and information
-		refreshBiasChoices(false)
-		loadMiscImages()
-
-		startCacheRefreshLoop()
-
-		// get any in progress games saved in cache and immediatly delete them
-		currentSinglePlayerGamesMutex.Lock()
-		getBiasGameCache("currentSinglePlayerGames", &currentSinglePlayerGames)
-		currentSinglePlayerGamesMutex.Unlock()
-		currentMultiPlayerGamesMutex.Lock()
-		getBiasGameCache("currentMultiPlayerGames", &currentMultiPlayerGames)
-		currentMultiPlayerGamesMutex.Unlock()
-		bgLog().Infof("restored %d singleplayer biasgames on launch", len(getCurrentSinglePlayerGames()))
-		bgLog().Infof("restored %d multiplayer biasgames on launch", len(getCurrentMultiPlayerGames()))
-
-		// start any multi games
-		for _, multiGame := range getCurrentMultiPlayerGames() {
-			go func(multiGame *multiBiasGame) {
-				defer helpers.Recover()
-				multiGame.processMultiGame()
-			}(multiGame)
-		}
-
-		gameIsReady = true
-
-		// load aliases
-		initAliases()
-
-		// set up suggestions channel
-		initSuggestionChannel()
-	}()
-}
-
-// Uninit called when bot is shutting down
-func (b *BiasGame) Uninit(session *discordgo.Session) {
-
-	// save any currently running games
-	err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)
-	helpers.Relax(err)
-
-	err = setBiasGameCache("currentMultiPlayerGames", getCurrentMultiPlayerGames(), 0)
-	helpers.Relax(err)
-
-	bgLog().Infof("stored %d singleplayer biasgames on shutdown", len(getCurrentSinglePlayerGames()))
-	bgLog().Infof("stored %d multiplayer biasgames on shutdown", len(getCurrentMultiPlayerGames()))
-}
-
-// Will validate if the passed command entered is used for this plugin
-func (b *BiasGame) Commands() []string {
-	return []string{
-		"biasgame",
-		"biasgame-edit",
-	}
-}
-
-// Main Entry point for the plugin
-func (b *BiasGame) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGames) {
-		return
-	}
-
-	// images, suggestions, and stat set up are done async when bot starts up
-	//   make sure game is ready before trying to process any commands
-	if gameIsReady == false {
-		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.game.game-not-ready"))
-		return
-	}
-
-	// process text after the initial command
-	commandArgs := strings.Fields(content)
-	if command == "biasgame" {
-
-		if len(commandArgs) == 0 {
-			// start default bias game
-			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
-			singleGame.sendBiasGameRound()
-
-		} else if commandArgs[0] == "group-stats" {
-
-			displayGroupStats(msg, content)
-		} else if commandArgs[0] == "idol-stats" {
-			displayIdolStats(msg, content)
-
-		} else if commandArgs[0] == "stats" {
-
-			// stats
-			displayBiasGameStats(msg, content)
-
-		} else if isCommandAlias(commandArgs[0], "server-rankings") {
-
-			showRankings(msg, commandArgs, true)
-
-		} else if isCommandAlias(commandArgs[0], "rankings") {
-
-			showRankings(msg, commandArgs, false)
-
-		} else if commandArgs[0] == "suggest" {
-
-			processImageSuggestion(msg, content)
-
-		} else if commandArgs[0] == "migrate-drive-images" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				runGoogleDriveMigration(msg)
-			})
-
-		} else if commandArgs[0] == "delete-image" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				deleteBiasImage(msg, content)
-			})
-
-		} else if commandArgs[0] == "update-image" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateImageInfo(msg, content)
-			})
-
-		} else if commandArgs[0] == "update-group" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateGroupInfo(msg, content)
-			})
-
-		} else if commandArgs[0] == "update-stats" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateGameStatsFromMsg(msg, content)
-			})
-
-		} else if commandArgs[0] == "update" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				updateIdolInfoFromMsg(msg, content)
-			})
-
-		} else if isCommandAlias(commandArgs[0], "image-ids") {
-
-			// shows images with object ids
-			helpers.RequireRobyulMod(msg, func() {
-				showImagesForIdol(msg, content, true)
-			})
-
-		} else if isCommandAlias(commandArgs[0], "images") {
-
-			showImagesForIdol(msg, content, false)
-
-		} else if commandArgs[0] == "alias" {
-
-			if len(commandArgs) < 2 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-				return
-			}
-
-			switch commandArgs[1] {
-			case "add":
-				helpers.RequireRobyulMod(msg, func() {
-					addGroupAlias(msg, content)
-				})
-				break
-			case "list":
-				listGroupAliases(msg)
-				break
-			case "delete", "del":
-				helpers.RequireRobyulMod(msg, func() {
-					deleteGroupAlias(msg, content)
-				})
-				break
-			default:
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-			}
-
-		} else if isCommandAlias(commandArgs[0], "current") {
-			displayCurrentGameStats(msg)
-
-		} else if isCommandAlias(commandArgs[0], "multi") {
-
-			startMultiPlayerGame(msg, commandArgs)
-
-		} else if commandArgs[0] == "idols" {
-
-			listIdolsInGame(msg)
-
-		} else if commandArgs[0] == "refresh-images" {
-
-			helpers.RequireRobyulMod(msg, func() {
-				newMessages, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresing"))
-				helpers.Relax(err)
-				refreshBiasChoices(true)
-
-				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.refresh.refresh-done"))
-			})
-
-		} else if _, err := strconv.Atoi(commandArgs[0]); err == nil {
-
-			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
-			singleGame.sendBiasGameRound()
-
-		} else if _, ok := biasGameGenders[commandArgs[0]]; ok {
-
-			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
-			singleGame.sendBiasGameRound()
-		}
-	} else if command == "biasgame-edit" { // edit is used for changing details of suggestions
-		fieldToUpdate := commandArgs[0]
-		fieldValue := strings.Join(commandArgs[1:], " ")
-		UpdateSuggestionDetails(msg, fieldToUpdate, fieldValue)
-	}
-}
-
-// Called whenever a reaction is added to any message
-func (b *BiasGame) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
-	defer helpers.Recover()
-	if gameIsReady == false || reaction == nil {
-		return
-	}
-
-	// confirm the reaction was added to a message for one bias games
-	if game := getSinglePlayerGameByUserID(reaction.UserID); game != nil {
-		game.processVote(reaction)
-	}
-
-	// check if this was a reaction to a idol suggestion.
-	//  if it was accepted an image will be returned to be added to the biasChoices
-	CheckSuggestionReaction(reaction)
-}
 
 /////////////////////////////////
 //    SINGLE GAME FUNCTIONS    //
@@ -423,7 +74,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		game.ChannelID = msg.ChannelID
 		singleGame = game
 	} else {
-		var biasChoices []*biasChoice
+		var biasChoices []*idols.Idol
 		gameGender := "mixed"
 		gameSize := 32
 
@@ -432,7 +83,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 			for _, arg := range commandArgs {
 
 				// gender check
-				if gender, ok := biasGameGenders[arg]; ok == true {
+				if gender, ok := gameGenders[arg]; ok == true {
 					gameGender = gender
 					continue
 				}
@@ -459,13 +110,13 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		// if this isn't a mixed game then filter all choices by the gender
 		if gameGender != "mixed" {
 
-			for _, bias := range getAllBiases() {
+			for _, bias := range idols.GetActiveIdols() {
 				if bias.Gender == gameGender {
 					biasChoices = append(biasChoices, bias)
 				}
 			}
 		} else {
-			biasChoices = getAllBiases()
+			biasChoices = idols.GetActiveIdols()
 		}
 
 		// confirm we have enough biases to choose from for the game size this should be
@@ -597,23 +248,24 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	}
 
 	// get random images
-	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
-	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
+
+	img1 := getSemiRandomIdolImage(g.BiasQueue[0], &g.GameImageIndex)
+	img2 := getSemiRandomIdolImage(g.BiasQueue[1], &g.GameImageIndex)
 
 	// create round message
 	messageString := fmt.Sprintf("**@%s**\nIdols Remaining: %d\n%s %s vs %s %s",
 		g.User.Username,
 		g.IdolsRemaining,
 		g.BiasQueue[0].GroupName,
-		g.BiasQueue[0].BiasName,
+		g.BiasQueue[0].Name,
 		g.BiasQueue[1].GroupName,
-		g.BiasQueue[1].BiasName)
+		g.BiasQueue[1].Name)
 
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
 	encoder.CompressionLevel = -2
-	encoder.Encode(buf, makeVSImage(img1, img2))
+	encoder.Encode(buf, MakeVSImage(img1, img2))
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
@@ -662,7 +314,7 @@ func (g *singleBiasGame) sendWinnerMessage() {
 			resizeTo = newResizeVal
 		}
 
-		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.GameImageIndex), resize.Lanczos3)
+		ri := resize.Resize(0, resizeTo, getSemiRandomIdolImage(bias, &g.GameImageIndex), resize.Lanczos3)
 
 		draw.Draw(bracketImage, ri.Bounds().Add(bracketImageOffsets[i]), ri, image.ZP, draw.Over)
 	}
@@ -677,14 +329,14 @@ func (g *singleBiasGame) sendWinnerMessage() {
 	messageString := fmt.Sprintf("%s\nWinner: %s %s!",
 		g.User.Mention(),
 		g.GameWinnerBias.GroupName,
-		g.GameWinnerBias.BiasName)
+		g.GameWinnerBias.Name)
 
 	// send message
 	winnerMsgs, err := helpers.SendFile(g.ChannelID, "biasgame_winner.png", myReader, messageString)
 	helpers.Relax(err)
 
 	// if the winner is nayoung, add a nayoung emoji <3 <3 <3
-	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.BiasName) == "nayoung" {
+	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.Name) == "nayoung" {
 		cache.GetSession().MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
 	}
 }
@@ -769,7 +421,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		for _, arg := range commandArgs {
 
 			// gender check
-			if gender, ok := biasGameGenders[arg]; ok == true {
+			if gender, ok := gameGenders[arg]; ok == true {
 				gameGender = gender
 				continue
 			}
@@ -793,18 +445,18 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
-	var biasChoices []*biasChoice
+	var biasChoices []*idols.Idol
 
 	// if this isn't a mixed game then filter all choices by the gender
 	if gameGender != "mixed" {
 
-		for _, bias := range getAllBiases() {
+		for _, bias := range idols.GetActiveIdols() {
 			if bias.Gender == gameGender {
 				biasChoices = append(biasChoices, bias)
 			}
 		}
 	} else {
-		biasChoices = getAllBiases()
+		biasChoices = idols.GetActiveIdols()
 	}
 
 	// confirm we have enough biases for a multiplayer game
@@ -856,22 +508,23 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	}
 
 	// get random images to use
-	img1 := g.BiasQueue[0].getRandomBiasImage(&g.GameImageIndex)
-	img2 := g.BiasQueue[1].getRandomBiasImage(&g.GameImageIndex)
+
+	img1 := getSemiRandomIdolImage(g.BiasQueue[0], &g.GameImageIndex)
+	img2 := getSemiRandomIdolImage(g.BiasQueue[1], &g.GameImageIndex)
 
 	// create round message
 	messageString := fmt.Sprintf("**Multi Game**\nIdols Remaining: %d\n%s %s vs %s %s",
 		g.IdolsRemaining,
 		g.BiasQueue[0].GroupName,
-		g.BiasQueue[0].BiasName,
+		g.BiasQueue[0].Name,
 		g.BiasQueue[1].GroupName,
-		g.BiasQueue[1].BiasName)
+		g.BiasQueue[1].Name)
 
 	// encode the combined image and compress it
 	buf := new(bytes.Buffer)
 	encoder := new(png.Encoder)
 	encoder.CompressionLevel = -2 // -2 compression is best speed, -3 is best compression but end result isn't worth the slower encoding
-	encoder.Encode(buf, makeVSImage(img1, img2))
+	encoder.Encode(buf, MakeVSImage(img1, img2))
 	myReader := bytes.NewReader(buf.Bytes())
 
 	// send round message
@@ -1068,7 +721,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 			resizeTo = newResizeVal
 		}
 
-		ri := resize.Resize(0, resizeTo, bias.getRandomBiasImage(&g.GameImageIndex), resize.Lanczos3)
+		ri := resize.Resize(0, resizeTo, getSemiRandomIdolImage(bias, &g.GameImageIndex), resize.Lanczos3)
 
 		draw.Draw(bracketImage, ri.Bounds().Add(bracketImageOffsets[i]), ri, image.ZP, draw.Over)
 	}
@@ -1082,7 +735,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 
 	messageString := fmt.Sprintf("**Multi Game**\nWinner: %s %s!",
 		g.GameWinnerBias.GroupName,
-		g.GameWinnerBias.BiasName)
+		g.GameWinnerBias.Name)
 
 	// send message
 	helpers.SendFile(g.ChannelID, "biasgame_multi_winner.png", myReader, messageString)
@@ -1120,78 +773,159 @@ func (g *multiBiasGame) adjustRoundDelay(lastRoundVoteCount int) {
 	}
 }
 
-//////////////////////////////////
-//     BIAS CHOICE FUNCTIONS    //
-//////////////////////////////////
+///////////////////////
+// UTILITY FUNCTIONS //
+///////////////////////
 
-// will return a random image for the bias,
-//  if an image has already been chosen for the given game and bias thenit will use that one
-func (b *biasChoice) getRandomBiasImage(gameImageIndex *map[string]int) image.Image {
-	var imageIndex int
-
-	// check if a random image for the idol has already been chosen for this game
-	//  also make sure that biasimages array contains the index. it may have been changed due to a refresh
-	if imagePos, ok := (*gameImageIndex)[b.NameAndGroup]; ok && len(b.BiasImages) > imagePos {
-		imageIndex = imagePos
-	} else {
-		imageIndex = rand.Intn(len(b.BiasImages))
-		(*gameImageIndex)[b.NameAndGroup] = imageIndex
+// gets a specific single player game for a UserID
+//  if the User currently has no game ongoing it will return nil
+//  will delete the game if a nil game is found
+func getSinglePlayerGameByUserID(userID string) *singleBiasGame {
+	if userID == "" {
+		return nil
 	}
 
-	img, _, err := image.Decode(bytes.NewReader(b.BiasImages[imageIndex].getImgBytes()))
-	helpers.Relax(err)
-	return img
-}
+	currentSinglePlayerGamesMutex.RLock()
+	game, ok := currentSinglePlayerGames[userID]
+	currentSinglePlayerGamesMutex.RUnlock()
 
-//////////////////////////////////
-//     BIAS IMAGE FUNCTIONS     //
-//////////////////////////////////
-
-// will get the bytes to the correctly sized image bytes
-func (b biasImage) getImgBytes() []byte {
-
-	// image bytes is sometimes loaded if the object needs to be deleted
-	if b.ImageBytes != nil {
-		return b.ImageBytes
+	// if a game is found and is nil, delete it
+	if ok && game == nil {
+		currentSinglePlayerGamesMutex.Lock()
+		delete(currentSinglePlayerGames, userID)
+		currentSinglePlayerGamesMutex.Unlock()
 	}
 
-	// get image bytes
-	imgBytes, err := helpers.RetrieveFileWithoutLogging(b.ObjectName)
-	helpers.Relax(err)
+	return game
+}
 
-	img, _, err := helpers.DecodeImageBytes(imgBytes)
-	helpers.Relax(err)
-
-	// check if the image is already the correct size, otherwise resize it
-	if img.Bounds().Dx() == IMAGE_RESIZE_HEIGHT && img.Bounds().Dy() == IMAGE_RESIZE_HEIGHT {
-		return imgBytes
-	} else {
-
-		// resize image to the correct size
-		img = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img, resize.Lanczos3)
-
-		// AFTER resizing, re-encode the bytes
-		resizedImgBytes := new(bytes.Buffer)
-		encoder := new(png.Encoder)
-		encoder.CompressionLevel = -2
-		encoder.Encode(resizedImgBytes, img)
-
-		return resizedImgBytes.Bytes()
+// gets a specific multi player game for a channelID
+//  returns nil if no games were found in the channel
+func getMultiPlayerGameByChannelID(channelID string) *multiBiasGame {
+	if channelID == "" {
+		return nil
 	}
+
+	for _, game := range getCurrentMultiPlayerGames() {
+		if game.ChannelID == channelID {
+			return game
+		}
+	}
+
+	return nil
 }
 
-///// Unused functions requried by ExtendedPlugin interface
-func (b *BiasGame) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+// gets all currently ongoing single player games
+func getCurrentSinglePlayerGames() map[string]*singleBiasGame {
+	currentSinglePlayerGamesMutex.RLock()
+	defer currentSinglePlayerGamesMutex.RUnlock()
+
+	// copy data to prevent race conditions
+	gamesCopy := make(map[string]*singleBiasGame)
+	for key, value := range currentSinglePlayerGames {
+		gamesCopy[key] = value
+	}
+
+	return gamesCopy
 }
-func (b *BiasGame) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+
+// gets all currently ongoing multi player games
+func getCurrentMultiPlayerGames() []*multiBiasGame {
+	currentMultiPlayerGamesMutex.RLock()
+	defer currentMultiPlayerGamesMutex.RUnlock()
+
+	// copy data to prevent race conditions
+	gamesCopy := make([]*multiBiasGame, len(currentMultiPlayerGames))
+	for i, value := range currentMultiPlayerGames {
+		gamesCopy[i] = value
+	}
+
+	return gamesCopy
 }
-func (b *BiasGame) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
+
+// startCacheRefreshLoop will refresh the cache for biasgames
+func startCacheRefreshLoop() {
+	bgLog().Info("Starting biasgame current games cache loop")
+	go func() {
+		defer helpers.Recover()
+
+		for {
+			time.Sleep(time.Second * 30)
+
+			// save any currently running games
+			err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)
+			helpers.Relax(err)
+			bgLog().Infof("Cached %d singleplayer biasgames to redis", len(getCurrentSinglePlayerGames()))
+
+			err = setBiasGameCache("currentMultiPlayerGames", getCurrentMultiPlayerGames(), 0)
+			helpers.Relax(err)
+			bgLog().Infof("Cached %d multiplayer biasgames to redis", len(getCurrentMultiPlayerGames()))
+		}
+	}()
 }
-func (b *BiasGame) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
+
+// loadMiscImages handles loading other images besides the idol images
+func loadMiscImages() {
+	var crown image.Image
+
+	validMiscImages := []string{
+		"verses.png",
+		"top-eight-bracket.png",
+		"shadow-border.png",
+		"crown.png",
+	}
+
+	miscImagesFolderPath := helpers.GetConfig().Path("assets_folder").Data().(string) + "biasgame/misc/"
+
+	// load misc images
+	for _, fileName := range validMiscImages {
+
+		// check if file exists
+		filePath := miscImagesFolderPath + fileName
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			helpers.Relax(err)
+		}
+
+		// open file and decode it
+		file, err := os.Open(filePath)
+		helpers.Relax(err)
+		img, _, err := image.Decode(file)
+		helpers.Relax(err)
+
+		// resize misc images as needed
+		switch fileName {
+		case "verses.png":
+			versesImage = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
+		case "shadow-border.png":
+			shadowBorder = resize.Resize(0, IMAGE_RESIZE_HEIGHT+30, img, resize.Lanczos3)
+		case "crown.png":
+			crown = resize.Resize(IMAGE_RESIZE_HEIGHT/2, 0, img, resize.Lanczos3)
+		case "top-eight-bracket.png":
+			winnerBracket = img
+		}
+		bgLog().Infof("Loading biasgame misc image: %s", fileName)
+	}
+
+	// append crown to top eight
+	bracketImage := image.NewRGBA(winnerBracket.Bounds())
+	draw.Draw(bracketImage, winnerBracket.Bounds(), winnerBracket, image.Point{0, 0}, draw.Src)
+	draw.Draw(bracketImage, crown.Bounds().Add(image.Pt(230, 5)), crown, image.ZP, draw.Over)
+	winnerBracket = bracketImage.SubImage(bracketImage.Rect)
 }
-func (b *BiasGame) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
-}
-func (b *BiasGame) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-}
-func (b *BiasGame) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
+
+// MakeVSImage will make the image that shows for rounds in the biasgame
+func MakeVSImage(img1, img2 image.Image) image.Image {
+	// resize images if needed
+	if img1.Bounds().Dy() != IMAGE_RESIZE_HEIGHT || img2.Bounds().Dy() != IMAGE_RESIZE_HEIGHT {
+		img1 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img1, resize.Lanczos3)
+		img2 = resize.Resize(0, IMAGE_RESIZE_HEIGHT, img2, resize.Lanczos3)
+	}
+
+	// give shadow border
+	img1 = giveImageShadowBorder(img1, 15, 15)
+	img2 = giveImageShadowBorder(img2, 15, 15)
+
+	// combind images
+	img1 = helpers.CombineTwoImages(img1, versesImage)
+	return helpers.CombineTwoImages(img1, img2)
 }

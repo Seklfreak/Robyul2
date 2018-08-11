@@ -413,6 +413,47 @@ func GeneratePublicFileLink(filename, filehash string) (link string) {
 		filehash, filename)
 }
 
+// Checks if an object exists by checking cache for a file or requested metadata from minio
+// objectName	: the name of the file to retrieve
+func ObjectExists(objectName string) bool {
+
+	// setup minioClient if not yet done
+	if minioClient == nil {
+		err := setupMinioClient()
+		if err != nil {
+			return false
+		}
+	}
+
+	data := getBucketCache(objectName)
+	if data != nil {
+		return true
+	}
+
+	// retrieve the object
+	minioStatObject, err := minioClient.StatObject(minioBucket, sanitize.BaseName(objectName), minio.StatObjectOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "Please reduce your request rate.") {
+			cache.GetLogger().WithField("module", "storage").Infof("object storage ratelimited, waiting for one second, then retrying")
+			time.Sleep(1 * time.Second)
+			return ObjectExists(objectName)
+		}
+		if strings.Contains(err.Error(), "net/http") || strings.Contains(err.Error(), "timeout") {
+			cache.GetLogger().WithField("module", "storage").Infof("network error retrieving, waiting for one second, then retrying")
+			time.Sleep(1 * time.Second)
+			return ObjectExists(objectName)
+		}
+		return false
+	}
+
+	// check if the returned object is nil
+	if minioStatObject.Size == 0 {
+		return false
+	}
+
+	return true
+}
+
 // TODO: prevent overwrites
 // uploads a file to the minio object storage
 // objectName	: the name of the file to upload

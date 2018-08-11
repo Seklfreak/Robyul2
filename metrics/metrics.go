@@ -241,11 +241,11 @@ func CollectRuntimeMetrics() {
 
 		VanityInvitesCount.Set(entriesCountMgo(models.VanityInvitesTable, nil))
 
-		BiasgameImagesCount.Set(entriesCountMgo(models.BiasGameIdolsTable, nil))
+		BiasgameImagesCount.Set(entriesCountMgo(models.OldIdolsTable, nil))
 
-		BiasgameSuggestionsCount.Set(entriesCountMgo(models.BiasGameSuggestionsTable, bson.M{"status": ""}))
+		BiasgameSuggestionsCount.Set(entriesCountMgo(models.IdolSuggestionsTable, bson.M{"status": ""}))
 
-		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable, nil))
+		BiasgameGamesCount.Set(entriesCountMgo(models.OldBiasGameTable, nil))
 
 		var key string
 		if cache.HasMachineryRedisClient() {
