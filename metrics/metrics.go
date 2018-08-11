@@ -241,11 +241,11 @@ func CollectRuntimeMetrics() {
 
 		VanityInvitesCount.Set(entriesCountMgo(models.VanityInvitesTable, nil))
 
-		BiasgameImagesCount.Set(entriesCountMgo(models.OldIdolsTable, nil))
+		BiasgameImagesCount.Set(entriesAggregateMgo(models.IdolTable, "images"))
 
 		BiasgameSuggestionsCount.Set(entriesCountMgo(models.IdolSuggestionsTable, bson.M{"status": ""}))
 
-		BiasgameGamesCount.Set(entriesCountMgo(models.OldBiasGameTable, nil))
+		BiasgameGamesCount.Set(entriesCountMgo(models.BiasGameTable, nil))
 
 		var key string
 		if cache.HasMachineryRedisClient() {
@@ -277,4 +277,33 @@ func entriesCountMgo(table models.MongoDbCollection, query interface{}) (count i
 	countT, err := helpers.MdbCollection(table).Find(query).Count()
 	helpers.Relax(err)
 	return int64(countT)
+}
+
+func entriesAggregateMgo(table models.MongoDbCollection, arrayField string) (count int64) {
+	pipe := helpers.MdbCollection(table).Pipe([]bson.M{
+		{
+			"$project": bson.M{"sizeOfArrayField": bson.M{"$size": "$" + arrayField}},
+		},
+		{
+			"$group": bson.M{
+				"_id": nil,
+				"count": bson.M{
+					"$sum": "$sizeOfArrayField",
+				},
+			},
+		},
+	})
+
+	resp := bson.M{}
+	err := pipe.One(&resp)
+	if err != nil {
+		cache.GetLogger().WithField("module", "metrics").Errorln("Unable to aggregate for metrics: ", err.Error())
+		return
+	}
+
+	if countT, ok := resp["count"].(int); ok {
+		count = int64(countT)
+	}
+
+	return
 }

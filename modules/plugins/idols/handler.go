@@ -47,6 +47,7 @@ func (i *Module) Uninit(session *discordgo.Session) {
 func (i *Module) Commands() []string {
 	return []string{
 		"idol",
+		"idols",
 		"sug-edit",
 		"s-edit",
 	}
@@ -60,7 +61,7 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 
 	commandArgs := strings.Fields(content)
 
-	if command == "idol" {
+	if command == "idol" || command == "idols" {
 
 		switch commandArgs[0] {
 		case "migrate-idols":
