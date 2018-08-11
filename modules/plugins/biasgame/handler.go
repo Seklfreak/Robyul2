@@ -2,6 +2,7 @@ package biasgame
 
 // Init when the bot starts up
 import (
+	"fmt"
 	"image"
 	"strconv"
 	"strings"
@@ -147,6 +148,15 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 			// start default bias game
 			singleGame := createOrGetSinglePlayerGame(msg, commandArgs)
 			singleGame.sendBiasGameRound()
+
+		} else if commandArgs[0] == "idols" {
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("This command has changed. Please use: `%sidol list`", helpers.GetPrefixForServer(msg.GuildID)))
+
+		} else if commandArgs[0] == "images" {
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("This command has changed. Please use: `%sidol images \"Group Name\" \"Idol Name\"`", helpers.GetPrefixForServer(msg.GuildID)))
+
+		} else if commandArgs[0] == "suggest" {
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("This command has changed. Please use: `%sidol suggest boy/girl \"Group Name\" \"Idol Name\" image url/attachment`", helpers.GetPrefixForServer(msg.GuildID)))
 
 		} else if commandArgs[0] == "group-stats" {
 
