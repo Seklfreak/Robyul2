@@ -93,12 +93,14 @@ func (m *Module) Init(session *discordgo.Session) {
 		bgLog().Infof("restored %d multiplayer biasgames on launch", len(getCurrentMultiPlayerGames()))
 
 		// start any multi games
-		for _, multiGame := range getCurrentMultiPlayerGames() {
-			go func(multiGame *multiBiasGame) {
-				defer helpers.Recover()
-				multiGame.processMultiGame()
-			}(multiGame)
-		}
+		/*
+			for _, multiGame := range getCurrentMultiPlayerGames() {
+				go func(multiGame *multiBiasGame) {
+					defer helpers.Recover()
+					multiGame.processMultiGame()
+				}(multiGame)
+			}
+		*/
 
 		moduleIsReady = true
 

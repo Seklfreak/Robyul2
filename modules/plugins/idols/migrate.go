@@ -15,15 +15,17 @@ import (
 func migrateIdols(msg *discordgo.Message, content string) {
 
 	// check if the new table already exists and has records. if it does block the migration again
-	count, err := helpers.GetMDb().C(models.IdolTable.String()).Count()
-	if err != nil {
-		cache.GetLogger().Errorln(err.Error())
-		return
-	}
-	if count > 0 {
-		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Migration has already been run. If something went wrong please drop table **%s** and run this again.", models.IdolTable))
-		return
-	}
+	/*
+		count, err := helpers.GetMDb().C(models.IdolTable.String()).Count()
+		if err != nil {
+			cache.GetLogger().Errorln(err.Error())
+			return
+		}
+		if count > 0 {
+			helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Migration has already been run. If something went wrong please drop table **%s** and run this again.", models.IdolTable))
+			return
+		}
+	*/
 
 	// refresh the idols from mongo again to make sure the data is up to date
 	helpers.SendMessage(msg.ChannelID, "Refreshing Idols from old table....")
