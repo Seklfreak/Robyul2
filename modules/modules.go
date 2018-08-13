@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
+	"github.com/Seklfreak/Robyul2/modules/plugins/nugugame"
 	"github.com/Seklfreak/Robyul2/modules/plugins/youtube"
 )
 
@@ -89,6 +90,7 @@ var (
 		&eventlog.Handler{},
 		&plugins.Perspective{},
 		&biasgame.Module{},
+		&nugugame.Module{},
 		&idols.Module{},
 	}
 )
