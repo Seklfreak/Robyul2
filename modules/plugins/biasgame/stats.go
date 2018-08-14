@@ -952,12 +952,12 @@ MultiWinLoop:
 		// round win
 		for _, round := range game.RoundWinners {
 			roundWinner := idols.GetMatchingIdolById(round)
-
 			if roundWinner.GroupName == targetGroupName {
 				totalRounds++
 				totalRoundWins++
 			}
 		}
+
 		// round lose
 		for _, round := range game.RoundLosers {
 			roundLoser := idols.GetMatchingIdolById(round)
@@ -1153,4 +1153,59 @@ func updateGameStats(targetGroup, targetName, newGroup, newName, newGender strin
 	}
 
 	return matched, modified
+}
+
+// validateStats will loop through all biasgames and confirm an idol exists for each game/round
+func validateStats(msg *discordgo.Message, commandArgs []string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	helpers.SendMessage(msg.ChannelID, "Checking games for invalid idol ids...")
+
+	find := helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})
+
+	game := models.BiasGameEntry{}
+	games := find.Iter()
+
+	missingIdolIds := make(map[bson.ObjectId]bool)
+
+	for games.Next(&game) {
+		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+
+		if gameWinner == nil {
+			missingIdolIds[game.GameWinner] = true
+		}
+
+		// round win
+		for _, round := range game.RoundWinners {
+			roundWinner := idols.GetMatchingIdolById(round)
+			if roundWinner == nil {
+				missingIdolIds[round] = true
+			}
+		}
+
+		// round lose
+		for _, round := range game.RoundLosers {
+			roundLoser := idols.GetMatchingIdolById(round)
+			if roundLoser == nil {
+				missingIdolIds[round] = true
+			}
+		}
+	}
+
+	if len(missingIdolIds) > 0 {
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("%d idol ids in biasgames that don't match valid idols.", len(missingIdolIds)))
+
+		if len(commandArgs) > 1 && commandArgs[1] == "print" {
+			helpers.SendMessage(msg.ChannelID, "Printing ids:")
+			var idsString string
+			for id, _ := range missingIdolIds {
+				idsString += id.String() + "\n"
+			}
+
+			helpers.SendMessage(msg.ChannelID, idsString)
+		}
+
+	} else {
+		helpers.SendMessage(msg.ChannelID, "All biasgames have valid idols.")
+	}
 }
