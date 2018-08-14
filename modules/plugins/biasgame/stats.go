@@ -60,7 +60,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	if genderFilter != "" {
 		for i := len(games) - 1; i >= 0; i-- {
 			gameWinner := idols.GetMatchingIdolById(games[i].GameWinner)
-			if gameWinner.Gender != genderFilter {
+			if gameWinner != nil && gameWinner.Gender != genderFilter {
 				games = append(games[:i], games[i+1:]...)
 			}
 		}
@@ -657,6 +657,10 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 	multiGamesIdolWinCounts := make(map[string]int)
 	for _, game := range allGames {
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+		if gameWinner == nil {
+			continue
+		}
+
 		groupAndName := fmt.Sprintf("%s %s", gameWinner.GroupName, gameWinner.Name)
 		allGamesIdolWinCounts[groupAndName] += 1
 		if game.GameType == "multi" {
@@ -719,7 +723,7 @@ MultiWinLoop:
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
 
 		// win game
-		if gameWinner.GroupName == targetIdol.GroupName && gameWinner.Name == targetIdol.Name {
+		if gameWinner != nil && gameWinner.GroupName == targetIdol.GroupName && gameWinner.Name == targetIdol.Name {
 			userGameWinMap[game.UserID]++
 			guildGameWinMap[game.GuildID]++
 			totalGameWins++
@@ -728,7 +732,7 @@ MultiWinLoop:
 		// round win
 		for _, roundWinnerId := range game.RoundWinners {
 			roundWinner := idols.GetMatchingIdolById(roundWinnerId)
-			if roundWinner.GroupName == targetIdol.GroupName && roundWinner.Name == targetIdol.Name {
+			if roundWinner != nil && roundWinner.GroupName == targetIdol.GroupName && roundWinner.Name == targetIdol.Name {
 				totalRounds++
 				totalRoundWins++
 			}
@@ -736,7 +740,7 @@ MultiWinLoop:
 		// round lose
 		for _, roundLoserId := range game.RoundLosers {
 			roundLoser := idols.GetMatchingIdolById(roundLoserId)
-			if roundLoser.GroupName == targetIdol.GroupName && roundLoser.Name == targetIdol.Name {
+			if roundLoser != nil && roundLoser.GroupName == targetIdol.GroupName && roundLoser.Name == targetIdol.Name {
 				totalRounds++
 			}
 		}
@@ -881,6 +885,10 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	memberWinCount := make(map[string]int)
 	for _, game := range allGames {
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+		if gameWinner == nil {
+			continue
+		}
+
 		if gameWinner.GroupName == targetGroupName {
 			memberWinCount[gameWinner.Name] += 1
 		}
@@ -943,7 +951,7 @@ MultiWinLoop:
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
 
 		// win game
-		if gameWinner.GroupName == targetGroupName {
+		if gameWinner != nil && gameWinner.GroupName == targetGroupName {
 			userGameWinMap[game.UserID]++
 			guildGameWinMap[game.GuildID]++
 			totalGameWins++
@@ -952,7 +960,7 @@ MultiWinLoop:
 		// round win
 		for _, round := range game.RoundWinners {
 			roundWinner := idols.GetMatchingIdolById(round)
-			if roundWinner.GroupName == targetGroupName {
+			if roundWinner != nil && roundWinner.GroupName == targetGroupName {
 				totalRounds++
 				totalRoundWins++
 			}
@@ -961,7 +969,7 @@ MultiWinLoop:
 		// round lose
 		for _, round := range game.RoundLosers {
 			roundLoser := idols.GetMatchingIdolById(round)
-			if roundLoser.GroupName == targetGroupName {
+			if roundLoser != nil && roundLoser.GroupName == targetGroupName {
 				totalRounds++
 			}
 		}
