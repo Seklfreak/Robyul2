@@ -1175,12 +1175,15 @@ func validateStats(msg *discordgo.Message, commandArgs []string) {
 	games := find.Iter()
 
 	missingIdolIds := make(map[bson.ObjectId]bool)
+	var gamesAffected []models.BiasGameEntry
 
 	for games.Next(&game) {
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+		gameIsAffected := false
 
 		if gameWinner == nil {
 			missingIdolIds[game.GameWinner] = true
+			gameIsAffected = true
 		}
 
 		// round win
@@ -1188,6 +1191,7 @@ func validateStats(msg *discordgo.Message, commandArgs []string) {
 			roundWinner := idols.GetMatchingIdolById(round)
 			if roundWinner == nil {
 				missingIdolIds[round] = true
+				gameIsAffected = true
 			}
 		}
 
@@ -1196,21 +1200,34 @@ func validateStats(msg *discordgo.Message, commandArgs []string) {
 			roundLoser := idols.GetMatchingIdolById(round)
 			if roundLoser == nil {
 				missingIdolIds[round] = true
+				gameIsAffected = true
 			}
+		}
+
+		if gameIsAffected {
+			gamesAffected = append(gamesAffected, game)
 		}
 	}
 
 	if len(missingIdolIds) > 0 {
-		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("%d idol ids in biasgames that don't match valid idols.", len(missingIdolIds)))
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("%d idol ids in %d biasgames that don't match valid idols.", len(missingIdolIds), len(gamesAffected)))
 
 		if len(commandArgs) > 1 && commandArgs[1] == "print" {
-			helpers.SendMessage(msg.ChannelID, "Printing ids:")
+			helpers.SendMessage(msg.ChannelID, "Printing idol ids:")
 			var idsString string
 			for id, _ := range missingIdolIds {
 				idsString += id.String() + "\n"
 			}
 
 			helpers.SendMessage(msg.ChannelID, idsString)
+
+			helpers.SendMessage(msg.ChannelID, "Printing game ids:")
+			var gameIdsString string
+			for _, game := range gamesAffected {
+				gameIdsString += game.ID.String() + "\n"
+			}
+
+			helpers.SendMessage(msg.ChannelID, gameIdsString)
 		}
 
 	} else {
