@@ -457,8 +457,17 @@ func updateIdolInfoFromMsg(msg *discordgo.Message, content string) {
 // updateIdolInfo updates a idols group, name, and gender depending on args
 func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string) int {
 
-	// attempt to find a matching idol of the new group and name,
+	// attempt to find a matching idol of the new group and name
 	_, _, matchingIdol := GetMatchingIdolAndGroup(newGroup, newName, false)
+
+	// GetMatchingIdolAndGroup does a lose alpha-numeric compare but we need
+	// to do a stricter check in order to accomedate simply wanting to change
+	// spacing or capitolization
+	if matchingIdol != nil {
+		if matchingIdol.GroupName != newGroup || matchingIdol.Name != newName {
+			matchingIdol = nil
+		}
+	}
 
 	recordsFound := 0
 

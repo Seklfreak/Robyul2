@@ -164,7 +164,6 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 			displayGroupStats(msg, content)
 		} else if commandArgs[0] == "idol-stats" {
 			displayIdolStats(msg, content)
-
 		} else if commandArgs[0] == "stats" {
 
 			// stats
@@ -178,6 +177,11 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 
 			showRankings(msg, commandArgs, false)
 
+		} else if commandArgs[0] == "validate-stats" {
+
+			helpers.RequireRobyulMod(msg, func() {
+				validateStats(msg, commandArgs)
+			})
 		} else if commandArgs[0] == "migrate-games" {
 
 			helpers.RequireRobyulMod(msg, func() {

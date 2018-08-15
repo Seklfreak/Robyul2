@@ -60,7 +60,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 	if genderFilter != "" {
 		for i := len(games) - 1; i >= 0; i-- {
 			gameWinner := idols.GetMatchingIdolById(games[i].GameWinner)
-			if gameWinner.Gender != genderFilter {
+			if gameWinner != nil && gameWinner.Gender != genderFilter {
 				games = append(games[:i], games[i+1:]...)
 			}
 		}
@@ -657,6 +657,10 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 	multiGamesIdolWinCounts := make(map[string]int)
 	for _, game := range allGames {
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+		if gameWinner == nil {
+			continue
+		}
+
 		groupAndName := fmt.Sprintf("%s %s", gameWinner.GroupName, gameWinner.Name)
 		allGamesIdolWinCounts[groupAndName] += 1
 		if game.GameType == "multi" {
@@ -719,7 +723,7 @@ MultiWinLoop:
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
 
 		// win game
-		if gameWinner.GroupName == targetIdol.GroupName && gameWinner.Name == targetIdol.Name {
+		if gameWinner != nil && gameWinner.GroupName == targetIdol.GroupName && gameWinner.Name == targetIdol.Name {
 			userGameWinMap[game.UserID]++
 			guildGameWinMap[game.GuildID]++
 			totalGameWins++
@@ -728,7 +732,7 @@ MultiWinLoop:
 		// round win
 		for _, roundWinnerId := range game.RoundWinners {
 			roundWinner := idols.GetMatchingIdolById(roundWinnerId)
-			if roundWinner.GroupName == targetIdol.GroupName && roundWinner.Name == targetIdol.Name {
+			if roundWinner != nil && roundWinner.GroupName == targetIdol.GroupName && roundWinner.Name == targetIdol.Name {
 				totalRounds++
 				totalRoundWins++
 			}
@@ -736,7 +740,7 @@ MultiWinLoop:
 		// round lose
 		for _, roundLoserId := range game.RoundLosers {
 			roundLoser := idols.GetMatchingIdolById(roundLoserId)
-			if roundLoser.GroupName == targetIdol.GroupName && roundLoser.Name == targetIdol.Name {
+			if roundLoser != nil && roundLoser.GroupName == targetIdol.GroupName && roundLoser.Name == targetIdol.Name {
 				totalRounds++
 			}
 		}
@@ -881,6 +885,10 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	memberWinCount := make(map[string]int)
 	for _, game := range allGames {
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+		if gameWinner == nil {
+			continue
+		}
+
 		if gameWinner.GroupName == targetGroupName {
 			memberWinCount[gameWinner.Name] += 1
 		}
@@ -943,7 +951,7 @@ MultiWinLoop:
 		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
 
 		// win game
-		if gameWinner.GroupName == targetGroupName {
+		if gameWinner != nil && gameWinner.GroupName == targetGroupName {
 			userGameWinMap[game.UserID]++
 			guildGameWinMap[game.GuildID]++
 			totalGameWins++
@@ -952,16 +960,16 @@ MultiWinLoop:
 		// round win
 		for _, round := range game.RoundWinners {
 			roundWinner := idols.GetMatchingIdolById(round)
-
-			if roundWinner.GroupName == targetGroupName {
+			if roundWinner != nil && roundWinner.GroupName == targetGroupName {
 				totalRounds++
 				totalRoundWins++
 			}
 		}
+
 		// round lose
 		for _, round := range game.RoundLosers {
 			roundLoser := idols.GetMatchingIdolById(round)
-			if roundLoser.GroupName == targetGroupName {
+			if roundLoser != nil && roundLoser.GroupName == targetGroupName {
 				totalRounds++
 			}
 		}
@@ -1153,4 +1161,76 @@ func updateGameStats(targetGroup, targetName, newGroup, newName, newGender strin
 	}
 
 	return matched, modified
+}
+
+// validateStats will loop through all biasgames and confirm an idol exists for each game/round
+func validateStats(msg *discordgo.Message, commandArgs []string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	helpers.SendMessage(msg.ChannelID, "Checking games for invalid idol ids...")
+
+	find := helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})
+
+	game := models.BiasGameEntry{}
+	games := find.Iter()
+
+	missingIdolIds := make(map[bson.ObjectId]bool)
+	var gamesAffected []models.BiasGameEntry
+
+	for games.Next(&game) {
+		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
+		gameIsAffected := false
+
+		if gameWinner == nil {
+			missingIdolIds[game.GameWinner] = true
+			gameIsAffected = true
+		}
+
+		// round win
+		for _, round := range game.RoundWinners {
+			roundWinner := idols.GetMatchingIdolById(round)
+			if roundWinner == nil {
+				missingIdolIds[round] = true
+				gameIsAffected = true
+			}
+		}
+
+		// round lose
+		for _, round := range game.RoundLosers {
+			roundLoser := idols.GetMatchingIdolById(round)
+			if roundLoser == nil {
+				missingIdolIds[round] = true
+				gameIsAffected = true
+			}
+		}
+
+		if gameIsAffected {
+			gamesAffected = append(gamesAffected, game)
+		}
+	}
+
+	if len(missingIdolIds) > 0 {
+		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("%d idol ids in %d biasgames that don't match valid idols.", len(missingIdolIds), len(gamesAffected)))
+
+		if len(commandArgs) > 1 && commandArgs[1] == "print" {
+			helpers.SendMessage(msg.ChannelID, "Printing idol ids:")
+			var idsString string
+			for id, _ := range missingIdolIds {
+				idsString += id.String() + "\n"
+			}
+
+			helpers.SendMessage(msg.ChannelID, idsString)
+
+			helpers.SendMessage(msg.ChannelID, "Printing game ids:")
+			var gameIdsString string
+			for _, game := range gamesAffected {
+				gameIdsString += game.ID.String() + "\n"
+			}
+
+			helpers.SendMessage(msg.ChannelID, gameIdsString)
+		}
+
+	} else {
+		helpers.SendMessage(msg.ChannelID, "All biasgames have valid idols.")
+	}
 }
