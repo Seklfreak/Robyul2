@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/nfnt/resize"
 )
 
@@ -60,6 +62,7 @@ func validateImages(msg *discordgo.Message, content string) {
 	}
 
 	// options
+	cleanImages := false
 	listObjectName := false
 
 	// check for options
@@ -67,18 +70,46 @@ func validateImages(msg *discordgo.Message, content string) {
 		if option == "list" {
 			listObjectName = true
 		}
+
+		if option == "clean" {
+			cleanImages = true
+		}
 	}
 
 	helpers.SendMessage(msg.ChannelID, "Checking idol images..")
 
-	// loop through idol images and check if object exists
+	find := helpers.MdbCollection(models.IdolTable).Find(bson.M{})
+	idols := find.Iter()
+
 	var missingImages []string
-	for _, idol := range GetActiveIdols() {
-		for _, image := range idol.Images {
+	idol := models.IdolEntry{}
+
+	// loop through idol images and check if object exists
+	for idols.Next(&idol) {
+		imagesDelete := false
+
+		for i := len(idol.Images) - 1; i >= 0; i-- {
+			image := idol.Images[i]
+
+			// log().Infoln("Checking image: ", image.ObjectName)
+
 			if !helpers.ObjectExists(image.ObjectName) {
 				missingImages = append(missingImages, image.ObjectName)
 				log().Infoln("Idol image does not exist in minio: ", image.ObjectName)
+
+				if cleanImages {
+					imagesDelete = true
+					idol.Images = append(idol.Images[:i], idol.Images[i+1:]...)
+				}
 			}
+		}
+
+		if cleanImages && imagesDelete {
+			if len(idol.Images) == 0 {
+				idol.Deleted = true
+			}
+
+			helpers.MDbUpsertID(models.IdolTable, idol.ID, idol)
 		}
 	}
 
@@ -88,5 +119,9 @@ func validateImages(msg *discordgo.Message, content string) {
 	if listObjectName {
 		printableObjectNames := strings.Join(missingImages, "\n")
 		helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Missing Image Object Names: \n%s", printableObjectNames))
+	}
+
+	if cleanImages {
+		helpers.SendMessage(msg.ChannelID, "Missing images were deleted from idol records, please refresh idols.")
 	}
 }
