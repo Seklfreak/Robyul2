@@ -33,9 +33,11 @@ func (m *Module) Init(session *discordgo.Session) {
 		alphaNumericRegex, err = regexp.Compile("[^a-zA-Z0-9가-힣]+")
 		helpers.Relax(err)
 
-		currentNuguGames = make(map[string][]*nuguGame)
+		currentNuguGames = make(map[string]*nuguGame)
 
+		// start cache loops
 		startDifficultyCacheLoop()
+		startCacheRefreshLoop()
 
 		// load all images and information
 		loadMiscImages()
@@ -45,6 +47,8 @@ func (m *Module) Init(session *discordgo.Session) {
 // Uninit called when bot is shutting down
 func (m *Module) Uninit(session *discordgo.Session) {
 
+	// save any currently running games
+	cacheNugugames()
 }
 
 // Will validate if the passed command entered is used for this plugin
@@ -105,14 +109,14 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Module) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-	for _, game := range getNuguGamesByChannelID(msg.ChannelID) {
+	if game := getNuguGamesByChannelID(msg.ChannelID); game != nil {
 		if game.WaitingForGuess {
+
 			// if the game is not multiplayer, check the message author is the one who created the game
 			if !game.IsMultigame && msg.Author.ID != game.User.ID {
-				continue
+				return
 			}
 			game.GuessChannel <- msg
-			break
 		}
 	}
 }

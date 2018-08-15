@@ -39,7 +39,7 @@ var idolsByDifficulty = map[string][]string{
 
 // startDifficultyCacheLoop will refresh the cache for nugugame idols in difficulty
 func startDifficultyCacheLoop() {
-	log().Info("Starting nugugame cache loop")
+	log().Info("Starting nugugame difficulty cache loop")
 	go func() {
 		defer helpers.Recover()
 

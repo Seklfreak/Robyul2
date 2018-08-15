@@ -23,10 +23,10 @@ func log() *logrus.Entry {
 	return cache.GetLogger().WithField("module", "nugugame")
 }
 
-// getIdolCache for easily getting redis cache specific to idols
+// getModuleCache for easily getting redis cache specific to this module
 func getModuleCache(key string, data interface{}) error {
 	// get cache with given key
-	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:idols:%s", key)).Bytes()
+	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:nugugame:%s", key)).Bytes()
 	if err != nil || err == redis.Nil {
 		return err
 	}
@@ -42,15 +42,24 @@ func getModuleCache(key string, data interface{}) error {
 	return err
 }
 
-// setIdolsCache for easily setting redis cache specific to idols
+// setModuleCache for easily setting redis cache specific to this module
 func setModuleCache(key string, data interface{}, time time.Duration) error {
 	marshaledData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:idols:%s", key), marshaledData, time).Result()
+	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:nugugame:%s", key), marshaledData, time).Result()
 	return err
+}
+
+// delModuleCache for easily setting redis cache specific to this module
+func delModuleCache(key string) {
+	go func() {
+		helpers.Recover()
+
+		cache.GetRedisClient().Del(fmt.Sprintf("robyul2-discord:nugugame:%s", key))
+	}()
 }
 
 // checks if the error is a permissions error and notifies the user

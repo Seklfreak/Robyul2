@@ -9,15 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/globalsign/mgo/bson"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/bwmarrin/discordgo"
-	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -25,9 +22,11 @@ const (
 	NUGUGAME_DEFULT_ROUND_DELAY  = 12
 	NUGUGAME_ROUND_DELETE_DELAY  = 2 * time.Second
 	CHECKMARK_EMOJI              = "✅"
+	SINGLE_NUGUGAME_CACHE_KEY    = "currentSingleNugugames"
+	MULTI_NUGUGAME_CACHE_KEY     = "currentMultiNugugames"
 )
 
-var currentNuguGames map[string][]*nuguGame
+var currentNuguGames map[string]*nuguGame
 var currentNuguGamesMutex sync.RWMutex
 var alphaNumericRegex *regexp.Regexp
 
@@ -89,30 +88,31 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
-	// get unique id for game for deleting
-	newID, err := uuid.NewV4()
-	if err != nil {
-		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.errors.general", err.Error()))
-		return
+	var game *nuguGame
+
+	// check if a cached game exists
+	if isMulti {
+		game = getCachedMultiGame(msg.ChannelID)
+	} else {
+		game = getCachedSingleGame(msg.Author.ID)
 	}
 
-	game := &nuguGame{
-		UUID:            newID.String(),
-		User:            msg.Author,
-		ChannelID:       msg.ChannelID,
-		Gender:          gameGender,
-		WaitingForGuess: false,
-		RoundDelay:      NUGUGAME_DEFULT_ROUND_DELAY,
-		IsMultigame:     isMulti,
-		GameType:        gameType,
-		Difficulty:      gameDifficulty,
-		LivesRemaining:  lives,
+	// check if the user has a cached game, if not then make a new one based on their options
+	if game == nil {
+		game = &nuguGame{
+			Gender:          gameGender,
+			WaitingForGuess: false,
+			IsMultigame:     isMulti,
+			GameType:        gameType,
+			Difficulty:      gameDifficulty,
+			LivesRemaining:  lives,
+		}
 	}
+	game.ChannelID = msg.ChannelID
+	game.User = msg.Author
 	game.GuessChannel = make(chan *discordgo.Message)
 	game.TimeoutChannel = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 	game.UsersCorrectGuesses = make(map[string][]bson.ObjectId)
-
-	spew.Dump(game)
 
 	game.saveGame()
 	game.sendRound()
@@ -138,7 +138,7 @@ func (g *nuguGame) sendRound() {
 	// get a random idol to send round for
 	g.CurrentIdol = g.getNewRandomIdol()
 
-	// if current idol is nil assume we're out of usable idols and end hte game
+	// if current idol is nil assume we're out of usable idols and end the game
 	if g.CurrentIdol == nil {
 
 		// trigger timeout channel to finish game
@@ -342,15 +342,20 @@ func (g *nuguGame) finishGame() {
 func (g *nuguGame) saveGame() {
 	currentNuguGamesMutex.Lock()
 	defer currentNuguGamesMutex.Unlock()
-
-	currentNuguGames[g.ChannelID] = append(currentNuguGames[g.ChannelID], g)
+	currentNuguGames[g.ChannelID] = g
 }
 
 // deleteGame will delete the game from the current nugu games
 func (g *nuguGame) deleteGame() {
 	currentNuguGamesMutex.Lock()
-	defer currentNuguGamesMutex.Unlock()
 	delete(currentNuguGames, g.ChannelID)
+	currentNuguGamesMutex.Unlock()
+
+	if g.IsMultigame {
+		delModuleCache(MULTI_NUGUGAME_CACHE_KEY + g.ChannelID)
+	} else {
+		delModuleCache(SINGLE_NUGUGAME_CACHE_KEY + g.User.ID)
+	}
 }
 
 // getNewRandomIdol will get a random idol for the game, respecting game options and not duplicating previous idols
@@ -455,14 +460,14 @@ func skipNuguGame(msg *discordgo.Message, commandArgs []string) {
 ///////////////////////
 
 // getAllNugugames thread safe get for all games
-func getAllNuguGames() map[string][]*nuguGame {
+func getAllNuguGames() map[string]*nuguGame {
 	currentNuguGamesMutex.RLock()
 	defer currentNuguGamesMutex.RUnlock()
 	return currentNuguGames
 }
 
 // getNuguGamesByChannelID thread safe get for all games in a channel
-func getNuguGamesByChannelID(channelID string) []*nuguGame {
+func getNuguGamesByChannelID(channelID string) *nuguGame {
 	currentNuguGamesMutex.RLock()
 	defer currentNuguGamesMutex.RUnlock()
 	return currentNuguGames[channelID]
@@ -477,13 +482,145 @@ func getNuguGameByUserID(userID string) *nuguGame {
 	var game *nuguGame
 
 	currentNuguGamesMutex.RLock()
-	for _, games := range currentNuguGames {
-		for _, nuguGame := range games {
-			if nuguGame.User != nil && userID == nuguGame.User.ID {
-				game = nuguGame
-			}
+	for _, nuguGame := range currentNuguGames {
+		if nuguGame.User != nil && userID == nuguGame.User.ID {
+			game = nuguGame
 		}
 	}
 	currentNuguGamesMutex.RUnlock()
 	return game
+}
+
+// getCachedGameByUserId will get a cached game from redis for the userid
+func getCachedSingleGame(userId string) *nuguGame {
+
+	var cachedNugugame nuguGameForCache
+	err := getModuleCache(SINGLE_NUGUGAME_CACHE_KEY+userId, &cachedNugugame)
+	if err != nil || cachedNugugame.UserId != userId {
+		return nil
+	}
+
+	return convertCachedNugugame(cachedNugugame)
+}
+
+// getCachedGameByUserId will get a cached game from redis for the userid
+func getCachedMultiGame(channelId string) *nuguGame {
+	var cachedNugugame nuguGameForCache
+	err := getModuleCache(MULTI_NUGUGAME_CACHE_KEY+channelId, &cachedNugugame)
+	if err != nil || cachedNugugame.ChannelID != channelId {
+		return nil
+	}
+
+	return convertCachedNugugame(cachedNugugame)
+}
+
+// converts cached nugugame to a real game
+func convertCachedNugugame(cachedNugugame nuguGameForCache) *nuguGame {
+	currentIdol := idols.GetMatchingIdolById(cachedNugugame.CurrentIdolId)
+	if currentIdol == nil {
+		return nil
+	}
+
+	realNugugame := &nuguGame{
+		ChannelID:           cachedNugugame.ChannelID,
+		CurrentIdol:         currentIdol,
+		Gender:              cachedNugugame.Gender,
+		GameType:            cachedNugugame.GameType,
+		IsMultigame:         cachedNugugame.IsMultigame,
+		Difficulty:          cachedNugugame.Difficulty,
+		LivesRemaining:      cachedNugugame.LivesRemaining,
+		UsersCorrectGuesses: cachedNugugame.UsersCorrectGuesses,
+	}
+
+	for _, idolId := range cachedNugugame.CorrectIdols {
+		idol := idols.GetMatchingIdolById(idolId)
+		if idol == nil {
+			return nil
+		}
+
+		realNugugame.CorrectIdols = append(realNugugame.CorrectIdols, idol)
+	}
+
+	for _, idolId := range cachedNugugame.IncorrectIdols {
+		idol := idols.GetMatchingIdolById(idolId)
+		if idol == nil {
+			return nil
+		}
+
+		realNugugame.IncorrectIdols = append(realNugugame.IncorrectIdols, idol)
+	}
+
+	return realNugugame
+}
+
+// converts actual games to the cached version for smaller size and to avoid
+// issues with dataypes (like the chan)
+func convertNugugameToCached(nugugames map[string]*nuguGame) map[string]nuguGameForCache {
+
+	// userid => cached game
+	cachedGames := make(map[string]nuguGameForCache)
+
+	for _, game := range nugugames {
+
+		// only need to save games that have actual correct guesses recorded
+		if len(game.CorrectIdols) == 0 {
+			continue
+		}
+
+		cachedGame := nuguGameForCache{
+			UserId:              game.User.ID,
+			ChannelID:           game.ChannelID,
+			Gender:              game.Gender,
+			GameType:            game.GameType,
+			IsMultigame:         game.IsMultigame,
+			Difficulty:          game.Difficulty,
+			LivesRemaining:      game.LivesRemaining,
+			CurrentIdolId:       game.CurrentIdol.ID,
+			UsersCorrectGuesses: game.UsersCorrectGuesses,
+		}
+
+		for _, idol := range game.CorrectIdols {
+			cachedGame.CorrectIdols = append(cachedGame.CorrectIdols, idol.ID)
+		}
+
+		for _, idol := range game.IncorrectIdols {
+			cachedGame.IncorrectIdols = append(cachedGame.IncorrectIdols, idol.ID)
+		}
+
+		cachedGames[cachedGame.UserId] = cachedGame
+	}
+
+	return cachedGames
+}
+
+// startCacheRefreshLoop will refresh the cache for biasgames
+func startCacheRefreshLoop() {
+	log().Info("Starting nugugame current games cache loop")
+
+	go func() {
+		defer helpers.Recover()
+
+		for {
+			time.Sleep(time.Second * 30)
+			cacheNugugames()
+		}
+	}()
+}
+
+func cacheNugugames() {
+	// save any currently running games
+	cachedGames := convertNugugameToCached(getAllNuguGames())
+	for userId, game := range cachedGames {
+
+		if game.IsMultigame {
+
+			// setting 3 day limit because i don't want people to just randomly stumble across a really old multi game in some channel
+			err := setModuleCache(MULTI_NUGUGAME_CACHE_KEY+game.ChannelID, game, time.Hour*72)
+			helpers.Relax(err)
+		} else {
+			err := setModuleCache(SINGLE_NUGUGAME_CACHE_KEY+userId, game, 0)
+			helpers.Relax(err)
+		}
+	}
+	log().Infof("Cached %d nugugames to redis", len(cachedGames))
 }
