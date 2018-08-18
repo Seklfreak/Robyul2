@@ -1,7 +1,9 @@
 package nugugame
 
 import (
+	"bytes"
 	"fmt"
+	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -80,10 +82,25 @@ func recordNuguGame(g *nuguGame) {
 
 // displayNuguGameStats shows nugugame stats based on the users parameters
 func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
 	// strip out "stats" arg
 	commandArgs = commandArgs[1:]
 
 	targetUser := msg.Author
+
+	// if there is only one arg check if it matches a valid group, if so send to group stats
+	if len(commandArgs) == 1 {
+		// if exists, _ := idols.GetMatchingGroup(commandArgs[1], true); exists {
+		// 	displayGroupStats(msg, statsMessage)
+		// 	return
+		// }
+	} else if len(commandArgs) == 2 {
+		if _, _, idol := idols.GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1], true); idol != nil {
+			displayIdolStats(msg, commandArgs, idol)
+			return
+		}
+	}
 
 	// default
 	query := bson.M{"ismultigame": false, "userid": targetUser.ID}
@@ -208,6 +225,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
+	// calculate guess perfentage
 	var correctGuessPercentage float64
 	totalGuesses := totalCorrectCount + totalIncorrectCount
 	if totalGuesses > 0 {
@@ -264,6 +282,11 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			{
 				Name:   "Highest Score",
 				Value:  highestScores["overall"],
+				Inline: true,
+			},
+			{
+				Name:   "Average Score",
+				Value:  strconv.Itoa(totalCorrectCount / len(games)),
 				Inline: true,
 			},
 			{
@@ -347,6 +370,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 // displayNugugameRanking sends embed of nugu game rankings
 func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServerRanking bool) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
 	// strip out "ranking" arg
 	commandArgs = commandArgs[1:]
 
@@ -489,6 +514,8 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 
 // displayMissedIdols will display the most
 func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
 	// strip out "missed" arg
 	commandArgs = commandArgs[1:]
 
@@ -655,4 +682,115 @@ func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	helpers.SendPagedMessage(msg, embed, 10)
+}
+
+// displayIdolStats displays nugugame stats for a given idol
+func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *idols.Idol) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	// if an idol as passed, skip checking args
+	if targetIdol == nil {
+		// strip out "idol-stats" arg
+		commandArgs = commandArgs[1:]
+
+		if len(commandArgs) < 2 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			return
+		}
+
+		// attempt to get matching idol
+		_, _, targetIdol = idols.GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1], true)
+		if targetIdol == nil {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-idol"))
+			return
+		}
+	}
+
+	// TODO: improve query performance
+	query := bson.M{}
+
+	var games []models.NuguGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query)).All(&games)
+
+	var totalCorrectGuesses int
+	var totalIncorrectGuesses int
+	var totalGames int
+
+	// check games for idol
+	for _, game := range games {
+		isInGame := false
+
+		// get missed idols and groups
+		for _, idolId := range game.CorrectIdols {
+			if targetIdol.ID == idolId {
+				isInGame = true
+				totalCorrectGuesses += 1
+			}
+		}
+
+		for _, idolId := range game.IncorrectIdols {
+			if targetIdol.ID == idolId {
+				isInGame = true
+				totalIncorrectGuesses += 1
+			}
+		}
+
+		if isInGame {
+			totalGames += 1
+		}
+	}
+
+	// calculate guess perfentage
+	var correctGuessPercentage float64
+	totalGuesses := totalCorrectGuesses + totalIncorrectGuesses
+	if totalGuesses > 0 {
+		correctGuessPercentage = (float64(totalCorrectGuesses) / float64(totalGuesses)) * 100
+	} else {
+		correctGuessPercentage = 0
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: fmt.Sprintf("Stats for %s %s", targetIdol.GroupName, targetIdol.Name),
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "attachment://idol_stats_thumbnail.png",
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:   "Total Games",
+				Value:  strconv.Itoa(totalGames),
+				Inline: true,
+			},
+			{
+				Name:   "Correct Guess %",
+				Value:  strconv.FormatFloat(correctGuessPercentage, 'f', 2, 64) + "%",
+				Inline: true,
+			},
+			{
+				Name:   "Total Correct Guesses",
+				Value:  strconv.Itoa(totalCorrectGuesses),
+				Inline: true,
+			},
+			{
+				Name:   "Total Incorrect Guesses",
+				Value:  strconv.Itoa(totalIncorrectGuesses),
+				Inline: true,
+			},
+		},
+	}
+
+	// get random image from the thumbnail
+	imageIndex := rand.Intn(len(targetIdol.Images))
+	thumbnailReader := bytes.NewReader(targetIdol.Images[imageIndex].GetImgBytes())
+
+	msgSend := &discordgo.MessageSend{
+		Files: []*discordgo.File{{
+			Name:   "idol_stats_thumbnail.png",
+			Reader: thumbnailReader,
+		}},
+		Embed: embed,
+	}
+	helpers.SendComplex(msg.ChannelID, msgSend)
 }

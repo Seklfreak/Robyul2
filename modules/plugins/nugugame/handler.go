@@ -99,6 +99,9 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 			case "stats":
 				displayNuguGameStats(msg, commandArgs)
 
+			case "idol-stats", "i-stats":
+				displayIdolStats(msg, commandArgs, nil)
+
 			default:
 				startNuguGame(msg, commandArgs)
 			}
