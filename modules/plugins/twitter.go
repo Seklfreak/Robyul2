@@ -368,6 +368,11 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				changes := false
 
 				for _, tweet := range twitterUserTweets {
+					tweetCreatedAt, err := tweet.CreatedAtTime()
+					if err != nil || time.Now().Sub(tweetCreatedAt) > time.Hour {
+						continue
+					}
+
 					// exclude RTs?
 					if entry.ExcludeRTs && tweet.RetweetedStatus != nil {
 						continue

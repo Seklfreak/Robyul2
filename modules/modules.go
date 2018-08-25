@@ -85,7 +85,7 @@ var (
 		&plugins.Starboard{},
 		&plugins.Autoleaver{},
 		&plugins.Persistency{},
-		//&plugins.Twitter{},
+		&plugins.Twitter{},
 		&eventlog.Handler{},
 		&plugins.Perspective{},
 		&biasgame.Module{},
