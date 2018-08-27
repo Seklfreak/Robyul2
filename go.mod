@@ -28,7 +28,7 @@ require (
 	github.com/certifi/gocertifi v0.0.0-20180118203423-deb3ae2ef261 // indirect
 	github.com/corona10/goimagehash v0.2.0
 	github.com/davecgh/go-spew v1.1.0
-	github.com/dghubble/go-twitter v0.0.0-20180126113843-4e4e49fc6b52
+	github.com/dghubble/go-twitter v0.0.0-20180817201112-a34e9059cd58
 	github.com/dghubble/oauth1 v0.4.0
 	github.com/dghubble/sling v1.1.0 // indirect
 	github.com/domainr/whois v0.0.0-20180221144318-5d48ef794bef

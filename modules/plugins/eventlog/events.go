@@ -451,3 +451,12 @@ func (h *Handler) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *disc
 		}
 	}()
 }
+
+/*
+TODO: cache webhooks, monitor changes
+func (h *Handler) OnWebhooksUpdate(user *discordgo.WebhooksUpdate, session *discordgo.Session) {
+	go func() {
+		defer helpers.Recover()
+	}()
+}
+*/
