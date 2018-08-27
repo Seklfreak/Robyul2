@@ -131,9 +131,6 @@ var (
 	// VanityInvitesCount counts all vanity invites channels
 	VanityInvitesCount = expvar.NewInt("vanityinvites_count")
 
-	// DiscordRestApiRequests counts all discord rest requests made
-	DiscordRestApiRequests = expvar.NewInt("discord_rest_api_requests")
-
 	// GimmeProxyCachedProxies counts all cached gimmeproxy proxies
 	GimmeProxyCachedProxies = expvar.NewInt("gimmeproxy_cached_proxies")
 
@@ -206,7 +203,6 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 		UserCount.Set(int64(len(users)))
 		ChannelCount.Set(int64(channels))
 		GuildCount.Set(int64(len(guilds)))
-		DiscordRestApiRequests.Set(discordgo.RequestsMade)
 	}
 }
 
