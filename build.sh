@@ -15,8 +15,6 @@ fi
 
 set -x
 
-patch vendor/github.com/bwmarrin/discordgo/restapi.go patches/adds_robyul_discord_rest_api_logging.patch -R
-
 go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
 
 go build ${@} \
