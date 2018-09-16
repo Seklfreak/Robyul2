@@ -42,14 +42,8 @@ github.com/bradfitz/gomemcache v0.0.0-20170208213004-1952afaa557d h1:7IjN4QP3c38
 github.com/bradfitz/gomemcache v0.0.0-20170208213004-1952afaa557d/go.mod h1:PmM6Mmwb0LSuEubjR8N7PtNe1KxZLtOUHtbeikc5h60=
 github.com/bradfitz/slice v0.0.0-20160823171949-d9036e2120b5 h1:i2YH7UF+OLvc168kF3/xPUppI6ukksCg9QPtTMgqTIY=
 github.com/bradfitz/slice v0.0.0-20160823171949-d9036e2120b5/go.mod h1:pccXHIvs3TV/TUqSNyEvF99sxjX2r4FFRIyw6TZY9+w=
-github.com/bwmarrin/discordgo v0.0.0-20180611145856-bc7403812ada h1:xnQTScmET8un1EKlPfhEq/7DzHwEq9/LwvTX/s2BMeE=
-github.com/bwmarrin/discordgo v0.0.0-20180611145856-bc7403812ada/go.mod h1:5NIvFv5Z7HddYuXbuQegZ684DleQaCFqChP2iuBivJ8=
 github.com/bwmarrin/discordgo v0.16.1-0.20180827162935-32167eae712f h1:5oVrnYTctDFasd685ODaiR7aT1xBzKZCmTZpuZR8paY=
 github.com/bwmarrin/discordgo v0.16.1-0.20180827162935-32167eae712f/go.mod h1:5NIvFv5Z7HddYuXbuQegZ684DleQaCFqChP2iuBivJ8=
-github.com/bwmarrin/discordgo v0.18.0 h1:XopVQXCIFy7Cr2eT7NcYcm4k0l2PYX+AP5RUbIWX2/8=
-github.com/bwmarrin/discordgo v0.18.0/go.mod h1:5NIvFv5Z7HddYuXbuQegZ684DleQaCFqChP2iuBivJ8=
-github.com/bwmarrin/discordgo v0.18.1-0.20180404155514-73f6772a2b7c h1:aS8qCsdHi0kMZiTW/v1ox2q3lLUq2XpepoiU5+xxnj0=
-github.com/bwmarrin/discordgo v0.18.1-0.20180404155514-73f6772a2b7c/go.mod h1:5NIvFv5Z7HddYuXbuQegZ684DleQaCFqChP2iuBivJ8=
 github.com/cenkalti/backoff v2.0.0+incompatible h1:5IIPUHhlnUZbcHQsQou5k1Tn58nJkeJL9U+ig5CHJbY=
 github.com/cenkalti/backoff v2.0.0+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/certifi/gocertifi v0.0.0-20180118203423-deb3ae2ef261 h1:6/yVvBsKeAw05IUj4AzvrxaCnDjN4nUqKjW9+w5wixg=
@@ -58,8 +52,6 @@ github.com/corona10/goimagehash v0.2.0 h1:klxzJe/rlnA8DffjEqOEL93/pVMl9J2Glf/qvG
 github.com/corona10/goimagehash v0.2.0/go.mod h1:BQtzmQ2tNr04YeCPYBOiIWe/69WJF5IRGPLmzxvcAKg=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dghubble/go-twitter v0.0.0-20180126113843-4e4e49fc6b52 h1:U/+wpJcySEAVW1cOPunDjbVwYSA4y+Je/gzDNlGkGnI=
-github.com/dghubble/go-twitter v0.0.0-20180126113843-4e4e49fc6b52/go.mod h1:6beqTZaXeBPti9pDBcBEqxfJc7uCbSafqZPRDPQOKoM=
 github.com/dghubble/go-twitter v0.0.0-20180817201112-a34e9059cd58 h1:wnxH1Y1QLw60flg8Cv8nmlnud57a9GqgzOvDMSIm1i4=
 github.com/dghubble/go-twitter v0.0.0-20180817201112-a34e9059cd58/go.mod h1:6beqTZaXeBPti9pDBcBEqxfJc7uCbSafqZPRDPQOKoM=
 github.com/dghubble/oauth1 v0.4.0 h1:+MpOsgByu02lzT4pRGei5d2p6nAgj8yDwF3RASrgNPQ=

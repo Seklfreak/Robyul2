@@ -21,21 +21,26 @@ import (
 
 // recordNuguGame saves the nugugame to mongo
 func recordNuguGame(g *nuguGame) {
-	defer helpers.Recover() // this func is called via coroutine
+	defer helpers.Recover() // this func is called via goroutine
 
 	// small changes could be made to the game object during this func, make
 	// copy so real game object isn't affected
 	var game nuguGame
 	game = *g
 
-	// if the game doesn't have any correct guesses then ignore it. don't need tons of games people didn't play in the db
+	// if the game doesn't have any correct guesses then ignore it. don't need
+	// tons of games people didn't play in the db
 	if len(game.CorrectIdols) == 0 {
 		return
 	}
 
 	// get guildID from game channel
-	channel, _ := cache.GetSession().State.Channel(game.ChannelID)
-	guild, err := cache.GetSession().State.Guild(channel.GuildID)
+	channel, err := helpers.GetChannel(game.ChannelID)
+	if err != nil {
+		fmt.Println("Error getting channel when recording stats")
+		return
+	}
+	guild, err := helpers.GetGuild(channel.GuildID)
 	if err != nil {
 		fmt.Println("Error getting guild when recording stats")
 		return
@@ -61,7 +66,7 @@ func recordNuguGame(g *nuguGame) {
 		delete(game.UsersCorrectGuesses, gameUserId)
 	}
 
-	// create a bias game entry
+	// create a nugugame entry
 	nugugameEntry := models.NuguGameEntry{
 		ID:                  "",
 		UserID:              gameUserId,
@@ -76,7 +81,6 @@ func recordNuguGame(g *nuguGame) {
 		UsersCorrectGuesses: game.UsersCorrectGuesses,
 		IsMultigame:         game.IsMultigame,
 	}
-
 	helpers.MDbInsert(models.NuguGameTable, nugugameEntry)
 }
 
@@ -342,7 +346,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		},
 	}
 
-	// add stats for server
+	// add stats for server or global
 	if isServerQuery || isGlobalQuery {
 		embed.Fields = append(embed.Fields, []*discordgo.MessageEmbedField{
 			{
@@ -590,7 +594,7 @@ func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
 		}
 	}
 
-	// ckeck if no idols have been missed
+	// check if no idols have been missed
 	if len(mostMissedIdols) == 0 {
 		helpers.SendMessage(msg.ChannelID, "No missed idols found")
 		return

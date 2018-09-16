@@ -30,11 +30,7 @@ var currentNuguGames map[string]*nuguGame
 var currentNuguGamesMutex sync.RWMutex
 var alphaNumericRegex *regexp.Regexp
 
-///////////////////
-//   NUGU GAME   //
-///////////////////
-
-// startNuguGame will create and the start the nugu game for the user
+// startNuguGame Starts a new nugu game or resumes a game in cache
 func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 
 	// if the user already has a game, do nothing
@@ -43,24 +39,23 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 		return
 	}
 
-	// if the user already has a game, do nothing
+	// if the channel already has a game, do nothing
 	if game := getNuguGamesByChannelID(msg.ChannelID); game != nil {
 		helpers.SendMessage(msg.ChannelID, "Only one running nugu game is allowed per channel.")
 		return
 	}
 
-	// todo set this back to mixed
+	// default game settings
 	gameGender := "mixed"
 	isMulti := false
 	gameType := "idol"
 	gameDifficulty := "all"
 	lives := 5
 
-	// validate game arguments
+	// validate game arguments and adjust game settings as needed
 	if len(commandArgs) > 0 {
 		for _, arg := range commandArgs {
 
-			// gender check
 			if gender, ok := gameGenders[arg]; ok == true {
 				gameGender = gender
 				continue
@@ -108,29 +103,25 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 			LivesRemaining:  lives,
 		}
 	}
+
 	game.ChannelID = msg.ChannelID
 	game.User = msg.Author
 	game.GuessChannel = make(chan *discordgo.Message)
-	game.TimeoutChannel = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+	game.GuessTimeoutTimer = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 	game.UsersCorrectGuesses = make(map[string][]bson.ObjectId)
 
 	game.saveGame()
 	game.sendRound()
-
-	// opens game channels and waits for guesses or timeout to be triggered
 	game.watchForGuesses()
 }
 
 // sendRound sends the next round in the game
 func (g *nuguGame) sendRound() {
-	log().Println("Sending nugu game round...")
-
-	// if already waiting for user message, do not send the next round
 	if g.WaitingForGuess == true {
 		return
 	}
 
-	// delete last round message if there was one
+	// delete last round message if there was one.
 	if g.LastRoundMessage != nil && len(g.CorrectIdols) != 0 && g.CorrectIdols[len(g.CorrectIdols)-1].ID == g.CurrentIdol.ID {
 		go helpers.DeleteMessageWithDelay(g.LastRoundMessage, NUGUGAME_ROUND_DELETE_DELAY)
 	}
@@ -142,10 +133,10 @@ func (g *nuguGame) sendRound() {
 	if g.CurrentIdol == nil {
 
 		// trigger timeout channel to finish game
-		if !g.TimeoutChannel.Stop() {
-			<-g.TimeoutChannel.C
+		if !g.GuessTimeoutTimer.Stop() {
+			<-g.GuessTimeoutTimer.C
 		}
-		g.TimeoutChannel.Reset(time.Nanosecond)
+		g.GuessTimeoutTimer.Reset(time.Nanosecond)
 		return
 	}
 
@@ -177,28 +168,27 @@ func (g *nuguGame) sendRound() {
 	g.LastRoundMessage = fileSendMessage[0]
 
 	// clear timeout channel and reset timer
-	if !g.TimeoutChannel.Stop() {
-		<-g.TimeoutChannel.C
+	if !g.GuessTimeoutTimer.Stop() {
+		<-g.GuessTimeoutTimer.C
 	}
-	g.TimeoutChannel.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+	g.GuessTimeoutTimer.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 }
 
 // waitforguess will watch the users messages in the channel for correct guess
 func (g *nuguGame) watchForGuesses() {
-	log().Println("waiting for nugu game guess...")
 
 	go func() {
 		defer helpers.Recover()
 
 		// watch for user input
 		for {
-			log().Infoln("loop")
 
 			select {
 			case userMsg := <-g.GuessChannel:
-				log().Infoln("User Message: ", userMsg)
 
-				// to help with async actions happening. g.currentIdol could be set to nil
+				// To help with async actions happening. g.currentIdol could
+				// be set to nil when the game just ends and guesses are still
+				// coming in
 				currentIdol := g.CurrentIdol
 				if currentIdol == nil {
 					continue
@@ -207,6 +197,9 @@ func (g *nuguGame) watchForGuesses() {
 				// if guess is correct add green check mark too it, save the correct guess, and send next round
 				userGuess := strings.ToLower(alphaNumericRegex.ReplaceAllString(userMsg.Content, ""))
 
+				// TODO------------------------------------------------------------
+				//   improve performance by collecting correct guesses when the idol is set so it doesn't have to be done on every guess
+				// Get the correct answers for this idol
 				var correctAnswers []string
 				if g.GameType == "group" {
 					correctAnswers = []string{currentIdol.GroupName}
@@ -220,13 +213,11 @@ func (g *nuguGame) watchForGuesses() {
 					correctAnswers = append(correctAnswers, currentIdol.NameAliases...)
 				}
 
-				log().Printf("--- Guess given: %s, %s, %s, %s", userMsg.Content, userGuess, currentIdol.Name, correctAnswers)
-
 				// check if the user guess contains the idols name
 				for _, correctAnswer := range correctAnswers {
 
 					correctAnswer = strings.ToLower(alphaNumericRegex.ReplaceAllString(correctAnswer, ""))
-					if userGuess == correctAnswer && g.WaitingForGuess {
+					if g.WaitingForGuess && userGuess == correctAnswer {
 						g.WaitingForGuess = false
 
 						if g.IsMultigame {
@@ -235,6 +226,8 @@ func (g *nuguGame) watchForGuesses() {
 							g.UsersCorrectGuesses[userMsg.Author.ID] = append(g.UsersCorrectGuesses[userMsg.Author.ID], currentIdol.ID)
 
 						} else {
+
+							// Delete users guess if its a solo game, helps reduce spam
 							go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
 						}
 
@@ -246,28 +239,27 @@ func (g *nuguGame) watchForGuesses() {
 
 				// do nothing if the user message doesn't match, they could just be talking...
 
-			case <-g.TimeoutChannel.C:
+			case <-g.GuessTimeoutTimer.C:
 				g.WaitingForGuess = false
 
 				// check if they have lives remaining for the game
 				if g.LivesRemaining > 1 && g.CurrentIdol != nil {
-					/*msgs, err := */ helpers.SendMessage(g.ChannelID, fmt.Sprintf("The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
-					// helpers.Relax(err)
-					// go helpers.DeleteMessageWithDelay(msgs[0], NUGUGAME_ROUND_DELETE_DELAY)
+					g.GuessTimeoutTimer.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
+
+					helpers.SendMessage(g.ChannelID, fmt.Sprintf("The idol was: %s %s", g.CurrentIdol.GroupName, g.CurrentIdol.Name))
 
 					g.LivesRemaining--
 					g.IncorrectIdols = append(g.IncorrectIdols, g.CurrentIdol)
-					g.TimeoutChannel.Reset(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
 					g.sendRound()
 
 					break
 				} else {
 
+					// currentidol could be nil if game ran out of usable idols
 					if g.CurrentIdol != nil {
 						g.IncorrectIdols = append(g.IncorrectIdols, g.CurrentIdol)
 					}
 
-					log().Infoln("done.")
 					g.finishGame()
 					return
 				}
@@ -276,7 +268,7 @@ func (g *nuguGame) watchForGuesses() {
 	}()
 }
 
-// finishGame will send the final message and delete the game
+// finishGame will send the final message, record stats, and delete the game
 func (g *nuguGame) finishGame() {
 	go recordNuguGame(g)
 	g.deleteGame()
@@ -304,7 +296,7 @@ func (g *nuguGame) finishGame() {
 			}
 			sort.Sort(sort.Reverse(sort.IntSlice(userScores)))
 
-			// used to make sure the user isn't printed twice if their score matches another
+			// used to make sure the same user isn't printed twice if their score matches another
 			usedUserIds := make(map[string]bool)
 
 			// loop through user scores highest to lowest and append them to final message
@@ -315,8 +307,8 @@ func (g *nuguGame) finishGame() {
 					if len(idolIds) == userScore && !usedUserIds[userId] {
 
 						// get user name
-						user, err := helpers.GetUser(userId)
 						var userName string
+						user, err := helpers.GetUser(userId)
 						if err != nil || user == nil {
 							userName = "*Unknown*"
 						} else {
@@ -325,9 +317,7 @@ func (g *nuguGame) finishGame() {
 
 						finalMessage += fmt.Sprintf("\n%s: %d", userName, userScore)
 
-						// remove user so they don't get printed twice if their score matches someone else
 						usedUserIds[userId] = true
-						continue
 					}
 				}
 			}
@@ -363,6 +353,7 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	var idol *idols.Idol
 	var idolPool []*idols.Idol
 
+	// TODO: remove "all" difficulty from nugugame
 	idolIds := getNugugameIdolsByDifficulty(g.Difficulty)
 	if len(idolIds) > 0 {
 		for _, idolID := range idolIds {
@@ -388,7 +379,8 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	}
 
 	// if there are no more unused idols, end the game
-	if len(idolPool) == len(append(g.CorrectIdols, g.IncorrectIdols...)) {
+	usedIdols := append(g.CorrectIdols, g.IncorrectIdols...)
+	if len(idolPool) == len(usedIdols) {
 		return nil
 	}
 
@@ -398,7 +390,7 @@ RandomIdolLoop:
 		randomIdol := idolPool[rand.Intn(len(idolPool))]
 
 		// if the random idol found matches one the game has had previous then skip it
-		for _, previousGuesses := range append(g.CorrectIdols, g.IncorrectIdols...) {
+		for _, previousGuesses := range usedIdols {
 			if previousGuesses.NameAndGroup == randomIdol.NameAndGroup {
 				continue RandomIdolLoop
 			}
@@ -415,7 +407,7 @@ RandomIdolLoop:
 func quitNuguGame(msg *discordgo.Message, commandArgs []string) {
 	var game *nuguGame
 
-	// if the user already has a game, do nothing
+	// confirm the user has a game
 	if game = getNuguGameByUserID(msg.Author.ID); game == nil {
 		return
 	}
@@ -425,20 +417,20 @@ func quitNuguGame(msg *discordgo.Message, commandArgs []string) {
 		return
 	}
 
+	// manually set lives left to 1 and force the guess timeout channel to end
+	// which will cause another life to be lost and the game to end
 	game.LivesRemaining = 1
-
-	// trigger timeout channel to finish game
-	if !game.TimeoutChannel.Stop() {
-		<-game.TimeoutChannel.C
+	if !game.GuessTimeoutTimer.Stop() {
+		<-game.GuessTimeoutTimer.C
 	}
-	game.TimeoutChannel.Reset(time.Nanosecond)
+	game.GuessTimeoutTimer.Reset(time.Nanosecond)
 }
 
 // skipNuguGame allows a user to skip a nugugame round
 func skipNuguGame(msg *discordgo.Message, commandArgs []string) {
 	var game *nuguGame
 
-	// if the user already has a game, do nothing
+	// confirm the user has a game
 	if game = getNuguGameByUserID(msg.Author.ID); game == nil {
 		return
 	}
@@ -448,11 +440,11 @@ func skipNuguGame(msg *discordgo.Message, commandArgs []string) {
 		return
 	}
 
-	// trigger timeout channel to finish game
-	if !game.TimeoutChannel.Stop() {
-		<-game.TimeoutChannel.C
+	// trigger timeout channel to finish round
+	if !game.GuessTimeoutTimer.Stop() {
+		<-game.GuessTimeoutTimer.C
 	}
-	game.TimeoutChannel.Reset(time.Nanosecond)
+	game.GuessTimeoutTimer.Reset(time.Nanosecond)
 }
 
 ///////////////////////
@@ -593,7 +585,7 @@ func convertNugugameToCached(nugugames map[string]*nuguGame) map[string]nuguGame
 	return cachedGames
 }
 
-// startCacheRefreshLoop will refresh the cache for biasgames
+// startCacheRefreshLoop will refresh the cache for nugugames
 func startCacheRefreshLoop() {
 	log().Info("Starting nugugame current games cache loop")
 
