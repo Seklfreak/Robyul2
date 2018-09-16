@@ -65,6 +65,12 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 		return
 	}
 
+	// nugugame only enabled on Snakeyez Dev and ModChat for right now
+	if msg.GuildID != "403003926720413699" && msg.GuildID != "184790855977009152" {
+		helpers.SendMessage(msg.ChannelID, "Sorry, nugugame is currently unavailable.")
+		return
+	}
+
 	// process text after the initial command
 	commandArgs := strings.Fields(content)
 
