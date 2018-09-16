@@ -694,6 +694,7 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 
 	// if an idol as passed, skip checking args
 	if targetIdol == nil {
+
 		// strip out "idol-stats" arg
 		commandArgs = commandArgs[1:]
 
@@ -710,41 +711,43 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 		}
 	}
 
-	// TODO: improve query performance
-	query := bson.M{}
+	// query games where idol is in game
+	query := bson.M{"$or": []bson.M{
+		// check if idol is in round winner or losers array
+		bson.M{"correctidols": targetIdol.ID},
+		bson.M{"incorrectidols": targetIdol.ID},
+	}}
+
+	// exclude unneeded fields for better performance
+	fieldsToExclude := map[string]int{
+		"correctidols":       0,
+		"usercorrectguesses": 0,
+	}
 
 	var games []models.NuguGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query)).All(&games)
+	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query).Select(fieldsToExclude)).All(&games)
 
 	var totalCorrectGuesses int
 	var totalIncorrectGuesses int
-	var totalGames int
 
-	// check games for idol
+	// collect stats from games
 	for _, game := range games {
-		isInGame := false
 
-		// get missed idols and groups
-		for _, idolId := range game.CorrectIdols {
-			if targetIdol.ID == idolId {
-				isInGame = true
-				totalCorrectGuesses += 1
-			}
-		}
-
+		// check if idol was in correct guesses, if not add to correct guesses
+		isIncorrectGuess := false
 		for _, idolId := range game.IncorrectIdols {
 			if targetIdol.ID == idolId {
-				isInGame = true
+				isIncorrectGuess = true
 				totalIncorrectGuesses += 1
 			}
 		}
 
-		if isInGame {
-			totalGames += 1
+		if !isIncorrectGuess {
+			totalCorrectGuesses += 1
 		}
 	}
 
-	// calculate guess perfentage
+	// calculate guess percentage
 	var correctGuessPercentage float64
 	totalGuesses := totalCorrectGuesses + totalIncorrectGuesses
 	if totalGuesses > 0 {
@@ -764,7 +767,7 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "Total Games",
-				Value:  strconv.Itoa(totalGames),
+				Value:  strconv.Itoa(totalCorrectGuesses + totalIncorrectGuesses),
 				Inline: true,
 			},
 			{
@@ -785,7 +788,7 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 		},
 	}
 
-	// get random image from the thumbnail
+	// get random image for the thumbnail
 	imageIndex := rand.Intn(len(targetIdol.Images))
 	thumbnailReader := bytes.NewReader(targetIdol.Images[imageIndex].GetImgBytes())
 
