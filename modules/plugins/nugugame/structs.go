@@ -14,6 +14,7 @@ type nuguGame struct {
 	CorrectIdols        []*idols.Idol
 	IncorrectIdols      []*idols.Idol
 	CurrentIdol         *idols.Idol
+	CorrectAnswers      []string // holds the correct possible answers for the current
 	WaitingForGuess     bool
 	IsMultigame         bool // if true all messages in the channel will be account for
 	ChannelID           string

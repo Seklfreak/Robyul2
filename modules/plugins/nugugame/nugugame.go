@@ -129,6 +129,24 @@ func (g *nuguGame) sendRound() {
 	// get a random idol to send round for
 	g.CurrentIdol = g.getNewRandomIdol()
 
+	// Get the correct possible answers for this idol
+	var correctAnswers []string
+	if g.GameType == "group" {
+		correctAnswers = []string{g.CurrentIdol.GroupName}
+
+		// add aliases as acceptable answers
+		if hasAliases, aliases := idols.GetAlisesForGroup(g.CurrentIdol.GroupName); hasAliases {
+			correctAnswers = append(correctAnswers, aliases...)
+		}
+	} else {
+		correctAnswers = []string{g.CurrentIdol.Name}
+		correctAnswers = append(correctAnswers, g.CurrentIdol.NameAliases...)
+	}
+	for i, correctAnswer := range correctAnswers {
+		correctAnswers[i] = strings.ToLower(alphaNumericRegex.ReplaceAllString(correctAnswer, ""))
+	}
+	g.CorrectAnswers = correctAnswers
+
 	// if current idol is nil assume we're out of usable idols and end the game
 	if g.CurrentIdol == nil {
 
@@ -197,26 +215,9 @@ func (g *nuguGame) watchForGuesses() {
 				// if guess is correct add green check mark too it, save the correct guess, and send next round
 				userGuess := strings.ToLower(alphaNumericRegex.ReplaceAllString(userMsg.Content, ""))
 
-				// TODO------------------------------------------------------------
-				//   improve performance by collecting correct guesses when the idol is set so it doesn't have to be done on every guess
-				// Get the correct answers for this idol
-				var correctAnswers []string
-				if g.GameType == "group" {
-					correctAnswers = []string{currentIdol.GroupName}
-
-					// add aliases as acceptable answers
-					if hasAliases, aliases := idols.GetAlisesForGroup(currentIdol.GroupName); hasAliases {
-						correctAnswers = append(correctAnswers, aliases...)
-					}
-				} else {
-					correctAnswers = []string{currentIdol.Name}
-					correctAnswers = append(correctAnswers, currentIdol.NameAliases...)
-				}
-
 				// check if the user guess contains the idols name
-				for _, correctAnswer := range correctAnswers {
+				for _, correctAnswer := range g.CorrectAnswers {
 
-					correctAnswer = strings.ToLower(alphaNumericRegex.ReplaceAllString(correctAnswer, ""))
 					if g.WaitingForGuess && userGuess == correctAnswer {
 						g.WaitingForGuess = false
 
