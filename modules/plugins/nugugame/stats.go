@@ -95,10 +95,10 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	// if there is only one arg check if it matches a valid group, if so send to group stats
 	if len(commandArgs) == 1 {
-		// if exists, _ := idols.GetMatchingGroup(commandArgs[1], true); exists {
-		// 	displayGroupStats(msg, statsMessage)
-		// 	return
-		// }
+		if exists, groupName := idols.GetMatchingGroup(commandArgs[0], true); exists {
+			displayGroupStats(msg, commandArgs, groupName)
+			return
+		}
 	} else if len(commandArgs) == 2 {
 		if _, _, idol := idols.GetMatchingIdolAndGroup(commandArgs[0], commandArgs[1], true); idol != nil {
 			displayIdolStats(msg, commandArgs, idol)
@@ -789,6 +789,139 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 	msgSend := &discordgo.MessageSend{
 		Files: []*discordgo.File{{
 			Name:   "idol_stats_thumbnail.png",
+			Reader: thumbnailReader,
+		}},
+		Embed: embed,
+	}
+	helpers.SendComplex(msg.ChannelID, msgSend)
+}
+
+// displayIdolStats displays nugugame stats for a given idol
+func displayGroupStats(msg *discordgo.Message, commandArgs []string, groupName string) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	targetGroupName := groupName
+
+	// if we have a group name, skip argument checking
+	if targetGroupName == "" {
+
+		// strip out "group-stats" arg
+		commandArgs = commandArgs[1:]
+
+		if len(commandArgs) < 1 {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.too-few"))
+			return
+		}
+
+		// get real group name from arg
+		var exists bool
+		if exists, targetGroupName = idols.GetMatchingGroup(commandArgs[0], true); !exists {
+			helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
+			return
+		}
+	}
+
+	var idolsInGroup []*idols.Idol
+	var allGroupImages []idols.IdolImage
+
+	// get all the games for the target group
+	var orStatements []bson.M
+	for _, idol := range idols.GetAllIdols() {
+		if idol.GroupName == targetGroupName {
+			idolsInGroup = append(idolsInGroup, idol)
+
+			// get random picture for the idol
+			imageIndex := rand.Intn(len(idol.Images))
+			allGroupImages = append(allGroupImages, idol.Images[imageIndex])
+
+			orStatements = append(orStatements, []bson.M{
+				bson.M{"correctidols": idol.ID},
+				bson.M{"incorrectidols": idol.ID},
+			}...)
+		}
+	}
+	query := bson.M{"$or": orStatements}
+
+	// exclude unneeded fields for better performance
+	fieldsToExclude := map[string]int{
+		"usercorrectguesses": 0,
+	}
+
+	var games []models.NuguGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query).Select(fieldsToExclude)).All(&games)
+
+	var totalCorrectGuesses int
+	var totalIncorrectGuesses int
+
+	// collect stats from games
+	for _, targetIdol := range idolsInGroup {
+
+	GameLoop:
+		for _, game := range games {
+
+			for _, idolId := range game.IncorrectIdols {
+				if targetIdol.ID == idolId {
+					totalIncorrectGuesses += 1
+					continue GameLoop
+				}
+			}
+
+			for _, idolId := range game.CorrectIdols {
+				if targetIdol.ID == idolId {
+					totalCorrectGuesses += 1
+				}
+			}
+		}
+	}
+
+	// calculate guess percentage
+	var correctGuessPercentage float64
+	totalGuesses := totalCorrectGuesses + totalIncorrectGuesses
+	if totalGuesses > 0 {
+		correctGuessPercentage = (float64(totalCorrectGuesses) / float64(totalGuesses)) * 100
+	} else {
+		correctGuessPercentage = 0
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: fmt.Sprintf("Stats for %s", targetGroupName),
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "attachment://group_stats_thumbnail.png",
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:   "Total Games",
+				Value:  strconv.Itoa(totalCorrectGuesses + totalIncorrectGuesses),
+				Inline: true,
+			},
+			{
+				Name:   "Correct Guess %",
+				Value:  strconv.FormatFloat(correctGuessPercentage, 'f', 2, 64) + "%",
+				Inline: true,
+			},
+			{
+				Name:   "Total Correct Guesses",
+				Value:  strconv.Itoa(totalCorrectGuesses),
+				Inline: true,
+			},
+			{
+				Name:   "Total Incorrect Guesses",
+				Value:  strconv.Itoa(totalIncorrectGuesses),
+				Inline: true,
+			},
+		},
+	}
+
+	// get random image for the thumbnail
+	imageIndex := rand.Intn(len(allGroupImages))
+	thumbnailReader := bytes.NewReader(allGroupImages[imageIndex].GetImgBytes())
+
+	msgSend := &discordgo.MessageSend{
+		Files: []*discordgo.File{{
+			Name:   "group_stats_thumbnail.png",
 			Reader: thumbnailReader,
 		}},
 		Embed: embed,
