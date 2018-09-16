@@ -49,7 +49,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	gameGender := "mixed"
 	isMulti := false
 	gameType := "idol"
-	gameDifficulty := "all"
+	gameDifficulty := "medium"
 	lives := 5
 
 	// validate game arguments and adjust game settings as needed
@@ -353,7 +353,6 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 	var idol *idols.Idol
 	var idolPool []*idols.Idol
 
-	// TODO: remove "all" difficulty from nugugame
 	idolIds := getNugugameIdolsByDifficulty(g.Difficulty)
 	if len(idolIds) > 0 {
 		for _, idolID := range idolIds {
@@ -363,8 +362,6 @@ func (g *nuguGame) getNewRandomIdol() *idols.Idol {
 				idolPool = append(idolPool, idolForGame)
 			}
 		}
-	} else {
-		idolPool = idols.GetActiveIdols()
 	}
 
 	// if this isn't a mixed game then filter all choices by the gender

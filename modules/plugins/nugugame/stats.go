@@ -165,7 +165,6 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		"easy":    "*No Stats*",
 		"medium":  "*No Stats*",
 		"hard":    "*No Stats*",
-		"all":     "*No Stats*",
 		"girl":    "*No Stats*",
 		"boy":     "*No Stats*",
 		"mixed":   "*No Stats*",
@@ -306,11 +305,6 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			{
 				Name:   "Correct Guess %",
 				Value:  strconv.FormatFloat(correctGuessPercentage, 'f', 2, 64) + "%",
-				Inline: true,
-			},
-			{
-				Name:   "Highest Score (All)",
-				Value:  highestScores["all"],
 				Inline: true,
 			},
 			{
