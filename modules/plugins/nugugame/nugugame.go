@@ -129,6 +129,17 @@ func (g *nuguGame) sendRound() {
 	// get a random idol to send round for
 	g.CurrentIdol = g.getNewRandomIdol()
 
+	// if current idol is nil assume we're out of usable idols and end the game
+	if g.CurrentIdol == nil {
+
+		// trigger timeout channel to finish game
+		if !g.GuessTimeoutTimer.Stop() {
+			<-g.GuessTimeoutTimer.C
+		}
+		g.GuessTimeoutTimer.Reset(time.Nanosecond)
+		return
+	}
+
 	// Get the correct possible answers for this idol
 	var correctAnswers []string
 	if g.GameType == "group" {
@@ -146,17 +157,6 @@ func (g *nuguGame) sendRound() {
 		correctAnswers[i] = strings.ToLower(alphaNumericRegex.ReplaceAllString(correctAnswer, ""))
 	}
 	g.CorrectAnswers = correctAnswers
-
-	// if current idol is nil assume we're out of usable idols and end the game
-	if g.CurrentIdol == nil {
-
-		// trigger timeout channel to finish game
-		if !g.GuessTimeoutTimer.Stop() {
-			<-g.GuessTimeoutTimer.C
-		}
-		g.GuessTimeoutTimer.Reset(time.Nanosecond)
-		return
-	}
 
 	// get an image for the current idol and resize it
 	idolImage := g.CurrentIdol.GetResizedRandomImage(NUGUGAME_IMAGE_RESIZE_HEIGHT)
