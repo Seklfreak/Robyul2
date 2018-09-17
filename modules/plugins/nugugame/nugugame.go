@@ -553,7 +553,7 @@ func convertNugugameToCached(nugugames map[string]*nuguGame) map[string]nuguGame
 	for _, game := range nugugames {
 
 		// only need to save games that have actual correct guesses recorded
-		if len(game.CorrectIdols) == 0 {
+		if len(game.CorrectIdols) == 0 || game.CurrentIdol == nil {
 			continue
 		}
 
