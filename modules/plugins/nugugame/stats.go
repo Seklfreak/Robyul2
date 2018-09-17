@@ -270,6 +270,11 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		embedIcon = targetUser.AvatarURL("512")
 	}
 
+	averageScore := "*No Stats*"
+	if len(games) > 0 {
+		averageScore = strconv.Itoa(totalCorrectCount / len(games))
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
@@ -289,7 +294,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			},
 			{
 				Name:   "Average Score",
-				Value:  strconv.Itoa(totalCorrectCount / len(games)),
+				Value:  averageScore,
 				Inline: true,
 			},
 			{
