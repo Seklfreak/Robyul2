@@ -3,14 +3,14 @@ go:
   #- master
   - 1.11.x
 install:
-    - go mod download
-    - go get -u github.com/jteeuwen/go-bindata/...
+    - env GO111MODULE=on go mod download
+    - env GO111MODULE=on go get -u github.com/jteeuwen/go-bindata/...
     # snyk (on non pull requests)
     - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then npm install npm -g && npm install -g snyk && snyk test; fi'
 script:
-    - bash format_go.sh
-    - go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
-    - go test -v -race $(go list ./... | grep -v /vendor/)
+    - env GO111MODULE=on bash format_go.sh
+    - env GO111MODULE=on go-bindata -nomemcopy -nocompress -pkg helpers -o helpers/assets.go _assets/
+    - env GO111MODULE=on go test -v -race $(go list ./... | grep -v /vendor/)
 after_success:
     # snyk (on non pull requests)
     - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then snyk monitor; fi'
