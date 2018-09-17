@@ -50,7 +50,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	isMulti := false
 	gameType := "idol"
 	gameDifficulty := "medium"
-	lives := 5
+	lives := 3
 
 	// validate game arguments and adjust game settings as needed
 	if len(commandArgs) > 0 {
