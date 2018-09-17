@@ -4,7 +4,7 @@ go:
   - 1.11.x
 install:
     - env GO111MODULE=on go mod download
-    - env GO111MODULE=on go get -u github.com/jteeuwen/go-bindata/...
+    - go get -u github.com/jteeuwen/go-bindata/...
     # snyk (on non pull requests)
     - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then npm install npm -g && npm install -g snyk && snyk test; fi'
 script:
