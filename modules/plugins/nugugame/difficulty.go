@@ -3,6 +3,7 @@ package nugugame
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -125,6 +126,64 @@ LoadDifficultyLoop:
 	// update cache
 	err := setModuleCache(NUGUGAME_DIFFICULTY_IDOLS_KEY, getAllNugugameIdols(), 0)
 	helpers.Relax(err)
+}
+
+// listIdolsByDifficulty will display the idols included in a specific difficulty of the nugugame
+func countIdolsByDifficulty(msg *discordgo.Message, commandArgs []string) {
+
+	// get count of idols in each difficulty
+	idolCountMap := make(map[string]map[string]string)
+	for difficulty, idolsInDifficulty := range idolsByDifficulty {
+
+		var girlCount int
+		var boyCount int
+
+		for _, idolId := range idolsInDifficulty {
+			idol := idols.GetMatchingIdolById(bson.ObjectIdHex(idolId))
+			if idol == nil {
+				continue
+			}
+
+			if idol.Gender == "boy" {
+				boyCount += 1
+			} else {
+				girlCount += 1
+			}
+
+			idolCountMap[difficulty] = make(map[string]string)
+			idolCountMap[difficulty]["allCount"] = strconv.Itoa(len(idolsInDifficulty))
+			idolCountMap[difficulty]["girlCount"] = strconv.Itoa(girlCount)
+			idolCountMap[difficulty]["boyCount"] = strconv.Itoa(boyCount)
+
+		}
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Color: 0x0FADED, // blueish
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    "Idols included in each difficulty",
+			IconURL: msg.Author.AvatarURL("512"),
+		},
+	}
+
+	var difficultyOrder = []string{"easy", "medium", "hard"}
+	for _, difficulty := range difficultyOrder {
+		embed.Fields = append(embed.Fields, []*discordgo.MessageEmbedField{{
+			Name:   fmt.Sprintf("%s", strings.Title(difficulty)),
+			Value:  idolCountMap[difficulty]["allCount"],
+			Inline: true,
+		}, {
+			Name:   "Girls",
+			Value:  idolCountMap[difficulty]["girlCount"],
+			Inline: true,
+		}, {
+			Name:   "Boys",
+			Value:  idolCountMap[difficulty]["boyCount"],
+			Inline: true,
+		}}...)
+	}
+
+	helpers.SendEmbed(msg.ChannelID, embed)
 }
 
 // listIdolsByDifficulty will display the idols included in a specific difficulty of the nugugame
