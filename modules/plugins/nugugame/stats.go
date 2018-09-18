@@ -512,7 +512,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 		}...)
 	}
 
-	helpers.SendPagedMessage(msg, embed, 30)
+	helpers.SendPagedMessage(msg, embed, 21)
 }
 
 // displayMissedIdols will display the most
