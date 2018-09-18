@@ -49,7 +49,7 @@ func (m *Handler) checkInstagramPublicFeedLoop() {
 
 		wg.Add(InstagramGraphQlWorkers)
 
-		jobs := make(chan map[string][]models.InstagramEntry, 0)
+		jobs := make(chan map[string][]models.InstagramEntry, InstagramGraphQlWorkers)
 
 		workerEntries := make(map[int]map[string][]models.InstagramEntry, 0)
 		for w := 1; w <= InstagramGraphQlWorkers; w++ {
