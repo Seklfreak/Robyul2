@@ -50,7 +50,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	isMulti := false
 	gameType := "idol"
 	gameDifficulty := "medium"
-	lives := 5
+	lives := 3
 
 	// validate game arguments and adjust game settings as needed
 	if len(commandArgs) > 0 {
@@ -129,6 +129,17 @@ func (g *nuguGame) sendRound() {
 	// get a random idol to send round for
 	g.CurrentIdol = g.getNewRandomIdol()
 
+	// if current idol is nil assume we're out of usable idols and end the game
+	if g.CurrentIdol == nil {
+
+		// trigger timeout channel to finish game
+		if !g.GuessTimeoutTimer.Stop() {
+			<-g.GuessTimeoutTimer.C
+		}
+		g.GuessTimeoutTimer.Reset(time.Nanosecond)
+		return
+	}
+
 	// Get the correct possible answers for this idol
 	var correctAnswers []string
 	if g.GameType == "group" {
@@ -146,17 +157,6 @@ func (g *nuguGame) sendRound() {
 		correctAnswers[i] = strings.ToLower(alphaNumericRegex.ReplaceAllString(correctAnswer, ""))
 	}
 	g.CorrectAnswers = correctAnswers
-
-	// if current idol is nil assume we're out of usable idols and end the game
-	if g.CurrentIdol == nil {
-
-		// trigger timeout channel to finish game
-		if !g.GuessTimeoutTimer.Stop() {
-			<-g.GuessTimeoutTimer.C
-		}
-		g.GuessTimeoutTimer.Reset(time.Nanosecond)
-		return
-	}
 
 	// get an image for the current idol and resize it
 	idolImage := g.CurrentIdol.GetResizedRandomImage(NUGUGAME_IMAGE_RESIZE_HEIGHT)
@@ -553,7 +553,7 @@ func convertNugugameToCached(nugugames map[string]*nuguGame) map[string]nuguGame
 	for _, game := range nugugames {
 
 		// only need to save games that have actual correct guesses recorded
-		if len(game.CorrectIdols) == 0 {
+		if len(game.CorrectIdols) == 0 || game.CurrentIdol == nil {
 			continue
 		}
 

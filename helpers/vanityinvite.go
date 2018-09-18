@@ -391,7 +391,7 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 	}
 
 	cache.GetLogger().WithField("module", "vanityinvite").Infof(
-		"created a new invite for Guild # to Channel #", vanityInviteEntry.GuildID, vanityInviteEntry.ChannelID)
+		"created a new invite for Guild #%s to Channel #%s", vanityInviteEntry.GuildID, vanityInviteEntry.ChannelID)
 
 	invite, err := cache.GetSession().ChannelInviteCreate(vanityInviteEntry.ChannelID, discordgo.Invite{
 		MaxAge: 60 * 60 * 24, // 1 day
