@@ -108,7 +108,10 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	game.User = msg.Author
 	game.GuessChannel = make(chan *discordgo.Message)
 	game.GuessTimeoutTimer = time.NewTimer(NUGUGAME_DEFULT_ROUND_DELAY * time.Second)
-	game.UsersCorrectGuesses = make(map[string][]bson.ObjectId)
+
+	if game.UsersCorrectGuesses == nil {
+		game.UsersCorrectGuesses = make(map[string][]bson.ObjectId)
+	}
 
 	game.saveGame()
 	game.sendRound()
