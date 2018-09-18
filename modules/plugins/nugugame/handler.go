@@ -86,6 +86,9 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 			case "missed":
 				displayMissedIdols(msg, commandArgs)
 
+			case "count", "counts":
+				countIdolsByDifficulty(msg, commandArgs)
+
 			case "refresh-nugugame":
 				helpers.RequireRobyulMod(msg, func() {
 					manualRefreshDifficulties(msg)
