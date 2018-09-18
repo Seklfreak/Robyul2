@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"math/rand"
 	"os"
 	"time"
 
@@ -115,4 +116,21 @@ func loadMiscImages() {
 			shadowBorder = resize.Resize(0, NUGUGAME_IMAGE_RESIZE_HEIGHT+40, img, resize.Lanczos3)
 		}
 	}
+}
+
+// <3
+func getRandomNayoungEmoji() string {
+	nayoungEmojiArray := []string{
+		":nayoungthumbsup:430592739839705091",
+		":nayoungsalute:430592737340030979",
+		":nayounghype:430592740066066433",
+		":nayoungheart6:430592739868934164",
+		":nayoungheart2:430592737004224514",
+		":nayoungheart:430592736496713738",
+		":nayoungok:424683077793611777",
+		"a:anayoungminnie:430592552610299924",
+	}
+
+	randomIndex := rand.Intn(len(nayoungEmojiArray))
+	return nayoungEmojiArray[randomIndex]
 }

@@ -226,13 +226,29 @@ func (g *nuguGame) watchForGuesses() {
 
 						if g.IsMultigame {
 
-							cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+							// if the user guessed nayoung correctly, add cute nayoung emoji instead of a checkmark
+							if strings.ToLower(currentIdol.GroupName) == "pristin" && strings.ToLower(currentIdol.Name) == "nayoung" {
+								cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, getRandomNayoungEmoji()) // <3
+
+							} else {
+								cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+							}
+
 							g.UsersCorrectGuesses[userMsg.Author.ID] = append(g.UsersCorrectGuesses[userMsg.Author.ID], currentIdol.ID)
 
 						} else {
 
-							// Delete users guess if its a solo game, helps reduce spam
-							go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
+							// if the user guessed nayoung correctly, add cute nayoung emoji instead of a checkmark
+							if strings.ToLower(currentIdol.GroupName) == "pristin" && strings.ToLower(currentIdol.Name) == "nayoung" {
+								cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, getRandomNayoungEmoji()) // <3
+								go helpers.DeleteMessageWithDelay(userMsg, 4*time.Second)
+
+							} else {
+
+								// Delete users guess if its a solo game, helps reduce spam
+								go helpers.DeleteMessageWithDelay(userMsg, NUGUGAME_ROUND_DELETE_DELAY)
+							}
+
 						}
 
 						g.CorrectIdols = append(g.CorrectIdols, currentIdol)
