@@ -22,7 +22,7 @@ const (
 
 var difficultyPercentageMap = map[string]float32{
 	"easy":   .10,
-	"medium": .35,
+	"medium": .40,
 	"hard":   .85,
 }
 var difficultyLives = map[string]int{
@@ -32,9 +32,9 @@ var difficultyLives = map[string]int{
 }
 var idolsByDifficultyMutex sync.RWMutex
 var idolsByDifficulty = map[string][]string{
-	"easy":   []string{},
-	"medium": []string{},
-	"hard":   []string{},
+	"easy":   {},
+	"medium": {},
+	"hard":   {},
 }
 
 // startDifficultyCacheLoop will refresh the cache for nugugame idols in difficulty
@@ -106,7 +106,7 @@ LoadDifficultyLoop:
 		for _, name := range compiledData[count] {
 			idolsInNugugame = append(idolsInNugugame, name)
 
-			for difficulty, _ := range idolsByDifficulty {
+			for difficulty := range idolsByDifficulty {
 				amountForDifficulty := float32(len(idols.GetActiveIdols())) * difficultyPercentageMap[difficulty]
 
 				if len(idolsInNugugame) == int(amountForDifficulty) {
