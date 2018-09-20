@@ -274,11 +274,13 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	for idol, missCount := range mostMissedIdols {
 		if missCount > mostMissedIdolCount {
 			mostMissedIdol = fmt.Sprintf("%s %s", idol.GroupName, idol.Name)
+			mostMissedIdolCount = missCount
 		}
 	}
 	for groupName, missCount := range mostMissedGroups {
 		if missCount > mostMissedGroupCount {
 			mostMissedGroup = groupName
+			mostMissedGroupCount = missCount
 		}
 	}
 
