@@ -413,6 +413,12 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 				}
 			}
 
+			// gender check
+			if gender, ok := gameGenders[arg]; ok {
+				query["gender"] = gender
+				continue
+			}
+
 			// check difficulty
 			if _, ok := difficultyLives[arg]; ok {
 				query["difficulty"] = arg
@@ -505,8 +511,8 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 				Inline: true,
 			},
 			{
-				Name:   "Game Difficulty",
-				Value:  game.Difficulty,
+				Name:   "Game Type",
+				Value:  strings.Title(fmt.Sprintf("%s | %s", game.Difficulty, game.Gender)),
 				Inline: true,
 			},
 		}...)
