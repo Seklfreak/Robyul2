@@ -324,7 +324,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			},
 			{
 				Name:   "Total Points",
-				Value:  strconv.Itoa(totalPointsScored),
+				Value:  humanize.Comma(int64(totalPointsScored)),
 				Inline: true,
 			},
 			{
