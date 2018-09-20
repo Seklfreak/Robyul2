@@ -406,7 +406,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 }
 
 // displayNugugameRanking sends embed of nugu game rankings
-func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServerRanking bool) {
+func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, byServerRanking bool) {
 	cache.GetSession().ChannelTyping(msg.ChannelID)
 
 	// strip out "ranking" arg
@@ -421,8 +421,9 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 
 	embedIcon := cache.GetSession().State.User.AvatarURL("512")
 	embedTitle := "Nugu Game User Rankings"
-	if isServerRanking {
+	if byServerRanking {
 		embedTitle = "Nugu Game Server Rankings"
+		query = bson.M{"gametype": "idol"}
 	}
 
 	// check arguments
@@ -430,7 +431,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 		for _, arg := range commandArgs {
 
 			// check if running stats by server, default to the server of the message
-			if arg == "server" && !isServerRanking {
+			if arg == "server" && !byServerRanking {
 				targetGuild, err = helpers.GetGuild(msg.GuildID)
 				query["guildid"] = msg.GuildID
 				embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
@@ -439,12 +440,22 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 			}
 
 			// If stats are for a server, check if they also a serverid so we can run for other servers
-			if isServerQuery && !isServerRanking {
+			if isServerQuery && !byServerRanking {
 				if targetGuild, err = helpers.GetGuild(commandArgs[len(commandArgs)-1]); err == nil {
 					query["guildid"] = targetGuild.ID
 					embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
 					continue
 				}
+			}
+
+			if byServerRanking && (arg == "solo" || arg == "single") {
+				query["ismultigame"] = false
+				continue
+			}
+
+			if byServerRanking && arg == "multi" {
+				query["ismultigame"] = true
+				continue
 			}
 
 			// gender check
@@ -482,7 +493,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 	highestScoreGamesMap := make(map[string]models.NuguGameEntry)
 	var highestScoreGames []models.NuguGameEntry
 	for _, game := range games {
-		if isServerRanking {
+		if byServerRanking {
 
 			if _, ok := highestScoreGamesMap[game.GuildID]; !ok {
 				highestScoreGamesMap[game.GuildID] = game
@@ -514,8 +525,14 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 
 		// get display name of user or guilds
 		displayName := "*Unknown*"
-		if isServerRanking {
+		var gameTypeText string
+		if byServerRanking {
 
+			gameType := "Solo"
+			if game.IsMultigame {
+				gameType = "Multi"
+			}
+			gameTypeText = strings.Title(fmt.Sprintf("%s | %s | %s", game.Difficulty, game.Gender, gameType))
 			guild, err := helpers.GetGuild(game.GuildID)
 			if err == nil {
 				displayName = guild.Name
@@ -523,6 +540,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 
 		} else {
 
+			gameTypeText = strings.Title(fmt.Sprintf("%s | %s", game.Difficulty, game.Gender))
 			user, err := helpers.GetUser(game.UserID)
 			if err == nil {
 				displayName = user.Username
@@ -546,7 +564,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, isServ
 			},
 			{
 				Name:   "Game Type",
-				Value:  strings.Title(fmt.Sprintf("%s | %s", game.Difficulty, game.Gender)),
+				Value:  gameTypeText,
 				Inline: true,
 			},
 		}...)
