@@ -21,20 +21,23 @@ const (
 )
 
 var difficultyPercentageMap = map[string]float32{
-	"easy":   .10,
-	"medium": .40,
-	"hard":   .85,
+	"easy":      .10,
+	"medium":    .30,
+	"hard":      .65,
+	"very-hard": .90,
 }
 var difficultyLives = map[string]int{
-	"easy":   3,
-	"medium": 3,
-	"hard":   5,
+	"easy":      3,
+	"medium":    3,
+	"hard":      5,
+	"very-hard": 5,
 }
 var idolsByDifficultyMutex sync.RWMutex
 var idolsByDifficulty = map[string][]string{
-	"easy":   {},
-	"medium": {},
-	"hard":   {},
+	"easy":      {},
+	"medium":    {},
+	"hard":      {},
+	"very-hard": {},
 }
 
 // startDifficultyCacheLoop will refresh the cache for nugugame idols in difficulty
@@ -112,7 +115,7 @@ LoadDifficultyLoop:
 				if len(idolsInNugugame) == int(amountForDifficulty) {
 					idolsByDifficulty[difficulty] = idolsInNugugame
 
-					if difficulty == "hard" {
+					if difficulty == "very-hard" {
 						break LoadDifficultyLoop
 					}
 				}
@@ -121,7 +124,11 @@ LoadDifficultyLoop:
 	}
 	idolsByDifficultyMutex.Unlock()
 
-	log().Infof("Amount Of Idols By Difficulty: Easy: %d, Medium: %d, Hard: %d", len(idolsByDifficulty["easy"]), len(idolsByDifficulty["medium"]), len(idolsByDifficulty["hard"]))
+	log().Infof("Amount Of Idols By Difficulty: Easy: %d, Medium: %d, Hard: %d, Very Hard: %d",
+		len(idolsByDifficulty["easy"]),
+		len(idolsByDifficulty["medium"]),
+		len(idolsByDifficulty["hard"]),
+		len(idolsByDifficulty["very-hard"]))
 
 	// update cache
 	err := setModuleCache(NUGUGAME_DIFFICULTY_IDOLS_KEY, getAllNugugameIdols(), 0)
@@ -166,7 +173,7 @@ func countIdolsByDifficulty(msg *discordgo.Message, commandArgs []string) {
 		},
 	}
 
-	var difficultyOrder = []string{"easy", "medium", "hard"}
+	var difficultyOrder = []string{"easy", "medium", "hard", "very-hard"}
 	for _, difficulty := range difficultyOrder {
 		embed.Fields = append(embed.Fields, []*discordgo.MessageEmbedField{{
 			Name:   fmt.Sprintf("%s", strings.Title(difficulty)),
@@ -281,5 +288,9 @@ func complieGameStats(records map[string]int) (map[int][]string, []int) {
 func manualRefreshDifficulties(msg *discordgo.Message) {
 	helpers.SendMessage(msg.ChannelID, "Refreshing nugugame difficulties...")
 	refreshDifficulties()
-	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Amount Of Idols By Difficulty: \nEasy: %d \nMedium: %d \nHard: %d", len(idolsByDifficulty["easy"]), len(idolsByDifficulty["medium"]), len(idolsByDifficulty["hard"])))
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Amount Of Idols By Difficulty: \nEasy: %d \nMedium: %d \nHard: %d\nVery Hard: %d",
+		len(idolsByDifficulty["easy"]),
+		len(idolsByDifficulty["medium"]),
+		len(idolsByDifficulty["hard"]),
+		len(idolsByDifficulty["very-hard"])))
 }
