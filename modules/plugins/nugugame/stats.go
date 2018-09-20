@@ -3,6 +3,7 @@ package nugugame
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -107,7 +108,11 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	}
 
 	// default
-	query := bson.M{"ismultigame": false, "userid": targetUser.ID}
+	query := bson.M{"$or": []bson.M{
+		// check if idol is in round winner or losers array
+		bson.M{"userid": targetUser.ID, "ismultigame": false},
+		bson.M{"ismultigame": true, fmt.Sprintf("userscorrectguesses.%s", targetUser.ID): bson.M{"$exists": true}},
+	}}
 	isServerQuery := false
 	isGlobalQuery := false
 	var targetGuild *discordgo.Guild
@@ -118,9 +123,13 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		for _, arg := range commandArgs {
 
 			if user, err := helpers.GetUserFromMention(arg); err == nil {
-				if _, ok := query["userid"]; ok {
-					query["userid"] = user.ID
+				if !isServerQuery && !isGlobalQuery {
 					targetUser = user
+					query = bson.M{"$or": []bson.M{
+						// check if idol is in round winner or losers array
+						bson.M{"userid": targetUser.ID, "ismultigame": false},
+						bson.M{"ismultigame": true, fmt.Sprintf("userscorrectguesses.%s", targetUser.ID): bson.M{"$exists": true}},
+					}}
 				}
 				continue
 			}
@@ -175,15 +184,42 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	mostMissedIdols := make(map[*idols.Idol]int)
 	mostMissedGroups := make(map[string]int)
-	var totalCorrectCount int
-	var totalIncorrectCount int
+	var totalPointsScored int
+	var totalSoloCorrectCount int
+	var totalSoloIncorrectCount int
+	var soloGamesPlayed int
+	var multiGamesPlayed int
 
 	// compile stats
 	for _, game := range games {
 		gameScore := game.CorrectIdolsCount
 
-		totalCorrectCount += game.CorrectIdolsCount
-		totalIncorrectCount += game.IncorrectIdolsCount
+		if game.IsMultigame {
+			multiGamesPlayed += 1
+			userPointsScored := len(game.UsersCorrectGuesses[targetUser.ID])
+			totalPointsScored += userPointsScored
+
+			// highest score for multi game
+			curHighestForMulti, _ := strconv.Atoi(highestScores["multi"])
+			if gameScore > curHighestForMulti {
+
+				if !isServerQuery && !isGlobalQuery {
+
+					highestScores["multi"] = strconv.Itoa(userPointsScored)
+				} else {
+
+					highestScores["multi"] = strconv.Itoa(gameScore)
+				}
+			}
+
+			// the reset of the stats are for solo only games
+			continue
+		}
+
+		soloGamesPlayed += 1
+		totalPointsScored += game.CorrectIdolsCount
+		totalSoloCorrectCount += game.CorrectIdolsCount
+		totalSoloIncorrectCount += game.IncorrectIdolsCount
 
 		// overall highest score
 		curHighestEverything, _ := strconv.Atoi(highestScores["overall"])
@@ -209,14 +245,6 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			highestScores[game.GameType] = strconv.Itoa(gameScore)
 		}
 
-		// highest score for multi game
-		if game.IsMultigame {
-			curHighestForMulti, _ := strconv.Atoi(highestScores["multi"])
-			if gameScore > curHighestForMulti {
-				highestScores["multi"] = strconv.Itoa(gameScore)
-			}
-		}
-
 		// get missed idols and groups
 		for _, idolId := range game.IncorrectIdols {
 			idol := idols.GetMatchingIdolById(idolId)
@@ -230,9 +258,9 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	// calculate guess perfentage
 	var correctGuessPercentage float64
-	totalGuesses := totalCorrectCount + totalIncorrectCount
+	totalGuesses := totalSoloCorrectCount + totalSoloIncorrectCount
 	if totalGuesses > 0 {
-		correctGuessPercentage = (float64(totalCorrectCount) / float64(totalGuesses)) * 100
+		correctGuessPercentage = (float64(totalSoloCorrectCount) / float64(totalGuesses)) * 100
 	} else {
 		correctGuessPercentage = 0
 	}
@@ -272,7 +300,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	averageScore := "*No Stats*"
 	if len(games) > 0 {
-		averageScore = strconv.Itoa(totalCorrectCount / len(games))
+		averageScore = fmt.Sprintf("%.0f", math.Round(float64(totalSoloCorrectCount)/float64(soloGamesPlayed)))
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -283,8 +311,18 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name:   "Total Games Played",
-				Value:  strconv.Itoa(len(games)),
+				Name:   "Solo Games Played",
+				Value:  strconv.Itoa(soloGamesPlayed),
+				Inline: true,
+			},
+			{
+				Name:   "Multi Games Played",
+				Value:  strconv.Itoa(multiGamesPlayed),
+				Inline: true,
+			},
+			{
+				Name:   "Total Points",
+				Value:  strconv.Itoa(totalPointsScored),
 				Inline: true,
 			},
 			{
@@ -298,6 +336,11 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 			{
+				Name:   "Correct Guess %",
+				Value:  strconv.FormatFloat(correctGuessPercentage, 'f', 2, 64) + "%",
+				Inline: true,
+			},
+			{
 				Name:   "Most Missed Idol",
 				Value:  mostMissedIdol,
 				Inline: true,
@@ -308,8 +351,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 			{
-				Name:   "Correct Guess %",
-				Value:  strconv.FormatFloat(correctGuessPercentage, 'f', 2, 64) + "%",
+				Name:   "Highest Score (Multi)",
+				Value:  highestScores["multi"],
 				Inline: true,
 			},
 			{
@@ -343,17 +386,6 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 		},
-	}
-
-	// add stats for server or global
-	if isServerQuery || isGlobalQuery {
-		embed.Fields = append(embed.Fields, []*discordgo.MessageEmbedField{
-			{
-				Name:   "Highest Score (Multi)",
-				Value:  highestScores["multi"],
-				Inline: true,
-			},
-		}...)
 	}
 
 	// add empty fields for better formatting
