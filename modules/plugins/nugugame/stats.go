@@ -213,30 +213,33 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				}
 			}
 
-			// the reset of the stats are for solo only games
-			continue
+			// user stats are mainly based on solo games
+			if !isServerQuery && !isGlobalQuery {
+				continue
+			}
+		} else {
+			soloGamesPlayed += 1
+			totalSoloCorrectCount += game.CorrectIdolsCount
+			totalSoloIncorrectCount += game.IncorrectIdolsCount
 		}
 
-		soloGamesPlayed += 1
 		totalPointsScored += game.CorrectIdolsCount
-		totalSoloCorrectCount += game.CorrectIdolsCount
-		totalSoloIncorrectCount += game.IncorrectIdolsCount
 
 		// overall highest score
 		curHighestEverything, _ := strconv.Atoi(highestScores["overall"])
-		if gameScore > curHighestEverything {
+		if gameScore > curHighestEverything && game.GameType == "idol" {
 			highestScores["overall"] = strconv.Itoa(gameScore)
 		}
 
 		// highest scores by difficulty
 		curHighestByDifficulty, _ := strconv.Atoi(highestScores[game.Difficulty])
-		if gameScore > curHighestByDifficulty {
+		if gameScore > curHighestByDifficulty && game.GameType == "idol" {
 			highestScores[game.Difficulty] = strconv.Itoa(gameScore)
 		}
 
 		// highest scores by gender
 		curHighestByGender, _ := strconv.Atoi(highestScores[game.Gender])
-		if gameScore > curHighestByGender {
+		if gameScore > curHighestByGender && game.GameType == "idol" {
 			highestScores[game.Gender] = strconv.Itoa(gameScore)
 		}
 
