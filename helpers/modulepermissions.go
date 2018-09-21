@@ -117,7 +117,7 @@ var (
 		{Names: []string{"reddit"}, Permission: ModulePermReddit},
 		{Names: []string{"color"}, Permission: ModulePermColor},
 		{Names: []string{"steam"}, Permission: ModulePermSteam},
-		{Names: []string{"google"}, Permission: ModulePermGoogle},
+		//{Names: []string{"google"}, Permission: ModulePermGoogle},
 		{Names: []string{"whois"}, Permission: ModulePermWhois},
 		{Names: []string{"isup"}, Permission: ModulePermIsup},
 		{Names: []string{"levels"}, Permission: ModulePermLevels},

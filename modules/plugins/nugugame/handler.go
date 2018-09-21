@@ -3,7 +3,6 @@ package nugugame
 // Init when the bot starts up
 import (
 	"regexp"
-	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -71,7 +70,11 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 	}
 
 	// process text after the initial command
-	commandArgs := strings.Fields(content)
+	commandArgs, err := helpers.ToArgv(content)
+	if err != nil {
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+		return
+	}
 
 	if command == "nugugame" || command == "ng" {
 		if len(commandArgs) > 0 {

@@ -4,7 +4,6 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/modules/plugins/biasgame"
 	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
-	"github.com/Seklfreak/Robyul2/modules/plugins/google"
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/Seklfreak/Robyul2/modules/plugins/instagram"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
@@ -53,7 +52,7 @@ var (
 		&plugins.Debug{},
 		&plugins.Donators{},
 		&plugins.Ping{},
-		&google.Handler{},
+		//&google.Handler{},
 		&plugins.BotStatus{},
 		&plugins.VanityInvite{},
 		&plugins.DiscordMoney{},
