@@ -170,16 +170,17 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query)).All(&games)
 
 	highestScores := map[string]string{
-		"overall": "*No Stats*",
-		"easy":    "*No Stats*",
-		"medium":  "*No Stats*",
-		"hard":    "*No Stats*",
-		"girl":    "*No Stats*",
-		"boy":     "*No Stats*",
-		"mixed":   "*No Stats*",
-		"group":   "*No Stats*",
-		"idol":    "*No Stats*",
-		"multi":   "*No Stats*",
+		"overall":  "*No Stats*",
+		"easy":     "*No Stats*",
+		"medium":   "*No Stats*",
+		"hard":     "*No Stats*",
+		"koreaboo": "*No Stats*",
+		"girl":     "*No Stats*",
+		"boy":      "*No Stats*",
+		"mixed":    "*No Stats*",
+		"group":    "*No Stats*",
+		"idol":     "*No Stats*",
+		"multi":    "*No Stats*",
 	}
 
 	mostMissedIdols := make(map[*idols.Idol]int)
@@ -212,30 +213,33 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				}
 			}
 
-			// the reset of the stats are for solo only games
-			continue
+			// user stats are mainly based on solo games
+			if !isServerQuery && !isGlobalQuery {
+				continue
+			}
+		} else {
+			soloGamesPlayed += 1
+			totalSoloCorrectCount += game.CorrectIdolsCount
+			totalSoloIncorrectCount += game.IncorrectIdolsCount
 		}
 
-		soloGamesPlayed += 1
 		totalPointsScored += game.CorrectIdolsCount
-		totalSoloCorrectCount += game.CorrectIdolsCount
-		totalSoloIncorrectCount += game.IncorrectIdolsCount
 
 		// overall highest score
 		curHighestEverything, _ := strconv.Atoi(highestScores["overall"])
-		if gameScore > curHighestEverything {
+		if gameScore > curHighestEverything && game.GameType == "idol" {
 			highestScores["overall"] = strconv.Itoa(gameScore)
 		}
 
 		// highest scores by difficulty
 		curHighestByDifficulty, _ := strconv.Atoi(highestScores[game.Difficulty])
-		if gameScore > curHighestByDifficulty {
+		if gameScore > curHighestByDifficulty && game.GameType == "idol" {
 			highestScores[game.Difficulty] = strconv.Itoa(gameScore)
 		}
 
 		// highest scores by gender
 		curHighestByGender, _ := strconv.Atoi(highestScores[game.Gender])
-		if gameScore > curHighestByGender {
+		if gameScore > curHighestByGender && game.GameType == "idol" {
 			highestScores[game.Gender] = strconv.Itoa(gameScore)
 		}
 
@@ -313,13 +317,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name:   "Solo Games Played",
-				Value:  strconv.Itoa(soloGamesPlayed),
-				Inline: true,
-			},
-			{
-				Name:   "Multi Games Played",
-				Value:  strconv.Itoa(multiGamesPlayed),
+				Name:   "Solo / Multi Games",
+				Value:  fmt.Sprintf("%s / %s", strconv.Itoa(soloGamesPlayed), strconv.Itoa(multiGamesPlayed)),
 				Inline: true,
 			},
 			{
@@ -343,18 +342,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 			{
-				Name:   "Most Missed Idol",
-				Value:  mostMissedIdol,
-				Inline: true,
-			},
-			{
-				Name:   "Most Missed Group",
-				Value:  mostMissedGroup,
-				Inline: true,
-			},
-			{
-				Name:   "Highest Score (Multi)",
-				Value:  highestScores["multi"],
+				Name:   "Highest Score (Koreaboo)",
+				Value:  highestScores["koreaboo"],
 				Inline: true,
 			},
 			{
@@ -385,6 +374,21 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 			{
 				Name:   "Highest Score (Group)",
 				Value:  highestScores["group"],
+				Inline: true,
+			},
+			{
+				Name:   "Most Missed Idol",
+				Value:  mostMissedIdol,
+				Inline: true,
+			},
+			{
+				Name:   "Most Missed Group",
+				Value:  mostMissedGroup,
+				Inline: true,
+			},
+			{
+				Name:   "Highest Score (Multi)",
+				Value:  highestScores["multi"],
 				Inline: true,
 			},
 		},

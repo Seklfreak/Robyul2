@@ -73,7 +73,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 
 			if _, ok := idolsByDifficulty[arg]; ok {
 				gameDifficulty = arg
-				lives = difficultyLives[arg]
+				lives = difficultyLives[gameDifficulty]
 				continue
 			}
 
