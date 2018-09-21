@@ -60,11 +60,6 @@ func (m *Module) Commands() []string {
 
 // Main Entry point for the plugin
 func (m *Module) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
-	// nugugame only enabled on Snakeyez Dev, ModChat, and Robyul Cord for right now
-	if msg.GuildID != "403003926720413699" && msg.GuildID != "184790855977009152" && msg.GuildID != "286619174371852298" {
-		return
-	}
-
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermGames) {
 		return
 	}
@@ -121,11 +116,6 @@ func (m *Module) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Module) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-	// nugugame only enabled on Snakeyez Dev, ModChat, and Robyul Cord for right now
-	if msg.GuildID != "403003926720413699" && msg.GuildID != "184790855977009152" && msg.GuildID != "286619174371852298" {
-		return
-	}
-
 	if game := getNuguGamesByChannelID(msg.ChannelID); game != nil {
 		if game.WaitingForGuess {
 
