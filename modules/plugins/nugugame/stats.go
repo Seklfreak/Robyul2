@@ -314,13 +314,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name:   "Solo Games Played",
-				Value:  strconv.Itoa(soloGamesPlayed),
-				Inline: true,
-			},
-			{
-				Name:   "Multi Games Played",
-				Value:  strconv.Itoa(multiGamesPlayed),
+				Name:   "Solo / Multi Games",
+				Value:  fmt.Sprintf("%s / %s", strconv.Itoa(soloGamesPlayed), strconv.Itoa(multiGamesPlayed)),
 				Inline: true,
 			},
 			{
@@ -344,33 +339,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 			{
-				Name:   "Most Missed Idol",
-				Value:  mostMissedIdol,
-				Inline: true,
-			},
-			{
-				Name:   "Most Missed Group",
-				Value:  mostMissedGroup,
-				Inline: true,
-			},
-			{
-				Name:   "Highest Score (Multi)",
-				Value:  highestScores["multi"],
-				Inline: true,
-			},
-			{
-				Name:   "Highest Score (Girl)",
-				Value:  highestScores["girl"],
-				Inline: true,
-			},
-			{
-				Name:   "Highest Score (Boy)",
-				Value:  highestScores["boy"],
-				Inline: true,
-			},
-			{
-				Name:   "Highest Score (Group)",
-				Value:  highestScores["group"],
+				Name:   "Highest Score (Koreaboo)",
+				Value:  highestScores["koreaboo"],
 				Inline: true,
 			},
 			{
@@ -389,8 +359,33 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 			{
-				Name:   "Highest Score (Koreaboo)",
-				Value:  highestScores["koreaboo"],
+				Name:   "Highest Score (Girl)",
+				Value:  highestScores["girl"],
+				Inline: true,
+			},
+			{
+				Name:   "Highest Score (Boy)",
+				Value:  highestScores["boy"],
+				Inline: true,
+			},
+			{
+				Name:   "Highest Score (Group)",
+				Value:  highestScores["group"],
+				Inline: true,
+			},
+			{
+				Name:   "Most Missed Idol",
+				Value:  mostMissedIdol,
+				Inline: true,
+			},
+			{
+				Name:   "Most Missed Group",
+				Value:  mostMissedGroup,
+				Inline: true,
+			},
+			{
+				Name:   "Highest Score (Multi)",
+				Value:  highestScores["multi"],
 				Inline: true,
 			},
 		},
