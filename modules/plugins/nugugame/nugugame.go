@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/globalsign/mgo/bson"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -114,7 +112,6 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 	if game.UsersCorrectGuesses == nil {
 		game.UsersCorrectGuesses = make(map[string][]bson.ObjectId)
 	}
-	log().Println(spew.Sdump(game))
 
 	game.saveGame()
 	game.sendRound()

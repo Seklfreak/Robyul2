@@ -170,17 +170,17 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	helpers.MDbIter(helpers.MdbCollection(models.NuguGameTable).Find(query)).All(&games)
 
 	highestScores := map[string]string{
-		"overall":   "*No Stats*",
-		"easy":      "*No Stats*",
-		"medium":    "*No Stats*",
-		"hard":      "*No Stats*",
-		"very-hard": "*No Stats*",
-		"girl":      "*No Stats*",
-		"boy":       "*No Stats*",
-		"mixed":     "*No Stats*",
-		"group":     "*No Stats*",
-		"idol":      "*No Stats*",
-		"multi":     "*No Stats*",
+		"overall":  "*No Stats*",
+		"easy":     "*No Stats*",
+		"medium":   "*No Stats*",
+		"hard":     "*No Stats*",
+		"koreaboo": "*No Stats*",
+		"girl":     "*No Stats*",
+		"boy":      "*No Stats*",
+		"mixed":    "*No Stats*",
+		"group":    "*No Stats*",
+		"idol":     "*No Stats*",
+		"multi":    "*No Stats*",
 	}
 
 	mostMissedIdols := make(map[*idols.Idol]int)
@@ -389,8 +389,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 				Inline: true,
 			},
 			{
-				Name:   "Highest Score (Very-Hard)",
-				Value:  highestScores["very-hard"],
+				Name:   "Highest Score (Koreaboo)",
+				Value:  highestScores["koreaboo"],
 				Inline: true,
 			},
 		},
