@@ -43,6 +43,9 @@ func (m *Mirror) Init(session *discordgo.Session) {
 	var err error
 	mirrors, err = m.GetMirrors()
 	helpers.Relax(err)
+
+	session.AddHandler(m.OnMessage)
+	session.AddHandler(m.OnMessageDelete)
 }
 
 func (m *Mirror) Uninit(session *discordgo.Session) {
@@ -328,7 +331,7 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 	}
 }
 
-func (m *Mirror) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Mirror) OnMessage(session *discordgo.Session, msg *discordgo.MessageCreate) {
 	// ignore bot messages except whitelisted bots
 	if msg.Author.Bot {
 		var isWhitelisted bool
@@ -350,7 +353,7 @@ func (m *Mirror) OnMessage(content string, msg *discordgo.Message, session *disc
 				// ignore commands
 				prefix := helpers.GetPrefixForServer(sourceChannel.GuildID)
 				if prefix != "" {
-					if strings.HasPrefix(content, prefix) {
+					if strings.HasPrefix(msg.Content, prefix) {
 						return
 					}
 				}
@@ -381,7 +384,7 @@ func (m *Mirror) OnMessage(content string, msg *discordgo.Message, session *disc
 				}
 				switch mirrorEntry.Type {
 				case models.MirrorTypeText:
-					m.postMirrorMessage(mirrorEntry, msg, msg.Author, newContent)
+					m.postMirrorMessage(mirrorEntry, msg.Message, msg.Author, newContent)
 					break
 				default:
 					// post mirror links
@@ -389,7 +392,7 @@ func (m *Mirror) OnMessage(content string, msg *discordgo.Message, session *disc
 						sourceGuild, err := helpers.GetGuild(sourceChannel.GuildID)
 						helpers.Relax(err)
 						for _, linkToRepost := range linksToRepost {
-							m.postMirrorMessage(mirrorEntry, msg, msg.Author,
+							m.postMirrorMessage(mirrorEntry, msg.Message, msg.Author,
 								fmt.Sprintf("posted %s in `#%s` on the `%s` server (<#%s>)",
 									linkToRepost, sourceChannel.Name, sourceGuild.Name, sourceChannel.ID,
 								),
@@ -432,12 +435,6 @@ func (m *Mirror) postMirrorMessage(mirrorEntry models.MirrorEntry, sourceMessage
 			}
 		}
 	}
-}
-
-func (m *Mirror) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {
-}
-
-func (m *Mirror) OnGuildMemberRemove(member *discordgo.Member, session *discordgo.Session) {
 }
 
 func (m *Mirror) GetMirrors() (entryBucket []models.MirrorEntry, err error) {
@@ -507,19 +504,7 @@ func (m *Mirror) getRememberedMessages(sourceMessage *discordgo.Message) ([]Mirr
 	return rememberedMessages, nil
 }
 
-func (m *Mirror) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session *discordgo.Session) {
-
-}
-func (m *Mirror) OnReactionRemove(reaction *discordgo.MessageReactionRemove, session *discordgo.Session) {
-
-}
-func (m *Mirror) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-
-}
-func (m *Mirror) OnGuildBanRemove(user *discordgo.GuildBanRemove, session *discordgo.Session) {
-
-}
-func (m *Mirror) OnMessageDelete(msg *discordgo.MessageDelete, session *discordgo.Session) {
+func (m *Mirror) OnMessageDelete(session *discordgo.Session, msg *discordgo.MessageDelete) {
 	go func() {
 		defer helpers.Recover()
 		var err error

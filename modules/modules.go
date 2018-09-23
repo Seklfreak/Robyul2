@@ -70,6 +70,7 @@ var (
 		&plugins.Steam{},
 		&plugins.Config{},
 		&plugins.Storage{},
+		&plugins.Mirror{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
@@ -77,7 +78,6 @@ var (
 		&plugins.GuildAnnouncements{},
 		&levels.Levels{},
 		&plugins.Gallery{},
-		&plugins.Mirror{},
 		&plugins.CustomCommands{},
 		&plugins.ReactionPolls{},
 		&plugins.Mod{},
