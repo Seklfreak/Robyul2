@@ -20,7 +20,6 @@ import (
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
 	"github.com/olebedev/when"
@@ -173,7 +172,7 @@ func (m *Mod) cacheBans() {
 			Expiration: time.Hour * 24 * 30 * 365, // TODO
 		})
 		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			helpers.RelaxLog(err)
 		} else {
 			guildBansCached += 1
 		}
@@ -2318,7 +2317,7 @@ func (m *Mod) removeBanFromCache(user *discordgo.GuildBanRemove) bool {
 					Expiration: time.Hour * 24 * 30 * 365,
 				})
 				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					helpers.RelaxLog(err)
 				}
 				return true
 			}
@@ -2342,7 +2341,7 @@ func (m *Mod) addBanToCache(user *discordgo.GuildBanAdd) bool {
 					Expiration: time.Hour * 24 * 30 * 365,
 				})
 				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					helpers.RelaxLog(err)
 				}
 				return true
 			} else {
@@ -2353,7 +2352,7 @@ func (m *Mod) addBanToCache(user *discordgo.GuildBanAdd) bool {
 					Expiration: time.Hour * 24 * 30 * 365,
 				})
 				if err != nil {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+					helpers.RelaxLog(err)
 				}
 				return true
 			}
@@ -2501,7 +2500,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins {
 					guild, err := helpers.GetGuild(member.GuildID)
 					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						helpers.RelaxLog(err)
 						return
 					}
 
@@ -2637,10 +2636,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 							helpers.GuildSettingsGetCached(member.GuildID).InspectsChannel, member.GuildID, err.Error())
 						if errD, ok := err.(*discordgo.RESTError); ok {
 							if errD.Message.Code != discordgo.ErrCodeMissingAccess && errD.Message.Code != discordgo.ErrCodeMissingPermissions {
-								raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+								helpers.RelaxLog(err)
 							}
 						} else {
-							raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+							helpers.RelaxLog(err)
 						}
 						return
 					}
@@ -2666,12 +2665,12 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				if mutedMember == member.User.ID {
 					muteRole, err := helpers.GetMuteRole(member.GuildID)
 					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						helpers.RelaxLog(err)
 						return
 					}
 					err = session.GuildMemberRoleAdd(member.GuildID, member.User.ID, muteRole.ID)
 					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						helpers.RelaxLog(err)
 						return
 					}
 				}
@@ -2728,7 +2727,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 	go func() {
 		bannedOnGuild, err := helpers.GetGuild(user.GuildID)
 		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+			helpers.RelaxLog(err)
 			return
 		}
 
@@ -2746,7 +2745,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 				if helpers.GetIsInGuild(targetGuild.ID, user.User.ID) {
 					guild, err := helpers.GetGuild(targetGuild.ID)
 					if err != nil {
-						raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+						helpers.RelaxLog(err)
 						continue
 					}
 
@@ -2883,7 +2882,7 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 									helpers.RelaxLog(err)
 								}
 							} else {
-								raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+								helpers.RelaxLog(err)
 							}
 							continue
 						}

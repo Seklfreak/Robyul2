@@ -33,6 +33,10 @@ var (
 	mirrors []models.MirrorEntry
 	// one lock for every channel ID
 	mirrorChannelLocks = make(map[string]*sync.Mutex, 0)
+
+	whitelistedBotIDs = []string{
+		"470154919463354370", // redvelvet-feed (turtles)
+	}
 )
 
 func (m *Mirror) Init(session *discordgo.Session) {
@@ -325,14 +329,22 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Mirror) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {
-TryNextMirror:
+	// ignore bot messages except whitelisted bots
+	if msg.Author.Bot {
+		var isWhitelisted bool
+		for _, whitelistedBotID := range whitelistedBotIDs {
+			if msg.Author.ID == whitelistedBotID {
+				isWhitelisted = true
+			}
+		}
+		if !isWhitelisted {
+			return
+		}
+	}
+
 	for _, mirrorEntry := range mirrors {
 		for _, mirroredChannelEntry := range mirrorEntry.ConnectedChannels {
 			if mirroredChannelEntry.ChannelID == msg.ChannelID {
-				// ignore bot messages
-				if msg.Author.Bot == true {
-					continue TryNextMirror
-				}
 				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 				// ignore commands
