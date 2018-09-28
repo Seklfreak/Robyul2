@@ -332,6 +332,8 @@ func (m *Mirror) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Mirror) OnMessage(session *discordgo.Session, msg *discordgo.MessageCreate) {
+	defer helpers.Recover()
+
 	// ignore bot messages except whitelisted bots
 	if msg.Author.Bot {
 		var isWhitelisted bool
@@ -505,34 +507,33 @@ func (m *Mirror) getRememberedMessages(sourceMessage *discordgo.Message) ([]Mirr
 }
 
 func (m *Mirror) OnMessageDelete(session *discordgo.Session, msg *discordgo.MessageDelete) {
-	go func() {
-		defer helpers.Recover()
-		var err error
-		var rememberedMessages []Mirror_PostedMessage
+	defer helpers.Recover()
 
-		for _, mirror := range mirrors {
-			for _, mirrorChannel := range mirror.ConnectedChannels {
-				if mirrorChannel.ChannelID == msg.ChannelID {
-					rememberedMessages, err = m.getRememberedMessages(msg.Message)
-					helpers.Relax(err)
+	var err error
+	var rememberedMessages []Mirror_PostedMessage
 
-					for _, messageData := range rememberedMessages {
-						err = session.ChannelMessageDelete(messageData.ChannelID, messageData.MessageID)
-						if err != nil {
-							cache.GetLogger().WithFields(logrus.Fields{
-								"module":            "mirror",
-								"sourceChannelID":   msg.ChannelID,
-								"sourceMessageID":   msg.ID,
-								"sourceAuthorID":    msg.Author.ID,
-								"mirroredChannelID": messageData.ChannelID,
-								"mirroredMessageID": messageData.MessageID,
-							}).Warn(
-								"Deleting mirrored message failed:", err.Error(),
-							)
-						}
+	for _, mirror := range mirrors {
+		for _, mirrorChannel := range mirror.ConnectedChannels {
+			if mirrorChannel.ChannelID == msg.ChannelID {
+				rememberedMessages, err = m.getRememberedMessages(msg.Message)
+				helpers.Relax(err)
+
+				for _, messageData := range rememberedMessages {
+					err = session.ChannelMessageDelete(messageData.ChannelID, messageData.MessageID)
+					if err != nil {
+						cache.GetLogger().WithFields(logrus.Fields{
+							"module":            "mirror",
+							"sourceChannelID":   msg.ChannelID,
+							"sourceMessageID":   msg.ID,
+							"sourceAuthorID":    msg.Author.ID,
+							"mirroredChannelID": messageData.ChannelID,
+							"mirroredMessageID": messageData.MessageID,
+						}).Warn(
+							"Deleting mirrored message failed:", err.Error(),
+						)
 					}
 				}
 			}
 		}
-	}()
+	}
 }

@@ -161,6 +161,8 @@ func (dm *DM) logger() *logrus.Entry {
 }
 
 func (dm *DM) OnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
+	defer helpers.Recover()
+
 	if message.Author.Bot == true {
 		return
 	}
@@ -170,7 +172,9 @@ func (dm *DM) OnMessage(session *discordgo.Session, message *discordgo.MessageCr
 	}
 
 	channel, err := helpers.GetChannel(message.ChannelID)
-	helpers.Relax(err)
+	if err != nil {
+		return
+	}
 
 	if channel.Type != discordgo.ChannelTypeDM {
 		return
