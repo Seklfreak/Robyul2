@@ -1835,7 +1835,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 							break
 						}
 					}
-					if len(levelsServersUsers) <= i-offset {
+
+					if len(levelsServersUsers)-1 <= i-offset {
 						break
 					}
 
