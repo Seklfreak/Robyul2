@@ -1320,24 +1320,13 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		}
 
-		isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(targetUser.ID)
-		helpers.RelaxLog(err)
-		isBannedOnBansdiscordlistNetText := ":white_check_mark: User is not banned.\n"
-		isBannedOnBansdiscordlistNetTextText := ":white_check_mark: User is not banned on <https://bans.discordlist.net/>.\n"
-		if isBannedOnBansdiscordlistNet {
-			isBannedOnBansdiscordlistNetText = ":warning: User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
-			isBannedOnBansdiscordlistNetTextText = ":warning: User is banned on <https://bans.discordlist.net/>.\n"
-		}
-
 		resultEmbed.Fields = []*discordgo.MessageEmbedField{
 			{Name: "Bans", Value: resultBansText, Inline: false},
-			{Name: "bans.discordlist.net", Value: isBannedOnBansdiscordlistNetText, Inline: false},
 			{Name: "Join History", Value: joinsText, Inline: false},
 			{Name: "Common Servers", Value: commonGuildsText, Inline: false},
 			{Name: "Account Age", Value: joinedTimeText, Inline: false},
 		}
 		resultText += resultBansText
-		resultText += isBannedOnBansdiscordlistNetTextText
 		resultText += joinsText
 		resultText += commonGuildsText
 		resultText += joinedTimeText
@@ -1401,7 +1390,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 					emojis.From("2"),
 					emojis.From("3"),
 					emojis.From("5"),
-					emojis.From("6"),
 					emojis.From("9"),
 					"💾"}
 				for _, allowedEmote := range allowedEmotes {
@@ -1486,21 +1474,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							}
 						}
 					}
-					NumberSixes, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("6"), 100)
-					for _, NumberSix := range NumberSixes {
-						if NumberSix.ID == msg.Author.ID {
-							if settings.InspectTriggersEnabled.UserBannedDiscordlistNet && emotesLocked == false {
-								settings.InspectTriggersEnabled.UserBannedDiscordlistNet = false
-							} else {
-								settings.InspectTriggersEnabled.UserBannedDiscordlistNet = true
-							}
-							needEmbedUpdate = true
-							err := session.MessageReactionRemove(msg.ChannelID, chooseMessage.ID, emojis.From("6"), msg.Author.ID)
-							if err != nil {
-								emotesLocked = true
-							}
-						}
-					}
 					NumberNines, _ := cache.GetSession().MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("9"), 100)
 					for _, NumberNine := range NumberNines {
 						if NumberNine.ID == msg.Author.ID {
@@ -1549,13 +1522,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						}
 						chooseEmbed.Description += fmt.Sprintf("%s %s Account joined this server more than once. Gets checked everytime an user joins.\n",
 							emojis.FromToText("5"), enabledEmote)
-
-						enabledEmote = ":black_square_button:"
-						if settings.InspectTriggersEnabled.UserBannedDiscordlistNet {
-							enabledEmote = ":heavy_check_mark:"
-						}
-						chooseEmbed.Description += fmt.Sprintf("%s %s Account is banned on bans.discordlist.net, a global (unofficial) discord ban list. Gets checked everytime an user joins.\n",
-							emojis.FromToText("6"), enabledEmote)
 
 						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserJoins {
@@ -1614,11 +1580,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserMultipleJoins),
 						},
 						{
-							Key:      "autoinspectschannel_userbanneddiscordlistnet",
-							OldValue: helpers.StoreBoolAsString(settingsBefore.UserBannedDiscordlistNet),
-							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserBannedDiscordlistNet),
-						},
-						{
 							Key:      "autoinspectschannel_userjoins",
 							OldValue: helpers.StoreBoolAsString(settingsBefore.UserJoins),
 							NewValue: helpers.StoreBoolAsString(settings.InspectTriggersEnabled.UserJoins),
@@ -1638,7 +1599,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				settings.InspectTriggersEnabled.UserNoCommonServers = false
 				settings.InspectTriggersEnabled.UserNewlyCreatedAccount = false
 				settings.InspectTriggersEnabled.UserMultipleJoins = false
-				settings.InspectTriggersEnabled.UserBannedDiscordlistNet = false
 				settings.InspectTriggersEnabled.UserJoins = false
 				successMessage = helpers.GetText("plugins.mod.inspects-channel-disabled")
 
@@ -2516,14 +2476,10 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					oneDayAgo := time.Now().AddDate(0, 0, -1)
 					oneWeekAgo := time.Now().AddDate(0, 0, -7)
 
-					isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(member.User.ID)
-					helpers.RelaxLog(err)
-
 					if !((helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedOnOtherServers && len(bannedOnServerList) > 0) ||
 						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNoCommonServers && (len(isOnServerList)-1) <= 0) ||
 						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserNewlyCreatedAccount && joinedTime.After(oneWeekAgo)) ||
 						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserMultipleJoins && len(joins) > 1) ||
-						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserBannedDiscordlistNet && isBannedOnBansdiscordlistNet) ||
 						(helpers.GuildSettingsGetCached(member.GuildID).InspectTriggersEnabled.UserJoins)) {
 						return
 					}
@@ -2610,14 +2566,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 						}
 					}
 
-					isBannedOnBansdiscordlistNetText := ":white_check_mark: User is not banned.\n"
-					if isBannedOnBansdiscordlistNet {
-						isBannedOnBansdiscordlistNetText = ":warning: User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
-					}
-
 					resultEmbed.Fields = []*discordgo.MessageEmbedField{
 						{Name: "Bans", Value: resultBansText, Inline: false},
-						{Name: "bans.discordlist.net", Value: isBannedOnBansdiscordlistNetText, Inline: false},
 						{Name: "Join History", Value: joinsText, Inline: false},
 						{Name: "Common Servers", Value: commonGuildsText, Inline: false},
 						{Name: "Account Age", Value: joinedTimeText, Inline: false},
@@ -2844,16 +2794,8 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 						}
 					}
 
-					isBannedOnBansdiscordlistNet, err := helpers.IsBannedOnBansdiscordlistNet(user.User.ID)
-					helpers.RelaxLog(err)
-					isBannedOnBansdiscordlistNetText := ":white_check_mark: User is not banned.\n"
-					if isBannedOnBansdiscordlistNet {
-						isBannedOnBansdiscordlistNetText = ":warning: User is banned on [bans.discordlist.net](https://bans.discordlist.net/).\n"
-					}
-
 					resultEmbed.Fields = []*discordgo.MessageEmbedField{
 						{Name: "Bans", Value: resultBansText, Inline: false},
-						{Name: "bans.discordlist.net", Value: isBannedOnBansdiscordlistNetText, Inline: false},
 						{Name: "Join History", Value: joinsText, Inline: false},
 						{Name: "Common Servers", Value: commonGuildsText, Inline: false},
 						{Name: "Account Age", Value: joinedTimeText, Inline: false},
