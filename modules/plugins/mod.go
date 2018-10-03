@@ -2448,6 +2448,8 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 			)
 			helpers.RelaxLog(err)
 			go func() {
+				defer helpers.Recover()
+
 				if member.User.ID == session.State.User.ID { // Don't inspect Robyul
 					return
 				}
@@ -2675,6 +2677,8 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 	}
 
 	go func() {
+		defer helpers.Recover()
+
 		bannedOnGuild, err := helpers.GetGuild(user.GuildID)
 		if err != nil {
 			helpers.RelaxLog(err)
