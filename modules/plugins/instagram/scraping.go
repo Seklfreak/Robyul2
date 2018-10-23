@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"fmt"
+
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/pkg/errors"
 )
@@ -30,7 +32,7 @@ func (m *Handler) getInformationAndPosts(username string, proxy http.Transport) 
 
 	if graphQlFeedResult.EntryData.ProfilePage == nil || len(graphQlFeedResult.EntryData.ProfilePage) < 0 ||
 		graphQlFeedResult.EntryData.ProfilePage[0].Graphql.User.ID == "" {
-		return information, posts, errors.New("failed to find user information")
+		return information, posts, fmt.Errorf("failed to find user information for %s", username)
 	}
 
 	feed := graphQlFeedResult.EntryData.ProfilePage[0].Graphql
