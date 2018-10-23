@@ -7,6 +7,8 @@ import (
 
 	"fmt"
 
+	"strings"
+
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/pkg/errors"
 )
@@ -18,6 +20,13 @@ func (m *Handler) getInformationAndPosts(username string, proxy http.Transport) 
 		return
 	}
 
+	if strings.Contains(
+		string(pageContent),
+		"<meta content=\"Welcome back to Instagram. Sign in to check out what your friends, family &amp; interests have been capturing &amp; sharing around the world.\" name=\"description\" />",
+	) {
+		fmt.Println("next")
+		return information, posts, fmt.Errorf("page was load incorrectly for %s", username)
+	}
 	var sharedDataText string
 	sharedDataText, err = m.extractInstagramSharedData(string(pageContent))
 	if err != nil {
