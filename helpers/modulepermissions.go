@@ -3,7 +3,6 @@ package helpers
 import (
 	"sync"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
 )
@@ -166,28 +165,28 @@ func ModuleIsAllowed(channelID, msgID, userID string, module models.ModulePermis
 func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.ModulePermissionsModule) (isAllowed bool) {
 	channel, err := GetChannelWithoutApi(channelID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
-			"failed to get channel for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
-			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
-		)
+		//cache.GetLogger().WithField("module", "modulepermissions").Errorf(
+		//	"failed to get channel for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
+		//	msgID, channelID, userID, GetModuleNameById(module), err.Error(),
+		//)
 		return true
 	}
 
 	user, err := GetGuildMemberWithoutApi(channel.GuildID, userID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
-			"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
-			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
-		)
+		//cache.GetLogger().WithField("module", "modulepermissions").Errorf(
+		//	"failed to get guild member for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
+		//	msgID, channelID, userID, GetModuleNameById(module), err.Error(),
+		//)
 		return true
 	}
 
 	guild, err := GetGuildWithoutApi(channel.GuildID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "modulepermissions").Errorf(
-			"failed to get guild for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
-			msgID, channelID, userID, GetModuleNameById(module), err.Error(),
-		)
+		//cache.GetLogger().WithField("module", "modulepermissions").Errorf(
+		//	"failed to get guild for ModuleIsAllowedSilent message #%s channel #%s user #%s module %s: %s",
+		//	msgID, channelID, userID, GetModuleNameById(module), err.Error(),
+		//)
 		return true
 	}
 
@@ -237,10 +236,10 @@ func ModuleIsAllowedSilent(channelID, msgID, userID string, module models.Module
 	// allowed channel
 	if GetAllowedForChannel(channel.GuildID, channelID)&module == module ||
 		GetAllowedForChannel(channel.GuildID, channelID)&ModulePermAllPlaceholder == ModulePermAllPlaceholder {
-		cache.GetLogger().WithField("module", "modulepermissions").Infof(
-			"allowed command by channel message #%s channel #%s user #%s module %s",
-			msgID, channelID, userID, GetModuleNameById(module),
-		)
+		//cache.GetLogger().WithField("module", "modulepermissions").Infof(
+		//	"allowed command by channel message #%s channel #%s user #%s module %s",
+		//	msgID, channelID, userID, GetModuleNameById(module),
+		//)
 		return true
 	}
 

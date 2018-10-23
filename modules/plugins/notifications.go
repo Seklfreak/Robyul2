@@ -557,11 +557,11 @@ NextKeyword:
 			if doesMatch == true {
 				memberToNotify, err := helpers.GetGuildMemberWithoutApi(guild.ID, notificationSetting.UserID)
 				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
+					//cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
 					continue NextKeyword
 				}
 				if memberToNotify == nil {
-					cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("member to notify not found")
+					//cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("member to notify not found")
 					continue NextKeyword
 				}
 				messageAuthor, err := helpers.GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
