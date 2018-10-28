@@ -96,6 +96,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8 // indirect
 	github.com/stretchr/testify v1.2.2 // indirect
 	github.com/stvp/tempredis v0.0.0-20160122230306-83f7aae7ea49 // indirect
+	github.com/ugjka/cleverbot-go v0.0.0-20181020132216-83099429de01 // indirect
 	github.com/ungerik/go-cairo v0.0.0-20180416133000-59e8c8194bab
 	github.com/vmihailenco/msgpack v3.3.3+incompatible
 	github.com/xuri/excelize v0.0.0-20180527032555-9e463b461434

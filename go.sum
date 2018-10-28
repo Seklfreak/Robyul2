@@ -190,6 +190,8 @@ github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stvp/tempredis v0.0.0-20160122230306-83f7aae7ea49 h1:aBiMfOQ47GCfoTbNcnVyph/dnUuTWN0rSqEKFq3T58Y=
 github.com/stvp/tempredis v0.0.0-20160122230306-83f7aae7ea49/go.mod h1:oqN97ltKNihBbwlX8dLpwxCl3+HnXKV/R0e+sRLd9C8=
+github.com/ugjka/cleverbot-go v0.0.0-20181020132216-83099429de01 h1:JHM9eKBOHmH1VINmW4+pO8AZ418jAbZFcFapj8zomlY=
+github.com/ugjka/cleverbot-go v0.0.0-20181020132216-83099429de01/go.mod h1:IbIb5Zooqv8AxacEHaq/o+XXy/q2TSk4NkSP4E8TW2w=
 github.com/ungerik/go-cairo v0.0.0-20180416133000-59e8c8194bab h1:uuHCRoT19rNBRcruqAjhAMxjLcOVITcrOZy1WoOxrjk=
 github.com/ungerik/go-cairo v0.0.0-20180416133000-59e8c8194bab/go.mod h1:0ErpLiOxxE1oY+R4stiKut6/DbUJHnOp6U+e4d8zcTs=
 github.com/vmihailenco/msgpack v3.3.3+incompatible h1:wapg9xDUZDzGCNFlwc5SqI1rvcciqcxEHac4CYj89xI=

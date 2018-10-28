@@ -5,6 +5,7 @@ import (
 
 	"time"
 
+	"github.com/CleverbotIO/go-cleverbot.io"
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
