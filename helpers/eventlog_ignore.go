@@ -16,7 +16,10 @@ func eventlogEventIsIgnored(createdAt time.Time, guildID, targetID, targetType, 
 		len(changes) == 1 &&
 		changes[0].Key == "channel_topic" &&
 		((strings.Contains(changes[0].NewValue, "▶") || strings.Contains(changes[0].NewValue, "⏹")) &&
-			(strings.Contains(changes[0].NewValue, "🔈") || strings.Contains(changes[0].NewValue, "🔊"))) {
+			(strings.Contains(changes[0].NewValue, "🔇") ||
+				strings.Contains(changes[0].NewValue, "🔈") ||
+				strings.Contains(changes[0].NewValue, "🔉") ||
+				strings.Contains(changes[0].NewValue, "🔊"))) {
 		return true
 	}
 

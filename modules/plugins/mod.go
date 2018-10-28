@@ -19,7 +19,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
 	"github.com/olebedev/when"
