@@ -286,10 +286,6 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 		defer helpers.Recover()
 
 		guild, err := helpers.GetGuild(member.GuildID)
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			return
-		}
 		helpers.Relax(err)
 
 		var entryBucket []models.GreeterEntry
@@ -411,10 +407,6 @@ func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session 
 		defer helpers.Recover()
 
 		guild, err := helpers.GetGuild(user.GuildID)
-		if err != nil {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			return
-		}
 		helpers.Relax(err)
 
 		var entryBucket []models.GreeterEntry
