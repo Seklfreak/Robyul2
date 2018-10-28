@@ -16,7 +16,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 	"github.com/jzelinskie/geddit"
 	"github.com/sirupsen/logrus"
@@ -143,7 +143,8 @@ func (r *Reddit) checkSubredditLoop() {
 						if err != nil {
 							if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
 								if errD.Message.Code != discordgo.ErrCodeMissingPermissions &&
-									errD.Message.Code != discordgo.ErrCodeUnknownChannel {
+									errD.Message.Code != discordgo.ErrCodeUnknownChannel &&
+									errD.Message.Code != discordgo.ErrCodeMissingAccess {
 									helpers.Relax(err)
 								}
 							} else {

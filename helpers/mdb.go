@@ -45,9 +45,9 @@ func ConnectMDB(url string, database string) {
 	log := cache.GetLogger()
 	log.WithField("module", "mdb").Info("Connecting to " + url)
 
-	mgoL := new(mgoLogger)
+	//mgoL := new(mgoLogger)
 	mgo.SetDebug(false)
-	mgo.SetLogger(mgoL)
+	//mgo.SetLogger(mgoL)
 
 	newUrl := strings.TrimSuffix(url, "?ssl=true")
 	newUrl = strings.Replace(newUrl, "ssl=true&", "", -1)

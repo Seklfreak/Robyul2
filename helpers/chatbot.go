@@ -5,7 +5,6 @@ import (
 
 	"time"
 
-	"github.com/CleverbotIO/go-cleverbot.io"
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
@@ -80,7 +79,6 @@ func CleverbotIORequest(channel, message string) (response string, err error) {
 func ChatbotSendCleverbotIO(session *discordgo.Session, channel, message string, author *discordgo.User) {
 	message, err := CleverbotIORequest(channel, message)
 	if err != nil {
-		RelaxLog(err)
 		SendMessage(channel, GetText("bot.errors.chatbot"))
 		return
 	}

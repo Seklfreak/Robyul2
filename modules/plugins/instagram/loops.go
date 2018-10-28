@@ -232,7 +232,8 @@ func (m *Handler) retryOnError(err error) (retry bool) {
 			strings.Contains(err.Error(), "expected status 200; got 503") ||
 			strings.Contains(err.Error(), "tls: bad record MAC") ||
 			strings.Contains(err.Error(), "unexpected EOF") ||
-			strings.Contains(err.Error(), "page was load incorrectly") {
+			strings.Contains(err.Error(), "page was load incorrectly") ||
+			strings.Contains(err.Error(), "read: connection reset by peer") {
 			return true
 		}
 	}

@@ -30,13 +30,13 @@ import (
 	"github.com/andybons/gogif"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
+	humanize "github.com/dustin/go-humanize"
+	raven "github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/lucasb-eyer/go-colorful"
+	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
-	"gopkg.in/oleiade/lane.v1"
+	lane "gopkg.in/oleiade/lane.v1"
 )
 
 type Levels struct {

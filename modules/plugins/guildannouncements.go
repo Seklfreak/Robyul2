@@ -11,7 +11,6 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -320,11 +319,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 						messageSend.Embed = embed
 					}
 				}
-				_, err = helpers.SendComplex(ourSetting.ChannelID, messageSend)
-				if err != nil {
-					cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Join Message in %s #%s: %s",
-						guild.Name, guild.ID, err.Error())
-				}
+				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
@@ -371,11 +366,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 						messageSend.Embed = embed
 					}
 				}
-				_, err = helpers.SendComplex(ourSetting.ChannelID, messageSend)
-				if err != nil {
-					cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Leave Message in %s #%s: %s",
-						guild.Name, guild.ID, err.Error())
-				}
+				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Infof("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID)
@@ -456,11 +447,7 @@ func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session 
 						messageSend.Embed = embed
 					}
 				}
-				_, err = helpers.SendComplex(ourSetting.ChannelID, messageSend)
-				if err != nil {
-					cache.GetLogger().WithField("module", "guildannouncements").Warnf("Error Sending Ban Message in %s #%s: %s",
-						guild.Name, guild.ID, err.Error())
-				}
+				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
 		}
 		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) banned on Guild %s (#%s)", user.User.Username, user.User.ID, guild.Name, guild.ID))
