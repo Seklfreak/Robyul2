@@ -1,4 +1,4 @@
-package plugins
+package notifications
 
 import (
 	"fmt"
@@ -17,13 +17,13 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-type Notifications struct{}
+type Handler struct{}
 
 var (
-	notificationSettingsCache      []models.NotificationsEntry
-	ignoredChannelsCache           []models.NotificationsIgnoredChannelsEntry
-	ValidTextDelimiters            = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“", "‘"}
-	NotificationsWhitelistedBotIDs = []string{
+	notificationSettingsCache []*models.NotificationsEntry
+	ignoredChannelsCache      []models.NotificationsIgnoredChannelsEntry
+	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“", "‘"}
+	WhitelistedBotIDs         = []string{
 		"430101373397368842", // Test Webhook (Sekl)
 
 		"178215222614556673", // Fiscord-IRC (Kakkela)
@@ -36,14 +36,14 @@ var (
 		"308942526570561536", // TrelleIRC (Kakkela, Webhook)
 		"430089364417150976", // TrelleIRC (Kakkela, Webhook)
 	}
-	generatedDelimiterCombinations []delimiterCombination
+	generatedDelimiterCombinations = getAllDelimiterCombinations()
 )
 
 const (
 	UserConfigNotificationsLayoutModeKey = "notifications:layout-mode"
 )
 
-func (m *Notifications) Commands() []string {
+func (m *Handler) Commands() []string {
 	return []string{
 		"notifications",
 		"notification",
@@ -52,22 +52,21 @@ func (m *Notifications) Commands() []string {
 	}
 }
 
-func (m *Notifications) Init(session *discordgo.Session) {
-	generatedDelimiterCombinations = m.getAllDelimiterCombinations()
+func (m *Handler) Init(session *discordgo.Session) {
 	session.AddHandler(m.OnMessage)
 	go func() {
 		defer helpers.Recover()
 
-		err := m.refreshNotificationSettingsCache()
+		err := refreshNotificationSettingsCache()
 		helpers.RelaxLog(err)
 	}()
 }
 
-func (m *Notifications) Uninit(session *discordgo.Session) {
+func (m *Handler) Uninit(session *discordgo.Session) {
 
 }
 
-func (m *Notifications) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
+func (m *Handler) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermNotifications) {
 		return
 	}
@@ -130,7 +129,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			go func() {
 				defer helpers.Recover()
 
-				err := m.refreshNotificationSettingsCache()
+				err := refreshNotificationSettingsCache()
 				helpers.RelaxLog(err)
 			}()
 		case "delete", "del", "remove": // [p]notifications delete <keyword(s)>
@@ -174,7 +173,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			go func() {
 				defer helpers.Recover()
 
-				err := m.refreshNotificationSettingsCache()
+				err := refreshNotificationSettingsCache()
 				helpers.RelaxLog(err)
 			}()
 		case "list": // [p]notifications list
@@ -266,7 +265,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 			go func() {
 				defer helpers.Recover()
 
-				err := m.refreshNotificationSettingsCache()
+				err := refreshNotificationSettingsCache()
 				helpers.RelaxLog(err)
 			}()
 
@@ -352,7 +351,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 						go func() {
 							defer helpers.Recover()
 
-							err := m.refreshNotificationSettingsCache()
+							err := refreshNotificationSettingsCache()
 							helpers.RelaxLog(err)
 						}()
 						return
@@ -381,7 +380,7 @@ func (m *Notifications) Action(command string, content string, msg *discordgo.Me
 					go func() {
 						defer helpers.Recover()
 
-						err := m.refreshNotificationSettingsCache()
+						err := refreshNotificationSettingsCache()
 						helpers.RelaxLog(err)
 					}()
 				})
@@ -428,7 +427,7 @@ type PendingNotification struct {
 	Keywords []string
 }
 
-func (m *Notifications) OnMessage(session *discordgo.Session, msg *discordgo.MessageCreate) {
+func (m *Handler) OnMessage(session *discordgo.Session, msg *discordgo.MessageCreate) {
 	if msg == nil || msg.Content == "" {
 		return
 	}
@@ -466,7 +465,7 @@ func (m *Notifications) OnMessage(session *discordgo.Session, msg *discordgo.Mes
 	// ignore bot messages except whitelisted bots
 	if msg.Author.Bot {
 		var isWhitelisted bool
-		for _, whitelistedBotID := range NotificationsWhitelistedBotIDs {
+		for _, whitelistedBotID := range WhitelistedBotIDs {
 			if msg.Author.ID == whitelistedBotID {
 				isWhitelisted = true
 			}
@@ -534,27 +533,7 @@ NextKeyword:
 				}
 			}
 
-			matchContent := strings.ToLower(strings.TrimSpace(msg.Content))
-			doesMatch := false
-			for _, combination := range generatedDelimiterCombinations {
-				if strings.Contains(matchContent, strings.ToLower(combination.Start+notificationSetting.Keyword+combination.End)) {
-					doesMatch = true
-				}
-			}
-			for _, delimiter := range ValidTextDelimiters {
-				if strings.HasPrefix(matchContent, strings.ToLower(notificationSetting.Keyword+delimiter)) {
-					doesMatch = true
-				}
-			}
-			for _, delimiter := range ValidTextDelimiters {
-				if strings.HasSuffix(matchContent, strings.ToLower(delimiter+notificationSetting.Keyword)) {
-					doesMatch = true
-				}
-			}
-			if matchContent == strings.ToLower(notificationSetting.Keyword) {
-				doesMatch = true
-			}
-			if doesMatch == true {
+			if keywordMatches(msg.Content, notificationSetting.Keyword) {
 				memberToNotify, err := helpers.GetGuildMemberWithoutApi(guild.ID, notificationSetting.UserID)
 				if err != nil {
 					//cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
@@ -720,7 +699,6 @@ NextKeyword:
 
 		dmChannel, err := session.UserChannelCreate(pendingNotification.Member.User.ID)
 		if err != nil {
-			cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", pendingNotification.Member.User.ID).Warn("error creating DM channel: " + err.Error())
 			continue
 		}
 		keywordsTriggeredText := ""
@@ -752,11 +730,7 @@ NextKeyword:
 				guild.Name,
 				messageTime.UTC().Format("15:04:05"),
 			), "\n") {
-				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
-				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
-					continue
-				}
+				helpers.SendMessage(dmChannel.ID, resultPage)
 			}
 			break
 		case 3:
@@ -801,10 +775,7 @@ NextKeyword:
 			if guild.Icon != "" {
 				notificationEmbed.Author.IconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
 			}
-			_, err = helpers.SendEmbed(dmChannel.ID, notificationEmbed)
-			if err != nil {
-				cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
-			}
+			helpers.SendEmbed(dmChannel.ID, notificationEmbed)
 			break
 		case 4:
 			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
@@ -816,11 +787,7 @@ NextKeyword:
 				helpers.MessageDeeplink(msg.ChannelID, msg.ID),
 				escapedContent,
 			), "\n") {
-				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
-				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
-					continue
-				}
+				helpers.SendMessage(dmChannel.ID, resultPage)
 			}
 			break
 		default:
@@ -832,11 +799,7 @@ NextKeyword:
 				messageTime.UTC().Format("15:04:05"),
 				escapedContent,
 			), "\n") {
-				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
-				if err != nil {
-					cache.GetLogger().WithField("module", "notifications").Warn("error sending DM: " + err.Error())
-					continue
-				}
+				helpers.SendMessage(dmChannel.ID, resultPage)
 			}
 			break
 		}
@@ -844,32 +807,7 @@ NextKeyword:
 	}
 }
 
-func (m *Notifications) refreshNotificationSettingsCache() (err error) {
-	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(nil)).All(&notificationSettingsCache)
-	if err != nil {
-		return err
-	}
-	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsIgnoredChannelsTable).Find(nil)).All(&ignoredChannelsCache)
-	if err != nil {
-		return err
-	}
-
-	cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Refreshed Notification Settings Cache: Got %d keywords and %d ignored channels",
-		len(notificationSettingsCache), len(ignoredChannelsCache)))
-	return nil
-}
-
 type delimiterCombination struct {
 	Start string
 	End   string
-}
-
-func (m *Notifications) getAllDelimiterCombinations() []delimiterCombination {
-	var result []delimiterCombination
-	for _, delimiterStart := range ValidTextDelimiters {
-		for _, delimiterEnd := range ValidTextDelimiters {
-			result = append(result, delimiterCombination{Start: delimiterStart, End: delimiterEnd})
-		}
-	}
-	return result
 }
