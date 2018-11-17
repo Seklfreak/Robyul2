@@ -363,9 +363,6 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 				return
 			}
 
-			// Mark typing
-			session.ChannelTyping(message.ChannelID)
-
 			// Resolve other @mentions before sending the message
 			for _, user := range message.Mentions {
 				msg = strings.Replace(msg, "<@"+user.ID+">", user.Username, -1)

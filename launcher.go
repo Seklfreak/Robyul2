@@ -29,7 +29,6 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/getsentry/raven-go"
 	"github.com/go-redis/redis"
-	"github.com/inconshreveable/go-keen"
 	"github.com/kz/discordrus"
 	"github.com/olivere/elastic"
 	"github.com/sirupsen/logrus"
@@ -311,50 +310,6 @@ func main() {
 	if err != nil {
 		raven.CaptureErrorAndWait(err, nil)
 		panic(err)
-	}
-
-	// Connect helper
-	friendsConfigs, err := config.Path("friends").Children()
-	if err != nil {
-		raven.CaptureErrorAndWait(err, nil)
-		panic(err)
-	}
-	for _, friendConfig := range friendsConfigs {
-		if friendConfig.Path("token").Data().(string) != "" {
-			log.WithField("module", "launcher").Infof("Connecting friend to discord...")
-			discordFriend, err := discordgo.New(
-				friendConfig.Path("token").Data().(string),
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			discordFriend.Lock()
-			discordFriend.Debug = false
-			discordFriend.LogLevel = discordgo.LogError
-			discordFriend.StateEnabled = true
-			discordFriend.Unlock()
-
-			discordFriend.AddHandlerOnce(FriendOnReady)
-
-			// Connect to discord
-			err = discordFriend.Open()
-			if err != nil {
-				raven.CaptureErrorAndWait(err, nil)
-				panic(err)
-			}
-		}
-	}
-
-	// create keen client
-	if config.Path("keen.project_id").Data().(string) != "" &&
-		config.Path("keen.key").Data().(string) != "" {
-		log.WithField("module", "launcher").Info("Connecting bot to keen.io...")
-		keenClient := &keen.Client{
-			ProjectToken: config.Path("keen.project_id").Data().(string),
-			ApiKey:       config.Path("keen.key").Data().(string),
-		}
-		cache.SetKeen(keenClient)
 	}
 
 	// Open REST API

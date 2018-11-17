@@ -816,13 +816,10 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 			}
 		}
 
-		_, err := helpers.SendComplex(
+		helpers.SendComplex(
 			channelID, &discordgo.MessageSend{
 				Content: content,
 			})
-		if err != nil {
-			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (discord embed mode): #%s to channel: #%s failed: %s", tweet.IDStr, channelID, err))
-		}
 		return
 	}
 
@@ -898,14 +895,11 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 		content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
 	}
 
-	_, err := helpers.SendComplex(
+	helpers.SendComplex(
 		channelID, &discordgo.MessageSend{
 			Content: content,
 			Embed:   channelEmbed,
 		})
-	if err != nil {
-		cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.ID, channelID, err))
-	}
 }
 
 func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.Tweet, twitterUser *anaconda.User, entry models.TwitterEntry) {
@@ -940,13 +934,10 @@ func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.T
 			}
 		}
 
-		_, err := helpers.SendComplex(
+		helpers.SendComplex(
 			channelID, &discordgo.MessageSend{
 				Content: content,
 			})
-		if err != nil {
-			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (discord embed mode): #%d to channel: #%s failed: %s", tweet.Id, channelID, err))
-		}
 		return
 	}
 
@@ -1018,14 +1009,11 @@ func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.T
 		content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
 	}
 
-	_, err := helpers.SendComplex(
+	helpers.SendComplex(
 		channelID, &discordgo.MessageSend{
 			Content: content,
 			Embed:   channelEmbed,
 		})
-	if err != nil {
-		cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet: #%d to channel: #%s failed: %s", tweet.Id, channelID, err))
-	}
 }
 
 func (m *Twitter) bestVideoVariant(videoVariants []twitter.VideoVariant) (bestVariant twitter.VideoVariant) {

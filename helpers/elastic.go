@@ -19,6 +19,8 @@ import (
 	"github.com/olivere/elastic"
 )
 
+const ElasticIndexTimeout = "5s"
+
 var lastPresenceUpdates map[string]models.ElasticPresenceUpdate
 var lastPresenceUpdatesLock = sync.RWMutex{}
 
@@ -239,6 +241,7 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 			Index(models.ElasticIndexPresenceUpdates).
 			Type("doc").
 			BodyJson(elasticPresenceUpdate).
+			Timeout(ElasticIndexTimeout).
 			Do(context.Background())
 		return err
 	}
@@ -285,6 +288,7 @@ func ElasticAddMessage(message *discordgo.Message) error {
 		Index(models.ElasticIndexMessages).
 		Type("doc").
 		BodyJson(elasticMessageData).
+		Timeout(ElasticIndexTimeout).
 		Do(context.Background())
 	return err
 }
@@ -398,6 +402,7 @@ func ElasticAddJoin(member *discordgo.Member, usedInvite, usedVanityName string)
 		Index(models.ElasticIndexJoins).
 		Type("doc").
 		BodyJson(elasticJoinData).
+		Timeout(ElasticIndexTimeout).
 		Do(context.Background())
 	return err
 }
@@ -430,6 +435,7 @@ func ElasticAddLeave(member *discordgo.Member) error {
 		Index(models.ElasticIndexLeaves).
 		Type("doc").
 		BodyJson(elasticLeaveData).
+		Timeout(ElasticIndexTimeout).
 		Do(context.Background())
 	return err
 }
@@ -456,6 +462,7 @@ func ElasticAddVanityInviteClick(vanityInvite models.VanityInviteEntry, referer 
 		Index(models.ElasticIndexVanityInviteClicks).
 		Type("doc").
 		BodyJson(elasticVanityInviteClickData).
+		Timeout(ElasticIndexTimeout).
 		Do(context.Background())
 	return err
 }
@@ -490,6 +497,7 @@ func ElasticAddVoiceSession(guildID, channelID, userID string, joinTime, leaveTi
 		Index(models.ElasticIndexVoiceSessions).
 		Type("doc").
 		BodyJson(elasticVoiceSessionData).
+		Timeout(ElasticIndexTimeout).
 		Do(context.Background())
 	return err
 }
@@ -534,6 +542,7 @@ func ElasticAddEventlog(createdAt time.Time, guildID, targetID, targetType, user
 		Index(models.ElasticIndexEventlogs).
 		Type("doc").
 		BodyJson(elasticEventlog).
+		Timeout(ElasticIndexTimeout).
 		Do(context.Background())
 	if err != nil {
 		return "", err
