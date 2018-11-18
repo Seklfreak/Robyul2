@@ -21,8 +21,6 @@ func getAllDelimiterCombinations() []delimiterCombination {
 }
 
 func keywordMatches(message, keyword string) bool {
-	message = strings.ToLower(strings.TrimSpace(message))
-
 	if message == keyword {
 		return true
 	}

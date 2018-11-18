@@ -517,6 +517,8 @@ func (m *Handler) OnMessage(session *discordgo.Session, msg *discordgo.MessageCr
 
 	var pendingNotifications []PendingNotification
 
+	textToMatch := strings.ToLower(strings.TrimSpace(msg.Content))
+
 NextKeyword:
 	for _, notificationSetting := range notificationSettingsCache {
 		if notificationSetting.GuildID == guild.ID || notificationSetting.GuildID == "global" {
@@ -533,7 +535,7 @@ NextKeyword:
 				}
 			}
 
-			if keywordMatches(msg.Content, notificationSetting.Keyword) {
+			if keywordMatches(textToMatch, notificationSetting.Keyword) {
 				memberToNotify, err := helpers.GetGuildMemberWithoutApi(guild.ID, notificationSetting.UserID)
 				if err != nil {
 					//cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
