@@ -3,6 +3,8 @@ package notifications
 import (
 	"strings"
 
+	"github.com/bwmarrin/discordgo"
+
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 )
@@ -62,4 +64,40 @@ func refreshNotificationSettingsCache() (err error) {
 	}
 
 	return nil
+}
+
+func asyncRefresh() {
+	go func() {
+		defer helpers.Recover()
+
+		err := refreshNotificationSettingsCache()
+		helpers.RelaxLog(err)
+	}()
+}
+
+func isIgnored(entry *models.NotificationsEntry, msg *discordgo.Message) bool {
+	// ignore messages by the notification setting author
+	if entry.UserID == msg.Author.ID {
+		return true
+	}
+
+	// ignore message if in ignored guilds for global keyword
+	if len(entry.IgnoredGuildIDs) > 0 {
+		for _, ignoredGuildID := range entry.IgnoredGuildIDs {
+			if ignoredGuildID == msg.GuildID {
+				return true
+			}
+		}
+	}
+
+	// ignore message if in ignored channels for keyword
+	if len(entry.IgnoredChannelIDs) > 0 {
+		for _, ignoredChannelID := range entry.IgnoredChannelIDs {
+			if ignoredChannelID == msg.ChannelID {
+				return true
+			}
+		}
+	}
+
+	return false
 }

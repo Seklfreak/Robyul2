@@ -10,12 +10,13 @@ const (
 )
 
 type NotificationsEntry struct {
-	ID              bson.ObjectId `bson:"_id,omitempty"`
-	Keyword         string
-	GuildID         string // can be "global" to affect every guild
-	UserID          string
-	Triggered       int
-	IgnoredGuildIDs []string
+	ID                bson.ObjectId `bson:"_id,omitempty"`
+	Keyword           string
+	GuildID           string // can be "global" to affect every guild
+	UserID            string
+	Triggered         int
+	IgnoredGuildIDs   []string
+	IgnoredChannelIDs []string
 }
 
 type NotificationsIgnoredChannelsEntry struct {

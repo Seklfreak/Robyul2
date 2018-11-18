@@ -331,9 +331,11 @@
       "mode-2": "Your notifications will sent to you in the following format now: `content before title`.",
       "mode-3": "Your notifications will sent to you in the following format now: `embed with context`.",
       "mode-4": "Your notifications will sent to you in the following format now: `content after title with deeplink`.",
-      "keyword-ignore-not-found-error": "I wasn't able to find the global keyword you want to ignore on this server. <:blobglare:317044032658341888>",
+      "keyword-ignore-not-found-error": "I wasn't able to find the keyword you want to ignore. <:blobglare:317044032658341888>",
       "keyword-ignore-guild-added": "I will ignore this keyword on this server now. <a:ablobgrimace:394026913108328449>",
-      "keyword-ignore-guild-removed": "I will no longer ignore this keyword on this server. <a:ablobshocked:394026914076950539>"
+      "keyword-ignore-guild-removed": "I will no longer ignore this keyword on this server. <a:ablobshocked:394026914076950539>",
+      "keyword-ignore-channel-added": "I will ignore this keyword in %s now. <a:ablobgrimace:394026913108328449>",
+      "keyword-ignore-channel-removed": "I will no longer ignore this keyword in %s. <a:ablobshocked:394026914076950539>"
     },
     "stats": {
       "voicestats-toplist-no-entries": "No sessions saved yet. Sessions get saved after someone leaves a voice chat.",

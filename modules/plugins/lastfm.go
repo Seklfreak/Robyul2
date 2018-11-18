@@ -17,7 +17,7 @@ import (
 	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 )
 
