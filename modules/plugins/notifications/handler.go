@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -9,6 +10,69 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 )
+
+// _noti list
+func handleList(session *discordgo.Session, msg *discordgo.Message) {
+	guild, err := helpers.GetGuild(msg.GuildID)
+	helpers.Relax(err)
+
+	var entryBucket []models.NotificationsEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(bson.M{
+		"userid":  msg.Author.ID,
+		"guildid": bson.M{"$in": []string{msg.GuildID, "global"}},
+	}).Sort("-triggered")).All(&entryBucket)
+	helpers.Relax(err)
+
+	if entryBucket == nil || len(entryBucket) <= 0 {
+		helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-list-no-keywords-error", msg.Author.ID))
+		return
+	}
+
+	resultMessage := fmt.Sprintf("Enabled keywords for the server: `%s`:\n", guild.Name)
+	for _, entry := range entryBucket {
+		resultMessage += fmt.Sprintf("`%s` (triggered `%d` times)", entry.Keyword, entry.Triggered)
+
+		if len(entry.IgnoredGuildIDs) > 0 {
+			resultMessage += " [Ignored in these Guild(s): "
+			for _, ignoredGuildID := range entry.IgnoredGuildIDs {
+				guild, err := helpers.GetGuildWithoutApi(ignoredGuildID)
+				if err != nil {
+					resultMessage += "N/A"
+				} else {
+					resultMessage += "`" + guild.Name + "`"
+				}
+				resultMessage += ", "
+			}
+			resultMessage = strings.TrimRight(resultMessage, ", ")
+			resultMessage += "]"
+		}
+
+		if len(entry.IgnoredChannelIDs) > 0 {
+			resultMessage += " [Ignored in these Channel(s): "
+			for _, ignoredChannelID := range entry.IgnoredChannelIDs {
+				resultMessage += "<#" + ignoredChannelID + ">, "
+			}
+			resultMessage = strings.TrimRight(resultMessage, ", ")
+			resultMessage += "]"
+		}
+
+		if entry.GuildID == "global" {
+			resultMessage += " [Global Keyword] :globe_with_meridians:"
+		}
+
+		resultMessage += "\n"
+	}
+	resultMessage += fmt.Sprintf("Found **%d** Keywords in total.", len(entryBucket))
+
+	dmChannel, err := session.UserChannelCreate(msg.Author.ID)
+	helpers.Relax(err)
+
+	_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
+	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+
+	_, err = helpers.SendMessage(dmChannel.ID, resultMessage)
+	helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+}
 
 // _noti ignore <keyword(s)> [<#channel or channel id>]
 func handleIgnore(session *discordgo.Session, content string, msg *discordgo.Message, args []string) {

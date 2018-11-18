@@ -177,44 +177,8 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 				helpers.RelaxLog(err)
 			}()
 		case "list": // [p]notifications list
-			channel, err := helpers.GetChannel(msg.ChannelID)
-			helpers.Relax(err)
-			guild, err := helpers.GetGuild(channel.GuildID)
-			helpers.Relax(err)
-			var entryBucket []models.NotificationsEntry
-			err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(bson.M{
-				"userid":  msg.Author.ID,
-				"guildid": bson.M{"$in": []string{guild.ID, "global"}},
-			}).Sort("-triggered")).All(&entryBucket)
-			helpers.Relax(err)
-
-			if entryBucket == nil || len(entryBucket) <= 0 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.keyword-list-no-keywords-error", msg.Author.ID))
-				return
-			} else if err != nil {
-				helpers.Relax(err)
-			}
-
-			resultMessage := fmt.Sprintf("Enabled keywords for the server: `%s`:\n", guild.Name)
-			for _, entry := range entryBucket {
-				resultMessage += fmt.Sprintf("`%s` (triggered `%d` times)", entry.Keyword, entry.Triggered)
-				if entry.GuildID == "global" {
-					resultMessage += " `[Global Keyword]` :globe_with_meridians:"
-				}
-				resultMessage += "\n"
-			}
-			resultMessage += fmt.Sprintf("Found **%d** Keywords in total.", len(entryBucket))
-
-			dmChannel, err := session.UserChannelCreate(msg.Author.ID)
-			helpers.Relax(err)
-
-			for _, resultPage := range helpers.Pagify(resultMessage, "\n") {
-				_, err := helpers.SendMessage(dmChannel.ID, resultPage)
-				helpers.RelaxMessage(err, "", "")
-			}
-
-			_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.check-your-dms", msg.Author.ID))
-			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+			handleList(session, msg)
+			return
 		case "ignore":
 			handleIgnore(session, content, msg, args)
 			return
