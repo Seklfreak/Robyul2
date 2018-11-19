@@ -22,19 +22,18 @@ func getAllDelimiterCombinations() []delimiterCombination {
 	return result
 }
 
-func keywordMatches(message string, keyword []byte) bool {
-	var lookup strings.Builder
-	lookup.Write(keyword)
-
-	if message == lookup.String() {
+func keywordMatches(message, keyword string) bool {
+	if message == keyword {
 		return true
 	}
 
+	var lookup strings.Builder
+
 	for _, combination := range generatedDelimiterCombinations {
 		lookup.Reset()
-		lookup.Write(combination.Start)
-		lookup.Write(keyword)
-		lookup.Write(combination.End)
+		lookup.WriteString(combination.Start)
+		lookup.WriteString(keyword)
+		lookup.WriteString(combination.End)
 
 		if strings.Contains(message, lookup.String()) {
 			return true
@@ -42,8 +41,8 @@ func keywordMatches(message string, keyword []byte) bool {
 	}
 	for _, delimiter := range ValidTextDelimiters {
 		lookup.Reset()
-		lookup.Write(keyword)
-		lookup.Write(delimiter)
+		lookup.WriteString(keyword)
+		lookup.WriteString(delimiter)
 
 		if strings.HasPrefix(message, lookup.String()) {
 			return true
@@ -51,8 +50,8 @@ func keywordMatches(message string, keyword []byte) bool {
 	}
 	for _, delimiter := range ValidTextDelimiters {
 		lookup.Reset()
-		lookup.Write(delimiter)
-		lookup.Write(keyword)
+		lookup.WriteString(delimiter)
+		lookup.WriteString(keyword)
 
 		if strings.HasSuffix(message, lookup.String()) {
 			return true
@@ -62,23 +61,16 @@ func keywordMatches(message string, keyword []byte) bool {
 	return false
 }
 
-func refreshNotificationSettingsCache() error {
-	var bucket []*models.NotificationsEntry
-	err := helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(nil)).All(&bucket)
+func refreshNotificationSettingsCache() (err error) {
+	var temporaryNotificationSettingsCache []*models.NotificationsEntry
+	err = helpers.MDbIter(helpers.MdbCollection(models.NotificationsTable).Find(nil)).All(&temporaryNotificationSettingsCache)
 	if err != nil {
 		return err
 	}
-	temporaryNotificationSettingsCache := make([]*entryWithBytes, len(bucket))
-	for i := range bucket {
-		temporaryNotificationSettingsCache[i] = &entryWithBytes{}
-		temporaryNotificationSettingsCache[i].NotificationsEntry = bucket[i]
+	for i := range temporaryNotificationSettingsCache {
 		temporaryNotificationSettingsCache[i].Keyword = strings.ToLower(
 			temporaryNotificationSettingsCache[i].Keyword,
 		)
-		temporaryNotificationSettingsCache[i].KeywordBytes = []byte(
-			temporaryNotificationSettingsCache[i].Keyword,
-		)
-
 	}
 	notificationSettingsCache = temporaryNotificationSettingsCache
 

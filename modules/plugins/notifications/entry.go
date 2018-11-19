@@ -19,6 +19,30 @@ import (
 
 type Handler struct{}
 
+var (
+	notificationSettingsCache []*models.NotificationsEntry
+	ignoredChannelsCache      []models.NotificationsIgnoredChannelsEntry
+	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“", "‘"}
+	WhitelistedBotIDs         = []string{
+		"430101373397368842", // Test Webhook (Sekl)
+
+		"178215222614556673", // Fiscord-IRC (Kakkela)
+		"232927528325611521", // TrelleIRC (Kakkela)
+
+		"309026207104761858", // Fiscord (Kakkela, Webhook)
+		"426398711896080384", // Fiscord (Kakkela, Webhook)
+		"308942631696859148", // TrelleIRC (Kakkela, Webhook)
+		"426685461793341451", // TrelleIRC (Kakkela, Webhook)
+		"308942526570561536", // TrelleIRC (Kakkela, Webhook)
+		"430089364417150976", // TrelleIRC (Kakkela, Webhook)
+	}
+	generatedDelimiterCombinations = getAllDelimiterCombinations()
+)
+
+const (
+	UserConfigNotificationsLayoutModeKey = "notifications:layout-mode"
+)
+
 func (m *Handler) Commands() []string {
 	return []string{
 		"notifications",
@@ -102,7 +126,12 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Added Notification Keyword \"%s\" to Guild %s (#%s) for User %s (#%s)", keywords, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
-			asyncRefresh()
+			go func() {
+				defer helpers.Recover()
+
+				err := refreshNotificationSettingsCache()
+				helpers.RelaxLog(err)
+			}()
 		case "delete", "del", "remove": // [p]notifications delete <keyword(s)>
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
@@ -141,7 +170,12 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 			helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 			cache.GetLogger().WithField("module", "notifications").Info(fmt.Sprintf("Deleted Notification Keyword \"%s\" from Guild %s (#%s) for User %s (#%s)", entryBucket.Keyword, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
 			session.ChannelMessageDelete(msg.ChannelID, msg.ID) // Do not get error as it might fail because deletion permissions are not given to the user
-			asyncRefresh()
+			go func() {
+				defer helpers.Recover()
+
+				err := refreshNotificationSettingsCache()
+				helpers.RelaxLog(err)
+			}()
 		case "list": // [p]notifications list
 			handleList(session, msg)
 			return
@@ -224,7 +258,12 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 
 						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-add-success", targetChannel.ID))
 
-						asyncRefresh()
+						go func() {
+							defer helpers.Recover()
+
+							err := refreshNotificationSettingsCache()
+							helpers.RelaxLog(err)
+						}()
 						return
 					}
 					helpers.Relax(err)
@@ -248,7 +287,12 @@ func (m *Handler) Action(command string, content string, msg *discordgo.Message,
 
 					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.notifications.ignore-channel-remove-success", targetChannel.ID))
 
-					asyncRefresh()
+					go func() {
+						defer helpers.Recover()
+
+						err := refreshNotificationSettingsCache()
+						helpers.RelaxLog(err)
+					}()
 				})
 			}
 		case "toggle-mode", "toggle-modes", "toggle-layout", "toggle-layouts":
@@ -389,11 +433,11 @@ NextKeyword:
 	for _, notificationSetting := range notificationSettingsCache {
 		if notificationSetting.GuildID == guild.ID || notificationSetting.GuildID == "global" {
 			// check if message should be ignored for specific keyword
-			if isIgnored(notificationSetting.NotificationsEntry, msg.Message) {
+			if isIgnored(notificationSetting, msg.Message) {
 				continue NextKeyword
 			}
 
-			if keywordMatches(textToMatch, notificationSetting.KeywordBytes) {
+			if keywordMatches(textToMatch, notificationSetting.Keyword) {
 				memberToNotify, err := helpers.GetGuildMemberWithoutApi(guild.ID, notificationSetting.UserID)
 				if err != nil {
 					//cache.GetLogger().WithField("module", "notifications").WithField("channelID", channel.ID).WithField("userID", notificationSetting.UserID).Warn("error getting member to notify: " + err.Error())
@@ -665,4 +709,9 @@ NextKeyword:
 		}
 		metrics.KeywordNotificationsSentCount.Add(1)
 	}
+}
+
+type delimiterCombination struct {
+	Start string
+	End   string
 }
