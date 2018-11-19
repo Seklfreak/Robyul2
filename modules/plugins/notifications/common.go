@@ -26,18 +26,34 @@ func keywordMatches(message, keyword string) bool {
 	if message == keyword {
 		return true
 	}
+
+	var lookup strings.Builder
+
 	for _, combination := range generatedDelimiterCombinations {
-		if strings.Contains(message, combination.Start+keyword+combination.End) {
+		lookup.Reset()
+		lookup.WriteString(combination.Start)
+		lookup.WriteString(keyword)
+		lookup.WriteString(combination.End)
+
+		if strings.Contains(message, lookup.String()) {
 			return true
 		}
 	}
 	for _, delimiter := range ValidTextDelimiters {
-		if strings.HasPrefix(message, keyword+delimiter) {
+		lookup.Reset()
+		lookup.WriteString(keyword)
+		lookup.WriteString(delimiter)
+
+		if strings.HasPrefix(message, lookup.String()) {
 			return true
 		}
 	}
 	for _, delimiter := range ValidTextDelimiters {
-		if strings.HasSuffix(message, delimiter+keyword) {
+		lookup.Reset()
+		lookup.WriteString(delimiter)
+		lookup.WriteString(keyword)
+
+		if strings.HasSuffix(message, lookup.String()) {
 			return true
 		}
 	}
