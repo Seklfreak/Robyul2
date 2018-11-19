@@ -23,12 +23,36 @@ func getAllDelimiterCombinations() []delimiterCombination {
 }
 
 func keywordMatches(message, keyword string) bool {
+	// early match if message is keyword
 	if message == keyword {
 		return true
 	}
 
+	// early skip if word is not found
+	if !strings.Contains(message, keyword) {
+		return false
+	}
+
 	var lookup strings.Builder
 
+	// check common cases first
+	// spaces around word
+	lookup.WriteString(" ")
+	lookup.WriteString(keyword)
+	lookup.WriteString(" ")
+	if strings.Contains(message, lookup.String()) {
+		return true
+	}
+
+	// spaces after word
+	lookup.Reset()
+	lookup.WriteString(keyword)
+	lookup.WriteString(" ")
+	if strings.Contains(message, lookup.String()) {
+		return true
+	}
+
+	// check delimiter around word
 	for _, combination := range generatedDelimiterCombinations {
 		lookup.Reset()
 		lookup.WriteString(combination.Start)
@@ -39,6 +63,7 @@ func keywordMatches(message, keyword string) bool {
 			return true
 		}
 	}
+	// check delimiter after word
 	for _, delimiter := range ValidTextDelimiters {
 		lookup.Reset()
 		lookup.WriteString(keyword)
@@ -48,6 +73,7 @@ func keywordMatches(message, keyword string) bool {
 			return true
 		}
 	}
+	// check delimiter before word
 	for _, delimiter := range ValidTextDelimiters {
 		lookup.Reset()
 		lookup.WriteString(delimiter)
