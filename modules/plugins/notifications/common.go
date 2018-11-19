@@ -48,7 +48,7 @@ func keywordMatches(message, keyword string) bool {
 	lookup.Reset()
 	lookup.WriteString(keyword)
 	lookup.WriteString(" ")
-	if strings.Contains(message, lookup.String()) {
+	if strings.HasPrefix(message, lookup.String()) {
 		return true
 	}
 
