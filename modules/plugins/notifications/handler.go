@@ -134,7 +134,11 @@ func ignoreKeywordInGuildOrChannel(userID, keywords, guildID, channelID string) 
 	findArgs := bson.M{"userid": userID,
 		"keyword": bson.M{"$regex": bson.RegEx{Pattern: "^" + regexp.QuoteMeta(keywords) + "$", Options: "i"}}}
 	if channelID == "" {
+		// ignore guild? look for global keywords
 		findArgs["guildid"] = "global"
+	} else {
+		// ignore channels? look for global keywords, or keywords on this guild
+		findArgs["$or"] = []bson.M{{"guildid": "global"}, {"guildid": guildID}}
 	}
 
 	err := helpers.MdbOne(
