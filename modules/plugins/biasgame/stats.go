@@ -14,7 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -250,7 +250,7 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 	}
 
 	// get the amount of wins and idol with most wins for each user
-	rankings := []*rankingStruct{}
+	var rankings []*rankingStruct
 	for rankTypeId, gameWinners := range rankingsInfo {
 		rankInfo := &rankingStruct{
 			amountOfGames: len(gameWinners),
@@ -439,17 +439,16 @@ func recordSingleGamesStats(game *singleBiasGame) {
 func recordMultiGamesStats(game *multiBiasGame) {
 
 	// get guildID from game channel
-	channel, _ := cache.GetSession().State.Channel(game.ChannelID)
-	guild, err := cache.GetSession().State.Guild(channel.GuildID)
+	channel, err := cache.GetSession().State.Channel(game.ChannelID)
 	if err != nil {
-		fmt.Println("Error getting guild when recording stats")
+		fmt.Println("Error getting channel when recording stats")
 		return
 	}
 
 	// create a bias game entry
 	biasGameEntry := models.BiasGameEntry{
 		ID:           "",
-		GuildID:      guild.ID,
+		GuildID:      channel.GuildID,
 		GameType:     "multi",
 		Gender:       game.Gender,
 		RoundWinners: compileGameWinnersLosers(game.RoundWinners),
@@ -635,8 +634,8 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 	// get all the games that the target idol has been in
 	queryParams := bson.M{"$or": []bson.M{
 		// check if idol is in round winner or losers array
-		bson.M{"roundwinners": targetIdol.ID},
-		bson.M{"roundlosers": targetIdol.ID},
+		{"roundwinners": targetIdol.ID},
+		{"roundlosers": targetIdol.ID},
 	}}
 
 	// exclude rounds from rankings query for better performance
@@ -859,8 +858,8 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	for _, idol := range idols.GetAllIdols() {
 		if idol.GroupName == targetGroupName {
 			orStatements = append(orStatements, []bson.M{
-				bson.M{"roundwinners": idol.ID},
-				bson.M{"roundlosers": idol.ID},
+				{"roundwinners": idol.ID},
+				{"roundlosers": idol.ID},
 			}...)
 		}
 	}
@@ -1215,7 +1214,7 @@ func validateStats(msg *discordgo.Message, commandArgs []string) {
 		if len(commandArgs) > 1 && commandArgs[1] == "print" {
 			helpers.SendMessage(msg.ChannelID, "Printing idol ids:")
 			var idsString string
-			for id, _ := range missingIdolIds {
+			for id := range missingIdolIds {
 				idsString += id.String() + "\n"
 			}
 
