@@ -47,8 +47,11 @@ var RobyulMod = []string{
 }
 var Blacklisted = []string{
 	"171883318386753536",
+	"502156053597782027",
 }
-var BlacklistedGuildIDs []string
+var BlacklistedGuildIDs = []string{
+	"508302914071298090",
+}
 
 // No Level gaining, No Elastic Search features
 var LimitedGuildIDs = []string{
