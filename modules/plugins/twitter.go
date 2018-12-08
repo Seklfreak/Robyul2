@@ -21,7 +21,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 )
@@ -1086,17 +1086,19 @@ func (m *Twitter) handleError(err error) string {
 }
 
 func (m *Twitter) lockEntry(entryID bson.ObjectId) {
-	if _, ok := twitterEntryLocks[string(entryID)]; ok {
-		twitterEntryLocks[string(entryID)].Lock()
+	key := string(entryID)
+	if _, ok := twitterEntryLocks[key]; ok && twitterEntryLocks[key] != nil {
+		twitterEntryLocks[key].Lock()
 		return
 	}
-	twitterEntryLocks[string(entryID)] = new(sync.Mutex)
-	twitterEntryLocks[string(entryID)].Lock()
+	twitterEntryLocks[key] = new(sync.Mutex)
+	twitterEntryLocks[key].Lock()
 }
 
 func (m *Twitter) unlockEntry(entryID bson.ObjectId) {
-	if _, ok := twitterEntryLocks[string(entryID)]; ok {
-		twitterEntryLocks[string(entryID)].Unlock()
+	key := string(entryID)
+	if _, ok := twitterEntryLocks[key]; ok && twitterEntryLocks[key] != nil {
+		twitterEntryLocks[key].Unlock()
 	}
 }
 
