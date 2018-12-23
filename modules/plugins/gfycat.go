@@ -40,8 +40,7 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	session.ChannelTyping(msg.ChannelID)
 
 	if len(content) <= 0 && len(msg.Attachments) <= 0 {
-		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
-		helpers.Relax(err)
+		helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 		return
 	}
 
@@ -103,7 +102,6 @@ func (m *Gfycat) Action(command string, content string, msg *discordgo.Message, 
 	helpers.Relax(err)
 
 	processMessages, _ := helpers.SendMessage(msg.ChannelID, "Your gfycat is processing, this may take a while. <a:ablobsleep:394026914290991116>")
-	session.ChannelTyping(msg.ChannelID)
 
 	if jsonResult.ExistsP("isOk") == false || jsonResult.Path("isOk").Data().(bool) == false {
 		errorMessage := ""
@@ -169,7 +167,6 @@ CheckGfycatStatusLoop:
 		switch taskData {
 		case "encoding":
 			time.Sleep(5 * time.Second)
-			session.ChannelTyping(msg.ChannelID)
 			continue CheckGfycatStatusLoop
 		case "complete":
 			gfyName = result.Path("gfyname").Data().(string)
