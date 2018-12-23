@@ -1,6 +1,6 @@
 # Robyul
 
-[![Build Status](https://travis-ci.org/Seklfreak/Robyul2.svg?branch=master)](https://travis-ci.org/Seklfreak/Robyul2)
+[![Build Status](https://travis-ci.com/Seklfreak/Robyul2.svg?branch=master)](https://travis-ci.org/Seklfreak/Robyul2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Seklfreak/Robyul2)](https://goreportcard.com/report/github.com/Seklfreak/Robyul2)
 [<img src="https://img.shields.io/badge/Support-me!-orange.svg">](https://www.patreon.com/sekl)
 [<img src="https://discordapp.com/api/guilds/286619174371852298/widget.png?style=shield">](https://discord.is/robyul)
