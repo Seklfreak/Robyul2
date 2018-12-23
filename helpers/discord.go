@@ -1586,3 +1586,70 @@ func MessageDeeplink(channelID, messageID string) string {
 
 	return "https://discordapp.com/channels/" + channel.GuildID + "/" + channelID + "/" + messageID
 }
+
+// ReplaceValues represents text to replace for ReplaceMessageSend
+type ReplaceValues struct {
+	Before string
+	After  string
+}
+
+// ReplaceMessageSend replaces all values in the message with the replace values
+func ReplaceMessageSend(message *discordgo.MessageSend, replace []*ReplaceValues) *discordgo.MessageSend {
+	for _, replaceItem := range replace {
+		if replaceItem == nil {
+			continue
+		}
+
+		message.Content = strings.Replace(message.Content, replaceItem.Before, replaceItem.After, -1)
+
+		if message.Embed == nil {
+			continue
+		}
+
+		message.Embed.URL = strings.Replace(message.Embed.URL, replaceItem.Before, replaceItem.After, -1)
+		message.Embed.Title = strings.Replace(message.Embed.Title, replaceItem.Before, replaceItem.After, -1)
+		message.Embed.Description = strings.Replace(message.Embed.Description, replaceItem.Before, replaceItem.After, -1)
+		message.Embed.Timestamp = strings.Replace(message.Embed.Timestamp, replaceItem.Before, replaceItem.After, -1)
+
+		if message.Embed.Footer != nil {
+			message.Embed.Footer.Text = strings.Replace(message.Embed.Footer.Text, replaceItem.Before, replaceItem.After, -1)
+			message.Embed.Footer.IconURL = strings.Replace(message.Embed.Footer.IconURL, replaceItem.Before, replaceItem.After, -1)
+		}
+
+		if message.Embed.Image != nil {
+			message.Embed.Image.URL = strings.Replace(message.Embed.Image.URL, replaceItem.Before, replaceItem.After, -1)
+		}
+
+		if message.Embed.Thumbnail != nil {
+			message.Embed.Thumbnail.URL = strings.Replace(message.Embed.Thumbnail.URL, replaceItem.Before, replaceItem.After, -1)
+		}
+
+		if message.Embed.Video != nil {
+			message.Embed.Video.URL = strings.Replace(message.Embed.Video.URL, replaceItem.Before, replaceItem.After, -1)
+		}
+
+		if message.Embed.Provider != nil {
+			message.Embed.Provider.Name = strings.Replace(message.Embed.Provider.Name, replaceItem.Before, replaceItem.After, -1)
+			message.Embed.Provider.URL = strings.Replace(message.Embed.Provider.URL, replaceItem.Before, replaceItem.After, -1)
+		}
+
+		if message.Embed.Author != nil {
+			message.Embed.Author.Name = strings.Replace(message.Embed.Author.Name, replaceItem.Before, replaceItem.After, -1)
+			message.Embed.Author.URL = strings.Replace(message.Embed.Author.URL, replaceItem.Before, replaceItem.After, -1)
+			message.Embed.Author.IconURL = strings.Replace(message.Embed.Author.IconURL, replaceItem.Before, replaceItem.After, -1)
+		}
+
+		if len(message.Embed.Fields) > 0 {
+			for i := range message.Embed.Fields {
+				if message.Embed.Fields[i] == nil {
+					continue
+				}
+
+				message.Embed.Fields[i].Name = strings.Replace(message.Embed.Fields[i].Name, replaceItem.Before, replaceItem.After, -1)
+				message.Embed.Fields[i].Value = strings.Replace(message.Embed.Fields[i].Value, replaceItem.Before, replaceItem.After, -1)
+			}
+		}
+	}
+
+	return message
+}

@@ -301,19 +301,19 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 			ourSetting := guildAnnouncementSetting
 			go func() {
 				defer helpers.Recover()
-				guildJoinText := m.ReplaceMemberText(ourSetting.EmbedCode, member)
-				if guildJoinText == "" {
-					return
-				}
 				messageSend := &discordgo.MessageSend{
-					Content: guildJoinText,
+					Content: ourSetting.EmbedCode,
 				}
-				if helpers.IsEmbedCode(guildJoinText) {
-					ptext, embed, err := helpers.ParseEmbedCode(guildJoinText)
+				if helpers.IsEmbedCode(ourSetting.EmbedCode) {
+					ptext, embed, err := helpers.ParseEmbedCode(ourSetting.EmbedCode)
 					if err == nil {
 						messageSend.Content = ptext
 						messageSend.Embed = embed
 					}
+				}
+				messageSend = m.ReplaceMemberText(messageSend, member)
+				if messageSend == nil {
+					return
 				}
 				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
@@ -348,19 +348,19 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 			go func() {
 				defer helpers.Recover()
 
-				guildLeaveText := m.ReplaceMemberText(ourSetting.EmbedCode, member)
-				if guildLeaveText == "" {
-					return
-				}
 				messageSend := &discordgo.MessageSend{
-					Content: guildLeaveText,
+					Content: ourSetting.EmbedCode,
 				}
-				if helpers.IsEmbedCode(guildLeaveText) {
-					ptext, embed, err := helpers.ParseEmbedCode(guildLeaveText)
+				if helpers.IsEmbedCode(ourSetting.EmbedCode) {
+					ptext, embed, err := helpers.ParseEmbedCode(ourSetting.EmbedCode)
 					if err == nil {
 						messageSend.Content = ptext
 						messageSend.Embed = embed
 					}
+				}
+				messageSend = m.ReplaceMemberText(messageSend, member)
+				if messageSend == nil {
+					return
 				}
 				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
@@ -369,11 +369,11 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 	}()
 }
 
-func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Member) string {
+func (m *GuildAnnouncements) ReplaceMemberText(message *discordgo.MessageSend, member *discordgo.Member) *discordgo.MessageSend {
 	guild, err := helpers.GetGuild(member.GuildID)
 	if errD, ok := err.(*discordgo.RESTError); ok {
 		if errD.Message.Code != discordgo.ErrCodeMissingAccess { // It's probably Robyul leaving a server :nayoungpout:
-			return ""
+			return nil
 		} else {
 			helpers.Relax(err)
 		}
@@ -391,15 +391,19 @@ func (m *GuildAnnouncements) ReplaceMemberText(text string, member *discordgo.Me
 		}
 	}
 
-	text = strings.Replace(text, "{USER_USERNAME}", member.User.Username, -1)
-	text = strings.Replace(text, "{USER_ID}", member.User.ID, -1)
-	text = strings.Replace(text, "{USER_DISCRIMINATOR}", member.User.Discriminator, -1)
-	text = strings.Replace(text, "{USER_NUMBER}", strconv.Itoa(userNumber), -1)
-	text = strings.Replace(text, "{USER_MENTION}", fmt.Sprintf("<@%s>", member.User.ID), -1)
-	text = strings.Replace(text, "{USER_AVATARURL}", member.User.AvatarURL(""), -1)
-	text = strings.Replace(text, "{GUILD_NAME}", guild.Name, -1)
-	text = strings.Replace(text, "{GUILD_ID}", guild.ID, -1)
-	return text
+	return helpers.ReplaceMessageSend(
+		message,
+		[]*helpers.ReplaceValues{
+			{Before: "{USER_USERNAME}", After: member.User.Username},
+			{Before: "{USER_ID}", After: member.User.ID},
+			{Before: "{USER_DISCRIMINATOR}", After: member.User.Discriminator},
+			{Before: "{USER_NUMBER}", After: strconv.Itoa(userNumber)},
+			{Before: "{USER_MENTION}", After: member.User.Mention()},
+			{Before: "{USER_AVATARURL}", After: member.User.AvatarURL("")},
+			{Before: "{GUILD_NAME}", After: guild.Name},
+			{Before: "{GUILD_ID}", After: guild.ID},
+		},
+	)
 }
 
 func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
@@ -425,19 +429,19 @@ func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session 
 				member := new(discordgo.Member)
 				member.User = user.User
 				member.GuildID = user.GuildID
-				guildBanText := m.ReplaceMemberText(ourSetting.EmbedCode, member)
-				if guildBanText == "" {
-					return
-				}
 				messageSend := &discordgo.MessageSend{
-					Content: guildBanText,
+					Content: ourSetting.EmbedCode,
 				}
-				if helpers.IsEmbedCode(guildBanText) {
-					ptext, embed, err := helpers.ParseEmbedCode(guildBanText)
+				if helpers.IsEmbedCode(ourSetting.EmbedCode) {
+					ptext, embed, err := helpers.ParseEmbedCode(ourSetting.EmbedCode)
 					if err == nil {
 						messageSend.Content = ptext
 						messageSend.Embed = embed
 					}
+				}
+				messageSend = m.ReplaceMemberText(messageSend, member)
+				if messageSend == nil {
+					return
 				}
 				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
