@@ -83,6 +83,14 @@ func auditlogBackfillLoop() {
 				continue
 			}
 
+			// enforce API limits
+			if backfill.Count > 100 {
+				backfill.Count = 100
+			}
+			if backfill.Count < 1 {
+				backfill.Count = 1
+			}
+
 			switch backfill.Type {
 			case models.AuditLogBackfillTypeChannelCreate:
 				logger().Infof("doing channel create backfill for guild #%s, count %d", backfill.GuildID, backfill.Count)
