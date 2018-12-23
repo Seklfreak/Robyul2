@@ -75,6 +75,11 @@ func (n *Names) actionNames(args []string, in *discordgo.Message, out **discordg
 	var user *discordgo.User
 	if len(args) >= 1 {
 		user, err = helpers.GetUserFromMention(args[0])
+		if err != nil {
+			_, err := helpers.SendMessage(in.ChannelID, helpers.GetText("bot.arguments.invalid"))
+			helpers.RelaxMessage(err, in.ChannelID, in.ID)
+			return nil
+		}
 	}
 	if user == nil || user.ID == "" {
 		user = in.Author
