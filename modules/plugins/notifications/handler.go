@@ -81,6 +81,7 @@ func handleIgnore(session *discordgo.Session, content string, msg *discordgo.Mes
 		return
 	}
 
+	session.ChannelMessageDelete(msg.ChannelID, msg.ID)
 	session.ChannelTyping(msg.ChannelID)
 
 	var targetChannelID string
