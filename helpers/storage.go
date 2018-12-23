@@ -69,10 +69,7 @@ func AddFile(name string, data []byte, metadata AddFileMetadata, source string, 
 	objectName = name
 	if objectName == "" {
 		// generate unique filename
-		newID, err := uuid.NewV4()
-		if err != nil {
-			return "", err
-		}
+		newID := uuid.NewV4()
 		objectName = newID.String()
 	}
 	// retrieve guildID if channelID is set
