@@ -187,7 +187,7 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 					}
 
 					if postAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
+						// cache.GetLogger().WithField("module", "instagram").Infof("Posting Post (GraphQL): #%s", post.ID)
 						go m.postPostToChannel(entry.ChannelID, post, entry.SendPostType)
 					}
 

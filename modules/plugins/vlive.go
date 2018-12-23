@@ -161,7 +161,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, r
 						}
 					}
 					if videoAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting VOD: #%d", vod.Seq))
+						// cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting VOD: #%d", vod.Seq))
 						entry.PostedVOD = append(entry.PostedVOD, vod)
 						changes = true
 						go r.postVodToChannel(entry, vod, updatedVliveChannel)
@@ -175,7 +175,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, r
 						}
 					}
 					if videoAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
+						// cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Upcoming: #%d", upcoming.Seq))
 						entry.PostedUpcoming = append(entry.PostedUpcoming, upcoming)
 						changes = true
 						go r.postUpcomingToChannel(entry, upcoming, updatedVliveChannel)
@@ -189,7 +189,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, r
 						}
 					}
 					if videoAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Live: #%d", live.Seq))
+						// cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Live: #%d", live.Seq))
 						entry.PostedLive = append(entry.PostedLive, live)
 						changes = true
 						go r.postLiveToChannel(entry, live, updatedVliveChannel)
@@ -203,7 +203,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, r
 						}
 					}
 					if noticeAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Notice: #%d", notice.Number))
+						// cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Notice: #%d", notice.Number))
 						entry.PostedNotices = append(entry.PostedNotices, notice)
 						changes = true
 						go r.postNoticeToChannel(entry, notice, updatedVliveChannel)
@@ -217,7 +217,7 @@ func (r *VLive) feedWorker(id int, jobs <-chan map[string][]models.VliveEntry, r
 						}
 					}
 					if celebAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
+						// cache.GetLogger().WithField("module", "vlive").WithField("worker", id).Info(fmt.Sprintf("Posting Celeb: #%s", celeb.ID))
 						entry.PostedCelebs = append(entry.PostedCelebs, celeb)
 						changes = true
 						go r.postCelebToChannel(entry, celeb, updatedVliveChannel)
@@ -707,13 +707,13 @@ func (r *VLive) postVodToChannel(entry models.VliveEntry, vod models.VliveVideoI
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
+	helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", vod.Url),
 		Embed:   channelEmbed,
 	})
-	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Warnf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
-	}
+	// if err != nil {
+	//	 cache.GetLogger().WithField("module", "vlive").Warnf("posting vod: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
+	// }
 }
 
 func (r *VLive) postUpcomingToChannel(entry models.VliveEntry, vod models.VliveVideoInfo, vliveChannel models.VliveChannelInfo) {
@@ -734,13 +734,13 @@ func (r *VLive) postUpcomingToChannel(entry models.VliveEntry, vod models.VliveV
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
 	postText := fmt.Sprintf("<%s>", vliveChannel.Url)
-	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
+	helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + postText,
 		Embed:   channelEmbed,
 	})
-	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Warnf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
-	}
+	// if err != nil {
+	// 	cache.GetLogger().WithField("module", "vlive").Warnf("posting upcoming: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
+	// }
 }
 
 func (r *VLive) postLiveToChannel(entry models.VliveEntry, vod models.VliveVideoInfo, vliveChannel models.VliveChannelInfo) {
@@ -760,13 +760,13 @@ func (r *VLive) postLiveToChannel(entry models.VliveEntry, vod models.VliveVideo
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
+	helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", vod.Url),
 		Embed:   channelEmbed,
 	})
-	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Warnf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
-	}
+	// if err != nil {
+	// 	cache.GetLogger().WithField("module", "vlive").Warnf("posting live: #%d to channel: #%s failed: %s", vod.Seq, entry.ChannelID, err)
+	// }
 }
 
 func (r *VLive) postNoticeToChannel(entry models.VliveEntry, notice models.VliveNoticeInfo, vliveChannel models.VliveChannelInfo) {
@@ -786,13 +786,13 @@ func (r *VLive) postNoticeToChannel(entry models.VliveEntry, notice models.Vlive
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
+	helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", notice.Url),
 		Embed:   channelEmbed,
 	})
-	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Warnf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err)
-	}
+	// if err != nil {
+	// 	cache.GetLogger().WithField("module", "vlive").Warnf("posting notice: #%d to channel: #%s failed: %s", notice.Number, entry.ChannelID, err)
+	// }
 }
 
 func (r *VLive) postCelebToChannel(entry models.VliveEntry, celeb models.VliveCelebInfo, vliveChannel models.VliveChannelInfo) {
@@ -811,11 +811,11 @@ func (r *VLive) postCelebToChannel(entry models.VliveEntry, celeb models.VliveCe
 	if entry.MentionRoleID != "" {
 		mentionText = fmt.Sprintf("<@&%s>\n", entry.MentionRoleID)
 	}
-	_, err := helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
+	helpers.SendComplex(entry.ChannelID, &discordgo.MessageSend{
 		Content: mentionText + fmt.Sprintf("<%s>", celeb.Url),
 		Embed:   channelEmbed,
 	})
-	if err != nil {
-		cache.GetLogger().WithField("module", "vlive").Warnf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err)
-	}
+	// if err != nil {
+	// 	cache.GetLogger().WithField("module", "vlive").Warnf("posting celeb: #%s to channel: #%s failed: %s", celeb.ID, entry.ChannelID, err)
+	// }
 }

@@ -114,7 +114,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 							}
 						}
 						if tweetAlreadyPosted == false {
-							cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", item.IdStr, entry.ChannelID))
+							// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", item.IdStr, entry.ChannelID))
 							entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: item.IdStr, CreatedAt: item.CreatedAt})
 							changes = true
 							go t.postAnacondaTweetToChannel(entry.ChannelID, &item, &item.User, entry)
@@ -390,7 +390,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 						}
 					}
 					if tweetAlreadyPosted == false {
-						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s to: #%s", tweet.IDStr, entry.ChannelID))
+						// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s to: #%s", tweet.IDStr, entry.ChannelID))
 						entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
 						tweetToPost := tweet
