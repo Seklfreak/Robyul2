@@ -315,22 +315,22 @@ func main() {
 	// Open REST API
 	wsContainer := restful.NewContainer()
 
+	// configure CORS filter
+	cors := restful.CrossOriginResourceSharing{
+		AllowedDomains: []string{"https://robyul.chat", "https://api.robyul.chat", "http://localhost:8000"},
+		AllowedHeaders: []string{"Content-Type", "Accept", "Origin", "X-CSRF-Token", "Authorization"},
+		AllowedMethods: []string{"GET", "POST"},
+		MaxAge:         1000,
+		Container:      wsContainer,
+	}
+	wsContainer.Filter(cors.Filter)
+	wsContainer.Filter(wsContainer.OPTIONSFilter)
+
 	for _, service := range rest.NewRestServices() {
 		wsContainer.Add(service)
 	}
+
 	wsContainer.Filter(func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		// Add CORS header
-		allowedHosts := []string{"https://robyul.chat", "https://api.robyul.chat", "http://localhost:8000"}
-		if origin := req.Request.Header.Get("Origin"); origin != "" {
-			for _, allowedHost := range allowedHosts {
-				if allowedHost == origin {
-					resp.AddHeader("Access-Control-Allow-Origin", origin)
-					resp.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-					resp.AddHeader("Access-Control-Max-Age", "1000")
-					resp.AddHeader("Access-Control-Allow-Headers", "origin, x-csrftoken, content-type, accept, Authorization")
-				}
-			}
-		}
 		// Log request and time
 		now := time.Now()
 		chain.ProcessFilter(req, resp)
@@ -339,7 +339,6 @@ func main() {
 			req.Request.Method, req.Request.Host, req.Request.URL, tookTime))
 		logKeenRequest(req, tookTime.Seconds())
 	})
-	wsContainer.Filter(wsContainer.OPTIONSFilter)
 
 	go func() {
 		server := &http.Server{Addr: "localhost:2021", Handler: wsContainer}
