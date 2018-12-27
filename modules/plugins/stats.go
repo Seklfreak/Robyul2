@@ -653,7 +653,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		var sinceStatusName, sinceStatusValue, lastMessageText, firstMessageText string
 		if cache.HasElastic() && !helpers.GuildSettingsGetCached(currentGuild.ID).ChatlogDisabled {
-			presenceUpdate, err := helpers.GetLastPresenceUpdate(targetUser.ID)
+			presenceUpdate, err := helpers.GetLastPresenceUpdate(targetUser.ID, true)
 			if err == nil {
 				sinceStatusName = presenceUpdate.Status
 				sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)

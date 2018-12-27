@@ -219,7 +219,7 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 	updatePresence := true
 
 	// check if new item is required
-	lastPresence, err := GetLastPresenceUpdate(presence.User.ID)
+	lastPresence, err := GetLastPresenceUpdate(presence.User.ID, false)
 	if err == nil {
 		// don't update if status is the same
 		if elasticPresenceUpdate.GameType == lastPresence.GameType &&
@@ -804,7 +804,7 @@ func UnmarshalElasticMessage(item *elastic.SearchHit) (result models.ElasticMess
 }
 
 // GetLastPresenceUpdate gets the last presence of an user, either from local cache, or ElasticSearch
-func GetLastPresenceUpdate(userID string) (*models.ElasticPresenceUpdate, error) {
+func GetLastPresenceUpdate(userID string, elasticsearch bool) (*models.ElasticPresenceUpdate, error) {
 	// try local cache
 	lastPresenceUpdatesLock.RLock()
 	lastPresence, ok := lastPresenceUpdates[userID]
@@ -813,23 +813,25 @@ func GetLastPresenceUpdate(userID string) (*models.ElasticPresenceUpdate, error)
 		return &lastPresence, nil
 	}
 
-	// try ElasticSearch
-	searchResult, err := cache.GetElastic().Search().
-		Index(models.ElasticIndexPresenceUpdates).
-		Type("doc").
-		Query(elastic.NewQueryStringQuery("UserID:"+userID+" AND NOT Status:\"\"")).
-		Sort("CreatedAt", false).
-		From(0).Size(1).
-		Do(context.Background())
-	if err != nil {
-		return nil, err
-	}
+	if elasticsearch {
+		// try ElasticSearch
+		searchResult, err := cache.GetElastic().Search().
+			Index(models.ElasticIndexPresenceUpdates).
+			Type("doc").
+			Query(elastic.NewQueryStringQuery("UserID:"+userID+" AND NOT Status:\"\"")).
+			Sort("CreatedAt", false).
+			From(0).Size(1).
+			Do(context.Background())
+		if err != nil {
+			return nil, err
+		}
 
-	if searchResult.TotalHits() > 0 {
-		var ttyp models.ElasticPresenceUpdate
-		for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-			if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
-				return &presenceUpdate, nil
+		if searchResult.TotalHits() > 0 {
+			var ttyp models.ElasticPresenceUpdate
+			for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+				if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
+					return &presenceUpdate, nil
+				}
 			}
 		}
 	}
