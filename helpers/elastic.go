@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"reflect"
 
 	"context"
 
@@ -21,7 +22,7 @@ import (
 
 const ElasticIndexTimeout = "5s"
 
-var lastPresenceUpdates map[string]models.ElasticPresenceUpdate
+var lastPresenceUpdates = make(map[string]models.ElasticPresenceUpdate)
 var lastPresenceUpdatesLock = sync.RWMutex{}
 
 func ElasticOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -216,14 +217,11 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 	}
 
 	updatePresence := true
-	lastPresenceUpdatesLock.Lock()
-	if lastPresenceUpdates == nil {
-		lastPresenceUpdates = make(map[string]models.ElasticPresenceUpdate, 0)
-	}
-	lastPresenceUpdatesLock.Unlock()
 
-	lastPresenceUpdatesLock.RLock()
-	if lastPresence, ok := lastPresenceUpdates[presence.User.ID]; ok {
+	// check if new item is required
+	lastPresence, err := GetLastPresenceUpdate(presence.User.ID)
+	if err == nil {
+		// don't update if status is the same
 		if elasticPresenceUpdate.GameType == lastPresence.GameType &&
 			elasticPresenceUpdate.GameURL == lastPresence.GameURL &&
 			elasticPresenceUpdate.GameName == lastPresence.GameName &&
@@ -231,9 +229,9 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 			updatePresence = false
 		}
 	}
-	lastPresenceUpdatesLock.RUnlock()
 
 	if updatePresence {
+		// if required, index new item
 		lastPresenceUpdatesLock.Lock()
 		lastPresenceUpdates[presence.User.ID] = elasticPresenceUpdate
 		lastPresenceUpdatesLock.Unlock()
@@ -803,4 +801,39 @@ func UnmarshalElasticMessage(item *elastic.SearchHit) (result models.ElasticMess
 	}
 
 	return result
+}
+
+// GetLastPresenceUpdate gets the last presence of an user, either from local cache, or ElasticSearch
+func GetLastPresenceUpdate(userID string) (*models.ElasticPresenceUpdate, error) {
+	// try local cache
+	lastPresenceUpdatesLock.RLock()
+	lastPresence, ok := lastPresenceUpdates[userID]
+	lastPresenceUpdatesLock.RUnlock()
+	if ok && lastPresence.Status != "" {
+		return &lastPresence, nil
+	}
+
+	// try ElasticSearch
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndexPresenceUpdates).
+		Type("doc").
+		Query(elastic.NewQueryStringQuery("UserID:"+userID+" AND NOT Status:\"\"")).
+		Sort("CreatedAt", false).
+		From(0).Size(1).
+		Do(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	if searchResult.TotalHits() > 0 {
+		var ttyp models.ElasticPresenceUpdate
+		for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+			if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
+				return &presenceUpdate, nil
+			}
+		}
+	}
+
+	// we found nothing…
+	return nil, errors.New("no presence update found")
 }

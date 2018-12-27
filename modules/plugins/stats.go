@@ -13,8 +13,6 @@ import (
 
 	"context"
 
-	"reflect"
-
 	"sync"
 
 	"github.com/Jeffail/gabs"
@@ -26,8 +24,8 @@ import (
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
+	humanize "github.com/dustin/go-humanize"
+	raven "github.com/getsentry/raven-go"
 	"github.com/olivere/elastic"
 )
 
@@ -655,56 +653,19 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		var sinceStatusName, sinceStatusValue, lastMessageText, firstMessageText string
 		if cache.HasElastic() && !helpers.GuildSettingsGetCached(currentGuild.ID).ChatlogDisabled {
-			queryString := "UserID:" + targetUser.ID + " AND NOT Status:\"\""
-			termQuery := elastic.NewQueryStringQuery(queryString)
-			searchResult, err := cache.GetElastic().Search().
-				Index(models.ElasticIndexPresenceUpdates).
-				Type("doc").
-				Query(termQuery).
-				Sort("CreatedAt", false).
-				From(0).Size(1).
-				Do(context.Background())
+			presenceUpdate, err := helpers.GetLastPresenceUpdate(targetUser.ID)
 			if err == nil {
-				if searchResult.TotalHits() > 0 {
-					var ttyp models.ElasticPresenceUpdate
-					for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-						if presenceUpdate, ok := item.(models.ElasticPresenceUpdate); ok {
-							sinceStatusName = presenceUpdate.Status
-							sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)
-							switch sinceStatusName {
-							case "dnd":
-								sinceStatusName = "Do Not Disturb"
-							}
-						}
-					}
-				}
-			} else {
-				if errE, ok := err.(*elastic.Error); ok {
-					raven.CaptureError(fmt.Errorf("%#v", errE), map[string]string{
-						"ChannelID":        msg.ChannelID,
-						"Content":          msg.Content,
-						"Timestamp":        string(msg.Timestamp),
-						"TTS":              strconv.FormatBool(msg.Tts),
-						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
-						"IsBot":            strconv.FormatBool(msg.Author.Bot),
-						"ElasticTermQuery": queryString,
-					})
-				} else {
-					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{
-						"ChannelID":        msg.ChannelID,
-						"Content":          msg.Content,
-						"Timestamp":        string(msg.Timestamp),
-						"TTS":              strconv.FormatBool(msg.Tts),
-						"MentionEveryone":  strconv.FormatBool(msg.MentionEveryone),
-						"IsBot":            strconv.FormatBool(msg.Author.Bot),
-						"ElasticTermQuery": queryString,
-					})
+				sinceStatusName = presenceUpdate.Status
+				sinceStatusValue = humanize.Time(presenceUpdate.CreatedAt)
+				switch sinceStatusName {
+				case "dnd":
+					sinceStatusName = "Do Not Disturb"
 				}
 			}
 
-			queryString = "UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
-			termQuery = elastic.NewQueryStringQuery(queryString)
-			searchResult, err = cache.GetElastic().Search().
+			queryString := "UserID:" + targetUser.ID + " AND GuildID:" + currentGuild.ID
+			termQuery := elastic.NewQueryStringQuery(queryString)
+			searchResult, err := cache.GetElastic().Search().
 				Index(models.ElasticIndexMessages).
 				Type("doc").
 				Query(termQuery).
