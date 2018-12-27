@@ -3396,8 +3396,6 @@ func (m *Levels) GetProfile(member *discordgo.Member, guild *discordgo.Guild, gi
 			outGif.Delay = append(outGif.Delay, avatarGif.Delay[i])
 		}
 
-		outGif.LoopCount = -1
-
 		buf = bytes.Buffer{}
 		err = gif.EncodeAll(&buf, outGif)
 		if err != nil {
