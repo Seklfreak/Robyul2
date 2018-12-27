@@ -187,6 +187,7 @@ type Rest_Statistics_Histogram_Three struct {
 	Count1 int64
 	Count2 int64
 	Count3 int64
+	Count4 int64
 }
 
 type Rest_Statistics_Histogram_TwoSub struct {

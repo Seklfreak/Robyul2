@@ -22,8 +22,8 @@ import (
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/emicklei/go-restful"
-	"github.com/getsentry/raven-go"
+	restful "github.com/emicklei/go-restful"
+	raven "github.com/getsentry/raven-go"
 	"github.com/olivere/elastic"
 	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack"
@@ -879,12 +879,19 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 		ExtendedBoundsMin(minBound).
 		ExtendedBoundsMax(time.Now())
 
+	aggWithUniqueUsers := agg.
+		SubAggregation(
+			"distinict_user_ids",
+			elastic.NewCardinalityAggregation().
+				Field("UserID.keyword"),
+		)
+
 	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
 	searchResult, err := cache.GetElastic().Search().
 		Index(models.ElasticIndexMessages).
 		Type("doc").
 		Query(termQuery).
-		Aggregation("messages", agg).
+		Aggregation("messages", aggWithUniqueUsers).
 		Size(0).
 		Do(context.Background())
 	if err != nil {
@@ -897,18 +904,27 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 	var timestamp int64
 	var timeConverted time.Time
 	var timeISO8601 string
+	var distinctUserIDs float64
 	if agg, found := searchResult.Aggregations.Terms("messages"); found {
 		for _, bucket := range agg.Buckets {
 			timestamp = int64(bucket.Key.(float64) / 1000)
 			timeConverted = time.Unix(timestamp, 0)
 			timeISO8601 = timeConverted.Format(models.ISO8601)
 
+			distinctUserIDs = 0
+			distinctUserIDsValue, exists := bucket.ValueCount("distinict_user_ids")
+			if exists {
+				distinctUserIDs = *distinctUserIDsValue.Value
+			}
+
 			result = append(result, models.Rest_Statistics_Histogram_Three{
 				Time:   timeISO8601,
 				Count1: bucket.DocCount,
 				Count2: 0,
 				Count3: 0,
+				Count4: int64(distinctUserIDs),
 			})
+
 			if len(result) >= countNumber {
 				break
 			}

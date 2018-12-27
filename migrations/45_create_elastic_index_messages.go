@@ -47,6 +47,11 @@ func m45_create_elastic_index_messages() {
 					},
 					"UserID": map[string]interface{}{
 						"type": "text",
+						"fields": map[string]interface{}{
+							"keyword": map[string]interface{}{
+								"type": "keyword",
+							},
+						},
 					},
 					"GuildID": map[string]interface{}{
 						"type": "text",
