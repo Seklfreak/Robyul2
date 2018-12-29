@@ -317,7 +317,12 @@ func main() {
 
 	// configure CORS filter
 	cors := restful.CrossOriginResourceSharing{
-		AllowedDomains: []string{"https://robyul.chat", "https://api.robyul.chat", "http://localhost:8000"},
+		AllowedDomains: []string{
+			"https://robyul.chat",
+			"https://api.robyul.chat",
+			"http://localhost:8000",
+			"http://robyul-web.local:8000",
+		},
 		AllowedHeaders: []string{"Content-Type", "Accept", "Origin", "X-CSRF-Token", "Authorization"},
 		AllowedMethods: []string{"GET", "POST"},
 		MaxAge:         1000,

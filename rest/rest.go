@@ -109,6 +109,7 @@ func NewRestServices() []*restful.WebService {
 	service.Route(service.GET("/{guild-id}/messages/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetMessageStatisticsCount))
 	service.Route(service.GET("/{guild-id}/joins/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetJoinsStatisticsCount))
 	service.Route(service.GET("/{guild-id}/leaves/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetLeavesStatisticsCount))
+	service.Route(service.GET("/{guild-id}/by-uniques/{interval}/count").Filter(sessionAndWebkeyAuthenticate).To(GetMessageByUniqueUsersStatisticsCount))
 	service.Route(service.GET("/{guild-id}/serveractivity/{interval}/histogram/{count}").Filter(sessionAndWebkeyAuthenticate).To(GetServerActivityStatisticsHistogram))
 	service.Route(service.GET("/{guild-id}/vanityinvite/{interval}/histogram/{count}").Filter(sessionAndWebkeyAuthenticate).To(GetVanityInviteStatistics))
 	service.Route(service.GET("/bot").Filter(webkeyAuthenticate).To(GotBotStatistics))
@@ -851,6 +852,56 @@ func GetLeavesStatisticsCount(request *restful.Request, response *restful.Respon
 	response.WriteEntity(models.Rest_Statistics_Count{Count: searchResult})
 }
 
+func GetMessageByUniqueUsersStatisticsCount(request *restful.Request, response *restful.Response) {
+	guildID := request.PathParameter("guild-id")
+	interval := request.PathParameter("interval")
+
+	if request.Attribute("UserID").(string) != "global" {
+		if !helpers.IsModByID(guildID, request.Attribute("UserID").(string)) && !helpers.IsAdminByID(guildID, request.Attribute("UserID").(string)) {
+			response.WriteErrorString(401, "401: Not Authorized")
+			return
+		}
+	}
+
+	agg := elastic.NewCardinalityAggregation().
+		Field("UserID.keyword")
+
+	rangeQuery := elastic.NewRangeQuery("CreatedAt").
+		Gte("now-" + interval).
+		Lte("now")
+	termQuery := elastic.NewQueryStringQuery("GuildID:" + guildID)
+	finalQuery := elastic.NewBoolQuery().Must(rangeQuery, termQuery)
+	searchResult, err := cache.GetElastic().Search().
+		Index(models.ElasticIndexMessages).
+		Type("doc").
+		Query(finalQuery).
+		Aggregation("distinct_user_ids", agg).
+		Size(0).
+		Do(context.Background())
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	var result int64
+	if agg, found := searchResult.Aggregations.Terms("distinct_user_ids"); found {
+		if raw, found := agg.Aggregations["value"]; found {
+			if raw == nil {
+				response.WriteError(http.StatusInternalServerError, errors.New("invalid storage response"))
+				return
+			}
+
+			result, err = strconv.ParseInt(string(*raw), 10, 64)
+			if err != nil {
+				response.WriteError(http.StatusInternalServerError, err)
+				return
+			}
+		}
+	}
+
+	response.WriteEntity(models.Rest_Statistics_Count{Count: result})
+}
+
 func GetServerActivityStatisticsHistogram(request *restful.Request, response *restful.Response) {
 	guildID := request.PathParameter("guild-id")
 	interval := request.PathParameter("interval")
@@ -881,7 +932,7 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 
 	aggWithUniqueUsers := agg.
 		SubAggregation(
-			"distinict_user_ids",
+			"distinct_user_ids",
 			elastic.NewCardinalityAggregation().
 				Field("UserID.keyword"),
 		)
@@ -912,7 +963,7 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 			timeISO8601 = timeConverted.Format(models.ISO8601)
 
 			distinctUserIDs = 0
-			distinctUserIDsValue, exists := bucket.ValueCount("distinict_user_ids")
+			distinctUserIDsValue, exists := bucket.ValueCount("distinct_user_ids")
 			if exists {
 				distinctUserIDs = *distinctUserIDsValue.Value
 			}
