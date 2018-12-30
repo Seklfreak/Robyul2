@@ -12,7 +12,7 @@ func m45_create_elastic_index_messages() {
 	}
 
 	elastic := cache.GetElastic()
-	exists, err := elastic.IndexExists("robyul-messages").Do(context.Background())
+	exists, err := elastic.IndexExists("robyul-messages-v2").Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func m45_create_elastic_index_messages() {
 		},
 	}
 
-	index, err := elastic.CreateIndex("robyul-messages").BodyJson(messageMapping).Do(context.Background())
+	index, err := elastic.CreateIndex("robyul-messages-v2").BodyJson(messageMapping).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}

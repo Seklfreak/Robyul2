@@ -3,7 +3,7 @@ package models
 import "time"
 
 const (
-	ElasticIndexMessages           = "robyul-messages"
+	ElasticIndexMessages           = "robyul-messages-v2"
 	ElasticIndexJoins              = "robyul-joins"
 	ElasticIndexLeaves             = "robyul-leaves"
 	ElasticIndexPresenceUpdates    = "robyul-presence_updates"

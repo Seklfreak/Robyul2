@@ -24,7 +24,7 @@ func m51_reindex_elasticv5_to_v6() {
 	cache.GetLogger().WithField("module", "migrations").Info("reindexing ElasticSearch indexes")
 
 	src := elastic.NewReindexSource().Index("robyul").Type("message")
-	dst := elastic.NewReindexDestination().Index("robyul-messages").Type("doc")
+	dst := elastic.NewReindexDestination().Index("robyul-messages-v2").Type("doc")
 	res, err := elasticClient.Reindex().Source(src).Destination(dst).Refresh("true").Do(context.Background())
 	if err != nil {
 		panic(err)
