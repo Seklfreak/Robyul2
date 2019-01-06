@@ -1,4 +1,4 @@
-package plugins
+package mod
 
 import (
 	"bytes"
@@ -1200,7 +1200,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		}
 		resultMessage := resultMessages[0]
 
-		bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser, channel.GuildID)
+		bannedOnServerList, checkFailedServerList := m.inspectUserBans(targetUser)
 
 		resultEmbed.Description = helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
 		resultText := helpers.GetTextF("plugins.mod.inspect-description-done", targetUser.ID)
@@ -1499,8 +1499,12 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 						if settings.InspectTriggersEnabled.UserBannedOnOtherServers {
 							enabledEmote = ":heavy_check_mark:"
 						}
-						chooseEmbed.Description += fmt.Sprintf("%s %s User is banned on a different server with Robyul on. Gets checked everytime an user joins or gets banned on a different server with Robyul on.\n",
-							emojis.FromToText("1"), enabledEmote)
+						userBannedDesc := "User is banned on a different server with Robyul on. Gets checked everytime an user joins"
+						if helpers.FeatureEnabled(featureFlagInspectUserGotBanned, featureFlagInspectUserGotBannedFallback) {
+							userBannedDesc += " or gets banned on a different server with Robyul on"
+						}
+						chooseEmbed.Description += fmt.Sprintf("%s %s %s.\n",
+							emojis.FromToText("1"), enabledEmote, userBannedDesc)
 
 						enabledEmote = ":black_square_button:"
 						if settings.InspectTriggersEnabled.UserNoCommonServers {
@@ -2321,7 +2325,7 @@ func (m *Mod) addBanToCache(user *discordgo.GuildBanAdd) bool {
 	return false
 }
 
-func (m *Mod) inspectUserBans(user *discordgo.User, sourceGuildID string) ([]*discordgo.Guild, []*discordgo.Guild) {
+func (m *Mod) inspectUserBans(user *discordgo.User) ([]*discordgo.Guild, []*discordgo.Guild) {
 	bannedOnServerList := make([]*discordgo.Guild, 0)
 	checkFailedServerList := make([]*discordgo.Guild, 0)
 
@@ -2466,7 +2470,7 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 						return
 					}
 
-					bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User, guild.ID)
+					bannedOnServerList, checkFailedServerList := m.inspectUserBans(member.User)
 					joins, _ := m.GetJoins(member.User.ID, member.GuildID)
 
 					cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he joined Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d, Joins: %d",
@@ -2679,161 +2683,17 @@ func (m *Mod) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Sess
 	go func() {
 		defer helpers.Recover()
 
-		bannedOnGuild, err := helpers.GetGuild(user.GuildID)
-		if err != nil {
-			helpers.RelaxLog(err)
-			return
-		}
-
+		// cache ban
 		updated := m.addBanToCache(user)
 		if !updated {
 			return
 		}
-		for _, targetGuild := range cache.GetSession().State.Guilds {
-			if targetGuild.ID != user.GuildID && helpers.GuildSettingsGetCached(targetGuild.ID).InspectTriggersEnabled.UserBannedOnOtherServers {
-				if user.User.ID == session.State.User.ID { // Don't inspect Robyul
-					return
-				}
 
-				// check if user is on this guild
-				if helpers.GetIsInGuild(targetGuild.ID, user.User.ID) {
-					guild, err := helpers.GetGuild(targetGuild.ID)
-					if err != nil {
-						helpers.RelaxLog(err)
-						continue
-					}
-
-					bannedOnServerList, checkFailedServerList := m.inspectUserBans(user.User, guild.ID)
-
-					cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Inspected user %s (%s) because he got banned on Guild %s (#%s) for Guild %s (#%s): Banned On: %d, Banned Checks Failed: %d",
-						user.User.Username, user.User.ID, bannedOnGuild.Name, bannedOnGuild.ID, guild.Name, guild.ID, len(bannedOnServerList), len(checkFailedServerList)))
-
-					resultEmbed := &discordgo.MessageEmbed{
-						Title: helpers.GetTextF("plugins.mod.inspect-embed-title", user.User.Username, user.User.Discriminator),
-						Description: helpers.GetTextF("plugins.mod.inspect-description-done", user.User.ID) +
-							"\n_inspected because User got banned on a different Server._",
-						URL:       helpers.GetAvatarUrl(user.User),
-						Thumbnail: &discordgo.MessageEmbedThumbnail{URL: helpers.GetAvatarUrl(user.User)},
-						Footer:    &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.mod.inspect-embed-footer", user.User.ID, len(session.State.Guilds))},
-						Color:     0x0FADED,
-					}
-
-					resultBansText := ""
-					if len(bannedOnServerList) <= 0 {
-						resultBansText += fmt.Sprintf(":white_check_mark: User is banned on none servers.\n:black_medium_small_square:Checked %d servers.", len(session.State.Guilds)-len(checkFailedServerList))
-					} else {
-						resultBansText += fmt.Sprintf(":warning: User is banned on **%d** server(s).\n:black_medium_small_square:Checked %d servers.", len(bannedOnServerList), len(session.State.Guilds)-len(checkFailedServerList))
-					}
-
-					isOnServerList := m.inspectCommonServers(user.User)
-					commonGuildsText := ""
-					if len(isOnServerList) > 0 { // -1 to exclude the server the user is currently on
-						commonGuildsText += fmt.Sprintf(":white_check_mark: User is on **%d** server(s) with Robyul.", len(isOnServerList)-1)
-					} else {
-						commonGuildsText += ":question: User is on **none** servers with Robyul."
-					}
-
-					joinedTime := helpers.GetTimeFromSnowflake(user.User.ID)
-					oneDayAgo := time.Now().AddDate(0, 0, -1)
-					oneWeekAgo := time.Now().AddDate(0, 0, -7)
-					joinedTimeText := ""
-					if !joinedTime.After(oneWeekAgo) {
-						joinedTimeText += fmt.Sprintf(":white_check_mark: User Account got created %s.\n:black_medium_small_square:Joined at %s.", helpers.SinceInDaysText(joinedTime), joinedTime.Format(time.ANSIC))
-					} else if !joinedTime.After(oneDayAgo) {
-						joinedTimeText += fmt.Sprintf(":question: User Account is less than one Week old.\n:black_medium_small_square:Joined at %s.", joinedTime.Format(time.ANSIC))
-					} else {
-						joinedTimeText += fmt.Sprintf(":warning: User Account is less than one Day old.\n:black_medium_small_square:Joined at %s.", joinedTime.Format(time.ANSIC))
-					}
-
-					joins, _ := m.GetJoins(user.User.ID, targetGuild.ID)
-					joinsText := ""
-					if len(joins) == 0 {
-						joinsText = ":white_check_mark: User never joined this server\n"
-					} else if len(joins) == 1 {
-						if joins[0].InviteCodeUsed != "" {
-							createdByUser, _ := helpers.GetUser(joins[0].InviteCodeCreatedByUserID)
-							if createdByUser == nil {
-								createdByUser = new(discordgo.User)
-								createdByUser.ID = joins[0].InviteCodeCreatedByUserID
-								createdByUser.Username = "N/A"
-							}
-
-							var labelText string
-							if joins[0].VanityInviteUsedName != "" {
-								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
-							}
-
-							joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s) with the invite `%s`%s created by `%s (#%s)` %s\n",
-								humanize.Time(joins[0].JoinedAt), joins[0].InviteCodeUsed, labelText, createdByUser.Username,
-								createdByUser.ID, humanize.Time(joins[0].InviteCodeCreatedAt))
-						} else {
-							joinsText = fmt.Sprintf(":white_check_mark: User joined this server once (%s)\nGive Robyul the `Manage Server` permission to see using which invite.\n",
-								humanize.Time(joins[0].JoinedAt))
-						}
-					} else if len(joins) > 1 {
-						sort.Slice(joins, func(i, j int) bool { return joins[i].JoinedAt.After(joins[j].JoinedAt) })
-						lastJoin := joins[0]
-
-						if lastJoin.InviteCodeUsed != "" {
-							createdByUser, _ := helpers.GetUser(lastJoin.InviteCodeCreatedByUserID)
-							if createdByUser == nil {
-								createdByUser = new(discordgo.User)
-								createdByUser.ID = lastJoin.InviteCodeCreatedByUserID
-								createdByUser.Username = "N/A"
-							}
-
-							var labelText string
-							if lastJoin.VanityInviteUsedName != "" {
-								labelText = " (`" + helpers.GetConfig().Path("website.vanityurl_domain").Data().(string) + "/" + joins[0].VanityInviteUsedName + "`)"
-							}
-
-							joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
-								"Last time with the invite `%s`%s created by `%s (#%s)` %s\n",
-								len(joins), humanize.Time(lastJoin.JoinedAt), lastJoin.InviteCodeUsed,
-								labelText, createdByUser.Username, createdByUser.ID, humanize.Time(lastJoin.InviteCodeCreatedAt))
-						} else {
-							joinsText = fmt.Sprintf(":warning: User joined this server %d times (last time %s)\n"+
-								"Give Robyul the `Manage Server` permission to see using which invites.\n",
-								len(joins), humanize.Time(lastJoin.JoinedAt))
-						}
-					}
-
-					resultEmbed.Fields = []*discordgo.MessageEmbedField{
-						{Name: "Bans", Value: resultBansText, Inline: false},
-						{Name: "Join History", Value: joinsText, Inline: false},
-						{Name: "Common Servers", Value: commonGuildsText, Inline: false},
-						{Name: "Account Age", Value: joinedTimeText, Inline: false},
-					}
-
-					for _, failedServer := range checkFailedServerList {
-						if failedServer.ID == targetGuild.ID {
-							resultEmbed.Description += "\n:warning: I wasn't able to gather the ban list for this server!\nPlease give Robyul the permission `Ban Members` to help other servers."
-							break
-						}
-					}
-
-					targetChannel, err := helpers.GetChannelWithoutApi(helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel)
-					if err == nil {
-						// confirm user is still in Guild before sending
-						if !helpers.GetIsInGuild(targetGuild.ID, user.User.ID) {
-							continue
-						}
-
-						_, err = helpers.SendEmbed(targetChannel.ID, resultEmbed)
-						if err != nil {
-							cache.GetLogger().WithField("module", "mod").Warnf("Failed to send guild ban inspect to channel #%s on guild #%s: %s",
-								helpers.GuildSettingsGetCached(targetGuild.ID).InspectsChannel, targetGuild.ID, err.Error())
-							if errD, ok := err.(*discordgo.RESTError); ok {
-								if errD.Message.Code != discordgo.ErrCodeMissingAccess {
-									helpers.RelaxLog(err)
-								}
-							} else {
-								helpers.RelaxLog(err)
-							}
-							continue
-						}
-					}
-				}
+		// send inspects, if enabled
+		if helpers.FeatureEnabled(featureFlagInspectUserGotBanned, featureFlagInspectUserGotBannedFallback) {
+			err := m.inspectsUserGotBannedOnGuild(user)
+			if err != nil {
+				helpers.RelaxLog(err)
 			}
 		}
 	}()

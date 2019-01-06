@@ -144,5 +144,10 @@
   "polr": {
     "url": "https://demo.polr.me/api/",
     "api-key": ""
+  },
+  "unleash": {
+    "APP_NAME": "",
+    "INSTANCE_ID": "",
+    "URL": ""
   }
 }

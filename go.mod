@@ -13,6 +13,7 @@ require (
 	github.com/RichardKnop/machinery v1.5.4
 	github.com/Seklfreak/lastfm-go v0.0.0-20180325112940-ff0cf6912942
 	github.com/Seklfreak/polr-go v0.0.0-20180425152206-e6c594fafce8
+	github.com/Unleash/unleash-client-go v0.0.0-20181121205122-ae068e0ad68c
 	github.com/VojtechVitek/go-trello v0.0.0-20161023024849-28ebf2756ecc
 	github.com/andybons/gogif v0.0.0-20140526152223-16d573594812
 	github.com/aws/aws-sdk-go v1.16.11 // indirect
@@ -42,10 +43,12 @@ require (
 	github.com/go-ini/ini v1.40.0 // indirect
 	github.com/go-redis/cache v6.3.5+incompatible
 	github.com/go-redis/redis v6.14.2+incompatible
+	github.com/google/pprof v0.0.0-20181206194817-3ea8567a2e57 // indirect
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/huandu/facebook v2.3.1+incompatible
+	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/inconshreveable/go-keen v0.0.0-20170228023802-f7cb12356363
 	github.com/json-iterator/go v1.1.5
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
@@ -63,7 +66,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/mvdan/xurls v1.1.0 // indirect
-	github.com/nbio/st v0.0.0-20140626010706-e9e8d9816f32 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/olebedev/when v0.0.0-20171024044931-53693fbb59a8
 	github.com/olivere/elastic v6.2.14+incompatible
@@ -85,6 +87,7 @@ require (
 	github.com/xuri/excelize v1.4.0
 	github.com/zonedb/zonedb v0.0.0-20181223081958-1e4b8eea6f56 // indirect
 	go4.org v0.0.0-20181109185143-00e24f1b2599 // indirect
+	golang.org/x/arch v0.0.0-20181203225421-5a4828bb7045 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	unleash "github.com/Unleash/unleash-client-go"
+
 	"github.com/RichardKnop/machinery/v1"
 	marchineryConfig "github.com/RichardKnop/machinery/v1/config"
 	marchineryLog "github.com/RichardKnop/machinery/v1/log"
@@ -206,6 +208,26 @@ func main() {
 		}
 
 		cache.SetGoogleDriveService(driveService)
+	}
+
+	// connect to unleash
+	if helpers.GetConfig().ExistsP("unleash.app-name") &&
+		helpers.GetConfig().ExistsP("unleash.instance-id") &&
+		helpers.GetConfig().ExistsP("unleash.url") &&
+		helpers.GetConfig().Path("unleash.app-name").Data().(string) != "" &&
+		helpers.GetConfig().Path("unleash.instance-id").Data().(string) != "" &&
+		helpers.GetConfig().Path("unleash.url").Data().(string) != "" {
+		log.WithField("module", "launcher").Info("Connecting to unleash…")
+		err := unleash.Initialize(
+			unleash.WithListener(&helpers.UnleashListener{}),
+			unleash.WithAppName(helpers.GetConfig().Path("unleash.app-name").Data().(string)),
+			unleash.WithUrl(helpers.GetConfig().Path("unleash.url").Data().(string)),
+			unleash.WithInstanceId(helpers.GetConfig().Path("unleash.instance-id").Data().(string)),
+		)
+		if err != nil {
+			panic(err)
+		}
+		helpers.UnleashInitialised = true
 	}
 
 	// Connect and add event handlers
