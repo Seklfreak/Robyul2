@@ -135,7 +135,7 @@ func findBiasgamesWithoutExistingIdols(gameEntries []models.OldBiasGameEntry) ([
 
 	// use unique name map to quickly check which idols don't exist
 	gamesWithoutExistingWinner := make(map[string]bool)
-	for groupAndName, _ := range uniqueNames {
+	for groupAndName := range uniqueNames {
 		splitGroupAndName := strings.Split(groupAndName, "=")
 		_, _, idol := idols.GetMatchingIdolAndGroup(splitGroupAndName[0], splitGroupAndName[1], false)
 
@@ -172,7 +172,7 @@ GameLoop:
 	}
 
 	var gamesWithoutExistingWinnerAr []string
-	for groupAndName, _ := range gamesWithoutExistingWinner {
+	for groupAndName := range gamesWithoutExistingWinner {
 		gamesWithoutExistingWinnerAr = append(gamesWithoutExistingWinnerAr, groupAndName)
 	}
 

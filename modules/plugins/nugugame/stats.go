@@ -61,7 +61,7 @@ func recordNuguGame(g *nuguGame) {
 	gameUserId := game.User.ID
 	if len(game.UsersCorrectGuesses) == 1 {
 		game.IsMultigame = false
-		for userId, _ := range game.UsersCorrectGuesses {
+		for userId := range game.UsersCorrectGuesses {
 			gameUserId = userId
 		}
 		delete(game.UsersCorrectGuesses, gameUserId)
@@ -110,8 +110,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	// default
 	query := bson.M{"$or": []bson.M{
 		// check if idol is in round winner or losers array
-		bson.M{"userid": targetUser.ID, "ismultigame": false},
-		bson.M{"ismultigame": true, fmt.Sprintf("userscorrectguesses.%s", targetUser.ID): bson.M{"$exists": true}},
+		{"userid": targetUser.ID, "ismultigame": false},
+		{"ismultigame": true, fmt.Sprintf("userscorrectguesses.%s", targetUser.ID): bson.M{"$exists": true}},
 	}}
 	isServerQuery := false
 	isGlobalQuery := false
@@ -127,8 +127,8 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 					targetUser = user
 					query = bson.M{"$or": []bson.M{
 						// check if idol is in round winner or losers array
-						bson.M{"userid": targetUser.ID, "ismultigame": false},
-						bson.M{"ismultigame": true, fmt.Sprintf("userscorrectguesses.%s", targetUser.ID): bson.M{"$exists": true}},
+						{"userid": targetUser.ID, "ismultigame": false},
+						{"ismultigame": true, fmt.Sprintf("userscorrectguesses.%s", targetUser.ID): bson.M{"$exists": true}},
 					}}
 				}
 				continue
@@ -775,8 +775,8 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 	// query games where idol is in game
 	query := bson.M{"$or": []bson.M{
 		// check if idol is in round winner or losers array
-		bson.M{"correctidols": targetIdol.ID},
-		bson.M{"incorrectidols": targetIdol.ID},
+		{"correctidols": targetIdol.ID},
+		{"incorrectidols": targetIdol.ID},
 	}}
 
 	// exclude unneeded fields for better performance
@@ -902,8 +902,8 @@ func displayGroupStats(msg *discordgo.Message, commandArgs []string, groupName s
 			allGroupImages = append(allGroupImages, idol.Images[imageIndex])
 
 			orStatements = append(orStatements, []bson.M{
-				bson.M{"correctidols": idol.ID},
-				bson.M{"incorrectidols": idol.ID},
+				{"correctidols": idol.ID},
+				{"incorrectidols": idol.ID},
 			}...)
 		}
 	}

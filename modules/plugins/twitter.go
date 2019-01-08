@@ -21,7 +21,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 )

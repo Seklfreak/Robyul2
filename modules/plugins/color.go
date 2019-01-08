@@ -8,8 +8,8 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
-	"github.com/lucasb-eyer/go-colorful"
-	"github.com/ungerik/go-cairo"
+	colorful "github.com/lucasb-eyer/go-colorful"
+	cairo "github.com/ungerik/go-cairo"
 )
 
 type Color struct{}

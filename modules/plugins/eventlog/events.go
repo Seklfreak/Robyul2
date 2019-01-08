@@ -10,7 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
 func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *discordgo.Session) {

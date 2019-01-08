@@ -214,7 +214,7 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 		tempEmbed.Footer = p.getEmbedFooter()
 		sentMessage, _ := SendComplex(p.channelID, &discordgo.MessageSend{
 			Embed: tempEmbed,
-			Files: []*discordgo.File{&discordgo.File{
+			Files: []*discordgo.File{{
 				Name:   p.files[p.currentPage-1].Name,
 				Reader: newReader,
 			}},
@@ -277,7 +277,7 @@ func (p *pagedEmbedMessage) setupAndSendFirstMessage() {
 		tempEmbed.Image.URL = fmt.Sprintf("attachment://%s", p.files[p.currentPage-1].Name)
 		sentMessage, err = SendComplex(p.channelID, &discordgo.MessageSend{
 			Embed: tempEmbed,
-			Files: []*discordgo.File{&discordgo.File{
+			Files: []*discordgo.File{{
 				Name:   p.files[p.currentPage-1].Name,
 				Reader: newReader,
 			}},

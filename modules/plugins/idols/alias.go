@@ -380,7 +380,7 @@ func listGroupAliases(msg *discordgo.Message) {
 
 	// get group names into a slice so they can be sorted
 	groups := make([]string, len(groupAliases))
-	for group, _ := range groupAliases {
+	for group := range groupAliases {
 		groups = append(groups, group)
 	}
 	sort.Slice(groups, func(i, j int) bool {

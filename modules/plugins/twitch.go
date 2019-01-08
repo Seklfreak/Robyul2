@@ -17,8 +17,8 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
+	humanize "github.com/dustin/go-humanize"
+	raven "github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 )
 

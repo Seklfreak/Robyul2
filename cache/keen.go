@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/inconshreveable/go-keen"
+	keen "github.com/inconshreveable/go-keen"
 )
 
 var (

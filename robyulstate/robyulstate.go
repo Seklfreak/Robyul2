@@ -9,7 +9,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/getsentry/raven-go"
+	raven "github.com/getsentry/raven-go"
 	"github.com/olivere/elastic"
 	"github.com/pkg/errors"
 )

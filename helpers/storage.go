@@ -29,7 +29,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
-	"github.com/minio/minio-go"
+	minio "github.com/minio/minio-go"
 	uuid "github.com/satori/go.uuid"
 )
 

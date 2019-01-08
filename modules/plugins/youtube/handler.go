@@ -11,7 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	youtubeService "github.com/Seklfreak/Robyul2/services/youtube"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 )
 
 type Handler struct {

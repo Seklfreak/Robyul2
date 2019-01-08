@@ -16,7 +16,7 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var (

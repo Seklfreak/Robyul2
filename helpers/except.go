@@ -16,7 +16,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/bwmarrin/discordgo"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/getsentry/raven-go"
+	raven "github.com/getsentry/raven-go"
 	"github.com/olivere/elastic"
 )
 

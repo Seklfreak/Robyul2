@@ -155,7 +155,7 @@ func GetMatchingGroup(searchGroup string, activeOnly bool) (bool, string) {
 	groupAliases := getGroupAliases()
 
 	// check if the group suggested matches a current group. do loose comparison
-	for currentGroup, _ := range allGroupsMap {
+	for currentGroup := range allGroupsMap {
 
 		// if groups match, set the suggested group to the current group
 		if alphaNumericCompare(currentGroup, searchGroup) {

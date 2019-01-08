@@ -60,7 +60,7 @@ func auditlogBackfillLoop() {
 			}
 
 			addedToExistingBackfills := false
-			for i, _ := range backfills {
+			for i := range backfills {
 				if backfills[i].Type == backfill.Type &&
 					backfills[i].UserID == backfill.UserID &&
 					backfills[i].GuildID == backfill.GuildID {

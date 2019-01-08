@@ -18,7 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
-	"github.com/ungerik/go-cairo"
+	cairo "github.com/ungerik/go-cairo"
 )
 
 type Spoiler struct {

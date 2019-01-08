@@ -10,8 +10,8 @@ import (
 	"image"
 	"strings"
 
-	"github.com/lucasb-eyer/go-colorful"
-	"github.com/ungerik/go-cairo"
+	colorful "github.com/lucasb-eyer/go-colorful"
+	cairo "github.com/ungerik/go-cairo"
 )
 
 // Creates a Collage PNG Image from internet image urls (PNG or JPEG).

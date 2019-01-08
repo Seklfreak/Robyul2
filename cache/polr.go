@@ -3,7 +3,7 @@ package cache
 import (
 	"sync"
 
-	"github.com/Seklfreak/polr-go"
+	polr "github.com/Seklfreak/polr-go"
 )
 
 var (

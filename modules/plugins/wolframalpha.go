@@ -7,7 +7,7 @@ import (
 
 	"bytes"
 
-	"github.com/Krognol/go-wolfram"
+	wolfram "github.com/Krognol/go-wolfram"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/bwmarrin/discordgo"
