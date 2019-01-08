@@ -17,8 +17,8 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
-	"github.com/getsentry/raven-go"
+	humanize "github.com/dustin/go-humanize"
+	raven "github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 	redisCache "github.com/go-redis/cache"
 	"github.com/vmihailenco/msgpack"
@@ -162,7 +162,9 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 											continue
 										}
 									} else {
-										if errD, ok := err.(*discordgo.RESTError); !ok || (errD.Message.Code != discordgo.ErrCodeMissingPermissions && errD.Message.Code != discordgo.ErrCodeUnknownChannel) {
+										if errD, ok := err.(*discordgo.RESTError); !ok ||
+											errD.Message == nil ||
+											(errD.Message.Code != discordgo.ErrCodeMissingPermissions && errD.Message.Code != discordgo.ErrCodeUnknownChannel) {
 											raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{"GuildID": sourceEntry.GuildID})
 										}
 										continue
