@@ -137,7 +137,7 @@ func main() {
 			elastic.SetURL(
 				strings.Split(config.Path("elasticsearch.url").Data().(string), ",")...,
 			),
-			elastic.SetSniff(false),
+			elastic.SetSniff(true),
 			elastic.SetErrorLog(log),
 			// elastic.SetInfoLog(log),
 		)
