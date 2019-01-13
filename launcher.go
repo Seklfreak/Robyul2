@@ -134,10 +134,12 @@ func main() {
 	if config.Path("elasticsearch.url").Data().(string) != "" {
 		log.WithField("module", "launcher").Info("Connecting to ElasticSearch...")
 		client, err := elastic.NewClient(
-			elastic.SetURL(config.Path("elasticsearch.url").Data().(string)),
+			elastic.SetURL(
+				strings.Split(config.Path("elasticsearch.url").Data().(string), ",")...,
+			),
 			elastic.SetSniff(false),
 			elastic.SetErrorLog(log),
-			//elastic.SetInfoLog(log),
+			// elastic.SetInfoLog(log),
 		)
 		if err != nil {
 			panic(err)
