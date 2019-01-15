@@ -603,13 +603,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						}
 					}
 
-					collageBytes := helpers.CollageFromUrls(
-						imageUrls,
-						[]string{},
-						900, 900,
-						300, 300,
-						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
-					)
+					collageBytes := lastfmCollage(imageUrls)
 
 					topAlbumsEmbed := &discordgo.MessageEmbed{
 						Description: description,
@@ -766,13 +760,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						}
 					}
 
-					collageBytes := helpers.CollageFromUrls(
-						imageUrls,
-						artistNames,
-						900, 900,
-						300, 300,
-						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
-					)
+					collageBytes := lastfmCollage(imageUrls)
 
 					topArtistsEmbed := &discordgo.MessageEmbed{
 						Footer: &discordgo.MessageEmbedFooter{
@@ -930,13 +918,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 						}
 					}
 
-					collageBytes := helpers.CollageFromUrls(
-						imageUrls,
-						trackNames,
-						900, 900,
-						300, 300,
-						helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
-					)
+					collageBytes := lastfmCollage(imageUrls)
 
 					topTracksEmbed := &discordgo.MessageEmbed{
 						Footer: &discordgo.MessageEmbedFooter{
@@ -1272,4 +1254,22 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 		return
 	}
 
+}
+
+func lastfmCollage(imageUrls []string) []byte {
+	for i, _ := range imageUrls {
+		if !strings.HasSuffix(imageUrls[i], ".jpg") {
+			continue
+		}
+
+		imageUrls[i] = imageUrls[i][:len(imageUrls[i])-4] + ".png"
+	}
+
+	return helpers.CollageFromUrls(
+		imageUrls,
+		[]string{},
+		900, 900,
+		300, 300,
+		helpers.DISCORD_DARK_THEME_BACKGROUND_HEX,
+	)
 }
