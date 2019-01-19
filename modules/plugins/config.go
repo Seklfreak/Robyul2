@@ -276,11 +276,6 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 		nukeText = "Enabled, log in <#" + guildConfig.NukeLogChannel + ">"
 	}
 
-	troublemakerText := "Disabled"
-	if guildConfig.TroublemakerIsParticipating {
-		troublemakerText = "Enabled, log in <#" + guildConfig.TroublemakerLogChannel + ">"
-	}
-
 	levelsText := "Level Up Notification: "
 	if guildConfig.LevelsNotificationCode != "" {
 		levelsText += "Enabled"
@@ -410,10 +405,6 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 			{
 				Name:  "Levels",
 				Value: levelsText,
-			},
-			{
-				Name:  "Troublemaker Log",
-				Value: troublemakerText + fmt.Sprintf("\n`%stroublemaker participate <#channel or channel id>`", prefix),
 			},
 			{
 				Name:  "Auto Roles",
