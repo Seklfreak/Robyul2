@@ -327,6 +327,13 @@ func (n *Names) GetNicknames(guildID string, userID string) (nicknames []string,
 			nicknames = append(nicknames, entry.Nickname)
 		}
 	}
+
+	for i, nickname := range nicknames {
+		if len(nickname) <= 0 {
+			nicknames = append(nicknames[:i], nicknames[i+1:]...)
+		}
+	}
+
 	return nicknames, nil
 }
 
@@ -347,6 +354,13 @@ func (n *Names) GetUsernames(userID string) (usernames []string, err error) {
 			usernames = append(usernames, entry.Username)
 		}
 	}
+
+	for i, username := range usernames {
+		if len(username) <= 0 {
+			usernames = append(usernames[:i], usernames[i+1:]...)
+		}
+	}
+
 	return usernames, nil
 }
 
