@@ -59,13 +59,19 @@ NextModule:
 		})
 	}
 
+	featureServerStatisticsUniques := models.Rest_Feature_ServerStatistics_Uniques{Enabled: true}
+	if guildSettings.ChatlogDisabled {
+		featureServerStatisticsUniques.Enabled = false
+	}
+
 	return models.Rest_Guild_Features{
-		Levels_Badges:  featureLevels_Badges,
-		RandomPictures: featureRandomPictures,
-		Chatlog:        featureChatlog,
-		VanityInvite:   featureVanityInvite,
-		Modules:        featureModules,
-		Eventlog:       featureEventlog,
+		Levels_Badges:            featureLevels_Badges,
+		RandomPictures:           featureRandomPictures,
+		Chatlog:                  featureChatlog,
+		VanityInvite:             featureVanityInvite,
+		Modules:                  featureModules,
+		Eventlog:                 featureEventlog,
+		ServerStatistics_Uniques: featureServerStatisticsUniques,
 	}
 }
 

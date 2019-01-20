@@ -60,12 +60,13 @@ type Website_Session_Data struct {
 }
 
 type Rest_Guild_Features struct {
-	Levels_Badges  Rest_Feature_Levels_Badges
-	RandomPictures Rest_Feature_RandomPictures
-	Chatlog        Rest_Feature_Chatlog
-	VanityInvite   Rest_Feature_VanityInvite
-	Modules        []Rest_Feature_Module
-	Eventlog       Rest_Feature_Eventlog
+	Levels_Badges            Rest_Feature_Levels_Badges
+	RandomPictures           Rest_Feature_RandomPictures
+	Chatlog                  Rest_Feature_Chatlog
+	VanityInvite             Rest_Feature_VanityInvite
+	Modules                  []Rest_Feature_Module
+	Eventlog                 Rest_Feature_Eventlog
+	ServerStatistics_Uniques Rest_Feature_ServerStatistics_Uniques
 }
 
 type Rest_Feature_Module struct {
@@ -159,6 +160,10 @@ type Rest_Feature_VanityInvite struct {
 }
 
 type Rest_Feature_Eventlog struct {
+	Enabled bool
+}
+
+type Rest_Feature_ServerStatistics_Uniques struct {
 	Enabled bool
 }
 
