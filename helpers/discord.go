@@ -29,7 +29,7 @@ const (
 
 var (
 	snowflakeRegex     = regexp.MustCompile(`^[0-9]+$`)
-	discordInviteRegex = regexp.MustCompile(`(http(s)?:\/\/)?(discord\.gg(\/invite)?|discordapp\.com\/invite)\/([A-Za-z0-9]+)`)
+	discordInviteRegex = regexp.MustCompile(`(http(s)?:\/\/)?(discord\.gg(\/invite)?|discordapp\.com\/invite)\/([A-Za-z0-9-]+)`)
 )
 
 var botAdmins = []string{
