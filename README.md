@@ -32,7 +32,7 @@ Robyul provides various features with the needs of KPop Servers in mind, some ex
 - `_suggest your idea` to make suggestions!
 - [and much more...](https://robyul.chat/commands)
 
-If you want Robyul on your Discord Server please ask on the Discord for Robyul: https://discord.gg/s5qZvUV.
+If you want Robyul on your Discord Server please ask on the Discord for Robyul: https://discord.is/Robyul .
 
 Robyul is build on top of [Karen, the highly efficient, multipurpose Discord bot written in Golang.](https://github.com/SubliminalHQ/karen)
 
