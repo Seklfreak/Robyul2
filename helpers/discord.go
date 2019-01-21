@@ -1653,3 +1653,23 @@ func ReplaceMessageSend(message *discordgo.MessageSend, replace []*ReplaceValues
 
 	return message
 }
+
+// UniqueUsers deduplicates a list of users by User ID
+func UniqueUsers(listOfUsers []*discordgo.User) []*discordgo.User {
+	exist := make(map[string]bool)
+
+	var list []*discordgo.User
+	for _, user := range listOfUsers {
+		if user == nil || user.ID == "" {
+			continue
+		}
+
+		if value := exist[user.ID]; value {
+			continue
+		}
+
+		exist[user.ID] = true
+		list = append(list, user)
+	}
+	return list
+}

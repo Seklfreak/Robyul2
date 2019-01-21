@@ -75,6 +75,8 @@ type CacheInviteInformation struct {
 
 var (
 	invitesCache map[string][]CacheInviteInformation
+
+	regexNumberOnly = regexp.MustCompile(`^\d+$`)
 )
 
 func (m *Mod) Init(session *discordgo.Session) {
@@ -184,8 +186,6 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 	if !helpers.ModuleIsAllowed(msg.ChannelID, msg.ID, msg.Author.ID, helpers.ModulePermMod) {
 		return
 	}
-
-	regexNumberOnly := regexp.MustCompile(`^\d+$`)
 
 	switch command {
 	case "cleanup":
@@ -625,107 +625,8 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 			}
 		})
 		return
-	case "ban": // [p]ban <User> [<Days>] [<Reason>], checks for IsMod and Ban Permissions
-		helpers.RequireMod(msg, func() {
-			args := strings.Fields(content)
-			if len(args) >= 1 {
-				// Days Argument
-				days := 0
-				var err error
-				if len(args) >= 2 && regexNumberOnly.MatchString(args[1]) {
-					days, err = strconv.Atoi(args[1])
-					if err != nil {
-						helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-						return
-					}
-					if days > 7 {
-						_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-error-too-many-days"))
-						helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-						return
-					}
-				}
-
-				targetUser, err := helpers.GetUserFromMention(args[0])
-				if err != nil {
-					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-					return
-				}
-				// Bot can ban?
-				botCanBan := false
-				channel, err := helpers.GetChannel(msg.ChannelID)
-				helpers.Relax(err)
-				guild, err := helpers.GetGuild(channel.GuildID)
-				helpers.Relax(err)
-				guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
-				helpers.Relax(err)
-				for _, role := range guild.Roles {
-					for _, userRole := range guildMemberBot.Roles {
-						if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-							botCanBan = true
-						}
-					}
-				}
-
-				if botCanBan == false {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					return
-				}
-				// User can ban?
-				userCanBan := false
-				guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
-				helpers.Relax(err)
-				for _, role := range guild.Roles {
-					for _, userRole := range guildMemberUser.Roles {
-						if userRole == role.ID && (role.Permissions&discordgo.PermissionBanMembers == discordgo.PermissionBanMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-							userCanBan = true
-						}
-					}
-				}
-				if msg.Author.ID == guild.OwnerID {
-					userCanBan = true
-				}
-				if userCanBan == false {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					return
-				}
-				// Get Reason
-				reasonText := fmt.Sprintf("Issued by: %s#%s (#%s) | Delete Days: %d | Reason: ",
-					msg.Author.Username, msg.Author.Discriminator, msg.Author.ID, days)
-				if len(args) > 1 {
-					if regexNumberOnly.MatchString(args[1]) && len(args) > 1 {
-						reasonText += strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
-					} else {
-						reasonText += strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-					}
-				}
-				if strings.HasSuffix(reasonText, "Reason: ") {
-					reasonText += "None given"
-				}
-				// Ban user
-				err = session.GuildBanCreateWithReason(guild.ID, targetUser.ID, reasonText, days)
-				if err != nil {
-					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-						if err.Message.Code == 0 {
-							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-failed-too-low"))
-							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							return
-						} else {
-							helpers.Relax(err)
-						}
-					} else {
-						helpers.Relax(err)
-					}
-				}
-				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Banned User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-banned-success", targetUser.Username, targetUser.ID))
-				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-			} else {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-				return
-			}
-		})
+	case "ban":
+		banHandler(msg, content)
 		return
 	case "kick": // [p]kick <User> [<Reason>], checks for IsMod and Kick Permissions
 		helpers.RequireMod(msg, func() {
