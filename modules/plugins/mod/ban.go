@@ -11,7 +11,7 @@ import (
 )
 
 // banHandler [p]ban <User> [<Days>] [<Reason>], checks for IsMod and Ban Permissions
-func banHandler(msg *discordgo.Message, content string) {
+func banHandler(msg *discordgo.Message, content string, confirmation bool) {
 	if !helpers.IsMod(msg) {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("mod.no_permission"))
 		return
@@ -136,14 +136,15 @@ func banHandler(msg *discordgo.Message, content string) {
 	}
 	usersToBanText = strings.TrimRight(usersToBanText, ", ")
 
-	if helpers.ConfirmEmbed(
-		msg.ChannelID, msg.Author,
-		helpers.GetTextF(
-			"plugins.mod.confirm-ban",
-			usersToBanText,
-			days,
-			reasonText,
-		), "✅", "🚫") {
+	if !confirmation ||
+		helpers.ConfirmEmbed(
+			msg.ChannelID, msg.Author,
+			helpers.GetTextF(
+				"plugins.mod.confirm-ban",
+				usersToBanText,
+				days,
+				reasonText,
+			), "✅", "🚫") {
 		for _, userToBan := range usersToBan {
 			err = cache.GetSession().GuildBanCreateWithReason(guild.ID, userToBan.ID, reasonText, days)
 			if err != nil {

@@ -39,6 +39,8 @@ func (m *Mod) Commands() []string {
 		"mute",
 		"unmute",
 		"ban",
+		"quick-ban",
+		"quickban",
 		"kick",
 		"serverlist",
 		"echo",
@@ -626,7 +628,10 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		})
 		return
 	case "ban":
-		banHandler(msg, content)
+		banHandler(msg, content, true)
+		return
+	case "quick-ban", "quickban":
+		banHandler(msg, content, false)
 		return
 	case "kick": // [p]kick <User> [<Reason>], checks for IsMod and Kick Permissions
 		helpers.RequireMod(msg, func() {
