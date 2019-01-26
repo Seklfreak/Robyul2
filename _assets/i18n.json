@@ -157,7 +157,8 @@
       "pin-error-permissions": "I'm not allowed to pin messages. <a:ablobcry:393869333740126219>",
       "pin-error-limit": "The pin limit in this channel has been reached. <a:ablobshocked:394026914076950539>\nPlease unpin a message before pinning more.",
       "pin-error-system-message": "Sorry, I cannot pin system messages!",
-      "confirm-ban": "Are you sure you want to ban the following user(s):\n%s?\nDelete `%d` Days of messages.\nReason: `%s`."
+      "confirm-ban": "Are you sure you want to ban the following user(s):\n%s?\nDelete `%d` Days of messages.\nReason: `%s`.",
+      "confirm-kick": "Are you sure you want to kick the following user(s):\n%s?\nReason: `%s`."
     },
     "vlive": {
       "channel-not-found": "Unable to find V Live Channel!",

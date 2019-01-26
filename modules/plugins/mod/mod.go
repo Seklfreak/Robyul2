@@ -42,6 +42,9 @@ func (m *Mod) Commands() []string {
 		"quick-ban",
 		"quickban",
 		"kick",
+		"quick-kick",
+		"quickick",
+		"quickkick",
 		"serverlist",
 		"echo",
 		"inspect",
@@ -633,84 +636,11 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 	case "quick-ban", "quickban":
 		banHandler(msg, content, false)
 		return
-	case "kick": // [p]kick <User> [<Reason>], checks for IsMod and Kick Permissions
-		helpers.RequireMod(msg, func() {
-			args := strings.Fields(content)
-			if len(args) >= 1 {
-				targetUser, err := helpers.GetUserFromMention(args[0])
-				if err != nil {
-					helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.invalid"))
-					return
-				}
-				// Bot can kick?
-				botCanKick := false
-				channel, err := helpers.GetChannel(msg.ChannelID)
-				helpers.Relax(err)
-				guild, err := helpers.GetGuild(channel.GuildID)
-				helpers.Relax(err)
-				guildMemberBot, err := helpers.GetGuildMember(guild.ID, session.State.User.ID)
-				helpers.Relax(err)
-				for _, role := range guild.Roles {
-					for _, userRole := range guildMemberBot.Roles {
-						if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-							botCanKick = true
-						}
-					}
-				}
-				if botCanKick == false {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.bot-disallowed"))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					return
-				}
-				// User can kick?
-				userCanKick := false
-				guildMemberUser, err := helpers.GetGuildMember(guild.ID, msg.Author.ID)
-				helpers.Relax(err)
-				for _, role := range guild.Roles {
-					for _, userRole := range guildMemberUser.Roles {
-						if userRole == role.ID && (role.Permissions&discordgo.PermissionKickMembers == discordgo.PermissionKickMembers || role.Permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator) {
-							userCanKick = true
-						}
-					}
-				}
-				if msg.Author.ID == guild.OwnerID {
-					userCanKick = true
-				}
-				if userCanKick == false {
-					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.disallowed"))
-					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-					return
-				}
-				// Get Reason
-				reasonText := fmt.Sprintf("Issued by: %s#%s (#%s) | Reason: ",
-					msg.Author.Username, msg.Author.Discriminator, msg.Author.ID)
-				reasonText += strings.TrimSpace(strings.Replace(content, strings.Join(args[:1], " "), "", 1))
-				if strings.HasSuffix(reasonText, "Reason: ") {
-					reasonText += "None given"
-				}
-				// Kick user
-				err = session.GuildMemberDeleteWithReason(guild.ID, targetUser.ID, reasonText)
-				if err != nil {
-					if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
-						if err.Message.Code == 0 {
-							_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-failed-too-low"))
-							helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-							return
-						} else {
-							helpers.Relax(err)
-						}
-					} else {
-						helpers.Relax(err)
-					}
-				}
-				cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("Kicked User %s (#%s) on Guild %s (#%s) by %s (#%s)", targetUser.Username, targetUser.ID, guild.Name, guild.ID, msg.Author.Username, msg.Author.ID))
-				_, err = helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.mod.user-kicked-success", targetUser.Username, targetUser.ID))
-				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
-			} else {
-				helpers.SendMessage(msg.ChannelID, helpers.GetTextF("bot.arguments.too-few"))
-				return
-			}
-		})
+	case "kick":
+		kickHander(msg, content, true)
+		return
+	case "quick-kick", "quickkick", "quickick":
+		kickHander(msg, content, false)
 		return
 	case "serverlist": // [p]serverlist
 		helpers.RequireRobyulMod(msg, func() {
