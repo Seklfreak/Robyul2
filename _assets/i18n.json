@@ -615,7 +615,8 @@
       "embed-footer-imageurl": "https://i.imgur.com/KQarWiQ.png",
       "toggledirectlinks-error-subreddit-not-found": "I wasn't able to find a subreddit with that ID. <:blobthinking:317028940885524490>",
       "toggledirectlinks-disabled": "I disabled direct links for `/r/%s`.",
-      "toggledirectlinks-enabled": "I enabled direct links for `/r/%s`."
+      "toggledirectlinks-enabled": "I enabled direct links for `/r/%s`.",
+      "inactive": "The Reddit module is currently out of order! Please try again later."
     },
     "persistency": {
       "bias-persistency-enabled": "I will restore Bias Roles on rejoin now! <:blobokhand:317032017164238848>",

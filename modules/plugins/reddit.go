@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"net/http"
 	"strings"
 
 	"fmt"
@@ -24,7 +25,9 @@ import (
 
 type redditAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next redditAction)
 
-type Reddit struct{}
+type Reddit struct {
+	redditLoggedIn bool
+}
 
 var (
 	redditSession   *geddit.OAuthSession
@@ -50,12 +53,20 @@ func (r *Reddit) Init(session *discordgo.Session) {
 		RedditUserAgent,
 		"https://robyul.chat",
 	)
-	helpers.Relax(err)
+	redditSession.Client = &http.Client{Timeout: 5 * time.Second}
+	if err != nil {
+		r.logger().WithError(err).Error("failed to create reddit OAuth Session")
+		return
+	}
 	err = redditSession.LoginAuth(
 		helpers.GetConfig().Path("reddit.username").Data().(string),
 		helpers.GetConfig().Path("reddit.password").Data().(string),
 	)
-	helpers.Relax(err)
+	if err != nil {
+		r.logger().WithError(err).Error("failed to login to reddit")
+		return
+	}
+	r.redditLoggedIn = true
 	go r.checkSubredditLoop()
 	r.logger().Info("Started checkSubredditLoop loop (0s)")
 }
@@ -254,6 +265,11 @@ func (r *Reddit) Action(command string, content string, msg *discordgo.Message, 
 func (r *Reddit) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) redditAction {
 	if len(args) < 1 {
 		*out = r.newMsg("bot.arguments.too-few")
+		return r.actionFinish
+	}
+
+	if redditSession == nil || !r.redditLoggedIn {
+		*out = r.newMsg("plugins.reddit.inactive")
 		return r.actionFinish
 	}
 
