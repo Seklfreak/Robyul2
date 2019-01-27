@@ -40,7 +40,7 @@ func SinceInDaysText(timeThen time.Time) string {
 	if duration.Hours() >= 24 {
 		return strconv.FormatFloat(math.Floor(duration.Hours()/24), 'f', 0, 64) + " days ago"
 	} else {
-		return "Less then a Day ago"
+		return "Less than a Day ago"
 	}
 }
 
