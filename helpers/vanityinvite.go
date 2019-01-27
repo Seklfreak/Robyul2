@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"encoding/json"
 	"time"
 
 	"regexp"
@@ -13,7 +14,6 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
-	redisCache "github.com/go-redis/cache"
 	"github.com/pkg/errors"
 )
 
@@ -378,14 +378,17 @@ func ResetCachedDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInvit
 }
 
 func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) (code string, err error) {
-	cacheCodec := cache.GetRedisCacheCodec()
+	redisClient := cache.GetRedisClient()
 	key := fmt.Sprintf(models.VanityInvitesInviteRedisKey, vanityInviteEntry.GuildID)
 
 	var vanityInviteRedis models.VanityInviteRedisEntry
-	if err = cacheCodec.Get(key, &vanityInviteRedis); err == nil {
-		if time.Now().Before(vanityInviteRedis.ExpiresAt) {
 
-			//fmt.Println(vanityInviteRedis.ExpiresAt)
+	cacheResult, err := redisClient.Get(key).Bytes()
+	if err == nil {
+		err = json.Unmarshal(cacheResult, &vanityInviteRedis)
+		if err == nil && time.Now().Before(vanityInviteRedis.ExpiresAt) {
+
+			fmt.Printf("got item from cache: %#v, %s\n", vanityInviteRedis, vanityInviteRedis.ExpiresAt.String()) // TODO
 			return vanityInviteRedis.InviteCode, nil
 		}
 	}
@@ -395,7 +398,7 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 
 	invite, err := cache.GetSession().ChannelInviteCreate(vanityInviteEntry.ChannelID, discordgo.Invite{
 		MaxAge: 60 * 60 * 24, // 1 day
-		//Unique: true,
+		// Unique: true,
 	})
 	if err != nil {
 		return "", err
@@ -406,17 +409,20 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 		createdAtTime = time.Now()
 	}
 
+	expireAt := createdAtTime.Add(time.Duration(invite.MaxAge) * time.Second).Add(-3 * time.Hour)
+
 	vanityInviteRedis = models.VanityInviteRedisEntry{
 		InviteCode: invite.Code,
-		ExpiresAt:  createdAtTime.Add(time.Duration(invite.MaxAge) * time.Second).Add(-3 * time.Hour),
+		ExpiresAt:  expireAt,
 	}
 
-	err = cacheCodec.Set(&redisCache.Item{
-		Key:        key,
-		Object:     vanityInviteRedis,
-		Expiration: createdAtTime.Add(time.Duration(invite.MaxAge) * time.Second).Add(-3 * time.Hour).Sub(time.Now()),
-	})
-	RelaxLog(err)
+	fmt.Printf("caching item: %#v, %s, %s\n", vanityInviteRedis, expireAt.String(), expireAt.Sub(time.Now()).String()) // TODO
+
+	cacheItem, err := json.Marshal(vanityInviteRedis)
+	if err == nil {
+		err = redisClient.Set(key, cacheItem, expireAt.Sub(time.Now())).Err()
+		RelaxLog(err)
+	}
 
 	return invite.Code, nil
 }
