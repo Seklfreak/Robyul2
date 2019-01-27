@@ -225,6 +225,7 @@ func main() {
 			unleash.WithAppName(helpers.GetConfig().Path("unleash.app-name").Data().(string)),
 			unleash.WithUrl(helpers.GetConfig().Path("unleash.url").Data().(string)),
 			unleash.WithInstanceId(helpers.GetConfig().Path("unleash.instance-id").Data().(string)),
+			unleash.WithHttpClient(&http.Client{Timeout: 3 * time.Second}),
 		)
 		if err != nil {
 			panic(err)
