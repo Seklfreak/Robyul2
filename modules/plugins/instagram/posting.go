@@ -2,9 +2,9 @@ package instagram
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/emojis"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -19,16 +19,6 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 	if post.Author.IsPrivate {
 		instagramNameModifier += " 🔒"
 	}
-	/*
-		if post.User.IsBusiness {
-			instagramNameModifier += " 🏢"
-		}
-	*/
-	/*
-		if post.User.IsFavorite {
-			instagramNameModifier += " ⭐"
-		}
-	*/
 
 	mediaModifier := "Picture"
 	if post.IsVideo {
@@ -38,7 +28,7 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 		mediaModifier = fmt.Sprintf("Album (%d items)", len(post.MediaUrls))
 	}
 
-	var content string
+	content := []string{""}
 	channelEmbed := &discordgo.MessageEmbed{
 		Title:     helpers.GetTextF("plugins.instagram.post-embed-title", post.Author.FullName, post.Author.Username, instagramNameModifier, mediaModifier),
 		URL:       fmt.Sprintf(instagramFriendlyPost, post.Shortcode),
@@ -51,9 +41,9 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 		Color:       helpers.GetDiscordColorFromHex(hexColor),
 	}
 	if postType == models.InstagramSendPostTypeDirectLinks {
-		content += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", post.Author.FullName, post.Author.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
+		content[0] += "**" + helpers.GetTextF("plugins.instagram.post-embed-title", post.Author.FullName, post.Author.Username, instagramNameModifier, mediaModifier) + "** _" + helpers.GetText("plugins.instagram.embed-footer") + "_\n"
 		if post.Caption != "" {
-			content += post.Caption + "\n"
+			content[0] += post.Caption + "\n"
 		}
 	}
 
@@ -64,20 +54,27 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 		mediaUrls = append(mediaUrls, mediaUrl)
 	}
 
-	content += fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Shortcode))
+	content[0] += fmt.Sprintf("<%s>", fmt.Sprintf(instagramFriendlyPost, post.Shortcode))
 
 	if len(mediaUrls) > 0 {
 		channelEmbed.Description += "\n\n`Links:` "
 		for i, mediaUrl := range mediaUrls {
 			if postType == models.InstagramSendPostTypeDirectLinks {
-				content += "\n" + mediaUrl
+				index := int(math.Floor((float64(i+1) / 5.0) - 0.01))
+
+				if index >= len(content) {
+					content = append(content, "")
+				}
+
+				fmt.Println("adding " + mediaUrl + " to content at " + strconv.Itoa(index))
+				content[index] += "\n" + mediaUrl
 			}
 			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)
 		}
 	}
 
 	messageSend := &discordgo.MessageSend{
-		Content: content,
+		Content: content[0],
 	}
 	if postType != models.InstagramSendPostTypeDirectLinks {
 		messageSend.Embed = channelEmbed
@@ -85,10 +82,20 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 
 	_, err := helpers.SendComplex(channelID, messageSend)
 	if err != nil {
-		cache.GetLogger().WithField("module", "instagram").Warnf("posting post: #%s to channel: #%s failed: %s", post.ID, channelID, err)
+		return
+	}
+
+	if len(content) > 1 {
+		for _, text := range content[1:] {
+			_, err = helpers.SendMessage(channelID, text)
+			if err != nil {
+				return
+			}
+		}
 	}
 }
 
+/*
 func (m *Handler) postLiveToChannel(channelID string, instagramUser Instagram_User) {
 	instagramNameModifier := ""
 	if instagramUser.IsVerified {
@@ -126,6 +133,7 @@ func (m *Handler) postLiveToChannel(channelID string, instagramUser Instagram_Us
 		cache.GetLogger().WithField("module", "instagram").Warnf("posting broadcast: #%d to channel: #%s failed: %s", instagramUser.Broadcast.ID, channelID, err.Error())
 	}
 }
+*/
 
 /*
 func (m *Handler) postReelMediaToChannel(channelID string, story goinstaResponse.StoryResponse, number int, postMode models.InstagramSendPostType) {
