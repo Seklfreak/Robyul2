@@ -1641,7 +1641,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 				opacityText := "0.5"
 				switch args[1] {
-				case "badge", "badges":
+				case "badge", "badges", "avatar":
 					opacityText = "1.0"
 				}
 				if len(args) >= 3 {
@@ -1663,6 +1663,8 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					userUserdata.EXPOpacity = opacityText
 				case "badge", "badges":
 					userUserdata.BadgeOpacity = opacityText
+				case "avatar":
+					userUserdata.AvatarOpacity = opacityText
 				default:
 					_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -3252,6 +3254,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 
 	expOpacity := m.GetExpOpacity(userData)
 	badgeOpacity := m.GetBadgeOpacity(userData)
+	avatarOpacity := m.GetAvatarOpacity(userData)
 
 	tempTemplateHtml := strings.Replace(htmlTemplateString, "{USER_USERNAME}", html.EscapeString(member.User.Username), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_NICKNAME}", html.EscapeString(member.Nick), -1)
@@ -3275,6 +3278,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_TEXT_COLOR}", "#"+m.GetTextColor(userData), -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_EXP_OPACITY}", expOpacity, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_BADGE_OPACITY}", badgeOpacity, -1)
+	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_AVATAR_OPACITY}", avatarOpacity, -1)
 	tempTemplateHtml = strings.Replace(tempTemplateHtml, "{USER_PLAYING}", playingStatus, -1)
 
 	if web == false { // privacy
@@ -3483,6 +3487,14 @@ func (m *Levels) GetExpOpacity(userUserdata models.ProfileUserdataEntry) string 
 func (m *Levels) GetBadgeOpacity(userUserdata models.ProfileUserdataEntry) string {
 	if userUserdata.BadgeOpacity != "" {
 		return userUserdata.BadgeOpacity
+	} else {
+		return "1.0"
+	}
+}
+
+func (m *Levels) GetAvatarOpacity(userUserdata models.ProfileUserdataEntry) string {
+	if userUserdata.AvatarOpacity != "" {
+		return userUserdata.AvatarOpacity
 	} else {
 		return "1.0"
 	}

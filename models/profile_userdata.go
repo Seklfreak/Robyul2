@@ -27,6 +27,7 @@ type ProfileUserdataEntry struct {
 	DetailOpacity        string
 	BadgeOpacity         string
 	EXPOpacity           string
+	AvatarOpacity        string
 	Timezone             string
 	Birthday             string
 	HideLastFm           bool
