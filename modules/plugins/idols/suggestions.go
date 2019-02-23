@@ -177,9 +177,12 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	sugImgHashString, err := helpers.GetImageHashString(suggestedImage)
 	helpers.Relax(err)
 
-	// compare the given image to all images currently available in the game
-	for _, idol := range GetActiveIdols() {
-		for _, curIdolImage := range idol.Images {
+
+	_, _, matchingIdol := GetMatchingIdolAndGroup(suggestionArgs[1], suggestionArgs[2], true)
+	if matchingIdol != nil {
+
+		// compare the given image to all images currently available in the game
+		for _, curIdolImage := range matchingIdol.Images {
 			compareVal, err := helpers.ImageHashStringComparison(sugImgHashString, curIdolImage.HashString)
 			if err != nil {
 				log().Errorf("Comparison error: %s", err.Error())
@@ -193,6 +196,7 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 			}
 		}
 	}
+
 
 	// compare the given image to all images currently in the suggestion queue
 	for _, suggestion := range suggestionQueue {
