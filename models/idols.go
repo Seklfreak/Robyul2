@@ -25,6 +25,10 @@ type IdolEntry struct {
 	Gender      string
 	Images      []IdolImageEntry
 	Deleted     bool // there are times when a idol can't be fully deleted cause its used as a reference, in which case this will simply be set to true
+	BGGames     int
+	BGGameWins  int
+	BGRounds    int
+	BGRoundWins int
 }
 
 type OldIdolEntry struct {

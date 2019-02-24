@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -117,4 +118,23 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []IdolImage, di
 
 	// send paged embed
 	helpers.SendPagedImageMessage(msg, imagesMessage, 4)
+}
+
+func compileGameStats(records map[string]int) (map[int][]string, []int) {
+	// use map of counts to compile a new map of [unique occurence amounts]Names
+	var uniqueCounts []int
+	compiledData := make(map[int][]string)
+	for k, v := range records {
+		// store unique counts so the map can be "sorted"
+		if _, ok := compiledData[v]; !ok {
+			uniqueCounts = append(uniqueCounts, v)
+		}
+
+		compiledData[v] = append(compiledData[v], k)
+	}
+
+	// sort biggest to smallest
+	sort.Sort(sort.Reverse(sort.IntSlice(uniqueCounts)))
+
+	return compiledData, uniqueCounts
 }

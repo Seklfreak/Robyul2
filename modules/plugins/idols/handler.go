@@ -92,6 +92,10 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 			helpers.RequireRobyulMod(msg, func() {
 				updateIdolInfoFromMsg(msg, content)
 			})
+		case "refresh-biasgames":
+			helpers.RequireRobyulMod(msg, func() {
+				RefreshAllIdolBiasgameStats(msg)
+			})
 		case "refresh-idols-old":
 			helpers.RequireRobyulMod(msg, func() {
 				newMessages, err := helpers.SendMessage(msg.ChannelID, "Refreshign Idols...")
