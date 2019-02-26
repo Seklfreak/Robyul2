@@ -325,6 +325,10 @@ func makeIdolFromIdolEntry(entry models.IdolEntry) Idol {
 		NameAndGroup: entry.Name + entry.GroupName,
 		NameAliases:  entry.NameAliases,
 		Gender:       entry.Gender,
+		BGGames:      entry.BGGames,
+		BGGameWins:   entry.BGGameWins,
+		BGRounds:     entry.BGRounds,
+		BGRoundWins:  entry.BGRoundWins,
 	}
 
 	// convert idol entry images
