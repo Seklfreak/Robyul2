@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
-	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,7 +26,8 @@ func log() *logrus.Entry {
 func getModuleCache(key string, data interface{}) error {
 	// get cache with given key
 	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:idols:%s", key)).Bytes()
-	if err != nil || err == redis.Nil {
+	helpers.RelaxLog(err)
+	if err != nil {
 		return err
 	}
 
@@ -49,6 +50,7 @@ func setModuleCache(key string, data interface{}, time time.Duration) error {
 	}
 
 	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:idols:%s", key), marshaledData, time).Result()
+	helpers.RelaxLog(err)
 	return err
 }
 
@@ -117,4 +119,23 @@ func sendPagedEmbedOfImages(msg *discordgo.Message, imagesToSend []IdolImage, di
 
 	// send paged embed
 	helpers.SendPagedImageMessage(msg, imagesMessage, 4)
+}
+
+func compileGameStats(records map[string]int) (map[int][]string, []int) {
+	// use map of counts to compile a new map of [unique occurence amounts]Names
+	var uniqueCounts []int
+	compiledData := make(map[int][]string)
+	for k, v := range records {
+		// store unique counts so the map can be "sorted"
+		if _, ok := compiledData[v]; !ok {
+			uniqueCounts = append(uniqueCounts, v)
+		}
+
+		compiledData[v] = append(compiledData[v], k)
+	}
+
+	// sort biggest to smallest
+	sort.Sort(sort.Reverse(sort.IntSlice(uniqueCounts)))
+
+	return compiledData, uniqueCounts
 }

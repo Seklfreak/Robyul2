@@ -19,4 +19,8 @@ type Idol struct {
 	NameAndGroup string
 	Images       []IdolImage
 	Deleted      bool
+	BGGames      int
+	BGGameWins   int
+	BGRounds     int
+	BGRoundWins  int
 }

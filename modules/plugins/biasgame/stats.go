@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -432,6 +434,8 @@ func recordSingleGamesStats(game *singleBiasGame) {
 		GameWinner:   game.GameWinnerBias.ID,
 	}
 
+	go idols.UpdateIdolGameStats(biasGameEntry)
+
 	helpers.MDbInsert(models.BiasGameTable, biasGameEntry)
 }
 
@@ -455,6 +459,8 @@ func recordMultiGamesStats(game *multiBiasGame) {
 		RoundLosers:  compileGameWinnersLosers(game.RoundLosers),
 		GameWinner:   game.GameWinnerBias.ID,
 	}
+
+	go idols.UpdateIdolGameStats(biasGameEntry)
 
 	helpers.MDbInsert(models.BiasGameTable, biasGameEntry)
 }
@@ -631,124 +637,27 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 		return
 	}
 
-	// get all the games that the target idol has been in
-	queryParams := bson.M{"$or": []bson.M{
-		// check if idol is in round winner or losers array
-		{"roundwinners": targetIdol.ID},
-		{"roundlosers": targetIdol.ID},
-	}}
-
-	// exclude rounds from rankings query for better performance
-	fieldsToExclude := map[string]int{
-		"roundwinners": 0,
-		"roundlosers":  0,
+	if targetIdol.BGGames == 0 {
+		idols.RefreshIdolBiasgameStats(targetIdol)
 	}
 
-	// query db for information on this
-	var allGames []models.BiasGameEntry
+	// get all the games that the target idol has won
 	var targetIdolGames []models.BiasGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{}).Select(fieldsToExclude)).All(&allGames)
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&targetIdolGames)
+	queryParams := bson.M{"gamewinner": targetIdol.ID}
+	fieldsToExclude := map[string]int{"roundwinners": 0, "roundlosers": 0}
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams).Select(fieldsToExclude)).All(&targetIdolGames)
 
-	// get idol win counts
-	allGamesIdolWinCounts := make(map[string]int)
-	singleGamesIdolWinCounts := make(map[string]int)
-	multiGamesIdolWinCounts := make(map[string]int)
-	for _, game := range allGames {
-		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
-		if gameWinner == nil {
-			continue
-		}
-
-		groupAndName := fmt.Sprintf("%s %s", gameWinner.GroupName, gameWinner.Name)
-		allGamesIdolWinCounts[groupAndName] += 1
-		if game.GameType == "multi" {
-			multiGamesIdolWinCounts[groupAndName] += 1
-		} else {
-			singleGamesIdolWinCounts[groupAndName] += 1
-		}
-	}
-
-	biasGroupName := fmt.Sprintf("%s %s", targetIdol.GroupName, targetIdol.Name)
-
-	// get overall win rank
-	compiledData, uniqueCounts := complieGameStats(allGamesIdolWinCounts)
-	idolWinRank := 0
-OverallWinLoop:
-	for i, count := range uniqueCounts {
-		for _, idolGroupName := range compiledData[count] {
-			if idolGroupName == biasGroupName {
-				idolWinRank = i + 1
-				break OverallWinLoop
-			}
-		}
-	}
-
-	// get single win rank
-	compiledData, uniqueCounts = complieGameStats(singleGamesIdolWinCounts)
-	idolSingleWinRank := 0
-SingleWinLoop:
-	for i, count := range uniqueCounts {
-		for _, idolGroupName := range compiledData[count] {
-			if idolGroupName == biasGroupName {
-				idolSingleWinRank = i + 1
-				break SingleWinLoop
-			}
-		}
-	}
-
-	// get multi win rank
-	compiledData, uniqueCounts = complieGameStats(multiGamesIdolWinCounts)
-	idolMultiWinRank := 0
-MultiWinLoop:
-	for i, count := range uniqueCounts {
-		for _, idolGroupName := range compiledData[count] {
-			if idolGroupName == biasGroupName {
-				idolMultiWinRank = i + 1
-				break MultiWinLoop
-			}
-		}
-	}
-
-	totalGames := len(targetIdolGames)
-	totalGameWins := 0
-	totalRounds := 0
-	totalRoundWins := 0
-	userGameWinMap := make(map[string]int)
-	guildGameWinMap := make(map[string]int)
-
+	userWinMap := make(map[string]int)
+	guildWinMap := make(map[string]int)
 	for _, game := range targetIdolGames {
-
-		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
-
-		// win game
-		if gameWinner != nil && gameWinner.GroupName == targetIdol.GroupName && gameWinner.Name == targetIdol.Name {
-			userGameWinMap[game.UserID]++
-			guildGameWinMap[game.GuildID]++
-			totalGameWins++
-		}
-
-		// round win
-		for _, roundWinnerId := range game.RoundWinners {
-			roundWinner := idols.GetMatchingIdolById(roundWinnerId)
-			if roundWinner != nil && roundWinner.GroupName == targetIdol.GroupName && roundWinner.Name == targetIdol.Name {
-				totalRounds++
-				totalRoundWins++
-			}
-		}
-		// round lose
-		for _, roundLoserId := range game.RoundLosers {
-			roundLoser := idols.GetMatchingIdolById(roundLoserId)
-			if roundLoser != nil && roundLoser.GroupName == targetIdol.GroupName && roundLoser.Name == targetIdol.Name {
-				totalRounds++
-			}
-		}
+		userWinMap[game.UserID]++
+		guildWinMap[game.GuildID]++
 	}
 
 	// get most winning user
 	highestUserWins := 0
 	var userId string
-	for k, v := range userGameWinMap {
+	for k, v := range userWinMap {
 		if v > highestUserWins {
 			highestUserWins = v
 			userId = k
@@ -763,7 +672,7 @@ MultiWinLoop:
 	// get most winning server
 	highestServerWins := 0
 	var guildId string
-	for k, v := range guildGameWinMap {
+	for k, v := range guildWinMap {
 		if v > highestServerWins {
 			highestServerWins = v
 			guildId = k
@@ -773,6 +682,49 @@ MultiWinLoop:
 	guildMostWins, err := helpers.GetGuild(guildId)
 	if err == nil {
 		guildNameMostWins = guildMostWins.Name
+	}
+
+	// messy af but who knows how long robyul will still be around /shrug
+	type idolWins struct {
+		id   bson.ObjectId
+		wins int
+	}
+	var idolsForSorting []idolWins
+	for _, idol := range idols.GetActiveIdols() {
+		iWins := idolWins{
+			id:   idol.ID,
+			wins: idol.BGGameWins,
+		}
+
+		idolsForSorting = append(idolsForSorting, iWins)
+	}
+
+	sort.Slice(idolsForSorting, func(i int, j int) bool {
+		return idolsForSorting[i].wins > idolsForSorting[j].wins
+	})
+
+	var idolRank int
+	for i, tempIdol := range idolsForSorting {
+		if tempIdol.id == targetIdol.ID {
+			idolRank = i + 1
+			break
+		}
+	}
+
+	// overall game and game win info
+	var gameWinPercentage float64
+	if targetIdol.BGGames > 0 {
+		gameWinPercentage = (float64(targetIdol.BGGameWins) / float64(targetIdol.BGGames)) * 100
+	} else {
+		gameWinPercentage = 0
+	}
+
+	// overall round and round win info
+	var roundWinPercentage float64
+	if targetIdol.BGGames > 0 {
+		roundWinPercentage = (float64(targetIdol.BGRoundWins) / float64(targetIdol.BGRounds)) * 100
+	} else {
+		roundWinPercentage = 0
 	}
 
 	// make embed
@@ -786,31 +738,13 @@ MultiWinLoop:
 		},
 	}
 
-	// overall game and game win info
-	var gameWinPercentage float64
-	if totalGames > 0 {
-		gameWinPercentage = (float64(totalGameWins) / float64(totalGames)) * 100
-	} else {
-		gameWinPercentage = 0
-	}
-
-	// overall round and round win info
-	var roundWinPercentage float64
-	if totalGames > 0 {
-		roundWinPercentage = (float64(totalRoundWins) / float64(totalRounds)) * 100
-	} else {
-		roundWinPercentage = 0
-	}
-
 	// add fields
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolWinRank), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Pictures Available", Value: strconv.Itoa(len(targetIdol.Images)), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolSingleWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", idolMultiWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: humanize.Comma(int64(totalGameWins)), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: humanize.Comma(int64(totalRoundWins)), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: humanize.Comma(int64(totalGames)), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: humanize.Comma(int64(totalRounds)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: humanize.Comma(int64(targetIdol.BGGameWins)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: humanize.Comma(int64(targetIdol.BGRoundWins)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: humanize.Comma(int64(targetIdol.BGGames)), Inline: true})
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Rounds", Value: humanize.Comma(int64(targetIdol.BGRounds)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Game Win %", Value: strconv.FormatFloat(gameWinPercentage, 'f', 2, 64) + "%", Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Round Win %", Value: strconv.FormatFloat(roundWinPercentage, 'f', 2, 64) + "%", Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "User With Most Wins", Value: fmt.Sprintf("%s (%s wins)", userNameMostWins, humanize.Comma(int64(highestUserWins))), Inline: true})
@@ -846,138 +780,67 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 		return
 	}
 
-	// find matching idol
+	// find matching group
 	groupMatched, targetGroupName := idols.GetMatchingGroup(commandArgs[0], false)
 	if !groupMatched {
 		helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.biasgame.stats.no-matching-group"))
 		return
 	}
 
+	var totalGames int
+	var totalGameWins int
+	var totalRounds int
+	var totalRoundWins int
+
+	// get group member with most wins
+	var mostWinningMember string
+	var mostWins int
+	groupsWinCounts := make(map[string]int)
+
 	// get all the games for the target group
 	var orStatements []bson.M
 	for _, idol := range idols.GetAllIdols() {
+		groupsWinCounts[idol.GroupName] = groupsWinCounts[idol.GroupName] + idol.BGGameWins
+
 		if idol.GroupName == targetGroupName {
 			orStatements = append(orStatements, []bson.M{
-				{"roundwinners": idol.ID},
+				{"gamewinner": idol.ID},
 				{"roundlosers": idol.ID},
 			}...)
+
+			totalGameWins = totalGameWins + idol.BGGameWins
+			totalRounds = totalRounds + idol.BGRounds
+			totalRoundWins = totalRoundWins + idol.BGRoundWins
+
+			if idol.BGGameWins > mostWins {
+				mostWins = idol.BGGameWins
+				mostWinningMember = idol.Name
+			}
 		}
 	}
+	spew.Dump(groupsWinCounts)
 	queryParams := bson.M{"$or": orStatements}
 
 	// exclude rounds from rankings query for better performance
-	fieldsToExclude := map[string]int{
-		"roundwinners": 0,
-		"roundlosers":  0,
-	}
+	fieldsToExclude := map[string]int{"roundwinners": 0, "roundlosers": 0}
 
 	// query db for information on this
-	var allGames []models.BiasGameEntry
 	var targetGroupGames []models.BiasGameEntry
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{}).Select(fieldsToExclude)).All(&allGames)
-	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&targetGroupGames)
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams).Select(fieldsToExclude)).All(&targetGroupGames)
 
-	// get idol win counts
-	allGamesGroupsWinCounts := make(map[string]int)
-	singleGamesGroupWinCounts := make(map[string]int)
-	multiGamesGroupWinCounts := make(map[string]int)
-	memberWinCount := make(map[string]int)
-	for _, game := range allGames {
-		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
-		if gameWinner == nil {
-			continue
-		}
+	totalGames = len(targetGroupGames)
 
-		if gameWinner.GroupName == targetGroupName {
-			memberWinCount[gameWinner.Name] += 1
-		}
-		allGamesGroupsWinCounts[gameWinner.GroupName] += 1
-		if game.GameType == "multi" {
-			multiGamesGroupWinCounts[gameWinner.GroupName] += 1
-		} else {
-			singleGamesGroupWinCounts[gameWinner.GroupName] += 1
-		}
-	}
-
-	// get overall win rank
-	compiledData, uniqueCounts := complieGameStats(allGamesGroupsWinCounts)
-	groupWinRank := 0
-OverallWinLoop:
-	for i, count := range uniqueCounts {
-		for _, groupName := range compiledData[count] {
-			if groupName == targetGroupName {
-				groupWinRank = i + 1
-				break OverallWinLoop
-			}
-		}
-	}
-
-	// get single win rank
-	compiledData, uniqueCounts = complieGameStats(singleGamesGroupWinCounts)
-	groupSingleWinRank := 0
-SingleWinLoop:
-	for i, count := range uniqueCounts {
-		for _, groupName := range compiledData[count] {
-			if groupName == targetGroupName {
-				groupSingleWinRank = i + 1
-				break SingleWinLoop
-			}
-		}
-	}
-
-	// get multi win rank
-	compiledData, uniqueCounts = complieGameStats(multiGamesGroupWinCounts)
-	groupMultiWinRank := 0
-MultiWinLoop:
-	for i, count := range uniqueCounts {
-		for _, groupName := range compiledData[count] {
-			if groupName == targetGroupName {
-				groupMultiWinRank = i + 1
-				break MultiWinLoop
-			}
-		}
-	}
-
-	totalGames := len(targetGroupGames)
-	totalGameWins := 0
-	totalRounds := 0
-	totalRoundWins := 0
-	userGameWinMap := make(map[string]int)
-	guildGameWinMap := make(map[string]int)
-
+	userWinMap := make(map[string]int)
+	guildWinMap := make(map[string]int)
 	for _, game := range targetGroupGames {
-
-		gameWinner := idols.GetMatchingIdolById(game.GameWinner)
-
-		// win game
-		if gameWinner != nil && gameWinner.GroupName == targetGroupName {
-			userGameWinMap[game.UserID]++
-			guildGameWinMap[game.GuildID]++
-			totalGameWins++
-		}
-
-		// round win
-		for _, round := range game.RoundWinners {
-			roundWinner := idols.GetMatchingIdolById(round)
-			if roundWinner != nil && roundWinner.GroupName == targetGroupName {
-				totalRounds++
-				totalRoundWins++
-			}
-		}
-
-		// round lose
-		for _, round := range game.RoundLosers {
-			roundLoser := idols.GetMatchingIdolById(round)
-			if roundLoser != nil && roundLoser.GroupName == targetGroupName {
-				totalRounds++
-			}
-		}
+		userWinMap[game.UserID]++
+		guildWinMap[game.GuildID]++
 	}
 
 	// get most winning user
 	highestUserWins := 0
 	var userId string
-	for k, v := range userGameWinMap {
+	for k, v := range userWinMap {
 		if v > highestUserWins {
 			highestUserWins = v
 			userId = k
@@ -992,7 +855,7 @@ MultiWinLoop:
 	// get most winning server
 	highestServerWins := 0
 	var guildId string
-	for k, v := range guildGameWinMap {
+	for k, v := range guildWinMap {
 		if v > highestServerWins {
 			highestServerWins = v
 			guildId = k
@@ -1002,6 +865,19 @@ MultiWinLoop:
 	guildMostWins, err := helpers.GetGuild(guildId)
 	if err == nil {
 		guildNameMostWins = guildMostWins.Name
+	}
+
+	// get group rank
+	compiledData, uniqueCounts := complieGameStats(groupsWinCounts)
+	groupWinRank := 0
+WinLoop:
+	for i, count := range uniqueCounts {
+		for _, groupName := range compiledData[count] {
+			if groupName == targetGroupName {
+				groupWinRank = i + 1
+				break WinLoop
+			}
+		}
 	}
 
 	// make embed
@@ -1043,27 +919,9 @@ MultiWinLoop:
 		allGroupImages = append(allGroupImages, bias.Images[imageIndex])
 	}
 
-	// get group member with most wins
-	var mostWinningMember string
-	var mostWins int
-	for name, winCount := range memberWinCount {
-		if winCount > mostWins {
-			mostWins = winCount
-			mostWinningMember = name
-		}
-
-		// if win count is even between members, display first one alphabetically
-		if winCount == mostWins && name > mostWinningMember {
-			mostWinningMember = name
-		}
-
-	}
-
 	// add fields
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Overall Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupWinRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Most Winning Member", Value: fmt.Sprintf("%s (%d wins)", mostWinningMember, mostWins), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Single Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupSingleWinRank), Inline: true})
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Multi Game Wins Rank", Value: fmt.Sprintf("Rank #%d", groupMultiWinRank), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Games Won", Value: humanize.Comma(int64(totalGameWins)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Rounds Won", Value: humanize.Comma(int64(totalRoundWins)), Inline: true})
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Total Games", Value: humanize.Comma(int64(totalGames)), Inline: true})

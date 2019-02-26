@@ -325,6 +325,10 @@ func makeIdolFromIdolEntry(entry models.IdolEntry) Idol {
 		NameAndGroup: entry.Name + entry.GroupName,
 		NameAliases:  entry.NameAliases,
 		Gender:       entry.Gender,
+		BGGames:      entry.BGGames,
+		BGGameWins:   entry.BGGameWins,
+		BGRounds:     entry.BGRounds,
+		BGRoundWins:  entry.BGRoundWins,
 	}
 
 	// convert idol entry images
@@ -975,4 +979,191 @@ func updateBiasgame(targetId, newId bson.ObjectId) (int, error) {
 	}
 
 	return modified, nil
+}
+
+// RefreshIdolBiasgameStats is a slow operation that will check every game the
+// idol has ever been in and update its game stats
+func RefreshIdolBiasgameStats(targetIdol *Idol) {
+
+	// get all the games that the target idol has been in
+	queryParams := bson.M{"$or": []bson.M{
+		// check if idol is in round winner or losers array
+		{"roundwinners": targetIdol.ID},
+		{"roundlosers": targetIdol.ID},
+	}}
+
+	// query db for information on this
+	var targetIdolGames []models.BiasGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(queryParams)).All(&targetIdolGames)
+
+	totalGames := len(targetIdolGames)
+	totalGameWins := 0
+	totalRounds := 0
+	totalRoundWins := 0
+
+	for _, game := range targetIdolGames {
+
+		// win game
+		if game.GameWinner == targetIdol.ID {
+			totalGameWins++
+		}
+
+		// round win
+		for _, roundWinnerId := range game.RoundWinners {
+			if roundWinnerId == targetIdol.ID {
+				totalRounds++
+				totalRoundWins++
+			}
+		}
+		// round lose
+		for _, roundLoserId := range game.RoundLosers {
+			if roundLoserId == targetIdol.ID {
+				totalRounds++
+			}
+		}
+	}
+
+	targetIdol.BGGames = totalGames
+	targetIdol.BGGameWins = totalGameWins
+	targetIdol.BGRounds = totalRounds
+	targetIdol.BGRoundWins = totalRoundWins
+
+	// update cache
+	if len(GetAllIdols()) > 0 {
+		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
+	}
+}
+
+// RefreshIdolBiasgameStats is a slow operation that will check every game the
+// idol has ever been in and update its game stats
+func RefreshAllIdolBiasgameStats(msg *discordgo.Message) {
+	cache.GetSession().ChannelTyping(msg.ChannelID)
+
+	helpers.SendMessage(msg.ChannelID, "Refreshing biasgame info on idol records...")
+
+	var allGames []models.BiasGameEntry
+	helpers.MDbIter(helpers.MdbCollection(models.BiasGameTable).Find(bson.M{})).All(&allGames)
+
+	totalIdols := len(GetAllIdols())
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintln("Total games found: ", len(allGames)))
+	helpers.SendMessage(msg.ChannelID, fmt.Sprintln("Idols found: ", totalIdols))
+	helpers.SendMessage(msg.ChannelID, "Processing...")
+
+	idolsProcessed := 0
+	log().Infof("Idols processed: %d / %d", idolsProcessed, totalIdols)
+
+	idolGameTotalMap := make(map[bson.ObjectId]int)
+	idolGameWinMap := make(map[bson.ObjectId]int)
+	idolRoundTotalMap := make(map[bson.ObjectId]int)
+	idolRoundWinMap := make(map[bson.ObjectId]int)
+
+	for _, game := range allGames {
+
+		idolsFound := make(map[bson.ObjectId]bool)
+		idolsFound[game.GameWinner] = true
+
+		idolGameWinMap[game.GameWinner]++
+
+		// round win
+		for _, roundWinnerId := range game.RoundWinners {
+			idolRoundWinMap[roundWinnerId]++
+			idolRoundTotalMap[roundWinnerId]++
+			idolsFound[roundWinnerId] = true
+
+		}
+		// round lose
+		for _, roundLoserId := range game.RoundLosers {
+			idolRoundTotalMap[roundLoserId]++
+			idolsFound[roundLoserId] = true
+		}
+
+		for idolId, _ := range idolsFound {
+			idolGameTotalMap[idolId]++
+		}
+	}
+
+	for _, targetIdol := range GetAllIdols() {
+
+		log().Infoln("Running for: ", targetIdol.GroupName, targetIdol.Name, idolGameTotalMap[targetIdol.ID])
+
+		targetIdol.BGGames = idolGameTotalMap[targetIdol.ID]
+		targetIdol.BGGameWins = idolGameWinMap[targetIdol.ID]
+		targetIdol.BGRounds = idolRoundTotalMap[targetIdol.ID]
+		targetIdol.BGRoundWins = idolRoundWinMap[targetIdol.ID]
+
+		idolsProcessed++
+		log().Infof("Idols processed: %d / %d", idolsProcessed, totalIdols)
+
+		var targetIdolEntry models.IdolEntry
+		err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"groupname": targetIdol.GroupName, "name": targetIdol.Name}), &targetIdolEntry)
+		helpers.Relax(err)
+
+		targetIdolEntry.BGGames = targetIdol.BGGames
+		targetIdolEntry.BGGameWins = targetIdol.BGGameWins
+		targetIdolEntry.BGRounds = targetIdol.BGRounds
+		targetIdolEntry.BGRoundWins = targetIdol.BGRoundWins
+		err = helpers.MDbUpsertID(models.IdolTable, targetIdolEntry.ID, targetIdolEntry)
+		helpers.Relax(err)
+	}
+
+	// update cache
+	if len(GetAllIdols()) > 0 {
+		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
+	}
+	helpers.SendMessage(msg.ChannelID, "Done.")
+}
+
+// UpdateIdolGameStats is called every time a biasgame finished
+func UpdateIdolGameStats(game models.BiasGameEntry) {
+	helpers.Recover()
+
+	roundWinIdols := make(map[bson.ObjectId]int)
+	roundTotalIdols := make(map[bson.ObjectId]int)
+
+	for _, roundWinner := range game.RoundWinners {
+		roundWinIdols[roundWinner]++
+		roundTotalIdols[roundWinner]++
+	}
+
+	for _, roundWinner := range game.RoundLosers {
+		roundTotalIdols[roundWinner]++
+	}
+
+	for _, idol := range GetActiveIdols() {
+		inGame := false
+		if idol.ID == game.GameWinner {
+			idol.BGGameWins++
+			inGame = true
+		}
+
+		if roundWins, ok := roundWinIdols[idol.ID]; ok {
+			idol.BGRoundWins = idol.BGRoundWins + roundWins
+			inGame = true
+		}
+
+		if roundTotal, ok := roundTotalIdols[idol.ID]; ok {
+			idol.BGRounds = idol.BGRounds + roundTotal
+			inGame = true
+		}
+
+		if inGame {
+			idol.BGGames++
+
+			var targetIdolEntry models.IdolEntry
+			err := helpers.MdbOne(helpers.MdbCollection(models.IdolTable).Find(bson.M{"groupname": idol.GroupName, "name": idol.Name}), &targetIdolEntry)
+			helpers.Relax(err)
+
+			targetIdolEntry.BGGames = idol.BGGames
+			targetIdolEntry.BGGameWins = idol.BGGameWins
+			targetIdolEntry.BGRounds = idol.BGRounds
+			targetIdolEntry.BGRoundWins = idol.BGRoundWins
+			err = helpers.MDbUpsertID(models.IdolTable, targetIdolEntry.ID, targetIdolEntry)
+			helpers.Relax(err)
+		}
+	}
+
+	// update cache
+	if len(GetAllIdols()) > 0 {
+		setModuleCache(ALL_IDOLS_CACHE_KEY, GetAllIdols(), time.Hour*24*7)
+	}
 }
