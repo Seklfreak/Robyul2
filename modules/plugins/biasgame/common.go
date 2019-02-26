@@ -13,7 +13,6 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
-	"github.com/go-redis/redis"
 	json "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 )
@@ -35,7 +34,8 @@ func bgLog() *logrus.Entry {
 func getBiasGameCache(key string, data interface{}) error {
 	// get cache with given key
 	cacheResult, err := cache.GetRedisClient().Get(fmt.Sprintf("robyul2-discord:biasgame:%s", key)).Bytes()
-	if err != nil || err == redis.Nil {
+	helpers.RelaxLog(err)
+	if err != nil {
 		return err
 	}
 
@@ -58,6 +58,7 @@ func setBiasGameCache(key string, data interface{}, time time.Duration) error {
 	}
 
 	_, err = cache.GetRedisClient().Set(fmt.Sprintf("robyul2-discord:biasgame:%s", key), marshaledData, time).Result()
+	helpers.RelaxLog(err)
 	return err
 }
 
