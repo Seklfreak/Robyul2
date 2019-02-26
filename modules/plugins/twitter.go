@@ -36,6 +36,7 @@ var (
 	twitterEntriesCache      []models.TwitterEntry
 	twitterStreamIsStarting  sync.Mutex
 	twitterEntryLocks        = make(map[string]*sync.Mutex)
+	twitterEntryLock         sync.Mutex
 )
 
 const (
@@ -1086,6 +1087,9 @@ func (m *Twitter) handleError(err error) string {
 }
 
 func (m *Twitter) lockEntry(entryID bson.ObjectId) {
+	twitterEntryLock.Lock()
+	defer twitterEntryLock.Unlock()
+
 	key := string(entryID)
 	if _, ok := twitterEntryLocks[key]; ok && twitterEntryLocks[key] != nil {
 		twitterEntryLocks[key].Lock()
@@ -1096,6 +1100,9 @@ func (m *Twitter) lockEntry(entryID bson.ObjectId) {
 }
 
 func (m *Twitter) unlockEntry(entryID bson.ObjectId) {
+	twitterEntryLock.Lock()
+	defer twitterEntryLock.Unlock()
+
 	key := string(entryID)
 	if _, ok := twitterEntryLocks[key]; ok && twitterEntryLocks[key] != nil {
 		twitterEntryLocks[key].Unlock()
