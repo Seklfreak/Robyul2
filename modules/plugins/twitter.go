@@ -336,6 +336,21 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				ScreenName: twitterAccoutnScreenName,
 			})
 			if err != nil {
+				if strings.Contains(err.Error(), "50 User not found") ||
+					strings.Contains(err.Error(), "63 User has been suspended") {
+					for _, entry := range entries {
+						err = helpers.MDbDelete(models.TwitterTable, entry.ID)
+						if err != nil {
+							helpers.RelaxLog(err)
+							continue
+						}
+						cache.GetLogger().WithField("module", "twitter").Infof(
+							"removed entry %s (@%s) because user suspended or deleted",
+							helpers.MdbIdToHuman(entry.ID), entry.AccountScreenName,
+						)
+					}
+					continue
+				}
 				cache.GetLogger().WithField("module", "twitter").Warnf("updating twitter account @%s failed: %s", twitterAccoutnScreenName, err.Error())
 				continue
 			}
