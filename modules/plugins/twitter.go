@@ -43,6 +43,7 @@ const (
 	TwitterFriendlyUser   = "https://twitter.com/%s"
 	TwitterFriendlyStatus = "https://twitter.com/%s/status/%s"
 	rfc2822               = "Mon Jan 02 15:04:05 -0700 2006"
+	twitterStreamLimit    = 5000
 )
 
 func (m *Twitter) Commands() []string {
@@ -168,7 +169,9 @@ func (t *Twitter) startTwitterStream() {
 	var err error
 	var accountIDs []string
 
-	err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitterTable).Find(nil)).All(&twitterEntriesCache)
+	err = helpers.MDbIterWithoutLogging(
+		helpers.MdbCollection(models.TwitterTable).Find(nil).Sort("_id"),
+	).All(&twitterEntriesCache)
 	helpers.Relax(err)
 
 	for _, entry := range twitterEntriesCache {
@@ -235,6 +238,10 @@ func (t *Twitter) startTwitterStream() {
 				accountIDs = append(accountIDs, entry.AccountID)
 			}
 		}
+	}
+
+	if len(accountIDs) > twitterStreamLimit {
+		accountIDs = accountIDs[0:twitterStreamLimit]
 	}
 
 	twitterStream = anacondaClient.PublicStreamFilter(url.Values{
