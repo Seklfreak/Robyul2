@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	instagramEntryLock  sync.Mutex
 	instagramEntryLocks = make(map[string]*sync.Mutex)
 )
 
@@ -207,6 +208,9 @@ func (m *Handler) checkInstagramPublicFeedLoopWorker(id int, jobs <-chan map[str
 }
 
 func (m *Handler) lockEntry(entryID bson.ObjectId) {
+	instagramEntryLock.Lock()
+	defer instagramEntryLock.Unlock()
+
 	if _, ok := instagramEntryLocks[string(entryID)]; ok {
 		instagramEntryLocks[string(entryID)].Lock()
 		return
@@ -216,6 +220,9 @@ func (m *Handler) lockEntry(entryID bson.ObjectId) {
 }
 
 func (m *Handler) unlockEntry(entryID bson.ObjectId) {
+	instagramEntryLock.Lock()
+	defer instagramEntryLock.Unlock()
+
 	if _, ok := instagramEntryLocks[string(entryID)]; ok {
 		instagramEntryLocks[string(entryID)].Unlock()
 	}
