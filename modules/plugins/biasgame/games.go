@@ -855,15 +855,15 @@ func startCacheRefreshLoop() {
 			// save any currently running games
 			currentSinglePlayerGamesMutex.RLock()
 			err := setBiasGameCache("currentSinglePlayerGames", currentSinglePlayerGames, 0)
+			currentSinglePlayerGamesMutex.RUnlock()
 			helpers.Relax(err)
 			bgLog().Infof("Cached %d singleplayer biasgames to redis", len(currentSinglePlayerGames))
-			currentSinglePlayerGamesMutex.RUnlock()
 
 			currentMultiPlayerGamesMutex.RLock()
 			err = setBiasGameCache("currentMultiPlayerGames", currentMultiPlayerGames, 0)
+			currentMultiPlayerGamesMutex.RUnlock()
 			helpers.Relax(err)
 			bgLog().Infof("Cached %d multiplayer biasgames to redis", len(currentMultiPlayerGames))
-			currentMultiPlayerGamesMutex.RUnlock()
 		}
 	}()
 }
