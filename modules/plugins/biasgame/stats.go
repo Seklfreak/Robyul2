@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
@@ -818,7 +816,6 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 			}
 		}
 	}
-	spew.Dump(groupsWinCounts)
 	queryParams := bson.M{"$or": orStatements}
 
 	// exclude rounds from rankings query for better performance
