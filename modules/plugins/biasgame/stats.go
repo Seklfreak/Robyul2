@@ -793,6 +793,7 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	// get group member with most wins
 	var mostWinningMember string
 	var mostWins int
+	var idolsIDsInGroup = make(map[bson.ObjectId]bool)
 	groupsWinCounts := make(map[string]int)
 
 	// get all the games for the target group
@@ -805,6 +806,8 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 				{"gamewinner": idol.ID},
 				{"roundlosers": idol.ID},
 			}...)
+
+			idolsIDsInGroup[idol.ID] = true
 
 			totalGameWins = totalGameWins + idol.BGGameWins
 			totalRounds = totalRounds + idol.BGRounds
@@ -830,8 +833,10 @@ func displayGroupStats(msg *discordgo.Message, content string) {
 	userWinMap := make(map[string]int)
 	guildWinMap := make(map[string]int)
 	for _, game := range targetGroupGames {
-		userWinMap[game.UserID]++
-		guildWinMap[game.GuildID]++
+		if _, ok := idolsIDsInGroup[game.GameWinner]; ok {
+			userWinMap[game.UserID]++
+			guildWinMap[game.GuildID]++
+		}
 	}
 
 	// get most winning user
