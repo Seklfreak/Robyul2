@@ -182,11 +182,11 @@ func main() {
 	// Connecting to redis
 	log.WithField("module", "launcher").Info("Connecting to redis...")
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     config.Path("redis.address").Data().(string),
-		Password: "", // no password set
-		DB:       0,  // use default DB
-		//DialTimeout: 5 * time.Minute,
-		//ReadTimeout: 5 * time.Minute,
+		Addr:         config.Path("redis.address").Data().(string),
+		Password:     "", // no password set
+		DB:           0,  // use default DB
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
 	})
 	cache.SetRedisClient(redisClient)
 

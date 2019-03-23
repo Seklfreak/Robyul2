@@ -36,12 +36,14 @@ var (
 	twitterEntriesCache      []models.TwitterEntry
 	twitterStreamIsStarting  sync.Mutex
 	twitterEntryLocks        = make(map[string]*sync.Mutex)
+	twitterEntryLock         sync.Mutex
 )
 
 const (
 	TwitterFriendlyUser   = "https://twitter.com/%s"
 	TwitterFriendlyStatus = "https://twitter.com/%s/status/%s"
 	rfc2822               = "Mon Jan 02 15:04:05 -0700 2006"
+	twitterStreamLimit    = 5000
 )
 
 func (m *Twitter) Commands() []string {
@@ -167,7 +169,9 @@ func (t *Twitter) startTwitterStream() {
 	var err error
 	var accountIDs []string
 
-	err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitterTable).Find(nil)).All(&twitterEntriesCache)
+	err = helpers.MDbIterWithoutLogging(
+		helpers.MdbCollection(models.TwitterTable).Find(nil).Sort("_id"),
+	).All(&twitterEntriesCache)
 	helpers.Relax(err)
 
 	for _, entry := range twitterEntriesCache {
@@ -234,6 +238,10 @@ func (t *Twitter) startTwitterStream() {
 				accountIDs = append(accountIDs, entry.AccountID)
 			}
 		}
+	}
+
+	if len(accountIDs) > twitterStreamLimit {
+		accountIDs = accountIDs[0:twitterStreamLimit]
 	}
 
 	twitterStream = anacondaClient.PublicStreamFilter(url.Values{
@@ -328,6 +336,21 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				ScreenName: twitterAccoutnScreenName,
 			})
 			if err != nil {
+				if strings.Contains(err.Error(), "50 User not found") ||
+					strings.Contains(err.Error(), "63 User has been suspended") {
+					for _, entry := range entries {
+						err = helpers.MDbDelete(models.TwitterTable, entry.ID)
+						if err != nil {
+							helpers.RelaxLog(err)
+							continue
+						}
+						cache.GetLogger().WithField("module", "twitter").Infof(
+							"removed entry %s (@%s) because user suspended or deleted",
+							helpers.MdbIdToHuman(entry.ID), entry.AccountScreenName,
+						)
+					}
+					continue
+				}
 				cache.GetLogger().WithField("module", "twitter").Warnf("updating twitter account @%s failed: %s", twitterAccoutnScreenName, err.Error())
 				continue
 			}
@@ -1086,6 +1109,9 @@ func (m *Twitter) handleError(err error) string {
 }
 
 func (m *Twitter) lockEntry(entryID bson.ObjectId) {
+	twitterEntryLock.Lock()
+	defer twitterEntryLock.Unlock()
+
 	key := string(entryID)
 	if _, ok := twitterEntryLocks[key]; ok && twitterEntryLocks[key] != nil {
 		twitterEntryLocks[key].Lock()
@@ -1096,6 +1122,9 @@ func (m *Twitter) lockEntry(entryID bson.ObjectId) {
 }
 
 func (m *Twitter) unlockEntry(entryID bson.ObjectId) {
+	twitterEntryLock.Lock()
+	defer twitterEntryLock.Unlock()
+
 	key := string(entryID)
 	if _, ok := twitterEntryLocks[key]; ok && twitterEntryLocks[key] != nil {
 		twitterEntryLocks[key].Unlock()
