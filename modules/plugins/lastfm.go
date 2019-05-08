@@ -195,8 +195,8 @@ func (m *LastFm) generateDiscordStats() {
 						for _, track := range cachedStat.Overall {
 							added := false
 							for i, trackInDb := range newCombinedGuildStat.Overall {
-								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
-									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+								if strings.EqualFold(trackInDb.Name, track.Name) &&
+									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
 									newCombinedGuildStat.Overall[i].Plays += track.Plays
 									newCombinedGuildStat.Overall[i].Users += track.Users
 									added = true
@@ -209,8 +209,8 @@ func (m *LastFm) generateDiscordStats() {
 						for _, track := range cachedStat.SevenDay {
 							added := false
 							for i, trackInDb := range newCombinedGuildStat.SevenDay {
-								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
-									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+								if strings.EqualFold(trackInDb.Name, track.Name) &&
+									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
 									newCombinedGuildStat.SevenDay[i].Plays += track.Plays
 									newCombinedGuildStat.SevenDay[i].Users += track.Users
 									added = true
@@ -223,8 +223,8 @@ func (m *LastFm) generateDiscordStats() {
 						for _, track := range cachedStat.OneMonth {
 							added := false
 							for i, trackInDb := range newCombinedGuildStat.OneMonth {
-								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
-									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+								if strings.EqualFold(trackInDb.Name, track.Name) &&
+									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
 									newCombinedGuildStat.OneMonth[i].Plays += track.Plays
 									newCombinedGuildStat.OneMonth[i].Users += track.Users
 									added = true
@@ -237,8 +237,8 @@ func (m *LastFm) generateDiscordStats() {
 						for _, track := range cachedStat.ThreeMonth {
 							added := false
 							for i, trackInDb := range newCombinedGuildStat.ThreeMonth {
-								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
-									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+								if strings.EqualFold(trackInDb.Name, track.Name) &&
+									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
 									newCombinedGuildStat.ThreeMonth[i].Plays += track.Plays
 									newCombinedGuildStat.ThreeMonth[i].Users += track.Users
 									added = true
@@ -251,8 +251,8 @@ func (m *LastFm) generateDiscordStats() {
 						for _, track := range cachedStat.SixMonth {
 							added := false
 							for i, trackInDb := range newCombinedGuildStat.SixMonth {
-								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
-									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+								if strings.EqualFold(trackInDb.Name, track.Name) &&
+									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
 									newCombinedGuildStat.SixMonth[i].Plays += track.Plays
 									newCombinedGuildStat.SixMonth[i].Users += track.Users
 									added = true
@@ -265,8 +265,8 @@ func (m *LastFm) generateDiscordStats() {
 						for _, track := range cachedStat.TwelveMonth {
 							added := false
 							for i, trackInDb := range newCombinedGuildStat.TwelveMonth {
-								if strings.ToLower(trackInDb.Name) == strings.ToLower(track.Name) &&
-									strings.ToLower(trackInDb.ArtistName) == strings.ToLower(track.ArtistName) {
+								if strings.EqualFold(trackInDb.Name, track.Name) &&
+									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
 									newCombinedGuildStat.TwelveMonth[i].Plays += track.Plays
 									newCombinedGuildStat.TwelveMonth[i].Users += track.Users
 									added = true
