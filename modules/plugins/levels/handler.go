@@ -3244,7 +3244,7 @@ func (m *Levels) GetProfileHTML(member *discordgo.Member, guild *discordgo.Guild
 					playingStatus += fmt.Sprintf("<i class=\"fa fa-users\" aria-hidden=\"true\"></i> %s",
 						topArtists.Artists[0].Name)
 					playCountText := fmt.Sprintf("(%s plays)", humanize.Comma(int64(playCountN)))
-					if helpers.RuneLength(topArtists.Artists[0].Name)+1+helpers.RuneLength(playCountText) <= 20 {
+					if helpers.RuneLength(topArtists.Artists[0].Name)+1+helpers.RuneLength(playCountText) <= 30 {
 						playingStatus += " " + playCountText
 					}
 				}
