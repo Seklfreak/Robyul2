@@ -602,7 +602,8 @@ NextKeyword:
 
 		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
 		case 2:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.\n\u200B",
+			// for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.\n"+helpers.ZERO_WIDTH_SPACE, // TODO: https://trello.com/c/NDlpRZNw
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```\n%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.",
 				escapedContent,
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
@@ -658,7 +659,8 @@ NextKeyword:
 			helpers.SendEmbed(dmChannel.ID, notificationEmbed)
 			break
 		case 4:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
+			// for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```", // TODO: https://trello.com/c/NDlpRZNw
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```\n%s```",
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
@@ -671,7 +673,8 @@ NextKeyword:
 			}
 			break
 		default:
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```",
+			// for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```", // TODO: https://trello.com/c/NDlpRZNw
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n```\n%s```",
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
