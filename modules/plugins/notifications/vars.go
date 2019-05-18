@@ -5,8 +5,10 @@ import "github.com/Seklfreak/Robyul2/models"
 var (
 	notificationSettingsCache []*models.NotificationsEntry
 	ignoredChannelsCache      []models.NotificationsIgnoredChannelsEntry
-	ValidTextDelimiters       = []string{" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“", "‘"}
-	WhitelistedBotIDs         = []string{
+	ValidTextDelimiters       = []string{
+		" ", ".", ",", "?", "!", ";", "(", ")", "=", "\"", "'", "`", "´", "_", "~", "+", "-", "/", ":", "*", "\n", "…", "’", "“", "‘", "[", "]",
+	}
+	WhitelistedBotIDs = []string{
 		"430101373397368842", // Test Webhook (Sekl)
 
 		"178215222614556673", // Fiscord-IRC (Kakkela)
