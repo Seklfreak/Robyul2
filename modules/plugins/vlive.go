@@ -53,6 +53,7 @@ func (r *VLive) Init(session *discordgo.Session) {
 }
 func (r *VLive) checkVliveFeedsLoop() {
 	var entries []models.VliveEntry
+	var entriesLength int
 	var bundledEntries map[string][]models.VliveEntry
 
 	defer helpers.Recover()
@@ -69,6 +70,8 @@ func (r *VLive) checkVliveFeedsLoop() {
 
 		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.VliveTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
+
+		entriesLength = len(entries)
 
 		for _, entry := range entries {
 			// check if channel exists
@@ -94,6 +97,8 @@ func (r *VLive) checkVliveFeedsLoop() {
 				bundledEntries[entry.VLiveChannel.Code] = []models.VliveEntry{entry}
 			}
 		}
+
+		entries = nil
 
 		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checking %d channels for %d feeds with %d workers", len(bundledEntries), len(entries), VLiveWorkers))
 		start := time.Now()
@@ -128,7 +133,9 @@ func (r *VLive) checkVliveFeedsLoop() {
 		cache.GetLogger().WithField("module", "vlive").Info(fmt.Sprintf("checked %d channels for %d feeds with %d workers, took %s", len(bundledEntries), len(entries), VLiveWorkers, elapsed))
 		metrics.VliveRefreshTime.Set(elapsed.Seconds())
 
-		if len(entries) <= 10 {
+		bundledEntries = nil
+
+		if entriesLength <= 10 {
 			time.Sleep(60 * time.Second)
 		}
 	}
