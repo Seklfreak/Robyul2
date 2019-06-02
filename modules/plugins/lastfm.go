@@ -304,6 +304,9 @@ func (m *LastFm) generateDiscordStats() {
 
 		lastfmCombinedGuildStats = newCombinedGuildStats
 
+		newCombinedGuildStats = nil
+		safeEntries.entries = nil
+
 		time.Sleep(6 * time.Hour)
 	}
 }
