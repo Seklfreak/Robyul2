@@ -240,8 +240,6 @@ func (t *Twitter) startTwitterStream() {
 		}
 	}
 
-	twitterEntriesCache = nil
-
 	if len(accountIDs) > twitterStreamLimit {
 		accountIDs = accountIDs[0:twitterStreamLimit]
 	}
