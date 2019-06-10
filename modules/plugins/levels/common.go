@@ -189,6 +189,9 @@ func cacheTopLoop() {
 		}
 		log.WithField("module", "levels").Info("cached rankings in redis")
 
+		newTopCache = nil
+		levelsUsers = nil
+
 		time.Sleep(10 * time.Minute)
 	}
 }
