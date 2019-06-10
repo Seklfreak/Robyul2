@@ -296,7 +296,7 @@ func main() {
 		discord.AddHandler(helpers.ElasticOnMessageUpdate)
 		discord.AddHandler(helpers.ElasticOnMessageDelete)
 		discord.AddHandler(helpers.ElasticOnGuildMemberRemove)
-		discord.AddHandler(helpers.ElasticOnPresenceUpdate)
+		// discord.AddHandler(helpers.ElasticOnPresenceUpdate)
 		// Guild Member Add in modules/plugins/mod.go
 	}
 
