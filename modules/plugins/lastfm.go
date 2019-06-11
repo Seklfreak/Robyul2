@@ -27,6 +27,9 @@ const (
 	lastfmHexColor           = "#d51007"
 	lastfmFriendlyUser       = "https://www.last.fm/user/%s"
 	lastfmYouTubeFriendlyUrl = "https://youtu.be/%s"
+
+	featureFlagServerStats         = "module-lastfm-feature-server-stats"
+	featureFlagServerStatsFallback = false
 )
 
 var (
@@ -98,6 +101,11 @@ func (m *LastFm) generateDiscordStats() {
 	}()
 
 	for {
+		if !helpers.FeatureEnabled(featureFlagServerStats, featureFlagServerStatsFallback) {
+			time.Sleep(15 * time.Minute)
+			continue
+		}
+
 		err := helpers.MDbIter(helpers.MdbCollection(models.LastFmTable).Find(nil)).All(&safeEntries.entries)
 		helpers.Relax(err)
 
@@ -989,6 +997,11 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		case "discord-top", "server-top", "servertop", "discordtop":
+			if !helpers.FeatureEnabled(featureFlagServerStats, featureFlagServerStatsFallback) {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-stats-available"))
+				return
+			}
+
 			channel, err := helpers.GetChannel(msg.ChannelID)
 			helpers.Relax(err)
 			guild, err := helpers.GetGuild(channel.GuildID)
@@ -1002,7 +1015,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 
 			if combinedStats.GuildID == "" {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-stats-available"))
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.lastfm.no-stats-available-yet"))
 				return
 			}
 
