@@ -374,14 +374,14 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 				// download and send custom emoji
 				if emojiID != "" {
 					fileName := emojiName
-					emojiUrl := discordgo.EndpointEmoji(emojiID)
-					if animated {
-						emojiUrl = strings.Replace(emojiUrl, ".png", ".gif", -1)
-						fileName += ".gif"
-					} else {
+					if !animated {
 						fileName += ".png"
+					} else {
+						fileName += ".gif"
 					}
-					emojiData, err := helpers.NetGetUAWithError(emojiUrl, helpers.DEFAULT_UA)
+					emojiData, err := helpers.NetGetUAWithError(
+						helpers.EmojIURL(emojiID, animated), helpers.DEFAULT_UA,
+					)
 					helpers.RelaxLog(err)
 					if err == nil {
 						_, err = helpers.SendComplex(message.ChannelID, &discordgo.MessageSend{

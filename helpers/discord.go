@@ -1671,3 +1671,11 @@ func UniqueUsers(listOfUsers []*discordgo.User) []*discordgo.User {
 	}
 	return list
 }
+
+func EmojIURL(emojiID string, animated bool) string {
+	if animated {
+		return discordgo.EndpointCDN + "emojis/" + emojiID + ".gif"
+	}
+
+	return discordgo.EndpointCDN + "emojis/" + emojiID + ".png"
+}
