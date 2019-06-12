@@ -189,20 +189,19 @@ func CollectDiscordMetrics(session *discordgo.Session) {
 	for {
 		time.Sleep(15 * time.Second)
 
-		users := make(map[string]string)
+		users := make(map[string]bool)
 		channels := 0
-		guilds := session.State.Guilds
 
-		for _, guild := range guilds {
+		for _, guild := range session.State.Guilds {
 			channels += len(guild.Channels)
 			for _, u := range guild.Members {
-				users[u.User.ID] = u.User.Username
+				users[u.User.ID] = true
 			}
 		}
 
 		UserCount.Set(int64(len(users)))
 		ChannelCount.Set(int64(channels))
-		GuildCount.Set(int64(len(guilds)))
+		GuildCount.Set(int64(len(session.State.Guilds)))
 	}
 }
 
