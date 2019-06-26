@@ -52,9 +52,6 @@ func (rp *RandomPictures) Init(session *discordgo.Session) {
 	// Get drive service
 	driveService = cache.GetGoogleDriveService()
 
-	// initial random generator
-	rand.Seed(time.Now().Unix())
-
 	go func() {
 		log := cache.GetLogger()
 

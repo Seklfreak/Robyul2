@@ -3,7 +3,6 @@ package levels
 import (
 	"math"
 	"math/rand"
-	"time"
 )
 
 func GetLevelFromExp(exp int64) int {
@@ -30,6 +29,5 @@ func GetProgressToNextLevelFromExp(exp int64) int {
 func getRandomExpForMessage() int64 {
 	min := 10
 	max := 15
-	rand.Seed(time.Now().Unix())
 	return int64(rand.Intn(max-min) + min)
 }

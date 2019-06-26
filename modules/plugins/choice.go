@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -63,7 +62,6 @@ func (c *Choice) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 		}
-		rand.Seed(time.Now().Unix())
 		_, err = helpers.SendMessage(msg.ChannelID, fmt.Sprintf("<@%s> :game_die: %d :game_die:", msg.Author.ID, rand.Intn(maxN)+1))
 		helpers.Relax(err)
 		return
