@@ -105,11 +105,11 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		}
 	}()
 
-	go func() {
-		time.Sleep(60 * time.Second)
-
-		helpers.UpdateBotlists()
-	}()
+	// go func() {
+	// 	time.Sleep(60 * time.Second)
+	//
+	// 	helpers.UpdateBotlists()
+	// }()
 }
 
 func BotDestroy() {
