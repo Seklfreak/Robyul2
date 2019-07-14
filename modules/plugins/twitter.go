@@ -291,7 +291,9 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 		}()
 	}()
 
+	var err error
 	var bundledEntries map[string][]models.TwitterEntry
+	var accountID int64
 
 	for {
 		bundledEntries = make(map[string][]models.TwitterEntry, 0)
@@ -319,21 +321,27 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				}
 			}
 
-			if _, ok := bundledEntries[entry.AccountScreenName]; ok {
-				bundledEntries[entry.AccountScreenName] = append(bundledEntries[entry.AccountScreenName], entry)
+			if _, ok := bundledEntries[entry.AccountID]; ok {
+				bundledEntries[entry.AccountID] = append(bundledEntries[entry.AccountID], entry)
 			} else {
-				bundledEntries[entry.AccountScreenName] = []models.TwitterEntry{entry}
+				bundledEntries[entry.AccountID] = []models.TwitterEntry{entry}
 			}
 		}
 
 		cache.GetLogger().WithField("module", "twitter").Infof("checking %d accounts for %d feeds", len(bundledEntries), len(twitterEntriesCache))
 		start := time.Now()
 
-		for twitterAccoutnScreenName, entries := range bundledEntries {
-			// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account @%s", twitterAccoutnScreenName))
+		for twitterAccountID, entries := range bundledEntries {
+			accountID, err = strconv.ParseInt(twitterAccountID, 10, 64)
+			if err != nil {
+				continue
+			}
 
-			twitterUser, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
-				ScreenName: twitterAccoutnScreenName,
+			twitterUserTweets, _, err := twitterClient.Timelines.UserTimeline(&twitter.UserTimelineParams{
+				UserID:          accountID,
+				Count:           10,
+				ExcludeReplies:  twitter.Bool(true),
+				IncludeRetweets: twitter.Bool(true),
 			})
 			if err != nil {
 				if strings.Contains(err.Error(), "50 User not found") ||
@@ -351,20 +359,11 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 					}
 					continue
 				}
-				cache.GetLogger().WithField("module", "twitter").Warnf("updating twitter account @%s failed: %s", twitterAccoutnScreenName, err.Error())
+				cache.GetLogger().WithField("module", "twitter").Warnf("getting tweets of @%s failed: %d", accountID, err.Error())
 				continue
 			}
 
-			twitterUserTweets, _, err := twitterClient.Timelines.UserTimeline(&twitter.UserTimelineParams{
-				ScreenName:      twitterAccoutnScreenName,
-				Count:           10,
-				ExcludeReplies:  twitter.Bool(true),
-				IncludeRetweets: twitter.Bool(true),
-			})
-			if err != nil {
-				cache.GetLogger().WithField("module", "twitter").Warnf("getting tweets of @%s failed: %s", twitterAccoutnScreenName, err.Error())
-				continue
-			}
+			cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("checking Twitter Account %d", accountID))
 
 			// https://github.com/golang/go/wiki/SliceTricks#reversing
 			for i := len(twitterUserTweets)/2 - 1; i >= 0; i-- {
@@ -417,7 +416,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 						entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
 						tweetToPost := tweet
-						go m.postTweetToChannel(entry.ChannelID, &tweetToPost, twitterUser, entry)
+						go m.postTweetToChannel(entry.ChannelID, &tweetToPost, entry)
 					}
 
 				}
@@ -808,9 +807,9 @@ func (m *Twitter) Action(command string, content string, msg *discordgo.Message,
 	}
 }
 
-func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twitterUser *twitter.User, entry models.TwitterEntry) {
+func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, entry models.TwitterEntry) {
 	if entry.PostMode == models.TwitterPostModeDiscordEmbed || entry.PostMode == models.TwitterPostModeText {
-		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr))
+		content := fmt.Sprintf("%s", fmt.Sprintf(TwitterFriendlyStatus, tweet.User.ScreenName, tweet.IDStr))
 		if entry.PostMode == models.TwitterPostModeText {
 			content = "<" + content + ">"
 		}
@@ -847,10 +846,10 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 	}
 
 	twitterNameModifier := ""
-	if twitterUser.Verified {
+	if tweet.User.Verified {
 		twitterNameModifier += " ☑"
 	}
-	if twitterUser.Protected {
+	if tweet.User.Protected {
 		twitterNameModifier += " 🔒"
 	}
 
@@ -877,17 +876,17 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 
 	channelEmbed := &discordgo.MessageEmbed{
 		Title: helpers.GetText("plugins.twitter.tweet-embed-title") + mediaModifier,
-		URL:   fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr),
+		URL:   fmt.Sprintf(TwitterFriendlyStatus, tweet.User.ScreenName, tweet.IDStr),
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    helpers.GetText("plugins.twitter.embed-footer"),
 			IconURL: helpers.GetText("plugins.twitter.embed-footer-imageurl"),
 		},
 		Description: tweetText,
-		Color:       helpers.GetDiscordColorFromHex(twitterUser.ProfileLinkColor),
+		Color:       helpers.GetDiscordColorFromHex(tweet.User.ProfileLinkColor),
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    fmt.Sprintf("%s (@%s)%s", twitterUser.Name, twitterUser.ScreenName, twitterNameModifier),
-			URL:     fmt.Sprintf(TwitterFriendlyUser, twitterUser.ScreenName),
-			IconURL: twitterUser.ProfileImageURLHttps,
+			Name:    fmt.Sprintf("%s (@%s)%s", tweet.User.Name, tweet.User.ScreenName, twitterNameModifier),
+			URL:     fmt.Sprintf(TwitterFriendlyUser, tweet.User.ScreenName),
+			IconURL: tweet.User.ProfileImageURLHttps,
 		},
 	}
 
@@ -913,7 +912,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, twi
 		}
 	}
 
-	content := fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IDStr))
+	content := fmt.Sprintf("<%s>", fmt.Sprintf(TwitterFriendlyStatus, tweet.User.ScreenName, tweet.IDStr))
 	if entry.MentionRoleID != "" {
 		content = fmt.Sprintf("<@&%s>\n%s", entry.MentionRoleID, content)
 	}
