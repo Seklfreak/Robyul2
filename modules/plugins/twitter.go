@@ -413,7 +413,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 						}
 					}
 					if tweetAlreadyPosted == false {
-						// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s to: #%s", tweet.IDStr, entry.ChannelID))
+						cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via REST): #%s to: #%s", tweet.IDStr, entry.ChannelID))
 						entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: tweet.IDStr, CreatedAt: tweet.CreatedAt})
 						changes = true
 						tweetToPost := tweet
