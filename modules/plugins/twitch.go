@@ -132,7 +132,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 	var entries []models.TwitchEntry
 	var bundledEntries map[string][]models.TwitchEntry
 
-	logger := cache.GetLogger().WithField("module", "twitch")
+	// logger := cache.GetLogger().WithField("module", "twitch")
 
 	for {
 		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitchTable).Find(nil)).All(&entries)
@@ -140,29 +140,28 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 
 		bundledEntries = make(map[string][]models.TwitchEntry, 0)
 
-		// TODO: remove this migration at some point
-		for _, entry := range entries {
-			if entry.TwitchUserID != "" {
-				continue
-			}
-
-			twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
-			if err != nil {
-				continue
-			}
-
-			entry.TwitchUserID = twichUserID
-
-			err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
-			if err != nil {
-				continue
-			}
-
-			logger.WithField("TwitchUserID", twichUserID).
-				WithField("entryID", entry.ID).
-				WithField("TwitchChannelName", entry.TwitchChannelName).
-				Info("set Twitch User ID as part of migration")
-		}
+		// for _, entry := range entries {
+		// 	if entry.TwitchUserID != "" {
+		// 		continue
+		// 	}
+		//
+		// 	twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
+		// 	if err != nil {
+		// 		continue
+		// 	}
+		//
+		// 	entry.TwitchUserID = twichUserID
+		//
+		// 	err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
+		// 	if err != nil {
+		// 		continue
+		// 	}
+		//
+		// 	logger.WithField("TwitchUserID", twichUserID).
+		// 		WithField("entryID", entry.ID).
+		// 		WithField("TwitchChannelName", entry.TwitchChannelName).
+		// 		Info("set Twitch User ID as part of migration")
+		// }
 
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
@@ -188,8 +187,8 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 
 		// TODO: Check multiple entries at once
 		for twitchUserID, entries := range bundledEntries {
-			logger.WithField("TwitchUserID", twitchUserID).
-				WithField("TwitchChannelName", entries[0].TwitchChannelName).Info("checking twitch channel")
+			// logger.WithField("TwitchUserID", twitchUserID).
+			// 	WithField("TwitchChannelName", entries[0].TwitchChannelName).Info("checking twitch channel")
 
 			//cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", twitchChannelName))
 			twitchStatus, err := m.getTwitchStatus(twitchUserID)
