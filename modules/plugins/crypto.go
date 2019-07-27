@@ -4,7 +4,6 @@ import (
 	"sort"
 	"strings"
 
-	"net/http"
 	"time"
 
 	"context"
@@ -32,9 +31,7 @@ func (m *Crypto) Commands() []string {
 
 func (m *Crypto) Init(session *discordgo.Session) {
 	// init crypto client
-	m.cryptoClient = cryptocomparego.NewClient(&http.Client{
-		Timeout: time.Second * 15,
-	})
+	m.cryptoClient = cryptocomparego.NewClient(helpers.DefaultClient)
 }
 
 func (m *Crypto) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

@@ -32,6 +32,12 @@ var (
 	driveService *drive.Service
 )
 
+var (
+	httpClient = &http.Client{
+		Timeout: 3 * time.Second,
+	}
+)
+
 const (
 	driveSearchText       = "\"%s\" in parents and (mimeType = \"image/gif\" or mimeType = \"image/jpeg\" or mimeType = \"image/png\" or mimeType = \"application/vnd.google-apps.folder\")"
 	driveFieldsText       = "nextPageToken, files(id, size, mimeType)"
@@ -959,13 +965,10 @@ func (rp *RandomPictures) postItem(guildID string, channelID string, messageID s
 	linkToHistory := helpers.GetConfig().Path("website.randompictures_base_url").Data().(string) + guildID
 
 	// open link to prepare cache
-	client := &http.Client{
-		Timeout: 3 * time.Second,
-	}
 	request, err := http.NewRequest("GET", linkToPost, nil)
 	if err == nil {
 		request.Header.Set("User-Agent", helpers.DEFAULT_UA)
-		resp, err := client.Do(request)
+		resp, err := httpClient.Do(request)
 		if err != nil {
 			if errU, ok := err.(*url.Error); ok {
 				if !strings.Contains(errU.Err.Error(), "Client.Timeout exceeded while awaiting headers") {

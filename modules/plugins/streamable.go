@@ -63,8 +63,6 @@ func (s *Streamable) Action(command string, content string, msg *discordgo.Messa
 		sourceUrl = msg.Attachments[0].URL
 	}
 
-	httpClient := http.Client{Timeout: time.Second * 10}
-
 	var streamableTitle string
 
 	req, err := http.NewRequest("GET", sourceUrl, nil)

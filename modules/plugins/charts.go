@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -547,10 +546,6 @@ func (m *Charts) GetMelonDailyStats() (time string, ranks []GenericSongScore) {
 }
 
 func (m *Charts) DoMelonRequest(url string) []byte {
-	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}
-
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		panic(err)
@@ -560,7 +555,7 @@ func (m *Charts) DoMelonRequest(url string) []byte {
 	request.Header.Set("Accept-Language", "en_US")
 	request.Header.Set("appKey", helpers.GetConfig().Path("melon.app_key").Data().(string))
 
-	response, err := client.Do(request)
+	response, err := helpers.DefaultClient.Do(request)
 	helpers.Relax(err)
 
 	if response != nil && response.Body != nil {

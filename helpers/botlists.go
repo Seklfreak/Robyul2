@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
 )
@@ -51,11 +50,7 @@ func updateDiscordBotsOrg(numOfGuilds int) (err error) {
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", token)
 
-	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}
-
-	resp, err := client.Do(request)
+	resp, err := DefaultClient.Do(request)
 	if err != nil {
 		return err
 	}

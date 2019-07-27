@@ -15,6 +15,10 @@ import (
 
 var DEFAULT_UA = "Robyul2/" + version.BOT_VERSION + " (https://robyul.chat)"
 
+var DefaultClient = &http.Client{
+	Timeout: time.Duration(15 * time.Second),
+}
+
 // NetGet executes a GET request to url with the Karen/Discord-Bot user-agent
 func NetGet(url string) []byte {
 	return NetGetUA(url, DEFAULT_UA)
@@ -22,11 +26,6 @@ func NetGet(url string) []byte {
 
 // NetGetUA performs a GET request with a custom user-agent
 func NetGetUA(url string, useragent string) []byte {
-	// Allocate client
-	client := &http.Client{
-		Timeout: time.Duration(15 * time.Second),
-	}
-
 	// Prepare request
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -37,7 +36,7 @@ func NetGetUA(url string, useragent string) []byte {
 	request.Header.Set("User-Agent", useragent)
 
 	// Do request
-	response, err := client.Do(request)
+	response, err := DefaultClient.Do(request)
 	Relax(err)
 
 	if response != nil && response.Body != nil {
@@ -57,11 +56,6 @@ func NetGetUA(url string, useragent string) []byte {
 }
 
 func NetGetUAWithError(url string, useragent string) ([]byte, error) {
-	// Allocate client
-	client := &http.Client{
-		Timeout: time.Duration(15 * time.Second),
-	}
-
 	// Prepare request
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -72,7 +66,7 @@ func NetGetUAWithError(url string, useragent string) ([]byte, error) {
 	request.Header.Set("User-Agent", useragent)
 
 	// Do request
-	response, err := client.Do(request)
+	response, err := DefaultClient.Do(request)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -138,11 +132,6 @@ func NetGetUAWithErrorAndTransport(url string, useragent string, transport http.
 }
 
 func NetGetUAWithErrorAndTimeout(url string, useragent string, timeout time.Duration) ([]byte, error) {
-	// Allocate client
-	client := &http.Client{
-		Timeout: timeout,
-	}
-
 	// Prepare request
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -153,7 +142,7 @@ func NetGetUAWithErrorAndTimeout(url string, useragent string, timeout time.Dura
 	request.Header.Set("User-Agent", useragent)
 
 	// Do request
-	response, err := client.Do(request)
+	response, err := DefaultClient.Do(request)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -184,11 +173,6 @@ func NetPost(url string, data string) []byte {
 }
 
 func NetPostUA(url string, data string, useragent string) []byte {
-	// Allocate client
-	client := &http.Client{
-		Timeout: time.Duration(15 * time.Second),
-	}
-
 	// Prepare request
 	request, err := http.NewRequest("POST", url, bytes.NewBufferString(data))
 	if err != nil {
@@ -199,7 +183,7 @@ func NetPostUA(url string, data string, useragent string) []byte {
 	request.Header.Set("Content-Type", "application/json")
 
 	// Do request
-	response, err := client.Do(request)
+	response, err := DefaultClient.Do(request)
 	Relax(err)
 
 	if response != nil && response.Body != nil {
@@ -219,11 +203,6 @@ func NetPostUA(url string, data string, useragent string) []byte {
 }
 
 func NetPostUAWithError(url string, data string, useragent string) (result []byte, err error) {
-	// Allocate client
-	client := &http.Client{
-		Timeout: time.Duration(15 * time.Second),
-	}
-
 	// Prepare request
 	request, err := http.NewRequest("POST", url, bytes.NewBufferString(data))
 	if err != nil {
@@ -234,7 +213,7 @@ func NetPostUAWithError(url string, data string, useragent string) (result []byt
 	request.Header.Set("Content-Type", "application/json")
 
 	// Do request
-	response, err := client.Do(request)
+	response, err := DefaultClient.Do(request)
 	if err != nil {
 		return result, err
 	}

@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"time"
-
 	"net/url"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -16,10 +14,6 @@ import (
 )
 
 func UploadImage(imageData []byte) (hostedUrl string, err error) {
-	client := &http.Client{
-		Timeout: 60 * time.Second,
-	}
-
 	parameters := url.Values{"image": {base64.StdEncoding.EncodeToString(imageData)}}
 
 	req, err := http.NewRequest("POST", "https://api.imgur.com/3/image", strings.NewReader(parameters.Encode()))
@@ -28,7 +22,7 @@ func UploadImage(imageData []byte) (hostedUrl string, err error) {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Client-ID "+GetConfig().Path("imgur.client_id").Data().(string))
-	res, err := client.Do(req)
+	res, err := DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}

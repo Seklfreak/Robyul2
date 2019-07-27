@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"time"
 )
 
 var (
@@ -26,10 +25,6 @@ func TakeHTMLScreenshot(html string, width, height int) (data []byte, err error)
 		return nil, err
 	}
 
-	client := &http.Client{
-		Timeout: time.Duration(30 * time.Second),
-	}
-
 	request, err := http.NewRequest("POST", sushiiImageServerBase+"/html", bytes.NewBuffer(marshalledRequest))
 	if err != nil {
 		return nil, err
@@ -38,7 +33,7 @@ func TakeHTMLScreenshot(html string, width, height int) (data []byte, err error)
 	request.Header.Set("User-Agent", DEFAULT_UA)
 	request.Header.Set("Content-Type", "application/json")
 
-	response, err := client.Do(request)
+	response, err := DefaultClient.Do(request)
 	if err != nil {
 		return nil, err
 	}

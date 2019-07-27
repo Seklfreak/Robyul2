@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"time"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/bwmarrin/discordgo"
@@ -164,16 +162,13 @@ func (l *Lyrics) Action(command string, content string, msg *discordgo.Message, 
 
 func (l *Lyrics) GeniusRequest(location string, object interface{}) error {
 	requestUrl := GeniusApiBaseUrl + location
-	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}
 	req, err := http.NewRequest("GET", requestUrl, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("User-Agent", helpers.DEFAULT_UA)
 	req.Header.Add("Authorization", helpers.GetConfig().Path("genius.token").Data().(string))
-	resp, err := client.Do(req)
+	resp, err := helpers.DefaultClient.Do(req)
 
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()

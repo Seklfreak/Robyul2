@@ -20,9 +20,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-type Twitch struct {
-	httpClient *http.Client
-}
+type Twitch struct{}
 
 const (
 	twitchStatsEndpoint = "https://api.twitch.tv/kraken/streams/%s"
@@ -112,10 +110,6 @@ func (m *Twitch) Commands() []string {
 }
 
 func (m *Twitch) Init(session *discordgo.Session) {
-	m.httpClient = &http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}
-
 	go m.checkTwitchFeedsLoop()
 	cache.GetLogger().WithField("module", "twitch").Info("Started twitch loop (60s)")
 }
@@ -478,7 +472,7 @@ func (m *Twitch) getTwitchID(username string) (string, error) {
 		return "", err
 	}
 
-	resp, err := m.httpClient.Do(req)
+	resp, err := helpers.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -512,7 +506,7 @@ func (m *Twitch) getTwitchStatus(id string) (*TwitchStatus, error) {
 	request.Header.Set("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
 	request.Header.Set("Accept", "application/vnd.twitchtv.v5+json")
 
-	response, err := m.httpClient.Do(request)
+	response, err := helpers.DefaultClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
