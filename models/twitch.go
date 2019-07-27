@@ -11,6 +11,7 @@ type TwitchEntry struct {
 	GuildID           string        // renamed from serverid
 	ChannelID         string
 	TwitchChannelName string
+	TwitchUserID      string
 	IsLive            bool
 	MentionRoleID     string
 }

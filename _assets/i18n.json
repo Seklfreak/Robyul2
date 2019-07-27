@@ -298,7 +298,8 @@
       "channel-added-success": "Added Twitch Channel `%s` to the Channel <#%s>!",
       "channel-delete-success": "Deleted Twitch Channel `%s` from the Database!",
       "channel-delete-not-found-error": "Unable to find Twitch Channel in the Database!",
-      "channel-list-no-channels-error": "No Twitch Channels found on this server!"
+      "channel-list-no-channels-error": "No Twitch Channels found on this server!",
+      "channel-not-found": "Twitch channel not found!"
     },
     "charts": {
       "realtime-melon-embed-title": "**%s KST** | Melon Realtime Charts",

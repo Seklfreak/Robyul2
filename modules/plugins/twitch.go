@@ -1,16 +1,15 @@
 package plugins
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"net/url"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -18,16 +17,32 @@ import (
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
-	raven "github.com/getsentry/raven-go"
 	"github.com/globalsign/mgo/bson"
 )
 
-type Twitch struct{}
+type Twitch struct {
+	httpClient *http.Client
+}
 
 const (
 	twitchStatsEndpoint = "https://api.twitch.tv/kraken/streams/%s"
+	twitchUsersEndpoint = "https://api.twitch.tv/helix/users?login=%s"
 	twitchHexColor      = "#6441a5"
 )
+
+type TwitchUser struct {
+	Data []struct {
+		ID              string `json:"id"`
+		Login           string `json:"login"`
+		DisplayName     string `json:"display_name"`
+		Type            string `json:"type"`
+		BroadcasterType string `json:"broadcaster_type"`
+		Description     string `json:"description"`
+		ProfileImageURL string `json:"profile_image_url"`
+		OfflineImageURL string `json:"offline_image_url"`
+		ViewCount       int    `json:"view_count"`
+	} `json:"data"`
+}
 
 type TwitchStatus struct {
 	Stream struct {
@@ -97,6 +112,10 @@ func (m *Twitch) Commands() []string {
 }
 
 func (m *Twitch) Init(session *discordgo.Session) {
+	m.httpClient = &http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
+
 	go m.checkTwitchFeedsLoop()
 	cache.GetLogger().WithField("module", "twitch").Info("Started twitch loop (60s)")
 }
@@ -113,11 +132,37 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 	var entries []models.TwitchEntry
 	var bundledEntries map[string][]models.TwitchEntry
 
+	logger := cache.GetLogger().WithField("module", "twitch")
+
 	for {
 		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitchTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
 
 		bundledEntries = make(map[string][]models.TwitchEntry, 0)
+
+		// TODO: remove this migration at some point
+		for _, entry := range entries {
+			if entry.TwitchUserID != "" {
+				continue
+			}
+
+			twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
+			if err != nil {
+				continue
+			}
+
+			entry.TwitchUserID = twichUserID
+
+			err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
+			if err != nil {
+				continue
+			}
+
+			logger.WithField("TwitchUserID", twichUserID).
+				WithField("entryID", entry.ID).
+				WithField("TwitchChannelName", entry.TwitchChannelName).
+				Info("set Twitch User ID as part of migration")
+		}
 
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
@@ -127,10 +172,14 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 				continue
 			}
 
-			if _, ok := bundledEntries[entry.TwitchChannelName]; ok {
-				bundledEntries[entry.TwitchChannelName] = append(bundledEntries[entry.TwitchChannelName], entry)
+			if entry.TwitchUserID == "" {
+				continue
+			}
+
+			if _, ok := bundledEntries[entry.TwitchUserID]; ok {
+				bundledEntries[entry.TwitchUserID] = append(bundledEntries[entry.TwitchUserID], entry)
 			} else {
-				bundledEntries[entry.TwitchChannelName] = []models.TwitchEntry{entry}
+				bundledEntries[entry.TwitchUserID] = []models.TwitchEntry{entry}
 			}
 		}
 
@@ -138,27 +187,31 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 		start := time.Now()
 
 		// TODO: Check multiple entries at once
-		for twitchChannelName, entries := range bundledEntries {
+		for twitchUserID, entries := range bundledEntries {
+			logger.WithField("TwitchUserID", twitchUserID).
+				WithField("TwitchChannelName", entries[0].TwitchChannelName).Info("checking twitch channel")
+
 			//cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", twitchChannelName))
-			twitchStatus := m.getTwitchStatus(twitchChannelName)
+			twitchStatus, err := m.getTwitchStatus(twitchUserID)
+			if err != nil {
+				continue
+			}
 
 			for _, entry := range entries {
 				changes := false
-				if twitchStatus.Links.Channel != "" {
-					if entry.IsLive == false {
-						if twitchStatus.Stream.ID != 0 {
-							go func(gEntry models.TwitchEntry, gTwitchStatus TwitchStatus) {
-								defer helpers.Recover()
-								m.postTwitchLiveToChannel(gEntry, gTwitchStatus)
-							}(entry, twitchStatus)
-							entry.IsLive = true
-							changes = true
-						}
-					} else {
-						if twitchStatus.Stream.ID == 0 {
-							entry.IsLive = false
-							changes = true
-						}
+				if entry.IsLive == false {
+					if twitchStatus.Stream.ID != 0 {
+						go func(gEntry models.TwitchEntry, gTwitchStatus TwitchStatus) {
+							defer helpers.Recover()
+							m.postTwitchLiveToChannel(gEntry, gTwitchStatus)
+						}(entry, *twitchStatus)
+						entry.IsLive = true
+						changes = true
+					}
+				} else {
+					if twitchStatus.Stream.ID == 0 {
+						entry.IsLive = false
+						changes = true
 					}
 				}
 
@@ -229,6 +282,16 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 						}
 					}
 				}
+
+				userID, err := m.getTwitchID(targetTwitchChannelName)
+				if err != nil {
+					if strings.Contains(err.Error(), "user not found") {
+						helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.channel-not-found"))
+						return
+					}
+					helpers.Relax(err)
+				}
+
 				// create new entry in db
 				newID, err := helpers.MDbInsert(
 					models.TwitchTable,
@@ -236,6 +299,7 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 						GuildID:           targetChannel.GuildID,
 						ChannelID:         targetChannel.ID,
 						TwitchChannelName: targetTwitchChannelName,
+						TwitchUserID:      userID,
 						IsLive:            false,
 						MentionRoleID:     mentionRole.ID,
 					},
@@ -345,85 +409,136 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 				return
 			}
 			session.ChannelTyping(msg.ChannelID)
-			twitchStatus := m.getTwitchStatus(args[0])
-			if twitchStatus.Stream.ID == 0 {
-				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
-				return
-			} else {
-				twitchChannelEmbed := &discordgo.MessageEmbed{
-					Title:  helpers.GetTextF("plugins.twitch.channel-embed-title", twitchStatus.Stream.Channel.DisplayName, twitchStatus.Stream.Channel.Name),
-					URL:    twitchStatus.Stream.Channel.URL,
-					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitch.embed-footer")},
-					Fields: []*discordgo.MessageEmbedField{
-						{Name: "Viewers", Value: humanize.Comma(int64(twitchStatus.Stream.Viewers)), Inline: true},
-						{Name: "Followers", Value: humanize.Comma(int64(twitchStatus.Stream.Channel.Followers)), Inline: true},
-						{Name: "Total Views", Value: humanize.Comma(int64(twitchStatus.Stream.Channel.Views)), Inline: true}},
-					Color: helpers.GetDiscordColorFromHex(twitchHexColor),
+			twitchUserID, err := m.getTwitchID(args[0])
+			if err != nil {
+				if strings.Contains(err.Error(), "user not found") {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
+					return
 				}
-				if twitchStatus.Stream.Channel.Logo != "" {
-					twitchChannelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: twitchStatus.Stream.Channel.Logo}
-				}
-				if twitchStatus.Stream.Channel.VideoBanner != "" {
-					twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Channel.VideoBanner}
-				}
-				if twitchStatus.Stream.Preview.Medium != "" {
-					twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10)}
-				}
-				if twitchStatus.Stream.Channel.Status != "" {
-					twitchChannelEmbed.Description += fmt.Sprintf("**%s**\n", twitchStatus.Stream.Channel.Status)
-				}
-				if twitchStatus.Stream.Game != "" {
-					twitchChannelEmbed.Description += fmt.Sprintf("playing **%s**\n", twitchStatus.Stream.Game)
-				}
-				if twitchChannelEmbed.Description != "" {
-					twitchChannelEmbed.Description = strings.Trim(twitchChannelEmbed.Description, "\n")
-				}
-				_, err := helpers.SendEmbed(msg.ChannelID, twitchChannelEmbed)
 				helpers.Relax(err)
 				return
 			}
+
+			twitchStatus, err := m.getTwitchStatus(twitchUserID)
+			if err != nil {
+				helpers.Relax(err)
+				return
+			}
+
+			twitchChannelEmbed := &discordgo.MessageEmbed{
+				Title:  helpers.GetTextF("plugins.twitch.channel-embed-title", twitchStatus.Stream.Channel.DisplayName, twitchStatus.Stream.Channel.Name),
+				URL:    twitchStatus.Stream.Channel.URL,
+				Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetText("plugins.twitch.embed-footer")},
+				Fields: []*discordgo.MessageEmbedField{
+					{Name: "Viewers", Value: humanize.Comma(int64(twitchStatus.Stream.Viewers)), Inline: true},
+					{Name: "Followers", Value: humanize.Comma(int64(twitchStatus.Stream.Channel.Followers)), Inline: true},
+					{Name: "Total Views", Value: humanize.Comma(int64(twitchStatus.Stream.Channel.Views)), Inline: true}},
+				Color: helpers.GetDiscordColorFromHex(twitchHexColor),
+			}
+			if twitchStatus.Stream.Channel.Logo != "" {
+				twitchChannelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: twitchStatus.Stream.Channel.Logo}
+			}
+			if twitchStatus.Stream.Channel.VideoBanner != "" {
+				twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Channel.VideoBanner}
+			}
+			if twitchStatus.Stream.Preview.Medium != "" {
+				twitchChannelEmbed.Image = &discordgo.MessageEmbedImage{URL: twitchStatus.Stream.Preview.Medium + "?" + strconv.FormatInt(time.Now().Unix(), 10)}
+			}
+			if twitchStatus.Stream.Channel.Status != "" {
+				twitchChannelEmbed.Description += fmt.Sprintf("**%s**\n", twitchStatus.Stream.Channel.Status)
+			}
+			if twitchStatus.Stream.Game != "" {
+				twitchChannelEmbed.Description += fmt.Sprintf("playing **%s**\n", twitchStatus.Stream.Game)
+			}
+			if twitchChannelEmbed.Description != "" {
+				twitchChannelEmbed.Description = strings.Trim(twitchChannelEmbed.Description, "\n")
+			}
+			_, err = helpers.SendEmbed(msg.ChannelID, twitchChannelEmbed)
+			helpers.Relax(err)
+			return
 		}
 	}
 }
 
-func (m *Twitch) getTwitchStatus(name string) TwitchStatus {
-	var twitchStatus TwitchStatus
-
-	client := &http.Client{
-		Timeout: time.Duration(10 * time.Second),
+func (m *Twitch) newTwitchRequest(method, uri string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, uri, body)
+	if err != nil {
+		return nil, err
 	}
 
-	request, err := http.NewRequest("GET", fmt.Sprintf(twitchStatsEndpoint, name), nil)
+	req.Header.Add("User-Agent", helpers.DEFAULT_UA)
+	req.Header.Add("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
+	req.Header.Add("Accept", "application/vnd.twitchtv.v5+json")
+
+	return req, nil
+}
+
+func (m *Twitch) getTwitchID(username string) (string, error) {
+	req, err := m.newTwitchRequest(http.MethodGet, fmt.Sprintf(twitchUsersEndpoint, username), nil)
 	if err != nil {
-		panic(err)
+		return "", err
+	}
+
+	resp, err := m.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var twitchUser TwitchUser
+	err = json.Unmarshal(body, &twitchUser)
+	if err != nil {
+		return "", err
+	}
+
+	if len(twitchUser.Data) == 0 ||
+		twitchUser.Data[0].ID == "" {
+		return "", errors.New("user not found")
+	}
+
+	return twitchUser.Data[0].ID, nil
+}
+
+func (m *Twitch) getTwitchStatus(id string) (*TwitchStatus, error) {
+	request, err := m.newTwitchRequest(http.MethodGet, fmt.Sprintf(twitchStatsEndpoint, id), nil)
+	if err != nil {
+		return nil, err
 	}
 
 	request.Header.Set("User-Agent", helpers.DEFAULT_UA)
 	request.Header.Set("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
+	request.Header.Set("Accept", "application/vnd.twitchtv.v5+json")
 
-	response, err := client.Do(request)
+	response, err := m.httpClient.Do(request)
 	if err != nil {
-		if errU, ok := err.(*url.Error); ok {
-			cache.GetLogger().WithField("module", "twitch").Warnf("twitch status request failed: %#v", errU.Err)
-			return twitchStatus
-		} else {
-			raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-		}
-		panic(err)
+		return nil, err
 	}
+	defer response.Body.Close()
 
 	if response != nil && response.Body != nil {
 		defer response.Body.Close()
 	}
 
-	buf := bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, response.Body)
+	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	json.Unmarshal(buf.Bytes(), &twitchStatus)
-	return twitchStatus
+	var twitchStatus TwitchStatus
+	err = json.Unmarshal(body, &twitchStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	if twitchStatus.Stream.ID == 0 {
+		return nil, errors.New("channel offline")
+	}
+
+	return &twitchStatus, nil
 }
 
 func (m *Twitch) postTwitchLiveToChannel(entry models.TwitchEntry, twitchStatus TwitchStatus) {

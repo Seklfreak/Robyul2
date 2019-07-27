@@ -344,7 +344,8 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 				IncludeRetweets: twitter.Bool(true),
 			})
 			if err != nil {
-				if strings.Contains(err.Error(), "50 User not found") ||
+				if strings.Contains(err.Error(), "34 Sorry, that page does not exist") ||
+					strings.Contains(err.Error(), "50 User not found") ||
 					strings.Contains(err.Error(), "63 User has been suspended") {
 					for _, entry := range entries {
 						err = helpers.MDbDelete(models.TwitterTable, entry.ID)
@@ -359,7 +360,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 					}
 					continue
 				}
-				cache.GetLogger().WithField("module", "twitter").Warnf("getting tweets of @%s failed: %d", accountID, err.Error())
+				cache.GetLogger().WithField("module", "twitter").Warnf("getting tweets of @%d failed: %s", accountID, err.Error())
 				continue
 			}
 
