@@ -18,7 +18,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
-	"github.com/sirupsen/logrus"
 )
 
 type Twitch struct{}
@@ -127,7 +126,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 	var entries []models.TwitchEntry
 	var bundledEntries map[string][]models.TwitchEntry
 
-	// logger := cache.GetLogger().WithField("module", "twitch")
+	logger := cache.GetLogger().WithField("module", "twitch")
 
 	for {
 		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitchTable).Find(nil)).All(&entries)
@@ -177,7 +176,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 			}
 		}
 
-		cache.GetLogger().WithField("module", "twitch").Infof("checking %d channels for %d feeds", len(bundledEntries), len(entries))
+		logger.Infof("checking %d channels for %d feeds", len(bundledEntries), len(entries))
 		start := time.Now()
 
 		// TODO: Check multiple entries at once
@@ -190,10 +189,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 			if err != nil &&
 				!strings.Contains(err.Error(), "user not found") &&
 				!strings.Contains(err.Error(), "channel offline") {
-				cache.GetLogger().WithFields(logrus.Fields{
-					"module":       "twitch",
-					"twitchUserID": twitchUserID,
-				}).WithError(err).Error("failure checking twitch channel")
+				logger.WithField("twitchUserID", twitchUserID).WithError(err).Error("failure checking twitch channel")
 				continue
 			}
 
@@ -223,7 +219,7 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 		}
 
 		elapsed := time.Since(start)
-		cache.GetLogger().WithField("module", "twitch").Infof("checked %d channels for %d feeds, took %s", len(bundledEntries), len(entries), elapsed)
+		logger.Infof("checked %d channels for %d feeds, took %s", len(bundledEntries), len(entries), elapsed)
 		metrics.TwitchRefreshTime.Set(elapsed.Seconds())
 
 		time.Sleep(30 * time.Second)
