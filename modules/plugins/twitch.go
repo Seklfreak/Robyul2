@@ -18,6 +18,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
+	"github.com/sirupsen/logrus"
 )
 
 type Twitch struct{}
@@ -186,14 +187,20 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 
 			//cache.GetLogger().WithField("module", "twitch").Info(fmt.Sprintf("checking Twitch Channel %s", twitchChannelName))
 			twitchStatus, err := m.getTwitchStatus(twitchUserID)
-			if err != nil {
+			if err != nil &&
+				!strings.Contains(err.Error(), "user not found") &&
+				!strings.Contains(err.Error(), "channel offline") {
+				cache.GetLogger().WithFields(logrus.Fields{
+					"module":       "twitch",
+					"twitchUserID": twitchUserID,
+				}).WithError(err).Error("failure checking twitch channel")
 				continue
 			}
 
 			for _, entry := range entries {
 				changes := false
-				if entry.IsLive == false {
-					if twitchStatus.Stream.ID != 0 {
+				if !entry.IsLive {
+					if twitchStatus != nil && twitchStatus.Stream.ID != 0 {
 						go func(gEntry models.TwitchEntry, gTwitchStatus TwitchStatus) {
 							defer helpers.Recover()
 							m.postTwitchLiveToChannel(gEntry, gTwitchStatus)
@@ -202,13 +209,13 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 						changes = true
 					}
 				} else {
-					if twitchStatus.Stream.ID == 0 {
+					if twitchStatus == nil || twitchStatus.Stream.ID == 0 {
 						entry.IsLive = false
 						changes = true
 					}
 				}
 
-				if changes == true {
+				if changes {
 					err = helpers.MDbUpdateWithoutLogging(models.TwitchTable, entry.ID, entry)
 					helpers.Relax(err)
 				}
@@ -414,6 +421,10 @@ func (m *Twitch) Action(command string, content string, msg *discordgo.Message, 
 
 			twitchStatus, err := m.getTwitchStatus(twitchUserID)
 			if err != nil {
+				if strings.Contains(err.Error(), "channel offline") {
+					helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.twitch.no-channel-information"))
+					return
+				}
 				helpers.Relax(err)
 				return
 			}
