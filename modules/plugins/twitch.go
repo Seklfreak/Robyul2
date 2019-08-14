@@ -135,28 +135,28 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 
 		bundledEntries = make(map[string][]models.TwitchEntry, 0)
 
-		// for _, entry := range entries {
-		// 	if entry.TwitchUserID != "" {
-		// 		continue
-		// 	}
-		//
-		// 	twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
-		// 	if err != nil {
-		// 		continue
-		// 	}
-		//
-		// 	entry.TwitchUserID = twichUserID
-		//
-		// 	err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
-		// 	if err != nil {
-		// 		continue
-		// 	}
-		//
-		// 	logger.WithField("TwitchUserID", twichUserID).
-		// 		WithField("entryID", entry.ID).
-		// 		WithField("TwitchChannelName", entry.TwitchChannelName).
-		// 		Info("set Twitch User ID as part of migration")
-		// }
+		for _, entry := range entries {
+			if entry.TwitchUserID != "" {
+				continue
+			}
+
+			twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
+			if err != nil {
+				continue
+			}
+
+			entry.TwitchUserID = twichUserID
+
+			err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
+			if err != nil {
+				continue
+			}
+
+			logger.WithField("TwitchUserID", twichUserID).
+				WithField("entryID", entry.ID).
+				WithField("TwitchChannelName", entry.TwitchChannelName).
+				Info("set Twitch User ID as part of migration")
+		}
 
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
