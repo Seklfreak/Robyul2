@@ -66,7 +66,7 @@ func (m *Handler) postPostToChannel(channelID string, post InstagramPostInformat
 					content = append(content, "")
 				}
 
-				fmt.Println("adding " + mediaUrl + " to content at " + strconv.Itoa(index))
+				// fmt.Println("adding " + mediaUrl + " to content at " + strconv.Itoa(index))
 				content[index] += "\n" + mediaUrl
 			}
 			channelEmbed.Description += fmt.Sprintf("[%s](%s) ", emojis.From(strconv.Itoa(i+1)), mediaUrl)

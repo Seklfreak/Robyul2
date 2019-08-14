@@ -879,7 +879,7 @@ func (m *Twitter) postTweetToChannel(channelID string, tweet *twitter.Tweet, ent
 		Title: helpers.GetText("plugins.twitter.tweet-embed-title") + mediaModifier,
 		URL:   fmt.Sprintf(TwitterFriendlyStatus, tweet.User.ScreenName, tweet.IDStr),
 		Footer: &discordgo.MessageEmbedFooter{
-			Text:    helpers.GetText("plugins.twitter.embed-footer"),
+			Text:    helpers.GetText("plugins.twitter.embed-footer") + " via HTTP",
 			IconURL: helpers.GetText("plugins.twitter.embed-footer-imageurl"),
 		},
 		Description: tweetText,
@@ -993,7 +993,7 @@ func (m *Twitter) postAnacondaTweetToChannel(channelID string, tweet *anaconda.T
 		Title: helpers.GetText("plugins.twitter.tweet-embed-title") + mediaModifier,
 		URL:   fmt.Sprintf(TwitterFriendlyStatus, twitterUser.ScreenName, tweet.IdStr),
 		Footer: &discordgo.MessageEmbedFooter{
-			Text:    helpers.GetText("plugins.twitter.embed-footer"),
+			Text:    helpers.GetText("plugins.twitter.embed-footer") + " via Streaming",
 			IconURL: helpers.GetText("plugins.twitter.embed-footer-imageurl"),
 		},
 		Description: tweetText,
