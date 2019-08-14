@@ -132,30 +132,31 @@ func (m *Twitch) checkTwitchFeedsLoop() {
 		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.TwitchTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
 
+		// migration from twitch channel names to twitch user ids
+		// for _, entry := range entries {
+		// 	if entry.TwitchUserID != "" {
+		// 		continue
+		// 	}
+		//
+		// 	twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
+		// 	if err != nil {
+		// 		continue
+		// 	}
+		//
+		// 	entry.TwitchUserID = twichUserID
+		//
+		// 	err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
+		// 	if err != nil {
+		// 		continue
+		// 	}
+		//
+		// 	logger.WithField("TwitchUserID", twichUserID).
+		// 		WithField("entryID", entry.ID).
+		// 		WithField("TwitchChannelName", entry.TwitchChannelName).
+		// 		Info("set Twitch User ID as part of migration")
+		// }
+
 		bundledEntries = make(map[string][]models.TwitchEntry, 0)
-
-		for _, entry := range entries {
-			if entry.TwitchUserID != "" {
-				continue
-			}
-
-			twichUserID, err := m.getTwitchID(entry.TwitchChannelName)
-			if err != nil {
-				continue
-			}
-
-			entry.TwitchUserID = twichUserID
-
-			err = helpers.MDbUpdate(models.TwitchTable, entry.ID, entry)
-			if err != nil {
-				continue
-			}
-
-			logger.WithField("TwitchUserID", twichUserID).
-				WithField("entryID", entry.ID).
-				WithField("TwitchChannelName", entry.TwitchChannelName).
-				Info("set Twitch User ID as part of migration")
-		}
 
 		for _, entry := range entries {
 			channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
