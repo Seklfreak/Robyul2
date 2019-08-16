@@ -18,6 +18,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var whitelistMods = []string{
+	"257900648618655746", // mali
+	"460594042007453697", // rachel
+}
+
+func isWhitelistMod(userID string) bool {
+	if helpers.IsRobyulMod(userID) {
+		return true
+	}
+
+	for _, whitelistModID := range whitelistMods {
+		if whitelistModID == userID {
+			return true
+		}
+	}
+
+	return false
+}
+
 type autoleaverAction func(args []string, in *discordgo.Message, out **discordgo.MessageSend) (next autoleaverAction)
 
 type Autoleaver struct{}
@@ -149,7 +168,7 @@ func (a *Autoleaver) actionStart(args []string, in *discordgo.Message, out **dis
 }
 
 func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsRobyulMod(in.Author.ID) {
+	if !isWhitelistMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
@@ -312,7 +331,7 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 }
 
 func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	if !helpers.IsRobyulMod(in.Author.ID) {
+	if !isWhitelistMod(in.Author.ID) {
 		*out = a.newMsg(helpers.GetText("robyulmod.no_permission"))
 		return a.actionFinish
 	}
