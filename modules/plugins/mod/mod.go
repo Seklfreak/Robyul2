@@ -779,7 +779,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		})
 		return
 	case "edit": // [p]edit <channel> <message id> <message>
-		helpers.RequireAdmin(msg, func() {
+		helpers.RequireMod(msg, func() {
 			args := strings.Fields(content)
 			if len(args) >= 3 {
 				sourceChannel, err := helpers.GetChannel(msg.ChannelID)
