@@ -8,6 +8,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -25,6 +26,7 @@ const (
 )
 
 // map of messageID to pagedEmbedMessage
+var pagedEmbededMessagesLock sync.RWMutex
 var pagedEmbededMessages map[string]*pagedEmbedMessage
 var validReactions map[string]bool
 
@@ -58,7 +60,7 @@ func init() {
 //  mainly used on bot uninit to clean embeds
 func RemoveReactionsFromPagedEmbeds() {
 	// TODO: sync group? Without blocking bot shutdown
-	for _, pagedEmbed := range pagedEmbededMessages {
+	for _, pagedEmbed := range GetAllPagedMessages() {
 		go func(pagedEmbed *pagedEmbedMessage) {
 			cache.GetSession().MessageReactionsRemoveAll(pagedEmbed.channelID, pagedEmbed.messageID)
 		}(pagedEmbed)
@@ -67,8 +69,37 @@ func RemoveReactionsFromPagedEmbeds() {
 
 // GetPagedMessage will return the paged message if there is one, otherwill will return nil
 func GetPagedMessage(messageID string) *pagedEmbedMessage {
+	pagedEmbededMessagesLock.RLock()
+	defer pagedEmbededMessagesLock.RUnlock()
+
 	pagedMessaged, _ := pagedEmbededMessages[messageID]
 	return pagedMessaged
+}
+
+func GetAllPagedMessages() map[string]*pagedEmbedMessage {
+	pagedEmbededMessagesLock.RLock()
+	defer pagedEmbededMessagesLock.RUnlock()
+
+	messagesCopy := make(map[string]*pagedEmbedMessage)
+	for key, value := range pagedEmbededMessages {
+		messagesCopy[key] = value
+	}
+
+	return messagesCopy
+}
+
+func DeletePagedMessage(messageID string) {
+	pagedEmbededMessagesLock.Lock()
+	defer pagedEmbededMessagesLock.Unlock()
+
+	delete(pagedEmbededMessages, messageID)
+}
+
+func SetPagedMessage(messageID string, message *pagedEmbedMessage) {
+	pagedEmbededMessagesLock.Lock()
+	defer pagedEmbededMessagesLock.Unlock()
+
+	pagedEmbededMessages[messageID] = message
 }
 
 // CreatePagedMessage creates the paged messages
@@ -99,7 +130,7 @@ func SendPagedMessage(msg *discordgo.Message, embed *discordgo.MessageEmbed, fie
 
 	pagedMessage.setupAndSendFirstMessage()
 
-	pagedEmbededMessages[pagedMessage.messageID] = pagedMessage
+	SetPagedMessage(pagedMessage.messageID, pagedMessage)
 	return nil
 }
 
@@ -133,7 +164,7 @@ func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSen
 
 	pagedMessage.setupAndSendFirstMessage()
 
-	pagedEmbededMessages[pagedMessage.messageID] = pagedMessage
+	SetPagedMessage(pagedMessage.messageID, pagedMessage)
 	return nil
 }
 
@@ -148,7 +179,7 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 
 	// check if user who made the embed message is closing it
 	if X_EMOJI == reaction.Emoji.Name {
-		delete(pagedEmbededMessages, reaction.MessageID)
+		DeletePagedMessage(reaction.MessageID)
 		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
 		return
 	}
@@ -224,8 +255,8 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 		originalmsgID := p.messageID
 		p.messageID = sentMessage[0].ID
 		p.addReactionsToMessage()
-		pagedEmbededMessages[sentMessage[0].ID] = p
-		delete(pagedEmbededMessages, originalmsgID)
+		SetPagedMessage(sentMessage[0].ID, p)
+		DeletePagedMessage(originalmsgID)
 	} else {
 
 		// get start and end fields based on current page and fields per page
@@ -382,7 +413,7 @@ func (p *pagedEmbedMessage) hasError(err error) bool {
 	}
 
 	// delete from current embeds
-	delete(pagedEmbededMessages, p.messageID)
+	DeletePagedMessage(p.messageID)
 
 	// check if error is a permissions error
 	if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeMissingPermissions {
