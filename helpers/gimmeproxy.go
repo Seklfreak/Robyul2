@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	PROXY_CHECK_URLS = []string{"https://instagram.com"}
+	PROXY_CHECK_URLS = []string{"https://robyul.chat"}
 )
 
 type gimmeProxyResult struct {
