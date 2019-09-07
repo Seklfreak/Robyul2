@@ -210,31 +210,11 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 	}
 
 	// search channel
-	var channelId, channelTitle string
+	var channelId string
 	// try ID
 	directItem, err := h.service.GetChannelSingle(args[2])
 	if err == nil && directItem != nil {
 		channelId = directItem.Id
-		channelTitle = directItem.Snippet.Title
-	}
-
-	if channelId == "" {
-		// try searching for text
-		yc, err := h.service.SearchQuerySingle(args[2:len(args)-1], "channel")
-		if err != nil {
-			logger().Error(err)
-			*out = h.newMsg(err.Error())
-			return h.actionFinish
-		}
-		if yc != nil {
-			// Very few channels only have snippet.ChannelID
-			// Maybe it's youtube API bug.
-			channelId = yc.Id.ChannelId
-			if channelId == "" {
-				channelId = yc.Snippet.ChannelId
-			}
-			channelTitle = yc.Snippet.ChannelTitle
-		}
 	}
 
 	entry := models.YoutubeChannelEntry{
@@ -243,11 +223,10 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 		NextCheckTime:           time.Now().Unix(),
 		LastSuccessfulCheckTime: time.Now().Unix(),
 
-		YoutubeChannelID:   channelId,
-		YoutubeChannelName: channelTitle,
+		YoutubeChannelID: channelId,
 	}
 
-	if entry.YoutubeChannelID == "" || entry.YoutubeChannelName == "" {
+	if entry.YoutubeChannelID == "" {
 		*out = h.newMsg("plugins.youtube.channel-not-found")
 		return h.actionFinish
 	}
@@ -276,14 +255,10 @@ func (h *Handler) actionAddChannel(args []string, in *discordgo.Message, out **d
 				Key:   "youtube_channel_ytchannelid",
 				Value: channelId,
 			},
-			{
-				Key:   "youtube_channel_ytchannelname",
-				Value: channelTitle,
-			},
 		}, false)
 	helpers.RelaxLog(err)
 
-	*out = h.newMsg("plugins.youtube.channel-added-success", channelTitle, dc.ID)
+	*out = h.newMsg("plugins.youtube.channel-added-success", channelId, dc.ID)
 	return h.actionFinish
 }
 
@@ -369,7 +344,7 @@ func (h *Handler) actionListChannel(args []string, in *discordgo.Message, out **
 
 	msg := ""
 	for _, e := range entries {
-		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", helpers.MdbIdToHuman(e.ID), e.YoutubeChannelName, e.ChannelID)
+		msg += helpers.GetTextF("plugins.youtube.channel-list-entry", helpers.MdbIdToHuman(e.ID), e.YoutubeChannelID, e.ChannelID)
 	}
 
 	for _, resultPage := range helpers.Pagify(msg, "\n") {

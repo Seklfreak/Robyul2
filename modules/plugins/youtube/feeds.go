@@ -106,7 +106,7 @@ func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeCh
 	// get updated feeds
 	feeds, err := f.service.GetChannelFeeds(e.YoutubeChannelID, publishedAfter)
 	if err != nil {
-		logger().Warn("check channel feeds error: " + err.Error() + " channel name: " + e.YoutubeChannelName + "id: " + e.YoutubeChannelID)
+		logger().Warn("check channel feeds error: " + err.Error() + " id: " + e.YoutubeChannelID)
 		return e
 	}
 

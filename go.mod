@@ -43,12 +43,10 @@ require (
 	github.com/go-ini/ini v1.40.0 // indirect
 	github.com/go-redis/cache v6.3.5+incompatible
 	github.com/go-redis/redis v6.14.2+incompatible
-	github.com/google/pprof v0.0.0-20181206194817-3ea8567a2e57 // indirect
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/huandu/facebook v2.3.1+incompatible
-	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/inconshreveable/go-keen v0.0.0-20170228023802-f7cb12356363
 	github.com/json-iterator/go v1.1.5
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
@@ -87,7 +85,6 @@ require (
 	github.com/xuri/excelize v1.4.0
 	github.com/zonedb/zonedb v0.0.0-20181223081958-1e4b8eea6f56 // indirect
 	go4.org v0.0.0-20181109185143-00e24f1b2599 // indirect
-	golang.org/x/arch v0.0.0-20181203225421-5a4828bb7045 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890
@@ -105,3 +102,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 	mvdan.cc/xurls v1.1.0
 )
+
+go 1.13

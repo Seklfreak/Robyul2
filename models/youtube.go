@@ -17,7 +17,6 @@ type YoutubeChannelEntry struct {
 
 	// Youtube channel specific fields.
 	YoutubeChannelID    string
-	YoutubeChannelName  string
 	YoutubePostedVideos []string
 }
 
