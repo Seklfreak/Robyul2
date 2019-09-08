@@ -97,9 +97,10 @@ func (t *Twitter) Init(session *discordgo.Session) {
 						entryID := entry.ID
 						t.lockEntry(entryID)
 
+						var localEntry models.TwitterEntry
 						err := helpers.MdbOneWithoutLogging(
 							helpers.MdbCollection(models.TwitterTable).Find(bson.M{"_id": entry.ID}),
-							&entry,
+							&localEntry,
 						)
 						if err != nil {
 							t.unlockEntry(entryID)
@@ -110,23 +111,23 @@ func (t *Twitter) Init(session *discordgo.Session) {
 						changes := false
 						tweetAlreadyPosted := false
 
-						for _, postedTweet := range entry.PostedTweets {
+						for _, postedTweet := range localEntry.PostedTweets {
 							if postedTweet.ID == item.IdStr {
 								tweetAlreadyPosted = true
 							}
 						}
 						if tweetAlreadyPosted == false {
 							// cache.GetLogger().WithField("module", "twitter").Info(fmt.Sprintf("posting tweet (via streaming): #%s to: #%s", item.IdStr, entry.ChannelID))
-							entry.PostedTweets = append(entry.PostedTweets, models.TwitterTweetEntry{ID: item.IdStr, CreatedAt: item.CreatedAt})
+							localEntry.PostedTweets = append(localEntry.PostedTweets, models.TwitterTweetEntry{ID: item.IdStr, CreatedAt: item.CreatedAt})
 							changes = true
-							go t.postAnacondaTweetToChannel(entry.ChannelID, &item, &item.User, entry)
+							go t.postAnacondaTweetToChannel(localEntry.ChannelID, &item, &item.User, localEntry)
 						}
 
 						if changes == true {
 							err = helpers.MDbUpsertIDWithoutLogging(
 								models.TwitterTable,
-								entry.ID,
-								entry,
+								localEntry.ID,
+								localEntry,
 							)
 							if err != nil {
 								t.unlockEntry(entryID)
@@ -147,13 +148,13 @@ func (t *Twitter) Init(session *discordgo.Session) {
 	go t.startTwitterStream()
 	go t.updateTwitterStreamLoop()
 
-	go func() {
-		// wait for twitterEntriesCache to initialize
-		time.Sleep(30 * time.Second)
-		// TODO: only to REST API check on start or after stream restarts
-		go t.checkTwitterFeedsLoop()
-		cache.GetLogger().WithField("module", "twitter").Info("started twitter loop (10m)")
-	}()
+	// go func() {
+	// 	// wait for twitterEntriesCache to initialize
+	// 	time.Sleep(30 * time.Second)
+	// 	// TODO: only to REST API check on start or after stream restarts
+	// 	go t.checkTwitterFeedsLoop()
+	// 	cache.GetLogger().WithField("module", "twitter").Info("started twitter loop (10m)")
+	// }()
 }
 
 func (t *Twitter) Uninit(session *discordgo.Session) {
@@ -168,13 +169,21 @@ func (t *Twitter) startTwitterStream() {
 
 	var err error
 	var accountIDs []string
+	var idInSlice bool
 
 	err = helpers.MDbIterWithoutLogging(
-		helpers.MdbCollection(models.TwitterTable).Find(nil).Sort("_id"),
+		helpers.MdbCollection(models.TwitterTable).Find(nil).Sort("_id").Select(
+			// avoid selecting growing PostedTweets slice
+			bson.M{"postmode": 1, "accountid": 1, "excluderts": 1, "excludementions": 1, "channelid": 1},
+		),
 	).All(&twitterEntriesCache)
 	helpers.Relax(err)
 
 	for _, entry := range twitterEntriesCache {
+		if entry.AccountID == "" {
+			continue
+		}
+
 		// check if channel exists
 		channel, err := helpers.GetChannelWithoutApi(entry.ChannelID)
 		if err != nil || channel == nil || channel.ID == "" {
@@ -197,46 +206,16 @@ func (t *Twitter) startTwitterStream() {
 			}
 		}
 
-		idToAdd := entry.AccountID
+		idInSlice = false
 
-		if idToAdd == "" && entry.AccountScreenName != "" {
-			user, _, err := twitterClient.Users.Show(&twitter.UserShowParams{
-				ScreenName: entry.AccountScreenName,
-			})
-			if err != nil {
-				if strings.Contains(err.Error(), "User not found.") {
-					continue
-				}
+		for _, accountID := range accountIDs {
+			if entry.AccountID == accountID {
+				idInSlice = true
 			}
-			helpers.RelaxLog(err)
-			if err == nil {
-				idToAdd = user.IDStr
-				if idToAdd != "" && idToAdd != "0" {
-					entry.AccountID = idToAdd
-					err = helpers.MDbUpsertID(
-						models.TwitterTable,
-						entry.ID,
-						entry,
-					)
-					if err != nil {
-						helpers.RelaxLog(err)
-						continue
-					}
-				}
-			}
-			cache.GetLogger().WithField("module", "twitter").Infof("saved User ID %s for Twitter Account @%s", idToAdd, entry.AccountScreenName)
 		}
 
-		if idToAdd != "" {
-			idInSlice := false
-			for _, accountID := range accountIDs {
-				if idToAdd == accountID {
-					idInSlice = true
-				}
-			}
-			if idInSlice == false {
-				accountIDs = append(accountIDs, entry.AccountID)
-			}
+		if !idInSlice {
+			accountIDs = append(accountIDs, entry.AccountID)
 		}
 	}
 
@@ -255,6 +234,7 @@ func (t *Twitter) startTwitterStream() {
 func (t *Twitter) stopTwitterStream() {
 	if twitterStream != nil {
 		twitterStream.Stop()
+		twitterStream = nil
 		cache.GetLogger().WithField("module", "twitter").Info("stopped stream")
 	}
 }
