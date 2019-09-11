@@ -596,15 +596,12 @@ NextKeyword:
 			continue
 		}
 
-		escapedContent := strings.Replace(msg.Content, "```", "", -1)
-		escapedContent = strings.Replace(escapedContent, "`", "'", -1)
-		escapedContent = strings.TrimSpace(strings.Trim(escapedContent, "\n"))
+		quoteContent := strings.TrimRight(strings.Replace("> "+strings.TrimSpace(strings.Trim(msg.Content, "\n")), "\n", "\n> ", -1), "> ")
 
 		switch helpers.GetUserConfigInt(pendingNotification.Member.User.ID, UserConfigNotificationsLayoutModeKey, 1) {
 		case 2:
-			// for _, resultPage := range helpers.Pagify(fmt.Sprintf("```"+helpers.ZERO_WIDTH_SPACE+"%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.\n"+helpers.ZERO_WIDTH_SPACE, // TODO: https://trello.com/c/NDlpRZNw
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf("```\n%s```:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.",
-				escapedContent,
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf("%s\n:bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`.",
+				quoteContent,
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
@@ -659,28 +656,26 @@ NextKeyword:
 			helpers.SendEmbed(dmChannel.ID, notificationEmbed)
 			break
 		case 4:
-			// for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```", // TODO: https://trello.com/c/NDlpRZNw
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n```\n%s```",
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`\n<%s>:\n%s",
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
 				guild.Name,
 				messageTime.UTC().Format("15:04:05"),
 				helpers.MessageDeeplink(msg.ChannelID, msg.ID),
-				escapedContent,
+				quoteContent,
 			), "\n") {
 				helpers.SendMessage(dmChannel.ID, resultPage)
 			}
 			break
 		default:
-			// for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n```"+helpers.ZERO_WIDTH_SPACE+"%s```", // TODO: https://trello.com/c/NDlpRZNw
-			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n```\n%s```",
+			for _, resultPage := range helpers.Pagify(fmt.Sprintf(":bell: User `%s` mentioned %s in %s on `%s` at `%s UTC`:\n%s",
 				pendingNotification.Author.User.Username,
 				keywordsTriggeredText,
 				fmt.Sprintf("<#%s>", channel.ID),
 				guild.Name,
 				messageTime.UTC().Format("15:04:05"),
-				escapedContent,
+				quoteContent,
 			), "\n") {
 				helpers.SendMessage(dmChannel.ID, resultPage)
 			}
