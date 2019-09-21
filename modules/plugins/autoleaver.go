@@ -529,6 +529,8 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 			}
 		}
 
+		_ = onWhitelist
+
 		// if onWhitelist {
 		// 	err = a.sendAllowedJoinMessage(guild.ID)
 		// 	helpers.RelaxLog(err)
