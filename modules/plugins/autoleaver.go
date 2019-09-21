@@ -531,11 +531,11 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 
 		_ = onWhitelist
 
-		// if onWhitelist {
-		// 	err = a.sendAllowedJoinMessage(guild.ID)
-		// 	helpers.RelaxLog(err)
-		// 	return
-		// }
+		if onWhitelist {
+			err = a.sendAllowedJoinMessage(guild.ID)
+			helpers.RelaxLog(err)
+			return
+		}
 
 		notWhitelistedJoinText := helpers.GetTextF("plugins.autoleaver.noti-join-not-whitelisted", guild.Name, guild.ID)
 		if notificationChannelID != "" {
@@ -559,6 +559,7 @@ func (a *Autoleaver) sendAutoleaveMessage(guildID string) (err error) {
 	targetChannelID, err := helpers.GetGuildDefaultChannel(guildID)
 	_ = targetChannelID
 	if err == nil {
+		// TODO
 		// helpers.SendMessage(targetChannelID, helpers.GetText("plugins.autoleaver.non-whitelisted-leave-message"))
 		return nil
 	}
@@ -570,6 +571,7 @@ func (a *Autoleaver) sendAllowedJoinMessage(guildID string) (err error) {
 	targetChannelID, err := helpers.GetGuildDefaultChannel(guildID)
 	_ = targetChannelID
 	if err == nil {
+		// TODO
 		// helpers.SendMessage(targetChannelID, helpers.GetTextF("plugins.autoleaver.yes-whitelisted-join-message", guildID))
 		return nil
 	}
