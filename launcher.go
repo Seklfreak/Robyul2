@@ -347,6 +347,8 @@ func main() {
 		panic(err)
 	}
 
+	cache.SetSession(discord)
+
 	// Open REST API
 	wsContainer := restful.NewContainer()
 
@@ -428,8 +430,6 @@ func main() {
 
 	// start proxies healthcheck loop
 	go helpers.CachedProxiesHealthcheckLoop()
-
-	cache.SetSession(discord)
 
 	modules.Init(discord)
 
