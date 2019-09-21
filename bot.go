@@ -245,6 +245,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 		return
 	}
 
+	if !cache.IsSession() {
+		return
+	}
+
 	// Get the channel
 	// Ignore the event if we cannot resolve the channel
 	channel, err := helpers.GetChannelWithoutApi(message.ChannelID)

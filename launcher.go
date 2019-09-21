@@ -6,15 +6,12 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/Seklfreak/Robyul2/modules"
-	"github.com/Seklfreak/Robyul2/shardmanager"
-	unleash "github.com/Unleash/unleash-client-go"
 
 	"github.com/RichardKnop/machinery/v1"
 	marchineryConfig "github.com/RichardKnop/machinery/v1/config"
@@ -24,22 +21,23 @@ import (
 	"github.com/Seklfreak/Robyul2/logging"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/migrations"
+	"github.com/Seklfreak/Robyul2/modules"
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/rest"
 	"github.com/Seklfreak/Robyul2/robyulstate"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/Seklfreak/Robyul2/version"
-	polr "github.com/Seklfreak/polr-go"
+	"github.com/Seklfreak/polr-go"
+	"github.com/Unleash/unleash-client-go"
 	"github.com/bwmarrin/discordgo"
-	restful "github.com/emicklei/go-restful"
-	raven "github.com/getsentry/raven-go"
+	"github.com/emicklei/go-restful"
+	"github.com/getsentry/raven-go"
 	"github.com/go-redis/redis"
 	"github.com/kz/discordrus"
 	"github.com/olivere/elastic"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
-
-	_ "net/http/pprof"
 )
 
 var (
@@ -433,6 +431,17 @@ func main() {
 
 	cache.SetSession(discord)
 
+	for {
+		if !allReady() {
+			log.Info("waiting for all shards to become ready…")
+			time.Sleep(250 * time.Millisecond)
+			continue
+		}
+
+		log.Info("all guild ready")
+		break
+	}
+
 	modules.Init(discord)
 
 	// Run async worker for guild changes
@@ -498,4 +507,14 @@ func logKeenRequest(request *restful.Request, timeInSeconds float64) {
 			cache.GetLogger().WithField("module", "launcher").Error("Error logging API request to keen: ", err.Error())
 		}
 	}
+}
+
+func allReady() bool {
+	for _, shard := range cache.GetSession().Sessions {
+		if len(shard.State.Ready.Guilds) <= 0 {
+			return false
+		}
+	}
+
+	return true
 }

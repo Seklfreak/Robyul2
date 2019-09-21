@@ -28,3 +28,10 @@ func GetSession() *shardmanager.Manager {
 
 	return session
 }
+
+func IsSession() bool {
+	sessionMutex.RLock()
+	defer sessionMutex.RUnlock()
+
+	return session != nil
+}
