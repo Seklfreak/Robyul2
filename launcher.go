@@ -431,17 +431,6 @@ func main() {
 
 	cache.SetSession(discord)
 
-	for {
-		if !allReady() {
-			log.Info("waiting for all shards to become ready…")
-			time.Sleep(250 * time.Millisecond)
-			continue
-		}
-
-		log.Info("all guild ready")
-		break
-	}
-
 	modules.Init(discord)
 
 	// Run async worker for guild changes
@@ -507,15 +496,4 @@ func logKeenRequest(request *restful.Request, timeInSeconds float64) {
 			cache.GetLogger().WithField("module", "launcher").Error("Error logging API request to keen: ", err.Error())
 		}
 	}
-}
-
-func allReady() bool {
-	for _, shard := range cache.GetSession().Sessions {
-		if len(shard.State.Guilds) <= 0 {
-			return false
-		}
-
-	}
-
-	return true
 }

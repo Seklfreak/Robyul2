@@ -46,8 +46,7 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 	))
 
 	for _, guild := range session.State.Guilds {
-		log.Info("adding guild to autoleaver cache: ", guild.ID)
-		cache.AddAutoleaverGuildID(guild.ID)
+		helpers.AddAutoleaverGuildID(guild.ID)
 	}
 
 	// Cache the session

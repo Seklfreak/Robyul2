@@ -498,7 +498,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		defer helpers.Recover()
 
 		// don't continue if bot didn't just join this guild
-		if !cache.AddAutoleaverGuildID(guild.ID) {
+		if !helpers.AddAutoleaverGuildID(guild.ID) {
 			return
 		}
 
@@ -606,7 +606,7 @@ func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.
 
 		// remove guild from autoleaver Guilds, if not just leaving because unavailability
 		if guild.OwnerID != "" {
-			cache.RemoveAutoleaverGuildID(guild.ID)
+			helpers.RemoveAutoleaverGuildID(guild.ID)
 		}
 	}()
 }
