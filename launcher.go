@@ -335,6 +335,8 @@ func main() {
 
 	discord.AddHandler(robyulState.OnInterface)
 
+	cache.SetSession(discord)
+
 	// // Connect to discord
 	// err = discord.Open()
 	// if err != nil {
@@ -346,8 +348,6 @@ func main() {
 		raven.CaptureErrorAndWait(err, nil)
 		panic(err)
 	}
-
-	cache.SetSession(discord)
 
 	// Open REST API
 	wsContainer := restful.NewContainer()
