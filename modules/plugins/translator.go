@@ -13,6 +13,7 @@ import (
 	"cloud.google.com/go/translate"
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/text/language"
 	"google.golang.org/api/option"
@@ -36,7 +37,7 @@ func (t *Translator) Commands() []string {
 	}
 }
 
-func (t *Translator) Init(session *discordgo.Session) {
+func (t *Translator) Init(session *shardmanager.Manager) {
 	t.ctx = context.Background()
 
 	client, err := translate.NewClient(

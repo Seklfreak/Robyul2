@@ -12,11 +12,12 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/Seklfreak/Robyul2/ratelimits"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
 // Init warms the caches and initializes the plugins
-func Init(session *discordgo.Session) {
+func Init(session *shardmanager.Manager) {
 	checkDuplicateCommands()
 
 	pluginCount := len(PluginList)
@@ -87,7 +88,7 @@ func Init(session *discordgo.Session) {
 }
 
 // Uninit deintializes the plugins
-func Uninit(session *discordgo.Session) {
+func Uninit(session *shardmanager.Manager) {
 	extendedPluginCount := len(PluginExtendedList)
 	extendedPluginCache = make(map[string]*ExtendedPlugin)
 
@@ -129,11 +130,11 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message) {
 
 	// Call the module
 	if ref, ok := pluginCache[command]; ok {
-		(*ref).Action(command, content, msg, cache.GetSession())
+		(*ref).Action(command, content, msg, cache.GetSession().SessionForGuildS(msg.GuildID))
 	}
 	// call the extended module
 	if ref, ok := extendedPluginCache[command]; ok {
-		(*ref).Action(command, content, msg, cache.GetSession())
+		(*ref).Action(command, content, msg, cache.GetSession().SessionForGuildS(msg.GuildID))
 	}
 }
 
@@ -141,7 +142,7 @@ func CallExtendedPlugin(content string, msg *discordgo.Message) {
 	defer helpers.Recover()
 
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnMessage(strings.TrimSpace(content), msg, cache.GetSession())
+		extendedPlugin.OnMessage(strings.TrimSpace(content), msg, cache.GetSession().SessionForGuildS(msg.GuildID))
 	}
 	//go safePluginExtendedCall(strings.TrimSpace(content), msg, plug)
 }
@@ -150,7 +151,7 @@ func CallExtendedPluginOnMessageDelete(message *discordgo.MessageDelete) {
 	defer helpers.Recover()
 
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnMessageDelete(message, cache.GetSession())
+		extendedPlugin.OnMessageDelete(message, cache.GetSession().SessionForGuildS(message.GuildID))
 	}
 }
 
@@ -159,7 +160,7 @@ func CallExtendedPluginOnGuildMemberAdd(member *discordgo.Member) {
 
 	// Iterate over all plugins
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnGuildMemberAdd(member, cache.GetSession())
+		extendedPlugin.OnGuildMemberAdd(member, cache.GetSession().SessionForGuildS(member.GuildID))
 	}
 }
 func CallExtendedPluginOnGuildMemberRemove(member *discordgo.Member) {
@@ -167,7 +168,7 @@ func CallExtendedPluginOnGuildMemberRemove(member *discordgo.Member) {
 
 	// Iterate over all plugins
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnGuildMemberRemove(member, cache.GetSession())
+		extendedPlugin.OnGuildMemberRemove(member, cache.GetSession().SessionForGuildS(member.GuildID))
 	}
 }
 func CallExtendedPluginOnReactionAdd(reaction *discordgo.MessageReactionAdd) {
@@ -175,7 +176,7 @@ func CallExtendedPluginOnReactionAdd(reaction *discordgo.MessageReactionAdd) {
 
 	// Iterate over all plugins
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnReactionAdd(reaction, cache.GetSession())
+		extendedPlugin.OnReactionAdd(reaction, cache.GetSession().SessionForGuildS(reaction.GuildID))
 	}
 }
 func CallExtendedPluginOnReactionRemove(reaction *discordgo.MessageReactionRemove) {
@@ -183,7 +184,7 @@ func CallExtendedPluginOnReactionRemove(reaction *discordgo.MessageReactionRemov
 
 	// Iterate over all plugins
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnReactionRemove(reaction, cache.GetSession())
+		extendedPlugin.OnReactionRemove(reaction, cache.GetSession().SessionForGuildS(reaction.GuildID))
 	}
 }
 func CallExtendedPluginOnGuildBanAdd(user *discordgo.GuildBanAdd) {
@@ -191,7 +192,7 @@ func CallExtendedPluginOnGuildBanAdd(user *discordgo.GuildBanAdd) {
 
 	// Iterate over all plugins
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnGuildBanAdd(user, cache.GetSession())
+		extendedPlugin.OnGuildBanAdd(user, cache.GetSession().SessionForGuildS(user.GuildID))
 	}
 }
 func CallExtendedPluginOnGuildBanRemove(user *discordgo.GuildBanRemove) {
@@ -199,7 +200,7 @@ func CallExtendedPluginOnGuildBanRemove(user *discordgo.GuildBanRemove) {
 
 	// Iterate over all plugins
 	for _, extendedPlugin := range PluginExtendedList {
-		extendedPlugin.OnGuildBanRemove(user, cache.GetSession())
+		extendedPlugin.OnGuildBanRemove(user, cache.GetSession().SessionForGuildS(user.GuildID))
 	}
 }
 

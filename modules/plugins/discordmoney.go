@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -17,7 +18,7 @@ func (dm *DiscordMoney) Commands() []string {
 	}
 }
 
-func (dm *DiscordMoney) Init(session *discordgo.Session) {
+func (dm *DiscordMoney) Init(session *shardmanager.Manager) {
 
 }
 

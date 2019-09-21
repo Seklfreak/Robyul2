@@ -87,7 +87,7 @@ func recordNuguGame(g *nuguGame) {
 
 // displayNuguGameStats shows nugugame stats based on the users parameters
 func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// strip out "stats" arg
 	commandArgs = commandArgs[1:]
@@ -293,7 +293,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 	var embedIcon string
 	if isGlobalQuery {
 		embedTitle = "Global - Nugu Game Stats"
-		embedIcon = cache.GetSession().State.User.AvatarURL("512")
+		embedIcon = cache.GetSession().SessionForGuildS(msg.GuildID).State.User.AvatarURL("512")
 
 	} else if isServerQuery {
 		embedTitle = "Server - Nugu Game Stats"
@@ -411,7 +411,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 // displayNugugameRanking sends embed of nugu game rankings
 func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, byServerRanking bool) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// strip out "ranking" arg
 	commandArgs = commandArgs[1:]
@@ -423,7 +423,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, byServ
 	var isServerQuery bool
 	var err error
 
-	embedIcon := cache.GetSession().State.User.AvatarURL("512")
+	embedIcon := cache.GetSession().SessionForGuildS(msg.GuildID).State.User.AvatarURL("512")
 	embedTitle := "Nugu Game User Rankings"
 	if byServerRanking {
 		embedTitle = "Nugu Game Server Rankings"
@@ -579,7 +579,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, byServ
 
 // displayMissedIdols will display the most
 func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// strip out "missed" arg
 	commandArgs = commandArgs[1:]
@@ -681,7 +681,7 @@ func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
 	var embedIcon string
 	if isGlobalQuery {
 		embedTitle = "Global - Most Missed Idols"
-		embedIcon = cache.GetSession().State.User.AvatarURL("512")
+		embedIcon = cache.GetSession().SessionForGuildS(msg.GuildID).State.User.AvatarURL("512")
 
 	} else if isServerQuery {
 		embedTitle = "Server - Most Missed Idols"
@@ -751,7 +751,7 @@ func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
 
 // displayIdolStats displays nugugame stats for a given idol
 func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *idols.Idol) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// if an idol as passed, skip checking args
 	if targetIdol == nil {
@@ -865,7 +865,7 @@ func displayIdolStats(msg *discordgo.Message, commandArgs []string, targetIdol *
 
 // displayIdolStats displays nugugame stats for a given idol
 func displayGroupStats(msg *discordgo.Message, commandArgs []string, groupName string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	targetGroupName := groupName
 

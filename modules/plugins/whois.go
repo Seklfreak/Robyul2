@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/domainr/whois"
 )
@@ -16,7 +17,7 @@ func (w *Whois) Commands() []string {
 	}
 }
 
-func (w *Whois) Init(session *discordgo.Session) {
+func (w *Whois) Init(session *shardmanager.Manager) {
 }
 
 func (w *Whois) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

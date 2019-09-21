@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -14,7 +15,7 @@ func (m8 *M8ball) Commands() []string {
 	}
 }
 
-func (m8 *M8ball) Init(session *discordgo.Session) {
+func (m8 *M8ball) Init(session *shardmanager.Manager) {
 }
 
 func (m8 *M8ball) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

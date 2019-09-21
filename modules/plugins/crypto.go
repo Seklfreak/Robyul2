@@ -10,6 +10,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/lucazulian/cryptocomparego"
@@ -29,7 +30,7 @@ func (m *Crypto) Commands() []string {
 	}
 }
 
-func (m *Crypto) Init(session *discordgo.Session) {
+func (m *Crypto) Init(session *shardmanager.Manager) {
 	// init crypto client
 	m.cryptoClient = cryptocomparego.NewClient(helpers.DefaultClient)
 }
@@ -51,7 +52,7 @@ func (m *Crypto) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Crypto) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) cryptoAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	return m.actionExchange
 }

@@ -20,7 +20,7 @@ import (
 
 // displayBiasGameStats will display stats for the bias game based on the stats message
 func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// if there is only one arg check if it matches a valid group, if so send to group stats
 	contentArg, _ := helpers.ToArgv(statsMessage)
@@ -155,7 +155,7 @@ func displayBiasGameStats(msg *discordgo.Message, statsMessage string) {
 
 // showRankings will show the user rankings for biasgame
 func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bool) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	gameSizeFilter := "this.roundwinners.length > 0"
 	rankType := "user"
@@ -291,7 +291,7 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 		Color: 0x0FADED, // blueish
 		Author: &discordgo.MessageEmbedAuthor{
 			Name:    embedTitle,
-			IconURL: cache.GetSession().State.User.AvatarURL("512"),
+			IconURL: cache.GetSession().SessionForGuildS(msg.GuildID).State.User.AvatarURL("512"),
 		},
 	}
 
@@ -413,8 +413,8 @@ func displayCurrentGameStats(msg *discordgo.Message) {
 func recordSingleGamesStats(game *singleBiasGame) {
 
 	// get guildID from game channel
-	channel, _ := cache.GetSession().State.Channel(game.ChannelID)
-	guild, err := cache.GetSession().State.Guild(channel.GuildID)
+	channel, _ := cache.GetSession().SessionForGuildS(game.GuildID).State.Channel(game.ChannelID)
+	guild, err := cache.GetSession().SessionForGuildS(game.GuildID).State.Guild(channel.GuildID)
 	if err != nil {
 		fmt.Println("Error getting guild when recording stats")
 		return
@@ -441,7 +441,7 @@ func recordSingleGamesStats(game *singleBiasGame) {
 func recordMultiGamesStats(game *multiBiasGame) {
 
 	// get guildID from game channel
-	channel, err := cache.GetSession().State.Channel(game.ChannelID)
+	channel, err := cache.GetSession().SessionForGuildS(game.guildID).State.Channel(game.ChannelID)
 	if err != nil {
 		fmt.Println("Error getting channel when recording stats")
 		return
@@ -481,7 +481,7 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 		// multi stats games can run for server or global with server as the default
 		if strings.Contains(statsMessage, "global") {
 
-			iconURL = cache.GetSession().State.User.AvatarURL("512")
+			iconURL = cache.GetSession().SessionForGuildS(msg.GuildID).State.User.AvatarURL("512")
 			targetName = "Global"
 		} else {
 			queryParams["guildid"] = guild.ID
@@ -499,7 +499,7 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 			targetName = "Server"
 			queryParams["guildid"] = guild.ID
 		} else if strings.Contains(statsMessage, "global") {
-			iconURL = cache.GetSession().State.User.AvatarURL("512")
+			iconURL = cache.GetSession().SessionForGuildS(msg.GuildID).State.User.AvatarURL("512")
 			targetName = "Global"
 
 		} else if user, err := helpers.GetUserFromMention(statsMessage); err == nil {
@@ -614,7 +614,7 @@ func compileGameWinnersLosers(idols []*idols.Idol) []bson.ObjectId {
 
 // displayIdolStats sends an embed for stats on a specific idol
 func displayIdolStats(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	commandArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -764,7 +764,7 @@ func displayIdolStats(msg *discordgo.Message, content string) {
 
 // displayIdolStats sends an embed for stats on a specific idol
 func displayGroupStats(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	commandArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -950,9 +950,9 @@ WinLoop:
 
 // updateGameStatsFromMsg will update saved game stats based on the discord message
 func updateGameStatsFromMsg(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
-	if !helpers.ConfirmEmbed(msg.ChannelID, msg.Author, "This command is still targeted at the old biasgame table, would you like to continue?", "✅", "🚫") {
+	if !helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, "This command is still targeted at the old biasgame table, would you like to continue?", "✅", "🚫") {
 		return
 	}
 
@@ -1024,7 +1024,7 @@ func updateGameStats(targetGroup, targetName, newGroup, newName, newGender strin
 
 // validateStats will loop through all biasgames and confirm an idol exists for each game/round
 func validateStats(msg *discordgo.Message, commandArgs []string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	helpers.SendMessage(msg.ChannelID, "Checking games for invalid idol ids...")
 

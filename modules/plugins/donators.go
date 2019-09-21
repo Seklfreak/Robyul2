@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -30,7 +31,7 @@ var (
 	hearts = []string{"💕", "💞", "💗", "💝", "💘", "💖", "💓", "💕"}
 )
 
-func (d *Donators) Init(session *discordgo.Session) {
+func (d *Donators) Init(session *shardmanager.Manager) {
 }
 
 func (d *Donators) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

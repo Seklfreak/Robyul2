@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -15,7 +16,7 @@ func (i *Imgur) Commands() []string {
 	}
 }
 
-func (i *Imgur) Init(session *discordgo.Session) {
+func (i *Imgur) Init(session *shardmanager.Manager) {
 
 }
 

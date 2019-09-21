@@ -12,6 +12,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -31,11 +32,11 @@ func (dm *DM) Commands() []string {
 	}
 }
 
-func (dm *DM) Init(session *discordgo.Session) {
+func (dm *DM) Init(session *shardmanager.Manager) {
 	session.AddHandler(dm.OnMessage)
 }
 
-func (dm *DM) Uninit(session *discordgo.Session) {
+func (dm *DM) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -52,7 +53,7 @@ func (dm *DM) Action(command string, content string, msg *discordgo.Message, ses
 }
 
 func (dm *DM) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) dmAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = dm.newMsg("bot.arguments.too-few")
@@ -87,7 +88,7 @@ func (dm *DM) actionSend(args []string, in *discordgo.Message, out **discordgo.M
 		return dm.actionFinish
 	}
 
-	dmChannel, err := cache.GetSession().UserChannelCreate(targetUser.ID)
+	dmChannel, err := cache.GetSession().SessionForGuildS(in.GuildID).UserChannelCreate(targetUser.ID)
 	helpers.Relax(err)
 
 	parts := strings.Split(in.Content, args[1])

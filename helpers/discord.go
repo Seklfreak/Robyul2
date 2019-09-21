@@ -383,7 +383,7 @@ func RequireRobyulMod(msg *discordgo.Message, cb Callback) {
 	cb()
 }
 
-func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText string, confirmEmojiID string, abortEmojiID string) bool {
+func ConfirmEmbed(guildID, channelID string, author *discordgo.User, confirmMessageText string, confirmEmojiID string, abortEmojiID string) bool {
 	// send embed asking the user to confirm
 	confirmMessages, err := SendComplex(channelID,
 		&discordgo.MessageSend{
@@ -408,11 +408,11 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 	}
 
 	// add default reactions to embed
-	cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID)
-	cache.GetSession().MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID)
+	cache.GetSession().SessionForGuildS(guildID).MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, confirmEmojiID)
+	cache.GetSession().SessionForGuildS(guildID).MessageReactionAdd(confirmMessage.ChannelID, confirmMessage.ID, abortEmojiID)
 
 	responseChannel := make(chan bool, 1)
-	stopHandler := cache.GetSession().AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
+	stopHandler := cache.GetSession().SessionForGuildS(guildID).AddHandler(func(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
 		if reaction == nil || reaction.MessageID != confirmMessage.ID || reaction.UserID != author.ID {
 			return
 		}
@@ -432,7 +432,7 @@ func ConfirmEmbed(channelID string, author *discordgo.User, confirmMessageText s
 
 	response := <-responseChannel
 	stopHandler()
-	cache.GetSession().ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
+	cache.GetSession().SessionForGuildS(guildID).ChannelMessageDelete(confirmMessage.ChannelID, confirmMessage.ID)
 	return response
 }
 
@@ -448,16 +448,16 @@ func GetMuteRole(guildID string) (*discordgo.Role, error) {
 		}
 	}
 	if muteRole == nil {
-		muteRole, err = cache.GetSession().GuildRoleCreate(guildID)
+		muteRole, err = cache.GetSession().SessionForGuildS(guildID).GuildRoleCreate(guildID)
 		if err != nil {
 			return muteRole, err
 		}
-		muteRole, err = cache.GetSession().GuildRoleEdit(guildID, muteRole.ID, settings.MutedRoleName, muteRole.Color, muteRole.Hoist, 0, muteRole.Mentionable)
+		muteRole, err = cache.GetSession().SessionForGuildS(guildID).GuildRoleEdit(guildID, muteRole.ID, settings.MutedRoleName, muteRole.Color, muteRole.Hoist, 0, muteRole.Mentionable)
 		if err != nil {
 			return muteRole, err
 		}
 		for _, channel := range guild.Channels {
-			err = cache.GetSession().ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0,
+			err = cache.GetSession().SessionForGuildS(guildID).ChannelPermissionSet(channel.ID, muteRole.ID, "role", 0,
 				discordgo.PermissionSendMessages|discordgo.PermissionAddReactions|discordgo.PermissionVoiceConnect)
 			if err != nil {
 				cache.GetLogger().WithField("module", "discord").Error("Error disabling send messages and add reactions on mute Role: " + err.Error())
@@ -473,7 +473,7 @@ func RemoveMuteRole(guildID string, userID string) (err error) {
 		return err
 	}
 
-	err = cache.GetSession().GuildMemberRoleRemove(guildID, userID, muteRole.ID)
+	err = cache.GetSession().SessionForGuildS(guildID).GuildMemberRoleRemove(guildID, userID, muteRole.ID)
 	if err != nil {
 		if errD, ok := err.(*discordgo.RESTError); ok && errD.Message != nil {
 			if errD.Message.Code == discordgo.ErrCodeUnknownMember ||
@@ -562,7 +562,7 @@ func UnmuteUserMachinery(guildID string, userID string) (err error) {
 
 	if err == nil {
 		_, err = EventlogLog(time.Now(), guildID, userID,
-			models.EventlogTargetTypeUser, cache.GetSession().State.User.ID,
+			models.EventlogTargetTypeUser, cache.GetSession().SessionForGuildS(guildID).State.User.ID,
 			models.EventlogTypeRobyulUnmute, "timed mute expired",
 			nil,
 			nil, false)
@@ -618,7 +618,7 @@ func AddMuteRole(guildID string, userID string) (err error) {
 	}
 
 	if GetIsInGuild(guildID, userID) {
-		err = cache.GetSession().GuildMemberRoleAdd(guildID, userID, muteRole.ID)
+		err = cache.GetSession().SessionForGuildS(guildID).GuildMemberRoleAdd(guildID, userID, muteRole.ID)
 		if err != nil {
 			return err
 		}
@@ -817,11 +817,11 @@ func LogMachineryError(errorMessage string) (err error) {
 }
 
 func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
-	targetMember, err := cache.GetSession().State.Member(guildID, userID)
+	targetMember, err := cache.GetSession().SessionForGuildS(guildID).State.Member(guildID, userID)
 	if targetMember == nil || targetMember.GuildID == "" || targetMember.JoinedAt == "" {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuildMember").Debug(
 			fmt.Sprintf("discord api request: GuildMember: %s, %s", guildID, userID))
-		targetMember, err = cache.GetSession().GuildMember(guildID, userID)
+		targetMember, err = cache.GetSession().SessionForGuildS(guildID).GuildMember(guildID, userID)
 	}
 	if targetMember != nil {
 		targetMember.GuildID = guildID
@@ -830,7 +830,7 @@ func GetGuildMember(guildID string, userID string) (*discordgo.Member, error) {
 }
 
 func GetGuildMemberWithoutApi(guildID string, userID string) (*discordgo.Member, error) {
-	return cache.GetSession().State.Member(guildID, userID)
+	return cache.GetSession().SessionForGuildS(guildID).State.Member(guildID, userID)
 }
 
 func GetIsInGuild(guildID string, userID string) bool {
@@ -843,45 +843,49 @@ func GetIsInGuild(guildID string, userID string) bool {
 }
 
 func GetGuild(guildID string) (*discordgo.Guild, error) {
-	targetGuild, err := cache.GetSession().State.Guild(guildID)
+	targetGuild, err := cache.GetSession().SessionForGuildS(guildID).State.Guild(guildID)
 	if targetGuild == nil || targetGuild.ID == "" {
 		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetGuild").Debug(
 		//		fmt.Sprintf("discord api request: Guild: %s", guildID))
-		targetGuild, err = cache.GetSession().Guild(guildID)
+		targetGuild, err = cache.GetSession().SessionForGuildS(guildID).Guild(guildID)
 	}
 	return targetGuild, err
 }
 
 func GetGuildWithoutApi(guildID string) (*discordgo.Guild, error) {
-	targetGuild, err := cache.GetSession().State.Guild(guildID)
+	targetGuild, err := cache.GetSession().SessionForGuildS(guildID).State.Guild(guildID)
 	return targetGuild, err
 }
 
 func GetChannel(channelID string) (*discordgo.Channel, error) {
-	targetChannel, err := cache.GetSession().State.Channel(channelID)
-	if targetChannel == nil || targetChannel.ID == "" {
-		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetChannel").Debug(
-		//	fmt.Sprintf("discord api request: Channel: %s", channelID))
-		targetChannel, err = cache.GetSession().Channel(channelID)
-	}
-	return targetChannel, err
+	return GetChannelWithoutApi(channelID)
+	// targetChannel, err = cache.GetSession().Channel(channelID)
 }
 
 func GetChannelWithoutApi(channelID string) (*discordgo.Channel, error) {
-	targetChannel, err := cache.GetSession().State.Channel(channelID)
-	return targetChannel, err
+	for _, shard := range cache.GetSession().Sessions {
+		targetChannel, err := shard.State.Channel(channelID)
+		if err == nil && targetChannel != nil && targetChannel.ID != "" {
+			return targetChannel, nil
+		}
+	}
+
+	return nil, discordgo.ErrStateNotFound
 }
 
 func GetMessage(channelID string, messageID string) (*discordgo.Message, error) {
-	targetMessage, err := cache.GetSession().State.Message(channelID, messageID)
-	if targetMessage == nil || targetMessage.ID == "" {
-		//cache.GetLogger().WithField("module", "discord").WithField("method", "GetMessage").Debug(
-		//	fmt.Sprintf("discord api request: Message: %s in Channel: %s", messageID, channelID))
-		targetMessage, err = cache.GetSession().ChannelMessage(channelID, messageID)
-		cache.GetSession().State.MessageAdd(targetMessage)
-		return targetMessage, err
+	for _, shard := range cache.GetSession().Sessions {
+		targetMessage, err := shard.State.Message(channelID, messageID)
+		if err == nil && targetMessage != nil && targetMessage.ID != "" {
+			return targetMessage, nil
+		}
 	}
-	return targetMessage, nil
+
+	targetMessage, err := cache.GetSession().Session(0).ChannelMessage(channelID, messageID)
+	if err == nil {
+		cache.GetSession().SessionForGuildS(targetMessage.GuildID).State.MessageAdd(targetMessage)
+	}
+	return targetMessage, err
 }
 
 func GetChannelFromMention(msg *discordgo.Message, mention string) (*discordgo.Channel, error) {
@@ -952,17 +956,19 @@ func GetUser(userID string) (*discordgo.User, error) {
 	cacheCodec := cache.GetRedisCacheCodec()
 	key := fmt.Sprintf("robyul2-discord:api:user:%s", userID) // TODO: Should we cache this?
 
-	for _, guild := range cache.GetSession().State.Guilds {
-		member, err := GetGuildMemberWithoutApi(guild.ID, userID)
-		if err == nil && member != nil && member.User != nil && member.User.ID != "" {
-			return member.User, nil
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			member, err := GetGuildMemberWithoutApi(guild.ID, userID)
+			if err == nil && member != nil && member.User != nil && member.User.ID != "" {
+				return member.User, nil
+			}
 		}
 	}
 
 	if err = cacheCodec.Get(key, &targetUser); err != nil {
 		cache.GetLogger().WithField("module", "discord").WithField("method", "GetUser").Debug(
 			fmt.Sprintf("discord api request: User: %s", userID))
-		targetUser, err := cache.GetSession().User(userID)
+		targetUser, err := cache.GetSession().Session(0).User(userID)
 		if err == nil {
 			err = cacheCodec.Set(&redisCache.Item{
 				Key:        key,
@@ -979,12 +985,15 @@ func GetUser(userID string) (*discordgo.User, error) {
 }
 
 func GetUserWithoutAPI(userID string) (*discordgo.User, error) {
-	for _, guild := range cache.GetSession().State.Guilds {
-		member, err := GetGuildMemberWithoutApi(guild.ID, userID)
-		if err == nil && member != nil && member.User != nil && member.User.ID != "" {
-			return member.User, nil
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			member, err := GetGuildMemberWithoutApi(guild.ID, userID)
+			if err == nil && member != nil && member.User != nil && member.User.ID != "" {
+				return member.User, nil
+			}
 		}
 	}
+
 	return nil, errors.New("user not found")
 }
 
@@ -1142,14 +1151,14 @@ func SendMessage(channelID, content string) (messages []*discordgo.Message, err 
 	content = CleanDiscordContent(content)
 	if len(content) > 2000 {
 		for _, page := range AutoPagify(content) {
-			message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+			message, err = cache.GetSession().Session(0).ChannelMessageSend(channelID, page)
 			if err != nil {
 				return messages, err
 			}
 			messages = append(messages, message)
 		}
 	} else {
-		message, err = cache.GetSession().ChannelMessageSend(channelID, content)
+		message, err = cache.GetSession().Session(0).ChannelMessageSend(channelID, content)
 		if err != nil {
 			return messages, err
 		}
@@ -1173,7 +1182,7 @@ func SendMessageBoxed(channelID, content string) (messages []*discordgo.Message,
 
 func SendEmbed(channelID string, embed *discordgo.MessageEmbed) (messages []*discordgo.Message, err error) {
 	var message *discordgo.Message
-	message, err = cache.GetSession().ChannelMessageSendEmbed(channelID, TruncateEmbed(embed))
+	message, err = cache.GetSession().Session(0).ChannelMessageSendEmbed(channelID, TruncateEmbed(embed))
 	if err != nil {
 		return messages, err
 	}
@@ -1195,10 +1204,10 @@ func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*dis
 	if len(pages) > 0 {
 		for i, page := range pages {
 			if i+1 < len(pages) {
-				message, err = cache.GetSession().ChannelMessageSend(channelID, page)
+				message, err = cache.GetSession().Session(0).ChannelMessageSend(channelID, page)
 			} else {
 				data.Content = page
-				message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+				message, err = cache.GetSession().Session(0).ChannelMessageSendComplex(channelID, data)
 			}
 			if err != nil {
 				return messages, err
@@ -1206,7 +1215,7 @@ func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*dis
 			messages = append(messages, message)
 		}
 	} else {
-		message, err = cache.GetSession().ChannelMessageSendComplex(channelID, data)
+		message, err = cache.GetSession().Session(0).ChannelMessageSendComplex(channelID, data)
 		if err != nil {
 			return messages, err
 		}
@@ -1216,7 +1225,7 @@ func SendComplex(channelID string, data *discordgo.MessageSend) (messages []*dis
 }
 
 func EditMessage(channelID, messageID, content string) (message *discordgo.Message, err error) {
-	message, err = cache.GetSession().ChannelMessageEdit(channelID, messageID, content)
+	message, err = cache.GetSession().Session(0).ChannelMessageEdit(channelID, messageID, content)
 	content = CleanDiscordContent(content)
 	if err != nil {
 		return nil, err
@@ -1226,7 +1235,7 @@ func EditMessage(channelID, messageID, content string) (message *discordgo.Messa
 }
 
 func EditEmbed(channelID, messageID string, embed *discordgo.MessageEmbed) (message *discordgo.Message, err error) {
-	message, err = cache.GetSession().ChannelMessageEditEmbed(channelID, messageID, TruncateEmbed(embed))
+	message, err = cache.GetSession().Session(0).ChannelMessageEditEmbed(channelID, messageID, TruncateEmbed(embed))
 	if err != nil {
 		return nil, err
 	} else {
@@ -1242,7 +1251,7 @@ func EditComplex(data *discordgo.MessageEdit) (message *discordgo.Message, err e
 		content := CleanDiscordContent(*data.Content)
 		data.Content = &content
 	}
-	message, err = cache.GetSession().ChannelMessageEditComplex(data)
+	message, err = cache.GetSession().Session(0).ChannelMessageEditComplex(data)
 	if err != nil {
 		return nil, err
 	} else {
@@ -1337,7 +1346,7 @@ func typingLoop(channelID string, quitChannel chan int) {
 		case <-quitChannel:
 			return
 		default:
-			cache.GetSession().ChannelTyping(channelID)
+			cache.GetSession().Session(0).ChannelTyping(channelID)
 			time.Sleep(5 * time.Second)
 		}
 	}
@@ -1488,7 +1497,7 @@ func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
 	if guild.SystemChannelID != "" {
 		channel, err := GetChannel(guild.SystemChannelID)
 		if err == nil && channel.Type == discordgo.ChannelTypeGuildText {
-			channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+			channelPermissions, err := cache.GetSession().SessionForGuildS(guildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(guildID).State.User.ID, channel.ID)
 			if err == nil {
 				if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
 					return channel.ID, nil
@@ -1515,7 +1524,7 @@ func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
 	// check channel with the same ID as the guild, the default channel when a guild is being created
 	channel, err := GetChannel(guildID)
 	if err == nil && channel.Type == discordgo.ChannelTypeGuildText {
-		channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+		channelPermissions, err := cache.GetSession().SessionForGuildS(guildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(guildID).State.User.ID, channel.ID)
 		if err == nil {
 			if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
 				return channel.ID, nil
@@ -1535,7 +1544,7 @@ func GetGuildDefaultChannel(guildID string) (channelID string, err error) {
 		if guildChannel.Type != discordgo.ChannelTypeGuildText {
 			continue
 		}
-		channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, guildChannel.ID)
+		channelPermissions, err := cache.GetSession().SessionForGuildS(guildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(guildID).State.User.ID, guildChannel.ID)
 		if err == nil {
 			if channelPermissions&discordgo.PermissionSendMessages == discordgo.PermissionSendMessages {
 				return guildChannel.ID, nil
@@ -1554,7 +1563,7 @@ func DeleteMessageWithDelay(msg *discordgo.Message, delay time.Duration) (err er
 	}
 
 	time.Sleep(delay)
-	return cache.GetSession().ChannelMessageDelete(msg.ChannelID, msg.ID)
+	return cache.GetSession().SessionForGuildS(msg.GuildID).ChannelMessageDelete(msg.ChannelID, msg.ID)
 }
 
 // ReplaceEmojis, replaces emoji mentions with text
@@ -1678,4 +1687,15 @@ func EmojIURL(emojiID string, animated bool) string {
 	}
 
 	return discordgo.EndpointCDN + "emojis/" + emojiID + ".png"
+}
+
+func AllGuilds() []*discordgo.Guild {
+	var guilds []*discordgo.Guild
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			guilds = append(guilds, guild)
+		}
+	}
+
+	return guilds
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
@@ -26,7 +27,7 @@ func (m *Move) Commands() []string {
 	}
 }
 
-func (m *Move) Init(session *discordgo.Session) {
+func (m *Move) Init(session *shardmanager.Manager) {
 }
 
 func (m *Move) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -63,17 +64,17 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 		return m.actionFinish
 	}
 
-	cache.GetSession().MessageReactionAdd(in.ChannelID, in.ID, "🔄")
+	cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionAdd(in.ChannelID, in.ID, "🔄")
 
 	sourceChannel, err := helpers.GetChannel(in.ChannelID)
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		helpers.Relax(err)
 	}
 
 	targetChannel, err := helpers.GetChannelFromMention(in, args[0])
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		helpers.Relax(err)
 	}
 
@@ -82,20 +83,20 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 	if len(args) >= 3 {
 		numOfMessagesToMove, err = strconv.Atoi(args[2])
 		if err != nil {
-			cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+			cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 			*out = m.newMsg("bot.arguments.invalid")
 			return m.actionFinish
 		}
 	}
 	if numOfMessagesToMove < 1 || numOfMessagesToMove > 100 {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		*out = m.newMsg("bot.arguments.invalid")
 		return m.actionFinish
 	}
 
 	err = m.copyMessages(sourceChannel.ID, args[1], numOfMessagesToMove, targetChannel.ID, true)
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMessage {
 				*out = m.newMsg("bot.arguments.invalid")
@@ -109,13 +110,13 @@ func (m *Move) actionMove(args []string, in *discordgo.Message, out **discordgo.
 		helpers.Relax(err)
 	}
 
-	cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
-	cache.GetSession().MessageReactionAdd(in.ChannelID, in.ID, "👌")
+	cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
+	cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionAdd(in.ChannelID, in.ID, "👌")
 	go func() {
 		defer helpers.Recover()
 
 		time.Sleep(5 * time.Second)
-		cache.GetSession().ChannelMessageDelete(in.ChannelID, in.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).ChannelMessageDelete(in.ChannelID, in.ID)
 	}()
 	return nil
 }
@@ -133,17 +134,17 @@ func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.
 		return m.actionFinish
 	}
 
-	cache.GetSession().MessageReactionAdd(in.ChannelID, in.ID, "🔄")
+	cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionAdd(in.ChannelID, in.ID, "🔄")
 
 	sourceChannel, err := helpers.GetChannel(in.ChannelID)
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		helpers.Relax(err)
 	}
 
 	targetChannel, err := helpers.GetChannelFromMention(in, args[0])
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		helpers.Relax(err)
 	}
 
@@ -152,20 +153,20 @@ func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.
 	if len(args) >= 3 {
 		numOfMessagesToMove, err = strconv.Atoi(args[2])
 		if err != nil {
-			cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+			cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 			*out = m.newMsg("bot.arguments.invalid")
 			return m.actionFinish
 		}
 	}
 	if numOfMessagesToMove < 1 || numOfMessagesToMove > 100 {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		*out = m.newMsg("bot.arguments.invalid")
 		return m.actionFinish
 	}
 
 	err = m.copyMessages(sourceChannel.ID, args[1], numOfMessagesToMove, targetChannel.ID, false)
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownMessage {
 				*out = m.newMsg("bot.arguments.invalid")
@@ -179,24 +180,29 @@ func (m *Move) actionCopy(args []string, in *discordgo.Message, out **discordgo.
 		helpers.Relax(err)
 	}
 
-	cache.GetSession().MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().State.User.ID)
-	cache.GetSession().MessageReactionAdd(in.ChannelID, in.ID, "👌")
+	cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionRemove(in.ChannelID, in.ID, "🔄", cache.GetSession().SessionForGuildS(in.GuildID).State.User.ID)
+	cache.GetSession().SessionForGuildS(in.GuildID).MessageReactionAdd(in.ChannelID, in.ID, "👌")
 	go func() {
 		defer helpers.Recover()
 
 		time.Sleep(5 * time.Second)
-		cache.GetSession().ChannelMessageDelete(in.ChannelID, in.ID)
+		cache.GetSession().SessionForGuildS(in.GuildID).ChannelMessageDelete(in.ChannelID, in.ID)
 	}()
 	return nil
 }
 
 func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMessages int, targetChannelID string, delete bool) (err error) {
+	sourceChannel, err := helpers.GetChannel(sourceChannelID)
+	if err != nil {
+		return err
+	}
+
 	// debug
 	//m.logger().Debugf("requested move from #%s Message #%s n %d to #%s deletion %v",
 	//	sourceChannelID, sourceMessageID, numberOfMessages, targetChannelID, delete)
 	// gather messages to copy
 	messagesToMove := make([]*discordgo.Message, 0)
-	requestedMessage, err := cache.GetSession().ChannelMessage(sourceChannelID, sourceMessageID)
+	requestedMessage, err := cache.GetSession().SessionForGuildS(sourceChannel.GuildID).ChannelMessage(sourceChannelID, sourceMessageID)
 	if err != nil {
 		return err
 	}
@@ -213,7 +219,7 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 			}
 			messagesLeft -= messagesToGet
 
-			requestedMessages, err := cache.GetSession().ChannelMessages(sourceChannelID, messagesToGet, "", lastAfterID, "")
+			requestedMessages, err := cache.GetSession().SessionForGuildS(sourceChannel.GuildID).ChannelMessages(sourceChannelID, messagesToGet, "", lastAfterID, "")
 			if err != nil {
 				return err
 			}
@@ -288,7 +294,7 @@ func (m *Move) copyMessages(sourceChannelID, sourceMessageID string, numberOfMes
 		for _, messageToDelete := range messagesToMove {
 			bulkDeleteMessageIDs = append(bulkDeleteMessageIDs, messageToDelete.ID)
 		}
-		cache.GetSession().ChannelMessagesBulkDelete(sourceChannelID, bulkDeleteMessageIDs)
+		cache.GetSession().SessionForGuildS(sourceChannelID).ChannelMessagesBulkDelete(sourceChannelID, bulkDeleteMessageIDs)
 	}
 
 	return nil

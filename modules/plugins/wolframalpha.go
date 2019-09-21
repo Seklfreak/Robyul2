@@ -10,6 +10,7 @@ import (
 	wolfram "github.com/Krognol/go-wolfram"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -23,7 +24,7 @@ func (m *WolframAlpha) Commands() []string {
 	}
 }
 
-func (m *WolframAlpha) Init(session *discordgo.Session) {
+func (m *WolframAlpha) Init(session *shardmanager.Manager) {
 
 }
 

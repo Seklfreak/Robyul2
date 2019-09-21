@@ -89,16 +89,18 @@ func SetPrefixForServer(guild string, prefix string) error {
 
 func GuildSettingsUpdater() {
 	for {
-		for _, guild := range cache.GetSession().State.Guilds {
-			settings, e := GuildSettingsGet(guild.ID)
-			if e != nil {
-				raven.CaptureError(e, map[string]string{})
-				continue
-			}
+		for _, shard := range cache.GetSession().Sessions {
+			for _, guild := range shard.State.Guilds {
+				settings, e := GuildSettingsGet(guild.ID)
+				if e != nil {
+					raven.CaptureError(e, map[string]string{})
+					continue
+				}
 
-			cacheMutex.Lock()
-			guildSettingsCache[guild.ID] = settings
-			cacheMutex.Unlock()
+				cacheMutex.Lock()
+				guildSettingsCache[guild.ID] = settings
+				cacheMutex.Unlock()
+			}
 		}
 
 		time.Sleep(15 * time.Second)

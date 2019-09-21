@@ -16,6 +16,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
 	cairo "github.com/ungerik/go-cairo"
@@ -42,7 +43,7 @@ func (s *Spoiler) Commands() []string {
 	}
 }
 
-func (s *Spoiler) Init(session *discordgo.Session) {
+func (s *Spoiler) Init(session *shardmanager.Manager) {
 	var err error
 
 	s.cachePath = helpers.GetConfig().Path("cache_folder").Data().(string)

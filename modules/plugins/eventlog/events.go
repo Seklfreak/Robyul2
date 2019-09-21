@@ -37,7 +37,7 @@ func (h *Handler) OnMessage(content string, msg *discordgo.Message, session *dis
 	postedInviteChannelIDs := make([]string, 0)
 	postedInviteInviterUserIDs := make([]string, 0)
 	for _, inviteCode := range invitesCodes {
-		invite, err := cache.GetSession().InviteWithCounts(inviteCode)
+		invite, err := cache.GetSession().SessionForGuildS(msg.GuildID).InviteWithCounts(inviteCode)
 		if err == nil && invite != nil && invite.Guild != nil {
 			postedInviteGuildIDs = append(postedInviteGuildIDs, invite.Guild.ID)
 			postedInviteGuildNames = append(postedInviteGuildNames, invite.Guild.Name)
@@ -155,7 +155,7 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 
 	err = Container.Drain(1, reaction.UserID)
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		cache.GetSession().SessionForGuildS(reaction.GuildID).MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> You are undoing too fast.\nPlease wait a bit.")
 		return
 	}
@@ -167,7 +167,7 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 	}
 
 	// skip if target message is by robyul and has embeds
-	if message.Author.ID != cache.GetSession().State.User.ID || len(message.Embeds) <= 0 {
+	if message.Author.ID != cache.GetSession().SessionForGuildS(reaction.GuildID).State.User.ID || len(message.Embeds) <= 0 {
 		return
 	}
 
@@ -198,10 +198,10 @@ func (h *Handler) OnReactionAdd(reaction *discordgo.MessageReactionAdd, session 
 
 	err = helpers.Revert(ID, reaction.UserID, *eventlogItem)
 	if err != nil {
-		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		cache.GetSession().SessionForGuildS(reaction.GuildID).MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 		helpers.SendMessage(reaction.ChannelID, "<@"+reaction.UserID+"> Error reverting change: "+err.Error())
 	} else {
-		cache.GetSession().MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
+		cache.GetSession().SessionForGuildS(reaction.GuildID).MessageReactionsRemoveAll(reaction.ChannelID, reaction.MessageID)
 	}
 }
 
@@ -418,8 +418,8 @@ func (h *Handler) OnGuildRoleDelete(session *discordgo.Session, role *discordgo.
 }
 
 func (h *Handler) OnGuildBanAdd(user *discordgo.GuildBanAdd, session *discordgo.Session) {
-	if helpers.GetMemberPermissions(user.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
-		helpers.GetMemberPermissions(user.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+	if helpers.GetMemberPermissions(user.GuildID, cache.GetSession().SessionForGuildS(user.GuildID).State.User.ID)&discordgo.PermissionBanMembers != discordgo.PermissionBanMembers &&
+		helpers.GetMemberPermissions(user.GuildID, cache.GetSession().SessionForGuildS(user.GuildID).State.User.ID)&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
 		return
 	}
 

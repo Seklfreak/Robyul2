@@ -104,7 +104,7 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 		// add reactions
 		for _, messageID := range messageIDs {
 			messageIDParts := strings.SplitN(messageID, "|", 2)
-			cache.GetSession().MessageReactionAdd(messageIDParts[0], messageIDParts[1], "↩")
+			cache.GetSession().SessionForGuildS(guildID).MessageReactionAdd(messageIDParts[0], messageIDParts[1], "↩")
 		}
 	}
 
@@ -162,13 +162,13 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 			}
 			break
 		case models.EventlogTargetTypeRole:
-			targetRole, err := cache.GetSession().State.Role(guildID, id)
+			targetRole, err := cache.GetSession().SessionForGuildS(guildID).State.Role(guildID, id)
 			if err == nil {
 				targetName = "@" + targetRole.Name
 			}
 			break
 		case models.EventlogTargetTypeEmoji:
-			targetEmoji, err := cache.GetSession().State.Emoji(guildID, id)
+			targetEmoji, err := cache.GetSession().SessionForGuildS(guildID).State.Emoji(guildID, id)
 			if err == nil {
 				targetName = targetEmoji.Name
 			}
@@ -212,7 +212,7 @@ func eventlogTargetsToText(guildID, targetType, idsText string) (names []string)
 						targetName = "User #" + channelOverwrite.ID
 					}
 				case "role":
-					targetRole, err := cache.GetSession().State.Role(guildID, channelOverwrite.ID)
+					targetRole, err := cache.GetSession().SessionForGuildS(guildID).State.Role(guildID, channelOverwrite.ID)
 					if err == nil {
 						targetName = "@" + targetRole.Name + ": "
 					} else {

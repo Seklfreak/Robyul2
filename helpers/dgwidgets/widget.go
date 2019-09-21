@@ -43,12 +43,14 @@ type Widget struct {
 	UserWhitelist []string
 
 	running bool
+
+	GuildID string
 }
 
 // NewWidget returns a pointer to a Widget object
 //    ses      : discordgo session
 //    channelID: channelID to spawn the widget on
-func NewWidget(channelID string, userID string, embed *discordgo.MessageEmbed) *Widget {
+func NewWidget(guildID, channelID string, userID string, embed *discordgo.MessageEmbed) *Widget {
 	return &Widget{
 		ChannelID:       channelID,
 		Keys:            []string{},
@@ -58,6 +60,7 @@ func NewWidget(channelID string, userID string, embed *discordgo.MessageEmbed) *
 		Embed:           embed,
 		Timeout:         time.Minute * 5,
 		UserWhitelist:   []string{userID},
+		GuildID:         guildID,
 	}
 }
 
@@ -100,7 +103,7 @@ func (w *Widget) Spawn() error {
 
 	// Add reaction buttons
 	for _, v := range w.Keys {
-		cache.GetSession().MessageReactionAdd(w.Message.ChannelID, w.Message.ID, v)
+		cache.GetSession().SessionForGuildS(w.GuildID).MessageReactionAdd(w.Message.ChannelID, w.Message.ID, v)
 	}
 
 	var reaction *discordgo.MessageReaction
@@ -108,7 +111,7 @@ func (w *Widget) Spawn() error {
 		// Navigation timeout enabled
 		if w.Timeout != 0 {
 			select {
-			case k := <-nextMessageReactionAddC(cache.GetSession()):
+			case k := <-nextMessageReactionAddC(cache.GetSession().SessionForGuildS(w.GuildID)):
 				reaction = k.MessageReaction
 			case <-time.After(startTime.Add(w.Timeout).Sub(time.Now())):
 				return nil
@@ -117,7 +120,7 @@ func (w *Widget) Spawn() error {
 			}
 		} else /*Navigation timeout not enabled*/ {
 			select {
-			case k := <-nextMessageReactionAddC(cache.GetSession()):
+			case k := <-nextMessageReactionAddC(cache.GetSession().SessionForGuildS(w.GuildID)):
 				reaction = k.MessageReaction
 			case <-w.Close:
 				return nil
@@ -125,7 +128,7 @@ func (w *Widget) Spawn() error {
 		}
 
 		// Ignore reactions sent by bot
-		if reaction.MessageID != w.Message.ID || cache.GetSession().State.User.ID == reaction.UserID {
+		if reaction.MessageID != w.Message.ID || cache.GetSession().SessionForGuildS(w.GuildID).State.User.ID == reaction.UserID {
 			continue
 		}
 
@@ -139,7 +142,7 @@ func (w *Widget) Spawn() error {
 			go func() {
 				if w.isUserAllowed(reaction.UserID) {
 					time.Sleep(time.Millisecond * 250)
-					cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+					cache.GetSession().SessionForGuildS(w.GuildID).MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 				}
 			}()
 		}
@@ -157,7 +160,7 @@ func (w *Widget) Handle(emojiName string, handler WidgetHandler) error {
 	}
 	// if the widget is running, append the added emoji to the message.
 	if w.Running() && w.Message != nil {
-		return cache.GetSession().MessageReactionAdd(w.Message.ChannelID, w.Message.ID, emojiName)
+		return cache.GetSession().SessionForGuildS(w.GuildID).MessageReactionAdd(w.Message.ChannelID, w.Message.ID, emojiName)
 	}
 	return nil
 }
@@ -172,7 +175,7 @@ func (w *Widget) QueryInput(prompt string, userID string, timeout time.Duration)
 		return nil, err
 	}
 	defer func() {
-		cache.GetSession().ChannelMessageDelete(msg[0].ChannelID, msg[0].ID)
+		cache.GetSession().SessionForGuildS(w.GuildID).ChannelMessageDelete(msg[0].ChannelID, msg[0].ID)
 	}()
 
 	timeoutChan := make(chan int)
@@ -183,11 +186,11 @@ func (w *Widget) QueryInput(prompt string, userID string, timeout time.Duration)
 
 	for {
 		select {
-		case usermsg := <-nextMessageCreateC(cache.GetSession()):
+		case usermsg := <-nextMessageCreateC(cache.GetSession().SessionForGuildS(w.GuildID)):
 			if usermsg.Author.ID != userID {
 				continue
 			}
-			cache.GetSession().ChannelMessageDelete(usermsg.ChannelID, usermsg.ID)
+			cache.GetSession().SessionForGuildS(w.GuildID).ChannelMessageDelete(usermsg.ChannelID, usermsg.ID)
 			return usermsg.Message, nil
 		case <-timeoutChan:
 			return nil, errors.New("Timed out")

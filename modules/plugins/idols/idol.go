@@ -368,7 +368,7 @@ func makeIdolFromOldIdolEntry(entry models.OldIdolEntry) Idol {
 // updateGroupInfo if a target group is found, this will update the group name
 //  for all members
 func updateGroupInfo(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	contentArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -420,7 +420,7 @@ func updateGroupInfo(msg *discordgo.Message, content string) {
 
 // updateIdolInfoFromMsg updates a idols group, name, and/or gender depending on args
 func updateIdolInfoFromMsg(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	contentArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -560,7 +560,7 @@ func updateIdolInfo(targetGroup, targetName, newGroup, newName, newGender string
 
 // updateImageInfo updates a specific image and its related idol info
 func updateImageInfo(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	contentArgs, err := helpers.ToArgv(content)
 	if err != nil {
@@ -839,7 +839,7 @@ func setAllIdols(idols []*Idol) {
 // showImagesForIdol will show a embed message with all the available images for an idol
 func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectNames bool) {
 	defer helpers.Recover()
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	commandArgs, err := helpers.ToArgv(msgContent)
 	if err != nil {
@@ -874,7 +874,7 @@ func showImagesForIdol(msg *discordgo.Message, msgContent string, showObjectName
 
 // listIdols will list all idols
 func listIdols(msg *discordgo.Message) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	genderCountMap := make(map[string]int)
 	genderGroupCountMap := make(map[string]int)
@@ -1037,7 +1037,7 @@ func RefreshIdolBiasgameStats(targetIdol *Idol) {
 // RefreshIdolBiasgameStats is a slow operation that will check every game the
 // idol has ever been in and update its game stats
 func RefreshAllIdolBiasgameStats(msg *discordgo.Message) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	helpers.SendMessage(msg.ChannelID, "Refreshing biasgame info on idol records...")
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -198,7 +199,7 @@ type GenericAlbumScore struct {
 	IsNew       bool
 }
 
-func (m *Charts) Init(session *discordgo.Session) {
+func (m *Charts) Init(session *shardmanager.Manager) {
 }
 
 func (m *Charts) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

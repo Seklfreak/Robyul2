@@ -11,6 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
@@ -36,7 +37,7 @@ func (n *Names) Commands() []string {
 
 // TODO: switch to robyul state
 
-func (n *Names) Init(session *discordgo.Session) {
+func (n *Names) Init(session *shardmanager.Manager) {
 	previousNicknamesMutex.Lock()
 	previousNicknames = make(map[string]map[string]string, 0)
 	previousNicknamesMutex.Unlock()
@@ -65,7 +66,7 @@ func (n *Names) Action(command string, content string, msg *discordgo.Message, s
 }
 
 func (n *Names) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) namesAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	return n.actionNames
 }

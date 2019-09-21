@@ -4,21 +4,21 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/bwmarrin/discordgo"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 )
 
 var (
-	session      *discordgo.Session
+	session      *shardmanager.Manager
 	sessionMutex sync.RWMutex
 )
 
-func SetSession(s *discordgo.Session) {
+func SetSession(s *shardmanager.Manager) {
 	sessionMutex.Lock()
 	session = s
 	sessionMutex.Unlock()
 }
 
-func GetSession() *discordgo.Session {
+func GetSession() *shardmanager.Manager {
 	sessionMutex.RLock()
 	defer sessionMutex.RUnlock()
 

@@ -63,11 +63,11 @@ func GetDiscordEmojiFromText(guildID string, text string) (emoji *discordgo.Emoj
 		return nil, errors.New("invalid emoji text received")
 	}
 	fmt.Println(textParts)
-	return cache.GetSession().State.Emoji(guildID, textParts[len(textParts)-1])
+	return cache.GetSession().SessionForGuildS(guildID).State.Emoji(guildID, textParts[len(textParts)-1])
 }
 
 func GetDiscordEmojiFromName(guildID string, name string) (emoji *discordgo.Emoji, err error) {
-	guild, err := cache.GetSession().State.Guild(guildID)
+	guild, err := cache.GetSession().SessionForGuildS(guildID).State.Guild(guildID)
 	if err != nil {
 		return nil, err
 	}

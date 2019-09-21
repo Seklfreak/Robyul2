@@ -149,14 +149,14 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		_, err = cache.GetSession().ChannelEditComplex(item.TargetID, channelEdit)
+		_, err = cache.GetSession().SessionForGuildS(item.GuildID).ChannelEditComplex(item.TargetID, channelEdit)
 		if err != nil {
 			return err
 		}
 
 		return logRevert(channel.GuildID, userID, eventlogID)
 	case models.EventlogTypeRoleUpdate:
-		role, err := cache.GetSession().State.Role(item.GuildID, item.TargetID)
+		role, err := cache.GetSession().SessionForGuildS(item.GuildID).State.Role(item.GuildID, item.TargetID)
 		if err != nil {
 			return err
 		}
@@ -185,7 +185,7 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		role, err = cache.GetSession().GuildRoleEdit(item.GuildID, item.TargetID, newName, newColor, newHoist, newPermissions, newMentionable)
+		role, err = cache.GetSession().SessionForGuildS(item.GuildID).GuildRoleEdit(item.GuildID, item.TargetID, newName, newColor, newHoist, newPermissions, newMentionable)
 		if err != nil {
 			return err
 		}
@@ -195,7 +195,7 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		for _, change := range item.Changes {
 			switch change.Key {
 			case "member_nick":
-				err = cache.GetSession().GuildMemberNickname(item.GuildID, item.TargetID, change.OldValue)
+				err = cache.GetSession().SessionForGuildS(item.GuildID).GuildMemberNickname(item.GuildID, item.TargetID, change.OldValue)
 				if err != nil {
 					return err
 				}
@@ -206,14 +206,14 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			switch option.Key {
 			case "member_roles_added":
 				for _, roleID := range strings.Split(option.Value, ";") {
-					err = cache.GetSession().GuildMemberRoleRemove(item.GuildID, item.TargetID, roleID)
+					err = cache.GetSession().SessionForGuildS(item.GuildID).GuildMemberRoleRemove(item.GuildID, item.TargetID, roleID)
 					if err != nil {
 						return err
 					}
 				}
 			case "member_roles_removed":
 				for _, roleID := range strings.Split(option.Value, ";") {
-					err = cache.GetSession().GuildMemberRoleAdd(item.GuildID, item.TargetID, roleID)
+					err = cache.GetSession().SessionForGuildS(item.GuildID).GuildMemberRoleAdd(item.GuildID, item.TargetID, roleID)
 					if err != nil {
 						return err
 					}
@@ -288,7 +288,7 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		_, err = cache.GetSession().GuildEdit(item.TargetID, guildParams)
+		_, err = cache.GetSession().SessionForGuildS(item.GuildID).GuildEdit(item.TargetID, guildParams)
 		if err != nil {
 			return err
 		}
@@ -334,14 +334,14 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		_, err = cache.GetSession().GuildEmojiCreate(item.GuildID, emojiName, emojiImage, emojiRoles)
+		_, err = cache.GetSession().SessionForGuildS(item.GuildID).GuildEmojiCreate(item.GuildID, emojiName, emojiImage, emojiRoles)
 		if err != nil {
 			return err
 		}
 
 		return logRevert(item.GuildID, userID, eventlogID)
 	case models.EventlogTypeEmojiUpdate:
-		emoji, err := cache.GetSession().State.Emoji(item.GuildID, item.TargetID)
+		emoji, err := cache.GetSession().SessionForGuildS(item.GuildID).State.Emoji(item.GuildID, item.TargetID)
 		if err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		_, err = cache.GetSession().GuildEmojiEdit(item.GuildID, item.TargetID, emojiName, emoji.Roles)
+		_, err = cache.GetSession().SessionForGuildS(item.GuildID).GuildEmojiEdit(item.GuildID, item.TargetID, emojiName, emoji.Roles)
 		if err != nil {
 			return err
 		}
@@ -403,12 +403,12 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 			}
 		}
 
-		channel, err := cache.GetSession().GuildChannelCreate(item.GuildID, channelName, channelType)
+		channel, err := cache.GetSession().SessionForGuildS(item.GuildID).GuildChannelCreate(item.GuildID, channelName, channelType)
 		if err != nil {
 			return err
 		}
 
-		_, err = cache.GetSession().ChannelEditComplex(channel.ID, &discordgo.ChannelEdit{
+		_, err = cache.GetSession().SessionForGuildS(item.GuildID).ChannelEditComplex(channel.ID, &discordgo.ChannelEdit{
 			Name:                 channelName,
 			Topic:                channelTopic,
 			NSFW:                 channelNSFW,

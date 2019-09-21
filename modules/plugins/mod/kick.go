@@ -52,7 +52,7 @@ func kickHander(msg *discordgo.Message, content string, confirmation bool) {
 	var botCanKick bool
 	guild, err := helpers.GetGuild(msg.GuildID)
 	helpers.Relax(err)
-	guildMemberBot, err := helpers.GetGuildMember(guild.ID, cache.GetSession().State.User.ID)
+	guildMemberBot, err := helpers.GetGuildMember(guild.ID, cache.GetSession().SessionForGuildS(msg.GuildID).State.User.ID)
 	helpers.Relax(err)
 	for _, role := range guild.Roles {
 		for _, userRole := range guildMemberBot.Roles {
@@ -115,14 +115,14 @@ func kickHander(msg *discordgo.Message, content string, confirmation bool) {
 
 	if !confirmation ||
 		helpers.ConfirmEmbed(
-			msg.ChannelID, msg.Author,
+			msg.GuildID, msg.ChannelID, msg.Author,
 			helpers.GetTextF(
 				"plugins.mod.confirm-kick",
 				usersToKickText,
 				reasonText,
 			), "✅", "🚫") {
 		for _, userToKick := range usersToKick {
-			err = cache.GetSession().GuildMemberDeleteWithReason(guild.ID, userToKick.ID, reasonText)
+			err = cache.GetSession().SessionForGuildS(msg.GuildID).GuildMemberDeleteWithReason(guild.ID, userToKick.ID, reasonText)
 			if err != nil {
 				if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 					if err.Message.Code == 0 {

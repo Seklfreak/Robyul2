@@ -58,12 +58,12 @@ func initSuggestionChannel() {
 
 	// when the bot starts, delete any past bot messages from the suggestion channel and make the embed
 	var messagesToDelete []string
-	messagesInChannel, _ := cache.GetSession().ChannelMessages(imageSuggestionChannlId, 100, "", "", "")
+	messagesInChannel, _ := cache.GetSession().SessionForGuildS(imageSuggestionChannel.GuildID).ChannelMessages(imageSuggestionChannlId, 100, "", "", "")
 	for _, msg := range messagesInChannel {
 		messagesToDelete = append(messagesToDelete, msg.ID)
 	}
 
-	cache.GetSession().ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
+	cache.GetSession().SessionForGuildS(imageSuggestionChannel.GuildID).ChannelMessagesBulkDelete(imageSuggestionChannlId, messagesToDelete)
 
 	// make a message on how to edit suggestions
 	helpMessage := "```Editable Fields: name, group, gender, notes\n" +
@@ -177,7 +177,6 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 	sugImgHashString, err := helpers.GetImageHashString(suggestedImage)
 	helpers.Relax(err)
 
-
 	_, _, matchingIdol := GetMatchingIdolAndGroup(suggestionArgs[1], suggestionArgs[2], true)
 	if matchingIdol != nil {
 
@@ -196,7 +195,6 @@ func processImageSuggestion(msg *discordgo.Message, msgContent string) {
 			}
 		}
 	}
-
 
 	// compare the given image to all images currently in the suggestion queue
 	for _, suggestion := range suggestionQueue {
@@ -287,7 +285,7 @@ func checkSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			// send processing image message
 			msg, err := helpers.SendMessage(imageSuggestionChannlId, "Uploading image...")
 			if err == nil {
-				defer cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg[0].ID)
+				defer cache.GetSession().SessionForGuildS(reaction.GuildID).ChannelMessageDelete(imageSuggestionChannlId, msg[0].ID)
 			}
 
 			addSuggestionToGame(cs)
@@ -312,7 +310,7 @@ func checkSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 			// confirm a note is set before denying a suggestion
 			if cs.Notes == "" {
 				// remove the x reaction just added
-				cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+				cache.GetSession().SessionForGuildS(reaction.GuildID).MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 
 				// alert user a note is needed and delete message after delay
 				msgs, err := helpers.SendMessage(imageSuggestionChannlId, "A note must be set before denying a suggestion. Please use: `"+helpers.GetPrefixForServer(imageSuggestionChannel.GuildID)+"edit notes {reason for denial...}`")
@@ -337,7 +335,7 @@ func checkSuggestionReaction(reaction *discordgo.MessageReactionAdd) {
 		go helpers.MDbUpsertID(models.IdolSuggestionsTable, cs.ID, cs)
 
 		// send a message to the user who suggested the image
-		dmChannel, err := cache.GetSession().UserChannelCreate(cs.UserID)
+		dmChannel, err := cache.GetSession().SessionForGuildS(reaction.GuildID).UserChannelCreate(cs.UserID)
 		if err == nil {
 			// set notes if there are any
 			if cs.Notes != "" {
@@ -397,7 +395,7 @@ func updateCurrentSuggestionEmbed() {
 	var cs *models.IdolSuggestionEntry
 
 	if exampleRoundPicId != "" {
-		go cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, exampleRoundPicId)
+		go cache.GetSession().Session(0).ChannelMessageDelete(imageSuggestionChannlId, exampleRoundPicId)
 	}
 
 	if len(suggestionQueue) == 0 {
@@ -430,17 +428,17 @@ func updateCurrentSuggestionEmbed() {
 
 		// get info of user who suggested image
 		suggestedByText := "*No User Info Found*"
-		suggestedBy, err := cache.GetSession().User(cs.UserID)
+		suggestedBy, err := helpers.GetUser(cs.UserID)
 		if err == nil {
 			suggestedByText = fmt.Sprintf("%s#%s \n(%s)", suggestedBy.Username, suggestedBy.Discriminator, suggestedBy.ID)
 		}
 
 		// get guild and channel info it was suggested from
 		suggestedFromText := "*No Guild Info Found*"
-		suggestedFromCh, err := cache.GetSession().Channel(cs.ChannelID)
+		suggestedFromCh, err := helpers.GetChannel(cs.ChannelID)
 		if err == nil {
 
-			suggestedFrom, err := cache.GetSession().Guild(suggestedFromCh.GuildID)
+			suggestedFrom, err := helpers.GetGuild(suggestedFromCh.GuildID)
 			if err == nil {
 				suggestedFromText = fmt.Sprintf("G: %s \nC: #%s", suggestedFrom.Name, suggestedFromCh.Name)
 			}
@@ -527,39 +525,39 @@ func updateCurrentSuggestionEmbed() {
 	}
 
 	// delete old embed message
-	cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, suggestionEmbedMessageId)
+	cache.GetSession().Session(0).ChannelMessageDelete(imageSuggestionChannlId, suggestionEmbedMessageId)
 
 	// delete any other messages in the suggestions channel
 	clearSuggestionsChannel()
 
 	// send new embed message
-	embedMsg, err := cache.GetSession().ChannelMessageSendComplex(imageSuggestionChannlId, msgSend)
+	embedMsg, err := cache.GetSession().Session(0).ChannelMessageSendComplex(imageSuggestionChannlId, msgSend)
 	helpers.Relax(err)
 	suggestionEmbedMessageId = embedMsg.ID
 
 	updateSuggestionQueueCount()
 	// delete any reactions on message and then reset them if there's another suggestion in queue
-	cache.GetSession().MessageReactionsRemoveAll(imageSuggestionChannlId, embedMsg.ID)
+	cache.GetSession().Session(0).MessageReactionsRemoveAll(imageSuggestionChannlId, embedMsg.ID)
 	if len(suggestionQueue) > 0 {
 
 		// compare the given image to all images currently available in the game
 		sendSimilarImages(embedMsg, cs.ImageHashString)
 
-		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, CHECKMARK_EMOJI)
-		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, X_EMOJI)
-		cache.GetSession().MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, NAV_NUMBERS_EMOJI)
+		cache.GetSession().Session(0).MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, CHECKMARK_EMOJI)
+		cache.GetSession().Session(0).MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, X_EMOJI)
+		cache.GetSession().Session(0).MessageReactionAdd(imageSuggestionChannlId, embedMsg.ID, NAV_NUMBERS_EMOJI)
 	}
 }
 
 func updateSuggestionQueueCount() {
 	// update suggestion count message
 	if suggestionQueueCountMessageId == "" {
-		msg, err := cache.GetSession().ChannelMessageSend(imageSuggestionChannlId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
+		msg, err := cache.GetSession().Session(0).ChannelMessageSend(imageSuggestionChannlId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
 		if err == nil {
 			suggestionQueueCountMessageId = msg.ID
 		}
 	} else {
-		cache.GetSession().ChannelMessageEdit(imageSuggestionChannlId, suggestionQueueCountMessageId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
+		cache.GetSession().Session(0).ChannelMessageEdit(imageSuggestionChannlId, suggestionQueueCountMessageId, fmt.Sprintf("Suggestions in queue: %d", len(suggestionQueue)))
 	}
 }
 
@@ -638,11 +636,11 @@ func clearSuggestionsChannel() {
 	}
 
 	// get newer messages
-	messagesArray, err := cache.GetSession().ChannelMessages(imageSuggestionChannlId, 100, "", suggestionEmbedMessageId, "")
+	messagesArray, err := cache.GetSession().Session(0).ChannelMessages(imageSuggestionChannlId, 100, "", suggestionEmbedMessageId, "")
 	helpers.Relax(err)
 
 	for _, msg := range messagesArray {
-		cache.GetSession().ChannelMessageDelete(imageSuggestionChannlId, msg.ID)
+		cache.GetSession().Session(0).ChannelMessageDelete(imageSuggestionChannlId, msg.ID)
 	}
 }
 
@@ -723,12 +721,17 @@ func addSuggestionToGame(suggestion *models.IdolSuggestionEntry) {
 
 // getUserInputPage waits for the user to enter a number
 func getSuggestionDenialInput(channelID string) (int, error) {
+	channel, err := helpers.GetChannel(channelID)
+	if err != nil {
+		return 0, err
+	}
+
 	queryMsg, err := helpers.SendMessage(channelID, "Enter the number for the reason you would like to deny with.")
 	if err != nil {
 		return 0, err
 	}
 
-	defer cache.GetSession().ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
+	defer cache.GetSession().SessionForGuildS(channel.GuildID).ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
 
 	timeoutChan := make(chan int)
 	go func() {
@@ -738,7 +741,7 @@ func getSuggestionDenialInput(channelID string) (int, error) {
 
 	for {
 		userInputChan := make(chan *discordgo.MessageCreate)
-		cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
+		cache.GetSession().SessionForGuildS(channel.GuildID).AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
 			userInputChan <- e
 		})
 
@@ -752,7 +755,7 @@ func getSuggestionDenialInput(channelID string) (int, error) {
 			}
 
 			// delete user message and remove reaction
-			go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
+			go cache.GetSession().SessionForGuildS(channel.GuildID).ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
 
 			// get page number from user text
 			re := regexp.MustCompile("[0-9]+")

@@ -26,6 +26,7 @@ type nuguGame struct {
 	GuessTimeoutTimer   *time.Timer
 	LivesRemaining      int
 	UsersCorrectGuesses map[string][]bson.ObjectId // userid => []ids of idols they got right.  used in multi only
+	GuildID             string
 }
 
 // nuguGameForCache is only the information necessary to restore a game.
@@ -42,4 +43,5 @@ type nuguGameForCache struct {
 	IsMultigame         bool // if true all messages in the channel will be account for
 	LivesRemaining      int
 	UsersCorrectGuesses map[string][]bson.ObjectId // userid => []ids of idols they got right.  used in multi only
+	GuildID             string
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -19,7 +20,7 @@ func (m *Dog) Commands() []string {
 	}
 }
 
-func (m *Dog) Init(session *discordgo.Session) {
+func (m *Dog) Init(session *shardmanager.Manager) {
 
 }
 

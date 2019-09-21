@@ -9,6 +9,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -54,7 +55,7 @@ func (m *Facebook) Commands() []string {
 	}
 }
 
-func (m *Facebook) Init(session *discordgo.Session) {
+func (m *Facebook) Init(session *shardmanager.Manager) {
 	go m.checkFacebookFeedsLoop()
 	cache.GetLogger().WithField("module", "facebook").Info("Started Facebook loop (10m)")
 }

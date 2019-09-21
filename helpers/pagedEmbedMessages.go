@@ -39,6 +39,7 @@ type pagedEmbedMessage struct {
 	color               int
 	messageID           string
 	channelID           string
+	guildID             string
 	userId              string //user who triggered the message
 	msgType             int
 	waitingForPageInput bool
@@ -62,7 +63,7 @@ func RemoveReactionsFromPagedEmbeds() {
 	// TODO: sync group? Without blocking bot shutdown
 	for _, pagedEmbed := range GetAllPagedMessages() {
 		go func(pagedEmbed *pagedEmbedMessage) {
-			cache.GetSession().MessageReactionsRemoveAll(pagedEmbed.channelID, pagedEmbed.messageID)
+			cache.GetSession().SessionForGuildS(pagedEmbed.guildID).MessageReactionsRemoveAll(pagedEmbed.channelID, pagedEmbed.messageID)
 		}(pagedEmbed)
 	}
 }
@@ -126,6 +127,7 @@ func SendPagedMessage(msg *discordgo.Message, embed *discordgo.MessageEmbed, fie
 		fieldsPerPage:       fieldsPerPage,
 		totalNumOfPages:     int(math.Ceil(float64(len(embed.Fields)) / float64(fieldsPerPage))),
 		userId:              msg.Author.ID,
+		guildID:             msg.GuildID,
 	}
 
 	pagedMessage.setupAndSendFirstMessage()
@@ -160,6 +162,7 @@ func SendPagedImageMessage(msg *discordgo.Message, msgSend *discordgo.MessageSen
 		files:               msgSend.Files,
 		userId:              msg.Author.ID,
 		msgType:             IMAGE_MESSAGE_TYPE,
+		guildID:             msg.GuildID,
 	}
 
 	pagedMessage.setupAndSendFirstMessage()
@@ -180,7 +183,7 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 	// check if user who made the embed message is closing it
 	if X_EMOJI == reaction.Emoji.Name {
 		DeletePagedMessage(reaction.MessageID)
-		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
+		cache.GetSession().SessionForGuildS(p.guildID).ChannelMessageDelete(p.channelID, p.messageID)
 		return
 	}
 
@@ -218,7 +221,7 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 	// updated stats
 	if p.msgType == IMAGE_MESSAGE_TYPE {
 		// image embeds can't be edited, need to delete and remate it
-		cache.GetSession().ChannelMessageDelete(p.channelID, p.messageID)
+		cache.GetSession().SessionForGuildS(p.guildID).ChannelMessageDelete(p.channelID, p.messageID)
 
 		// if fields were sent with image embed, handle those
 		if len(p.fullEmbed.Fields) > 0 {
@@ -270,7 +273,7 @@ func (p *pagedEmbedMessage) UpdateMessagePage(reaction *discordgo.MessageReactio
 		tempEmbed.Footer = p.getEmbedFooter()
 		EditEmbed(p.channelID, p.messageID, tempEmbed)
 
-		cache.GetSession().MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
+		cache.GetSession().SessionForGuildS(p.guildID).MessageReactionRemove(reaction.ChannelID, reaction.MessageID, reaction.Emoji.Name, reaction.UserID)
 	}
 }
 
@@ -346,14 +349,14 @@ func (p *pagedEmbedMessage) getEmbedFooter() *discordgo.MessageEmbedFooter {
 }
 
 func (p *pagedEmbedMessage) addReactionsToMessage() {
-	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, LEFT_ARROW_EMOJI)
-	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().SessionForGuildS(p.guildID).MessageReactionAdd(p.channelID, p.messageID, LEFT_ARROW_EMOJI)
+	cache.GetSession().SessionForGuildS(p.guildID).MessageReactionAdd(p.channelID, p.messageID, RIGHT_ARROW_EMOJI)
 
 	if p.totalNumOfPages > 5 {
-		cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, NAV_NUMBERS)
+		cache.GetSession().SessionForGuildS(p.guildID).MessageReactionAdd(p.channelID, p.messageID, NAV_NUMBERS)
 	}
 
-	cache.GetSession().MessageReactionAdd(p.channelID, p.messageID, X_EMOJI)
+	cache.GetSession().SessionForGuildS(p.guildID).MessageReactionAdd(p.channelID, p.messageID, X_EMOJI)
 }
 
 // getUserInputPage waits for the user to enter a page
@@ -363,7 +366,7 @@ func (p *pagedEmbedMessage) getUserInputPage() (int, error) {
 		return 0, err
 	}
 
-	defer cache.GetSession().ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
+	defer cache.GetSession().SessionForGuildS(p.guildID).ChannelMessageDelete(queryMsg[0].ChannelID, queryMsg[0].ID)
 
 	timeoutChan := make(chan int)
 	go func() {
@@ -374,7 +377,7 @@ func (p *pagedEmbedMessage) getUserInputPage() (int, error) {
 	p.waitingForPageInput = true
 	for {
 		select {
-		case userMsg := <-waitForUserMessage():
+		case userMsg := <-waitForUserMessage(p.guildID):
 
 			// check for user who opened embed
 			if userMsg.Author.ID != p.userId {
@@ -386,8 +389,8 @@ func (p *pagedEmbedMessage) getUserInputPage() (int, error) {
 			if userEnteredNum, err := strconv.Atoi(re.FindString(userMsg.Content)); err == nil {
 
 				// delete user message and remove reaction
-				go cache.GetSession().ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
-				go cache.GetSession().MessageReactionRemove(p.channelID, p.messageID, NAV_NUMBERS, p.userId)
+				go cache.GetSession().SessionForGuildS(p.guildID).ChannelMessageDelete(userMsg.ChannelID, userMsg.ID)
+				go cache.GetSession().SessionForGuildS(p.guildID).MessageReactionRemove(p.channelID, p.messageID, NAV_NUMBERS, p.userId)
 
 				p.waitingForPageInput = false
 				if userEnteredNum > 0 && userEnteredNum <= p.totalNumOfPages {
@@ -398,7 +401,7 @@ func (p *pagedEmbedMessage) getUserInputPage() (int, error) {
 				}
 			}
 		case <-timeoutChan:
-			go cache.GetSession().MessageReactionRemove(p.channelID, p.messageID, NAV_NUMBERS, p.userId)
+			go cache.GetSession().SessionForGuildS(p.guildID).MessageReactionRemove(p.channelID, p.messageID, NAV_NUMBERS, p.userId)
 			p.waitingForPageInput = false
 			return 0, errors.New("Timed out")
 		}
@@ -429,9 +432,9 @@ func (p *pagedEmbedMessage) hasError(err error) bool {
 	return true
 }
 
-func waitForUserMessage() chan *discordgo.MessageCreate {
+func waitForUserMessage(guildID string) chan *discordgo.MessageCreate {
 	out := make(chan *discordgo.MessageCreate)
-	cache.GetSession().AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
+	cache.GetSession().SessionForGuildS(guildID).AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageCreate) {
 		out <- e
 	})
 	return out

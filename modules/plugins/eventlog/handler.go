@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -23,7 +24,7 @@ func (h *Handler) Commands() []string {
 	}
 }
 
-func (h *Handler) Init(session *discordgo.Session) {
+func (h *Handler) Init(session *shardmanager.Manager) {
 	defer helpers.Recover()
 
 	Container.Init()
@@ -37,7 +38,7 @@ func (h *Handler) Init(session *discordgo.Session) {
 	logger().Info("started auditlogBackfillLoop loop (1m)")
 }
 
-func (h *Handler) Uninit(session *discordgo.Session) {
+func (h *Handler) Uninit(session *shardmanager.Manager) {
 	defer helpers.Recover()
 }
 
@@ -59,7 +60,7 @@ func (h *Handler) Action(command string, content string, msg *discordgo.Message,
 }
 
 func (h *Handler) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = h.newMsg("bot.arguments.too-few")
@@ -135,7 +136,7 @@ func (h *Handler) actionSetLogChannel(args []string, in *discordgo.Message, out 
 
 // [p]toggle-eventlog
 func (h *Handler) actionToggleEventlog(args []string, in *discordgo.Message, out **discordgo.MessageSend) action {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 	if !helpers.IsAdmin(in) {
 		*out = h.newMsg("admin.no_permission")
 		return h.actionFinish

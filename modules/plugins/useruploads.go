@@ -5,6 +5,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -19,7 +20,7 @@ func (m *Useruploads) Commands() []string {
 	}
 }
 
-func (m *Useruploads) Init(session *discordgo.Session) {
+func (m *Useruploads) Init(session *shardmanager.Manager) {
 }
 
 func (m *Useruploads) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -35,7 +36,7 @@ func (m *Useruploads) Action(command string, content string, msg *discordgo.Mess
 }
 
 func (m *Useruploads) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) useruploadsAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = m.newMsg(helpers.GetText("bot.arguments.too-few"))

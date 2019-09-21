@@ -8,6 +8,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -20,7 +21,7 @@ func (u *UrbanDict) Commands() []string {
 	}
 }
 
-func (u *UrbanDict) Init(session *discordgo.Session) {
+func (u *UrbanDict) Init(session *shardmanager.Manager) {
 
 }
 

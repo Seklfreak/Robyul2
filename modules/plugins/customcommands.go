@@ -18,6 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -42,13 +43,13 @@ var (
 	customCommandsAllowedFiletypes = []string{"image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm"}
 )
 
-func (cc *CustomCommands) Init(session *discordgo.Session) {
+func (cc *CustomCommands) Init(session *shardmanager.Manager) {
 	var err error
 	customCommandsCache, err = cc.getAllCustomCommands()
 	helpers.Relax(err)
 }
 
-func (cc *CustomCommands) Uninit(session *discordgo.Session) {
+func (cc *CustomCommands) Uninit(session *shardmanager.Manager) {
 
 }
 

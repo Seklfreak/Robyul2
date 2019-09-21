@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -24,12 +25,12 @@ func (mp *ModulePermissions) Commands() []string {
 	}
 }
 
-func (mp *ModulePermissions) Init(session *discordgo.Session) {
+func (mp *ModulePermissions) Init(session *shardmanager.Manager) {
 	err := helpers.RefreshModulePermissionsCache()
 	helpers.Relax(err)
 }
 
-func (mp *ModulePermissions) Uninit(session *discordgo.Session) {
+func (mp *ModulePermissions) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -46,7 +47,7 @@ func (mp *ModulePermissions) Action(command string, content string, msg *discord
 }
 
 func (mp *ModulePermissions) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) modulePermissionsAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = mp.newMsg("bot.arguments.too-few")
@@ -134,7 +135,7 @@ func (mp *ModulePermissions) actionStatus(args []string, in *discordgo.Message, 
 			}
 			break
 		case "role":
-			role, _ := cache.GetSession().State.Role(entry.GuildID, entry.TargetID)
+			role, _ := cache.GetSession().SessionForGuildS(in.GuildID).State.Role(entry.GuildID, entry.TargetID)
 			if role == nil || role.ID == "" {
 				continue
 			}

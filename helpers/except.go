@@ -143,6 +143,11 @@ func RelaxMessage(err error, channelID string, commandMessageID string) {
 }
 
 func AddNoPermissionsReaction(channelID, messageID string) {
+	channel, err := GetChannelWithoutApi(channelID)
+	if err != nil {
+		return
+	}
+
 	reactions := []string{
 		":blobstop:317034621953114112",
 		"a:ablobweary:394026914479865856",
@@ -155,7 +160,7 @@ func AddNoPermissionsReaction(channelID, messageID string) {
 	// todo: global rand object in cache
 	randSource := rand.NewSource(time.Now().UnixNano())
 	randType := rand.New(randSource)
-	cache.GetSession().MessageReactionAdd(channelID, messageID, reactions[randType.Intn(len(reactions))])
+	cache.GetSession().SessionForGuildS(channel.GuildID).MessageReactionAdd(channelID, messageID, reactions[randType.Intn(len(reactions))])
 }
 
 func RelaxLog(err error) {

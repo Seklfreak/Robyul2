@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -20,7 +21,7 @@ var gameGenders map[string]string
 //  before the game is ready after a bot restart
 var moduleIsReady = false
 
-func (m *Module) Init(session *discordgo.Session) {
+func (m *Module) Init(session *shardmanager.Manager) {
 	go func() {
 		defer helpers.Recover()
 
@@ -107,7 +108,7 @@ func (m *Module) Init(session *discordgo.Session) {
 }
 
 // Uninit called when bot is shutting down
-func (m *Module) Uninit(session *discordgo.Session) {
+func (m *Module) Uninit(session *shardmanager.Manager) {
 
 	// save any currently running games
 	err := setBiasGameCache("currentSinglePlayerGames", getCurrentSinglePlayerGames(), 0)

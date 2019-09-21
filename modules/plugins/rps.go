@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -15,7 +16,7 @@ func (r *RPS) Commands() []string {
 	}
 }
 
-func (r *RPS) Init(session *discordgo.Session) {
+func (r *RPS) Init(session *shardmanager.Manager) {
 
 }
 

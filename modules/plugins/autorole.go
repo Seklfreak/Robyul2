@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
@@ -29,13 +30,13 @@ func (a *AutoRoles) Commands() []string {
 	}
 }
 
-func (a *AutoRoles) Init(session *discordgo.Session) {
+func (a *AutoRoles) Init(session *shardmanager.Manager) {
 	a.parser = when.New(nil)
 	a.parser.Add(en.All...)
 	a.parser.Add(common.All...)
 }
 
-func (a *AutoRoles) Uninit(session *discordgo.Session) {
+func (a *AutoRoles) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -334,7 +335,7 @@ func (a *AutoRoles) Action(command string, content string, msg *discordgo.Messag
 					}
 				}
 
-				if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.autorole.apply-confirm",
+				if helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, helpers.GetTextF("plugins.autorole.apply-confirm",
 					targetRole.Name, targetRole.ID, len(users)), "✅", "🚫") {
 					_, err = helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.autorole.apply-started"))
 					helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
@@ -404,7 +405,7 @@ func (a *AutoRoles) OnGuildMemberAdd(member *discordgo.Member, session *discordg
 }
 
 func AutoroleApply(guildID string, userID string, roleID string) (err error) {
-	err = cache.GetSession().GuildMemberRoleAdd(guildID, userID, roleID)
+	err = cache.GetSession().SessionForGuildS(guildID).GuildMemberRoleAdd(guildID, userID, roleID)
 	if err != nil {
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Code != discordgo.ErrCodeMissingPermissions &&

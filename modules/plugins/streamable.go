@@ -14,6 +14,7 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dyatlov/go-oembed/oembed"
 )
@@ -34,7 +35,7 @@ var (
 	oEmbedHandler *oembed.Oembed
 )
 
-func (s *Streamable) Init(session *discordgo.Session) {
+func (s *Streamable) Init(session *shardmanager.Manager) {
 	data, err := ioutil.ReadFile(helpers.GetConfig().Path("assets_folder").Data().(string) + "providers.json")
 	helpers.Relax(err)
 

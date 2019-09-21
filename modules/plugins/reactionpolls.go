@@ -11,6 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -36,13 +37,13 @@ var (
 )
 
 // @TODO: add metrics
-func (rp *ReactionPolls) Init(session *discordgo.Session) {
+func (rp *ReactionPolls) Init(session *shardmanager.Manager) {
 	var err error
 	reactionPollIDsCache, err = rp.getAllActiveReactionPollIDs()
 	helpers.Relax(err)
 }
 
-func (rp *ReactionPolls) Uninit(session *discordgo.Session) {
+func (rp *ReactionPolls) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -319,7 +320,7 @@ func (rp *ReactionPolls) getTotalVotes(reactionPoll models.ReactionpollsEntry, u
 		cache.GetLogger().WithField("module", "reactionpolls").Info(
 			"initialising reaction poll #", helpers.MdbIdToHuman(reactionPoll.ID),
 		)
-		message, err := cache.GetSession().ChannelMessage(reactionPoll.ChannelID, reactionPoll.MessageID)
+		message, err := cache.GetSession().SessionForGuildS(reactionPoll.GuildID).ChannelMessage(reactionPoll.ChannelID, reactionPoll.MessageID)
 		if err != nil {
 			return 0
 		}
@@ -328,12 +329,12 @@ func (rp *ReactionPolls) getTotalVotes(reactionPoll models.ReactionpollsEntry, u
 				if allowedEmote != messageReaction.Emoji.APIName() {
 					continue
 				}
-				messageReactionUsers, err := cache.GetSession().MessageReactions(
+				messageReactionUsers, err := cache.GetSession().SessionForGuildS(reactionPoll.GuildID).MessageReactions(
 					reactionPoll.ChannelID, reactionPoll.MessageID, messageReaction.Emoji.APIName(), 100)
 				if err == nil {
 					userIDs := make([]string, 0)
 					for _, messageReactionUser := range messageReactionUsers {
-						if messageReactionUser.ID == cache.GetSession().State.User.ID {
+						if messageReactionUser.ID == cache.GetSession().SessionForGuildS(reactionPoll.GuildID).State.User.ID {
 							continue
 						}
 

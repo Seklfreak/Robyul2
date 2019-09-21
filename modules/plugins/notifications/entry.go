@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
@@ -28,7 +29,7 @@ func (m *Handler) Commands() []string {
 	}
 }
 
-func (m *Handler) Init(session *discordgo.Session) {
+func (m *Handler) Init(session *shardmanager.Manager) {
 	session.AddHandler(m.OnMessage)
 	go func() {
 		defer helpers.Recover()
@@ -38,7 +39,7 @@ func (m *Handler) Init(session *discordgo.Session) {
 	}()
 }
 
-func (m *Handler) Uninit(session *discordgo.Session) {
+func (m *Handler) Uninit(session *shardmanager.Manager) {
 
 }
 

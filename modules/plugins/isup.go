@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -19,7 +20,7 @@ func (iu *Isup) Commands() []string {
 	}
 }
 
-func (iu *Isup) Init(session *discordgo.Session) {
+func (iu *Isup) Init(session *shardmanager.Manager) {
 }
 
 func (iu *Isup) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

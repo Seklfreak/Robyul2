@@ -26,7 +26,7 @@ var (
 		&plugins.Weather{},
 		&plugins.VLive{},
 		// &instagram.Handler{},
-		&plugins.Facebook{},
+		// &plugins.Facebook{},
 		&plugins.WolframAlpha{},
 		&plugins.LastFm{},
 		&plugins.Twitch{},

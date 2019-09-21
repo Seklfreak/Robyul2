@@ -15,6 +15,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
@@ -53,7 +54,7 @@ func (rp *RandomPictures) Commands() []string {
 	}
 }
 
-func (rp *RandomPictures) Init(session *discordgo.Session) {
+func (rp *RandomPictures) Init(session *shardmanager.Manager) {
 
 	// Get drive service
 	driveService = cache.GetGoogleDriveService()
@@ -208,28 +209,30 @@ func (rp *RandomPictures) setServerFeaturesLoop() {
 			continue
 		}
 
-		for _, guild := range cache.GetSession().State.Guilds {
-			sourcesOnServer = make([]models.RandompictureSourceEntry, 0)
-			for _, source := range sourcesBucket {
-				if source.GuildID == guild.ID {
-					sourcesOnServer = append(sourcesOnServer, source)
+		for _, shard := range cache.GetSession().Sessions {
+			for _, guild := range shard.State.Guilds {
+				sourcesOnServer = make([]models.RandompictureSourceEntry, 0)
+				for _, source := range sourcesBucket {
+					if source.GuildID == guild.ID {
+						sourcesOnServer = append(sourcesOnServer, source)
+					}
 				}
-			}
 
-			key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
-			feature = models.Rest_Feature_RandomPictures{
-				Count: len(sourcesOnServer),
-			}
+				key = fmt.Sprintf(models.Redis_Key_Feature_RandomPictures, guild.ID)
+				feature = models.Rest_Feature_RandomPictures{
+					Count: len(sourcesOnServer),
+				}
 
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        key,
-				Object:     feature,
-				Expiration: time.Minute * 60,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
+				err = cacheCodec.Set(&redisCache.Item{
+					Key:        key,
+					Object:     feature,
+					Expiration: time.Minute * 60,
+				})
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
 
+			}
 		}
 
 		time.Sleep(30 * time.Minute)
@@ -757,9 +760,9 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 	} else { // match roles
 		var err error
 		guildRoles := make([]*discordgo.Role, 0)
-		if helpers.GetMemberPermissions(channel.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionManageRoles == discordgo.PermissionManageRoles ||
-			helpers.GetMemberPermissions(channel.GuildID, cache.GetSession().State.User.ID)&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
-			guildRoles, err = cache.GetSession().GuildRoles(channel.GuildID)
+		if helpers.GetMemberPermissions(channel.GuildID, cache.GetSession().SessionForGuildS(channel.GuildID).State.User.ID)&discordgo.PermissionManageRoles == discordgo.PermissionManageRoles ||
+			helpers.GetMemberPermissions(channel.GuildID, cache.GetSession().SessionForGuildS(channel.GuildID).State.User.ID)&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+			guildRoles, err = cache.GetSession().SessionForGuildS(channel.GuildID).GuildRoles(channel.GuildID)
 			if err != nil {
 				if err, ok := err.(*discordgo.RESTError); ok && err.Message.Code == discordgo.ErrCodeMissingPermissions {
 					guildRoles = []*discordgo.Role{}
@@ -769,7 +772,7 @@ func (rp *RandomPictures) postRandomItemFromContent(channel *discordgo.Channel, 
 			}
 		}
 
-		targetMember, err := cache.GetSession().State.Member(channel.GuildID, msg.Author.ID)
+		targetMember, err := cache.GetSession().SessionForGuildS(channel.GuildID).State.Member(channel.GuildID, msg.Author.ID)
 		if err != nil {
 			return false, err
 		}

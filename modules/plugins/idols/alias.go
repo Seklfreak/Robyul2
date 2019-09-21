@@ -40,7 +40,7 @@ func getGroupAliases() map[string][]string {
 
 // addGroupAlias will add an alias for a group or idol depending on the amount of arguments
 func addAlias(msg *discordgo.Message, content string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// validate arguments
 	commandArgs, err := helpers.ToArgv(content)
@@ -158,7 +158,7 @@ func addGroupAlias(msg *discordgo.Message, targetGroup string, newAliasName stri
 
 // deleteGroupAlias will delete the alias if it is found
 func deleteIdolAlias(msg *discordgo.Message, commandArgs []string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	targetGroup := commandArgs[2]
 	targetName := commandArgs[3]
@@ -210,7 +210,7 @@ func deleteIdolAlias(msg *discordgo.Message, commandArgs []string) {
 
 // deleteGroupAlias will delete the alias if it is found
 func deleteGroupAlias(msg *discordgo.Message, commandArgs []string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	aliasToDelete := commandArgs[2]
 
@@ -274,7 +274,7 @@ func listAliases(msg *discordgo.Message, content string) {
 
 // listNameAliases lists aliases for a idol
 func listNameAliases(msg *discordgo.Message, targetGroup string, targetName string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	var targetIdol *Idol
 	if _, _, targetIdol = GetMatchingIdolAndGroup(targetGroup, targetName, true); targetIdol == nil {
@@ -308,7 +308,7 @@ func listNameAliases(msg *discordgo.Message, targetGroup string, targetName stri
 
 // listNameAliasesByGroup lists aliases for a group
 func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	var realGroupName string
 	if _, realGroupName = GetMatchingGroup(targetGroup, true); realGroupName == "" {
@@ -365,7 +365,7 @@ func listNameAliasesByGroup(msg *discordgo.Message, targetGroup string) {
 
 // listGroupAliases will display the current group aliases in a embed message
 func listGroupAliases(msg *discordgo.Message) {
-	cache.GetSession().ChannelTyping(msg.ChannelID)
+	cache.GetSession().SessionForGuildS(msg.GuildID).ChannelTyping(msg.ChannelID)
 
 	// set up base embed
 	embed := &discordgo.MessageEmbed{

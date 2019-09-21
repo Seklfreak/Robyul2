@@ -26,6 +26,7 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/ratelimits"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/andybons/gogif"
 	"github.com/bradfitz/slice"
@@ -113,7 +114,7 @@ const (
 	TimeBirthdayFormat = "01/02"
 )
 
-func (m *Levels) Init(session *discordgo.Session) {
+func (m *Levels) Init(session *shardmanager.Manager) {
 	m.BucketInit()
 
 	log := cache.GetLogger()
@@ -135,7 +136,7 @@ func (m *Levels) Init(session *discordgo.Session) {
 	go setServerFeaturesLoop()
 }
 
-func (l *Levels) Uninit(session *discordgo.Session) {
+func (l *Levels) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -632,7 +633,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 						backgroundUrl := m.GetProfileBackgroundUrlByName(backgroundName)
 
 						if helpers.ConfirmEmbed(
-							msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
+							msg.GuildID, msg.ChannelID, msg.Author, helpers.GetTextF("plugins.levels.profile-background-delete-confirm",
 								backgroundName, backgroundUrl),
 							"✅", "🚫") == true {
 							err = helpers.MDbDelete(models.ProfileBackgroundsTable, entryBucket.ID)
@@ -1919,7 +1920,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 					Title:       helpers.GetText("plugins.levels.global-top-server-embed-title"),
 					Description: "View the global leaderboard [here](" + rankingUrl + ").",
 					Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
-						len(session.State.Guilds),
+						len(helpers.AllGuilds()),
 					)},
 					Fields: []*discordgo.MessageEmbedField{},
 					URL:    rankingUrl,
@@ -2443,7 +2444,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				case "apply":
 					// [p]levels role apply
 					helpers.RequireMod(msg, func() {
-						if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetText("plugins.levels.levels-role-apply-confirm"), "✅", "🚫") {
+						if helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, helpers.GetText("plugins.levels.levels-role-apply-confirm"), "✅", "🚫") {
 							errors := make([]error, 0)
 							var success int
 
@@ -2920,7 +2921,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 			Title:       helpers.GetTextF("plugins.levels.user-embed-title", fullUsername),
 			Description: "View the leaderboard for this server [here](" + helpers.GetConfig().Path("website.ranking_base_url").Data().(string) + "/" + channel.GuildID + ").",
 			Footer: &discordgo.MessageEmbedFooter{Text: helpers.GetTextF("plugins.levels.embed-footer",
-				len(session.State.Guilds),
+				len(helpers.AllGuilds()),
 			)},
 			Fields: []*discordgo.MessageEmbedField{
 				{
@@ -2979,7 +2980,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 
 func (l *Levels) DeleteMessages(channelID string, messages []string) {
 	for _, message := range messages {
-		cache.GetSession().ChannelMessageDelete(channelID, message)
+		cache.GetSession().Session(0).ChannelMessageDelete(channelID, message)
 	}
 }
 

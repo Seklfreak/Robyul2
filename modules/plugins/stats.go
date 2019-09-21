@@ -21,6 +21,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
@@ -161,7 +162,7 @@ func (s *Stats) handleVoiceStateUpdate(session *discordgo.Session, update *disco
 	}
 }
 
-func (s *Stats) Init(session *discordgo.Session) {
+func (s *Stats) Init(session *shardmanager.Manager) {
 	VoiceSessionStarts = make([]VoiceSessionStart, 0)
 	session.AddHandler(s.handleVoiceStateUpdate)
 }
@@ -177,7 +178,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		// Count guilds, channels and users
 		users := make(map[string]string)
 		channels := 0
-		guilds := session.State.Guilds
+		guilds := helpers.AllGuilds()
 
 		for _, guild := range guilds {
 			channels += len(guild.Channels)
@@ -1449,7 +1450,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			inviteCodes = append(inviteCodes, args[0])
 		}
 
-		invite, err := cache.GetSession().InviteWithCounts(inviteCodes[0])
+		invite, err := cache.GetSession().SessionForGuildS(msg.GuildID).InviteWithCounts(inviteCodes[0])
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeUnknownInvite {
 				helpers.SendMessage(msg.ChannelID, helpers.GetText("plugins.stats.unknown-invite"))

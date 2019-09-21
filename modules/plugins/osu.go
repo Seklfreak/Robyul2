@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -21,7 +22,7 @@ func (o *Osu) Commands() []string {
 	}
 }
 
-func (o *Osu) Init(session *discordgo.Session) {
+func (o *Osu) Init(session *shardmanager.Manager) {
 
 }
 

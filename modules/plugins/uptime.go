@@ -6,6 +6,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -17,7 +18,7 @@ func (u *Uptime) Commands() []string {
 	}
 }
 
-func (u *Uptime) Init(session *discordgo.Session) {
+func (u *Uptime) Init(session *shardmanager.Manager) {
 
 }
 

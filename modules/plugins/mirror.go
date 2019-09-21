@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
@@ -39,7 +40,7 @@ var (
 	}
 )
 
-func (m *Mirror) Init(session *discordgo.Session) {
+func (m *Mirror) Init(session *shardmanager.Manager) {
 	var err error
 	mirrors, err = m.GetMirrors()
 	helpers.Relax(err)
@@ -48,7 +49,7 @@ func (m *Mirror) Init(session *discordgo.Session) {
 	session.AddHandler(m.OnMessageDelete)
 }
 
-func (m *Mirror) Uninit(session *discordgo.Session) {
+func (m *Mirror) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -413,9 +414,11 @@ func (m *Mirror) postMirrorMessage(mirrorEntry models.MirrorEntry, sourceMessage
 	for _, channelToMirrorToEntry := range mirrorEntry.ConnectedChannels {
 		if channelToMirrorToEntry.ChannelID != sourceMessage.ChannelID {
 			robyulIsOnTargetGuild := false
-			for _, guild := range cache.GetSession().State.Guilds {
-				if guild.ID == channelToMirrorToEntry.GuildID {
-					robyulIsOnTargetGuild = true
+			for _, shard := range cache.GetSession().Sessions {
+				for _, guild := range shard.State.Guilds {
+					if guild.ID == channelToMirrorToEntry.GuildID {
+						robyulIsOnTargetGuild = true
+					}
 				}
 			}
 			if robyulIsOnTargetGuild {

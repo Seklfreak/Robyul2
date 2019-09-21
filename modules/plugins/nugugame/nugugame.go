@@ -101,6 +101,7 @@ func startNuguGame(msg *discordgo.Message, commandArgs []string) {
 			GameType:        gameType,
 			Difficulty:      gameDifficulty,
 			LivesRemaining:  lives,
+			GuildID:         msg.GuildID,
 		}
 	}
 
@@ -228,10 +229,10 @@ func (g *nuguGame) watchForGuesses() {
 
 							// if the user guessed nayoung correctly, add cute nayoung emoji instead of a checkmark
 							if strings.ToLower(currentIdol.GroupName) == "pristin" && strings.ToLower(currentIdol.Name) == "nayoung" {
-								cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, getRandomNayoungEmoji()) // <3
+								cache.GetSession().SessionForGuildS(g.GuildID).MessageReactionAdd(g.ChannelID, userMsg.ID, getRandomNayoungEmoji()) // <3
 
 							} else {
-								cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
+								cache.GetSession().SessionForGuildS(g.GuildID).MessageReactionAdd(g.ChannelID, userMsg.ID, CHECKMARK_EMOJI)
 							}
 
 							g.UsersCorrectGuesses[userMsg.Author.ID] = append(g.UsersCorrectGuesses[userMsg.Author.ID], currentIdol.ID)
@@ -240,7 +241,7 @@ func (g *nuguGame) watchForGuesses() {
 
 							// if the user guessed nayoung correctly, add cute nayoung emoji instead of a checkmark
 							if strings.ToLower(currentIdol.GroupName) == "pristin" && strings.ToLower(currentIdol.Name) == "nayoung" {
-								cache.GetSession().MessageReactionAdd(g.ChannelID, userMsg.ID, getRandomNayoungEmoji()) // <3
+								cache.GetSession().SessionForGuildS(g.GuildID).MessageReactionAdd(g.ChannelID, userMsg.ID, getRandomNayoungEmoji()) // <3
 								go helpers.DeleteMessageWithDelay(userMsg, 4*time.Second)
 
 							} else {
@@ -539,6 +540,7 @@ func convertCachedNugugame(cachedNugugame nuguGameForCache) *nuguGame {
 		Difficulty:          cachedNugugame.Difficulty,
 		LivesRemaining:      cachedNugugame.LivesRemaining,
 		UsersCorrectGuesses: cachedNugugame.UsersCorrectGuesses,
+		GuildID:             cachedNugugame.GuildID,
 	}
 
 	for _, idolId := range cachedNugugame.CorrectIdols {
@@ -586,6 +588,7 @@ func convertNugugameToCached(nugugames map[string]*nuguGame) map[string]nuguGame
 			LivesRemaining:      game.LivesRemaining,
 			CurrentIdolId:       game.CurrentIdol.ID,
 			UsersCorrectGuesses: game.UsersCorrectGuesses,
+			GuildID:             game.GuildID,
 		}
 
 		for _, idol := range game.CorrectIdols {

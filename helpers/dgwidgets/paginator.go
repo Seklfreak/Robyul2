@@ -36,7 +36,7 @@ type Paginator struct {
 // NewPaginator returns a new Paginator
 //    ses      : discordgo session
 //    channelID: channelID to spawn the paginator on
-func NewPaginator(channelID, userID string) *Paginator {
+func NewPaginator(guildID, channelID, userID string) *Paginator {
 	p := &Paginator{
 		Pages:                   []*discordgo.MessageEmbed{},
 		Index:                   0,
@@ -45,7 +45,7 @@ func NewPaginator(channelID, userID string) *Paginator {
 		DeleteReactionsWhenDone: true,
 		Colour:                  helpers.GetDiscordColorFromHex("73d016"), // lime green
 		ColourWhenDone:          helpers.GetDiscordColorFromHex("ffb80a"), // orange
-		Widget:                  NewWidget(channelID, userID, nil),
+		Widget:                  NewWidget(guildID, channelID, userID, nil),
 	}
 	p.addHandlers()
 
@@ -99,14 +99,14 @@ func (p *Paginator) Spawn() error {
 
 		// Delete Message when done
 		if p.DeleteMessageWhenDone && p.Widget.Message != nil {
-			cache.GetSession().ChannelMessageDelete(p.Widget.Message.ChannelID, p.Widget.Message.ID)
+			cache.GetSession().SessionForGuildS(p.Widget.GuildID).ChannelMessageDelete(p.Widget.Message.ChannelID, p.Widget.Message.ID)
 		} else {
 			p.Update()
 		}
 
 		// Delete reactions when done
 		if p.DeleteReactionsWhenDone && p.Widget.Message != nil {
-			cache.GetSession().MessageReactionsRemoveAll(p.Widget.ChannelID, p.Widget.Message.ID)
+			cache.GetSession().SessionForGuildS(p.Widget.GuildID).MessageReactionsRemoveAll(p.Widget.ChannelID, p.Widget.Message.ID)
 		}
 	}()
 

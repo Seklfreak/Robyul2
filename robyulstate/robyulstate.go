@@ -488,7 +488,7 @@ func (s *Robyulstate) MemberRemove(member *discordgo.Member) error {
 	defer s.Unlock()
 
 	if _, ok := s.guildMap[member.GuildID]; !ok || s.guildMap[member.GuildID] == nil {
-		if member.User.ID == cache.GetSession().State.User.ID {
+		if member.User.ID == cache.GetSession().SessionForGuildS(member.GuildID).State.User.ID {
 			// robyul left a guild, ignore
 			return nil
 		}

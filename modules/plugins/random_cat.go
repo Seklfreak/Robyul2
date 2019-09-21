@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -20,7 +21,7 @@ func (rc RandomCat) Commands() []string {
 	}
 }
 
-func (rc RandomCat) Init(session *discordgo.Session) {
+func (rc RandomCat) Init(session *shardmanager.Manager) {
 	RandomCatEndpoint = "https://thecatapi.com/api/images/get?api_key=" +
 		helpers.GetConfig().Path("thecatapi-api-key").Data().(string) +
 		"&format=xml&results_per_page=1&type=jpg,gif,png"

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -15,7 +16,7 @@ type Module struct{}
 
 var gameGenders map[string]string
 
-func (i *Module) Init(session *discordgo.Session) {
+func (i *Module) Init(session *shardmanager.Manager) {
 	go func() {
 		defer helpers.Recover()
 
@@ -39,7 +40,7 @@ func (i *Module) Init(session *discordgo.Session) {
 }
 
 // Uninit called when bot is shutting down
-func (i *Module) Uninit(session *discordgo.Session) {
+func (i *Module) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -102,7 +103,7 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 				helpers.Relax(err)
 				refreshIdolsFromOld(true)
 
-				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
+				cache.GetSession().SessionForGuildS(msg.GuildID).ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
 				helpers.SendMessage(msg.ChannelID, "Idol info and images have been refreshed.")
 			})
 
@@ -113,7 +114,7 @@ func (i *Module) Action(command string, content string, msg *discordgo.Message, 
 				helpers.Relax(err)
 				refreshIdols(true)
 
-				cache.GetSession().ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
+				cache.GetSession().SessionForGuildS(msg.GuildID).ChannelMessageDelete(msg.ChannelID, newMessages[0].ID)
 				helpers.SendMessage(msg.ChannelID, "Idol info and images have been refreshed.")
 			})
 		case "images", "image", "pic", "pics", "img", "imgs":

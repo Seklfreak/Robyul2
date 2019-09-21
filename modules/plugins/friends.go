@@ -7,6 +7,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -22,7 +23,7 @@ func (f *Friend) Commands() []string {
 	}
 }
 
-func (f *Friend) Init(session *discordgo.Session) {
+func (f *Friend) Init(session *shardmanager.Manager) {
 
 }
 
@@ -85,7 +86,7 @@ func (f *Friend) actionInvite(args []string, in *discordgo.Message, out **discor
 
 	var invite *discordgo.Invite
 	for _, guildChannel := range guild.Channels {
-		invite, err = cache.GetSession().ChannelInviteCreate(guildChannel.ID, discordgo.Invite{
+		invite, err = cache.GetSession().SessionForGuildS(in.GuildID).ChannelInviteCreate(guildChannel.ID, discordgo.Invite{
 			MaxAge:    60 * 15,
 			MaxUses:   1,
 			Temporary: false,

@@ -24,7 +24,7 @@ func WebhookExecuteWithResult(id, token string, data *discordgo.WebhookParams) (
 		data.Content = CleanDiscordContent(data.Content)
 	}
 
-	result, err := cache.GetSession().RequestWithBucketID("POST", uri, data, discordgo.EndpointWebhookToken("", ""))
+	result, err := cache.GetSession().Session(0).RequestWithBucketID("POST", uri, data, discordgo.EndpointWebhookToken("", ""))
 	if err != nil {
 		return message, err
 	}
@@ -56,7 +56,7 @@ func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err erro
 	}
 
 	// get robyul's permissions for the target channel
-	channelPermissions, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channelID)
+	channelPermissions, err := cache.GetSession().SessionForGuildS(guildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(guildID).State.User.ID, channelID)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err erro
 	}
 
 	// try to use existing webhooks
-	existingWebhooks, err := cache.GetSession().ChannelWebhooks(channelID)
+	existingWebhooks, err := cache.GetSession().SessionForGuildS(guildID).ChannelWebhooks(channelID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func GetWebhook(guildID, channelID string) (webhook *discordgo.Webhook, err erro
 
 	// create new webhook if no existing webhook
 	if webhook == nil || webhook.ID == "" || webhook.Token == "" {
-		webhook, err = cache.GetSession().WebhookCreate(channelID, "Robyul Webhook - Do Not Delete!", "")
+		webhook, err = cache.GetSession().SessionForGuildS(guildID).WebhookCreate(channelID, "Robyul Webhook - Do Not Delete!", "")
 		if err != nil {
 			return nil, err
 		}

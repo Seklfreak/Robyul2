@@ -13,6 +13,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/sirupsen/logrus"
@@ -32,7 +33,7 @@ func (m *Steam) Commands() []string {
 	}
 }
 
-func (m *Steam) Init(session *discordgo.Session) {
+func (m *Steam) Init(session *shardmanager.Manager) {
 	m.apiKey = helpers.GetConfig().Path("steam.api_key").Data().(string)
 }
 
@@ -53,7 +54,7 @@ func (m *Steam) Action(command string, content string, msg *discordgo.Message, s
 }
 
 func (m *Steam) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) steamAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	return m.actionInfo
 }

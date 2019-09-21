@@ -128,7 +128,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		// show a warning if the game size is >= 256, wait for confirm
 		if gameSize >= 256 {
 
-			if !helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetText("plugins.biasgame.game.size-warning"), "✅", "🚫") {
+			if !helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, helpers.GetText("plugins.biasgame.game.size-warning"), "✅", "🚫") {
 				return nil
 			}
 
@@ -146,6 +146,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 			IdolsRemaining:   gameSize,
 			ReadyForReaction: false,
 			Gender:           gameGender,
+			GuildID:          msg.GuildID,
 		}
 		singleGame.GameImageIndex = make(map[string]int)
 
@@ -244,7 +245,7 @@ func (g *singleBiasGame) sendBiasGameRound() {
 
 	// if a round message has been sent, delete before sending the next one
 	if g.LastRoundMessage != nil {
-		go cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
+		go cache.GetSession().SessionForGuildS(g.GuildID).ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// get random images
@@ -284,8 +285,8 @@ func (g *singleBiasGame) sendBiasGameRound() {
 	g.ReadyForReaction = true
 
 	// add reactions
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
-	go cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().SessionForGuildS(g.GuildID).MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
+	go cache.GetSession().SessionForGuildS(g.GuildID).MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 }
 
 // sendWinnerMessage creates the top eight brackent sends the winning message to the user
@@ -293,7 +294,7 @@ func (g *singleBiasGame) sendWinnerMessage() {
 
 	// if a round message has been sent, delete before sending the next one
 	if g.LastRoundMessage != nil {
-		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
+		cache.GetSession().SessionForGuildS(g.GuildID).ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// get last 7 from winners array and combine with topEight array
@@ -337,7 +338,7 @@ func (g *singleBiasGame) sendWinnerMessage() {
 
 	// if the winner is nayoung, add a nayoung emoji <3 <3 <3
 	if strings.ToLower(g.GameWinnerBias.GroupName) == "pristin" && strings.ToLower(g.GameWinnerBias.Name) == "nayoung" {
-		cache.GetSession().MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
+		cache.GetSession().SessionForGuildS(g.GuildID).MessageReactionAdd(g.ChannelID, winnerMsgs[0].ID, getRandomNayoungEmoji()) // <3
 	}
 }
 
@@ -472,6 +473,7 @@ func startMultiPlayerGame(msg *discordgo.Message, commandArgs []string) {
 		Gender:         gameGender,
 		RoundDelay:     5,
 		GameIsRunning:  true,
+		guildID:        msg.GuildID,
 	}
 	multiGame.GameImageIndex = make(map[string]int)
 
@@ -504,7 +506,7 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 
 	// if a round message has been sent, delete before sending the next one
 	if g.LastRoundMessage != nil {
-		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
+		cache.GetSession().SessionForGuildS(g.guildID).ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// get random images to use
@@ -557,8 +559,8 @@ func (g *multiBiasGame) sendMultiBiasGameRound() error {
 	}
 
 	// add reactions
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
-	cache.GetSession().MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
+	cache.GetSession().SessionForGuildS(g.guildID).MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, LEFT_ARROW_EMOJI)
+	cache.GetSession().SessionForGuildS(g.guildID).MessageReactionAdd(g.ChannelID, fileSendMsg[0].ID, RIGHT_ARROW_EMOJI)
 
 	// update game state
 	g.CurrentRoundMessageId = fileSendMsg[0].ID
@@ -581,7 +583,7 @@ func (g *multiBiasGame) processMultiGame() {
 		g.GameIsRunning = true
 
 		// get current round message
-		message, err := cache.GetSession().ChannelMessage(g.ChannelID, g.CurrentRoundMessageId)
+		message, err := cache.GetSession().SessionForGuildS(g.guildID).ChannelMessage(g.ChannelID, g.CurrentRoundMessageId)
 		if err != nil {
 			g.GameIsRunning = false
 			return
@@ -636,9 +638,9 @@ func (g *multiBiasGame) processMultiGame() {
 		// if a random winner was chosen, display an arrow indication who the random winner was
 		if randomWin == true {
 			if winnerIndex == 1 {
-				cache.GetSession().MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_FORWARD_EMOJI)
+				cache.GetSession().SessionForGuildS(g.guildID).MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_FORWARD_EMOJI)
 			} else {
-				cache.GetSession().MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_BACKWARD_EMOJI)
+				cache.GetSession().SessionForGuildS(g.guildID).MessageReactionAdd(g.ChannelID, g.CurrentRoundMessageId, ARROW_BACKWARD_EMOJI)
 			}
 			time.Sleep(time.Millisecond * 1500)
 		}
@@ -700,7 +702,7 @@ func (g *multiBiasGame) sendWinnerMessage() {
 
 	// if a round message has been sent, delete before sending the next one
 	if g.LastRoundMessage != nil {
-		cache.GetSession().ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
+		cache.GetSession().SessionForGuildS(g.guildID).ChannelMessageDelete(g.LastRoundMessage.ChannelID, g.LastRoundMessage.ID)
 	}
 
 	// get last 7 from winners array and combine with topEight array

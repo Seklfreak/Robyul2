@@ -9,6 +9,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -70,7 +71,7 @@ type GeniusSearchResult struct {
 	} `json:"response"`
 }
 
-func (l *Lyrics) Init(session *discordgo.Session) {
+func (l *Lyrics) Init(session *shardmanager.Manager) {
 
 }
 

@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -19,7 +20,7 @@ var gameGenders = map[string]string{
 	"mixed": "mixed",
 }
 
-func (m *Module) Init(session *discordgo.Session) {
+func (m *Module) Init(session *shardmanager.Manager) {
 	go func() {
 
 		// refresh idols in difficulties
@@ -44,7 +45,7 @@ func (m *Module) Init(session *discordgo.Session) {
 }
 
 // Uninit called when bot is shutting down
-func (m *Module) Uninit(session *discordgo.Session) {
+func (m *Module) Uninit(session *shardmanager.Manager) {
 
 	// save any currently running games
 	cacheNugugames()

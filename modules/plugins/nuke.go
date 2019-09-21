@@ -9,6 +9,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -20,7 +21,7 @@ func (n *Nuke) Commands() []string {
 	}
 }
 
-func (n *Nuke) Init(session *discordgo.Session) {
+func (n *Nuke) Init(session *shardmanager.Manager) {
 	splitChooseRegex = regexp.MustCompile(`'.*?'|".*?"|\S+`)
 
 	// add nuke'd users to global blacklist
@@ -74,7 +75,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 
 					reason := strings.TrimSpace(strings.Replace(content, strings.Join(args[:2], " "), "", 1))
 
-					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.nuke-confirm",
+					if helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.nuke-confirm",
 						targetUser.Username, targetUser.ID, targetUser.ID, reason), "✅", "🚫") == true {
 						_, err = helpers.MDbInsert(
 							models.NukelogTable,
@@ -95,45 +96,47 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						reasonText := fmt.Sprintf("Nuke Ban | Issued by: %s#%s (#%s) | Delete Days: %d | Reason: %s",
 							msg.Author.Username, msg.Author.Discriminator, msg.Author.ID, 1, strings.TrimSpace(reason))
 
-						for _, targetGuild := range session.State.Guilds {
-							targetGuildSettings := helpers.GuildSettingsGetCached(targetGuild.ID)
-							if targetGuildSettings.NukeIsParticipating == true {
-								err = session.GuildBanCreateWithReason(targetGuild.ID, targetUser.ID, reasonText, 1)
-								if err != nil {
-									if err, ok := err.(*discordgo.RESTError); ok {
-										helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
-											targetGuild.Name, targetGuild.ID, err.Message.Message))
-										if targetGuildSettings.NukeLogChannel != "" {
-											helpers.SendMessage(targetGuildSettings.NukeLogChannel,
-												helpers.GetTextF("plugins.nuke.onserver-banned-error",
-													targetUser.Username, targetUser.ID,
-													err.Message.Message,
-													msg.Author.Username, msg.Author.ID,
-													reason))
+						for _, shard := range cache.GetSession().Sessions {
+							for _, targetGuild := range shard.State.Guilds {
+								targetGuildSettings := helpers.GuildSettingsGetCached(targetGuild.ID)
+								if targetGuildSettings.NukeIsParticipating == true {
+									err = session.GuildBanCreateWithReason(targetGuild.ID, targetUser.ID, reasonText, 1)
+									if err != nil {
+										if err, ok := err.(*discordgo.RESTError); ok {
+											helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
+												targetGuild.Name, targetGuild.ID, err.Message.Message))
+											if targetGuildSettings.NukeLogChannel != "" {
+												helpers.SendMessage(targetGuildSettings.NukeLogChannel,
+													helpers.GetTextF("plugins.nuke.onserver-banned-error",
+														targetUser.Username, targetUser.ID,
+														err.Message.Message,
+														msg.Author.Username, msg.Author.ID,
+														reason))
+											}
+										} else {
+											helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
+												targetGuild.Name, targetGuild.ID, err.Error()))
+											if targetGuildSettings.NukeLogChannel != "" {
+												helpers.SendMessage(targetGuildSettings.NukeLogChannel,
+													helpers.GetTextF("plugins.nuke.onserver-banned-error",
+														targetUser.Username, targetUser.ID,
+														err.Error(),
+														msg.Author.Username, msg.Author.ID,
+														reason))
+											}
 										}
 									} else {
-										helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.ban-error",
-											targetGuild.Name, targetGuild.ID, err.Error()))
+										helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.banned-on-server",
+											targetGuild.Name, targetGuild.ID))
 										if targetGuildSettings.NukeLogChannel != "" {
 											helpers.SendMessage(targetGuildSettings.NukeLogChannel,
-												helpers.GetTextF("plugins.nuke.onserver-banned-error",
+												helpers.GetTextF("plugins.nuke.onserver-banned-success",
 													targetUser.Username, targetUser.ID,
-													err.Error(),
 													msg.Author.Username, msg.Author.ID,
 													reason))
 										}
+										bannedOnN += 1
 									}
-								} else {
-									helpers.SendMessage(msg.ChannelID, helpers.GetTextF("plugins.nuke.banned-on-server",
-										targetGuild.Name, targetGuild.ID))
-									if targetGuildSettings.NukeLogChannel != "" {
-										helpers.SendMessage(targetGuildSettings.NukeLogChannel,
-											helpers.GetTextF("plugins.nuke.onserver-banned-success",
-												targetUser.Username, targetUser.ID,
-												msg.Author.Username, msg.Author.ID,
-												reason))
-									}
-									bannedOnN += 1
 								}
 							}
 						}
@@ -168,7 +171,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						nukeModMentions = append(nukeModMentions, "<@"+nukeMod+">")
 					}
 
-					if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.participation-confirm", strings.Join(nukeModMentions, ", "), helpers.GetPrefixForServer(channel.GuildID)), "✅", "🚫") == true {
+					if helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.participation-confirm", strings.Join(nukeModMentions, ", "), helpers.GetPrefixForServer(channel.GuildID)), "✅", "🚫") == true {
 						settings.NukeIsParticipating = true
 						previousChannel := settings.NukeLogChannel
 						settings.NukeLogChannel = targetChannel.ID
@@ -274,10 +277,10 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 					return
 				}
 
-				if helpers.ConfirmEmbed(msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.apply-confirm",
+				if helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author, helpers.GetTextF("plugins.nuke.apply-confirm",
 					helpers.GetPrefixForServer(channel.GuildID)), "✅", "🚫") {
 					// gather bans
-					guildBans, err := cache.GetSession().GuildBans(channel.GuildID)
+					guildBans, err := cache.GetSession().SessionForGuildS(channel.GuildID).GuildBans(channel.GuildID)
 					helpers.Relax(err)
 
 					// gather nuked users
@@ -315,7 +318,7 @@ func (n *Nuke) Action(command string, content string, msg *discordgo.Message, se
 						reasonText := fmt.Sprintf("Nuke Apply Ban | Issued by: %s#%s (#%s) | Delete Days: %d",
 							nukedByUser.Username, nukedByUser.Discriminator, nukeEntry.UserID, 0)
 
-						err = cache.GetSession().GuildBanCreateWithReason(channel.GuildID, nukeEntry.UserID, reasonText, 0)
+						err = cache.GetSession().SessionForGuildS(channel.GuildID).GuildBanCreateWithReason(channel.GuildID, nukeEntry.UserID, reasonText, 0)
 						helpers.Relax(err)
 
 						helpers.SendMessage(msg.ChannelID,

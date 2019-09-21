@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -36,7 +37,7 @@ func (h *Handler) Commands() []string {
 	}
 }
 
-func (h *Handler) Init(session *discordgo.Session) {
+func (h *Handler) Init(session *shardmanager.Manager) {
 	defer helpers.Recover()
 
 	h.service.Init(youtubeConfigFileName)

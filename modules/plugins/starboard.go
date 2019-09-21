@@ -18,6 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/helpers/dgwidgets"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -40,11 +41,11 @@ var (
 	starboardStarLocks = make(map[string]*sync.Mutex, 0)
 )
 
-func (s *Starboard) Init(session *discordgo.Session) {
+func (s *Starboard) Init(session *shardmanager.Manager) {
 
 }
 
-func (s *Starboard) Uninit(session *discordgo.Session) {
+func (s *Starboard) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -65,7 +66,7 @@ func (s *Starboard) Action(command string, content string, msg *discordgo.Messag
 }
 
 func (s *Starboard) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) starboardAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = s.newMsg("bot.arguments.too-few")
@@ -114,7 +115,7 @@ func (s *Starboard) actionTop(args []string, in *discordgo.Message, out **discor
 	}
 	helpers.Relax(err)
 
-	p := dgwidgets.NewPaginator(in.ChannelID, in.Author.ID)
+	p := dgwidgets.NewPaginator(in.GuildID, in.ChannelID, in.Author.ID)
 	p.Add(pages...)
 	p.Spawn()
 
@@ -444,7 +445,7 @@ func (s *Starboard) OnMessageDelete(msg *discordgo.MessageDelete, session *disco
 
 		s.deleteStarboardEntry(starboardEntry)
 
-		err = cache.GetSession().ChannelMessageDelete(
+		err = cache.GetSession().SessionForGuildS(msg.GuildID).ChannelMessageDelete(
 			starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
 		if errD, ok := err.(*discordgo.RESTError); ok {
 			if errD.Message.Message == "404: Not Found" || errD.Message.Code == discordgo.ErrCodeUnknownMessage {
@@ -496,9 +497,9 @@ func (s *Starboard) OnReactionAdd(reaction *discordgo.MessageReactionAdd, sessio
 			return
 		}
 
-		message, err := cache.GetSession().State.Message(reaction.ChannelID, reaction.MessageID)
+		message, err := cache.GetSession().SessionForGuildS(reaction.GuildID).State.Message(reaction.ChannelID, reaction.MessageID)
 		if err != nil {
-			message, err = cache.GetSession().ChannelMessage(reaction.ChannelID, reaction.MessageID)
+			message, err = cache.GetSession().SessionForGuildS(reaction.GuildID).ChannelMessage(reaction.ChannelID, reaction.MessageID)
 		}
 		if err != nil {
 			if errD, ok := err.(*discordgo.RESTError); ok && errD.Message.Code == discordgo.ErrCodeMissingAccess {
@@ -565,9 +566,9 @@ func (s *Starboard) OnReactionRemove(reaction *discordgo.MessageReactionRemove, 
 			return
 		}
 
-		message, err := cache.GetSession().State.Message(reaction.ChannelID, reaction.MessageID)
+		message, err := cache.GetSession().SessionForGuildS(reaction.GuildID).State.Message(reaction.ChannelID, reaction.MessageID)
 		if err != nil {
-			message, err = cache.GetSession().ChannelMessage(reaction.ChannelID, reaction.MessageID)
+			message, err = cache.GetSession().SessionForGuildS(reaction.GuildID).ChannelMessage(reaction.ChannelID, reaction.MessageID)
 		}
 		helpers.Relax(err)
 
@@ -656,14 +657,14 @@ func (s *Starboard) RemoveStar(guildID string, msg *discordgo.Message, starUserI
 
 	if starboardEntry.StarboardMessageID != "" && starboardEntry.StarboardMessageChannelID != "" {
 		if deleted {
-			err = cache.GetSession().ChannelMessageDelete(
+			err = cache.GetSession().SessionForGuildS(guildID).ChannelMessageDelete(
 				starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
 			return err
 		} else {
 			if starboardEntry.Stars >= s.getMinimum(guildID) {
 				return s.PostOrUpdateDiscordMessage(starboardEntry)
 			} else {
-				err = cache.GetSession().ChannelMessageDelete(
+				err = cache.GetSession().SessionForGuildS(guildID).ChannelMessageDelete(
 					starboardEntry.StarboardMessageChannelID, starboardEntry.StarboardMessageID)
 				starboardEntry.StarboardMessageID = ""
 				starboardEntry.StarboardMessageChannelID = ""

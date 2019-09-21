@@ -10,6 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
@@ -26,12 +27,12 @@ func (p *Persistency) Commands() []string {
 	}
 }
 
-func (p *Persistency) Init(session *discordgo.Session) {
+func (p *Persistency) Init(session *shardmanager.Manager) {
 	session.AddHandler(p.OnGuildMemberListChunk)
 	session.AddHandler(p.OnGuildMemberUpdate)
 }
 
-func (p *Persistency) Uninit(session *discordgo.Session) {
+func (p *Persistency) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -54,7 +55,7 @@ func (p *Persistency) Action(command string, content string, msg *discordgo.Mess
 }
 
 func (p *Persistency) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) PersistencyAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = p.newMsg(helpers.GetText("bot.arguments.too-few"))

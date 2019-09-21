@@ -238,24 +238,25 @@ func sessionAndWebkeyAuthenticate(request *restful.Request, response *restful.Re
 }
 
 func GetAllBotGuilds(request *restful.Request, response *restful.Response) {
-	allGuilds := cache.GetSession().State.Guilds
 	var botPrefix string
 
 	returnGuilds := make([]models.Rest_Guild, 0)
-	for _, guild := range allGuilds {
-		joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
-		botPrefix = helpers.GetPrefixForServer(guild.ID)
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
+			botPrefix = helpers.GetPrefixForServer(guild.ID)
 
-		returnGuilds = append(returnGuilds, models.Rest_Guild{
-			ID:        guild.ID,
-			Name:      guild.Name,
-			Icon:      guild.Icon,
-			OwnerID:   guild.OwnerID,
-			JoinedAt:  joinedAt,
-			BotPrefix: botPrefix,
-			Features:  getGuildFeatures(guild.ID),
-			Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
-		})
+			returnGuilds = append(returnGuilds, models.Rest_Guild{
+				ID:        guild.ID,
+				Name:      guild.Name,
+				Icon:      guild.Icon,
+				OwnerID:   guild.OwnerID,
+				JoinedAt:  joinedAt,
+				BotPrefix: botPrefix,
+				Features:  getGuildFeatures(guild.ID),
+				Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
+			})
+		}
 	}
 
 	response.WriteEntity(returnGuilds)
@@ -288,54 +289,55 @@ func FindUser(request *restful.Request, response *restful.Response) {
 func FindUserGuilds(request *restful.Request, response *restful.Response) {
 	userID := request.PathParameter("user-id")
 
-	allGuilds := cache.GetSession().State.Guilds
 	var botPrefix string
 
 	returnGuilds := make([]models.Rest_Member_Guild, 0)
-	for _, guild := range allGuilds {
-		if !helpers.GetIsInGuild(guild.ID, userID) {
-			continue
-		}
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			if !helpers.GetIsInGuild(guild.ID, userID) {
+				continue
+			}
 
-		joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
+			joinedAt := helpers.GetTimeFromSnowflake(guild.ID)
 
-		botPrefix = helpers.GetPrefixForServer(guild.ID)
+			botPrefix = helpers.GetPrefixForServer(guild.ID)
 
-		returnStatus := models.Rest_Status_Member{}
-		returnStatus.IsMember = true
-		if helpers.IsBotAdmin(userID) {
-			returnStatus.IsBotAdmin = true
-		}
-		if helpers.IsNukeMod(userID) {
-			returnStatus.IsNukeMod = true
-		}
-		if helpers.IsRobyulMod(userID) {
-			returnStatus.IsRobyulStaff = true
-		}
-		if helpers.IsBlacklisted(userID) {
-			returnStatus.IsBlacklisted = true
-		}
-		if helpers.IsAdminByID(guild.ID, userID) {
-			returnStatus.IsGuildAdmin = true
-		}
-		if helpers.IsModByID(guild.ID, userID) {
-			returnStatus.IsGuildMod = true
-		}
-		if helpers.HasPermissionByID(guild.ID, userID, discordgo.PermissionAdministrator) {
-			returnStatus.HasGuildPermissionAdministrator = true
-		}
+			returnStatus := models.Rest_Status_Member{}
+			returnStatus.IsMember = true
+			if helpers.IsBotAdmin(userID) {
+				returnStatus.IsBotAdmin = true
+			}
+			if helpers.IsNukeMod(userID) {
+				returnStatus.IsNukeMod = true
+			}
+			if helpers.IsRobyulMod(userID) {
+				returnStatus.IsRobyulStaff = true
+			}
+			if helpers.IsBlacklisted(userID) {
+				returnStatus.IsBlacklisted = true
+			}
+			if helpers.IsAdminByID(guild.ID, userID) {
+				returnStatus.IsGuildAdmin = true
+			}
+			if helpers.IsModByID(guild.ID, userID) {
+				returnStatus.IsGuildMod = true
+			}
+			if helpers.HasPermissionByID(guild.ID, userID, discordgo.PermissionAdministrator) {
+				returnStatus.HasGuildPermissionAdministrator = true
+			}
 
-		returnGuilds = append(returnGuilds, models.Rest_Member_Guild{
-			ID:        guild.ID,
-			Name:      guild.Name,
-			Icon:      guild.Icon,
-			OwnerID:   guild.OwnerID,
-			JoinedAt:  joinedAt,
-			BotPrefix: botPrefix,
-			Features:  getGuildFeatures(guild.ID),
-			Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
-			Status:    returnStatus,
-		})
+			returnGuilds = append(returnGuilds, models.Rest_Member_Guild{
+				ID:        guild.ID,
+				Name:      guild.Name,
+				Icon:      guild.Icon,
+				OwnerID:   guild.OwnerID,
+				JoinedAt:  joinedAt,
+				BotPrefix: botPrefix,
+				Features:  getGuildFeatures(guild.ID),
+				Settings:  getGuildSettings(guild.ID, request.Attribute("UserID").(string)),
+				Status:    returnStatus,
+			})
+		}
 	}
 
 	response.WriteEntity(returnGuilds)
@@ -635,7 +637,7 @@ func GetAllUserRanking(request *restful.Request, response *restful.Response) {
 
 	result := make([]models.Rest_Ranking_Rank_Item, 0)
 
-	for _, guild := range append(cache.GetSession().State.Guilds, &discordgo.Guild{ID: "global", Name: "global"}) {
+	for _, guild := range append(helpers.AllGuilds(), &discordgo.Guild{ID: "global", Name: "global"}) {
 		if guild.ID != "global" && !helpers.GetIsInGuild(guild.ID, userID) {
 			continue
 		}
@@ -1162,15 +1164,19 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 
 func GotBotStatistics(request *restful.Request, response *restful.Response) {
 	users := make(map[string]string)
+	var guildCount int
 
-	for _, guild := range cache.GetSession().State.Guilds {
-		for _, u := range guild.Members {
-			users[u.User.ID] = u.User.Username
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			guildCount++
+			for _, u := range guild.Members {
+				users[u.User.ID] = u.User.Username
+			}
 		}
 	}
 
 	response.WriteEntity(models.Rest_Statitics_Bot{
-		Guilds: len(cache.GetSession().State.Guilds),
+		Guilds: guildCount,
 		Users:  len(users),
 	})
 }
@@ -1647,7 +1653,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	}
 
 	for _, lookupRoleID := range lookupRoleIDs {
-		role, _ := cache.GetSession().State.Role(guildID, lookupRoleID)
+		role, _ := cache.GetSession().SessionForGuildS(guildID).State.Role(guildID, lookupRoleID)
 		if role != nil && role.ID != "" {
 			eventlog.Roles = append(eventlog.Roles, models.Rest_Role{
 				ID:          role.ID,
@@ -1664,7 +1670,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	}
 
 	for _, lookupEmojiID := range lookupEmojiIDs {
-		emoji, _ := cache.GetSession().State.Emoji(guildID, lookupEmojiID)
+		emoji, _ := cache.GetSession().SessionForGuildS(guildID).State.Emoji(guildID, lookupEmojiID)
 		if emoji != nil && emoji.ID != "" {
 			eventlog.Emoji = append(eventlog.Emoji, models.Rest_Emoji{
 				ID:            emoji.ID,
@@ -1679,7 +1685,7 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 	}
 
 	for _, lookupGuildID := range lookupGuildIDs {
-		guild, _ := cache.GetSession().State.Guild(lookupGuildID)
+		guild, _ := cache.GetSession().SessionForGuildS(guildID).State.Guild(lookupGuildID)
 		if guild != nil && guild.ID != "" {
 			joinedAt, _ := guild.JoinedAt.Parse()
 

@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -29,7 +30,7 @@ func (d *Debug) Commands() []string {
 	}
 }
 
-func (d *Debug) Init(session *discordgo.Session) {
+func (d *Debug) Init(session *shardmanager.Manager) {
 }
 
 func (d *Debug) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {

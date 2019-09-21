@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/services/youtube"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/Seklfreak/lastfm-go/lastfm"
 	"github.com/bradfitz/slice"
 	"github.com/bwmarrin/discordgo"
@@ -80,7 +81,7 @@ func (m *LastFm) Commands() []string {
 	}
 }
 
-func (m *LastFm) Init(session *discordgo.Session) {
+func (m *LastFm) Init(session *shardmanager.Manager) {
 	lastfmCachedStats = make([]LastFMAccountCachedStats, 0)
 	lastfmCombinedGuildStats = make([]LastFMCombinedGuildStats, 0)
 
@@ -177,117 +178,121 @@ func (m *LastFm) generateDiscordStats() {
 
 		// Combine Stats
 		newCombinedGuildStats := make([]LastFMCombinedGuildStats, 0)
-		for _, guild := range cache.GetSession().State.Guilds {
-			newCombinedGuildStat := new(LastFMCombinedGuildStats)
-			newCombinedGuildStat.GuildID = guild.ID
-			newCombinedGuildStat.NumberOfUsers = 0
+		for _, shard := range cache.GetSession().Sessions {
+			for _, guild := range shard.State.Guilds {
+				newCombinedGuildStat := new(LastFMCombinedGuildStats)
+				newCombinedGuildStat.GuildID = guild.ID
+				newCombinedGuildStat.NumberOfUsers = 0
 
-			members := make([]*discordgo.Member, 0)
-			for _, botGuild := range cache.GetSession().State.Guilds {
-				if botGuild.ID == guild.ID {
-					for _, member := range guild.Members {
-						members = append(members, member)
-					}
-				}
-			}
-
-			if len(members) <= 0 {
-				continue
-			}
-			for _, member := range members {
-				for _, cachedStat := range lastfmCachedStats {
-					if cachedStat.UserID == member.User.ID {
-						// User is on Guild
-						newCombinedGuildStat.NumberOfUsers += 1
-						// Append tracks
-						for _, track := range cachedStat.Overall {
-							added := false
-							for i, trackInDb := range newCombinedGuildStat.Overall {
-								if strings.EqualFold(trackInDb.Name, track.Name) &&
-									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
-									newCombinedGuildStat.Overall[i].Plays += track.Plays
-									newCombinedGuildStat.Overall[i].Users += track.Users
-									added = true
-								}
-							}
-							if added == false {
-								newCombinedGuildStat.Overall = append(newCombinedGuildStat.Overall, track)
-							}
-						}
-						for _, track := range cachedStat.SevenDay {
-							added := false
-							for i, trackInDb := range newCombinedGuildStat.SevenDay {
-								if strings.EqualFold(trackInDb.Name, track.Name) &&
-									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
-									newCombinedGuildStat.SevenDay[i].Plays += track.Plays
-									newCombinedGuildStat.SevenDay[i].Users += track.Users
-									added = true
-								}
-							}
-							if added == false {
-								newCombinedGuildStat.SevenDay = append(newCombinedGuildStat.SevenDay, track)
-							}
-						}
-						for _, track := range cachedStat.OneMonth {
-							added := false
-							for i, trackInDb := range newCombinedGuildStat.OneMonth {
-								if strings.EqualFold(trackInDb.Name, track.Name) &&
-									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
-									newCombinedGuildStat.OneMonth[i].Plays += track.Plays
-									newCombinedGuildStat.OneMonth[i].Users += track.Users
-									added = true
-								}
-							}
-							if added == false {
-								newCombinedGuildStat.OneMonth = append(newCombinedGuildStat.OneMonth, track)
-							}
-						}
-						for _, track := range cachedStat.ThreeMonth {
-							added := false
-							for i, trackInDb := range newCombinedGuildStat.ThreeMonth {
-								if strings.EqualFold(trackInDb.Name, track.Name) &&
-									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
-									newCombinedGuildStat.ThreeMonth[i].Plays += track.Plays
-									newCombinedGuildStat.ThreeMonth[i].Users += track.Users
-									added = true
-								}
-							}
-							if added == false {
-								newCombinedGuildStat.ThreeMonth = append(newCombinedGuildStat.ThreeMonth, track)
-							}
-						}
-						for _, track := range cachedStat.SixMonth {
-							added := false
-							for i, trackInDb := range newCombinedGuildStat.SixMonth {
-								if strings.EqualFold(trackInDb.Name, track.Name) &&
-									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
-									newCombinedGuildStat.SixMonth[i].Plays += track.Plays
-									newCombinedGuildStat.SixMonth[i].Users += track.Users
-									added = true
-								}
-							}
-							if added == false {
-								newCombinedGuildStat.SixMonth = append(newCombinedGuildStat.SixMonth, track)
-							}
-						}
-						for _, track := range cachedStat.TwelveMonth {
-							added := false
-							for i, trackInDb := range newCombinedGuildStat.TwelveMonth {
-								if strings.EqualFold(trackInDb.Name, track.Name) &&
-									strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
-									newCombinedGuildStat.TwelveMonth[i].Plays += track.Plays
-									newCombinedGuildStat.TwelveMonth[i].Users += track.Users
-									added = true
-								}
-							}
-							if added == false {
-								newCombinedGuildStat.TwelveMonth = append(newCombinedGuildStat.TwelveMonth, track)
+				members := make([]*discordgo.Member, 0)
+				for _, subShard := range cache.GetSession().Sessions {
+					for _, botGuild := range subShard.State.Guilds {
+						if botGuild.ID == guild.ID {
+							for _, member := range guild.Members {
+								members = append(members, member)
 							}
 						}
 					}
 				}
+
+				if len(members) <= 0 {
+					continue
+				}
+				for _, member := range members {
+					for _, cachedStat := range lastfmCachedStats {
+						if cachedStat.UserID == member.User.ID {
+							// User is on Guild
+							newCombinedGuildStat.NumberOfUsers += 1
+							// Append tracks
+							for _, track := range cachedStat.Overall {
+								added := false
+								for i, trackInDb := range newCombinedGuildStat.Overall {
+									if strings.EqualFold(trackInDb.Name, track.Name) &&
+										strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
+										newCombinedGuildStat.Overall[i].Plays += track.Plays
+										newCombinedGuildStat.Overall[i].Users += track.Users
+										added = true
+									}
+								}
+								if added == false {
+									newCombinedGuildStat.Overall = append(newCombinedGuildStat.Overall, track)
+								}
+							}
+							for _, track := range cachedStat.SevenDay {
+								added := false
+								for i, trackInDb := range newCombinedGuildStat.SevenDay {
+									if strings.EqualFold(trackInDb.Name, track.Name) &&
+										strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
+										newCombinedGuildStat.SevenDay[i].Plays += track.Plays
+										newCombinedGuildStat.SevenDay[i].Users += track.Users
+										added = true
+									}
+								}
+								if added == false {
+									newCombinedGuildStat.SevenDay = append(newCombinedGuildStat.SevenDay, track)
+								}
+							}
+							for _, track := range cachedStat.OneMonth {
+								added := false
+								for i, trackInDb := range newCombinedGuildStat.OneMonth {
+									if strings.EqualFold(trackInDb.Name, track.Name) &&
+										strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
+										newCombinedGuildStat.OneMonth[i].Plays += track.Plays
+										newCombinedGuildStat.OneMonth[i].Users += track.Users
+										added = true
+									}
+								}
+								if added == false {
+									newCombinedGuildStat.OneMonth = append(newCombinedGuildStat.OneMonth, track)
+								}
+							}
+							for _, track := range cachedStat.ThreeMonth {
+								added := false
+								for i, trackInDb := range newCombinedGuildStat.ThreeMonth {
+									if strings.EqualFold(trackInDb.Name, track.Name) &&
+										strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
+										newCombinedGuildStat.ThreeMonth[i].Plays += track.Plays
+										newCombinedGuildStat.ThreeMonth[i].Users += track.Users
+										added = true
+									}
+								}
+								if added == false {
+									newCombinedGuildStat.ThreeMonth = append(newCombinedGuildStat.ThreeMonth, track)
+								}
+							}
+							for _, track := range cachedStat.SixMonth {
+								added := false
+								for i, trackInDb := range newCombinedGuildStat.SixMonth {
+									if strings.EqualFold(trackInDb.Name, track.Name) &&
+										strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
+										newCombinedGuildStat.SixMonth[i].Plays += track.Plays
+										newCombinedGuildStat.SixMonth[i].Users += track.Users
+										added = true
+									}
+								}
+								if added == false {
+									newCombinedGuildStat.SixMonth = append(newCombinedGuildStat.SixMonth, track)
+								}
+							}
+							for _, track := range cachedStat.TwelveMonth {
+								added := false
+								for i, trackInDb := range newCombinedGuildStat.TwelveMonth {
+									if strings.EqualFold(trackInDb.Name, track.Name) &&
+										strings.EqualFold(trackInDb.ArtistName, track.ArtistName) {
+										newCombinedGuildStat.TwelveMonth[i].Plays += track.Plays
+										newCombinedGuildStat.TwelveMonth[i].Users += track.Users
+										added = true
+									}
+								}
+								if added == false {
+									newCombinedGuildStat.TwelveMonth = append(newCombinedGuildStat.TwelveMonth, track)
+								}
+							}
+						}
+					}
+				}
+				newCombinedGuildStats = append(newCombinedGuildStats, *newCombinedGuildStat)
 			}
-			newCombinedGuildStats = append(newCombinedGuildStats, *newCombinedGuildStat)
 		}
 		for n := range newCombinedGuildStats {
 			slice.Sort(newCombinedGuildStats[n].Overall[:], func(i, j int) bool {

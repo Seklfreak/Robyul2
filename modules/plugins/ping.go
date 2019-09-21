@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -25,7 +27,7 @@ var (
 	pingMessage string
 )
 
-func (p *Ping) Init(session *discordgo.Session) {
+func (p *Ping) Init(session *shardmanager.Manager) {
 	pingMessage = helpers.GetText("plugins.ping.message")
 	session.AddHandler(p.OnMessage)
 }
@@ -81,6 +83,8 @@ func (p *Ping) OnMessage(session *discordgo.Session, message *discordgo.MessageC
 		elasticTaken := time.Since(started)
 		text = text + "\nElasticSearch Latency: " + elasticTaken.String()
 	}
+
+	text += fmt.Sprintf("\nShard: %d", cache.GetSession().ShardForGuild(message.GuildID))
 
 	helpers.EditMessage(message.ChannelID, message.ID, text)
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
@@ -52,7 +53,7 @@ func (m *Twitter) Commands() []string {
 	}
 }
 
-func (t *Twitter) Init(session *discordgo.Session) {
+func (t *Twitter) Init(session *shardmanager.Manager) {
 	config := oauth1.NewConfig(
 		helpers.GetConfig().Path("twitter.consumer_key").Data().(string),
 		helpers.GetConfig().Path("twitter.consumer_secret").Data().(string))
@@ -157,7 +158,7 @@ func (t *Twitter) Init(session *discordgo.Session) {
 	// }()
 }
 
-func (t *Twitter) Uninit(session *discordgo.Session) {
+func (t *Twitter) Uninit(session *shardmanager.Manager) {
 	t.stopTwitterStream()
 }
 
@@ -191,7 +192,7 @@ func (t *Twitter) startTwitterStream() {
 		}
 
 		// check if we can send messages
-		channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+		channelPermission, err := cache.GetSession().SessionForGuildS(entry.GuildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(entry.GuildID).State.User.ID, channel.ID)
 		if err != nil {
 			continue
 		}
@@ -286,7 +287,7 @@ func (m *Twitter) checkTwitterFeedsLoop() {
 			}
 
 			// check if we can send messages
-			channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+			channelPermission, err := cache.GetSession().SessionForGuildS(entry.GuildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(entry.GuildID).State.User.ID, channel.ID)
 			if err != nil {
 				continue
 			}

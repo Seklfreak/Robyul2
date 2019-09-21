@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/helpers/dgwidgets"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -22,7 +23,7 @@ func (m *Config) Commands() []string {
 	}
 }
 
-func (m *Config) Init(session *discordgo.Session) {
+func (m *Config) Init(session *shardmanager.Manager) {
 }
 
 func (m *Config) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -40,7 +41,7 @@ func (m *Config) Action(command string, content string, msg *discordgo.Message, 
 }
 
 func (m *Config) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) configAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) > 1 {
 		switch args[0] {
@@ -384,7 +385,7 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 				Name: "Prefix",
 				Value: fmt.Sprintf("`%s`\n`@%s#%s set prefix <new prefix>`",
 					prefix,
-					cache.GetSession().State.User.Username, cache.GetSession().State.User.Discriminator),
+					cache.GetSession().SessionForGuildS(in.GuildID).State.User.Username, cache.GetSession().SessionForGuildS(in.GuildID).State.User.Discriminator),
 			},
 			{
 				Name:  "Admins",
@@ -449,7 +450,7 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 	}
 
 	if len(pages) > 1 {
-		p := dgwidgets.NewPaginator(in.ChannelID, in.Author.ID)
+		p := dgwidgets.NewPaginator(in.GuildID, in.ChannelID, in.Author.ID)
 		p.Add(pages...)
 		p.Spawn()
 	} else if len(pages) == 1 {

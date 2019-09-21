@@ -15,6 +15,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -109,7 +110,7 @@ func (m *Twitch) Commands() []string {
 	}
 }
 
-func (m *Twitch) Init(session *discordgo.Session) {
+func (m *Twitch) Init(session *shardmanager.Manager) {
 	go m.checkTwitchFeedsLoop()
 	cache.GetLogger().WithField("module", "twitch").Info("Started twitch loop (60s)")
 }

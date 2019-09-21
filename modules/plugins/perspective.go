@@ -14,6 +14,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -56,7 +57,7 @@ func (m *Perspective) Commands() []string {
 // TODO: prevent multiple notifications for the same messages
 // TODO: add timeout between specific user messages (don't notify for old messages)
 
-func (m *Perspective) Init(session *discordgo.Session) {
+func (m *Perspective) Init(session *shardmanager.Manager) {
 	m.googleApiKey = helpers.GetConfig().Path("google.api_key").Data().(string)
 	go func() {
 		defer helpers.Recover()
@@ -68,7 +69,7 @@ func (m *Perspective) Init(session *discordgo.Session) {
 	}()
 }
 
-func (m *Perspective) Uninit(session *discordgo.Session) {
+func (m *Perspective) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -85,7 +86,7 @@ func (m *Perspective) Action(command string, content string, msg *discordgo.Mess
 }
 
 func (m *Perspective) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) perspectiveAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = m.newMsg("bot.arguments.too-few")
@@ -388,10 +389,12 @@ func (m *Perspective) analyze(message string) (results PerspectiveMessageValues,
 
 func (m *Perspective) cacheGuildsToCheck() (err error) {
 	newGuildsToCheck := make([]string, 0)
-	for _, guild := range cache.GetSession().State.Guilds {
-		settings := helpers.GuildSettingsGetCached(guild.ID)
-		if settings.PerspectiveIsParticipating {
-			newGuildsToCheck = append(newGuildsToCheck, guild.ID)
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			settings := helpers.GuildSettingsGetCached(guild.ID)
+			if settings.PerspectiveIsParticipating {
+				newGuildsToCheck = append(newGuildsToCheck, guild.ID)
+			}
 		}
 	}
 

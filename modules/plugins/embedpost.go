@@ -8,6 +8,7 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -24,7 +25,7 @@ func (m *EmbedPost) Commands() []string {
 	}
 }
 
-func (m *EmbedPost) Init(session *discordgo.Session) {
+func (m *EmbedPost) Init(session *shardmanager.Manager) {
 
 }
 

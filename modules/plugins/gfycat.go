@@ -11,6 +11,7 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -28,7 +29,7 @@ func (m *Gfycat) Commands() []string {
 	}
 }
 
-func (m *Gfycat) Init(session *discordgo.Session) {
+func (m *Gfycat) Init(session *shardmanager.Manager) {
 
 }
 

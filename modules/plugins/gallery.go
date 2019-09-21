@@ -11,6 +11,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
@@ -34,14 +35,14 @@ var (
 	galleries       []models.GalleryEntry
 )
 
-func (g *Gallery) Init(session *discordgo.Session) {
+func (g *Gallery) Init(session *shardmanager.Manager) {
 	galleryUrlRegex = regexp.MustCompile(galleryUrlRegexText)
 	var err error
 	galleries, err = g.GetGalleries()
 	helpers.Relax(err)
 }
 
-func (g *Gallery) Uninit(session *discordgo.Session) {
+func (g *Gallery) Uninit(session *shardmanager.Manager) {
 
 }
 

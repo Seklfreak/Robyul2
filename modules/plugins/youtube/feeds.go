@@ -87,7 +87,7 @@ func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeCh
 	}
 
 	// check if we can send messages and embed links in channel
-	channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+	channelPermission, err := cache.GetSession().SessionForGuildS(channel.GuildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(channel.GuildID).State.User.ID, channel.ID)
 	if err != nil {
 		return e
 	}

@@ -1,6 +1,9 @@
 package modules
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/Seklfreak/Robyul2/shardmanager"
+	"github.com/bwmarrin/discordgo"
+)
 
 type BaseModule interface{}
 
@@ -9,7 +12,7 @@ type Plugin interface {
 
 	Commands() []string
 
-	Init(session *discordgo.Session)
+	Init(session *shardmanager.Manager)
 
 	Action(
 		command string,
@@ -24,9 +27,9 @@ type ExtendedPlugin interface {
 
 	Commands() []string
 
-	Init(session *discordgo.Session)
+	Init(session *shardmanager.Manager)
 
-	Uninit(session *discordgo.Session)
+	Uninit(session *shardmanager.Manager)
 
 	Action(
 		command string,

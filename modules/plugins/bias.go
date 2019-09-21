@@ -10,6 +10,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/kennygrant/sanitize"
@@ -27,13 +28,13 @@ var (
 	biasChannels []models.BiasEntry
 )
 
-func (m *Bias) Init(session *discordgo.Session) {
+func (m *Bias) Init(session *shardmanager.Manager) {
 	// refresh cache
 	err := helpers.MDbIter(helpers.MdbCollection(models.BiasTable).Find(nil)).All(&biasChannels)
 	helpers.Relax(err)
 }
 
-func (m *Bias) Uninit(session *discordgo.Session) {
+func (m *Bias) Uninit(session *shardmanager.Manager) {
 
 }
 

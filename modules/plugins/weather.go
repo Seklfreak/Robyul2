@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/shawntoffel/darksky"
@@ -29,7 +30,7 @@ func (w *Weather) Commands() []string {
 	}
 }
 
-func (w *Weather) Init(session *discordgo.Session) {
+func (w *Weather) Init(session *shardmanager.Manager) {
 	w.darkSkyClient = darksky.New(helpers.GetConfig().Path("darksky.api_key").Data().(string))
 }
 

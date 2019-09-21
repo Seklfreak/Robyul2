@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -24,7 +25,7 @@ func (m *Storage) Commands() []string {
 	}
 }
 
-func (m *Storage) Init(session *discordgo.Session) {
+func (m *Storage) Init(session *shardmanager.Manager) {
 }
 
 func (m *Storage) Action(command string, content string, msg *discordgo.Message, session *discordgo.Session) {
@@ -42,7 +43,7 @@ func (m *Storage) Action(command string, content string, msg *discordgo.Message,
 }
 
 func (m *Storage) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) storageAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	return m.actionStatus
 }
@@ -157,7 +158,7 @@ func (m *Storage) actionStatus(args []string, in *discordgo.Message, out **disco
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: fmt.Sprintf("%d Files in total on %s | %d Files in total on all Robyul Servers",
 				totalGuildFiles, guild.Name, totalFiles),
-			IconURL: cache.GetSession().State.User.AvatarURL("64"),
+			IconURL: cache.GetSession().SessionForGuildS(in.GuildID).State.User.AvatarURL("64"),
 		},
 	}
 

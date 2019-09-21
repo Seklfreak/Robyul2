@@ -12,6 +12,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/karrick/tparse/v2"
@@ -47,7 +48,7 @@ func (a *Autoleaver) Commands() []string {
 	}
 }
 
-func (a *Autoleaver) Init(session *discordgo.Session) {
+func (a *Autoleaver) Init(session *shardmanager.Manager) {
 	session.AddHandler(a.OnGuildCreate)
 	session.AddHandler(a.OnGuildDelete)
 
@@ -57,7 +58,7 @@ func (a *Autoleaver) Init(session *discordgo.Session) {
 	}()
 }
 
-func (a *Autoleaver) Uninit(session *discordgo.Session) {
+func (a *Autoleaver) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -143,7 +144,7 @@ func (a *Autoleaver) Action(command string, content string, msg *discordgo.Messa
 }
 
 func (a *Autoleaver) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) autoleaverAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = a.newMsg(helpers.GetText("bot.arguments.too-few"))
@@ -185,7 +186,7 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 		if len(inviteCodes) < 1 {
 			inviteCodes = append(inviteCodes, guildID)
 		}
-		invite, err := cache.GetSession().Invite(inviteCodes[0])
+		invite, err := cache.GetSession().SessionForGuildS(in.GuildID).Invite(inviteCodes[0])
 		if err == nil && invite != nil && invite.Guild != nil && invite.Guild.ID != "" {
 			guildID = invite.Guild.ID
 		} else {
@@ -398,17 +399,21 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 	notWhitelistedGuilds := make([]*discordgo.Guild, 0)
 
 	var isWhitelisted bool
-	for _, botGuild := range cache.GetSession().State.Guilds {
-		isWhitelisted, err = a.isOnWhitelist(botGuild.ID, entryBucket)
-		helpers.Relax(err)
+	for _, shard := range cache.GetSession().Sessions {
+		for _, botGuild := range shard.State.Guilds {
+			isWhitelisted, err = a.isOnWhitelist(botGuild.ID, entryBucket)
+			helpers.Relax(err)
 
-		if !isWhitelisted {
-			notWhitelistedGuilds = append(notWhitelistedGuilds, botGuild)
+			if !isWhitelisted {
+				notWhitelistedGuilds = append(notWhitelistedGuilds, botGuild)
+			}
 		}
 	}
 
+	status := cache.GetSession().GetFullStatus()
+
 	if len(notWhitelistedGuilds) <= 0 {
-		*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.check-no-not-whitelisted", len(cache.GetSession().State.Guilds)))
+		*out = a.newMsg(helpers.GetTextF("plugins.autoleaver.check-no-not-whitelisted", status.NumGuilds))
 		return a.actionFinish
 	}
 
@@ -417,7 +422,7 @@ func (a *Autoleaver) actionCheck(args []string, in *discordgo.Message, out **dis
 		notWhitelistedGuildsMessage += fmt.Sprintf("`%s` (`#%s`): Channels `%d`, Members: `%d`, Region: `%s`\n",
 			notWhitelistedGuild.Name, notWhitelistedGuild.ID, len(notWhitelistedGuild.Channels), len(notWhitelistedGuild.Members), notWhitelistedGuild.Region)
 	}
-	notWhitelistedGuildsMessage += helpers.GetTextF("plugins.autoleaver.check-not-whitelisted-footer", len(notWhitelistedGuilds), len(cache.GetSession().State.Guilds)) + "\n"
+	notWhitelistedGuildsMessage += helpers.GetTextF("plugins.autoleaver.check-not-whitelisted-footer", len(notWhitelistedGuilds), status.NumGuilds) + "\n"
 
 	*out = a.newMsg(notWhitelistedGuildsMessage)
 	return a.actionFinish
@@ -542,8 +547,9 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		err = a.sendAutoleaveMessage(guild.ID)
 		helpers.RelaxLog(err)
 
-		err = cache.GetSession().GuildLeave(guild.ID)
-		helpers.Relax(err)
+		// TODO: enable me!
+		// err = cache.GetSession().GuildLeave(guild.ID)
+		// helpers.Relax(err)
 	}()
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
@@ -45,7 +46,7 @@ func (r *Reddit) Commands() []string {
 	}
 }
 
-func (r *Reddit) Init(session *discordgo.Session) {
+func (r *Reddit) Init(session *shardmanager.Manager) {
 	var err error
 	redditSession, err = geddit.NewOAuthSession(
 		helpers.GetConfig().Path("reddit.id").Data().(string),

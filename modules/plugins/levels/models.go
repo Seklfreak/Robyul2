@@ -43,7 +43,7 @@ func getLevelsRoles(guildID string, currentLevel int) (apply []*discordgo.Role, 
 	}
 
 	for _, entry := range entryBucket {
-		role, err := cache.GetSession().State.Role(guildID, entry.RoleID)
+		role, err := cache.GetSession().SessionForGuildS(guildID).State.Role(guildID, entry.RoleID)
 		if err != nil {
 			continue
 		}
@@ -182,11 +182,11 @@ func getBadgesAvailable(user *discordgo.User, sourceServerID string) []models.Pr
 	guildsToCheck := make([]string, 0)
 	guildsToCheck = append(guildsToCheck, "global")
 
-	session := cache.GetSession()
-
-	for _, guild := range session.State.Guilds {
-		if helpers.GetIsInGuild(guild.ID, user.ID) {
-			guildsToCheck = append(guildsToCheck, guild.ID)
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			if helpers.GetIsInGuild(guild.ID, user.ID) {
+				guildsToCheck = append(guildsToCheck, guild.ID)
+			}
 		}
 	}
 

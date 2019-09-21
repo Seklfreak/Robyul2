@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	colorful "github.com/lucasb-eyer/go-colorful"
 	cairo "github.com/ungerik/go-cairo"
@@ -25,7 +26,7 @@ const (
 	PicSize = 200
 )
 
-func (c *Color) Init(session *discordgo.Session) {
+func (c *Color) Init(session *shardmanager.Manager) {
 
 }
 

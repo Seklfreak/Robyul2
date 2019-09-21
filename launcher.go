@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Seklfreak/Robyul2/modules"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	unleash "github.com/Unleash/unleash-client-go"
 
 	"github.com/RichardKnop/machinery/v1"
@@ -261,19 +263,24 @@ func main() {
 		}
 	}
 	log.WithField("module", "launcher").Info("Connecting Robyul to discord...")
-	discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
+	// discord, err := createSharding("Bot " + config.Path("discord.token").Data().(string))
+	// discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
+	// discord, err := newSharder("Bot " + config.Path("discord.token").Data().(string))
+
+	discord := shardmanager.New("Bot " + config.Path("discord.token").Data().(string))
 	if err != nil {
 		panic(err)
 	}
 
-	discord.Lock()
-	discord.Debug = false
-	//discord.LogLevel = discordgo.LogInformational
-	discord.LogLevel = discordgo.LogError
-	discord.StateEnabled = true
-	discord.MaxRestRetries = 5
-	discord.State.MaxMessageCount = 10
-	discord.Unlock()
+	discord.LogChannel = config.Path("sharding-channel").Data().(string)
+	discord.StatusMessageChannel = config.Path("sharding-channel").Data().(string)
+
+	amount, err := discord.GetRecommendedCount()
+	if err != nil {
+		panic(err)
+	}
+
+	discord.SetNumShards(amount)
 
 	discord.AddHandler(BotOnReady)
 	discord.AddHandler(BotOnMessageCreate)
@@ -284,7 +291,7 @@ func main() {
 	discord.AddHandler(BotOnReactionRemove)
 	discord.AddHandler(BotOnGuildBanAdd)
 	discord.AddHandler(BotOnGuildBanRemove)
-	discord.AddHandlerOnce(metrics.OnReady)
+	// discord.AddHandlerOnce(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
 	discord.AddHandler(BotOnMemberListChunk)
 	discord.AddHandler(BotGuildOnPresenceUpdate)
@@ -330,8 +337,13 @@ func main() {
 
 	discord.AddHandler(robyulState.OnInterface)
 
-	// Connect to discord
-	err = discord.Open()
+	// // Connect to discord
+	// err = discord.Open()
+	// if err != nil {
+	// 	raven.CaptureErrorAndWait(err, nil)
+	// 	panic(err)
+	// }
+	err = discord.Start()
 	if err != nil {
 		raven.CaptureErrorAndWait(err, nil)
 		panic(err)
@@ -419,6 +431,13 @@ func main() {
 	// start proxies healthcheck loop
 	go helpers.CachedProxiesHealthcheckLoop()
 
+	cache.SetSession(discord)
+
+	modules.Init(discord)
+
+	// Run async worker for guild changes
+	go helpers.GuildSettingsUpdater()
+
 	// Make a channel that waits for a os signal
 	BotRuntimeChannel = make(chan os.Signal, 1)
 	signal.Notify(BotRuntimeChannel, os.Interrupt, os.Kill)
@@ -434,7 +453,8 @@ func main() {
 		log.WithField("module", "launcher").Info("Uninitializing plugins...")
 		BotDestroy()
 		log.WithField("module", "launcher").Info("Disconnecting bot discord session...")
-		discord.Close()
+		discord.StopAll()
+		// discord.Close()
 		log.WithField("module", "launcher").Info("Disconnecting friend discord sessions...")
 		for _, friendSession := range cache.GetFriends() {
 			friendSession.Close()

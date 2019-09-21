@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -25,7 +26,7 @@ var (
 	splitChooseRegex *regexp.Regexp
 )
 
-func (c *Choice) Init(session *discordgo.Session) {
+func (c *Choice) Init(session *shardmanager.Manager) {
 	splitChooseRegex = regexp.MustCompile(`'.*?'|".*?"|\S+`)
 }
 

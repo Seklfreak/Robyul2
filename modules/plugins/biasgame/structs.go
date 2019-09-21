@@ -7,6 +7,7 @@ import (
 
 type singleBiasGame struct {
 	User             *discordgo.User
+	GuildID          string
 	ChannelID        string
 	RoundLosers      []*idols.Idol
 	RoundWinners     []*idols.Idol
@@ -34,6 +35,7 @@ type multiBiasGame struct {
 	UserIdsInvolved       []string
 	RoundDelay            int
 	GameIsRunning         bool
+	guildID               string
 
 	// a map of fileName => image array position. This is used to make sure that when a random image is selected for a game, that the same image is still used throughout the game
 	GameImageIndex map[string]int

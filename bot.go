@@ -50,13 +50,10 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 	}
 
 	// Cache the session
-	cache.SetSession(session)
+	// cache.SetSession(session)
 
 	// Load and init all modules
-	modules.Init(session)
-
-	// Run async worker for guild changes
-	go helpers.GuildSettingsUpdater()
+	// modules.Init(session)
 
 	// request guild members from the gateway
 	go func() {
@@ -127,11 +124,11 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 		for _, guild := range session.State.Guilds {
 			cache.GetLogger().WithField("module", "bot").Info("state guild:", guild.ID, guild.Name, guild.Large)
 		}
-		for _, guild := range cache.GetSession().State.Guilds {
+		for _, guild := range session.State.Guilds {
 			cache.GetLogger().WithField("module", "bot").Info("cached state guild:", guild.ID, guild.Name, guild.Large)
 		}
 
-		for _, guild := range cache.GetSession().State.Guilds {
+		for _, guild := range session.State.Guilds {
 			if helpers.IsBlacklistedGuild(guild.ID) {
 				continue
 			}
@@ -172,7 +169,7 @@ func BotGuildOnPresenceUpdate(session *discordgo.Session, presence *discordgo.Pr
 		return
 	}
 
-	member, err := cache.GetSession().State.Member(presence.GuildID, presence.User.ID)
+	member, err := session.State.Member(presence.GuildID, presence.User.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "state cache not found") {
 			return
@@ -350,7 +347,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 			helpers.RequireBotAdmin(message.Message, func() {
 				session.ChannelTyping(message.ChannelID)
 
-				if helpers.ConfirmEmbed(message.ChannelID, message.Author,
+				if helpers.ConfirmEmbed(message.GuildID, message.ChannelID, message.Author,
 					"Are you sure you want me to shutdown Robyul?", "✅", "🚫") {
 					cache.GetLogger().WithField("module", "debug").Warnf("shutting down Robuyul on request by %s#%s (%s)",
 						message.Author.Username, message.Author.Discriminator, message.Author.ID)
@@ -471,7 +468,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 				":blobthinkingeyes:317044481499201538",
 				":googleghost:317030645786476545",
 			}
-			cache.GetSession().MessageReactionAdd(message.ChannelID, message.ID, reactions[rand.Intn(len(reactions))])
+			cache.GetSession().SessionForGuildS(message.GuildID).MessageReactionAdd(message.ChannelID, message.ID, reactions[rand.Intn(len(reactions))])
 		}
 		return
 	}

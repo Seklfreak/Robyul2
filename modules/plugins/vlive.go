@@ -13,6 +13,7 @@ import (
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/metrics"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -47,7 +48,7 @@ func (r *VLive) Commands() []string {
 	}
 }
 
-func (r *VLive) Init(session *discordgo.Session) {
+func (r *VLive) Init(session *shardmanager.Manager) {
 	go r.checkVliveFeedsLoop()
 	cache.GetLogger().WithField("module", "vlive").Info("Started vlive loop (0s)")
 }
@@ -81,7 +82,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 			}
 
 			// check if we can send messages
-			channelPermission, err := cache.GetSession().State.UserChannelPermissions(cache.GetSession().State.User.ID, channel.ID)
+			channelPermission, err := cache.GetSession().SessionForGuildS(entry.GuildID).State.UserChannelPermissions(cache.GetSession().SessionForGuildS(entry.GuildID).State.User.ID, channel.ID)
 			if err != nil {
 				continue
 			}

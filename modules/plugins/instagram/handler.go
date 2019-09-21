@@ -36,7 +36,7 @@ func (m *Handler) Commands() []string {
 	}
 }
 
-func (m *Handler) Init(session *discordgo.Session) {
+func (m *Handler) Init(session *shardmanager.Manager) {
 	go func() {
 		defer helpers.Recover()
 

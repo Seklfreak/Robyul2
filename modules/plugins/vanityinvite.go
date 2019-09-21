@@ -10,6 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func (vi VanityInvite) Commands() []string {
 	}
 }
 
-func (vi VanityInvite) Init(session *discordgo.Session) {
+func (vi VanityInvite) Init(session *shardmanager.Manager) {
 	// TODO: loop that creates missing invites, confirms old invites are still working
 }
 
@@ -46,7 +47,7 @@ func (vi VanityInvite) Action(command string, content string, msg *discordgo.Mes
 }
 
 func (vi VanityInvite) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) vanityInviteAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) >= 1 {
 		switch args[0] {
@@ -82,14 +83,14 @@ func (vi VanityInvite) actionSet(args []string, in *discordgo.Message, out **dis
 
 	vanityEntryByGuildID, _ := helpers.GetVanityUrlByGuildID(targetChannel.GuildID)
 	if vanityEntryByGuildID.VanityName != "" && vanityEntryByGuildID.VanityName != strings.ToLower(args[1]) {
-		if !helpers.ConfirmEmbed(in.ChannelID, in.Author,
+		if !helpers.ConfirmEmbed(in.GuildID, in.ChannelID, in.Author,
 			helpers.GetTextF("plugins.vanityinvite.set-change-confirm", vanityEntryByGuildID.VanityNamePretty),
 			"✅", "🚫") {
 			return nil
 		}
 	}
 
-	_, err = cache.GetSession().ChannelInviteCreate(targetChannel.ID, discordgo.Invite{
+	_, err = cache.GetSession().SessionForGuildS(targetChannel.GuildID).ChannelInviteCreate(targetChannel.ID, discordgo.Invite{
 		MaxAge: 60 * 1, // 1 minute
 	})
 	if err != nil {
@@ -163,7 +164,7 @@ func (vi VanityInvite) actionRemove(args []string, in *discordgo.Message, out **
 		return vi.actionFinish
 	}
 
-	if !helpers.ConfirmEmbed(in.ChannelID, in.Author,
+	if !helpers.ConfirmEmbed(in.GuildID, in.ChannelID, in.Author,
 		helpers.GetTextF("plugins.vanityinvite.remove-confirm", vanityInvite.VanityNamePretty),
 		"✅", "🚫") {
 		return nil

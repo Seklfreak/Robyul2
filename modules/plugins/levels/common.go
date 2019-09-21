@@ -42,28 +42,30 @@ func setServerFeaturesLoop() {
 			continue
 		}
 
-		for _, guild := range cache.GetSession().State.Guilds {
-			badgesOnServer = make([]models.ProfileBadgeEntry, 0)
-			for _, badge := range badgesBucket {
-				if badge.GuildID == guild.ID {
-					badgesOnServer = append(badgesOnServer, badge)
+		for _, shard := range cache.GetSession().Sessions {
+			for _, guild := range shard.State.Guilds {
+				badgesOnServer = make([]models.ProfileBadgeEntry, 0)
+				for _, badge := range badgesBucket {
+					if badge.GuildID == guild.ID {
+						badgesOnServer = append(badgesOnServer, badge)
+					}
 				}
-			}
 
-			key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
-			feature = models.Rest_Feature_Levels_Badges{
-				Count: len(badgesOnServer),
-			}
+				key = fmt.Sprintf(models.Redis_Key_Feature_Levels_Badges, guild.ID)
+				feature = models.Rest_Feature_Levels_Badges{
+					Count: len(badgesOnServer),
+				}
 
-			err = cacheCodec.Set(&redisCache.Item{
-				Key:        key,
-				Object:     feature,
-				Expiration: time.Minute * 60,
-			})
-			if err != nil {
-				raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
-			}
+				err = cacheCodec.Set(&redisCache.Item{
+					Key:        key,
+					Object:     feature,
+					Expiration: time.Minute * 60,
+				})
+				if err != nil {
+					raven.CaptureError(fmt.Errorf("%#v", err), map[string]string{})
+				}
 
+			}
 		}
 
 		time.Sleep(30 * time.Minute)
@@ -101,18 +103,20 @@ func cacheTopLoop() {
 			continue
 		}
 
-		for _, guild := range cache.GetSession().State.Guilds {
-			guildExpMap := make(map[string]int64, 0)
-			for _, levelsUser := range levelsUsers {
-				if levelsUser.GuildID == guild.ID {
-					guildExpMap[levelsUser.UserID] = levelsUser.Exp
+		for _, shard := range cache.GetSession().Sessions {
+			for _, guild := range shard.State.Guilds {
+				guildExpMap := make(map[string]int64, 0)
+				for _, levelsUser := range levelsUsers {
+					if levelsUser.GuildID == guild.ID {
+						guildExpMap[levelsUser.UserID] = levelsUser.Exp
+					}
 				}
+				rankedGuildExpMap := rankMapByExp(guildExpMap)
+				newTopCache = append(newTopCache, Cache_Levels_top{
+					GuildID: guild.ID,
+					Levels:  rankedGuildExpMap,
+				})
 			}
-			rankedGuildExpMap := rankMapByExp(guildExpMap)
-			newTopCache = append(newTopCache, Cache_Levels_top{
-				GuildID: guild.ID,
-				Levels:  rankedGuildExpMap,
-			})
 		}
 
 		totalExpMap := make(map[string]int64, 0)
@@ -273,7 +277,7 @@ func processExpStackLoop() {
 									time.Sleep(time.Duration(guildSettings.LevelsNotificationDeleteAfter) * time.Second)
 
 									for _, message := range messages {
-										cache.GetSession().ChannelMessageDelete(message.ChannelID, message.ID)
+										cache.GetSession().SessionForGuildS(message.GuildID).ChannelMessageDelete(message.ChannelID, message.ID)
 									}
 								}()
 							}
@@ -387,7 +391,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 				}
 
 				if !applyingAlready {
-					applyRole, err := session.State.Role(guildID, overwrite.RoleID)
+					applyRole, err := session.SessionForGuildS(guildID).State.Role(guildID, overwrite.RoleID)
 
 					if err == nil {
 						toApply = append(toApply, applyRole)
@@ -413,7 +417,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 			}
 
 			if hasRole {
-				removeRole, err := session.State.Role(guildID, overwrite.RoleID)
+				removeRole, err := session.SessionForGuildS(guildID).State.Role(guildID, overwrite.RoleID)
 				if err == nil {
 					toRemove = append(toRemove, removeRole)
 				}
@@ -432,7 +436,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 	}
 
 	for _, toApplyRole := range toApply {
-		errRole := session.GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
+		errRole := session.SessionForGuildS(guildID).GuildMemberRoleAdd(guildID, userID, toApplyRole.ID)
 		if errRole != nil {
 			cache.GetLogger().WithField("module", "levels").Warnf("failed to add role applying level roles: %s", errRole.Error())
 			err = errRole
@@ -440,7 +444,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 	}
 
 	for _, toRemoveRole := range toRemove {
-		errRole := session.GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
+		errRole := session.SessionForGuildS(guildID).GuildMemberRoleRemove(guildID, userID, toRemoveRole.ID)
 		if errRole != nil {
 			cache.GetLogger().WithField("module", "levels").Warnf("failed to remove role applying level roles: %s", errRole.Error())
 			err = errRole

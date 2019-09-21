@@ -10,6 +10,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/globalsign/mgo/bson"
@@ -26,7 +27,7 @@ func (bs *BotStatus) Commands() []string {
 	}
 }
 
-func (bs *BotStatus) Init(session *discordgo.Session) {
+func (bs *BotStatus) Init(session *shardmanager.Manager) {
 	go func() {
 		defer helpers.Recover()
 
@@ -60,14 +61,16 @@ func (bs *BotStatus) gameStatusRotationLoop() {
 
 		newStatus = bs.replaceText(entryBucket.Text)
 
-		err = cache.GetSession().UpdateStatusComplex(discordgo.UpdateStatusData{
-			Game: &discordgo.Game{
-				Name: newStatus,
-				Type: entryBucket.Type,
-			},
-			Status: "online",
-		})
-		helpers.RelaxLog(err)
+		for i, shard := range cache.GetSession().Sessions {
+			err = shard.UpdateStatusComplex(discordgo.UpdateStatusData{
+				Game: &discordgo.Game{
+					Name: newStatus + fmt.Sprintf(" | Shard %d", i),
+					Type: entryBucket.Type,
+				},
+				Status: "online",
+			})
+			helpers.RelaxLog(err)
+		}
 
 		bs.logger().Infof("set the Bot Status to: \"%s\" using the rotation loop", newStatus)
 
@@ -88,7 +91,7 @@ func (bs *BotStatus) Action(command string, content string, msg *discordgo.Messa
 }
 
 func (bs *BotStatus) actionStart(args []string, in *discordgo.Message, out **discordgo.MessageSend) botStatusAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = bs.newMsg("bot.arguments.too-few")
@@ -113,16 +116,20 @@ func (bs *BotStatus) actionStart(args []string, in *discordgo.Message, out **dis
 func (bs *BotStatus) replaceText(text string) (result string) {
 	users := make(map[string]string)
 	channels := make(map[string]string)
-	for _, guild := range cache.GetSession().State.Guilds {
-		for _, u := range guild.Members {
-			users[u.User.ID] = u.User.Username
-		}
-		for _, c := range guild.Channels {
-			channels[c.ID] = c.Name
+	var guilds int64
+	for _, shard := range cache.GetSession().Sessions {
+		for _, guild := range shard.State.Guilds {
+			guilds++
+			for _, u := range guild.Members {
+				users[u.User.ID] = u.User.Username
+			}
+			for _, c := range guild.Channels {
+				channels[c.ID] = c.Name
+			}
 		}
 	}
 
-	text = strings.Replace(text, "{GUILD_COUNT}", humanize.Comma(int64(len(cache.GetSession().State.Guilds))), -1)
+	text = strings.Replace(text, "{GUILD_COUNT}", humanize.Comma(guilds), -1)
 	text = strings.Replace(text, "{MEMBER_COUNT}", humanize.Comma(int64(len(users))), -1)
 	text = strings.Replace(text, "{CHANNEL_COUNT}", humanize.Comma(int64(len(channels))), -1)
 
@@ -146,13 +153,16 @@ func (bs *BotStatus) actionSet(args []string, in *discordgo.Message, out **disco
 
 	newStatus := bs.replaceText(statusMessage)
 
-	err := cache.GetSession().UpdateStatusComplex(discordgo.UpdateStatusData{
-		Game: &discordgo.Game{
-			Name: newStatus,
-			Type: statusType,
-		},
-		Status: "online",
-	})
+	var err error
+	for i, shard := range cache.GetSession().Sessions {
+		err = shard.UpdateStatusComplex(discordgo.UpdateStatusData{
+			Game: &discordgo.Game{
+				Name: newStatus + fmt.Sprintf(" | Shard %d", i),
+				Type: statusType,
+			},
+			Status: "online",
+		})
+	}
 	helpers.Relax(err)
 
 	bs.logger().WithField("UserID", in.Author.ID).Infof("Set the Bot Status to: \"%s\" using the set command", newStatus)

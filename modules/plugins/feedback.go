@@ -8,6 +8,7 @@ import (
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	trello "github.com/VojtechVitek/go-trello"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
@@ -33,7 +34,7 @@ var (
 	trelloListIssues      *trello.List
 )
 
-func (f *Feedback) Init(session *discordgo.Session) {
+func (f *Feedback) Init(session *shardmanager.Manager) {
 	var err error
 	token := helpers.GetConfig().Path("trello.token").Data().(string)
 	trelloClient, err = trello.NewAuthClient(
@@ -49,7 +50,7 @@ func (f *Feedback) Init(session *discordgo.Session) {
 	helpers.Relax(err)
 }
 
-func (f *Feedback) Uninit(session *discordgo.Session) {
+func (f *Feedback) Uninit(session *shardmanager.Manager) {
 
 }
 
@@ -70,7 +71,7 @@ func (f *Feedback) Action(command string, content string, msg *discordgo.Message
 }
 
 func (f *Feedback) actionStart(command string, args []string, in *discordgo.Message, out **discordgo.MessageSend) feedbackAction {
-	cache.GetSession().ChannelTyping(in.ChannelID)
+	cache.GetSession().SessionForGuildS(in.GuildID).ChannelTyping(in.ChannelID)
 
 	if len(args) < 1 {
 		*out = f.newMsg("plugins.feedback.arguments-too-few")

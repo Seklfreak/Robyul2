@@ -75,7 +75,7 @@ func banHandler(msg *discordgo.Message, content string, confirmation bool) {
 	var botCanBan bool
 	guild, err := helpers.GetGuild(msg.GuildID)
 	helpers.Relax(err)
-	guildMemberBot, err := helpers.GetGuildMember(guild.ID, cache.GetSession().State.User.ID)
+	guildMemberBot, err := helpers.GetGuildMember(guild.ID, cache.GetSession().SessionForGuildS(msg.GuildID).State.User.ID)
 	helpers.Relax(err)
 	for _, role := range guild.Roles {
 		for _, userRole := range guildMemberBot.Roles {
@@ -138,7 +138,7 @@ func banHandler(msg *discordgo.Message, content string, confirmation bool) {
 
 	if !confirmation ||
 		helpers.ConfirmEmbed(
-			msg.ChannelID, msg.Author,
+			msg.GuildID, msg.ChannelID, msg.Author,
 			helpers.GetTextF(
 				"plugins.mod.confirm-ban",
 				usersToBanText,
@@ -146,7 +146,7 @@ func banHandler(msg *discordgo.Message, content string, confirmation bool) {
 				reasonText,
 			), "✅", "🚫") {
 		for _, userToBan := range usersToBan {
-			err = cache.GetSession().GuildBanCreateWithReason(guild.ID, userToBan.ID, reasonText, days)
+			err = cache.GetSession().SessionForGuildS(msg.GuildID).GuildBanCreateWithReason(guild.ID, userToBan.ID, reasonText, days)
 			if err != nil {
 				if err, ok := err.(*discordgo.RESTError); ok && err.Message != nil {
 					if err.Message.Code == 0 {

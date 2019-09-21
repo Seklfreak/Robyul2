@@ -25,7 +25,7 @@ func (h *Handler) Commands() []string {
 	}
 }
 
-func (h *Handler) Init(session *discordgo.Session) {
+func (h *Handler) Init(session *shardmanager.Manager) {
 	defer helpers.Recover()
 }
 

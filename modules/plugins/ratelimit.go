@@ -5,6 +5,7 @@ import (
 
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/ratelimits"
+	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -16,7 +17,7 @@ func (r *Ratelimit) Commands() []string {
 	}
 }
 
-func (r *Ratelimit) Init(session *discordgo.Session) {
+func (r *Ratelimit) Init(session *shardmanager.Manager) {
 
 }
 
