@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	AutoleaverStateTable MongoDbCollection = "autoleaver_whitelist"
+	AutoleaverStateTable MongoDbCollection = "autoleaver_state"
 )
 
 type AutoleaverStateEntry struct {
