@@ -45,7 +45,8 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		helpers.GetConfig().Path("discord.perms").Data().(string),
 	))
 
-	for _, guild := range event.Guilds {
+	for _, guild := range session.State.Guilds {
+		log.Info("adding guild to autoleaver cache: ", guild.ID)
 		cache.AddAutoleaverGuildID(guild.ID)
 	}
 

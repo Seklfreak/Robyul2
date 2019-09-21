@@ -511,9 +511,10 @@ func logKeenRequest(request *restful.Request, timeInSeconds float64) {
 
 func allReady() bool {
 	for _, shard := range cache.GetSession().Sessions {
-		if len(shard.State.Ready.Guilds) <= 0 {
+		if len(shard.State.Guilds) <= 0 {
 			return false
 		}
+
 	}
 
 	return true
