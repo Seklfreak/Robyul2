@@ -529,11 +529,11 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 			}
 		}
 
-		if onWhitelist {
-			err = a.sendAllowedJoinMessage(guild.ID)
-			helpers.RelaxLog(err)
-			return
-		}
+		// if onWhitelist {
+		// 	err = a.sendAllowedJoinMessage(guild.ID)
+		// 	helpers.RelaxLog(err)
+		// 	return
+		// }
 
 		notWhitelistedJoinText := helpers.GetTextF("plugins.autoleaver.noti-join-not-whitelisted", guild.Name, guild.ID)
 		if notificationChannelID != "" {
