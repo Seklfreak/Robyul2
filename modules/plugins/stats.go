@@ -51,6 +51,7 @@ func (s *Stats) Commands() []string {
 		"channels",
 		"channellist",
 		"avatar",
+		"shardingstats",
 	}
 }
 
@@ -1888,6 +1889,17 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		_, err = helpers.SendMessage(msg.ChannelID, targetUser.AvatarURL(""))
+		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
+		return
+	case "shardingstats":
+		fullStatus := cache.GetSession().GetFullStatus()
+		var content string
+		for _, shard := range fullStatus.Shards {
+			content += fmt.Sprintf("Shard **%d**: %s guilds\n", shard.Shard, humanize.Comma(int64(shard.NumGuilds)))
+		}
+		content += fmt.Sprintf("total guilds: %s", humanize.Comma(int64(fullStatus.NumGuilds)))
+
+		_, err := helpers.SendMessage(msg.ChannelID, content)
 		helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 		return
 	}
