@@ -49,12 +49,6 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 		helpers.AddAutoleaverGuildID(guild.ID)
 	}
 
-	// Cache the session
-	// cache.SetSession(session)
-
-	// Load and init all modules
-	// modules.Init(session)
-
 	// request guild members from the gateway
 	go func() {
 		time.Sleep(5 * time.Second)

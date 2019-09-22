@@ -261,9 +261,6 @@ func main() {
 		}
 	}
 	log.WithField("module", "launcher").Info("Connecting Robyul to discord...")
-	// discord, err := createSharding("Bot " + config.Path("discord.token").Data().(string))
-	// discord, err := discordgo.New("Bot " + config.Path("discord.token").Data().(string))
-	// discord, err := newSharder("Bot " + config.Path("discord.token").Data().(string))
 
 	discord := shardmanager.New("Bot " + config.Path("discord.token").Data().(string))
 	if err != nil {
@@ -337,12 +334,7 @@ func main() {
 
 	cache.SetSession(discord)
 
-	// // Connect to discord
-	// err = discord.Open()
-	// if err != nil {
-	// 	raven.CaptureErrorAndWait(err, nil)
-	// 	panic(err)
-	// }
+	// connect all shards
 	err = discord.Start()
 	if err != nil {
 		raven.CaptureErrorAndWait(err, nil)

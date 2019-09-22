@@ -12,16 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	VersionMajor = 0
-	VersionMinor = 2
-	VersionPath  = 0
-)
-
-var (
-	VersionString = strconv.Itoa(VersionMajor) + "." + strconv.Itoa(VersionMinor) + "." + strconv.Itoa(VersionPath)
-)
-
 type SessionFunc func(token string) (*discordgo.Session, error)
 
 type Manager struct {
@@ -354,31 +344,6 @@ func (m *Manager) statusRoutine() {
 
 	mID := ""
 
-	// Find the initial message id and reuse that message if found
-	msgs, err := m.bareSession.ChannelMessages(m.StatusMessageChannel, 50, "", "", "")
-	if err != nil {
-		m.handleError(err, -1, "Failed requesting message history in channel")
-	} else {
-		for _, msg := range msgs {
-			// Dunno our own bot id so best we can do is bot
-			if !msg.Author.Bot || len(msg.Embeds) < 1 {
-				continue
-			}
-
-			nameStr := ""
-			if m.Name != "" {
-				nameStr = " for " + m.Name
-			}
-
-			embed := msg.Embeds[0]
-			if embed.Title == "Sharding status"+nameStr {
-				// Found it sucessfully
-				mID = msg.ID
-				break
-			}
-		}
-	}
-
 	ticker := time.NewTicker(time.Second)
 	for {
 		select {
@@ -528,7 +493,7 @@ type Event struct {
 func (c *Event) String() string {
 	prefix := ""
 	if c.Shard > -1 {
-		prefix = fmt.Sprintf("[%d/%d] ", c.Shard, c.NumShards)
+		prefix = fmt.Sprintf("[%d/%d] ", c.Shard+1, c.NumShards)
 	}
 
 	s := fmt.Sprintf("%s%s", prefix, strings.Title(c.Type.String()))
