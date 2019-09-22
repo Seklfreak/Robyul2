@@ -529,8 +529,6 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 			}
 		}
 
-		_ = onWhitelist
-
 		if onWhitelist {
 			err = a.sendAllowedJoinMessage(guild.ID)
 			helpers.RelaxLog(err)
@@ -549,9 +547,8 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		err = a.sendAutoleaveMessage(guild.ID)
 		helpers.RelaxLog(err)
 
-		// TODO: enable me!
-		// err = cache.GetSession().GuildLeave(guild.ID)
-		// helpers.Relax(err)
+		err = cache.GetSession().SessionForGuildS(guild.ID).GuildLeave(guild.ID)
+		helpers.Relax(err)
 	}()
 }
 
