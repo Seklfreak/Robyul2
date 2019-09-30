@@ -72,6 +72,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 		// }
 
 		game.ChannelID = msg.ChannelID
+		game.GuildID = msg.GuildID
 		singleGame = game
 	} else {
 		var biasChoices []*idols.Idol
@@ -135,6 +136,7 @@ func createOrGetSinglePlayerGame(msg *discordgo.Message, commandArgs []string) *
 			// recheck if a game is still going on, see above
 			if game := getSinglePlayerGameByUserID(msg.Author.ID); game != nil {
 				game.ChannelID = msg.ChannelID
+				game.GuildID = msg.GuildID
 				return game
 			}
 		}

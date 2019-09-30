@@ -493,7 +493,7 @@ type Event struct {
 func (c *Event) String() string {
 	prefix := ""
 	if c.Shard > -1 {
-		prefix = fmt.Sprintf("[%d/%d] ", c.Shard+1, c.NumShards)
+		prefix = fmt.Sprintf("[%d/%d] ", c.Shard, c.NumShards)
 	}
 
 	s := fmt.Sprintf("%s%s", prefix, strings.Title(c.Type.String()))
