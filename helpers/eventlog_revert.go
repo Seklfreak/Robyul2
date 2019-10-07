@@ -1,11 +1,7 @@
 package helpers
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/base64"
-	"image"
-	"image/jpeg"
 	"strconv"
 	"strings"
 	"time"
@@ -15,9 +11,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
-
-	_ "image/gif"
-	_ "image/png"
 )
 
 func CanRevert(item models.ElasticEventlog) bool {
@@ -245,21 +238,11 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 					return err
 				}
 
-				// read icon
-				iconImage, _, err := image.Decode(bytes.NewReader(iconData))
-				if err != nil {
-					return err
-				}
-
 				// convert icon to jpeg
-				var jpegIconBuffer bytes.Buffer
-				err = jpeg.Encode(bufio.NewWriter(&jpegIconBuffer), iconImage, nil)
-				if err != nil {
-					return err
-				}
+				mimeType, _ := SniffMime(iconData)
 
 				// encode jpeg to base64
-				iconJpegBase64 := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(jpegIconBuffer.Bytes())
+				iconJpegBase64 := "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(iconData)
 
 				guildParams.Icon = iconJpegBase64
 			case "guild_region":
