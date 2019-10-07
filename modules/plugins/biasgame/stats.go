@@ -297,7 +297,7 @@ func showRankings(msg *discordgo.Message, commandArgs []string, isServerRanks bo
 
 	if rankType == "user" && filterGuild != nil {
 		embed.Author.Name = fmt.Sprintf("%s - %s\n", filterGuild.Name, embedTitle)
-		embed.Author.IconURL = discordgo.EndpointGuildIcon(filterGuild.ID, filterGuild.Icon)
+		embed.Author.IconURL = filterGuild.IconURL()
 	}
 
 	// make fields for each group and the idols in the group.
@@ -485,7 +485,7 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 			targetName = "Global"
 		} else {
 			queryParams["guildid"] = guild.ID
-			iconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
+			iconURL = guild.IconURL()
 			targetName = "Server"
 
 		}
@@ -495,7 +495,7 @@ func getStatsQueryInfo(msg *discordgo.Message, statsMessage string) (bson.M, str
 		// user/server/global checks
 		if strings.Contains(statsMessage, "server") {
 
-			iconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
+			iconURL = guild.IconURL()
 			targetName = "Server"
 			queryParams["guildid"] = guild.ID
 		} else if strings.Contains(statsMessage, "global") {

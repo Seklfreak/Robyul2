@@ -297,7 +297,7 @@ func displayNuguGameStats(msg *discordgo.Message, commandArgs []string) {
 
 	} else if isServerQuery {
 		embedTitle = "Server - Nugu Game Stats"
-		embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+		embedIcon = targetGuild.IconURL()
 
 	} else {
 		embedTitle = fmt.Sprintf("%s - Nugu Game Stats", targetUser.Username)
@@ -438,7 +438,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, byServ
 			if arg == "server" && !byServerRanking {
 				targetGuild, err = helpers.GetGuild(msg.GuildID)
 				query["guildid"] = msg.GuildID
-				embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+				embedIcon = targetGuild.IconURL()
 				isServerQuery = true
 				continue
 			}
@@ -447,7 +447,7 @@ func displayNugugameRanking(msg *discordgo.Message, commandArgs []string, byServ
 			if isServerQuery && !byServerRanking {
 				if targetGuild, err = helpers.GetGuild(commandArgs[len(commandArgs)-1]); err == nil {
 					query["guildid"] = targetGuild.ID
-					embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+					embedIcon = targetGuild.IconURL()
 					continue
 				}
 			}
@@ -685,7 +685,7 @@ func displayMissedIdols(msg *discordgo.Message, commandArgs []string) {
 
 	} else if isServerQuery {
 		embedTitle = "Server - Most Missed Idols"
-		embedIcon = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+		embedIcon = targetGuild.IconURL()
 
 	} else {
 		embedTitle = fmt.Sprintf("%s - Most Missed Idols", targetUser.Username)

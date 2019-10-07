@@ -652,7 +652,7 @@ NextKeyword:
 				Inline: false,
 			})
 			if guild.Icon != "" {
-				notificationEmbed.Author.IconURL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon)
+				notificationEmbed.Author.IconURL = guild.IconURL()
 			}
 			helpers.SendEmbed(dmChannel.ID, notificationEmbed)
 			break

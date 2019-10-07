@@ -1083,7 +1083,7 @@ func (m *LastFm) Action(command string, content string, msg *discordgo.Message, 
 			}
 			if guild.Icon != "" {
 				topTracksEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{
-					URL: discordgo.EndpointGuildIcon(guild.ID, guild.Icon),
+					URL: guild.IconURL(),
 				}
 			}
 			_, err = helpers.SendEmbed(msg.ChannelID, topTracksEmbed)

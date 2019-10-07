@@ -410,7 +410,7 @@ func getEventlogEmbed(eventlogID string, createdAt time.Time, guildID, targetID,
 		case models.EventlogTargetTypeGuild:
 			guild, err := GetGuildWithoutApi(targetIDs[0])
 			if err == nil && guild.Icon != "" {
-				embed.Thumbnail.URL = discordgo.EndpointGuildIcon(guild.ID, guild.Icon) + "?size=256"
+				embed.Thumbnail.URL = guild.IconURL() + "?size=256"
 			}
 		case models.EventlogTargetTypeEmoji:
 			embed.Thumbnail.URL = discordgo.EndpointEmoji(targetIDs[0])
@@ -725,8 +725,8 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	if oldGuild.Icon != newGuild.Icon {
 		iconObjectChange := getDiscordFileHashChange("guild_icon_object",
 			oldGuild.Icon, newGuild.Icon,
-			discordgo.EndpointGuildIcon(guildID, oldGuild.Icon),
-			discordgo.EndpointGuildIcon(guildID, newGuild.Icon),
+			oldGuild.IconURL(),
+			newGuild.IconURL(),
 			"", "", newGuild.ID)
 
 		changes = append(changes, models.ElasticEventlogChange{

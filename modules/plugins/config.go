@@ -445,7 +445,7 @@ func (m *Config) actionStatus(args []string, in *discordgo.Message, out **discor
 			Text: "Server #" + targetGuild.ID,
 		}
 		if targetGuild.Icon != "" {
-			page.Footer.IconURL = discordgo.EndpointGuildIcon(targetGuild.ID, targetGuild.Icon)
+			page.Footer.IconURL = targetGuild.IconURL()
 		}
 	}
 

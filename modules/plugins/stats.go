@@ -491,8 +491,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		if guild.Icon != "" {
-			serverinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", guild.ID, guild.Icon)}
-			serverinfoEmbed.URL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.png?size=2048", guild.ID, guild.Icon)
+			serverinfoEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: guild.IconURL()}
+			serverinfoEmbed.URL = guild.IconURL() + "?size=2048"
 		}
 
 		if totalMessagesText != "" {
@@ -1505,10 +1505,9 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 		}
 
 		inviteEmbed := &discordgo.MessageEmbed{
-			Title:     "Invite for " + invite.Guild.Name,
-			URL:       "https://discord.gg/" + invite.Code,
-			Thumbnail: &discordgo.MessageEmbedThumbnail{URL: invite.Guild.Icon},
-			Footer:    &discordgo.MessageEmbedFooter{Text: "Server #" + invite.Guild.ID},
+			Title:  "Invite for " + invite.Guild.Name,
+			URL:    "https://discord.gg/" + invite.Code,
+			Footer: &discordgo.MessageEmbedFooter{Text: "Server #" + invite.Guild.ID},
 
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Link", Value: "https://discord.gg/" + invite.Code, Inline: true},
@@ -1525,7 +1524,7 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 
 		if invite.Guild.Icon != "" {
 			inviteEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{
-				URL: fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.jpg", invite.Guild.ID, invite.Guild.Icon),
+				URL: invite.Guild.IconURL(),
 			}
 		}
 

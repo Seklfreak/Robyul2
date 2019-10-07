@@ -20,7 +20,7 @@ require (
 	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
 	github.com/beefsack/go-rate v0.0.0-20180408011153-efa7637bb9b6 // indirect
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013
-	github.com/bwmarrin/discordgo v0.19.0
+	github.com/bwmarrin/discordgo v0.16.1-0.20191003153151-ae74315d3834
 	github.com/cenkalti/backoff v2.1.0+incompatible // indirect
 	github.com/certifi/gocertifi v0.0.0-20180905225744-ee1a9a0726d2 // indirect
 	github.com/corona10/goimagehash v0.2.0

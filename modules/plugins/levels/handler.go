@@ -1894,7 +1894,7 @@ func (m *Levels) Action(command string, content string, msg *discordgo.Message, 
 				}
 
 				if guild.Icon != "" {
-					topLevelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: discordgo.EndpointGuildIcon(guild.ID, guild.Icon)}
+					topLevelEmbed.Thumbnail = &discordgo.MessageEmbedThumbnail{URL: guild.IconURL()}
 				}
 
 				_, err = helpers.SendEmbed(msg.ChannelID, topLevelEmbed)
