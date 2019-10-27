@@ -46,6 +46,7 @@ var RobyulMod = []string{
 var Blacklisted = []string{
 	"171883318386753536",
 	"502156053597782027",
+	"466007709322444800",
 }
 var BlacklistedGuildIDs = []string{
 	"586923572392493061",
