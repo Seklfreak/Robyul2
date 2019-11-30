@@ -20,6 +20,7 @@ var (
 		"426685461793341451", // TrelleIRC (Kakkela, Webhook)
 		"308942526570561536", // TrelleIRC (Kakkela, Webhook)
 		"430089364417150976", // TrelleIRC (Kakkela, Webhook)
+		"633601942077046786", // TrelleIRC (Kakkela, Webhook)
 	}
 	generatedDelimiterCombinations = getAllDelimiterCombinations()
 )
