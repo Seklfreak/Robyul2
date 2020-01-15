@@ -2183,7 +2183,7 @@ func (m *Mod) inspectUserBans(user *discordgo.User) ([]*discordgo.Guild, []*disc
 			key = fmt.Sprintf("robyul2-discord:api:bans:%s", botGuild.ID)
 			if err = cacheCodec.Get(key, &guildBans); err == nil {
 				for _, guildBan := range guildBans {
-					if guildBan.User.ID == user.ID {
+					if guildBan.User != nil && guildBan.User.ID == user.ID {
 						bannedOnServerList = append(bannedOnServerList, botGuild)
 						cache.GetLogger().WithField("module", "mod").Info(fmt.Sprintf("user %s (%s) is banned on Guild %s (#%s)",
 							user.Username, user.ID, botGuild.Name, botGuild.ID))
