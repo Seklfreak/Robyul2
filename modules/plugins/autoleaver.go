@@ -547,7 +547,7 @@ func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.
 		err = a.sendAutoleaveMessage(guild.ID)
 		helpers.RelaxLog(err)
 
-		err = cache.GetSession().SessionForGuildS(guild.ID).GuildLeave(guild.ID)
+		err = session.GuildLeave(guild.ID)
 		helpers.Relax(err)
 	}()
 }

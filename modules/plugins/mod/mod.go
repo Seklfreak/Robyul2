@@ -1635,15 +1635,35 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				return
 			}
 
-			targetGuild, err := helpers.GetGuild(args[0])
-			helpers.Relax(err)
+			var guilds []*discordgo.Guild
+			var guildsMessage string
+
+			for _, arg := range args {
+				targetGuild, err := helpers.GetGuildWithoutApi(arg)
+				if err == nil {
+					guilds = append(guilds, targetGuild)
+
+					guildsMessage += fmt.Sprintf("%s #%s ", targetGuild.Name, targetGuild.ID)
+				}
+
+				if len(guilds) >= 30 {
+					break
+				}
+			}
+
+			if len(guilds) <= 0 {
+				helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.arguments.invalid"))
+				return
+			}
 
 			if helpers.ConfirmEmbed(msg.GuildID, msg.ChannelID, msg.Author,
-				fmt.Sprintf("Are you sure you want me to leave the server `%s` (`#%s`)?",
-					targetGuild.Name, targetGuild.ID), "✅", "🚫") {
-				helpers.SendMessage(msg.ChannelID, "Goodbye <a:ablobwave:393869340975300638>")
-				err = session.GuildLeave(targetGuild.ID)
-				helpers.Relax(err)
+				fmt.Sprintf("Are you sure you want me to leave the server(s) %s?",
+					guildsMessage), "✅", "🚫") {
+				for _, guild := range guilds {
+					helpers.SendMessage(msg.ChannelID, fmt.Sprintf("Goodbye %s #%s <a:ablobwave:393869340975300638>", guild.Name, guild.ID))
+					err := session.GuildLeave(guild.ID)
+					helpers.Relax(err)
+				}
 			}
 		})
 		return
