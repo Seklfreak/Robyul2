@@ -291,7 +291,6 @@ func (g *nuguGame) watchForGuesses() {
 
 // finishGame will send the final message, record stats, and delete the game
 func (g *nuguGame) finishGame() {
-	go recordNuguGame(g)
 	g.deleteGame()
 
 	// if there is a current idol set, the user missed it and should be printed out what the idol was
@@ -347,6 +346,7 @@ func (g *nuguGame) finishGame() {
 	}
 
 	helpers.SendMessage(g.ChannelID, finalMessage)
+	recordNuguGame(g)
 }
 
 // saveGame saves the nugu game to the current running games
