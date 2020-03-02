@@ -122,6 +122,10 @@ func CallBotPlugin(command string, content string, msg *discordgo.Message) {
 	// Defer a recovery in case anything panics
 	defer helpers.RecoverDiscord(msg)
 
+	if !helpers.GuildIsOnWhitelist(msg.GuildID) {
+		return
+	}
+
 	// Consume a key for this action
 	ratelimits.Container.Drain(1, msg.Author.ID)
 

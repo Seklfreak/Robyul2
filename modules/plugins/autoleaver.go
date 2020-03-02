@@ -52,6 +52,11 @@ func (a *Autoleaver) Init(session *shardmanager.Manager) {
 	session.AddHandler(a.OnGuildCreate)
 	session.AddHandler(a.OnGuildDelete)
 
+	err := helpers.UpdateWhitelistCache()
+	if err != nil {
+		a.logger().WithError(err).Error("failure updating whitelist cache")
+	}
+
 	go func() {
 		defer helpers.Recover()
 		a.checkExpiredGuildsLoop()
@@ -238,6 +243,13 @@ func (a *Autoleaver) actionAdd(args []string, in *discordgo.Message, out **disco
 			Until:         until,
 		},
 	)
+	if err != nil {
+		helpers.Relax(err)
+	}
+	err = helpers.UpdateWhitelistCache()
+	if err != nil {
+		helpers.Relax(err)
+	}
 
 	guildAdded, _ := helpers.GetGuild(guildID)
 	if guildAdded == nil || guildAdded.ID == "" {
@@ -322,6 +334,10 @@ func (a *Autoleaver) actionImport(args []string, in *discordgo.Message, out **di
 		guildsAdded++
 	}
 	resultText += helpers.GetTextF("plugins.autoleaver.bulk-footer", guildsAdded) + "\n"
+	err = helpers.UpdateWhitelistCache()
+	if err != nil {
+		helpers.Relax(err)
+	}
 
 	for _, page := range helpers.Pagify(resultText, "\n") {
 		_, err = helpers.SendMessage(in.ChannelID, page)
@@ -367,6 +383,10 @@ func (a *Autoleaver) actionRemove(args []string, in *discordgo.Message, out **di
 
 	err = helpers.MDbDelete(models.AutoleaverWhitelistTable, entryBucket.ID)
 	helpers.Relax(err)
+	err = helpers.UpdateWhitelistCache()
+	if err != nil {
+		helpers.Relax(err)
+	}
 
 	guildRemoved, _ := helpers.GetGuild(guildID)
 	if guildRemoved == nil || guildRemoved.ID == "" {

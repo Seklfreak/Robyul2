@@ -1103,22 +1103,6 @@ func CommandExists(name string) bool {
 	return false
 }
 
-func GuildIsOnWhitelist(GuildID string) (whitelisted bool) {
-	var entryBucket []models.AutoleaverWhitelistEntry
-	err := MDbIter(MdbCollection(models.AutoleaverWhitelistTable).Find(nil)).All(&entryBucket)
-	if err != nil {
-		return false
-	}
-
-	for _, whitelistEntry := range entryBucket {
-		if whitelistEntry.GuildID == GuildID {
-			return true
-		}
-	}
-
-	return false
-}
-
 func AutoPagify(text string) (pages []string) {
 	for _, page := range Pagify(text, "\n") {
 		if len(page) <= 1992 {
