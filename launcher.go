@@ -383,9 +383,9 @@ func main() {
 	// Launch machinery
 	marchineryLog.Set(log.WithField("module", "machinery"))
 	machineryServerConfig := &marchineryConfig.Config{
-		Broker:          "redis://" + config.Path("redis.address").Data().(string) + "/1",
+		Broker:          "redis://" + config.Path("redis.address").Data().(string) + "/2",
 		DefaultQueue:    "robyul_tasks",
-		ResultBackend:   "redis://" + config.Path("redis.address").Data().(string) + "/1",
+		ResultBackend:   "redis://" + config.Path("redis.address").Data().(string) + "/2",
 		ResultsExpireIn: 3600,
 	}
 	machineryServer, err := machinery.NewServer(machineryServerConfig)
@@ -404,7 +404,7 @@ func main() {
 		panic(err)
 	}
 	cache.SetMachineryServer(machineryServer)
-	worker := machineryServer.NewWorker("robyul_worker_1", 1)
+	worker := machineryServer.NewWorker("robyul_worker_1", 10)
 	go func() {
 		cache.AddMachineryActiveWorker(worker)
 		err = worker.Launch()
@@ -416,11 +416,11 @@ func main() {
 			}
 		}
 	}()
-	log.WithField("module", "launcher").Info("started machinery worker robyul_worker_1 with concurrency 1")
+	log.WithField("module", "launcher").Info("started machinery worker robyul_worker_1 with concurrency 10")
 	machineryRedisClient := redis.NewClient(&redis.Options{
 		Addr:         config.Path("redis.address").Data().(string),
 		Password:     "", // no password set
-		DB:           1,  // use default DB
+		DB:           2,  // use default DB
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	})
