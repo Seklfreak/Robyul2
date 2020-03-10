@@ -286,7 +286,7 @@ func main() {
 	discord.AddHandler(BotOnReactionRemove)
 	discord.AddHandler(BotOnGuildBanAdd)
 	discord.AddHandler(BotOnGuildBanRemove)
-	// discord.AddHandlerOnce(metrics.OnReady)
+	discord.AddHandler(metrics.OnReady)
 	discord.AddHandler(metrics.OnMessageCreate)
 	discord.AddHandler(BotOnMemberListChunk)
 	discord.AddHandler(BotGuildOnPresenceUpdate)
@@ -394,11 +394,15 @@ func main() {
 		panic(err)
 	}
 	log.WithField("module", "launcher").Info("started machinery server, default queue: robyul_tasks")
-	machineryServer.RegisterTasks(map[string]interface{}{
+	err = machineryServer.RegisterTasks(map[string]interface{}{
 		"unmute_user":    helpers.UnmuteUserMachinery,
 		"apply_autorole": plugins.AutoroleApply,
 		"log_error":      helpers.LogMachineryError,
 	})
+	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
+		panic(err)
+	}
 	cache.SetMachineryServer(machineryServer)
 	worker := machineryServer.NewWorker("robyul_worker_1", 1)
 	go func() {
@@ -406,7 +410,7 @@ func main() {
 		err = worker.Launch()
 		cache.RemoveMachineryActiveWorker(worker)
 		if err != nil {
-			if !strings.Contains(err.Error(), "Signal received: interrupt") && !strings.Contains(err.Error(), "Worker quit gracefully") {
+			if !strings.Contains(err.Error(), "Worker quit gracefully") {
 				raven.CaptureErrorAndWait(err, nil)
 				panic(err)
 			}
@@ -414,9 +418,11 @@ func main() {
 	}()
 	log.WithField("module", "launcher").Info("started machinery worker robyul_worker_1 with concurrency 1")
 	machineryRedisClient := redis.NewClient(&redis.Options{
-		Addr:     config.Path("redis.address").Data().(string),
-		Password: "", // no password set
-		DB:       1,  // use default DB
+		Addr:         config.Path("redis.address").Data().(string),
+		Password:     "", // no password set
+		DB:           1,  // use default DB
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
 	})
 	cache.SetMachineryRedisClient(machineryRedisClient)
 

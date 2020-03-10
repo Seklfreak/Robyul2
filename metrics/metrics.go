@@ -4,6 +4,7 @@ import (
 	"expvar"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/Seklfreak/Robyul2/cache"
@@ -169,10 +170,14 @@ func Init() {
 	go http.ListenAndServe(helpers.GetConfig().Path("metrics_ip").Data().(string)+":1337", nil)
 }
 
+var once sync.Once
+
 // OnReady listens for said discord event
 func OnReady(session *discordgo.Session, event *discordgo.Ready) {
-	go CollectDiscordMetrics(session)
-	go CollectRuntimeMetrics()
+	once.Do(func() {
+		go CollectDiscordMetrics(session)
+		go CollectRuntimeMetrics()
+	})
 }
 
 // OnMessageCreate listens for said discord event

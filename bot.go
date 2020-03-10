@@ -115,12 +115,12 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 	go func() {
 		time.Sleep(5 * time.Second)
 
-		for _, guild := range session.State.Guilds {
-			cache.GetLogger().WithField("module", "bot").Info("state guild:", guild.ID, guild.Name, guild.Large)
-		}
-		for _, guild := range session.State.Guilds {
-			cache.GetLogger().WithField("module", "bot").Info("cached state guild:", guild.ID, guild.Name, guild.Large)
-		}
+		// for _, guild := range session.State.Guilds {
+		// 	cache.GetLogger().WithField("module", "bot").Info("state guild:", guild.ID, guild.Name, guild.Large)
+		// }
+		// for _, guild := range session.State.Guilds {
+		// 	cache.GetLogger().WithField("module", "bot").Info("cached state guild:", guild.ID, guild.Name, guild.Large)
+		// }
 
 		for _, guild := range session.State.Guilds {
 			if helpers.IsBlacklistedGuild(guild.ID) {
