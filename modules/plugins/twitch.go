@@ -1,15 +1,18 @@
 package plugins
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
@@ -21,12 +24,20 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-type Twitch struct{}
+type Twitch struct {
+	lastRefresh time.Time
+
+	token        string
+	secret       string
+	refreshToken string
+	accessToken  string
+}
 
 const (
-	twitchStatsEndpoint = "https://api.twitch.tv/kraken/streams/%s"
-	twitchUsersEndpoint = "https://api.twitch.tv/helix/users?login=%s"
-	twitchHexColor      = "#6441a5"
+	twitchStatsEndpoint        = "https://api.twitch.tv/kraken/streams/%s"
+	twitchUsersEndpoint        = "https://api.twitch.tv/helix/users?login=%s"
+	twitchRefreshTokenEndpoint = "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s"
+	twitchHexColor             = "#6441a5"
 )
 
 type TwitchUser struct {
@@ -111,6 +122,10 @@ func (m *Twitch) Commands() []string {
 }
 
 func (m *Twitch) Init(session *shardmanager.Manager) {
+	m.token = helpers.GetConfig().Path("twitch.token").Data().(string)
+	m.secret = helpers.GetConfig().Path("twitch.secret").Data().(string)
+	m.refreshToken = helpers.GetConfig().Path("twitch.refresh_token").Data().(string)
+
 	go m.checkTwitchFeedsLoop()
 	cache.GetLogger().WithField("module", "twitch").Info("Started twitch loop (60s)")
 }
@@ -469,7 +484,8 @@ func (m *Twitch) newTwitchRequest(method, uri string, body io.Reader) (*http.Req
 	}
 
 	req.Header.Add("User-Agent", helpers.DEFAULT_UA)
-	req.Header.Add("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
+	req.Header.Add("Authorization", "Bearer "+m.accessToken)
+	req.Header.Add("Client-ID", m.token)
 	req.Header.Add("Accept", "application/vnd.twitchtv.v5+json")
 
 	return req, nil
@@ -484,6 +500,16 @@ func (m *Twitch) getTwitchID(username string) (string, error) {
 	resp, err := helpers.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		err = m.performTokenRefresh(context.Background())
+		if err != nil {
+			return "", errors.Wrap(err, "failure refreshing token")
+		}
+
+		return m.getTwitchID(username)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -512,7 +538,7 @@ func (m *Twitch) getTwitchStatus(id string) (*TwitchStatus, error) {
 	}
 
 	request.Header.Set("User-Agent", helpers.DEFAULT_UA)
-	request.Header.Set("Client-ID", helpers.GetConfig().Path("twitch.token").Data().(string))
+	request.Header.Set("Client-ID", m.token)
 	request.Header.Set("Accept", "application/vnd.twitchtv.v5+json")
 
 	response, err := helpers.DefaultClient.Do(request)
@@ -520,6 +546,15 @@ func (m *Twitch) getTwitchStatus(id string) (*TwitchStatus, error) {
 		return nil, err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusUnauthorized {
+		err = m.performTokenRefresh(context.Background())
+		if err != nil {
+			return nil, errors.Wrap(err, "failure refreshing token")
+		}
+
+		return m.getTwitchStatus(id)
+	}
 
 	if response != nil && response.Body != nil {
 		defer response.Body.Close()
@@ -582,4 +617,52 @@ func (m *Twitch) postTwitchLiveToChannel(entry models.TwitchEntry, twitchStatus 
 		Embed:   twitchChannelEmbed,
 	})
 	helpers.Relax(err)
+}
+
+func (m *Twitch) performTokenRefresh(ctx context.Context) error {
+	if time.Since(m.lastRefresh) < 1*time.Hour {
+		return errors.New("refreshed too shortly again, should not require another refresh")
+	}
+
+	refreshBody := url.Values{}
+	refreshBody.Set("refresh_token", m.refreshToken)
+	refreshBody.Set("grant_type", "refresh_token")
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf(twitchRefreshTokenEndpoint, m.token, m.secret),
+		strings.NewReader(refreshBody.Encode()),
+	)
+	if err != nil {
+		return errors.Wrap(err, "cannot create request to refresh token")
+	}
+
+	resp, err := helpers.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "failure making request to refresh token")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid status code received from refresh token endpoint: %d", resp.StatusCode)
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrap(err, "failure reading refresh token body")
+	}
+
+	var responseData tokenRefreshResponsePayload
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return errors.Wrap(err, "failure unmarshalling refresh token body")
+	}
+
+	m.accessToken = responseData.AccessToken
+	m.lastRefresh = time.Now()
+	return nil
+}
+
+type tokenRefreshResponsePayload struct {
+	AccessToken string `json:"access_token"`
 }
