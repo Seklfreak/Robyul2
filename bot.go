@@ -295,6 +295,7 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 					channel.ID,
 					helpers.GetText("bot.prefix.not-set"),
 				)
+				return
 			}
 
 			helpers.SendMessage(

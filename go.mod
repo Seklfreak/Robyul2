@@ -18,7 +18,7 @@ require (
 	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
 	github.com/beefsack/go-rate v0.0.0-20180408011153-efa7637bb9b6 // indirect
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013
-	github.com/bwmarrin/discordgo v0.20.2
+	github.com/bwmarrin/discordgo v0.20.3-0.20200609022322-1d8aef5e9cce
 	github.com/cenkalti/backoff v2.1.0+incompatible // indirect
 	github.com/certifi/gocertifi v0.0.0-20180905225744-ee1a9a0726d2 // indirect
 	github.com/corona10/goimagehash v0.2.0
@@ -42,7 +42,7 @@ require (
 	github.com/go-redis/cache v6.3.5+incompatible
 	github.com/go-redis/redis v6.15.7+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
-	github.com/gorilla/websocket v1.4.1 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/huandu/facebook v2.3.1+incompatible
 	github.com/inconshreveable/go-keen v0.0.0-20170228023802-f7cb12356363
 	github.com/json-iterator/go v1.1.5
@@ -78,7 +78,9 @@ require (
 	github.com/xuri/excelize v1.4.0
 	github.com/zonedb/zonedb v0.0.0-20181223081958-1e4b8eea6f56 // indirect
 	go4.org v0.0.0-20181109185143-00e24f1b2599 // indirect
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20200610111108-226ff32320da // indirect
 	golang.org/x/text v0.3.2
 	google.golang.org/api v0.19.0
 	google.golang.org/genproto v0.0.0-20200303153909-beee998c1893

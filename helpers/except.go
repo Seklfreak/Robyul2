@@ -229,7 +229,7 @@ func SendError(msg *discordgo.Message, err interface{}) {
 		"ChannelID":       msg.ChannelID,
 		"Content":         msg.Content,
 		"Timestamp":       string(msg.Timestamp),
-		"TTS":             strconv.FormatBool(msg.Tts),
+		"TTS":             strconv.FormatBool(msg.TTS),
 		"MentionEveryone": strconv.FormatBool(msg.MentionEveryone),
 		"IsBot":           strconv.FormatBool(msg.Author.Bot),
 	})

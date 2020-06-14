@@ -330,7 +330,7 @@ func (rp *ReactionPolls) getTotalVotes(reactionPoll models.ReactionpollsEntry, u
 					continue
 				}
 				messageReactionUsers, err := cache.GetSession().SessionForGuildS(reactionPoll.GuildID).MessageReactions(
-					reactionPoll.ChannelID, reactionPoll.MessageID, messageReaction.Emoji.APIName(), 100)
+					reactionPoll.ChannelID, reactionPoll.MessageID, messageReaction.Emoji.APIName(), 100, "", "")
 				if err == nil {
 					userIDs := make([]string, 0)
 					for _, messageReactionUser := range messageReactionUsers {

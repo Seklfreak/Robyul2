@@ -1247,7 +1247,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 				// @TODO: use reaction event, see stats.go
 			HandleChooseReactions:
 				for {
-					saveAndExits, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, "💾", 100)
+					saveAndExits, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, "💾", 100, "", "")
 					for _, saveAndExit := range saveAndExits {
 						if saveAndExit.ID == msg.Author.ID {
 							// user wants to exit
@@ -1255,7 +1255,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							break HandleChooseReactions
 						}
 					}
-					numberOnes, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("1"), 100)
+					numberOnes, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("1"), 100, "", "")
 					for _, numberOne := range numberOnes {
 						if numberOne.ID == msg.Author.ID {
 							if settings.InspectTriggersEnabled.UserBannedOnOtherServers && emotesLocked == false {
@@ -1270,7 +1270,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							}
 						}
 					}
-					numberTwos, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("2"), 100)
+					numberTwos, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("2"), 100, "", "")
 					for _, numberTwo := range numberTwos {
 						if numberTwo.ID == msg.Author.ID {
 							if settings.InspectTriggersEnabled.UserNoCommonServers && emotesLocked == false {
@@ -1285,7 +1285,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							}
 						}
 					}
-					NumberThrees, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("3"), 100)
+					NumberThrees, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("3"), 100, "", "")
 					for _, NumberThree := range NumberThrees {
 						if NumberThree.ID == msg.Author.ID {
 							if settings.InspectTriggersEnabled.UserNewlyCreatedAccount && emotesLocked == false {
@@ -1300,7 +1300,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							}
 						}
 					}
-					NumberFives, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("5"), 100)
+					NumberFives, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("5"), 100, "", "")
 					for _, NumberFive := range NumberFives {
 						if NumberFive.ID == msg.Author.ID {
 							if settings.InspectTriggersEnabled.UserMultipleJoins && emotesLocked == false {
@@ -1315,7 +1315,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 							}
 						}
 					}
-					NumberNines, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("9"), 100)
+					NumberNines, _ := cache.GetSession().SessionForGuildS(msg.GuildID).MessageReactions(msg.ChannelID, chooseMessage.ID, emojis.From("9"), 100, "", "")
 					for _, NumberNine := range NumberNines {
 						if NumberNine.ID == msg.Author.ID {
 							if settings.InspectTriggersEnabled.UserJoins && emotesLocked == false {
