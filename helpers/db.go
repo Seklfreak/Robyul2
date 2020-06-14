@@ -49,6 +49,9 @@ func GuildSettingsSet(guild string, config models.Config) error {
 
 // GuildSettingsGet returns all config values for the guild or a default object
 func GuildSettingsGet(guild string) (models.Config, error) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
 	var settings models.Config
 	var err error
 
@@ -59,17 +62,23 @@ func GuildSettingsGet(guild string) (models.Config, error) {
 
 	if IsMdbNotFound(err) {
 		settings = models.Config{}.Default(guild)
+		settings.GuildID = guild
+		guildSettingsCache[guild] = settings
 		return settings, nil
 	}
 
+	guildSettingsCache[guild] = settings
 	return settings, err
 }
 
 func GuildSettingsGetCached(id string) models.Config {
 	cacheMutex.RLock()
-	defer cacheMutex.RUnlock()
-
 	settings := guildSettingsCache[id]
+	cacheMutex.RUnlock()
+
+	if settings.GuildID == "" {
+		settings, _ = GuildSettingsGet(id)
+	}
 	return settings
 }
 
