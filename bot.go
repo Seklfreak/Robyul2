@@ -31,7 +31,7 @@ func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
 		OnFirstReady(session, event)
 		didLaunch = true
 	} else {
-		OnReconnect(session, event)
+		// OnReconnect(session, event)
 	}
 }
 
