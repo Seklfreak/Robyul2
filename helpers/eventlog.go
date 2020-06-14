@@ -45,6 +45,8 @@ helpers.RelaxLog(err)
 
 func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, actionType, reason string,
 	changes []models.ElasticEventlogChange, options []models.ElasticEventlogOption, waitingForAuditLogBackfill bool) (added bool, err error) {
+	return false, nil
+
 	if guildID == "" {
 		return false, nil
 	}
@@ -114,6 +116,8 @@ func EventlogLog(createdAt time.Time, guildID, targetID, targetType, userID, act
 func EventlogLogUpdate(elasticID string, UserID string,
 	options []models.ElasticEventlogOption, changes []models.ElasticEventlogChange,
 	reason string, auditLogBackfilled, reverted bool) (err error) {
+	return nil
+
 	eventlogItem, err := ElasticUpdateEventLog(elasticID, UserID, cleanOptions(options), cleanChanges(changes), reason,
 		auditLogBackfilled, reverted, nil)
 	if err != nil {
