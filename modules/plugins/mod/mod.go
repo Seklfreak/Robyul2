@@ -80,7 +80,7 @@ type CacheInviteInformation struct {
 }
 
 var (
-	invitesCache map[string][]CacheInviteInformation
+	invitesCache = make(map[string][]CacheInviteInformation)
 
 	regexNumberOnly = regexp.MustCompile(`^\d+$`)
 )
