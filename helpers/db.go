@@ -100,15 +100,13 @@ func GuildSettingsUpdater() {
 	for {
 		for _, shard := range cache.GetSession().Sessions {
 			for _, guild := range shard.State.Guilds {
-				settings, e := GuildSettingsGet(guild.ID)
+				_, e := GuildSettingsGet(guild.ID)
 				if e != nil {
 					raven.CaptureError(e, map[string]string{})
 					continue
 				}
 
-				cacheMutex.Lock()
-				guildSettingsCache[guild.ID] = settings
-				cacheMutex.Unlock()
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 
