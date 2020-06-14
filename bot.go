@@ -51,7 +51,7 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 
 	// request guild members from the gateway
 	go func() {
-		time.Sleep(5 * time.Second)
+		time.Sleep(5 * time.Minute)
 
 		for _, guild := range session.State.Guilds {
 			if helpers.IsBlacklistedGuild(guild.ID) {
