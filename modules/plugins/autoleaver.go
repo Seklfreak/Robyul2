@@ -49,18 +49,19 @@ func (a *Autoleaver) Commands() []string {
 }
 
 func (a *Autoleaver) Init(session *shardmanager.Manager) {
-	session.AddHandler(a.OnGuildCreate)
-	session.AddHandler(a.OnGuildDelete)
+	// session.AddHandler(a.OnGuildCreate)
+	// session.AddHandler(a.OnGuildDelete)
 
 	err := helpers.UpdateWhitelistCache()
 	if err != nil {
 		a.logger().WithError(err).Error("failure updating whitelist cache")
 	}
 
-	go func() {
-		defer helpers.Recover()
-		a.checkExpiredGuildsLoop()
-	}()
+	// guild expiry is disbled
+	// go func() {
+	// 	defer helpers.Recover()
+	// 	a.checkExpiredGuildsLoop()
+	// }()
 }
 
 func (a *Autoleaver) Uninit(session *shardmanager.Manager) {
@@ -514,62 +515,62 @@ func (a *Autoleaver) logger() *logrus.Entry {
 }
 
 func (a *Autoleaver) OnGuildCreate(session *discordgo.Session, guild *discordgo.GuildCreate) {
-	go func() {
-		defer helpers.Recover()
-
-		// don't continue if bot didn't just join this guild
-		if !helpers.AddAutoleaverGuildID(guild.ID) {
-			return
-		}
-
-		// go helpers.UpdateBotlists()
-
-		onWhitelist, err := a.isOnWhitelist(guild.ID, nil)
-		helpers.Relax(err)
-
-		owner, err := helpers.GetUser(guild.OwnerID)
-		ownerName := "N/A"
-		if err != nil {
-			owner = new(discordgo.User)
-		} else {
-			ownerName = owner.Username + "#" + owner.Discriminator
-		}
-		membersCount := guild.MemberCount
-		if len(guild.Members) > membersCount {
-			membersCount = len(guild.Members)
-		}
-
-		joinText := helpers.GetTextF("plugins.autoleaver.noti-join", guild.Name, guild.ID, ownerName, guild.OwnerID, membersCount)
-
-		notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
-		if notificationChannelID != "" {
-			_, err = helpers.SendMessage(notificationChannelID, joinText)
-			if err != nil {
-				a.logger().WithField("GuildID", guild.ID).Errorf("Join Notification failed, Error: %s", err.Error())
-			}
-		}
-
-		if onWhitelist {
-			err = a.sendAllowedJoinMessage(guild.ID)
-			helpers.RelaxLog(err)
-			return
-		}
-
-		notWhitelistedJoinText := helpers.GetTextF("plugins.autoleaver.noti-join-not-whitelisted", guild.Name, guild.ID)
-		if notificationChannelID != "" {
-			_, err = helpers.SendMessage(notificationChannelID, notWhitelistedJoinText)
-			if err != nil {
-				a.logger().WithField("GuildID", guild.ID).Errorf("Not Whitelisted Join Notification failed, Error: %s", err.Error())
-			}
-		}
-
-		// send message to inform before leaving
-		err = a.sendAutoleaveMessage(guild.ID)
-		helpers.RelaxLog(err)
-
-		err = session.GuildLeave(guild.ID)
-		helpers.Relax(err)
-	}()
+	// go func() {
+	// 	defer helpers.Recover()
+	//
+	// 	// don't continue if bot didn't just join this guild
+	// 	if !helpers.AddAutoleaverGuildID(guild.ID) {
+	// 		return
+	// 	}
+	//
+	// 	// go helpers.UpdateBotlists()
+	//
+	// 	onWhitelist, err := a.isOnWhitelist(guild.ID, nil)
+	// 	helpers.Relax(err)
+	//
+	// 	owner, err := helpers.GetUser(guild.OwnerID)
+	// 	ownerName := "N/A"
+	// 	if err != nil {
+	// 		owner = new(discordgo.User)
+	// 	} else {
+	// 		ownerName = owner.Username + "#" + owner.Discriminator
+	// 	}
+	// 	membersCount := guild.MemberCount
+	// 	if len(guild.Members) > membersCount {
+	// 		membersCount = len(guild.Members)
+	// 	}
+	//
+	// 	joinText := helpers.GetTextF("plugins.autoleaver.noti-join", guild.Name, guild.ID, ownerName, guild.OwnerID, membersCount)
+	//
+	// 	notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
+	// 	if notificationChannelID != "" {
+	// 		_, err = helpers.SendMessage(notificationChannelID, joinText)
+	// 		if err != nil {
+	// 			a.logger().WithField("GuildID", guild.ID).Errorf("Join Notification failed, Error: %s", err.Error())
+	// 		}
+	// 	}
+	//
+	// 	if onWhitelist {
+	// 		err = a.sendAllowedJoinMessage(guild.ID)
+	// 		helpers.RelaxLog(err)
+	// 		return
+	// 	}
+	//
+	// 	notWhitelistedJoinText := helpers.GetTextF("plugins.autoleaver.noti-join-not-whitelisted", guild.Name, guild.ID)
+	// 	if notificationChannelID != "" {
+	// 		_, err = helpers.SendMessage(notificationChannelID, notWhitelistedJoinText)
+	// 		if err != nil {
+	// 			a.logger().WithField("GuildID", guild.ID).Errorf("Not Whitelisted Join Notification failed, Error: %s", err.Error())
+	// 		}
+	// 	}
+	//
+	// 	// send message to inform before leaving
+	// 	err = a.sendAutoleaveMessage(guild.ID)
+	// 	helpers.RelaxLog(err)
+	//
+	// 	err = session.GuildLeave(guild.ID)
+	// 	helpers.Relax(err)
+	// }()
 }
 
 func (a *Autoleaver) sendAutoleaveMessage(guildID string) (err error) {
@@ -593,35 +594,35 @@ func (a *Autoleaver) sendAllowedJoinMessage(guildID string) (err error) {
 }
 
 func (a *Autoleaver) OnGuildDelete(session *discordgo.Session, guild *discordgo.GuildDelete) {
-	go func() {
-		defer helpers.Recover()
-
-		// go helpers.UpdateBotlists()
-
-		var err error
-
-		owner, err := helpers.GetUser(guild.OwnerID)
-		ownerName := "N/A"
-		if err != nil {
-			owner = new(discordgo.User)
-		} else {
-			ownerName = owner.Username + "#" + owner.Discriminator
-		}
-
-		joinText := helpers.GetTextF("plugins.autoleaver.noti-leave", guild.Name, guild.ID, ownerName, guild.OwnerID)
-		notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
-		if notificationChannelID != "" {
-			_, err = helpers.SendMessage(notificationChannelID, joinText)
-			if err != nil {
-				a.logger().WithField("GuildID", guild.ID).Errorf("Leave Notification failed, Error: %s", err.Error())
-			}
-		}
-
-		// remove guild from autoleaver Guilds, if not just leaving because unavailability
-		if guild.OwnerID != "" {
-			helpers.RemoveAutoleaverGuildID(guild.ID)
-		}
-	}()
+	// go func() {
+	// 	defer helpers.Recover()
+	//
+	// 	// go helpers.UpdateBotlists()
+	//
+	// 	var err error
+	//
+	// 	owner, err := helpers.GetUser(guild.OwnerID)
+	// 	ownerName := "N/A"
+	// 	if err != nil {
+	// 		owner = new(discordgo.User)
+	// 	} else {
+	// 		ownerName = owner.Username + "#" + owner.Discriminator
+	// 	}
+	//
+	// 	joinText := helpers.GetTextF("plugins.autoleaver.noti-leave", guild.Name, guild.ID, ownerName, guild.OwnerID)
+	// 	notificationChannelID, _ := helpers.GetBotConfigString(models.AutoleaverLogChannelKey)
+	// 	if notificationChannelID != "" {
+	// 		_, err = helpers.SendMessage(notificationChannelID, joinText)
+	// 		if err != nil {
+	// 			a.logger().WithField("GuildID", guild.ID).Errorf("Leave Notification failed, Error: %s", err.Error())
+	// 		}
+	// 	}
+	//
+	// 	// remove guild from autoleaver Guilds, if not just leaving because unavailability
+	// 	if guild.OwnerID != "" {
+	// 		helpers.RemoveAutoleaverGuildID(guild.ID)
+	// 	}
+	// }()
 }
 
 func (a *Autoleaver) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Session) {

@@ -258,6 +258,10 @@ func BotOnMessageCreate(session *discordgo.Session, message *discordgo.MessageCr
 		return
 	}
 
+	if !helpers.GuildIsOnWhitelist(message.GuildID) {
+		return
+	}
+
 	// Check if the message contains @mentions for us
 	if strings.HasPrefix(message.Content, "<@") && len(message.Mentions) > 0 && message.Mentions[0].ID == session.State.User.ID {
 		// Consume a key for this action
