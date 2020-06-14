@@ -76,7 +76,7 @@ func ConnectMDB(url string, database string) {
 	}
 
 	mDbSession.SetMode(mgo.Primary, true)
-	mDbSession.SetSafe(&mgo.Safe{})
+	mDbSession.SetSafe(&mgo.Safe{WMode: "majority"})
 
 	mDbDatabase = database
 
