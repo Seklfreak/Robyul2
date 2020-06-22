@@ -3,6 +3,7 @@ package modules
 import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/modules/plugins/biasgame"
+	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/Seklfreak/Robyul2/modules/plugins/mod"
@@ -24,6 +25,8 @@ var (
 		&plugins.UrbanDict{},
 		&plugins.Weather{},
 		&plugins.VLive{},
+		// &instagram.Handler{},
+		// &plugins.Facebook{},
 		&plugins.WolframAlpha{},
 		&plugins.LastFm{},
 		&plugins.Twitch{},
@@ -50,6 +53,7 @@ var (
 		&plugins.Debug{},
 		&plugins.Donators{},
 		&plugins.Ping{},
+		//&google.Handler{},
 		&plugins.BotStatus{},
 		&plugins.VanityInvite{},
 		&plugins.DiscordMoney{},
@@ -68,10 +72,6 @@ var (
 		&plugins.Config{},
 		&plugins.Storage{},
 		&plugins.Mirror{},
-
-		// &instagram.Handler{},
-		// &plugins.Facebook{},
-		// &google.Handler{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
@@ -86,12 +86,11 @@ var (
 		&plugins.Starboard{},
 		&plugins.Autoleaver{},
 		&plugins.Persistency{},
+		&plugins.Twitter{},
+		&eventlog.Handler{},
+		&plugins.Perspective{},
 		&biasgame.Module{},
 		&nugugame.Module{},
 		&idols.Module{},
-
-		// &plugins.Twitter{},
-		// &eventlog.Handler{},
-		// &plugins.Perspective{},
 	}
 )
