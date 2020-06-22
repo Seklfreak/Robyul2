@@ -25,8 +25,6 @@ var (
 		&plugins.UrbanDict{},
 		&plugins.Weather{},
 		&plugins.VLive{},
-		// &instagram.Handler{},
-		// &plugins.Facebook{},
 		&plugins.WolframAlpha{},
 		&plugins.LastFm{},
 		&plugins.Twitch{},
@@ -53,7 +51,6 @@ var (
 		&plugins.Debug{},
 		&plugins.Donators{},
 		&plugins.Ping{},
-		//&google.Handler{},
 		&plugins.BotStatus{},
 		&plugins.VanityInvite{},
 		&plugins.DiscordMoney{},
@@ -72,6 +69,10 @@ var (
 		&plugins.Config{},
 		&plugins.Storage{},
 		&plugins.Mirror{},
+
+		// &instagram.Handler{},
+		// &plugins.Facebook{},
+		// &google.Handler{},
 	}
 
 	PluginExtendedList = []ExtendedPlugin{
@@ -88,9 +89,10 @@ var (
 		&plugins.Persistency{},
 		&plugins.Twitter{},
 		&eventlog.Handler{},
-		&plugins.Perspective{},
 		&biasgame.Module{},
 		&nugugame.Module{},
 		&idols.Module{},
+
+		// &plugins.Perspective{},
 	}
 )
