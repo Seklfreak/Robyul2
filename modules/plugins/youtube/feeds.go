@@ -101,7 +101,7 @@ func (f *feeds) checkChannelFeeds(e models.YoutubeChannelEntry) models.YoutubeCh
 	lastSuccessfulCheckTime := time.Unix(e.LastSuccessfulCheckTime, 0)
 	publishedAfter := lastSuccessfulCheckTime.
 		Add(time.Duration(-1) * time.Hour).
-		Format("2006-01-02T15:04:05-0700")
+		Format(time.RFC3339)
 
 	// get updated feeds
 	feeds, err := f.service.GetChannelFeeds(e.YoutubeChannelID, publishedAfter)
