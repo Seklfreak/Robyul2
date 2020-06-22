@@ -168,6 +168,8 @@ func ElasticOnPresenceUpdate(session *discordgo.Session, presence *discordgo.Pre
 }
 
 func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
+	return nil
+
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -247,6 +249,8 @@ func ElasticAddPresenceUpdate(presence *discordgo.Presence) error {
 }
 
 func ElasticAddMessage(message *discordgo.Message) error {
+	return nil
+
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -292,6 +296,8 @@ func ElasticAddMessage(message *discordgo.Message) error {
 }
 
 func ElasticUpdateMessage(message *discordgo.Message) error {
+	return nil
+
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
@@ -338,6 +344,8 @@ func ElasticUpdateMessage(message *discordgo.Message) error {
 }
 
 func ElasticDeleteMessage(message *discordgo.Message) error {
+	return nil
+
 	if !cache.HasElastic() {
 		return errors.New("no elastic client")
 	}
