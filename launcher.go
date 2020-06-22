@@ -24,6 +24,7 @@ import (
 	"github.com/Seklfreak/Robyul2/modules"
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/rest"
+	"github.com/Seklfreak/Robyul2/robyulstate"
 	"github.com/Seklfreak/Robyul2/shardmanager"
 	"github.com/Seklfreak/Robyul2/version"
 	"github.com/Seklfreak/polr-go"
@@ -301,35 +302,35 @@ func main() {
 		// Guild Member Add in modules/plugins/mod.go
 	}
 
-	// robyulState := robyulstate.NewState()
-	// robyulState.Logger = func(msgL, caller int, format string, a ...interface{}) {
-	// 	pc, file, line, _ := runtime.Caller(caller)
-	//
-	// 	files := strings.Split(file, "/")
-	// 	file = files[len(files)-1]
-	//
-	// 	name := runtime.FuncForPC(pc).Name()
-	// 	fns := strings.Split(name, ".")
-	// 	name = fns[len(fns)-1]
-	//
-	// 	msg := format
-	// 	if strings.Contains(msg, "%") {
-	// 		msg = fmt.Sprintf(format, a...)
-	// 	}
-	//
-	// 	switch msgL {
-	// 	case discordgo.LogError:
-	// 		log.WithField("module", "robyulState").Errorf("%s:%d:%s() %s", file, line, name, msg)
-	// 	case discordgo.LogWarning:
-	// 		log.WithField("module", "robyulState").Warnf("%s:%d:%s() %s", file, line, name, msg)
-	// 	case discordgo.LogInformational:
-	// 		log.WithField("module", "robyulState").Infof("%s:%d:%s() %s", file, line, name, msg)
-	// 	case discordgo.LogDebug:
-	// 		log.WithField("module", "robyulState").Debugf("%s:%d:%s() %s", file, line, name, msg)
-	// 	}
-	// }
+	robyulState := robyulstate.NewState()
+	robyulState.Logger = func(msgL, caller int, format string, a ...interface{}) {
+		pc, file, line, _ := runtime.Caller(caller)
 
-	// discord.AddHandler(robyulState.OnInterface)
+		files := strings.Split(file, "/")
+		file = files[len(files)-1]
+
+		name := runtime.FuncForPC(pc).Name()
+		fns := strings.Split(name, ".")
+		name = fns[len(fns)-1]
+
+		msg := format
+		if strings.Contains(msg, "%") {
+			msg = fmt.Sprintf(format, a...)
+		}
+
+		switch msgL {
+		case discordgo.LogError:
+			log.WithField("module", "robyulState").Errorf("%s:%d:%s() %s", file, line, name, msg)
+		case discordgo.LogWarning:
+			log.WithField("module", "robyulState").Warnf("%s:%d:%s() %s", file, line, name, msg)
+		case discordgo.LogInformational:
+			log.WithField("module", "robyulState").Infof("%s:%d:%s() %s", file, line, name, msg)
+		case discordgo.LogDebug:
+			log.WithField("module", "robyulState").Debugf("%s:%d:%s() %s", file, line, name, msg)
+		}
+	}
+
+	discord.AddHandler(robyulState.OnInterface)
 
 	cache.SetSession(discord)
 
