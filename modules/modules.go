@@ -3,7 +3,6 @@ package modules
 import (
 	"github.com/Seklfreak/Robyul2/modules/plugins"
 	"github.com/Seklfreak/Robyul2/modules/plugins/biasgame"
-	"github.com/Seklfreak/Robyul2/modules/plugins/eventlog"
 	"github.com/Seklfreak/Robyul2/modules/plugins/idols"
 	"github.com/Seklfreak/Robyul2/modules/plugins/levels"
 	"github.com/Seklfreak/Robyul2/modules/plugins/mod"
@@ -87,12 +86,12 @@ var (
 		&plugins.Starboard{},
 		&plugins.Autoleaver{},
 		&plugins.Persistency{},
-		&plugins.Twitter{},
-		&eventlog.Handler{},
 		&biasgame.Module{},
 		&nugugame.Module{},
 		&idols.Module{},
 
+		// &plugins.Twitter{},
+		// &eventlog.Handler{},
 		// &plugins.Perspective{},
 	}
 )
