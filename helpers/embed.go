@@ -155,7 +155,7 @@ func ParseEmbedCode(embedText string) (ptext string, embed *discordgo.MessageEmb
 		} else {
 			if strings.Contains(author, "url=") {
 				authorValues = strings.SplitN(author, "url=", 2)
-				if len(iconValues) >= 2 {
+				if len(authorValues) >= 2 {
 					embed.Author = &discordgo.MessageEmbedAuthor{
 						Name: strings.TrimSpace(authorValues[0][5:]),
 						URL:  strings.TrimSpace(authorValues[1]),
