@@ -35,6 +35,10 @@ var (
 )
 
 func (f *Feedback) Init(session *shardmanager.Manager) {
+	if helpers.GetConfig().Path("trello.token").Data().(string) == "" {
+		return
+	}
+
 	var err error
 	token := helpers.GetConfig().Path("trello.token").Data().(string)
 	trelloClient, err = trello.NewAuthClient(

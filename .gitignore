@@ -112,3 +112,6 @@ commands.txt
 
 Robyul2
 robyul_cache/
+
+.google-cloud-credentials
+dump.rdb
