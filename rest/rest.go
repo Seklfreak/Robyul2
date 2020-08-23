@@ -778,6 +778,11 @@ func GetMessageStatisticsCount(request *restful.Request, response *restful.Respo
 		}
 	}
 
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
+		return
+	}
+
 	rangeQuery := elastic.NewRangeQuery("CreatedAt").
 		Gte("now-" + interval).
 		Lte("now")
@@ -805,6 +810,11 @@ func GetJoinsStatisticsCount(request *restful.Request, response *restful.Respons
 			response.WriteErrorString(401, "401: Not Authorized")
 			return
 		}
+	}
+
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
+		return
 	}
 
 	rangeQuery := elastic.NewRangeQuery("CreatedAt").
@@ -836,6 +846,11 @@ func GetLeavesStatisticsCount(request *restful.Request, response *restful.Respon
 		}
 	}
 
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
+		return
+	}
+
 	rangeQuery := elastic.NewRangeQuery("CreatedAt").
 		Gte("now-" + interval).
 		Lte("now")
@@ -863,6 +878,11 @@ func GetMessageByUniqueUsersStatisticsCount(request *restful.Request, response *
 			response.WriteErrorString(401, "401: Not Authorized")
 			return
 		}
+	}
+
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
+		return
 	}
 
 	agg := elastic.NewCardinalityAggregation().
@@ -914,6 +934,11 @@ func GetServerActivityStatisticsHistogram(request *restful.Request, response *re
 			response.WriteErrorString(401, "401: Not Authorized")
 			return
 		}
+	}
+
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
+		return
 	}
 
 	countNumber, err := strconv.Atoi(count)
@@ -1051,6 +1076,11 @@ func GetVanityInviteStatistics(request *restful.Request, response *restful.Respo
 			response.WriteErrorString(401, "401: Not Authorized")
 			return
 		}
+	}
+
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
+		return
 	}
 
 	countNumber, err := strconv.Atoi(count)
@@ -1196,6 +1226,11 @@ func GetChatlogAroundMessageID(request *restful.Request, response *restful.Respo
 
 	if helpers.GuildSettingsGetCached(guildID).ChatlogDisabled {
 		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
 		return
 	}
 
@@ -1397,6 +1432,11 @@ func GetEventlog(request *restful.Request, response *restful.Response) {
 
 	if helpers.GuildSettingsGetCached(guildID).EventlogDisabled {
 		response.WriteErrorString(401, "401: Not Authorized")
+		return
+	}
+
+	if !cache.HasElastic() {
+		response.WriteErrorString(http.StatusServiceUnavailable, "unavailable")
 		return
 	}
 
