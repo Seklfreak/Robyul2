@@ -23,7 +23,7 @@ var (
 		&plugins.Translator{},
 		&plugins.UrbanDict{},
 		&plugins.Weather{},
-		&plugins.VLive{},
+		&plugins.VLive{}, // Mongo performance
 		&plugins.WolframAlpha{},
 		&plugins.LastFm{},
 		&plugins.Twitch{},
@@ -77,15 +77,15 @@ var (
 	PluginExtendedList = []ExtendedPlugin{
 		&plugins.Bias{},
 		&plugins.GuildAnnouncements{},
-		&levels.Levels{},
+		&levels.Levels{}, // Mongo performance
 		&plugins.Gallery{},
 		&plugins.CustomCommands{},
 		&plugins.ReactionPolls{},
 		&mod.Mod{},
 		&plugins.AutoRoles{},
-		&plugins.Starboard{},
+		&plugins.Starboard{}, // Mongo performance
 		&plugins.Autoleaver{},
-		&plugins.Persistency{},
+		&plugins.Persistency{}, // Mongo performance
 		&biasgame.Module{},
 		&nugugame.Module{},
 		&idols.Module{},
