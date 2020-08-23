@@ -43,7 +43,6 @@ var (
 		&plugins.Streamable{},
 		&plugins.Lyrics{},
 		&plugins.Friend{},
-		&plugins.Names{},
 		&plugins.Reddit{},
 		&plugins.Color{},
 		&plugins.Dog{},
@@ -69,6 +68,7 @@ var (
 		&plugins.Storage{},
 		&plugins.Mirror{},
 
+		// &plugins.Names{},
 		// &instagram.Handler{},
 		// &plugins.Facebook{},
 		// &google.Handler{},
