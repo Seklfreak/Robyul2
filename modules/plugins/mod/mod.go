@@ -1471,19 +1471,14 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		helpers.RequireMod(msg, func() {
 			searchText := strings.TrimSpace(content)
 			if len(searchText) > 3 {
-				globalCheck := helpers.IsBotAdmin(msg.Author.ID)
-				if globalCheck == true {
-					helpers.SendMessage(msg.ChannelID, "Searching for users on all servers with Robyul. :speech_balloon:")
-				} else {
-					helpers.SendMessage(msg.ChannelID, "Searching for users on this server. :speech_balloon:")
-				}
+				helpers.SendMessage(msg.ChannelID, "Searching for users on this server. :speech_balloon:")
 
 				currentChannel, err := helpers.GetChannel(msg.ChannelID)
 				helpers.Relax(err)
 
 				usersMatched := make([]*discordgo.User, 0)
 				for _, serverGuild := range helpers.AllGuilds() {
-					if globalCheck == true || serverGuild.ID == currentChannel.GuildID {
+					if serverGuild.ID == currentChannel.GuildID {
 						members := make([]*discordgo.Member, 0)
 						for _, botGuild := range session.State.Guilds {
 							if botGuild.ID == serverGuild.ID {
