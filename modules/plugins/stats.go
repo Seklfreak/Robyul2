@@ -750,33 +750,33 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 			}
 		}
 
-		voiceStatSummaryText := "N/A"
-		if cache.HasElastic() {
-			durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
-
-			termQuery := elastic.NewQueryStringQuery("GuildID:" + currentGuild.ID + " AND UserID:" + targetUser.ID)
-			searchResult, err := cache.GetElastic().Search().
-				Index(models.ElasticIndexVoiceSessions).
-				Type("doc").
-				Query(termQuery).
-				Aggregation("total", durationSumAgg).
-				Size(0).
-				Do(context.Background())
-			helpers.Relax(err)
-
-			voiceStatSummaryText = ""
-			if agg, found := searchResult.Aggregations.Sum("total"); found {
-				totalDuration := int64(*agg.Value)
-				voiceStatSummaryText = "Total duration connected: "
-				if totalDuration > 0 {
-					voiceStatSummaryText += helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(totalDuration))) + "\n"
-					voiceStatSummaryText += fmt.Sprintf("Try `%svoicestats @%s` to view the complete voice stats for this user!",
-						helpers.GetPrefixForServer(currentGuild.ID), fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator))
-				} else {
-					voiceStatSummaryText += "None"
-				}
-			}
-		}
+		// voiceStatSummaryText := "N/A"
+		// if cache.HasElastic() {
+		// 	durationSumAgg := elastic.NewSumAggregation().Field("DurationSeconds")
+		//
+		// 	termQuery := elastic.NewQueryStringQuery("GuildID:" + currentGuild.ID + " AND UserID:" + targetUser.ID)
+		// 	searchResult, err := cache.GetElastic().Search().
+		// 		Index(models.ElasticIndexVoiceSessions).
+		// 		Type("doc").
+		// 		Query(termQuery).
+		// 		Aggregation("total", durationSumAgg).
+		// 		Size(0).
+		// 		Do(context.Background())
+		// 	helpers.Relax(err)
+		//
+		// 	voiceStatSummaryText = ""
+		// 	if agg, found := searchResult.Aggregations.Sum("total"); found {
+		// 		totalDuration := int64(*agg.Value)
+		// 		voiceStatSummaryText = "Total duration connected: "
+		// 		if totalDuration > 0 {
+		// 			voiceStatSummaryText += helpers.HumanizedTimesSinceText(time.Now().UTC().Add(time.Second*time.Duration(totalDuration))) + "\n"
+		// 			voiceStatSummaryText += fmt.Sprintf("Try `%svoicestats @%s` to view the complete voice stats for this user!",
+		// 				helpers.GetPrefixForServer(currentGuild.ID), fmt.Sprintf("%s#%s", targetMember.User.Username, targetMember.User.Discriminator))
+		// 		} else {
+		// 			voiceStatSummaryText += "None"
+		// 		}
+		// 	}
+		// }
 
 		userinfoEmbed := &discordgo.MessageEmbed{
 			Color:  0x0FADED,
@@ -786,8 +786,8 @@ func (s *Stats) Action(command string, content string, msg *discordgo.Message, s
 				{Name: "Joined Discord on", Value: fmt.Sprintf("%s (%s)", joinedTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedTime)), Inline: true},
 				{Name: "Joined this server on", Value: fmt.Sprintf("%s (%s)", joinedServerTime.Format(time.ANSIC), helpers.SinceInDaysText(joinedServerTime)), Inline: true},
 				{Name: "Roles", Value: rolesText, Inline: false},
-				{Name: "Voice Stats",
-					Value: voiceStatSummaryText, Inline: false},
+				// {Name: "Voice Stats",
+				// 	Value: voiceStatSummaryText, Inline: false},
 			},
 		}
 		if description != "" {
