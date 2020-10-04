@@ -147,9 +147,9 @@ func (r *Reddit) checkSubredditLoop() {
 					go func() {
 						defer helpers.Recover()
 
-						r.logger().Info(fmt.Sprintf("posting submission: #%s (%s) on r/%s (%s) to #%s",
-							postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName,
-							RedditBaseUrl+"/r/"+subredditName+"/comments/"+postSubmission.ID+"/", entry.ChannelID))
+						// r.logger().Info(fmt.Sprintf("posting submission: #%s (%s) on r/%s (%s) to #%s",
+						// 	postSubmission.ID, submissionTime.Format(time.ANSIC), subredditName,
+						// 	RedditBaseUrl+"/r/"+subredditName+"/comments/"+postSubmission.ID+"/", entry.ChannelID))
 
 						err = r.postSubmission(postChannelID, postSubmission, entry.PostDirectLinks)
 						if err != nil {

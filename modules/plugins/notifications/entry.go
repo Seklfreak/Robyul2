@@ -447,7 +447,7 @@ NextKeyword:
 					if overwrite.Type == "role" {
 						roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
 						if err != nil {
-							cache.GetLogger().WithField("module", "notifications").Warn("error getting role: " + err.Error())
+							// cache.GetLogger().WithField("module", "notifications").Warn("error getting role: " + err.Error())
 							continue NextPermOverwriteEveryone
 						}
 						//fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
@@ -477,7 +477,7 @@ NextKeyword:
 					if overwrite.Type == "role" {
 						roleToCheck, err := session.State.Role(channel.GuildID, overwrite.ID)
 						if err != nil {
-							cache.GetLogger().WithField("module", "notifications").Warn("error getting role: " + err.Error())
+							// cache.GetLogger().WithField("module", "notifications").Warn("error getting role: " + err.Error())
 							continue NextPermOverwriteNotEveryone
 						}
 						//fmt.Printf("%s: %#v\n", roleToCheck.Name, overwrite)
