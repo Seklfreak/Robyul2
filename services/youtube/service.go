@@ -2,13 +2,13 @@ package youtube
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
 
 	"github.com/Seklfreak/Robyul2/helpers"
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	youtubeAPI "google.golang.org/api/youtube/v3"
 )
@@ -187,7 +187,7 @@ func (s *Service) handleGoogleAPIError(err error) error {
 	switch errCode {
 	case 403:
 		s.quota.DailyLimitExceeded()
-		return fmt.Errorf("plugins.youtube.daily-limit-exceeded")
+		return errors.Wrap(err, "YouTube 403: possibly daily limited exceeded")
 	default:
 		return err
 	}
