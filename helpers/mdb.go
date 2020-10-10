@@ -69,6 +69,10 @@ func ConnectMDB(url string, database string) {
 		}
 	}
 
+	const poolLimit = 8192
+	dialInfo.PoolLimit = poolLimit
+	dialInfo.MinPoolSize = 32
+
 	mDbSession, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		log.WithField("module", "mdb").Error(err.Error())
@@ -77,7 +81,7 @@ func ConnectMDB(url string, database string) {
 
 	mDbSession.SetMode(mgo.Primary, true)
 	mDbSession.SetSafe(&mgo.Safe{WMode: "majority"})
-	mDbSession.SetPoolLimit(8192)
+	mDbSession.SetPoolLimit(poolLimit)
 
 	mDbDatabase = database
 
