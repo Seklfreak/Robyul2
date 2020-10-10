@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
 	"time"
 
-	"github.com/Seklfreak/Robyul2/cache"
 	"github.com/Seklfreak/Robyul2/helpers"
 	"github.com/Seklfreak/Robyul2/models"
 	"github.com/Seklfreak/Robyul2/shardmanager"
@@ -410,8 +408,10 @@ func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session 
 	go func() {
 		defer helpers.Recover()
 
-		guild, err := helpers.GetGuild(user.GuildID)
-		helpers.Relax(err)
+		_, err := helpers.GetGuildWithoutApi(user.GuildID)
+		if err != nil {
+			return
+		}
 
 		var entryBucket []models.GreeterEntry
 		err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.GreeterTable).
@@ -446,7 +446,7 @@ func (m *GuildAnnouncements) OnGuildBanAdd(user *discordgo.GuildBanAdd, session 
 				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
 		}
-		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) banned on Guild %s (#%s)", user.User.Username, user.User.ID, guild.Name, guild.ID))
+		// cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) banned on Guild %s (#%s)", user.User.Username, user.User.ID, guild.Name, guild.ID))
 	}()
 }
 
