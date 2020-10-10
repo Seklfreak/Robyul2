@@ -388,7 +388,7 @@ func GetDiscordInviteByVanityInvite(vanityInviteEntry models.VanityInviteEntry) 
 		err = json.Unmarshal(cacheResult, &vanityInviteRedis)
 		if err == nil && time.Now().Before(vanityInviteRedis.ExpiresAt) {
 
-			fmt.Printf("got item from cache: %#v, %s\n", vanityInviteRedis, vanityInviteRedis.ExpiresAt.String()) // TODO
+			// fmt.Printf("got item from cache: %#v, %s\n", vanityInviteRedis, vanityInviteRedis.ExpiresAt.String()) // TODO
 			return vanityInviteRedis.InviteCode, nil
 		}
 	}
