@@ -345,7 +345,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 	member, err := helpers.GetGuildMemberWithoutApi(guildID, userID)
 	if err != nil {
 		// cache.GetLogger().WithField("module", "levels").Warnf("failed to get guild member to apply level roles: %s", err.Error())
-		return err
+		return nil
 	}
 
 	toRemove := make([]*discordgo.Role, 0)
