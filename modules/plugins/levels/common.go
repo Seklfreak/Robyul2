@@ -344,7 +344,7 @@ func applyLevelsRoles(guildID string, userID string, level int) (err error) {
 	apply, remove := getLevelsRoles(guildID, level)
 	member, err := helpers.GetGuildMemberWithoutApi(guildID, userID)
 	if err != nil {
-		cache.GetLogger().WithField("module", "levels").Warnf("failed to get guild member to apply level roles: %s", err.Error())
+		// cache.GetLogger().WithField("module", "levels").Warnf("failed to get guild member to apply level roles: %s", err.Error())
 		return err
 	}
 

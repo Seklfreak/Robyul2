@@ -54,7 +54,6 @@ func (r *VLive) Init(session *shardmanager.Manager) {
 }
 func (r *VLive) checkVliveFeedsLoop() {
 	var entries []models.VliveEntry
-	var entriesLength int
 	var bundledEntries map[string][]models.VliveEntry
 
 	defer helpers.Recover()
@@ -71,8 +70,6 @@ func (r *VLive) checkVliveFeedsLoop() {
 
 		err := helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.VliveTable).Find(nil)).All(&entries)
 		helpers.Relax(err)
-
-		entriesLength = len(entries)
 
 		for _, entry := range entries {
 			// check if channel exists
