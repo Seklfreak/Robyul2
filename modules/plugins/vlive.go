@@ -136,9 +136,7 @@ func (r *VLive) checkVliveFeedsLoop() {
 
 		bundledEntries = nil
 
-		if entriesLength <= 10 {
-			time.Sleep(60 * time.Second)
-		}
+		time.Sleep(60 * time.Second)
 	}
 }
 
