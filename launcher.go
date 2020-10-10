@@ -426,7 +426,7 @@ func main() {
 	cache.SetMachineryRedisClient(machineryRedisClient)
 
 	// start proxies healthcheck loop
-	go helpers.CachedProxiesHealthcheckLoop()
+	// go helpers.CachedProxiesHealthcheckLoop()
 
 	modules.Init(discord)
 
