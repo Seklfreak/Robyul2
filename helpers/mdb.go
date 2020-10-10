@@ -77,7 +77,7 @@ func ConnectMDB(url string, database string) {
 
 	mDbSession.SetMode(mgo.Primary, true)
 	mDbSession.SetSafe(&mgo.Safe{WMode: "majority"})
-	mDbSession.SetPoolLimit(16384)
+	mDbSession.SetPoolLimit(8192)
 
 	mDbDatabase = database
 
