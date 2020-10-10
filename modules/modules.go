@@ -85,7 +85,7 @@ var (
 		&plugins.AutoRoles{},
 		&plugins.Starboard{}, // Mongo performance
 		&plugins.Autoleaver{},
-		&plugins.Persistency{}, // Mongo performance
+		// &plugins.Persistency{}, // Mongo performance
 		&biasgame.Module{},
 		&nugugame.Module{},
 		&idols.Module{},
