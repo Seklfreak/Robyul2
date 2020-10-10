@@ -286,8 +286,10 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 	go func() {
 		defer helpers.Recover()
 
-		guild, err := helpers.GetGuild(member.GuildID)
-		helpers.Relax(err)
+		_, err := helpers.GetGuildWithoutApi(member.GuildID)
+		if err != nil {
+			return
+		}
 
 		var entryBucket []models.GreeterEntry
 		err = helpers.MDbIterWithoutLogging(helpers.MdbCollection(models.GreeterTable).
@@ -319,7 +321,7 @@ func (m *GuildAnnouncements) OnGuildMemberAdd(member *discordgo.Member, session 
 				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
 		}
-		cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
+		// cache.GetLogger().WithField("module", "guildannouncements").Info(fmt.Sprintf("User %s (%s) joined Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID))
 	}()
 }
 
@@ -327,11 +329,8 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 	go func() {
 		defer helpers.Recover()
 
-		guild, err := helpers.GetGuild(member.GuildID)
+		_, err := helpers.GetGuildWithoutApi(member.GuildID)
 		if err != nil {
-			if errD, ok := err.(*discordgo.RESTError); !ok || errD.Message.Code != discordgo.ErrCodeMissingAccess {
-				helpers.RelaxLog(err)
-			}
 			return
 		}
 
@@ -366,7 +365,7 @@ func (m *GuildAnnouncements) OnGuildMemberRemove(member *discordgo.Member, sessi
 				helpers.SendComplex(ourSetting.ChannelID, messageSend)
 			}()
 		}
-		cache.GetLogger().WithField("module", "guildannouncements").Infof("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID)
+		// cache.GetLogger().WithField("module", "guildannouncements").Infof("User %s (%s) left Guild %s (#%s)", member.User.Username, member.User.ID, guild.Name, guild.ID)
 	}()
 }
 

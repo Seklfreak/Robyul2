@@ -2229,70 +2229,70 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 		defer helpers.Recover()
 
 		// get joined at date
-		joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
-		if err != nil {
-			joinedAt = time.Now()
-		}
+		// joinedAt, err := discordgo.Timestamp(member.JoinedAt).Parse()
+		// if err != nil {
+		// 	joinedAt = time.Now()
+		// }
 		// Get invite link
-		var usedInvite CacheInviteInformation
-		var usedVanityInvite string
-		if helpers.GetMemberPermissions(member.GuildID, cache.GetSession().SessionForGuildS(member.GuildID).State.User.ID)&discordgo.PermissionManageServer == discordgo.PermissionManageServer ||
-			helpers.GetMemberPermissions(member.GuildID, cache.GetSession().SessionForGuildS(member.GuildID).State.User.ID)&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
-
-			invites, err := session.GuildInvites(member.GuildID)
-			if err != nil {
-				helpers.RelaxLog(err)
-			} else {
-				newCacheInvites := make([]CacheInviteInformation, 0)
-				for _, invite := range invites {
-					createdAt, err := invite.CreatedAt.Parse()
-					if err != nil {
-						continue
-					}
-					invitedByID := ""
-					if invite.Inviter != nil {
-						invitedByID = invite.Inviter.ID
-					}
-					newCacheInvites = append(newCacheInvites, CacheInviteInformation{
-						GuildID:         invite.Guild.ID,
-						CreatedByUserID: invitedByID,
-						Code:            invite.Code,
-						CreatedAt:       createdAt,
-						Uses:            invite.Uses,
-					})
-				}
-				foundDiffsInInvites := make([]CacheInviteInformation, 0)
-				if _, ok := invitesCache[member.GuildID]; ok {
-					for _, newInvite := range newCacheInvites {
-						seenInOldCache := false
-						for _, oldInvite := range invitesCache[member.GuildID] {
-							if oldInvite.Code == newInvite.Code {
-								seenInOldCache = true
-								if oldInvite.Uses != newInvite.Uses {
-									foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
-								}
-							}
-						}
-						if seenInOldCache == false && newInvite.Uses == 1 {
-							foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
-						}
-					}
-				}
-				invitesCache[member.GuildID] = newCacheInvites
-				if len(foundDiffsInInvites) == 1 {
-					usedInvite = foundDiffsInInvites[0]
-				}
-			}
-
-			vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
-
-			if vanityInvite.VanityName != "" {
-				discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
-				if discordInviteCode == usedInvite.Code {
-					usedVanityInvite = vanityInvite.VanityName
-				}
-			}
-		}
+		// var usedInvite CacheInviteInformation
+		// var usedVanityInvite string
+		// if helpers.GetMemberPermissions(member.GuildID, cache.GetSession().SessionForGuildS(member.GuildID).State.User.ID)&discordgo.PermissionManageServer == discordgo.PermissionManageServer ||
+		// 	helpers.GetMemberPermissions(member.GuildID, cache.GetSession().SessionForGuildS(member.GuildID).State.User.ID)&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+		//
+		// 	invites, err := session.GuildInvites(member.GuildID)
+		// 	if err != nil {
+		// 		helpers.RelaxLog(err)
+		// 	} else {
+		// 		newCacheInvites := make([]CacheInviteInformation, 0)
+		// 		for _, invite := range invites {
+		// 			createdAt, err := invite.CreatedAt.Parse()
+		// 			if err != nil {
+		// 				continue
+		// 			}
+		// 			invitedByID := ""
+		// 			if invite.Inviter != nil {
+		// 				invitedByID = invite.Inviter.ID
+		// 			}
+		// 			newCacheInvites = append(newCacheInvites, CacheInviteInformation{
+		// 				GuildID:         invite.Guild.ID,
+		// 				CreatedByUserID: invitedByID,
+		// 				Code:            invite.Code,
+		// 				CreatedAt:       createdAt,
+		// 				Uses:            invite.Uses,
+		// 			})
+		// 		}
+		// 		foundDiffsInInvites := make([]CacheInviteInformation, 0)
+		// 		if _, ok := invitesCache[member.GuildID]; ok {
+		// 			for _, newInvite := range newCacheInvites {
+		// 				seenInOldCache := false
+		// 				for _, oldInvite := range invitesCache[member.GuildID] {
+		// 					if oldInvite.Code == newInvite.Code {
+		// 						seenInOldCache = true
+		// 						if oldInvite.Uses != newInvite.Uses {
+		// 							foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+		// 						}
+		// 					}
+		// 				}
+		// 				if seenInOldCache == false && newInvite.Uses == 1 {
+		// 					foundDiffsInInvites = append(foundDiffsInInvites, newInvite)
+		// 				}
+		// 			}
+		// 		}
+		// 		invitesCache[member.GuildID] = newCacheInvites
+		// 		if len(foundDiffsInInvites) == 1 {
+		// 			usedInvite = foundDiffsInInvites[0]
+		// 		}
+		// 	}
+		//
+		// 	vanityInvite, _ := helpers.GetVanityUrlByGuildID(member.GuildID)
+		//
+		// 	if vanityInvite.VanityName != "" {
+		// 		discordInviteCode, _ := helpers.GetDiscordInviteByVanityInvite(vanityInvite)
+		// 		if discordInviteCode == usedInvite.Code {
+		// 			usedVanityInvite = vanityInvite.VanityName
+		// 		}
+		// 	}
+		// }
 
 		go func() {
 			defer helpers.Recover()
@@ -2305,13 +2305,13 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 			_, err = helpers.MDbInsertWithoutLogging(
 				models.ModJoinlogTable,
 				models.ModJoinlogEntry{
-					GuildID:                   member.GuildID,
-					UserID:                    member.User.ID,
-					JoinedAt:                  joinedAt,
-					InviteCodeUsed:            usedInvite.Code,
-					InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
-					InviteCodeCreatedAt:       usedInvite.CreatedAt,
-					VanityInviteUsedName:      usedVanityInvite,
+					GuildID:  member.GuildID,
+					UserID:   member.User.ID,
+					JoinedAt: joinedAt,
+					// InviteCodeUsed:            usedInvite.Code,
+					// InviteCodeCreatedByUserID: usedInvite.CreatedByUserID,
+					// InviteCodeCreatedAt:       usedInvite.CreatedAt,
+					// VanityInviteUsedName:      usedVanityInvite,
 				},
 			)
 			helpers.RelaxLog(err)
@@ -2465,16 +2465,16 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 					}
 				}
 			}()
-			go func() {
-				defer helpers.Recover()
-
-				if !cache.HasElastic() {
-					return
-				}
-
-				err := helpers.ElasticAddJoin(member, usedInvite.Code, usedVanityInvite)
-				helpers.RelaxLog(err)
-			}()
+			// go func() {
+			// 	defer helpers.Recover()
+			//
+			// 	if !cache.HasElastic() {
+			// 		return
+			// 	}
+			//
+			// 	err := helpers.ElasticAddJoin(member, usedInvite.Code, usedVanityInvite)
+			// 	helpers.RelaxLog(err)
+			// }()
 		}()
 		go func() {
 			defer helpers.Recover()
@@ -2496,27 +2496,27 @@ func (m *Mod) OnGuildMemberAdd(member *discordgo.Member, session *discordgo.Sess
 				}
 			}
 		}()
-		go func() {
-			defer helpers.Recover()
-
-			options := make([]models.ElasticEventlogOption, 0)
-
-			if usedInvite.Code != "" {
-				options = append(options, models.ElasticEventlogOption{
-					Key:   "used_invite_code",
-					Value: usedInvite.Code,
-				})
-			}
-			if usedVanityInvite != "" {
-				options = append(options, models.ElasticEventlogOption{
-					Key:   "used_vanity_invite_name",
-					Value: usedVanityInvite,
-				})
-			}
-
-			_, err := helpers.EventlogLog(joinedAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberJoin, "", nil, options, false)
-			helpers.RelaxLog(err)
-		}()
+		// go func() {
+		// 	defer helpers.Recover()
+		//
+		// 	options := make([]models.ElasticEventlogOption, 0)
+		//
+		// 	if usedInvite.Code != "" {
+		// 		options = append(options, models.ElasticEventlogOption{
+		// 			Key:   "used_invite_code",
+		// 			Value: usedInvite.Code,
+		// 		})
+		// 	}
+		// 	if usedVanityInvite != "" {
+		// 		options = append(options, models.ElasticEventlogOption{
+		// 			Key:   "used_vanity_invite_name",
+		// 			Value: usedVanityInvite,
+		// 		})
+		// 	}
+		//
+		// 	_, err := helpers.EventlogLog(joinedAt, member.GuildID, member.User.ID, models.EventlogTargetTypeUser, "", models.EventlogTypeMemberJoin, "", nil, options, false)
+		// 	helpers.RelaxLog(err)
+		// }()
 	}()
 }
 
