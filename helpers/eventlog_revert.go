@@ -222,7 +222,7 @@ func Revert(eventlogID, userID string, item models.ElasticEventlog) (err error) 
 		}
 
 		guildParams := discordgo.GuildParams{
-			DefaultMessageNotifications: guild.DefaultMessageNotifications,
+			DefaultMessageNotifications: int(guild.DefaultMessageNotifications),
 			AfkTimeout:                  guild.AfkTimeout,
 			AfkChannelID:                guild.AfkChannelID,
 		}

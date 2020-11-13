@@ -212,6 +212,12 @@ func (m *Manager) initSession(shard int) error {
 	session.ShardCount = m.numShards
 	session.ShardID = shard
 
+	// sets the necessary gateway intents https://discord.com/developers/docs/topics/gateway#gateway-intents
+	session.Identify.Intents = discordgo.MakeIntent(
+		discordgo.IntentsAllWithoutPrivileged |
+			discordgo.IntentsGuildMembers,
+	)
+
 	session.AddHandler(m.OnDiscordConnected)
 	session.AddHandler(m.OnDiscordDisconnected)
 	session.AddHandler(m.OnDiscordReady)

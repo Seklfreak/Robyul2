@@ -821,8 +821,8 @@ func OnEventlogGuildUpdate(guildID string, oldGuild, newGuild *discordgo.Guild) 
 	if oldGuild.DefaultMessageNotifications != newGuild.DefaultMessageNotifications {
 		changes = append(changes, models.ElasticEventlogChange{
 			Key:      "guild_defaultmessagenotifications",
-			OldValue: strconv.Itoa(oldGuild.DefaultMessageNotifications),
-			NewValue: strconv.Itoa(newGuild.DefaultMessageNotifications),
+			OldValue: strconv.Itoa(int(oldGuild.DefaultMessageNotifications)),
+			NewValue: strconv.Itoa(int(newGuild.DefaultMessageNotifications)),
 			Type:     models.EventlogTargetTypeGuildDefaultMessageNotifications,
 		})
 	}

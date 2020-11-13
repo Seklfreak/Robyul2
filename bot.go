@@ -59,7 +59,7 @@ func OnFirstReady(session *discordgo.Session, event *discordgo.Ready) {
 			}
 
 			//if guild.Large {
-			err := session.RequestGuildMembers(guild.ID, "", 0)
+			err := session.RequestGuildMembers(guild.ID, "", 0, false)
 			if err != nil && strings.Contains(err.Error(), "no websocket connection exists") {
 				cache.GetLogger().WithField("module", "bot").Warn("OnFirstReady: no websocket connection exists, stopping Robyul")
 				BotRuntimeChannel <- os.Interrupt
@@ -128,7 +128,7 @@ func OnReconnect(session *discordgo.Session, event *discordgo.Ready) {
 			}
 
 			//if guild.Large {
-			err := session.RequestGuildMembers(guild.ID, "", 0)
+			err := session.RequestGuildMembers(guild.ID, "", 0, false)
 			if err != nil && strings.Contains(err.Error(), "no websocket connection exists") {
 				cache.GetLogger().WithField("module", "bot").Warn("OnReconnect: no websocket connection exists, stopping Robyul")
 				BotRuntimeChannel <- os.Interrupt
