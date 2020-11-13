@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"os"
@@ -23,13 +24,25 @@ import (
 )
 
 var (
-	didLaunch = false
+	didLaunch     = map[string]bool{} // map[sessionID]bool
+	didLaunchLock sync.Mutex
 )
 
+func doLaunch(sessionID string) bool {
+	didLaunchLock.Lock()
+	defer didLaunchLock.Unlock()
+
+	if didLaunch[sessionID] {
+		return false
+	}
+
+	didLaunch[sessionID] = true
+	return true
+}
+
 func BotOnReady(session *discordgo.Session, event *discordgo.Ready) {
-	if !didLaunch {
+	if doLaunch(event.SessionID) {
 		OnFirstReady(session, event)
-		didLaunch = true
 	} else {
 		// OnReconnect(session, event)
 	}
