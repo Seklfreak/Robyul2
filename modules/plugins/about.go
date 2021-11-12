@@ -75,6 +75,11 @@ func (a *About) Action(command string, content string, msg *discordgo.Message, s
 				Inline: false,
 			},
 			{
+				Name:   ":scroll: Privacy Policy",
+				Value:  "https://robyul.chat/privacy-policy",
+				Inline: false,
+			},
+			{
 				Name:   ":video_game: Bias Game",
 				Value:  "Special thanks to Gailloune who created the original version of this game with his bot Watermelon Queen on the CLC Discord. With his help we were able to add the game to Robyul. Thanks Gai! <:SornHype:428235062925066250>",
 				Inline: false,
