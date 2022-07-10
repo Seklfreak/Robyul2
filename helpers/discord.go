@@ -132,10 +132,6 @@ func IsRobyulMod(id string) bool {
 }
 
 func CanInspectBasic(msg *discordgo.Message) bool {
-	if CanInspectExtended(msg) {
-		return true
-	}
-
 	channel, e := GetChannel(msg.ChannelID)
 	if e != nil {
 		return false
@@ -165,43 +161,7 @@ func CanInspectBasic(msg *discordgo.Message) bool {
 }
 
 func CanInspectExtended(msg *discordgo.Message) bool {
-	if IsBotAdmin(msg.Author.ID) {
-		return true
-	}
-
-	if IsRobyulMod(msg.Author.ID) {
-		return true
-	}
-
-	if IsNukeMod(msg.Author.ID) {
-		return true
-	}
-
-	channel, e := GetChannel(msg.ChannelID)
-	if e != nil {
-		return false
-	}
-
-	guild, e := GetGuild(channel.GuildID)
-	if e != nil {
-		return false
-	}
-
-	guildMember, e := GetGuildMemberWithoutApi(guild.ID, msg.Author.ID)
-	if e != nil {
-		return false
-	}
-	for _, role := range guild.Roles {
-		for _, userRole := range guildMember.Roles {
-			if userRole == role.ID {
-				for _, inspectRoleID := range ExtendedInspectRoleIDs {
-					if role.ID == inspectRoleID {
-						return true
-					}
-				}
-			}
-		}
-	}
+	// Deprecated in lieu of intents.
 	return false
 }
 

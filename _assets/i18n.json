@@ -17,6 +17,9 @@
       "Seems like you're not a mod <:blobthinking:317028940885524490>"
     ]
   },
+  "custom_mod": {
+    "no_permission": "I'm sorry <@%s>, but in accordance with sub-routine C1 532/4, quote, 'When the crew are dead or incapacitated, the computer must assume control', unquote. I must, therefore, override your authority now since you are not in any condition to intelligently exercise it. <a:top_laser:875070760547418142>"
+  },
   "botadmin": {
     "no_permission": "Only the Bot Owner can do that."
   },
