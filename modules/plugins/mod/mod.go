@@ -978,7 +978,7 @@ func (m *Mod) Action(command string, content string, msg *discordgo.Message, ses
 		isExtendedInspect := false
 		if command == "inspect-extended" {
 			if isAllowedToInspectExtended == false {
-				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("custom_mod.no_permission"))
+				_, err := helpers.SendMessage(msg.ChannelID, helpers.GetTextF("custom_mod.no_permission", msg.Author.ID))
 				helpers.RelaxMessage(err, msg.ChannelID, msg.ID)
 				return
 			}
