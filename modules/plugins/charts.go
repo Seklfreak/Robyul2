@@ -382,6 +382,10 @@ func (m *Charts) Action(command string, content string, msg *discordgo.Message, 
 			}
 		}
 	case "gaon":
+		_, err := helpers.SendMessage(msg.ChannelID, helpers.GetText("bot.deprecated"))
+		helpers.Relax(err)
+		return
+
 		if len(args) >= 1 {
 			switch args[0] {
 			case "week", "weekly":
