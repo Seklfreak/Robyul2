@@ -24,6 +24,7 @@
     "no_permission": "Only Robyul Mods can do that."
   },
   "bot": {
+    "deprecated": "Sorry! This module is deprecated...\nTo use the new bot please invite **bangya**, the official refactor. <https://bangya.io/invite>",
     "ratelimit": {
       "hit": "<@%s> Woah there. Way too spicy.\nYou're executing commands too fast, so i put you into the chill zone for ~15 seconds.\nNo more commands for you until you get out <:blobnogood:317029275742109706>"
     },
