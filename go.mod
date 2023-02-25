@@ -78,10 +78,9 @@ require (
 	github.com/xuri/excelize v1.4.0
 	github.com/zonedb/zonedb v0.0.0-20181223081958-1e4b8eea6f56 // indirect
 	go4.org v0.0.0-20181109185143-00e24f1b2599 // indirect
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
+	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20201029080932-201ba4db2418 // indirect
-	golang.org/x/text v0.3.2
+	golang.org/x/text v0.4.0
 	google.golang.org/api v0.19.0
 	google.golang.org/genproto v0.0.0-20200303153909-beee998c1893
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
