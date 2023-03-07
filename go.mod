@@ -54,7 +54,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v0.0.0-20181028223441-12d3b2882a08
 	github.com/lucazulian/cryptocomparego v0.0.0-20180707133135-0bbb5bcaed79
 	github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329 // indirect
-	github.com/miekg/dns v1.1.1
+	github.com/miekg/dns v1.1.25
 	github.com/minio/minio-go v6.0.11+incompatible
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
